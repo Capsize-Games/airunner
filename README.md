@@ -117,6 +117,15 @@ git clone -b develop https://github.com/Capsize-Games/airunner.git
 cd airunner && pip install -e .
 ```
 
+The current `controlnet_aux` Huggingface library has a bug which is awaiting a patch (submitted by me). Until it is accepted,
+install controlnet manually from my fork:
+
+```bash
+git clone -b develop https://github.com/w4ffl35/controlnet_aux.git
+cd  controlnet_aux
+pip install -e .
+```
+
 ----
 
 If you install from pypi or source, uninstall `opencv-python` (we use `opencv-python-headless` instead)
