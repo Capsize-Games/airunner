@@ -16,6 +16,7 @@ class SeedWidget(BaseWidget):
         self.ui.lineEdit.blockSignals(True)
         self.ui.lineEdit.setText(str(self.settings["generator_settings"]["seed"]))
         self.ui.lineEdit.setEnabled(not self.settings["generator_settings"]["random_seed"])
+        self.ui.random_button.setChecked(self.settings["generator_settings"]["random_seed"])
         self.ui.lineEdit.blockSignals(False)
 
     def on_application_settings_changed_signal(self, _message: dict):
