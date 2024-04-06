@@ -115,7 +115,10 @@ class MainWindow(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
+
+        self._updating_settings = True
         self.update_settings()
+
         LoraMixin.__init__(self)
         EmbeddingMixin.__init__(self)
         PipelineMixin.__init__(self)
@@ -133,6 +136,8 @@ class MainWindow(
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
         self.ui.enable_controlnet.blockSignals(False)
+        self._updating_settings = False
+
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
@@ -235,7 +240,8 @@ class MainWindow(
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
     def on_application_settings_changed_signal(self, _message: dict):
-        self.set_stylesheet()
+        if not self._updating_settings:
+            self.set_stylesheet()
 
     def on_vision_captured_signal(self, data: dict):
         # Create the window if it doesn't exist
@@ -785,7 +791,6 @@ class MainWindow(
             else:
                 self.logger.debug("Using system theme")
                 ui.setStyleSheet("")
-                self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
             for icon_data in [
                 ("pencil-icon", "toggle_brush_button"),
