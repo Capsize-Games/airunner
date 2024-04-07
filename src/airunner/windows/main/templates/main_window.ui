@@ -8,7 +8,7 @@
     <x>0</x>
     <y>0</y>
     <width>841</width>
-    <height>783</height>
+    <height>787</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -1336,7 +1336,7 @@
      <x>0</x>
      <y>0</y>
      <width>841</width>
-     <height>22</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="font">
@@ -1465,6 +1465,8 @@
     <property name="title">
      <string>Tools</string>
     </property>
+    <addaction name="actionRun_setup_wizard_2"/>
+    <addaction name="separator"/>
     <addaction name="actionModel_Manager_3"/>
     <addaction name="separator"/>
     <addaction name="actionUnload_Image_model"/>
@@ -2225,6 +2227,11 @@
     <string>Model Manager</string>
    </property>
   </action>
+  <action name="actionRun_setup_wizard_2">
+   <property name="text">
+    <string>Run Setup Wizard</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -2778,11 +2785,11 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1108</x>
-     <y>620</y>
+     <x>826</x>
+     <y>564</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1002</x>
+     <x>840</x>
      <y>582</y>
     </hint>
    </hints>
@@ -2794,11 +2801,11 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1108</x>
-     <y>389</y>
+     <x>826</x>
+     <y>393</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1002</x>
+     <x>840</x>
      <y>683</y>
     </hint>
    </hints>
@@ -2810,11 +2817,11 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1108</x>
-     <y>167</y>
+     <x>826</x>
+     <y>171</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1002</x>
+     <x>840</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2826,8 +2833,8 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1108</x>
-     <y>329</y>
+     <x>826</x>
+     <y>333</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2842,8 +2849,8 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1108</x>
-     <y>278</y>
+     <x>826</x>
+     <y>282</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2906,8 +2913,8 @@
    <slot>action_center_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1108</x>
-     <y>440</y>
+     <x>826</x>
+     <y>444</y>
     </hint>
     <hint type="destinationlabel">
      <x>806</x>
@@ -2922,11 +2929,11 @@
    <slot>action_ai_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1108</x>
-     <y>500</y>
+     <x>826</x>
+     <y>504</y>
     </hint>
     <hint type="destinationlabel">
-     <x>917</x>
+     <x>840</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2942,7 +2949,7 @@
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1002</x>
+     <x>840</x>
      <y>0</y>
     </hint>
    </hints>
@@ -2958,7 +2965,7 @@
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1002</x>
+     <x>840</x>
      <y>28</y>
     </hint>
    </hints>
@@ -2974,7 +2981,7 @@
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1002</x>
+     <x>840</x>
      <y>105</y>
     </hint>
    </hints>
@@ -2990,7 +2997,7 @@
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1002</x>
+     <x>840</x>
      <y>86</y>
     </hint>
    </hints>
@@ -3018,12 +3025,12 @@
    <slot>tts_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1108</x>
-     <y>680</y>
+     <x>826</x>
+     <y>624</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1122</x>
-     <y>788</y>
+     <x>840</x>
+     <y>786</y>
     </hint>
    </hints>
   </connection>
@@ -3034,12 +3041,12 @@
    <slot>v2t_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1108</x>
-     <y>731</y>
+     <x>826</x>
+     <y>675</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1122</x>
-     <y>859</y>
+     <x>840</x>
+     <y>786</y>
     </hint>
    </hints>
   </connection>
@@ -3050,12 +3057,12 @@
    <slot>ocr_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1108</x>
-     <y>782</y>
+     <x>826</x>
+     <y>726</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1122</x>
-     <y>941</y>
+     <x>840</x>
+     <y>786</y>
     </hint>
    </hints>
   </connection>
@@ -3082,11 +3089,11 @@
    <slot>action_toggle_select(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1108</x>
-     <y>218</y>
+     <x>826</x>
+     <y>222</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1122</x>
+     <x>840</x>
      <y>0</y>
     </hint>
    </hints>
@@ -3299,6 +3306,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionRun_setup_wizard_2</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_run_setup_wizard_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>420</x>
+     <y>393</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -3403,5 +3426,6 @@
   <slot>action_outpaint_toggled(bool)</slot>
   <slot>action_outpaint_export()</slot>
   <slot>action_outpaint_import()</slot>
+  <slot>action_run_setup_wizard_clicked()</slot>
  </slots>
 </ui>
