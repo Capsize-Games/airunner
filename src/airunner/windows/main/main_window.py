@@ -32,6 +32,7 @@ from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.model_merger import ModelMerger
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
+from airunner.windows.setup_wizard.setup_wizard import SetupWizard
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.worker_manager import WorkerManager
@@ -115,7 +116,10 @@ class MainWindow(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
+
+        self._updating_settings = True
         self.update_settings()
+
         LoraMixin.__init__(self)
         EmbeddingMixin.__init__(self)
         PipelineMixin.__init__(self)
@@ -133,6 +137,10 @@ class MainWindow(
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
         self.ui.enable_controlnet.blockSignals(False)
+        self._updating_settings = False
+
+        self.show_setup_wizard()
+
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
@@ -235,7 +243,8 @@ class MainWindow(
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
     def on_application_settings_changed_signal(self, _message: dict):
-        self.set_stylesheet()
+        if not self._updating_settings:
+            self.set_stylesheet()
 
     def on_vision_captured_signal(self, data: dict):
         # Create the window if it doesn't exist
@@ -785,7 +794,6 @@ class MainWindow(
             else:
                 self.logger.debug("Using system theme")
                 ui.setStyleSheet("")
-                self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
             for icon_data in [
                 ("pencil-icon", "toggle_brush_button"),
@@ -798,6 +806,10 @@ class MainWindow(
                 ("select-svgrepo-com", "toggle_select_button"),
             ]:
                 self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
+
+    def show_setup_wizard(self):
+        wizard = SetupWizard()
+        wizard.exec()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -999,3 +1011,7 @@ class MainWindow(
     @Slot()
     def action_outpaint_import(self):
         self.emit_signal(SignalCode.OUTPAINT_IMPORT_SIGNAL)
+
+    @Slot()
+    def action_run_setup_wizard_clicked(self):
+        self.show_setup_wizard()

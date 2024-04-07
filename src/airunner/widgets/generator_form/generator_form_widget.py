@@ -1,12 +1,12 @@
 import time
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from PySide6.QtCore import Signal, QRect
 from PySide6.QtWidgets import QApplication
 
 from airunner.enums import SignalCode, GeneratorSection, ImageCategory
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
-from airunner.utils import convert_image_to_base64, convert_base64_to_image, create_worker
+from airunner.utils import convert_base64_to_image, create_worker
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
 from airunner.workers.model_scanner_worker import ModelScannerWorker
@@ -133,20 +133,26 @@ class GeneratorForm(BaseWidget):
         self.emit_signal(SignalCode.SD_SAVE_PROMPT_SIGNAL)
 
     def handle_prompt_changed(self):
+        pass
+
+    def handle_negative_prompt_changed(self):
+        pass
+
+    def save_prompt_to_settings(self):
         settings = self.settings
+
         value = self.ui.prompt.toPlainText()
         self.current_prompt_value = value
         settings["generator_settings"]["prompt"] = value
-        self.settings = settings
 
-    def handle_negative_prompt_changed(self):
-        settings = self.settings
         value = self.ui.negative_prompt.toPlainText()
         self.current_negative_prompt_value = value
         settings["generator_settings"]["negative_prompt"] = value
+
         self.settings = settings
 
     def handle_generate_button_clicked(self):
+        self.save_prompt_to_settings()
         self.start_progress_bar()
         self.generate()
 
@@ -217,8 +223,6 @@ class GeneratorForm(BaseWidget):
         else:
             negative_prompt = ILLUSTRATION_NEGATIVE_PROMPT
         self.ui.negative_prompt.setPlainText(negative_prompt)
-        self.handle_prompt_changed()
-        self.handle_negative_prompt_changed()
         self.handle_generate_button_clicked()
 
     def get_memory_options(self):
