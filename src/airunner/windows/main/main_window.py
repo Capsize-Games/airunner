@@ -32,6 +32,7 @@ from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.model_merger import ModelMerger
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
+from airunner.windows.setup_wizard.setup_wizard import SetupWizard
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.worker_manager import WorkerManager
@@ -137,6 +138,8 @@ class MainWindow(
         self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
         self.ui.enable_controlnet.blockSignals(False)
         self._updating_settings = False
+
+        self.show_setup_wizard()
 
 
     def keyPressEvent(self, event):
@@ -804,6 +807,10 @@ class MainWindow(
             ]:
                 self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
 
+    def show_setup_wizard(self):
+        wizard = SetupWizard()
+        wizard.exec()
+
     def showEvent(self, event):
         super().showEvent(event)
         # self.automatic_filter_manager = AutomaticFilterManager()
@@ -1004,3 +1011,7 @@ class MainWindow(
     @Slot()
     def action_outpaint_import(self):
         self.emit_signal(SignalCode.OUTPAINT_IMPORT_SIGNAL)
+
+    @Slot()
+    def action_run_setup_wizard_clicked(self):
+        self.show_setup_wizard()

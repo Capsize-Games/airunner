@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>user_agreement</class>
+ <widget class="QWidget" name="user_agreement">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>602</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="1" column="0">
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>366</width>
+        <height>902</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>AI Runner - User Agreement
+
+This User Agreement (&quot;Agreement&quot;) is a legal agreement between you and Capsize LLC governing your use of the AI Runner software (&quot;Software&quot;). By using the Software, you agree to the terms and conditions outlined in this Agreement.
+
+1. Data Collection:
+   - AI Runner collects voice and data samples from the user for the purpose of enhancing user experience and improving the Software's functionality.
+   - All collected data is stored locally on your machine and is not transmitted to any third-party services.
+
+2. Data Usage:
+   - The collected data may be used by Capsize LLC for research and development purposes, including but not limited to training machine learning models and statistical analysis.
+   - Capsize LLC may analyze the data to improve the functionality and performance of AI Runner.
+
+3. Data Privacy:
+   - Capsize LLC is committed to protecting your privacy.
+   - Your data will not be shared with any third parties without your explicit consent.
+   - We will take all necessary measures to safeguard your data from unauthorized access or disclosure.
+
+4. Consent:
+   - By using AI Runner, you consent to the collection and usage of your data as described in this Agreement.
+
+5. Liability:
+   - Capsize LLC is not liable for any damages or losses arising from the use of AI Runner or the data collected by it.
+
+6. Changes to Agreement:
+   - Capsize LLC reserves the right to modify this Agreement at any time. Any changes will be notified to users through AI Runner or Capsize LLC's website.
+
+7. Contact:
+   - If you have any questions or concerns about this Agreement or AI Runner, please contact Capsize LLC at [insert contact information].
+
+By using AI Runner, you acknowledge that you have read, understood, and agree to be bound by the terms and conditions of this Agreement.
+
+</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>User Agreement</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QCheckBox" name="checkBox">
+     <property name="text">
+      <string>I have read and agree to the terms of the User Agreement</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>checkBox</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>user_agreement</receiver>
+   <slot>agreement_clicked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>575</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>270</x>
+     <y>-12</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>agreement_clicked(bool)</slot>
+ </slots>
+</ui>
