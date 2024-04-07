@@ -876,24 +876,19 @@ class SDHandler(
         self.logger.debug("Unloading tokenizer")
         self.tokenizer = None
 
-    def load_generator_arguments(self):
+    def handle_model_changed(self) -> bool:
         requested_model = self.settings["generator_settings"]["model"]
-        model_changed = (self.model is not None and self.model["name"] is not None and self.model["name"] != requested_model)
+        model_changed = (
+                    self.model is not None and self.model["name"] is not None and self.model["name"] != requested_model)
         if model_changed:  # model change
             self.logger.debug(f"Model changed clearing debugger: {self.model['name']} != {requested_model}")
             self.reload_model = True
             self.clear_scheduler()
             self.clear_controlnet()
+        return model_changed
 
-        """
-        Set a reference to pipe
-        """
-        is_txt2img = self.sd_request.is_txt2img
-        is_img2img = self.sd_request.is_img2img
-        is_outpaint = self.sd_request.is_outpaint
-
+    def get_controlnet_image(self) -> Image.Image:
         controlnet_image = self.controlnet_image
-
         if controlnet_image:
             self.emit_signal(
                 SignalCode.SD_CONTROLNET_IMAGE_GENERATED_SIGNAL,
@@ -903,7 +898,20 @@ class SDHandler(
             )
         else:
             self.logger.info("Controlnet image not generated")
+        return controlnet_image
 
+    def load_generator_arguments(self):
+        """
+        Here we are loading the arguments for the Stable Diffusion generator.
+        :return:
+        """
+        model_changed = self.handle_model_changed()
+
+        # Set a reference to pipe
+        is_txt2img = self.sd_request.is_txt2img
+        is_img2img = self.sd_request.is_img2img
+        is_outpaint = self.sd_request.is_outpaint
+        controlnet_image = self.get_controlnet_image()
         self.data = self.sd_request(
             model_data=self.model,
             extra_options={},
@@ -923,6 +931,11 @@ class SDHandler(
             controlnet_image=controlnet_image,
             generator_request_data=self.generator_request_data
         )
+        print("HANDLING REQUEST")
+        print("*"*80)
+        print(self.sd_request.generator_settings.prompt)
+        print("*" * 80)
+
         pipe = None
         pipeline_class_ = None
 

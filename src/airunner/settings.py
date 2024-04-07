@@ -347,7 +347,8 @@ CONFIG_FILES = {
     "v1": "v1.yaml",
     "v2": "v2.yaml",
     "xl": "sd_xl_base.yaml",
-    "xl_refiner": "sd_xl_refiner.yaml"
+    "xl_refiner": "sd_xl_refiner.yaml",
+    "controlnet": "controlnet.yaml",
 }
 SCHEDULER_CLASSES = {
     Scheduler.EULER_ANCESTRAL.value: "EulerAncestralDiscreteScheduler",
