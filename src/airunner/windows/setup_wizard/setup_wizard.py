@@ -7,6 +7,9 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.templates.airunner_license_ui import Ui_airunner_license
 from airunner.windows.setup_wizard.templates.path_settings_ui import Ui_PathSettings
 from airunner.windows.setup_wizard.templates.stable_diffusion_license_ui import Ui_stable_diffusion_license
+from airunner.windows.setup_wizard.templates.stable_diffusion_setup.choose_model_ui import Ui_choose_model
+from airunner.windows.setup_wizard.templates.stable_diffusion_setup.choose_style_ui import Ui_choose_model_style
+from airunner.windows.setup_wizard.templates.stable_diffusion_setup.choose_version_ui import Ui_choose_model_version
 from airunner.windows.setup_wizard.templates.user_agreement_ui import Ui_user_agreement
 
 
@@ -48,17 +51,28 @@ class BaseWizard(QWizardPage, MediatorMixin, SettingsMixin):
 
 
 
-class SetupWizard(QWizard):
+class SetupWizard(QWizard, MediatorMixin, SettingsMixin):
     def __init__(self):
         super(SetupWizard, self).__init__()
 
         self.addPage(WelcomePage())
+
+        settings = self.settings
+        if not settings["agreements"]["user"]:
+            self.addPage(UserAgreement())
+        if not settings["agreements"]["stable_diffusion"]:
+            self.addPage(StableDiffusionLicense())
+        if not settings["agreements"]["airunner"]:
+            self.addPage(AIRunnerLicense())
+
         self.addPage(PathSettings())
+
+        self.addPage(ChooseModelStyle())
+        self.addPage(ChooseModelVersion())
+        self.addPage(ChooseModel())
+
         self.addPage(MetaDataSettings())
         # self.addPage(ModelDownloadPage())
-        self.addPage(StableDiffusionLicense())
-        self.addPage(AIRunnerLicense())
-        self.addPage(UserAgreement())
         self.addPage(FinalPage())
         self.setWindowTitle("AI Runner Setup Wizard")
 
@@ -90,11 +104,9 @@ class MetaDataSettings(BaseWizard):
     widget_class_ = ExportPreferencesWidget
 
 
-# class ModelDownloadPage(BaseWizard):
-#     widget_class_ = ModelDownloadWidget
-
-
 class AgreementPage(BaseWizard):
+    setting_key = ""
+
     def __init__(self):
         super(AgreementPage, self).__init__()
         self.user_agreement_clicked = False
@@ -102,6 +114,9 @@ class AgreementPage(BaseWizard):
     @Slot(bool)
     def agreement_clicked(self, val):
         self.user_agreement_clicked = val
+        settings = self.settings
+        settings["agreements"][self.setting_key] = val
+        self.settings = settings
 
     def nextId(self):
         if self.user_agreement_clicked:
@@ -110,14 +125,29 @@ class AgreementPage(BaseWizard):
 
 class StableDiffusionLicense(AgreementPage):
     class_name_ = Ui_stable_diffusion_license
+    setting_key = "stable_diffusion"
 
 
 class AIRunnerLicense(AgreementPage):
     class_name_ = Ui_airunner_license
+    setting_key = "airunner"
 
 
 class UserAgreement(AgreementPage):
     class_name_ = Ui_user_agreement
+    setting_key = "user"
+
+
+class ChooseModelVersion(BaseWizard):
+    class_name_ = Ui_choose_model_version
+
+
+class ChooseModelStyle(BaseWizard):
+    class_name_ = Ui_choose_model_style
+
+
+class ChooseModel(BaseWizard):
+    class_name_ = Ui_choose_model
 
 
 class FinalPage(BaseWizard):
@@ -129,3 +159,7 @@ class FinalPage(BaseWizard):
         label = QLabel("Setup is complete. Click Finish to close the wizard.")
         layout.addWidget(label)
         self.setLayout(layout)
+
+        settings = self.settings
+        settings["run_setup_wizard"] = False
+        self.settings = settings
