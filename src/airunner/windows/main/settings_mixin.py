@@ -488,7 +488,13 @@ class SettingsMixin:
             controlnet=controlnet_bootstrap_data,
             ai_models=model_bootstrap_data,
             image_filters=imagefilter_bootstrap_data,
-            trusted_huggingface_repos=[]
+            trusted_huggingface_repos=[],
+            run_setup_wizard=True,
+            agreements=dict(
+                stable_diffusion=False,
+                airunner=False,
+                user=False,
+            ),
         )
 
     def update_settings(self):
