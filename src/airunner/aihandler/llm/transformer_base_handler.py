@@ -238,13 +238,13 @@ class TransformerBaseHandler(BaseHandler):
         """
         self.logger.error("Define post_load here")
 
-    def generate(self):
+    def generate(self) -> str:
         return self.do_generate()
 
-    def do_generate(self):
+    def do_generate(self) -> str:
         raise NotImplementedError
 
-    def process_data(self, data):
+    def process_data(self, data: dict) -> None:
         self.request_data = data.get("request_data", {})
         self.callback = self.request_data.get("callback", None)
         self.use_gpu = self.request_data.get("use_gpu", self.use_gpu)
@@ -273,7 +273,11 @@ class TransformerBaseHandler(BaseHandler):
         self.logger.debug("Moving model to device {device_name}")
         self.model.to(device_name)
 
-    def prepare_input_args(self):
+    def prepare_input_args(self) -> dict:
+        """
+        Prepare the input arguments for the transformer model.
+        :return: dict
+        """
         parameters = self.parameters or {}
         top_k = parameters.get("top_k", self.top_k)
         eta_cutoff = parameters.get("eta_cutoff", self.eta_cutoff)
@@ -340,7 +344,7 @@ class TransformerBaseHandler(BaseHandler):
         if self.tokenizer:
             self.tokenizer.seed = self.seed
 
-    def handle_request(self, data):
+    def handle_request(self, data: dict) -> str:
         self._processing_request = True
         kwargs = self.prepare_input_args()
         self.do_set_seed(kwargs.get("seed"))

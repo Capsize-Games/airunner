@@ -90,6 +90,7 @@ class LatentsWorker(Worker):
                 "outpaint_box_rect": sd_request.active_rect,
             }
         )
+        self.sd_request = None
 
 
 class SDHandler(

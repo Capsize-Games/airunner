@@ -55,12 +55,10 @@ class SignalCode(Enum):
     ENABLE_SELECTION_TOOL_SIGNAL = "enable_selection_tool_signal"
     ENABLE_MOVE_TOOL_SIGNAL = "enable_move_tool_signal"
     INTERRUPT_PROCESS_SIGNAL = "interrupt_process_signal"
-
     AI_MODELS_REFRESH_SIGNAL = "refresh_ai_models_signal"
     AI_MODELS_SAVE_OR_UPDATE_SIGNAL = "ai_models_save_or_update_signal"
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"
     AI_MODELS_CREATE_SIGNAL = "ai_models_create_signal"
-
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
     APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"
     APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION = "add_bot_message_to_conversation"
@@ -76,17 +74,13 @@ class SignalCode(Enum):
     APPLICATION_ACTIVE_GRID_AREA_UPDATED = "active_grid_area_updated"
     ACTIVE_GRID_AREA_MOVED_SIGNAL = "active_grid_area_moved_signal"
     MASK_GENERATOR_WORKER_RESPONSE_SIGNAL = "mask_generator_worker_response_signal"
-
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL = "AudioProcessorWorker_processed_audio"
     AUDIO_PROCESSOR_RESPONSE_SIGNAL = "audio_processor_response_signal"
     AUDIO_PROCESSOR_PROCESSED_AUDIO = "audio_processor_processed_audio"
-
     BRUSH_COLOR_CHANGED_SIGNAL = "brush_color_changed_signal"
-
     PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL = "preset_image_generator_display_menu_signal"
     PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL = "activate_brush"
-
     CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL = "load_image_from_path_signal"
     CANVAS_DO_DRAW_SIGNAL = "canvas_do_draw_signal"
     SCENE_DO_DRAW_SIGNAL = "scene_do_draw_signal"
@@ -131,9 +125,7 @@ class SignalCode(Enum):
     OUTPAINT_PASTE_IMAGE_SIGNAL = "outpaint_paste_image_signal"
     OUTPAINT_EXPORT_IMAGE_SIGNAL = "outpaint_export_image_signal"
     OUTPAINT_IMPORT_IMAGE_SIGNAL = "outpaint_import_image_signal"
-
     CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
-
     EMBEDDING_LOAD_FAILED_SIGNAL = "embedding_load_failed_signal"
     EMBEDDING_UPDATE_SIGNAL = "update_embedding_signal"
     EMBEDDING_ADD_SIGNAL = "add_embedding_signal"
@@ -141,18 +133,15 @@ class SignalCode(Enum):
     EMBEDDING_DELETE_MISSING_SIGNAL = "delete_missing_embeddings_signal"
     EMBEDDING_GET_ALL_SIGNAL = "get_all_embeddings"
     EMBEDDING_GET_ALL_RESULTS_SIGNAL = "get_all_embeddings_results"
-
     ENGINE_CANCEL_SIGNAL = "engine_cancel_signal"
     ENGINE_STOP_PROCESSING_QUEUE_SIGNAL = "engine_stop_processing_queue_signal"
     ENGINE_START_PROCESSING_QUEUE_SIGNAL = "engine_start_processing_queue_signal"
     ENGINE_DO_RESPONSE_SIGNAL = "engine_do_response_signal"
     ENGINE_DO_REQUEST_SIGNAL = "engine_do_request_signal"
     ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL = "EngineResponseWorker_response_signal"
-
     GENERATOR_FORM_UPDATE_VALUES_SIGNAL = "generator_form_update_values"
     GENERATE_IMAGE_FROM_IMAGE_SIGNAL = "generate_image_from_image"
     DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL = "do_generate_image_from_image"
-
     LAYER_SWITCH_SIGNAL = "switch_layer_signal"
     LAYER_ADD_SIGNAL = "add_layer_signal"
     LAYER_CREATE_SIGNAL = "create_layer_signal"
@@ -168,7 +157,6 @@ class SignalCode(Enum):
     LAYERS_SHOW_SIGNAL = "show_layers_signal"
     LAYER_OPACITY_CHANGED_SIGNAL = "layers_layer_opacity_changed_signal"
     LLM_IMAGE_PROMPT_GENERATED_SIGNAL = "llm_image_prompt_generated_signal"
-
     # TODO: combine clear history signals - we have two by mistake
     LLM_CLEAR_HISTORY_SIGNAL = "llm_clear_history_signal"
     LLM_RESPONSE_SIGNAL = "llm_response_signal"
@@ -181,21 +169,16 @@ class SignalCode(Enum):
     LLM_TOKEN_SIGNAL = "llm_token_signal"
     LLM_RESPOND_TO_USER_SIGNAL = "llm_respond_to_user_signal"
     LLM_PROCESS_STT_AUDIO_SIGNAL = "llm_process_stt_audio"
-
     LOG_ERROR_SIGNAL = "error_signal"
     LOG_WARNING_SIGNAL = "warning_signal"
     LOG_STATUS_SIGNAL = "status_signal"
-
     LORA_ADD_SIGNAL = "add_lora_signal"
     LORA_UPDATE_SIGNAL = "update_lora_signal"
-
     SET_CANVAS_COLOR_SIGNAL = "set_canvas_color_signal"
     UPDATE_SCENE_SIGNAL = "update_scene_signal"
     DRAW_GRID_SIGNAL = "draw_grid_signal"
     SET_SCENE_RECT_SIGNAL = "set_scene_rect_signal"
-
     DOWNLOAD_COMPLETE = "scan_for_models"
-
     SD_IMAGE_GENERATE_REQUEST_SIGNAL = "image_generate_request_signal"
     SD_PROGRESS_SIGNAL = "progress_signal"
     SD_REQUEST_SIGNAL = "sd_request_signal"
@@ -213,20 +196,16 @@ class SignalCode(Enum):
     SD_CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
     SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
     HANDLE_LATENTS_SIGNAL = "handle_latents_signal"
-
     STT_HEAR_SIGNAL = "hear_signal"
     STT_AUDIO_PROCESSED = "stt_audio_processed_signal"
     STT_PROCESS_AUDIO_SIGNAL = "stt_process_audio"
     STT_START_CAPTURE_SIGNAL = "stt_start_capture"
     STT_STOP_CAPTURE_SIGNAL = "stt_stop_capture"
-
     UNBLOCK_TTS_GENERATOR_SIGNAL = "unblock_tts_generator_signal"
-
     TTS_REQUEST = "tts_request"
     TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = "TTSGeneratorWorker_add_to_stream_signal"
     TTS_ENABLE_SIGNAL = "tts_enable_signal"
     TTS_DISABLE_SIGNAL = "tts_disable_signal"
-
     VISION_START_CAPTURE = "start_vision_capture"
     VISION_STOP_CAPTURE = "stop_vision_capture"
     VISION_CAPTURE_UNPAUSE_SIGNAL = "unpause_vision_capture"
@@ -239,15 +218,11 @@ class SignalCode(Enum):
     VISION_CAPTION_GENERATED_SIGNAL = "caption_generated_signal"
     VISION_DESCRIBE_IMAGE_SIGNAL = "describe_image_signal"
     VISION_PROCESS_IMAGES = "process_images"
-
     QUIT_APPLICATION = "quit"
-
     START_AUTO_IMAGE_GENERATION_SIGNAL = "start_auto_image_generation_signal"
     STOP_AUTO_IMAGE_GENERATION_SIGNAL = "stop_auto_image_generation_signal"
-
     LINES_UPDATED_SIGNAL = "lines_updated_signal"
     DO_GENERATE_SIGNAL = "do_generate_signal"
-
     UPSCALE_SIGNAL = "upscale_signal"
 
 
