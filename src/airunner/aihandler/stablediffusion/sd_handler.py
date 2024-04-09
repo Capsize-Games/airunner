@@ -932,10 +932,6 @@ class SDHandler(
             controlnet_image=controlnet_image,
             generator_request_data=self.generator_request_data
         )
-        print("HANDLING REQUEST")
-        print("*"*80)
-        print(self.sd_request.generator_settings.prompt)
-        print("*" * 80)
 
         pipe = None
         pipeline_class_ = None
