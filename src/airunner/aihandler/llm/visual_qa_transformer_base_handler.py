@@ -13,7 +13,7 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.prompt = "This is an image of"
-        self.model_path = "Salesforce/blip-vqa-base"
+        self.model_path = self.settings["ocr_settings"]["model_path"]
         self.processor = None
         self.do_sample = False
         self.num_beams = 1

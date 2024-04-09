@@ -30,6 +30,12 @@ tts_settings_default = {
     'play_queue_buffer_length': 1,
     'enable_cpu_offload': True,
     "model": "SpeechT5",
+    "speecht5": dict(
+        embeddings_path="Matthijs/cmu-arctic-xvectors",
+        vocoder_path="microsoft/speecht5_hifigan",
+        model_path="microsoft/speecht5_tts",
+        processor_path="microsoft/speecht5_tts"
+    ),
     "espeak": dict(
         gender="male",
         voice="male1",
@@ -41,6 +47,8 @@ tts_settings_default = {
     ),
     "bark": dict(
         language="English",
+        processor_path="suno/bark-small",
+        model_path="suno/bark-small",
         voice="v2/en_speaker_6",
         gender="Male",
         fine_temperature=80,
@@ -149,6 +157,9 @@ class SettingsMixin:
             autoload_sd=True,
             autoload_llm=False,
             show_nsfw_warning=True,
+            ocr_settings=dict(
+                model_path="Salesforce/blip-vqa-base",
+            ),
             document_settings={
                 "width": 512,
                 "height": 512,
@@ -488,7 +499,13 @@ class SettingsMixin:
             controlnet=controlnet_bootstrap_data,
             ai_models=model_bootstrap_data,
             image_filters=imagefilter_bootstrap_data,
-            trusted_huggingface_repos=[]
+            trusted_huggingface_repos=[],
+            run_setup_wizard=True,
+            agreements=dict(
+                stable_diffusion=False,
+                airunner=False,
+                user=False,
+            ),
         )
 
     def update_settings(self):

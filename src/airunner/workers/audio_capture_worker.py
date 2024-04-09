@@ -78,7 +78,7 @@ class AudioCaptureWorker(Worker):
     def handle_message(self, message):
         pass
 
-    def start_listening(self, _message):
+    def start_listening(self, _message=None):
         self.logger.debug("Start listening")
         self.listening = True
         fs = self.settings["stt_settings"]["fs"]
