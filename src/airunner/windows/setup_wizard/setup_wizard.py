@@ -80,9 +80,9 @@ class SetupWizard(QWizard, MediatorMixin, SettingsMixin):
         self.addPage(TTSSpeechT5Setup())
         self.addPage(TTSBarkSetup())
 
-        self.addPage(ChooseModelStyle())
-        self.addPage(ChooseModelVersion())
-        self.addPage(ChooseModel())
+        # self.addPage(ChooseModelStyle())
+        # self.addPage(ChooseModelVersion())
+        # self.addPage(ChooseModel())
 
         self.addPage(MetaDataSettings())
         # self.addPage(ModelDownloadPage())
