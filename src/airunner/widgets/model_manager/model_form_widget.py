@@ -45,6 +45,11 @@ class ModelFormWidget(BaseWidget):
         if type(allowCommercialUse) == list:
             allowCommercialUse = ", ".join(allowCommercialUse)
 
+        # self.ui.model_data.show()
+        #
+        # if data is None:
+        #     self.ui.model_data.hide()
+
         self.ui.poi.setText(str(model_data["poi"]))
         self.ui.require_credit.setText(str(model_data["allowNoCredit"]))
         self.ui.allow_commercial_use.setText(str(allowCommercialUse))
