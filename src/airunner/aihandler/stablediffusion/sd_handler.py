@@ -90,6 +90,7 @@ class LatentsWorker(Worker):
                 "outpaint_box_rect": sd_request.active_rect,
             }
         )
+        self.sd_request = None
 
 
 class SDHandler(
@@ -1183,7 +1184,7 @@ class SDHandler(
         self.reset_applied_memory_settings()
 
     def pipeline_class(self):
-        if self.settings["generator_settings"]["enable_controlnet"]:
+        if self.settings["generator_settings"]["enable_controlnet"] and self.controlnet() is not None:
             if self.sd_request.is_img2img:
                 pipeline_classname_ = StableDiffusionControlNetImg2ImgPipeline
             elif self.sd_request.is_txt2img:
