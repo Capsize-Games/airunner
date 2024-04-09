@@ -49,7 +49,7 @@ class TTSVocalizerWorker(Worker):
     def on_TTSGeneratorWorker_add_to_stream_signal(self, response: dict):
         if self.accept_message:
             self.logger.debug("Adding speech to stream...")
-            self.add_to_queue(response)
+            self.add_to_queue(response["message"])
 
     def handle_message(self, item):
         if not self.accept_message:

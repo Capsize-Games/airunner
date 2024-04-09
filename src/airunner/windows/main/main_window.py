@@ -139,7 +139,13 @@ class MainWindow(
         self.ui.enable_controlnet.blockSignals(False)
         self._updating_settings = False
 
-        self.show_setup_wizard()
+        if (
+            self.settings["run_setup_wizard"] or not
+            self.settings["agreements"]["user"] or not
+            self.settings["agreements"]["stable_diffusion"] or not
+            self.settings["agreements"]["airunner"]
+        ):
+            self.show_setup_wizard()
 
 
     def keyPressEvent(self, event):

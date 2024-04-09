@@ -60,9 +60,9 @@ class ChatPromptWidget(BaseWidget):
         self.respond_to_voice(transcription)
         self.ui.prompt.setPlainText(transcription)
 
-    def on_vision_processed(self, message):
+    def on_vision_processed(self, data):
+        message = data["message"]
         message = message.replace("this is an image of ", "")
-        print(message)
         if message not in self.vision_history:
             self.vision_history.append(message)
         self.emit_signal(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL)
