@@ -31,9 +31,9 @@ class TTSHandler(BaseHandler):
     @property
     def processor_path(self):
         if self.use_bark:
-            return "suno/bark-small"
+            return self.settings["tts_settings"]["bark"]["processor_path"]
         elif self.use_speecht5:
-            return "microsoft/speecht5_tts"
+            return self.settings["tts_settings"]["speecht5"]["processor_path"]
         elif self.use_espeak:
             return ""
         return ""
@@ -41,20 +41,20 @@ class TTSHandler(BaseHandler):
     @property
     def model_path(self):
         if self.use_bark:
-            return "suno/bark-small"
+            return self.settings["tts_settings"]["bark"]["model_path"]
         elif self.use_speecht5:
-            return "microsoft/speecht5_tts"
+            return self.settings["tts_settings"]["speecht5"]["model_path"]
         elif self.use_espeak:
             return ""
         return ""
     
     @property
     def vocoder_path(self):
-        return "microsoft/speecht5_hifigan"
+        return self.settings["tts_settings"]["speecht5"]["vocoder_path"]
     
     @property
     def speaker_embeddings_dataset_path(self):
-        return "Matthijs/cmu-arctic-xvectors"
+        return self.settings["tts_settings"]["speecht5"]["embeddings_path"]
 
     @property
     def word_chunks(self):
@@ -362,21 +362,27 @@ class TTSHandler(BaseHandler):
         os.environ["HF_DATASETS_OFFLINE"] = str(int(local_files_only))
 
         if not self.use_bark:
+            embeddings_dataset = None
             self.logger.debug("Loading Dataset")
             try:
                 embeddings_dataset = load_dataset(
                     self.speaker_embeddings_dataset_path,
                     split="validation"
                 )
-            except OSError as _e:
-                return self.load_dataset(
-                    local_files_only=False
-                )
-            self.speaker_embeddings = torch.tensor(
-                embeddings_dataset[7306]["xvector"]
-            ).unsqueeze(0)
+            except OSError as e:
+                if local_files_only:
+                    return self.load_dataset(
+                        local_files_only=False
+                    )
+                else:
+                    self.logger.error("Failed to load dataset")
+                    self.logger.error(e)
+            if embeddings_dataset:
+                self.speaker_embeddings = torch.tensor(
+                    embeddings_dataset[7306]["xvector"]
+                ).unsqueeze(0)
             
-            if self.use_cuda:
+            if self.use_cuda and self.speaker_embeddings is not None:
                 self.speaker_embeddings = self.speaker_embeddings.half().cuda()
 
     def load_corpus(self):
