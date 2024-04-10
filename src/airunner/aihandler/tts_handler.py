@@ -520,9 +520,11 @@ class TTSHandler(BaseHandler):
                 language = settings["language"]
                 gender = settings["gender"]
 
-                self.engine.setProperty('rate', rate)
-                self.engine.setProperty('volume', volume / 100.0)
-                self.engine.setProperty('pitch', pitch)
+                print("USING ESPEAK", message, rate, volume, pitch, voice)
+
+                self.engine.setProperty('rate', 100.0)
+                self.engine.setProperty('volume', 100.0 / 100.0)
+                self.engine.setProperty('pitch', 100.0)
                 self.engine.setProperty('voice', f'{voice}')
                 self.engine.say(message)
                 self.engine.runAndWait()
