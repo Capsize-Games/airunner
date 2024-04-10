@@ -120,9 +120,21 @@ class SDHandler(
         SchedulerMixin.__init__(self)
         MemoryEfficientMixin.__init__(self)
         self.logger.debug("Loading Stable Diffusion model runner...")
-        self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
-        self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
-        self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")[0]
+        try:
+            self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
+        except IndexError:
+            self.safety_checker_model = None
+
+        try:
+            self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
+        except IndexError:
+            self.text_encoder_model = None
+
+        try:
+            self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")[0]
+        except IndexError:
+            self.inpaint_vae_model = None
+
         self.handler_type = HandlerType.DIFFUSER
         self._previous_model: str = ""
         self.cross_attention_kwargs_scale: float = 1.0
