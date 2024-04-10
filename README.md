@@ -91,10 +91,10 @@ For emoji support on Ubuntu install the Noto Color Emoji font:
 sudo apt install fonts-noto-color-emoji
 ```
 
-Install `portaudio`, `libxcb-cursor` and `espeak`
+Install `portaudio`, `libxcb-cursor`, `xclip` and `espeak`
 
 ```bash
-sudo apt-get install libportaudio2 libxcb-cursor0 espeak
+sudo apt-get install libportaudio2 libxcb-cursor0 espeak xclip
 ```
 
 ### PyPi
