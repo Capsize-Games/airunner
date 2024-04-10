@@ -2,6 +2,9 @@ import os
 import requests
 from PySide6.QtCore import QObject, Signal
 
+from airunner.aihandler.logger import Logger
+
+logger = Logger(prefix="DownloadWorker")
 
 class DownloadWorker(QObject):
     progress = Signal(int, int)  # current, total
@@ -19,11 +22,16 @@ class DownloadWorker(QObject):
         self.is_cancelled = True
 
     def download(self):
+        logger.debug(f"Downloading {self.url} to {self.file_name}")
         try:
             with requests.get(self.url, stream=True) as r:
+                logger.debug(f"request {r}")
                 r.raise_for_status()
-                os.makedirs(os.path.dirname(self.file_name), exist_ok=True)
+                dir_name = os.path.dirname(self.file_name)
+                logger.debug(f"creating directory {dir_name}")
+                os.makedirs(dir_name, exist_ok=True)
 
+                logger.debug(f"Writing filename {self.file_name}")
                 with open(self.file_name, "wb") as f:
                     for chunk in r.iter_content(chunk_size=8192):
                         if self.is_cancelled:

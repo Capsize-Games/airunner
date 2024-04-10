@@ -40,9 +40,9 @@ tts_settings_default = {
         gender="male",
         voice="male1",
         language="en-US",
-        rate=0,
-        pitch=0,
-        volume=0,
+        rate=100,
+        pitch=100,
+        volume=100,
         punctuation_mode="none",
     ),
     "bark": dict(
