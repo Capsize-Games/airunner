@@ -4,7 +4,7 @@ from transformers import AutoModelForCausalLM, TextIteratorStreamer
 
 from airunner.aihandler.llm.llm_tools import QuitApplicationTool, StartVisionCaptureTool, StopVisionCaptureTool, \
     StartAudioCaptureTool, StopAudioCaptureTool, StartSpeakersTool, StopSpeakersTool, ProcessVisionTool, \
-    ProcessAudioTool
+    ProcessAudioTool, BashExecuteTool, WriteFileTool
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode, LLMToolName, LLMActionType
 
@@ -96,6 +96,8 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
             LLMToolName.TTS_DISABLE.value: StopSpeakersTool(),
             LLMToolName.DESCRIBE_IMAGE.value: ProcessVisionTool,
             LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
+            LLMToolName.BASH_EXECUTE.value: BashExecuteTool(),
+            LLMToolName.WRITE_FILE.value: WriteFileTool(),
             #LLMToolName.DEFAULT_TOOL.value: RespondToUserTool(),
         }
 
