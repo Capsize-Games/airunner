@@ -73,7 +73,7 @@ class ImportWidget(
         download_url, file, model_version = self.ui.model_choices.currentData()
         size_kb = file["sizeKB"]
 
-        model_data = self.current_model_data[0]
+        model_data = self.current_model_data
         name = model_data["name"] + " " + model_version["name"]
         
         model_version_name = model_version["name"]
@@ -195,7 +195,7 @@ class ImportWidget(
         if model_id:
             data = DownloadCivitAI.get_json(model_id)
 
-        self.current_model_data = [data]
+        self.current_model_data = data
 
         if data is not None:
             model_name = data["name"]
@@ -305,7 +305,7 @@ class ImportWidget(
             file,
             diffuser_model_version,
             pipeline_action,
-            self.current_model_data[0]["type"]
+            self.current_model_data["type"]
         )
 
         self.ui.model_form.set_model_form_data(
@@ -317,9 +317,9 @@ class ImportWidget(
             pipeline_class, 
             diffuser_model_version, 
             path, 
-            self.current_model_data[0]["name"],
-            model_data=self.current_model_data[0],
-            model_type=self.current_model_data[0]["type"]
+            self.current_model_data["name"],
+            model_data=self.current_model_data,
+            model_type=self.current_model_data["type"]
         )
 
         if self.is_civitai:
