@@ -1,18 +1,24 @@
 from urllib.parse import urlparse
-
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
 from airunner.aihandler.stablediffusion.download_civitai import DownloadCivitAI
 from airunner.aihandler.stablediffusion.download_huggingface import DownloadHuggingface
+from airunner.windows.main.ai_model_mixin import AIModelMixin
+from airunner.windows.main.pipeline_mixin import PipelineMixin
 
 
-class ImportWidget(BaseWidget):
+class ImportWidget(
+    BaseWidget,
+    PipelineMixin,
+    AIModelMixin
+):
     widget_class_ = Ui_import_model_widget
     model_widgets = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        AIModelMixin.__init__(self)
         self.current_model_data = None
         self.is_civitai = False
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.show_download_complete)
@@ -67,7 +73,7 @@ class ImportWidget(BaseWidget):
         download_url, file, model_version = self.ui.model_choices.currentData()
         size_kb = file["sizeKB"]
 
-        model_data = self.current_model_data
+        model_data = self.current_model_data[0]
         name = model_data["name"] + " " + model_version["name"]
         
         model_version_name = model_version["name"]
@@ -159,6 +165,19 @@ class ImportWidget(BaseWidget):
             })
             self.show_items_in_scrollarea()
 
+    def reset_form(self):
+        self.ui.download_progress_bar.setValue(0)
+        self.ui.download_progress_bar.hide()
+        self.ui.downloading_label.hide()
+        self.ui.cancel_download_button.hide()
+
+    def show_items_in_scrollarea(self):
+        self.ui.import_form.show()
+        self.ui.model_select_form.hide()
+        self.ui.download_form.hide()
+        self.ui.download_complete_form.hide()
+        self.import_models()
+
     def parse_url(self) -> str:
         url = self.ui.import_url.text()
         try:
@@ -176,7 +195,7 @@ class ImportWidget(BaseWidget):
         if model_id:
             data = DownloadCivitAI.get_json(model_id)
 
-        self.current_model_data = data
+        self.current_model_data = [data]
 
         if data is not None:
             model_name = data["name"]
@@ -204,17 +223,17 @@ class ImportWidget(BaseWidget):
 
         self.ui.model_choices.currentIndexChanged.connect(self.model_version_changed)
 
-        if self.current_model_data:
-            self.ui.name.setText(self.current_model_data["name"])
+        if data:
+            self.ui.name.setText(data["name"])
             self.ui.name.show()
-            if not self.current_model_data["nsfw"]:
+            if not data["nsfw"]:
                 self.ui.nsfw_label.hide()
             else:
                 self.ui.nsfw_label.show()
 
-            if "creator" in self.current_model_data and "username" in self.current_model_data["creator"]:
+            if "creator" in data and "username" in data["creator"]:
                 self.ui.creator.setText(
-                    f"By {self.current_model_data['creator']['username']}"
+                    f"By {data['creator']['username']}"
                 )
             else:
                 self.ui.creator.show()
@@ -259,6 +278,13 @@ class ImportWidget(BaseWidget):
         file_name = file["name"]
         return f"{path}/{version}/{file_name}"
 
+    def get_pipeline_classname(self, pipeline_action, version, category):
+        pipelines = self.get_pipelines(pipeline_action, version, category)
+        if len(pipelines) > 0:
+            return pipelines[0]["classname"]
+        else:
+            return None
+
     def set_model_form_data(self):
         try:
             download_url, file, model_version = self.ui.model_choices.currentData()
@@ -266,16 +292,21 @@ class ImportWidget(BaseWidget):
             return
         model_version_name = model_version["name"]
 
-        categories = self.get_service("ai_model_categories")()
-        actions = self.get_service(ServiceCode.PIPELINE_ACTIONS.value())()
+        categories = self.ai_model_categories()
+        actions = [pipeline["pipeline_action"] for pipeline in self.settings["pipelines"]]
         category = "stablediffusion"
         pipeline_action = "txt2img"
         if "inpaint" in model_version_name:
             pipeline_action = "outpaint"
         diffuser_model_version = model_version["baseModel"]
-        pipeline_class = self.get_service(ServiceCode.GET_PIPELINE_CLASSNAME.value())(pipeline_action, diffuser_model_version, category)
-        diffuser_model_versions = self.get_service("ai_model_versions")()
-        path = self.download_path(file, diffuser_model_version, pipeline_action, self.current_model_data["type"])  # path is the download path of the model
+        pipeline_class = self.get_pipeline_classname(pipeline_action, diffuser_model_version, category)
+        diffuser_model_versions = self.ai_model_versions()
+        path = self.download_path(
+            file,
+            diffuser_model_version,
+            pipeline_action,
+            self.current_model_data[0]["type"]
+        )
 
         self.ui.model_form.set_model_form_data(
             categories, 
@@ -286,9 +317,9 @@ class ImportWidget(BaseWidget):
             pipeline_class, 
             diffuser_model_version, 
             path, 
-            self.current_model_data["name"],
-            model_data=self.current_model_data,
-            model_type=self.current_model_data["type"]
+            self.current_model_data[0]["name"],
+            model_data=self.current_model_data[0],
+            model_type=self.current_model_data[0]["type"]
         )
 
         if self.is_civitai:
