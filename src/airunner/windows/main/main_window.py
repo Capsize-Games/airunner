@@ -247,6 +247,49 @@ class MainWindow(
         self.register(SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True))
         self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True))
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        self.register(SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal)
+        self.register(SignalCode.WRITE_FILE, self.on_write_file_signal)
+
+    def on_write_file_signal(self, data: dict):
+        """
+        Writes data to a file.
+        :param data: dict
+        :return: None
+        """
+        print(data)
+        args = data["args"]
+        if len(args) == 1:
+            message = args[0]
+        else:
+            message = args[1]
+        with open("output.txt", "w") as f:
+            f.write(message)
+
+    def on_bash_execute_signal(self, data: dict):
+        """
+        Takes a message from the LLM and strips bash commands from it.
+        Passes bash command to the bash_execute function.
+        :param message:
+        :return:
+        """
+        args = data["args"]
+        val = self.bash_execute(args[0])
+        print(val)
+
+    def bash_execute(self, command: str):
+        """
+        Executes a bash command.
+        :param command: str
+        :return: str
+        """
+        self.logger.debug(f"Executing bash command {command}")
+        try:
+            command = command.split(" ")
+            result = subprocess.check_output(command, shell=False)
+            return result.decode("utf-8")
+        except Exception as e:
+            self.logger.error(e)
+            return str(e)
 
     def on_application_settings_changed_signal(self, _message: dict):
         if not self._updating_settings:
