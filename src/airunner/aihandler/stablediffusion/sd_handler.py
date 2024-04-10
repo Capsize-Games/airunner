@@ -416,8 +416,17 @@ class SDHandler(
             self.logger.debug("Processor loaded")
         if self.processor is not None and image is not None:
             self.logger.debug("Controlnet: Processing image")
-            image = self.processor(image)
-            image = image.resize((self.settings["working_width"], self.settings["working_height"]))
+            try:
+                image = self.processor(image)
+            except ValueError as e:
+                self.logger.error(f"Error processing image: {e}")
+                image = None
+
+            if image is None:
+                image = image.resize((
+                    self.settings["working_width"],
+                    self.settings["working_height"]
+                ))
             return image
         self.logger.error("No controlnet processor found")
 
