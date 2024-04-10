@@ -4,6 +4,9 @@ from PySide6.QtCore import Qt
 from PySide6 import QtCore
 from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Scheduler, SignalCode
 
+
+AIRUNNER_ENVIRONMENT = os.environ.get("AIRUNNER_ENVIRONMENT", "dev")  # dev or prod
+LOG_LEVEL = logging.FATAL if AIRUNNER_ENVIRONMENT == "prod" else logging.WARNING
 BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 SQLITE_DB_NAME = "airunner.db"
 SQLITE_DB_PATH = os.path.join(BASE_PATH, SQLITE_DB_NAME)
@@ -43,24 +46,24 @@ DEFAULT_PATHS = {
     }
 }
 
-DEFAULT_CHATBOT = dict(
-    username="User",
-    botname="AIRunner",
-    use_personality=True,
-    use_mood=True,
-    use_guardrails=True,
-    use_system_instructions=True,
-    assign_names=True,
-    bot_personality="happy. He loves {{ username }}",
-    bot_mood="",
-    prompt_template="Mistral 7B Instruct: Default Chatbot",
-    guardrails_prompt=(
+DEFAULT_CHATBOT = {
+    "username": "User",
+    "botname": "AIRunner",
+    "use_personality": True,
+    "use_mood": True,
+    "use_guardrails": True,
+    "use_system_instructions": True,
+    "assign_names": True,
+    "bot_personality": "happy. He loves {{ username }}",
+    "bot_mood": "",
+    "prompt_template": "Mistral 7B Instruct: Default Chatbot",
+    "guardrails_prompt": (
         "Always assist with care, respect, and truth. "
         "Respond with utmost utility yet securely. "
         "Avoid harmful, unethical, prejudiced, or negative content. "
         "Ensure replies promote fairness and positivity."
     ),
-    system_instructions=(
+    "system_instructions": (
         "You are a knowledgeable and helpful assistant. "
         "You will always do your best to answer the User "
         "with the most accurate and helpful information. "
@@ -71,7 +74,7 @@ DEFAULT_CHATBOT = dict(
         "NEVER generate text for the User ONLY for "
         "the assistant."
     ),
-)
+}
 
 AVAILABLE_IMAGE_FILTERS = [
     "SaturationFilter",
@@ -378,8 +381,6 @@ SCHEDULER_CLASSES = {
 }
 MIN_SEED = 0
 MAX_SEED = 4294967295
-AIRUNNER_ENVIRONMENT = os.environ.get("AIRUNNER_ENVIRONMENT", "dev")  # dev or prod
-LOG_LEVEL = logging.FATAL if AIRUNNER_ENVIRONMENT == "prod" else logging.WARNING
 SCHEDULERS = [e.value for e in Scheduler]
 DEFAULT_SCHEDULER = Scheduler.DPM_PP_2M_K.value
 AVAILABLE_SCHEDULERS_BY_ACTION = {
@@ -392,7 +393,6 @@ AVAILABLE_SCHEDULERS_BY_ACTION.update({
     "upscale": [Scheduler.EULER.value],
     "superresolution": [Scheduler.DDIM.value, Scheduler.LMS.value, Scheduler.PLMS.value],
 })
-AIRUNNER_ENVIRONMENT = os.environ.get("AIRUNNER_ENVIRONMENT", "dev")  # dev or prod
 SERVER = {
     "host": "127.0.0.1",
     "port": 50006,
