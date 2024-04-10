@@ -224,6 +224,8 @@ class SignalCode(Enum):
     LINES_UPDATED_SIGNAL = "lines_updated_signal"
     DO_GENERATE_SIGNAL = "do_generate_signal"
     UPSCALE_SIGNAL = "upscale_signal"
+    BASH_EXECUTE_SIGNAL = "bash_execute_signal"
+    WRITE_FILE = "write_file_signal"
 
 
 class EngineResponseCode(Enum):
@@ -315,6 +317,8 @@ class LLMToolName(Enum):
     VISION_PROCESS_IMAGES = "vision_process_images"
     VISION_START_CAPTURE = "vision_start_capture"
     VISION_STOP_CAPTURE = "vision_stop_capture"
+    BASH_EXECUTE = "bash_execute"
+    WRITE_FILE = "write_file"
 
 
 class LLMActionType(Enum):

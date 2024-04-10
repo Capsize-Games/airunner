@@ -58,7 +58,13 @@ def create_application_control_tool_class(description, name, signal_code):
             super().__init__(*args, **kwargs)
 
         def __call__(self, *args, **kwargs):
-            self.emit_signal(self.signal_code)
+            print(args, kwargs)
+            self.emit_signal(
+                self.signal_code,
+                {
+                    "args": args
+                }
+            )
             return "emitting signal"
     ApplicationControlTool.description = description
     ApplicationControlTool.__name__ = name
@@ -140,6 +146,23 @@ ProcessAudioTool = create_application_control_tool_class(
     ),
     LLMToolName.LLM_PROCESS_STT_AUDIO.value,
     SignalCode.LLM_PROCESS_STT_AUDIO_SIGNAL
+)
+
+BashExecuteTool = create_application_control_tool_class(
+    (
+        "Write a bash command for linux. "
+    ),
+    LLMToolName.BASH_EXECUTE.value,
+    SignalCode.BASH_EXECUTE_SIGNAL
+)
+
+WriteFileTool = create_application_control_tool_class(
+    (
+        "Write text to a file. "
+        "Takes a string as input and returns nothing."
+    ),
+    LLMToolName.WRITE_FILE.value,
+    SignalCode.WRITE_FILE
 )
 
 RespondToUserTool = create_application_control_tool_class(
