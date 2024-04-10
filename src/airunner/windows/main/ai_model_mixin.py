@@ -66,10 +66,10 @@ class AIModelMixin:
         return val
     
     def ai_models_find(self, search="", default=False):
-        return [model for model in self.settings["ai_models"] if model["is_default"] == default and search.lower() in model["name"].lower()]
+        return [model for model in self.settings["ai_models"] if model.get("is_default", False) == default and search.lower() in model["name"].lower()]
 
     def ai_model_get_disabled_default(self):
-        return [model for model in self.settings["ai_models"] if model["is_default"] == True and model["enabled"] == False]
+        return [model for model in self.settings["ai_models"] if model.get("is_default", False) == True and model["enabled"] == False]
 
     def on_ai_models_save_or_update_signal(self, data: dict):
         new_models = data.get("models", [])
