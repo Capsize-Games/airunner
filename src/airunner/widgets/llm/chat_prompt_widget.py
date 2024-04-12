@@ -226,7 +226,6 @@ class ChatPromptWidget(BaseWidget):
 
     def llm_action_changed(self, val: str):
         settings = self.settings
-        print("SETTING LLM ACTION TO ", val)
         settings["llm_generator_settings"]["action"] = val
         self.settings = settings
 
