@@ -101,22 +101,17 @@ class ImportWidget(
                 'is_default': False
             })
         elif model_type == "LORA":
-            # lora_exists = session.query(Lora).filter_by(
-            #     name=name,
-            #     path=file_path,
-            # ).first()
-            # if not lora_exists:
-            #     new_lora = Lora(
-            #         name=name,
-            #         path=file_path,
-            #         scale=1,
-            #         enabled=True,
-            #         loaded=False,
-            #         trigger_word=trained_words,
-            #     )
-            #     session.add(new_lora)
-            # TODO: handle loral
-            pass
+            name = file["name"].replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
+            lora_data = dict(
+                name=name,
+                path=file_path,
+                scale=1,
+                enabled=True,
+                loaded=False,
+                trigger_word=trained_words,
+                version=model_version["baseModel"]
+            )
+            self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
         elif model_type == "TextualInversion":
             # name = file_path.split("/")[-1].split(".")[0]
             # embedding_exists = session.query(Embedding).filter_by(
