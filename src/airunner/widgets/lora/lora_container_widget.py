@@ -269,7 +269,6 @@ class LoraContainerWidget(BaseWidget):
         self.settings = settings
 
     def search_text_changed(self, val):
-        print("search text changed", val)
         self.search_filter = val
         self.clear_lora_widgets()
         self.load_lora()
