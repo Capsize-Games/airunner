@@ -51,8 +51,9 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
             self.chat_agent.interrupt_process()
 
     def on_clear_history_signal(self, _message):
-        self.logger.debug("Clearing chat history")
-        self.chat_agent.history = []
+        if self.chat_agent is not None:
+            self.logger.debug("Clearing chat history")
+            self.chat_agent.history = []
 
     @property
     def is_mistral(self) -> bool:
