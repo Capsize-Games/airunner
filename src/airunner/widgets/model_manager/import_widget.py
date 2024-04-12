@@ -1,4 +1,6 @@
+import os
 from urllib.parse import urlparse
+
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
@@ -83,7 +85,12 @@ class ImportWidget(
             pipeline_action = "outpaint"
         diffuser_model_version = model_version["baseModel"]
         model_type = model_data["type"]
-        file_path = self.download_path(file, diffuser_model_version, pipeline_action, model_type)  # path is the download path of the model
+        file_path = self.download_path(
+            file,
+            diffuser_model_version,
+            pipeline_action,
+            model_type
+        )
 
         trained_words = model_version.get("trainedWords", [])
         if isinstance(trained_words, str):
