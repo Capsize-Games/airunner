@@ -34,10 +34,20 @@ class LoraContainerWidget(BaseWidget):
                     continue
             self.add_lora(lora)
         
+        self.add_spacer()
+
+    def remove_spacer(self):
+        # remove spacer from end of self.ui.scrollAreaWidgetContents.layout()
+        if self.spacer:
+            self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
+
+    def add_spacer(self):
         # add spacer to end of self.ui.scrollAreaWidgetContents.layout()
         if not self.spacer:
             self.spacer = QWidget()
             self.spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        else:
+            self.remove_spacer()
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
 
     def add_lora(self, lora):
@@ -45,6 +55,8 @@ class LoraContainerWidget(BaseWidget):
             return
         lora_widget = LoraWidget(lora=lora)
         self.ui.scrollAreaWidgetContents.layout().addWidget(lora_widget)
+        self.add_spacer()
+
 
     def scan_for_lora(self):
         lora_path = self.settings["path_settings"]["lora_model_path"]
