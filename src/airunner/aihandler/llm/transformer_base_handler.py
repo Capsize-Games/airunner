@@ -148,7 +148,7 @@ class TransformerBaseHandler(BaseHandler):
             if config:
                 params["quantization_config"] = config
             params["torch_dtype"] = torch.bfloat16
-            params["device_map"] = get_torch_device()
+            params["device_map"] = get_torch_device(self.settings["memory_settings"]["default_gpu"][self.model_type])
         else:
             params["torch_dtype"] = torch.bfloat16
             params["device_map"] = "auto"

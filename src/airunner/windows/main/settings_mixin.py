@@ -119,6 +119,7 @@ class SettingsMixin:
         self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = dict(
+            installation_path="~/airunner",
             trust_remote_code=False,
             use_cuda=True,
             current_layer_index=0,
@@ -279,6 +280,12 @@ class SettingsMixin:
                 tome_sd_ratio=600,
                 move_unused_model_to_cpu=False,
                 unload_unused_models=True,
+                default_gpu=dict(
+                    sd=0,
+                    llm=0,
+                    tts=0,
+                    stt=0,
+                )
             ),
             grid_settings=dict(
                 cell_size=64,

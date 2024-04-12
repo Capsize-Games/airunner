@@ -233,7 +233,7 @@ class AIRunnerAgent(
 
         # Encode the rendered template
         encoded = self.tokenizer(rendered_template, return_tensors="pt")
-        model_inputs = encoded.to(get_torch_device())
+        model_inputs = encoded.to(get_torch_device(self.settings["memory_settings"]["default_gpu"]["llm"]))
 
         # Generate the response
         self.logger.debug("Generating...")

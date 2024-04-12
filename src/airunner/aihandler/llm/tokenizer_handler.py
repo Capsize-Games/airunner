@@ -46,7 +46,7 @@ class TokenizerHandler(TransformerBaseHandler):
         kwargs = {
             "local_files_only": local_files_only,
             "token": self.request_data.get("hf_api_key_read_key"),
-            "device_map": get_torch_device(),
+            "device_map": get_torch_device(self.settings["memory_settings"]["default_gpu"][self.model_type]),
             "trust_remote_code": True,
             "torch_dtype": self.torch_dtype,
         }

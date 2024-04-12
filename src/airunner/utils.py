@@ -573,6 +573,6 @@ def random_seed():
     return _random_generator.randint(0, MAX_SEED)
 
 
-def get_torch_device():
+def get_torch_device(card_index: int = 0):
     use_cuda = torch.cuda.is_available()
-    return torch.device(f"cuda" if use_cuda else "cpu")
+    return torch.device(f"cuda:{card_index}" if use_cuda else "cpu")
