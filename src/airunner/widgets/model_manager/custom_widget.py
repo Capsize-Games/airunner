@@ -56,7 +56,6 @@ class CustomModelWidget(
             pipeline_action = model.get("pipeline_action", GeneratorSection.TXT2IMG)
             pipeline_class = self.get_pipeline_classname(
                 pipeline_action, version, category)
-            print(model)
             model_widget = ModelWidget(
                 path=model["path"],
                 branch=model["branch"],
