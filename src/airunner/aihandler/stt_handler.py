@@ -49,6 +49,7 @@ class STTHandler(BaseHandler):
         self.load_processor()
         self.load_feature_extractor()
         self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
+        self.model_type = "stt"
 
     @property
     def use_cuda(self):
