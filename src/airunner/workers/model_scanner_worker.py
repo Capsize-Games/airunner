@@ -1,12 +1,18 @@
 import os
-
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode
 from airunner.models.modeldata import ModelData
-from airunner.service_locator import ServiceLocator
+from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.workers.worker import Worker
 
 
-class ModelScannerWorker(Worker):
+class ModelScannerWorker(
+    Worker,
+    PipelineMixin
+):
+    def __init__(self, *args, **kwargs):
+        Worker.__init__(self)
+        PipelineMixin.__init__(self)
+
     def handle_message(self, _message):
         self.scan_for_models()
 
@@ -51,7 +57,7 @@ class ModelScannerWorker(Worker):
                             model.category = "stablediffusion"
                             model.enabled = True
                             model.pipeline_action = key
-                            model.pipeline_class = ServiceLocator.get(ServiceCode.GET_PIPELINE_CLASSNAME)(
+                            model.pipeline_class = self.get_pipeline_classname(
                                 model.pipeline_action, model.version, model.category
                             )
 
