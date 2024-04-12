@@ -6,438 +6,499 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>603</width>
-    <height>903</height>
+    <width>1007</width>
+    <height>1034</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout_3">
+   <item row="17" column="0" rowspan="2" colspan="4">
+    <widget class="QCheckBox" name="use_lastchannels">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Alternative way of ordering NCHW tensors in memory preserving dimensions ordering. Channels last tensors ordered in such a way that channels become the densest dimension (aka storing images pixel-per-pixel). &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Since not all operators currently support channels last format it may result in a worst performance, so it’s better to try it and see if it works for your model.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Channels last memory</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="5">
+    <widget class="QLabel" name="label_11">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Assign models to available cards</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0" colspan="5">
+    <widget class="QLabel" name="label_9">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Keep this checked to take advantage of torch 2.0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="23" column="0" colspan="5">
+    <widget class="QCheckBox" name="use_enable_sequential_cpu_offload">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with &lt;/span&gt;attention slicing&lt;span style=&quot; font-weight:400;&quot;&gt; for lower memory consumption.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Offloads the weights to CPU and only load them to GPU when performing the forward pass for memory savings.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Sequential CPU offload</string>
+     </property>
+    </widget>
+   </item>
+   <item row="24" column="0" colspan="5">
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <italic>false</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>Less VRAM usage, slower inference</string>
+     </property>
+     <property name="indent">
+      <number>-1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="37" column="0" colspan="5">
+    <widget class="Line" name="line_9">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="16" column="0" colspan="5">
+    <widget class="Line" name="line_4">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0" colspan="5">
+    <widget class="Line" name="line_8">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="34" column="0" colspan="5">
+    <widget class="Line" name="line_6">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="26" column="0" colspan="3">
+    <widget class="QCheckBox" name="enable_model_cpu_offload">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with attention slicing for lower memory consumption.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Moves whole models to the GPU, instead of handling each model’s constituent &lt;/span&gt;&lt;span style=&quot; font-weight:400; font-style:italic;&quot;&gt;modules&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;. This results in a negligible impact on inference time (compared with moving the pipeline to &lt;/span&gt;&lt;span style=&quot; font-family:'monospace'; font-weight:400;&quot;&gt;cuda&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;), while still providing some memory savings.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Model CPU offload</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0" colspan="5">
+    <widget class="QCheckBox" name="use_accelerated_transformers">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Optimized and memory-efficient attention implementation.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Accelerated Transformers</string>
+     </property>
+    </widget>
+   </item>
+   <item row="29" column="0" colspan="2">
+    <widget class="QCheckBox" name="use_tf32">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;On Ampere and later CUDA devices matrix multiplications and convolutions can use the TensorFloat32 (TF32) mode for faster but slightly less accurate computations.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>TF32</string>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="0" colspan="5">
+    <widget class="QLabel" name="label_4">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <italic>false</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>Less VRAM usage, slight inference impact</string>
+     </property>
+     <property name="indent">
+      <number>-1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="28" column="0" colspan="5">
+    <widget class="Line" name="line_3">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="36" column="0" colspan="2">
+    <widget class="QLabel" name="label_7">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <italic>false</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>Work with large images</string>
+     </property>
+     <property name="indent">
+      <number>-1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="0" rowspan="2" colspan="2">
+    <widget class="QCheckBox" name="use_attention_slicing">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Perform computation in steps instead of all at once.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;About 10% slower inference times.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Uses as little as 3.2 GB of VRAM.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Attention Slicing</string>
+     </property>
+    </widget>
+   </item>
+   <item row="22" column="0" colspan="5">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="33" column="0" colspan="2">
+    <widget class="QLabel" name="label_6">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <italic>false</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>Work with large batches</string>
+     </property>
+     <property name="indent">
+      <number>-1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="30" column="0" colspan="5">
+    <widget class="QLabel" name="label_5">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <italic>false</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>faster matrix multiplications on ampere achitecture</string>
+     </property>
+     <property name="indent">
+      <number>-1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="31" column="0" colspan="5">
+    <widget class="Line" name="line_5">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0" colspan="5">
+    <widget class="QLabel" name="label_8">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <italic>false</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>Faster inference, lower VRAM usage</string>
+     </property>
+     <property name="indent">
+      <number>-1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="35" column="0" colspan="2">
+    <widget class="QCheckBox" name="use_tiled_vae">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with Attention Slicing or Xformers&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Makes it possible to work with large images on limited VRAM. Splits image into overlapping tiles, decodes tiles, blends outputs to make final image.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Tile vae</string>
+     </property>
+    </widget>
+   </item>
+   <item row="38" column="0" colspan="5">
+    <widget class="QGroupBox" name="use_tome">
+     <property name="toolTip">
+      <string>Merge redundant tokens for faster inference. May result in slight reduction in image quality.</string>
+     </property>
+     <property name="title">
+      <string>ToMe Token Merging</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_10">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Faster inference, slight image impact</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="SliderWidget" name="tome_sd_ratio" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="label_text" stdset="0">
+         <string>Ratio</string>
+        </property>
+        <property name="slider_callback" stdset="0">
+         <string notr="true">tome_sd_ratio_value_change</string>
+        </property>
+        <property name="current_value" stdset="0">
+         <number>1000</number>
+        </property>
+        <property name="slider_maximum" stdset="0">
+         <number>1000</number>
+        </property>
+        <property name="spinbox_maximum" stdset="0">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="display_as_float" stdset="0">
+         <bool>true</bool>
+        </property>
+        <property name="spinbox_single_step" stdset="0">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="spinbox_page_step" stdset="0">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="spinbox_minimum" stdset="0">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="slider_minimum" stdset="0">
+         <number>0</number>
+        </property>
+        <property name="settings_property" stdset="0">
+         <string>memory_settings.tome_sd_ratio</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="25" column="0" colspan="5">
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="32" column="0" colspan="2">
+    <widget class="QCheckBox" name="use_enable_vae_slicing">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with Attention Slicing or Xformers&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Decode large batches of images with limited VRAM, or to enable batches with 32 images or more.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Vae Slicing</string>
+     </property>
+    </widget>
+   </item>
+   <item row="27" column="0" colspan="5">
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <italic>false</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>Less VRAM usage, slight inference impact</string>
+     </property>
+     <property name="indent">
+      <number>-1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="20" column="0" colspan="5">
+    <widget class="QLabel" name="label_3">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <italic>false</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>May slow inference on some models, speed up on others</string>
+     </property>
+     <property name="indent">
+      <number>-1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="39" column="3" colspan="2">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>624</width>
+       <height>13</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="3" column="0">
+    <widget class="Line" name="line_7">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="5">
+    <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <widget class="QPushButton" name="optimize_memory_button">
-       <property name="text">
-        <string>Optimize Memory Settings</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line_7">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="use_accelerated_transformers">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Optimized and memory-efficient attention implementation.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Accelerated Transformers</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_8">
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-         <italic>false</italic>
-        </font>
-       </property>
-       <property name="text">
-        <string>Faster inference, lower VRAM usage</string>
-       </property>
-       <property name="indent">
-        <number>-1</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_9">
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Keep this checked to take advantage of torch 2.0</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line_8">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="use_attention_slicing">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Perform computation in steps instead of all at once.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;About 10% slower inference times.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Uses as little as 3.2 GB of VRAM.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Attention Slicing</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_4">
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-         <italic>false</italic>
-        </font>
-       </property>
-       <property name="text">
-        <string>Less VRAM usage, slight inference impact</string>
-       </property>
-       <property name="indent">
-        <number>-1</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line_4">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="use_lastchannels">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Alternative way of ordering NCHW tensors in memory preserving dimensions ordering. Channels last tensors ordered in such a way that channels become the densest dimension (aka storing images pixel-per-pixel). &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Since not all operators currently support channels last format it may result in a worst performance, so it’s better to try it and see if it works for your model.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Channels last memory</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_3">
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-         <italic>false</italic>
-        </font>
-       </property>
-       <property name="text">
-        <string>May slow inference on some models, speed up on others</string>
-       </property>
-       <property name="indent">
-        <number>-1</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="use_enable_sequential_cpu_offload">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with &lt;/span&gt;attention slicing&lt;span style=&quot; font-weight:400;&quot;&gt; for lower memory consumption.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Offloads the weights to CPU and only load them to GPU when performing the forward pass for memory savings.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Sequential CPU offload</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label">
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-         <italic>false</italic>
-        </font>
-       </property>
-       <property name="text">
-        <string>Less VRAM usage, slower inference</string>
-       </property>
-       <property name="indent">
-        <number>-1</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="enable_model_cpu_offload">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with attention slicing for lower memory consumption.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Moves whole models to the GPU, instead of handling each model’s constituent &lt;/span&gt;&lt;span style=&quot; font-weight:400; font-style:italic;&quot;&gt;modules&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;. This results in a negligible impact on inference time (compared with moving the pipeline to &lt;/span&gt;&lt;span style=&quot; font-family:'monospace'; font-weight:400;&quot;&gt;cuda&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;), while still providing some memory savings.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Model CPU offload</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_2">
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-         <italic>false</italic>
-        </font>
-       </property>
-       <property name="text">
-        <string>Less VRAM usage, slight inference impact</string>
-       </property>
-       <property name="indent">
-        <number>-1</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line_3">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="use_tf32">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;On Ampere and later CUDA devices matrix multiplications and convolutions can use the TensorFloat32 (TF32) mode for faster but slightly less accurate computations.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>TF32</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_5">
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-         <italic>false</italic>
-        </font>
-       </property>
-       <property name="text">
-        <string>faster matrix multiplications on ampere achitecture</string>
-       </property>
-       <property name="indent">
-        <number>-1</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line_5">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="use_enable_vae_slicing">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with Attention Slicing or Xformers&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Decode large batches of images with limited VRAM, or to enable batches with 32 images or more.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Vae Slicing</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_6">
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-         <italic>false</italic>
-        </font>
-       </property>
-       <property name="text">
-        <string>Work with large batches</string>
-       </property>
-       <property name="indent">
-        <number>-1</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line_6">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="use_tiled_vae">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with Attention Slicing or Xformers&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Makes it possible to work with large images on limited VRAM. Splits image into overlapping tiles, decodes tiles, blends outputs to make final image.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Tile vae</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_7">
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-         <italic>false</italic>
-        </font>
-       </property>
-       <property name="text">
-        <string>Work with large images</string>
-       </property>
-       <property name="indent">
-        <number>-1</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line_9">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QGroupBox" name="use_tome">
-       <property name="toolTip">
-        <string>Merge redundant tokens for faster inference. May result in slight reduction in image quality.</string>
-       </property>
+      <widget class="QGroupBox" name="groupBox">
        <property name="title">
-        <string>ToMe Token Merging</string>
+        <string>Art Model</string>
        </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_2">
+       <layout class="QGridLayout" name="gridLayout_3">
         <item row="0" column="0">
-         <widget class="QLabel" name="label_10">
-          <property name="font">
-           <font>
-            <pointsize>10</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Faster inference, slight image impact</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="SliderWidget" name="tome_sd_ratio" native="true">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>20</height>
-           </size>
-          </property>
-          <property name="label_text" stdset="0">
-           <string>Ratio</string>
-          </property>
-          <property name="slider_callback" stdset="0">
-           <string notr="true">tome_sd_ratio_value_change</string>
-          </property>
-          <property name="current_value" stdset="0">
-           <number>1000</number>
-          </property>
-          <property name="slider_maximum" stdset="0">
-           <number>1000</number>
-          </property>
-          <property name="spinbox_maximum" stdset="0">
-           <double>1.000000000000000</double>
-          </property>
-          <property name="display_as_float" stdset="0">
-           <bool>true</bool>
-          </property>
-          <property name="spinbox_single_step" stdset="0">
-           <double>0.010000000000000</double>
-          </property>
-          <property name="spinbox_page_step" stdset="0">
-           <double>0.100000000000000</double>
-          </property>
-          <property name="spinbox_minimum" stdset="0">
-           <double>0.000000000000000</double>
-          </property>
-          <property name="slider_minimum" stdset="0">
-           <number>0</number>
-          </property>
-          <property name="settings_property" stdset="0">
-           <string>memory_settings.tome_sd_ratio</string>
-          </property>
-         </widget>
+         <widget class="QComboBox" name="sd_combobox"/>
         </item>
        </layout>
       </widget>
      </item>
      <item>
-      <spacer name="verticalSpacer">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
+      <widget class="QGroupBox" name="groupBox_4">
+       <property name="title">
+        <string>Speech to text</string>
        </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
+       <layout class="QGridLayout" name="gridLayout_6">
+        <item row="0" column="0">
+         <widget class="QComboBox" name="stt_combobox"/>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_3">
+       <property name="title">
+        <string>Text to speech</string>
        </property>
-      </spacer>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="0" column="0">
+         <widget class="QComboBox" name="tts_combobox"/>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_2">
+       <property name="title">
+        <string>Text Generator</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <widget class="QComboBox" name="llm_combobox"/>
+        </item>
+       </layout>
+      </widget>
      </item>
     </layout>
+   </item>
+   <item row="0" column="0" colspan="5">
+    <widget class="QPushButton" name="optimize_memory_button">
+     <property name="text">
+      <string>Optimize Memory Settings</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>
@@ -458,8 +519,8 @@
    <slot>action_toggled_vae_slicing(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>103</x>
-     <y>415</y>
+     <x>112</x>
+     <y>598</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -474,11 +535,11 @@
    <slot>action_toggled_tile_vae(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>50</x>
-     <y>470</y>
+     <x>59</x>
+     <y>664</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-1</x>
+     <x>0</x>
      <y>440</y>
     </hint>
    </hints>
@@ -490,11 +551,11 @@
    <slot>action_toggled_tf32(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>47</x>
-     <y>360</y>
+     <x>56</x>
+     <y>532</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-3</x>
+     <x>0</x>
      <y>318</y>
     </hint>
    </hints>
@@ -506,8 +567,8 @@
    <slot>action_toggled_sequential_cpu_offload(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>134</x>
-     <y>249</y>
+     <x>143</x>
+     <y>400</y>
     </hint>
     <hint type="destinationlabel">
      <x>258</x>
@@ -522,8 +583,8 @@
    <slot>action_toggled_accelerated_transformers(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>145</x>
-     <y>62</y>
+     <x>154</x>
+     <y>178</y>
     </hint>
     <hint type="destinationlabel">
      <x>5</x>
@@ -543,7 +604,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>176</x>
-     <y>-14</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -554,8 +615,8 @@
    <slot>action_toggled_last_memory(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>173</x>
-     <y>194</y>
+     <x>182</x>
+     <y>334</y>
     </hint>
     <hint type="destinationlabel">
      <x>271</x>
@@ -570,8 +631,8 @@
    <slot>action_toggled_attention_slicing(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>96</x>
-     <y>139</y>
+     <x>105</x>
+     <y>268</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -586,12 +647,76 @@
    <slot>action_toggled_model_cpu_offload(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>94</x>
-     <y>305</y>
+     <x>103</x>
+     <y>466</y>
     </hint>
     <hint type="destinationlabel">
      <x>53</x>
-     <y>-13</y>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>sd_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_changed_sd_combobox(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>87</x>
+     <y>115</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>582</x>
+     <y>-10</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>llm_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_changed_llm_combobox(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>337</x>
+     <y>107</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>686</x>
+     <y>2</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>tts_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_changed_tts_combobox(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>639</x>
+     <y>116</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>665</x>
+     <y>17</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>stt_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_changed_stt_combobox(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>812</x>
+     <y>109</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>17</y>
     </hint>
    </hints>
   </connection>
@@ -607,5 +732,9 @@
   <slot>action_toggled_vae_slicing(bool)</slot>
   <slot>action_toggled_tile_vae(bool)</slot>
   <slot>action_toggled_tome(bool)</slot>
+  <slot>action_changed_sd_combobox(QString)</slot>
+  <slot>action_changed_llm_combobox(QString)</slot>
+  <slot>action_changed_stt_combobox(QString)</slot>
+  <slot>action_changed_tts_combobox(QString)</slot>
  </slots>
 </ui>
