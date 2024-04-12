@@ -16,7 +16,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QGroupBox,
-    QSizePolicy, QSpinBox, QWidget)
+    QSizePolicy, QSpacerItem, QSpinBox, QWidget)
 
 class Ui_font_setting_widget(object):
     def setupUi(self, font_setting_widget):
@@ -42,6 +42,10 @@ class Ui_font_setting_widget(object):
 
 
         self.gridLayout_4.addWidget(self.section, 0, 0, 1, 1)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout_4.addItem(self.verticalSpacer, 1, 0, 1, 1)
 
 
         self.retranslateUi(font_setting_widget)
