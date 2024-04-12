@@ -150,6 +150,7 @@ class TTSHandler(BaseHandler):
         self.do_interrupt = False
         self.cancel_generated_speech = False
         self.paused = False
+        self.model_type = "tts"
 
         self.logger.debug("Loading")
         self.register(
