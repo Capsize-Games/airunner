@@ -558,19 +558,19 @@ class SDHandler(
         if response is not None:
             nsfw_content_detected = response["nsfw_content_detected"]
 
-            if nsfw_content_detected:
-                self.emit_signal(
-                    SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL,
-                    response
-                )
-            else:
-                response["action"] = self.sd_request.generator_settings.section
-                response["outpaint_box_rect"] = self.sd_request.active_rect
+            # if nsfw_content_detected:
+            #     self.emit_signal(
+            #         SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL,
+            #         response
+            #     )
+            # else:
+            response["action"] = self.sd_request.generator_settings.section
+            response["outpaint_box_rect"] = self.sd_request.active_rect
 
-                self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
-                    'code': EngineResponseCode.IMAGE_GENERATED,
-                    'message': response
-                })
+            self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
+                'code': EngineResponseCode.IMAGE_GENERATED,
+                'message': response
+            })
 
     def has_pipe(self) -> bool:
         return self.pipe is not None
@@ -849,8 +849,16 @@ class SDHandler(
                         image = images[i]
                         image = image.convert("RGBA")
                         draw = ImageDraw.Draw(image)
-                        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 15)
-                        draw.text((0, 0), "NSFW", (255, 255, 255), font=font)
+                        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+                        draw.text(
+                            (
+                                self.settings["working_width"] / 2 - 30,
+                                self.settings["working_height"] / 2
+                            ),
+                            "NSFW",
+                            (255, 255, 255),
+                            font=font
+                        )
                         if do_base64:
                             img_byte_arr = io.BytesIO()
                             image.save(img_byte_arr, format='PNG')
