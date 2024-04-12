@@ -24,7 +24,7 @@ class Ui_chat_prompt(object):
     def setupUi(self, chat_prompt):
         if not chat_prompt.objectName():
             chat_prompt.setObjectName(u"chat_prompt")
-        chat_prompt.resize(474, 1044)
+        chat_prompt.resize(474, 1030)
         self.gridLayout = QGridLayout(chat_prompt)
         self.gridLayout.setObjectName(u"gridLayout")
         self.chat_prompt_splitter = QSplitter(chat_prompt)
@@ -42,7 +42,7 @@ class Ui_chat_prompt(object):
         self.chat_container.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 454, 423))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 454, 416))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
