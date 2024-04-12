@@ -205,6 +205,8 @@ class SDHandler(
         self.feature_extractor = None
         self.reload_prompts = False
         self.moved_to_cpu = False
+        self.cur_prompt = ""
+        self.cur_neg_prompt = ""
         self.data = {
             "action": "txt2img",
         }
@@ -519,17 +521,19 @@ class SDHandler(
             )
         )
 
-        cur_prompt = self.sd_request.generator_settings.prompt
-        cur_neg_prompt = self.sd_request.generator_settings.negative_prompt
-        prompt, negative_prompt = self.sd_request.generator_settings.parse_prompt(
-            self.settings["nsfw_filter"],
-            self.settings["generator_settings"]["prompt"],
-            self.settings["generator_settings"]["negative_prompt"]
-        )
         if (
-            prompt != cur_prompt or
-            negative_prompt != cur_neg_prompt
+            self.settings["generator_settings"]["prompt"] != self.cur_prompt or
+            self.settings["generator_settings"]["negative_prompt"] != self.cur_neg_prompt
         ):
+            self.cur_prompt = self.settings["generator_settings"]["prompt"]
+            self.cur_neg_prompt = self.settings["generator_settings"]["negative_prompt"]
+
+            self.sd_request.generator_settings.parse_prompt(
+                self.settings["nsfw_filter"],
+                self.settings["generator_settings"]["prompt"],
+                self.settings["generator_settings"]["negative_prompt"]
+            )
+
             self.latents = None
             self.latents_set = False
             self.reload_prompts = True
