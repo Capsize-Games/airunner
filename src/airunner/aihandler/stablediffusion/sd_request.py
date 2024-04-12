@@ -54,24 +54,25 @@ class GeneratorSettings:
         self.controlnet_image_settings = self.controlnet_image_settings = ControlnetImageSettings(
             **data.get("controlnet_image_settings", {})
         )
-        prompt, negative_prompt = self.parse_prompt(settings["nsfw_filter"])
-        self.prompt = prompt
-        self.negative_prompt = negative_prompt
+        self.parse_prompt(settings["nsfw_filter"])
 
     def parse_prompt(self, nsfw_filter_active: bool, prompt=None, negative_prompt=None):
         prompt = prompt or self.prompt
-        negative_prompt = negative_prompt or self.prompt
+        negative_prompt = negative_prompt or self.negative_prompt
         cipher_suite = Fernet(SD_GUARDRAILS_KEY)
         plain_text = cipher_suite.decrypt(SD_GUARDRAILS)
         bad_words_list = plain_text.decode().split(",")
         # Apply guardrails when nsfw_filter is disabled
         if not nsfw_filter_active:
+            negative_prompt_words = [negative_prompt]
             for word in bad_words_list:
                 if word in prompt:
                     prompt = prompt.replace(word, "")
                 if word not in negative_prompt:
-                    negative_prompt += f" {word}"
-        return prompt, negative_prompt
+                    negative_prompt_words.append(word)
+            negative_prompt = ", ".join(negative_prompt_words)
+        self.prompt = prompt
+        self.negative_prompt = negative_prompt
 
 
 class MemorySettings:
