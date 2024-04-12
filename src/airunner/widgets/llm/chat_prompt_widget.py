@@ -56,7 +56,8 @@ class ChatPromptWidget(BaseWidget):
             self.generating = False
             self.enable_send_button()
 
-    def on_hear_signal(self, transcription):
+    def on_hear_signal(self, data: dict):
+        transcription = data["transcription"]
         self.respond_to_voice(transcription)
         self.ui.prompt.setPlainText(transcription)
 
@@ -225,7 +226,6 @@ class ChatPromptWidget(BaseWidget):
 
     def llm_action_changed(self, val: str):
         settings = self.settings
-        print("SETTING LLM ACTION TO ", val)
         settings["llm_generator_settings"]["action"] = val
         self.settings = settings
 
@@ -273,7 +273,7 @@ class ChatPromptWidget(BaseWidget):
     def insert_newline(self):
         self.ui.prompt.insertPlainText("\n")
 
-    def respond_to_voice(self, transcript):
+    def respond_to_voice(self, transcript: str):
         transcript = transcript.strip()
         if transcript == "." or transcript is None or transcript == "":
             return

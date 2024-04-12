@@ -27,10 +27,11 @@ class BaseHandler(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
+        self.model_type = "llm"
 
     @property
     def device(self):
-        return get_torch_device()
+        return get_torch_device(self.settings["memory_settings"]["default_gpu"][self.model_type])
 
     @property
     def llm_dtype(self):
