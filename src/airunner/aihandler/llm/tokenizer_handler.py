@@ -49,6 +49,7 @@ class TokenizerHandler(TransformerBaseHandler):
             "device_map": get_torch_device(self.settings["memory_settings"]["default_gpu"][self.model_type]),
             "trust_remote_code": True,
             "torch_dtype": self.torch_dtype,
+            "attn_implementation": "flash_attention_2",
         }
         # if self.do_quantize_model:
         #     config = self.quantization_config()
