@@ -23,21 +23,18 @@ class FontSettingWidget(BaseWidget):
         self.ui.font_family.blockSignals(True)
         self.ui.font_family.clear()
         self.ui.font_family.addItems(QFontDatabase().families())
-        print(self.settings["font_settings"])
-        print(self.section)
-        print(self.settings["font_settings"][self.section]["font_family"])
         self.ui.font_family.setCurrentText(self.settings["font_settings"][self.section]["font_family"])
         self.ui.font_family.blockSignals(False)
 
     def initialize_font_size(self):
         self.ui.size.blockSignals(True)
-        self.ui.size.setValue(self.settings["font_settings"][self.section]["size"])
+        self.ui.size.setValue(self.settings["font_settings"][self.section]["font_size"])
         self.ui.size.blockSignals(False)
 
     @Slot(int)
     def size_changed(self, size: int):
         settings = self.settings
-        settings["font_settings"][self.section]["size"] = size
+        settings["font_settings"][self.section]["font_size"] = size
         self.settings = settings
 
     @Slot(str)

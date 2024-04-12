@@ -47,8 +47,9 @@ QComboBox:hover {
     selection-color: rgba(0, 132, 185, 50);
 } */
 /* hovering over items in the QComboBox should change the background color of those items */
-QComboBox::item:hover QAbstractItemView {
-    background-color: rgba(0, 132, 185, 50);
+QComboBox QAbstractItemView {
+    background-color: #333333;  /* dark gray background */
+    color: #C8C8C8;  /* light gray text */
 }
 
 /* hover over individual combobox items */
