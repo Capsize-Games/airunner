@@ -86,16 +86,28 @@ class LoraContainerWidget(BaseWidget):
         for dirpath, dirnames, filenames in os.walk(lora_path):
             # get version from dirpath
             version = dirpath.split("/")[-1]
+            do_skip = False
             for file in filenames:
                 if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
                     name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-                    self.emit_signal(SignalCode.LORA_ADD_SIGNAL, {
-                        'name': name,
-                        'path': os.path.join(dirpath, file),
-                        'enabled': True,
-                        'scale': 100.0,
-                        'version': version
-                    })
+                    for lora in self.settings["lora"]:
+                        if lora["name"] == name:
+                            do_skip = True
+                            break
+
+                    if not do_skip:
+                        lora_data = dict(
+                            name=name,
+                            path=os.path.join(dirpath, file),
+                            scale=1,
+                            enabled=True,
+                            loaded=False,
+                            trigger_word="",
+                            version=version
+                        )
+                        self.add_lora(lora_data)
+                        self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
+                    do_skip = False
 
     def toggle_all_lora(self, checked):
         for i in range(self.ui.lora_scroll_area.widget().layout().count()):
