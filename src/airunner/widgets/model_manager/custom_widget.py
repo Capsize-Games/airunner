@@ -1,3 +1,5 @@
+from PySide6.QtCore import Slot
+
 from airunner.enums import ServiceCode, SignalCode, StableDiffusionVersion, ImageGenerator, GeneratorSection
 from airunner.utils import create_worker
 from airunner.widgets.base_widget import BaseWidget
@@ -28,6 +30,7 @@ class CustomModelWidget(
         self.scan_for_models()
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.scan_for_models)
 
+    @Slot()
     def action_button_clicked_scan_for_models(self):
         self.scan_for_models()
 
