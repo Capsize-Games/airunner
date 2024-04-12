@@ -1,5 +1,6 @@
 import os
 
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.enums import SignalCode
@@ -24,6 +25,7 @@ class LoraContainerWidget(BaseWidget):
         super().__init__(*args, **kwargs)
 
         self.loars = None
+        self.register(SignalCode.LORA_DELETE_SIGNAL, self.delete_lora)
         self.scan_for_lora()
         self.load_lora()
 
@@ -57,7 +59,28 @@ class LoraContainerWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addWidget(lora_widget)
         self.add_spacer()
 
+    def delete_lora(self, data: dict):
+        lora_widget = data["lora_widget"]
 
+        # Remove lora from settings
+        settings = self.settings
+        settings["lora"] = [lora for lora in settings["lora"] if lora["name"] != lora_widget.lora["name"]]
+        self.settings = settings
+
+        # Remove lora widget from scroll area
+        self.ui.scrollAreaWidgetContents.layout().removeWidget(lora_widget)
+        self.add_spacer()
+
+        # Delete the lora from disc
+        lora_path = self.settings["path_settings"]["lora_model_path"]
+        lora_file = lora_widget.lora["name"]
+        for dirpath, dirnames, filenames in os.walk(lora_path):
+            for file in filenames:
+                if file.startswith(lora_file):
+                    os.remove(os.path.join(dirpath, file))
+                    break
+
+    @Slot()
     def scan_for_lora(self):
         lora_path = self.settings["path_settings"]["lora_model_path"]
         for dirpath, dirnames, filenames in os.walk(lora_path):
