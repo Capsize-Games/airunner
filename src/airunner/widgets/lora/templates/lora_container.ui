@@ -14,7 +14,7 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
+   <item row="0" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QLineEdit" name="lineEdit">
@@ -64,12 +64,19 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>565</width>
-        <height>724</height>
+        <width>559</width>
+        <height>693</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2"/>
      </widget>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="2">
+    <widget class="QPushButton" name="pushButton">
+     <property name="text">
+      <string>Scan for LoRA</string>
+     </property>
     </widget>
    </item>
   </layout>
@@ -108,9 +115,26 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>lora_container</receiver>
+   <slot>scan_for_lora()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>399</x>
+     <y>752</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>486</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>toggle_all(bool)</slot>
   <slot>search_text_changed(QString)</slot>
+  <slot>scan_for_lora()</slot>
  </slots>
 </ui>

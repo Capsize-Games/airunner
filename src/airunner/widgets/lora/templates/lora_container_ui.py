@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGridLayout,
-    QHBoxLayout, QLineEdit, QScrollArea, QSizePolicy,
-    QWidget)
+    QHBoxLayout, QLineEdit, QPushButton, QScrollArea,
+    QSizePolicy, QWidget)
 
 class Ui_lora_container(object):
     def setupUi(self, lora_container):
@@ -44,7 +44,7 @@ class Ui_lora_container(object):
         self.horizontalLayout.addWidget(self.toggleAllLora)
 
 
-        self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
+        self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 2)
 
         self.lora_scroll_area = QScrollArea(lora_container)
         self.lora_scroll_area.setObjectName(u"lora_scroll_area")
@@ -54,17 +54,23 @@ class Ui_lora_container(object):
         self.lora_scroll_area.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 565, 724))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 559, 693))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.lora_scroll_area.setWidget(self.scrollAreaWidgetContents)
 
         self.gridLayout.addWidget(self.lora_scroll_area, 1, 0, 1, 1)
 
+        self.pushButton = QPushButton(lora_container)
+        self.pushButton.setObjectName(u"pushButton")
+
+        self.gridLayout.addWidget(self.pushButton, 2, 0, 1, 2)
+
 
         self.retranslateUi(lora_container)
         self.toggleAllLora.toggled.connect(lora_container.toggle_all)
         self.lineEdit.textEdited.connect(lora_container.search_text_changed)
+        self.pushButton.clicked.connect(lora_container.scan_for_lora)
 
         QMetaObject.connectSlotsByName(lora_container)
     # setupUi
@@ -73,5 +79,6 @@ class Ui_lora_container(object):
         lora_container.setWindowTitle(QCoreApplication.translate("lora_container", u"Form", None))
         self.lineEdit.setPlaceholderText(QCoreApplication.translate("lora_container", u"Search", None))
         self.toggleAllLora.setText(QCoreApplication.translate("lora_container", u"Toggle all", None))
+        self.pushButton.setText(QCoreApplication.translate("lora_container", u"Scan for LoRA", None))
     # retranslateUi
 
