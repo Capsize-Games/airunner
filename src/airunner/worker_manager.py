@@ -1,6 +1,5 @@
 import traceback
 import numpy as np
-
 from PySide6.QtCore import QObject, Signal
 from airunner.enums import SignalCode, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
@@ -13,7 +12,7 @@ from airunner.workers.llm_request_worker import LLMRequestWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.sd_worker import SDWorker
 from airunner.aihandler.logger import Logger
-from airunner.utils import clear_memory, create_worker
+from airunner.utils import create_worker
 from airunner.workers.vision_capture_worker import VisionCaptureWorker
 from airunner.workers.vision_processor_worker import VisionProcessorWorker
 
@@ -179,16 +178,24 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def on_sd_image_generated_signal(self, message):
         self.emit_signal(SignalCode.SD_IMAGE_GENERATED_SIGNAL, message)
 
-    def on_text_generate_request_signal(self, message: dict):
+    def on_text_generate_request_signal(self, data: dict):
+        move_unused_model_to_cpu = self.settings["memory_settings"]["move_unused_model_to_cpu"]
+        unload_unused_models = self.settings["memory_settings"]["unload_unused_models"]
+        signal_code = SignalCode.LLM_REQUEST_SIGNAL
         if self.sd_state == "loaded":
-            self.emit_signal(
-                SignalCode.SD_MOVE_TO_CPU_SIGNAL,
-                {
-                    'callback': lambda _message=message: self.emit_signal(SignalCode.LLM_REQUEST_SIGNAL, _message)
-                }
-            )
-        else:
-            self.emit_signal(SignalCode.LLM_REQUEST_SIGNAL, message)
+            message = {
+                'callback': lambda _message=data: self.emit_signal(
+                    SignalCode.LLM_REQUEST_SIGNAL,
+                    _message
+                )
+            }
+            if move_unused_model_to_cpu:
+                signal_code = SignalCode.SD_MOVE_TO_CPU_SIGNAL
+            elif unload_unused_models:
+                signal_code = SignalCode.SD_UNLOAD_SIGNAL
+            else:
+                message = data
+        self.emit_signal(signal_code, message)
 
     def do_listen(self):
         # self.stt_controller.do_listen()

@@ -52,13 +52,10 @@ class MessageWidget(BaseWidget):
         self.set_chat_font()
 
     def set_chat_font(self):
-        print("set_chat_font")
         if self.font_family != self.settings["font_settings"]["chat"]["font_family"] or self.font_size != \
                 self.settings["font_settings"]["chat"]["font_size"]:
             self.font_family = self.settings["font_settings"]["chat"]["font_family"]
             self.font_size = self.settings["font_settings"]["chat"]["font_size"]
-            print(f"Setting font family to {self.font_family} and size to {self.font_size}")
-
             # Check if the font family is available
             if self.font_family in QFontDatabase().families():
                 font = QFont(self.font_family, self.font_size)
@@ -67,10 +64,6 @@ class MessageWidget(BaseWidget):
                     "Noto Color Emoji",
                 ])
                 self.ui.content.setFont(font)
-            else:
-                print(f"Font family {self.font_family} is not available on your system.")
-        else:
-            print("Font family and size are the same as before. No changes made.")
 
     def set_content_size(self):
         doc_height = self.ui.content.document().size().height()

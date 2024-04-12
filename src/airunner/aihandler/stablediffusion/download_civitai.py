@@ -1,12 +1,15 @@
 import os
-
 import requests
 from json.decoder import JSONDecodeError
 from PySide6.QtCore import QThread
+
+from airunner.aihandler.logger import Logger
 from airunner.aihandler.stablediffusion.download_worker import DownloadWorker
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 
+
+logger = Logger(prefix="DownloadCivitAI")
 
 class DownloadCivitAI(
     MediatorMixin
@@ -24,6 +27,7 @@ class DownloadCivitAI(
         if "/" in model_id:
             model_id = model_id.split("/")[0]
         url = f"https://civitai.com/api/v1/models/{model_id}"
+        logger.debug(f"Getting model data from CivitAI {url}")
         response = requests.get(url)
         json = None
         try:
@@ -37,13 +41,13 @@ class DownloadCivitAI(
         self.file_name = file_name
         self.worker = DownloadWorker(url, file_name, size_kb)
         self.thread = QThread()
-
         self.worker.moveToThread(self.thread)
 
         # Connect signals
         self.worker.finished.connect(lambda: self.emit_signal(SignalCode.DOWNLOAD_COMPLETE))
         self.worker.finished.connect(self.thread.quit)
         self.worker.progress.connect(lambda current, total: callback(current, total))
+        logger.debug(f"Starting model download thread")
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
         self.thread.started.connect(self.worker.download)
