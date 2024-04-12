@@ -1,12 +1,17 @@
 from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageGenerator
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
+from airunner.windows.main.pipeline_mixin import PipelineMixin
 
 
-class StableDiffusionSettingsWidget(BaseWidget):
+class StableDiffusionSettingsWidget(
+    BaseWidget,
+    PipelineMixin
+):
     widget_class_ = Ui_stable_diffusion_settings_widget
 
     def __init__(self, *args, **kwargs):
+        PipelineMixin.__init__(self, *args, **kwargs)
         super().__init__(*args, **kwargs)
         self.register(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, self.on_models_changed_signal)
         self.load_presets()
@@ -93,7 +98,7 @@ class StableDiffusionSettingsWidget(BaseWidget):
         self.logger.debug("load_versions")
         self.ui.version.blockSignals(True)
         self.ui.version.clear()
-        pipelines = self.get_service(ServiceCode.GET_PIPELINES)(category=ImageGenerator.STABLEDIFFUSION.value)
+        pipelines = self.get_pipelines(category=ImageGenerator.STABLEDIFFUSION.value)
         version_names = set([pipeline["version"] for pipeline in pipelines])
         self.ui.version.addItems(version_names)
         current_version = self.settings["current_version_stablediffusion"]
