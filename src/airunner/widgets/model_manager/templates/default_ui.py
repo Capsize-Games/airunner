@@ -23,21 +23,9 @@ class Ui_default_model_widget(object):
     def setupUi(self, default_model_widget):
         if not default_model_widget.objectName():
             default_model_widget.setObjectName(u"default_model_widget")
-        default_model_widget.resize(496, 268)
+        default_model_widget.resize(496, 434)
         self.gridLayout = QGridLayout(default_model_widget)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.default_scroll_area = QScrollArea(default_model_widget)
-        self.default_scroll_area.setObjectName(u"default_scroll_area")
-        self.default_scroll_area.setWidgetResizable(True)
-        self.scrollAreaWidgetContents = QWidget()
-        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 476, 184))
-        self.verticalLayout = QVBoxLayout(self.scrollAreaWidgetContents)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.default_scroll_area.setWidget(self.scrollAreaWidgetContents)
-
-        self.gridLayout.addWidget(self.default_scroll_area, 3, 0, 1, 1)
-
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.comboBox = QComboBox(default_model_widget)
@@ -55,12 +43,24 @@ class Ui_default_model_widget(object):
         self.horizontalLayout.addWidget(self.toggle_all)
 
 
-        self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
+        self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
+
+        self.default_scroll_area = QScrollArea(default_model_widget)
+        self.default_scroll_area.setObjectName(u"default_scroll_area")
+        self.default_scroll_area.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 476, 350))
+        self.verticalLayout = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.default_scroll_area.setWidget(self.scrollAreaWidgetContents)
+
+        self.gridLayout.addWidget(self.default_scroll_area, 2, 0, 1, 1)
 
         self.lineEdit = QLineEdit(default_model_widget)
         self.lineEdit.setObjectName(u"lineEdit")
 
-        self.gridLayout.addWidget(self.lineEdit, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.lineEdit, 1, 0, 1, 1)
 
 
         self.retranslateUi(default_model_widget)

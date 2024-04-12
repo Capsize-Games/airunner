@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>395</width>
-    <height>293</height>
+    <height>295</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -82,6 +82,9 @@
            <height>24</height>
           </size>
          </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
          <property name="toolTip">
           <string>View details</string>
          </property>
@@ -101,32 +104,6 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="edit_button">
-         <property name="minimumSize">
-          <size>
-           <width>24</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>24</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>Edit model</string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="../../../resources_light.qrc">
-           <normaloff>:/icons/light/setting-line-icon.svg</normaloff>:/icons/light/setting-line-icon.svg</iconset>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QPushButton" name="delete_button">
          <property name="minimumSize">
           <size>
@@ -139,6 +116,9 @@
            <width>24</width>
            <height>24</height>
           </size>
+         </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
          </property>
          <property name="toolTip">
           <string>Delete model</string>
@@ -306,34 +286,34 @@
    </hints>
   </connection>
   <connection>
-   <sender>edit_button</sender>
-   <signal>clicked()</signal>
-   <receiver>model_widget</receiver>
-   <slot>action_clicked_button_settings()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>56</x>
-     <y>49</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>13</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>delete_button</sender>
    <signal>clicked()</signal>
    <receiver>model_widget</receiver>
    <slot>action_clicked_button_delete()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>81</x>
-     <y>42</y>
+     <x>64</x>
+     <y>63</y>
     </hint>
     <hint type="destinationlabel">
      <x>80</x>
      <y>3</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>details</sender>
+   <signal>cellChanged(int,int)</signal>
+   <receiver>model_widget</receiver>
+   <slot>action_cell_changed(int,int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>245</x>
+     <y>88</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>304</x>
+     <y>-10</y>
     </hint>
    </hints>
   </connection>
@@ -342,5 +322,6 @@
   <slot>action_toggled_button_details(bool)</slot>
   <slot>action_clicked_button_settings()</slot>
   <slot>action_clicked_button_delete()</slot>
+  <slot>action_cell_changed(int,int)</slot>
  </slots>
 </ui>

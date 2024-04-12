@@ -84,7 +84,7 @@
             <x>0</x>
             <y>0</y>
             <width>448</width>
-            <height>333</height>
+            <height>329</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_5">
@@ -99,7 +99,7 @@
      </widget>
      <widget class="QWidget" name="custom_tab">
       <attribute name="title">
-       <string>Custom</string>
+       <string>Imported</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_3">
        <item row="0" column="0">
@@ -113,12 +113,70 @@
             <x>0</x>
             <y>0</y>
             <width>448</width>
-            <height>333</height>
+            <height>329</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_6">
            <item row="0" column="0">
             <widget class="CustomModelWidget" name="widget" native="true"/>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="lora_tab">
+      <attribute name="title">
+       <string>LoRA</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_9">
+       <item row="0" column="0">
+        <widget class="QScrollArea" name="scrollArea_4">
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <widget class="QWidget" name="scrollAreaWidgetContents_4">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>448</width>
+            <height>329</height>
+           </rect>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_8">
+           <item row="0" column="0">
+            <widget class="LoraContainerWidget" name="lora_widget" native="true"/>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="embeddings_tab">
+      <attribute name="title">
+       <string>Embeddings</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_11">
+       <item row="0" column="0">
+        <widget class="QScrollArea" name="scrollArea_5">
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <widget class="QWidget" name="scrollAreaWidgetContents_5">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>448</width>
+            <height>329</height>
+           </rect>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_10">
+           <item row="0" column="0">
+            <widget class="EmbeddingsContainerWidget" name="widget_4" native="true"/>
            </item>
           </layout>
          </widget>
@@ -142,7 +200,7 @@
             <x>0</x>
             <y>0</y>
             <width>448</width>
-            <height>333</height>
+            <height>329</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_7">
@@ -176,6 +234,18 @@
    <class>ImportWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/model_manager/import_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LoraContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/lora/lora_container_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>EmbeddingsContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/embeddings/embeddings_container_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

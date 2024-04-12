@@ -7,32 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>496</width>
-    <height>268</height>
+    <height>434</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="3" column="0">
-    <widget class="QScrollArea" name="default_scroll_area">
-     <property name="widgetResizable">
-      <bool>true</bool>
-     </property>
-     <widget class="QWidget" name="scrollAreaWidgetContents">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>476</width>
-        <height>184</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout"/>
-     </widget>
-    </widget>
-   </item>
-   <item row="1" column="0">
+   <item row="0" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QComboBox" name="comboBox"/>
@@ -55,6 +37,24 @@
     </layout>
    </item>
    <item row="2" column="0">
+    <widget class="QScrollArea" name="default_scroll_area">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>476</width>
+        <height>350</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout"/>
+     </widget>
+    </widget>
+   </item>
+   <item row="1" column="0">
     <widget class="QLineEdit" name="lineEdit">
      <property name="placeholderText">
       <string>Search models</string>
@@ -77,7 +77,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>162</x>
-     <y>-8</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -109,7 +109,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>278</x>
-     <y>-13</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
