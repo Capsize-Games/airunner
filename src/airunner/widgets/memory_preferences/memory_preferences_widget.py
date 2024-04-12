@@ -1,3 +1,6 @@
+import torch
+from PySide6.QtCore import Slot
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.memory_preferences.templates.memory_preferences_ui import Ui_memory_preferences
 
@@ -25,9 +28,53 @@ class MemoryPreferencesWidget(BaseWidget):
             getattr(self.ui, ui_element).setChecked(self.settings["memory_settings"][setting] is True)
             getattr(self.ui, ui_element).blockSignals(False)
 
+        device_count = torch.cuda.device_count()
+        available_devices = [f"{torch.cuda.get_device_name(i)}" for i in range(device_count)]
+        self.available_devices = available_devices
+        self.ui.sd_combobox.blockSignals(True)
+        self.ui.llm_combobox.blockSignals(True)
+        self.ui.tts_combobox.blockSignals(True)
+        self.ui.stt_combobox.blockSignals(True)
+        self.ui.sd_combobox.addItems(available_devices)
+        self.ui.llm_combobox.addItems(available_devices)
+        self.ui.tts_combobox.addItems(available_devices)
+        self.ui.stt_combobox.addItems(available_devices)
+        self.ui.sd_combobox.setCurrentText(available_devices[self.settings["memory_settings"]["default_gpu"]["sd"]])
+        self.ui.llm_combobox.setCurrentText(available_devices[self.settings["memory_settings"]["default_gpu"]["llm"]])
+        self.ui.tts_combobox.setCurrentText(available_devices[self.settings["memory_settings"]["default_gpu"]["tts"]])
+        self.ui.stt_combobox.setCurrentText(available_devices[self.settings["memory_settings"]["default_gpu"]["stt"]])
+        self.ui.sd_combobox.blockSignals(False)
+        self.ui.llm_combobox.blockSignals(False)
+        self.ui.tts_combobox.blockSignals(False)
+        self.ui.stt_combobox.blockSignals(False)
+
         self.ui.tome_sd_ratio.init(
             slider_callback=self.tome_sd_ratio_value_change,
         )
+
+    @Slot(str)
+    def action_changed_sd_combobox(self, val: str):
+        settings = self.settings
+        settings["memory_settings"]["default_gpu"]["sd"] = self.available_devices.index(val)
+        self.settings = settings
+
+    @Slot(str)
+    def action_changed_llm_combobox(self, val: str):
+        settings = self.settings
+        settings["memory_settings"]["default_gpu"]["llm"] = self.available_devices.index(val)
+        self.settings = settings
+
+    @Slot(str)
+    def action_changed_tts_combobox(self, val: str):
+        settings = self.settings
+        settings["memory_settings"]["default_gpu"]["tts"] = self.available_devices.index(val)
+        self.settings = settings
+
+    @Slot(str)
+    def action_changed_stt_combobox(self, val: str):
+        settings = self.settings
+        settings["memory_settings"]["default_gpu"]["stt"] = self.available_devices.index(val)
+        self.settings = settings
 
     def action_toggled_setting(self, setting_name, val):
         settings = self.settings
