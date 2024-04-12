@@ -27,7 +27,6 @@ class CustomModelWidget(
         self.show_items_in_scrollarea()
         self.initialized = True
         self.model_scanner_worker = create_worker(ModelScannerWorker)
-        self.scan_for_models()
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.scan_for_models)
 
     @Slot()
