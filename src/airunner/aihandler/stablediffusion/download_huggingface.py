@@ -1,11 +1,4 @@
-import os
 from urllib.parse import urlparse
-
-import requests
-from json.decoder import JSONDecodeError
-from PySide6.QtCore import QThread
-from airunner.aihandler.stablediffusion.download_worker import DownloadWorker
-from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from huggingface_hub import hf_hub_download
 

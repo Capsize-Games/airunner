@@ -97,7 +97,7 @@ class CompelMixin:
         self.prompt_embeds = prompt_embeds
         self.negative_prompt_embeds = negative_prompt_embeds
 
-        device = get_torch_device()
+        device = get_torch_device(self.settings["memory_settings"]["default_gpu"]["sd"])
 
         if prompt_embeds is not None:
             self.logger.debug(f"Moving prompt embeds to device: {device}")

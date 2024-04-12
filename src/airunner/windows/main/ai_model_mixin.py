@@ -1,6 +1,4 @@
-from PySide6.QtCore import Slot
-
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, GeneratorSection, ImageGenerator, StableDiffusionVersion
 from airunner.service_locator import ServiceLocator
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 
@@ -64,14 +62,14 @@ class AIModelMixin:
         return [model["name"] for model in self.settings["ai_models"] if model["section"] == section]
 
     def models_by_pipeline_action(self, pipeline_action):
-        val = [model for model in self.settings["ai_models"] if model["pipeline_action"] == pipeline_action]
+        val = [model for model in self.settings["ai_models"] if model.get("pipeline_action", ImageGenerator.STABLEDIFFUSION) == pipeline_action]
         return val
     
     def ai_models_find(self, search="", default=False):
-        return [model for model in self.settings["ai_models"] if model["is_default"] == default and search.lower() in model["name"].lower()]
+        return [model for model in self.settings["ai_models"] if model.get("is_default", False) == default and search.lower() in model["name"].lower()]
 
     def ai_model_get_disabled_default(self):
-        return [model for model in self.settings["ai_models"] if model["is_default"] == True and model["enabled"] == False]
+        return [model for model in self.settings["ai_models"] if model.get("is_default", False) == True and model["enabled"] == False]
 
     def on_ai_models_save_or_update_signal(self, data: dict):
         new_models = data.get("models", [])
@@ -105,13 +103,13 @@ class AIModelMixin:
         return [model["path"] for model in models]
 
     def ai_model_categories(self):
-        return [model["category"] for model in self.settings["ai_models"]]
+        return [model.get("category", ImageGenerator.STABLEDIFFUSION) for model in self.settings["ai_models"]]
     
     def ai_model_pipeline_actions(self):
-        return [model["pipeline_action"] for model in self.settings["ai_models"]]
+        return [model.get("pipeline_action", GeneratorSection.TXT2IMG) for model in self.settings["ai_models"]]
     
     def ai_model_versions(self):
-        return [model["version"] for model in self.settings["ai_models"]]
+        return [model.get("version", StableDiffusionVersion.SD1_5) for model in self.settings["ai_models"]]
     
     def ai_models_by_category(self, category):
         return [model for model in self.settings["ai_models"] if model["category"] == category]
