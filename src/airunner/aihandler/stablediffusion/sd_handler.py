@@ -241,7 +241,7 @@ class SDHandler(
 
     @property
     def device(self):
-        return get_torch_device()
+        return get_torch_device(self.settings["memory_settings"]["default_gpu"]["sd"])
 
     @property
     def do_load(self):
