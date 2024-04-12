@@ -4,7 +4,7 @@ from transformers import AutoModelForCausalLM, TextIteratorStreamer
 
 from airunner.aihandler.llm.llm_tools import QuitApplicationTool, StartVisionCaptureTool, StopVisionCaptureTool, \
     StartAudioCaptureTool, StopAudioCaptureTool, StartSpeakersTool, StopSpeakersTool, ProcessVisionTool, \
-    ProcessAudioTool
+    ProcessAudioTool, BashExecuteTool, WriteFileTool
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode, LLMToolName, LLMActionType
 
@@ -51,8 +51,9 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
             self.chat_agent.interrupt_process()
 
     def on_clear_history_signal(self, _message):
-        self.logger.debug("Clearing chat history")
-        self.chat_agent.history = []
+        if self.chat_agent is not None:
+            self.logger.debug("Clearing chat history")
+            self.chat_agent.history = []
 
     @property
     def is_mistral(self) -> bool:
@@ -96,6 +97,8 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
             LLMToolName.TTS_DISABLE.value: StopSpeakersTool(),
             LLMToolName.DESCRIBE_IMAGE.value: ProcessVisionTool,
             LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
+            LLMToolName.BASH_EXECUTE.value: BashExecuteTool(),
+            LLMToolName.WRITE_FILE.value: WriteFileTool(),
             #LLMToolName.DEFAULT_TOOL.value: RespondToUserTool(),
         }
 

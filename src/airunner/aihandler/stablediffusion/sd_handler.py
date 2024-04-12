@@ -120,9 +120,21 @@ class SDHandler(
         SchedulerMixin.__init__(self)
         MemoryEfficientMixin.__init__(self)
         self.logger.debug("Loading Stable Diffusion model runner...")
-        self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
-        self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
-        self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")[0]
+        try:
+            self.safety_checker_model = self.models_by_pipeline_action("safety_checker")[0]
+        except IndexError:
+            self.safety_checker_model = None
+
+        try:
+            self.text_encoder_model = self.models_by_pipeline_action("text_encoder")[0]
+        except IndexError:
+            self.text_encoder_model = None
+
+        try:
+            self.inpaint_vae_model = self.models_by_pipeline_action("inpaint_vae")[0]
+        except IndexError:
+            self.inpaint_vae_model = None
+
         self.handler_type = HandlerType.DIFFUSER
         self._previous_model: str = ""
         self.cross_attention_kwargs_scale: float = 1.0
@@ -229,7 +241,7 @@ class SDHandler(
 
     @property
     def device(self):
-        return get_torch_device()
+        return get_torch_device(self.settings["memory_settings"]["default_gpu"]["sd"])
 
     @property
     def do_load(self):
@@ -404,8 +416,17 @@ class SDHandler(
             self.logger.debug("Processor loaded")
         if self.processor is not None and image is not None:
             self.logger.debug("Controlnet: Processing image")
-            image = self.processor(image)
-            image = image.resize((self.settings["working_width"], self.settings["working_height"]))
+            try:
+                image = self.processor(image)
+            except ValueError as e:
+                self.logger.error(f"Error processing image: {e}")
+                image = None
+
+            if image is None:
+                image = image.resize((
+                    self.settings["working_width"],
+                    self.settings["working_height"]
+                ))
             return image
         self.logger.error("No controlnet processor found")
 
@@ -932,10 +953,6 @@ class SDHandler(
             controlnet_image=controlnet_image,
             generator_request_data=self.generator_request_data
         )
-        print("HANDLING REQUEST")
-        print("*"*80)
-        print(self.sd_request.generator_settings.prompt)
-        print("*" * 80)
 
         pipe = None
         pipeline_class_ = None

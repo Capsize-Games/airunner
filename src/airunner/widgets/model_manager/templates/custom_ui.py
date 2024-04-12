@@ -23,7 +23,7 @@ class Ui_custom_model_widget(object):
     def setupUi(self, custom_model_widget):
         if not custom_model_widget.objectName():
             custom_model_widget.setObjectName(u"custom_model_widget")
-        custom_model_widget.resize(620, 300)
+        custom_model_widget.resize(503, 300)
         self.gridLayout = QGridLayout(custom_model_widget)
         self.gridLayout.setObjectName(u"gridLayout")
         self.scan_for_models_button = QPushButton(custom_model_widget)
@@ -55,7 +55,7 @@ class Ui_custom_model_widget(object):
         self.custom_scroll_area.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 600, 189))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 483, 187))
         self.verticalLayout_2 = QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.custom_scroll_area.setWidget(self.scrollAreaWidgetContents)
