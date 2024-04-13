@@ -90,68 +90,16 @@ large language models and AI image generators on your own hardware.
 3. Drag the `install.sh` script into the terminal and press `Enter`
 4. Follow the on-screen instructions
 
-```bash
-
-
-Run AI Runner
-```bash
-cd airunner
-./airunner
-```
-
-#### Windows
-
-```bash
-cd airunner
-airunner.exe
-```
-
-Alternatively, you can use the itch.io launcher application which simplifies the process of downloading and running AI Runner.
-
 ---
 
-### Compiled from source
+## 🚀 Running AI Runner
 
-```bash
-cd dist/airunner
-./airunner
-```
+### Linux
 
----
-
-### PyPi
-
-```bash
-python3 -m airunner
-```
-
----
-
-### Uncompiled Source
-
-```bash
-cd src/airunner
-python main.py
-```
-
----
-
-### Docker
-
-Linux:
-
-```bash
-docker-compose up linux
-```
-
-Windows:
-
-```bash
-docker-compose up windows
-```
-
-[See the installation 
-wiki page for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions)
+1. Open the terminal using the keyboard shortcut `Ctrl + Alt + T`
+2. Navigate to the directory containing the `run.sh` script (`cd ~/airunner` for example)
+3. Run the `bin/run.sh` script by typing `./bin/run.sh` and pressing `Enter`
+4. AI Runner will start and you can begin using it after following the on-screen setup instructions
 
 ---
 
