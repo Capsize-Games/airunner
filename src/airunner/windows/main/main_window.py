@@ -134,6 +134,8 @@ class MainWindow(
         self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
         self.image_window = None
 
+        self.register(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal)
+
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
         self.ui.enable_controlnet.blockSignals(False)

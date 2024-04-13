@@ -23,7 +23,7 @@ class ModelScannerWorker(
         txt2img_model_path = self.settings["path_settings"]["txt2img_model_path"]
         depth2img_model_path = self.settings["path_settings"]["depth2img_model_path"]
         pix2pix_model_path = self.settings["path_settings"]["pix2pix_model_path"]
-        outpaint_model_path = self.settings["path_settings"]["inpaint_model_path"]
+        inpaint_model_path = self.settings["path_settings"]["inpaint_model_path"]
         upscale_model_path = self.settings["path_settings"]["upscale_model_path"]
         txt2vid_model_path = self.settings["path_settings"]["txt2vid_model_path"]
         llm_casuallm_model_path = self.settings["path_settings"]["llm_casuallm_model_path"]
@@ -34,7 +34,7 @@ class ModelScannerWorker(
             "txt2img": txt2img_model_path,
             "depth2img": depth2img_model_path,
             "pix2pix": pix2pix_model_path,
-            "outpaint": outpaint_model_path,
+            "outpaint": inpaint_model_path,
             "upscale": upscale_model_path,
             "txt2vid": txt2vid_model_path,
             "casuallm": llm_casuallm_model_path,
@@ -87,5 +87,4 @@ class ModelScannerWorker(
                                     'enabled': model.enabled,
                                     'is_default': False
                                 })
-
         self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {"models": models})

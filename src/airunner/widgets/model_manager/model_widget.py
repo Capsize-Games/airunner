@@ -1,3 +1,5 @@
+from PySide6.QtCore import Slot
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.model_ui import Ui_model_widget
 

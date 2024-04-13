@@ -23,12 +23,6 @@ class BaseWidget(
     qss_filename = None
     threads = []
 
-    def register_service(self, name: str, service: Callable):
-        ServiceLocator.register(name, service)
-
-    def get_service(self, name: str):
-        return ServiceLocator.get(name)
-
     @property
     def is_dark(self):
         if not "dark_mode_enabled" in self.settings:

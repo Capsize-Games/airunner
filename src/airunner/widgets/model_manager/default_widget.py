@@ -5,27 +5,30 @@ from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.default_ui import Ui_default_model_widget
 from PySide6 import QtWidgets
 
+from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 
 
 class DefaultModelWidget(
     BaseWidget,
-    PipelineMixin
+    PipelineMixin,
+    AIModelMixin
 ):
     widget_class_ = Ui_default_model_widget
     model_widgets = []
 
     def __init__(self, *args, **kwargs):
         PipelineMixin.__init__(self, *args, **kwargs)
+        AIModelMixin.__init__(self)
         super().__init__(*args, **kwargs)
         self.spacer = None
         self.show_items_in_scrollarea()
         # find how many models are set to enabled = False
         self.ui.toggle_all.blockSignals(True)
-        disabled_models = self.get_service("ai_model_get_disabled_default")()
+        disabled_models = self.ai_model_get_disabled_default()
         if len(disabled_models) == 0:
             self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Checked)
-        elif len(disabled_models) < len(self.get_service("ai_models_find")(default=True)):
+        elif len(disabled_models) < len(self.ai_models_find(default=True)):
             self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.PartiallyChecked)
         else:
             self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Unchecked)
@@ -39,9 +42,9 @@ class DefaultModelWidget(
                 child.deleteLater()
         if search:
             # search by name
-            models = self.get_service("ai_models_find")(search, default=True)
+            models = self.ai_models_find(search, default=True)
         else:
-            models = self.get_service("ai_models_find")(default=True)
+            models = self.ai_models_find(default=True)
         for model_widget in self.model_widgets:
             model_widget.deleteLater()
         self.model_widgets = []
