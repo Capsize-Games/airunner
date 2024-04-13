@@ -11,6 +11,9 @@ class StableDiffusionSettingsWidget(
     widget_class_ = Ui_stable_diffusion_settings_widget
 
     def __init__(self, *args, **kwargs):
+        self.icons = [
+            ("exchange-refresh-icon", "reload_selected_preset")
+        ]
         PipelineMixin.__init__(self, *args, **kwargs)
         super().__init__(*args, **kwargs)
         self.register(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, self.on_models_changed_signal)
