@@ -1,13 +1,11 @@
 import queue
-import re
-import time
 
-from PySide6.QtCore import QThread, Slot
+from PySide6.QtCore import QThread
 
 from airunner.enums import SignalCode, QueueType
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
-from airunner.aihandler.tts_handler import TTSHandler
+from airunner.aihandler.tts.tts_handler import TTSHandler
 
 
 class TTSGeneratorWorker(Worker):
