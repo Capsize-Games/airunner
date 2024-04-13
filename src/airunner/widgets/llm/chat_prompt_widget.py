@@ -2,8 +2,10 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
 
-from airunner.enums import SignalCode, ServiceCode, LLMActionType
+from airunner.enums import SignalCode, LLMActionType
+from airunner.utils import convert_base64_to_image
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
@@ -116,6 +118,10 @@ class ChatPromptWidget(BaseWidget):
     def interrupt_button_clicked(self):
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
+    @property
+    def current_active_scene(self) -> CustomScene:
+        return
+
     def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="casuallm"):
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
 
@@ -128,7 +134,12 @@ class ChatPromptWidget(BaseWidget):
 
         self.generating = True
 
-        image = self.get_service(ServiceCode.CURRENT_ACTIVE_IMAGE)() if (image_override is None or image_override is False) else image_override
+
+        # Here we get the image from the current active scene
+        base_64_image = self.settings["canvas_settings"]["image"]
+        image = convert_base64_to_image(base_64_image)
+
+        image = image if (image_override is None or image_override is False) else image_override
 
         if prompt is None or prompt == "":
             self.logger.warning("Prompt is empty")

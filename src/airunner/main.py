@@ -7,6 +7,9 @@ This is due to the way huggingface diffusion models are imported.
 """
 import os
 import torch
+
+from airunner.socket_server import SocketServer
+
 torch.backends.cuda.matmul.allow_tf32 = True
 
 hf_cache_path = ""
