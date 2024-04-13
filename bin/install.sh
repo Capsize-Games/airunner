@@ -45,7 +45,3 @@ else
     read -p "Enter the directory of controlnet_aux: " controlnet_aux_dir
     cd $controlnet_aux_dir && pip install -e .
 fi
-
-# Uninstall opencv-python
-pip uninstall opencv-python -y
-
