@@ -37,7 +37,7 @@ read -p "Do you want to clone the controlnet_aux repository? (y/n) " clone_contr
 if [[ $clone_controlnet_aux == "y" || $clone_controlnet_aux == "Y" ]]; then
     # Install controlnet_aux from fork
     if [ ! -d "controlnet_aux" ]; then
-        git clone -b develop https://github.com/w4ffl35/controlnet_aux.git
+        git clone -b 96-add-local_files_only-flag https://github.com/w4ffl35/controlnet_aux.git
     fi
     cd  controlnet_aux && pip install -e .
 else
