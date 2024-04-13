@@ -1,17 +1,23 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog
 
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode
 from airunner.models.modeldata import ModelData
 from airunner.widgets.model_manager.templates.model_manager_ui import Ui_model_manager
 from airunner.windows.base_window import BaseWindow
+from airunner.windows.main.pipeline_mixin import PipelineMixin
 
 
-class ModelManagerWidget(BaseWindow):
+class ModelManagerWidget(
+    BaseWindow,
+    PipelineMixin
+):
     is_modal = True
     template_class_ = Ui_model_manager
+    title = "Model Manager"
 
     def __init__(self):
+        PipelineMixin.__init__(self)
         super().__init__()
         self.current_model_form = None
         self.model_widgets = {
@@ -132,8 +138,11 @@ class ModelManagerWidget(BaseWindow):
         self.ui.model_form.pipeline_action.setCurrentText(model.pipeline_action)
 
         self.ui.model_form.model_name.setText(model.name)
-        pipeline_class = self.get_service(ServiceCode.GET_PIPELINE_CLASSNAME)(
-            model.pipeline_action, model.version, model.category)
+        pipeline_class = self.get_pipeline_classname(
+            model.pipeline_action,
+            model.version,
+            model.category
+        )
         self.ui.model_form.pipeline_class_line_edit.setText(pipeline_class)
         self.ui.model_form.enabled.setChecked(True)
         self.ui.model_form.path_line_edit.setText(model.path)

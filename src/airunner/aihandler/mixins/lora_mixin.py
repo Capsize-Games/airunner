@@ -53,6 +53,9 @@ class LoraMixin:
         except RuntimeError:
             self.logger.warning("LORA could not be loaded")
             self.disable_lora(checkpoint_path)
+        except ValueError:
+            self.logger.warning("LORA could not be loaded")
+            self.disable_lora(checkpoint_path)
 
     def disable_lora(self, checkpoint_path):
         self.disabled_lora.append(checkpoint_path)

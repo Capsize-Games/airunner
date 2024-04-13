@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>437</width>
-    <height>121</height>
+    <height>103</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -31,18 +31,6 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
    <item row="0" column="0">
     <layout class="QGridLayout" name="gridLayout">
      <property name="horizontalSpacing">
@@ -67,6 +55,35 @@
           </property>
          </widget>
         </item>
+        <item row="0" column="1">
+         <widget class="QPushButton" name="delete_button">
+          <property name="minimumSize">
+           <size>
+            <width>24</width>
+            <height>24</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>24</width>
+            <height>24</height>
+           </size>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="toolTip">
+           <string>Delete model</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../resources_light.qrc">
+            <normaloff>:/icons/light/recycle-bin-line-icon.svg</normaloff>:/icons/light/recycle-bin-line-icon.svg</iconset>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
@@ -74,7 +91,9 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../../resources_light.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>trigger_word_edit</sender>
@@ -83,8 +102,8 @@
    <slot>action_changed_trigger_words(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>115</x>
-     <y>116</y>
+     <x>137</x>
+     <y>66</y>
     </hint>
     <hint type="destinationlabel">
      <x>127</x>
@@ -115,12 +134,28 @@
    <slot>action_text_changed_trigger_word(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>312</x>
-     <y>109</y>
+     <x>215</x>
+     <y>66</y>
     </hint>
     <hint type="destinationlabel">
      <x>412</x>
-     <y>-9</y>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>delete_button</sender>
+   <signal>clicked()</signal>
+   <receiver>lora</receiver>
+   <slot>action_clicked_button_deleted()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>239</x>
+     <y>54</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>261</x>
+     <y>-6</y>
     </hint>
    </hints>
   </connection>
@@ -129,5 +164,6 @@
   <slot>action_toggled_lora_enabled(bool)</slot>
   <slot>action_changed_trigger_words(QString)</slot>
   <slot>action_text_changed_trigger_word(QString)</slot>
+  <slot>action_clicked_button_deleted()</slot>
  </slots>
 </ui>

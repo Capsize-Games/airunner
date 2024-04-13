@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>558</width>
-    <height>43</height>
+    <height>45</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -39,6 +39,9 @@
        <width>24</width>
        <height>24</height>
       </size>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="toolTip">
       <string>Toggle random seed</string>
