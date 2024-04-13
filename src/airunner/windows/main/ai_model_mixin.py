@@ -25,10 +25,6 @@ class AIModelMixin:
 
         for service in services:
             ServiceLocator.register(service, getattr(self, service))
-        
-        self.register(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal)
-        self.register(SignalCode.AI_MODEL_DELETE_SIGNAL, self.on_ai_model_delete_signal)
-        self.register(SignalCode.AI_MODELS_CREATE_SIGNAL, self.on_ai_models_create_signal)
 
     def ai_model_get_by_filter(self, filter_dict):
         return [item for item in self.settings["ai_models"] if all(item.get(k) == v for k, v in filter_dict.items())]
@@ -88,6 +84,11 @@ class AIModelMixin:
 
         # Convert back to list
         merged_models = list(model_dict.values())
+
+        settings["ai_models"] = merged_models
+        self.settings = settings
+
+        print("ai_models", merged_models)
 
         self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL, {
             "models": merged_models
