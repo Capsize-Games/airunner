@@ -1,7 +1,5 @@
 import traceback
-
 from PySide6.QtCore import QSettings, QByteArray, QDataStream, QIODevice
-
 from airunner.settings import (
     DEFAULT_BRUSH_PRIMARY_COLOR,
     DEFAULT_BRUSH_SECONDARY_COLOR,
