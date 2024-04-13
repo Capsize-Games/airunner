@@ -199,11 +199,14 @@
        <height>16777215</height>
       </size>
      </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
      <property name="text">
       <string/>
      </property>
      <property name="icon">
-      <iconset>
+      <iconset resource="../../../resources_light.qrc">
        <normaloff>:/icons/light/exchange-refresh-icon.svg</normaloff>:/icons/light/exchange-refresh-icon.svg</iconset>
      </property>
     </widget>

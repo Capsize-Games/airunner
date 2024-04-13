@@ -11,6 +11,9 @@ class SeedWidget(BaseWidget):
     name = "seed_widget"
 
     def __init__(self, *args, **kwargs):
+        self.icons = [
+            ("dice-game-icon", "random_button")
+        ]
         super().__init__(*args, **kwargs)
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
         self.ui.lineEdit.blockSignals(True)
