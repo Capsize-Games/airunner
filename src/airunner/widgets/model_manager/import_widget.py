@@ -1,4 +1,6 @@
+import os
 from urllib.parse import urlparse
+
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
@@ -83,7 +85,12 @@ class ImportWidget(
             pipeline_action = "outpaint"
         diffuser_model_version = model_version["baseModel"]
         model_type = model_data["type"]
-        file_path = self.download_path(file, diffuser_model_version, pipeline_action, model_type)  # path is the download path of the model
+        file_path = self.download_path(
+            file,
+            diffuser_model_version,
+            pipeline_action,
+            model_type
+        )
 
         trained_words = model_version.get("trainedWords", [])
         if isinstance(trained_words, str):
@@ -101,22 +108,17 @@ class ImportWidget(
                 'is_default': False
             })
         elif model_type == "LORA":
-            # lora_exists = session.query(Lora).filter_by(
-            #     name=name,
-            #     path=file_path,
-            # ).first()
-            # if not lora_exists:
-            #     new_lora = Lora(
-            #         name=name,
-            #         path=file_path,
-            #         scale=1,
-            #         enabled=True,
-            #         loaded=False,
-            #         trigger_word=trained_words,
-            #     )
-            #     session.add(new_lora)
-            # TODO: handle loral
-            pass
+            name = file["name"].replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
+            lora_data = dict(
+                name=name,
+                path=file_path,
+                scale=1,
+                enabled=True,
+                loaded=False,
+                trigger_word=trained_words,
+                version=model_version["baseModel"]
+            )
+            self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
         elif model_type == "TextualInversion":
             # name = file_path.split("/")[-1].split(".")[0]
             # embedding_exists = session.query(Embedding).filter_by(
@@ -256,7 +258,7 @@ class ImportWidget(
             if pipeline_action == "txt2img":
                 path = self.settings["path_settings"]["txt2img_model_path"]
             elif pipeline_action == "outpaint":
-                path = self.settings["path_settings"]["outpaint_model_path"]
+                path = self.settings["path_settings"]["inpaint_model_path"]
             elif pipeline_action == "upscale":
                 path = self.settings["path_settings"]["upscale_model_path"]
             elif pipeline_action == "depth2img":
