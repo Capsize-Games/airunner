@@ -83,69 +83,17 @@ large language models and AI image generators on your own hardware.
 
 ## 🔧 Installation
 
-### Linux prerequisites
+### Linux
 
-For emoji support on Ubuntu install the Noto Color Emoji font:
-
-```bash
-sudo apt install fonts-noto-color-emoji
-```
-
-Install `portaudio`, `libxcb-cursor`, `xclip` and `espeak`
+1. Open your file explorer and navigate to the directory containing the `install.sh` script
+2. Open the terminal using the keyboard shortcut `Ctrl + Alt + T`
+3. Drag the `install.sh` script into the terminal and press `Enter`
+4. Follow the on-screen instructions
 
 ```bash
-sudo apt-get install libportaudio2 libxcb-cursor0 espeak xclip
-```
 
-### PyPi
 
-If you are on Windows, first install the following dependencies:
-```bash
-pip install pypiwin32
-```
-
-```bash
-pip install airunner
-```
-
-### Source
-
-If you want to install AI Runner from source, you can do so using the following command:
-
-```bash
-git clone -b develop https://github.com/Capsize-Games/airunner.git
-cd airunner && pip install -e .
-```
-
-The current `controlnet_aux` Huggingface library has a bug which is awaiting a patch (submitted by me). Until it is accepted,
-install controlnet manually from my fork:
-
-```bash
-git clone -b develop https://github.com/w4ffl35/controlnet_aux.git
-cd  controlnet_aux
-pip install -e .
-```
-
-----
-
-If you install from pypi or source, uninstall `opencv-python` (we use `opencv-python-headless` instead)
-
-```bash
-pip uninstall opencv-python
-```
-
----
-
-## 💿 Running AI Runner
-
-There are many ways to run AI Runner, depending on your operating system and how you installed it.
-
-### Pre-compiled
-
-Unzip the AI Runner zip file which you downloaded from itch.io
-
-#### Linux
-
+Run AI Runner
 ```bash
 cd airunner
 ./airunner
