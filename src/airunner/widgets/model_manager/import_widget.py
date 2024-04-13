@@ -258,7 +258,7 @@ class ImportWidget(
             if pipeline_action == "txt2img":
                 path = self.settings["path_settings"]["txt2img_model_path"]
             elif pipeline_action == "outpaint":
-                path = self.settings["path_settings"]["outpaint_model_path"]
+                path = self.settings["path_settings"]["inpaint_model_path"]
             elif pipeline_action == "upscale":
                 path = self.settings["path_settings"]["upscale_model_path"]
             elif pipeline_action == "depth2img":

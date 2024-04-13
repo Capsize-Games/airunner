@@ -8,13 +8,15 @@ from airunner.widgets.model_manager.templates.custom_ui import Ui_custom_model_w
 
 from PySide6 import QtWidgets
 
+from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.workers.model_scanner_worker import ModelScannerWorker
 
 
 class CustomModelWidget(
     BaseWidget,
-    PipelineMixin
+    PipelineMixin,
+    AIModelMixin
 ):
     initialized = False
     widget_class_ = Ui_custom_model_widget
@@ -24,6 +26,7 @@ class CustomModelWidget(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         PipelineMixin.__init__(self)
+        AIModelMixin.__init__(self)
         self.show_items_in_scrollarea()
         self.initialized = True
         self.model_scanner_worker = create_worker(ModelScannerWorker)
@@ -43,9 +46,9 @@ class CustomModelWidget(
             if isinstance(child, ModelWidget):
                 child.deleteLater()
         if search:
-            models = self.get_service("ai_models_find")(search, default=False)
+            models = self.ai_models_find(search, default=False)
         else:
-            models = self.get_service("ai_models_find")(default=False)
+            models = self.ai_models_find(default=False)
         for model_widget in self.model_widgets:
             model_widget.deleteLater()
         self.model_widgets = []

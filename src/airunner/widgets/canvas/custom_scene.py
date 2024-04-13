@@ -60,7 +60,6 @@ class CustomScene(
 
         self.clipboard_handler = ClipboardHandler()
         self.image_handler = ImageHandler()
-        ServiceLocator.register(ServiceCode.CURRENT_ACTIVE_IMAGE, self.current_active_image)
         self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
 
     def dragEnterEvent(self, event: QDragEnterEvent):
