@@ -4,6 +4,7 @@
 cd "$(dirname "$0")"
 
 # Linux prerequisites
+sudo apt install python3 python3-venv python3-pip git
 sudo apt install fonts-noto-color-emoji
 sudo apt-get install libportaudio2 libxcb-cursor0 espeak xclip
 
