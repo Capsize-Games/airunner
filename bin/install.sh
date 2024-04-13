@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Change current working directory to the directory of the script
+cd "$(dirname "$0")"
+
 # Linux prerequisites
 sudo apt install fonts-noto-color-emoji
 sudo apt-get install libportaudio2 libxcb-cursor0 espeak xclip
