@@ -8,7 +8,7 @@ This is due to the way huggingface diffusion models are imported.
 import os
 import torch
 
-from airunner.socket_server import SocketServer
+#from airunner.socket_server import SocketServer
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -125,12 +125,13 @@ if __name__ == "__main__":
         This can be used to run the application on a remote machine or
         to be accessed by other applications.
         """
-        SocketServer(
-            host=args.host,
-            port=args.port,
-            keep_alive=args.keep_alive,
-            packet_size=args.packet_size
-        )
+        # SocketServer(
+        #     host=args.host,
+        #     port=args.port,
+        #     keep_alive=args.keep_alive,
+        #     packet_size=args.packet_size
+        # )
+        # TODO
     else:
         """
         Run as a GUI application.
