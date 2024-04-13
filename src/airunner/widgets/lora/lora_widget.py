@@ -13,11 +13,14 @@ class LoraWidget(BaseWidget):
     widget_class_ = Ui_lora
 
     def __init__(self, *args, **kwargs):
+        self.icons = [
+            ("recycle-bin-line-icon", "delete_button"),
+        ]
         self.lora = kwargs.pop("lora", None)
         super().__init__(*args, **kwargs)
         name = self.lora["name"]
         enabled = self.lora["enabled"]
-        trigger_word = self.lora["trigger_word"]
+        trigger_word = self.lora.get("trigger_word", "")
         self.ui.enabledCheckbox.blockSignals(True)
         self.ui.trigger_word_edit.blockSignals(True)
         self.ui.enabledCheckbox.setTitle(name)
@@ -32,7 +35,7 @@ class LoraWidget(BaseWidget):
             widget = self.ui.enabledCheckbox.layout().itemAt(i).widget()
             if isinstance(widget, LoraTriggerWordWidget):
                 widget.deleteLater()
-        for word in lora["trigger_word"].split(","):
+        for word in lora.get("trigger_word", "").split(","):
             if word.strip() == "":
                 continue
             widget = LoraTriggerWordWidget(trigger_word=word)
@@ -55,3 +58,11 @@ class LoraWidget(BaseWidget):
     def action_text_changed_trigger_word(self, val):
         self.lora["trigger_word"] = val
         self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL, self.lora)
+
+    def action_clicked_button_deleted(self):
+        self.emit_signal(
+            SignalCode.LORA_DELETE_SIGNAL,
+            {
+                "lora_widget": self
+            }
+        )

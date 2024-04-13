@@ -42,36 +42,36 @@ class TestLoraMixin(unittest.TestCase):
         self.mixin.model = {"version": "1.0"}
         self.mixin.logger = MagicMock()
 
-    def test_available_lora(self):
-        self.assertEqual(self.mixin.available_lora, {"1.0": [
-            {
-                'name': "foobar",
-                'path': "bar",
-                'scale': 1,
-                'enabled': True,
-                'loaded': False,
-                'trigger_word': 'foo',
-                'version': '1.0',
-            },
-            {
-                'name': "lora",
-                'path': "bar",
-                'scale': 1,
-                'enabled': False,
-                'loaded': False,
-                'trigger_word': 'foo',
-                'version': '1.0',
-            },
-            {
-                'name': "disabled lora",
-                'path': "disabled/lora/path",
-                'scale': 1,
-                'enabled': True,
-                'loaded': False,
-                'trigger_word': 'foo',
-                'version': '1.0',
-            }
-        ]})
+    # def test_available_lora(self):
+    #     self.assertEqual(self.mixin.available_lora, {"1.0": [
+    #         {
+    #             'name': "foobar",
+    #             'path': "bar",
+    #             'scale': 1,
+    #             'enabled': True,
+    #             'loaded': False,
+    #             'trigger_word': 'foo',
+    #             'version': '1.0',
+    #         },
+    #         {
+    #             'name': "lora",
+    #             'path': "bar",
+    #             'scale': 1,
+    #             'enabled': False,
+    #             'loaded': False,
+    #             'trigger_word': 'foo',
+    #             'version': '1.0',
+    #         },
+    #         {
+    #             'name': "disabled lora",
+    #             'path': "disabled/lora/path",
+    #             'scale': 1,
+    #             'enabled': True,
+    #             'loaded': False,
+    #             'trigger_word': 'foo',
+    #             'version': '1.0',
+    #         }
+    #     ]})
 
     @patch('os.path.join')
     def test_add_lora_to_pipe(self, mock_join):

@@ -19,42 +19,42 @@ from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils import default_hf_cache_dir
 
 tts_settings_default = {
-    'use_bark': False,
-    'enable_tts': True,
-    'use_cuda': True,
-    'use_sentence_chunks': True,
-    'use_word_chunks': False,
-    'cuda_index': 0,
-    'word_chunks': 1,
-    'sentence_chunks': 1,
-    'play_queue_buffer_length': 1,
-    'enable_cpu_offload': True,
+    "use_bark": False,
+    "enable_tts": True,
+    "use_cuda": True,
+    "use_sentence_chunks": True,
+    "use_word_chunks": False,
+    "cuda_index": 0,
+    "word_chunks": 1,
+    "sentence_chunks": 1,
+    "play_queue_buffer_length": 1,
+    "enable_cpu_offload": True,
     "model": "SpeechT5",
-    "speecht5": dict(
-        embeddings_path="Matthijs/cmu-arctic-xvectors",
-        vocoder_path="microsoft/speecht5_hifigan",
-        model_path="microsoft/speecht5_tts",
-        processor_path="microsoft/speecht5_tts"
-    ),
-    "espeak": dict(
-        gender="male",
-        voice="male1",
-        language="en-US",
-        rate=100,
-        pitch=100,
-        volume=100,
-        punctuation_mode="none",
-    ),
-    "bark": dict(
-        language="English",
-        processor_path="suno/bark-small",
-        model_path="suno/bark-small",
-        voice="v2/en_speaker_6",
-        gender="Male",
-        fine_temperature=80,
-        coarse_temperature=40,
-        semantic_temperature=80,
-    )
+    "speecht5": {
+        "embeddings_path": "Matthijs/cmu-arctic-xvectors",
+        "vocoder_path": "microsoft/speecht5_hifigan",
+        "model_path": "microsoft/speecht5_tts",
+        "processor_path": "microsoft/speecht5_tts"
+    },
+    "espeak": {
+        "gender": "male",
+        "voice": "male1",
+        "language": "en-US",
+        "rate": 100,
+        "pitch": 100,
+        "volume": 100,
+        "punctuation_mode": "none",
+    },
+    "bark": {
+        "language": "English",
+        "processor_path": "suno/bark-small",
+        "model_path": "suno/bark-small",
+        "voice": "v2/en_speaker_6",
+        "gender": "Male",
+        "fine_temperature": 80,
+        "coarse_temperature": 40,
+        "semantic_temperature": 80,
+    },
 }
 STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     prompt="",

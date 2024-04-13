@@ -1,12 +1,18 @@
 import os
-
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode
 from airunner.models.modeldata import ModelData
-from airunner.service_locator import ServiceLocator
+from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.workers.worker import Worker
 
 
-class ModelScannerWorker(Worker):
+class ModelScannerWorker(
+    Worker,
+    PipelineMixin
+):
+    def __init__(self, *args, **kwargs):
+        Worker.__init__(self)
+        PipelineMixin.__init__(self)
+
     def handle_message(self, _message):
         self.scan_for_models()
 
@@ -17,7 +23,7 @@ class ModelScannerWorker(Worker):
         txt2img_model_path = self.settings["path_settings"]["txt2img_model_path"]
         depth2img_model_path = self.settings["path_settings"]["depth2img_model_path"]
         pix2pix_model_path = self.settings["path_settings"]["pix2pix_model_path"]
-        outpaint_model_path = self.settings["path_settings"]["inpaint_model_path"]
+        inpaint_model_path = self.settings["path_settings"]["inpaint_model_path"]
         upscale_model_path = self.settings["path_settings"]["upscale_model_path"]
         txt2vid_model_path = self.settings["path_settings"]["txt2vid_model_path"]
         llm_casuallm_model_path = self.settings["path_settings"]["llm_casuallm_model_path"]
@@ -28,7 +34,7 @@ class ModelScannerWorker(Worker):
             "txt2img": txt2img_model_path,
             "depth2img": depth2img_model_path,
             "pix2pix": pix2pix_model_path,
-            "outpaint": outpaint_model_path,
+            "outpaint": inpaint_model_path,
             "upscale": upscale_model_path,
             "txt2vid": txt2vid_model_path,
             "casuallm": llm_casuallm_model_path,
@@ -51,7 +57,7 @@ class ModelScannerWorker(Worker):
                             model.category = "stablediffusion"
                             model.enabled = True
                             model.pipeline_action = key
-                            model.pipeline_class = ServiceLocator.get(ServiceCode.GET_PIPELINE_CLASSNAME)(
+                            model.pipeline_class = self.get_pipeline_classname(
                                 model.pipeline_action, model.version, model.category
                             )
 
@@ -81,5 +87,4 @@ class ModelScannerWorker(Worker):
                                     'enabled': model.enabled,
                                     'is_default': False
                                 })
-
         self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {"models": models})

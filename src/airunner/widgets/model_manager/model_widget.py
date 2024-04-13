@@ -1,3 +1,5 @@
+from PySide6.QtCore import Slot
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.model_ui import Ui_model_widget
 
@@ -6,6 +8,10 @@ class ModelWidget(BaseWidget):
     widget_class_ = Ui_model_widget
 
     def __init__(self, *args, **kwargs):
+        self.icons = [
+            ("eye-look-icon", "toolButton"),
+            ("recycle-bin-line-icon", "delete_button"),
+        ]
         self.path = kwargs.pop("path")
         self.branch = kwargs.pop("branch")
         self.version = kwargs.pop("version")

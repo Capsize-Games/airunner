@@ -6,9 +6,13 @@ from PySide6.QtWidgets import QWidget
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
+from airunner.windows.main.ai_model_mixin import AIModelMixin
 
 
-class LLMSettingsWidget(BaseWidget):
+class LLMSettingsWidget(
+    BaseWidget,
+    AIModelMixin
+):
     widget_class_ = Ui_llm_settings_widget
     current_generator = None
     dtype_descriptions = {
@@ -18,6 +22,10 @@ class LLMSettingsWidget(BaseWidget):
         "16bit": "Normal speed, some VRAM, uses GPU, slightly less accurate results.",
         "32bit": "Slow, no VRAM, uses CPU, most accurate results.",
     }
+
+    def __init__(self, *args, **kwargs):
+        AIModelMixin.__init__(self)
+        super().__init__(*args, **kwargs)
 
     @property
     def current_generator(self):
@@ -250,7 +258,7 @@ class LLMSettingsWidget(BaseWidget):
     def update_model_version_combobox(self):
         self.ui.model_version.blockSignals(True)
         self.ui.model_version.clear()
-        ai_model_paths = self.get_service("ai_model_paths")(model_type="llm", pipeline_action=self.ui.model.currentText())
+        ai_model_paths = self.ai_model_paths(model_type="llm", pipeline_action=self.ui.model.currentText())
         self.ui.model_version.addItems(ai_model_paths)
         self.ui.model_version.blockSignals(False)
 

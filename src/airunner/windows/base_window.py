@@ -17,6 +17,7 @@ class BaseWindow(
     template_class_ = None
     template = None
     is_modal: bool = False  # allow the window to be treated as a modal
+    title: str = "Base Window"
 
     def __init__(self, **kwargs):
         MediatorMixin.__init__(self)
@@ -31,6 +32,7 @@ class BaseWindow(
         if self.is_modal:
             self.setWindowModality(Qt.WindowModality.WindowModal)
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+        self.setWindowTitle(self.title)
         self.initialize_window()
         if self.do_exec:
             self.exec()

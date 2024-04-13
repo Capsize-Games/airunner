@@ -1,3 +1,5 @@
+from PySide6.QtCore import Slot
+
 from airunner.enums import ServiceCode, SignalCode, StableDiffusionVersion, ImageGenerator, GeneratorSection
 from airunner.utils import create_worker
 from airunner.widgets.base_widget import BaseWidget
@@ -6,13 +8,15 @@ from airunner.widgets.model_manager.templates.custom_ui import Ui_custom_model_w
 
 from PySide6 import QtWidgets
 
+from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.workers.model_scanner_worker import ModelScannerWorker
 
 
 class CustomModelWidget(
     BaseWidget,
-    PipelineMixin
+    PipelineMixin,
+    AIModelMixin
 ):
     initialized = False
     widget_class_ = Ui_custom_model_widget
@@ -22,12 +26,13 @@ class CustomModelWidget(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         PipelineMixin.__init__(self)
+        AIModelMixin.__init__(self)
         self.show_items_in_scrollarea()
         self.initialized = True
         self.model_scanner_worker = create_worker(ModelScannerWorker)
-        self.scan_for_models()
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.scan_for_models)
 
+    @Slot()
     def action_button_clicked_scan_for_models(self):
         self.scan_for_models()
 
@@ -41,9 +46,9 @@ class CustomModelWidget(
             if isinstance(child, ModelWidget):
                 child.deleteLater()
         if search:
-            models = self.get_service("ai_models_find")(search, default=False)
+            models = self.ai_models_find(search, default=False)
         else:
-            models = self.get_service("ai_models_find")(default=False)
+            models = self.ai_models_find(default=False)
         for model_widget in self.model_widgets:
             model_widget.deleteLater()
         self.model_widgets = []
@@ -53,7 +58,6 @@ class CustomModelWidget(
             pipeline_action = model.get("pipeline_action", GeneratorSection.TXT2IMG)
             pipeline_class = self.get_pipeline_classname(
                 pipeline_action, version, category)
-            print(model)
             model_widget = ModelWidget(
                 path=model["path"],
                 branch=model["branch"],

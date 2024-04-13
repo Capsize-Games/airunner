@@ -174,6 +174,7 @@ class SignalCode(Enum):
     LOG_STATUS_SIGNAL = "status_signal"
     LORA_ADD_SIGNAL = "add_lora_signal"
     LORA_UPDATE_SIGNAL = "update_lora_signal"
+    LORA_DELETE_SIGNAL = "delete_lora_signal"
     SET_CANVAS_COLOR_SIGNAL = "set_canvas_color_signal"
     UPDATE_SCENE_SIGNAL = "update_scene_signal"
     DRAW_GRID_SIGNAL = "draw_grid_signal"

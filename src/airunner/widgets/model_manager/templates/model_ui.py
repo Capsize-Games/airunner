@@ -25,7 +25,7 @@ class Ui_model_widget(object):
     def setupUi(self, model_widget):
         if not model_widget.objectName():
             model_widget.setObjectName(u"model_widget")
-        model_widget.resize(395, 293)
+        model_widget.resize(395, 295)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -56,6 +56,7 @@ class Ui_model_widget(object):
         self.toolButton.setObjectName(u"toolButton")
         self.toolButton.setMinimumSize(QSize(24, 24))
         self.toolButton.setMaximumSize(QSize(24, 24))
+        self.toolButton.setCursor(QCursor(Qt.PointingHandCursor))
         icon = QIcon()
         icon.addFile(u":/icons/light/eye-look-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolButton.setIcon(icon)
@@ -64,23 +65,14 @@ class Ui_model_widget(object):
 
         self.horizontalLayout.addWidget(self.toolButton)
 
-        self.edit_button = QPushButton(model_widget)
-        self.edit_button.setObjectName(u"edit_button")
-        self.edit_button.setMinimumSize(QSize(24, 24))
-        self.edit_button.setMaximumSize(QSize(24, 24))
-        icon1 = QIcon()
-        icon1.addFile(u":/icons/light/setting-line-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.edit_button.setIcon(icon1)
-
-        self.horizontalLayout.addWidget(self.edit_button)
-
         self.delete_button = QPushButton(model_widget)
         self.delete_button.setObjectName(u"delete_button")
         self.delete_button.setMinimumSize(QSize(24, 24))
         self.delete_button.setMaximumSize(QSize(24, 24))
-        icon2 = QIcon()
-        icon2.addFile(u":/icons/light/recycle-bin-line-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.delete_button.setIcon(icon2)
+        self.delete_button.setCursor(QCursor(Qt.PointingHandCursor))
+        icon1 = QIcon()
+        icon1.addFile(u":/icons/light/recycle-bin-line-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.delete_button.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.delete_button)
 
@@ -146,8 +138,8 @@ class Ui_model_widget(object):
 
         self.retranslateUi(model_widget)
         self.toolButton.toggled.connect(model_widget.action_toggled_button_details)
-        self.edit_button.clicked.connect(model_widget.action_clicked_button_settings)
         self.delete_button.clicked.connect(model_widget.action_clicked_button_delete)
+        self.details.cellChanged.connect(model_widget.action_cell_changed)
 
         QMetaObject.connectSlotsByName(model_widget)
     # setupUi
@@ -166,10 +158,6 @@ class Ui_model_widget(object):
         self.toolButton.setToolTip(QCoreApplication.translate("model_widget", u"View details", None))
 #endif // QT_CONFIG(tooltip)
         self.toolButton.setText("")
-#if QT_CONFIG(tooltip)
-        self.edit_button.setToolTip(QCoreApplication.translate("model_widget", u"Edit model", None))
-#endif // QT_CONFIG(tooltip)
-        self.edit_button.setText("")
 #if QT_CONFIG(tooltip)
         self.delete_button.setToolTip(QCoreApplication.translate("model_widget", u"Delete model", None))
 #endif // QT_CONFIG(tooltip)

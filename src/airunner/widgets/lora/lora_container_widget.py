@@ -1,5 +1,6 @@
 import os
 
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.enums import SignalCode
@@ -24,6 +25,7 @@ class LoraContainerWidget(BaseWidget):
         super().__init__(*args, **kwargs)
 
         self.loars = None
+        self.register(SignalCode.LORA_DELETE_SIGNAL, self.delete_lora)
         self.scan_for_lora()
         self.load_lora()
 
@@ -34,10 +36,20 @@ class LoraContainerWidget(BaseWidget):
                     continue
             self.add_lora(lora)
         
+        self.add_spacer()
+
+    def remove_spacer(self):
+        # remove spacer from end of self.ui.scrollAreaWidgetContents.layout()
+        if self.spacer:
+            self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
+
+    def add_spacer(self):
         # add spacer to end of self.ui.scrollAreaWidgetContents.layout()
         if not self.spacer:
             self.spacer = QWidget()
             self.spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        else:
+            self.remove_spacer()
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
 
     def add_lora(self, lora):
@@ -45,22 +57,57 @@ class LoraContainerWidget(BaseWidget):
             return
         lora_widget = LoraWidget(lora=lora)
         self.ui.scrollAreaWidgetContents.layout().addWidget(lora_widget)
+        self.add_spacer()
 
+    def delete_lora(self, data: dict):
+        lora_widget = data["lora_widget"]
+
+        # Remove lora from settings
+        settings = self.settings
+        settings["lora"] = [lora for lora in settings["lora"] if lora["name"] != lora_widget.lora["name"]]
+        self.settings = settings
+
+        # Remove lora widget from scroll area
+        self.ui.scrollAreaWidgetContents.layout().removeWidget(lora_widget)
+        self.add_spacer()
+
+        # Delete the lora from disc
+        lora_path = self.settings["path_settings"]["lora_model_path"]
+        lora_file = lora_widget.lora["name"]
+        for dirpath, dirnames, filenames in os.walk(lora_path):
+            for file in filenames:
+                if file.startswith(lora_file):
+                    os.remove(os.path.join(dirpath, file))
+                    break
+
+    @Slot()
     def scan_for_lora(self):
         lora_path = self.settings["path_settings"]["lora_model_path"]
         for dirpath, dirnames, filenames in os.walk(lora_path):
             # get version from dirpath
             version = dirpath.split("/")[-1]
+            do_skip = False
             for file in filenames:
                 if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
                     name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-                    self.emit_signal(SignalCode.LORA_ADD_SIGNAL, {
-                        'name': name,
-                        'path': os.path.join(dirpath, file),
-                        'enabled': True,
-                        'scale': 100.0,
-                        'version': version
-                    })
+                    for lora in self.settings["lora"]:
+                        if lora["name"] == name:
+                            do_skip = True
+                            break
+
+                    if not do_skip:
+                        lora_data = dict(
+                            name=name,
+                            path=os.path.join(dirpath, file),
+                            scale=1,
+                            enabled=True,
+                            loaded=False,
+                            trigger_word="",
+                            version=version
+                        )
+                        self.add_lora(lora_data)
+                        self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
+                    do_skip = False
 
     def toggle_all_lora(self, checked):
         for i in range(self.ui.lora_scroll_area.widget().layout().count()):
@@ -222,7 +269,6 @@ class LoraContainerWidget(BaseWidget):
         self.settings = settings
 
     def search_text_changed(self, val):
-        print("search text changed", val)
         self.search_filter = val
         self.clear_lora_widgets()
         self.load_lora()
