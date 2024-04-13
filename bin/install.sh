@@ -1,8 +1,12 @@
 #!/bin/bash
 
+# Change current working directory to the directory of the script
+cd "$(dirname "$0")"
+
 # Linux prerequisites
+sudo apt update
 sudo apt install fonts-noto-color-emoji
-sudo apt-get install libportaudio2 libxcb-cursor0 espeak xclip
+sudo apt install libportaudio2 libxcb-cursor0 espeak xclip
 
 # Create and activate virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
@@ -41,6 +45,3 @@ else
     read -p "Enter the directory of controlnet_aux: " controlnet_aux_dir
     cd $controlnet_aux_dir && pip install -e .
 fi
-
-# Uninstall opencv-python
-pip uninstall opencv-python -y
