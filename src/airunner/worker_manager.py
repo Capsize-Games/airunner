@@ -87,6 +87,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         if not disable_llm:
             self.llm_request_worker = create_worker(LLMRequestWorker)
             self.llm_generate_worker = create_worker(LLMGenerateWorker, do_load_on_init=do_load_llm_on_init)
+            self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.llm_generate_worker.on_llm_request_worker_response_signal)
+            self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.llm_generate_worker.on_unload_llm_signal)
 
         if not disable_stt:
             self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
@@ -95,6 +97,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         if not disable_vision_capture:
             self.vision_capture_worker = create_worker(VisionCaptureWorker)
             self.vision_processor_worker = create_worker(VisionProcessorWorker)
+
 
         self.toggle_vision_capture()
 
