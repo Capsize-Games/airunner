@@ -112,18 +112,25 @@ for category in ImageCategory:
 
 
 class SettingsMixin:
-    def __init__(self):
+    def __init__(
+        self,
+        use_cuda: bool = True,
+        ocr_enabled: bool = False,
+        tts_enabled: bool = False,
+        stt_enabled: bool = False,
+        ai_mode: bool = True,
+    ):
         self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = dict(
             installation_path="~/airunner",
             trust_remote_code=False,
-            use_cuda=True,
+            use_cuda=use_cuda,
             current_layer_index=0,
-            ocr_enabled=False,
-            tts_enabled=False,
-            stt_enabled=False,
-            ai_mode=True,
+            ocr_enabled=ocr_enabled,
+            tts_enabled=tts_enabled,
+            stt_enabled=stt_enabled,
+            ai_mode=ai_mode,
             nsfw_filter=True,
             resize_on_paste=True,
             image_to_new_layer=True,

@@ -87,6 +87,11 @@ class MainWindow(
         disable_llm: bool = False,
         disable_tts: bool = False,
         disable_stt: bool = False,
+        use_cuda: bool = True,
+        ocr_enabled: bool = False,
+        tts_enabled: bool = False,
+        stt_enabled: bool = False,
+        ai_mode: bool = True,
         disable_vision_capture: bool = False,
         do_load_llm_on_init: bool = False,
         tts_handler_class=EspeakTTSHandler,
@@ -138,8 +143,19 @@ class MainWindow(
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
-        super().__init__(*args, **kwargs)
+        SettingsMixin.__init__(
+            self,
+            use_cuda=use_cuda,
+            ocr_enabled=ocr_enabled,
+            tts_enabled=tts_enabled,
+            stt_enabled=stt_enabled,
+            ai_mode=ai_mode,
+        )
+
+        super().__init__(
+            *args,
+            **kwargs
+        )
 
         self._updating_settings = True
         self.update_settings()
