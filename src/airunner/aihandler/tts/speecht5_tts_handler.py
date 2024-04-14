@@ -4,6 +4,7 @@ import torch
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 from datasets import load_dataset
 from airunner.aihandler.tts.tts_handler import TTSHandler
+from airunner.enums import SignalCode, LLMChatRole
 
 
 class SpeechT5TTSHandler(TTSHandler):
@@ -87,15 +88,25 @@ class SpeechT5TTSHandler(TTSHandler):
 
         self.logger.debug("Generating speech...")
         start = time.time()
-        speech = self.model.generate(
-            **inputs,
-            speaker_embeddings=self.speaker_embeddings,
-            vocoder=self.vocoder,
-            max_length=100
-        )
+        try:
+            speech = self.model.generate(
+                **inputs,
+                speaker_embeddings=self.speaker_embeddings,
+                vocoder=self.vocoder,
+                max_length=100
+            )
+        except RuntimeError as e:
+            self.logger.error("Failed to generate speech")
+            self.logger.error(e)
+            self.cancel_generated_speech = False
+            return None
         if not self.cancel_generated_speech:
             self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
             response = speech.cpu().float().numpy()
+            self.emit_signal(SignalCode.PROCESS_SPEECH_SIGNAL, {
+                "message": text,#response,
+                "role": LLMChatRole.ASSISTANT
+            })
             return response
         if not self.do_interrupt:
             self.logger.debug("Skipping generated speech: " + text)
