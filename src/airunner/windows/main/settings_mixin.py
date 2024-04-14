@@ -177,8 +177,6 @@ class SettingsMixin:
                 "image": {
                     "use_guardrails": True,
                     "template_name": "image",
-                    "username": "User",
-                    "botname": "AIRunner",
                     "guardrails": (
                         "Avoid generating images that are illegal, "
                         "harmful, or might be seen as offensive."
@@ -411,7 +409,7 @@ class SettingsMixin:
                 prompt_template="Mistral 7B Instruct: Default Chatbot",
                 batch_size=1,
                 cache_llm_to_disk=True,
-                max_new_tokens=100,
+                max_new_tokens=100
             ),
             tts_settings=tts_settings_default,
             stt_settings=dict(
