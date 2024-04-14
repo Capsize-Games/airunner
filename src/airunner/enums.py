@@ -228,6 +228,8 @@ class SignalCode(Enum):
     BASH_EXECUTE_SIGNAL = "bash_execute_signal"
     WRITE_FILE = "write_file_signal"
     LLM_CHOOSE_RESPONSE_LENGTH_SIGNAL = "choose_response_length_signal"
+    PROCESS_SPEECH_SIGNAL = "process_speech_signal"
+    ADD_CHATBOT_MESSAGE_SIGNAL = "add_chatbot_message_signal"
 
 
 class EngineResponseCode(Enum):
