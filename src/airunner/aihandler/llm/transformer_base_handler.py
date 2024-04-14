@@ -10,17 +10,17 @@ from airunner.utils import clear_memory, get_torch_device
 class TransformerBaseHandler(BaseHandler):
     auto_class_ = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, do_load_on_init: bool = False, **kwargs):
         self.do_quantize_model = kwargs.pop("do_quantize_model", True)
 
         super().__init__(*args, **kwargs)
         self.callback = None
-        self.request_data = {}
+        self.request_data = kwargs.get("request_data", {})
         self.model = None
         self.vocoder = None
         self.temperature = kwargs.get("temperature", 0.7)
-        self.max_length = kwargs.get("max_length", 1000)
-        self.max_new_tokens = 200
+        #self.max_length = kwargs.get("max_length", 1000)
+        self.max_new_tokens = 30
         self.min_length = kwargs.get("min_length", 0)
         self.num_beams = kwargs.get("num_beams", 1)
         self.top_k = kwargs.get("top_k", 20)
@@ -31,7 +31,6 @@ class TransformerBaseHandler(BaseHandler):
         self.length_penalty = kwargs.get("length_penalty", 1.0)
         self.parameters = kwargs.get("parameters", None)
         self.model_path = kwargs.get("model_path", None)
-        self.override_parameters = kwargs.get("override_parameters", None)
         self.prompt = kwargs.get("prompt", None)
         self.current_model_path = kwargs.get("current_model_path", "")
         self.local_files_only = kwargs.get("local_files_only", False)
@@ -59,6 +58,13 @@ class TransformerBaseHandler(BaseHandler):
         self._generator = None
         self.template = None
         self.image = None
+        self.override_parameters = {}
+
+        if self.model_path is None:
+            self.model_path = self.settings["llm_generator_settings"]["model_version"]
+
+        if do_load_on_init:
+            self.load()
 
     @property
     def do_load_model(self):
@@ -246,12 +252,12 @@ class TransformerBaseHandler(BaseHandler):
 
     def process_data(self, data: dict) -> None:
         self.request_data = data.get("request_data", {})
+        self.parameters = self.request_data.get("parameters", {})
         self.callback = self.request_data.get("callback", None)
         self.use_gpu = self.request_data.get("use_gpu", self.use_gpu)
         self.image = self.request_data.get("image", None)
         self.parameters = self.request_data.get("parameters", {})
         self.model_path = self.request_data.get("model_path", self.model_path)
-        self.override_parameters = self.parameters.get("override_parameters", self.override_parameters)
         self.prompt = self.request_data.get("prompt", self.prompt)
         self.template = self.request_data.get("template", "")
 
@@ -279,51 +285,30 @@ class TransformerBaseHandler(BaseHandler):
         :return: dict
         """
         parameters = self.parameters or {}
-        top_k = parameters.get("top_k", self.top_k)
-        eta_cutoff = parameters.get("eta_cutoff", self.eta_cutoff)
-        top_p = parameters.get("top_p", self.top_p)
-        num_beams = parameters.get("num_beams", self.num_beams)
-        repetition_penalty = parameters.get("repetition_penalty", self.repetition_penalty)
-        early_stopping = parameters.get("early_stopping", self.early_stopping)
-        max_length = parameters.get("max_length", self.max_length)
-        min_length = parameters.get("min_length", self.min_length)
-        temperature = parameters.get("temperature", self.temperature)
-        return_result = parameters.get("return_result", self.return_result)
-        skip_special_tokens = parameters.get("skip_special_tokens", self.skip_special_tokens)
-        do_sample = parameters.get("do_sample", self.do_sample)
-        bad_words_ids = parameters.get("bad_words_ids", self.bad_words_ids)
-        bos_token_id = parameters.get("bos_token_id", self.bos_token_id)
-        pad_token_id = parameters.get("pad_token_id", self.pad_token_id)
-        eos_token_id = parameters.get("eos_token_id", self.eos_token_id)
-        no_repeat_ngram_size = parameters.get("no_repeat_ngram_size", self.no_repeat_ngram_size)
-        sequences = parameters.get("sequences", self.sequences)
-        decoder_start_token_id = parameters.get("decoder_start_token_id", self.decoder_start_token_id)
-        use_cache = parameters.get("use_cache", self.use_cache)
-        seed = parameters.get("seed", self.seed)
 
         kwargs = {
-            #"max_length": max_length,
-            "max_new_tokens": self.max_new_tokens,
-            "min_length": min_length,
-            "do_sample": do_sample,
-            "early_stopping": early_stopping,
-            "num_beams": num_beams,
-            "temperature": temperature,
-            "top_k": top_k,
-            "eta_cutoff": eta_cutoff,
-            "top_p": top_p,
-            "repetition_penalty": repetition_penalty,
-            # "bad_words_ids": bad_words_ids,
-            # "bos_token_id": bos_token_id,
-            # "pad_token_id": pad_token_id,
-            # "eos_token_id": eos_token_id,
-            "return_result": return_result,
-            "skip_special_tokens": skip_special_tokens,
-            "no_repeat_ngram_size": no_repeat_ngram_size,
-            "num_return_sequences": sequences,  # if num_beams == 1 or num_beams < sequences else num_beams,
-            "decoder_start_token_id": decoder_start_token_id,
-            "use_cache": use_cache,
-            "seed": seed,
+            "max_new_tokens": parameters.get("max_new_tokens", self.max_new_tokens),
+            "min_length": parameters.get("min_length", self.min_length),
+            #"max_length": parameters.get("max_length", self.max_length),
+            "do_sample": parameters.get("do_sample", self.do_sample),
+            "early_stopping": parameters.get("early_stopping", self.early_stopping),
+            "num_beams": parameters.get("num_beams", self.num_beams),
+            "temperature": parameters.get("temperature", self.temperature),
+            "top_k": parameters.get("top_k", self.top_k),
+            "eta_cutoff": parameters.get("eta_cutoff", self.eta_cutoff),
+            "top_p": parameters.get("top_p", self.top_p),
+            "repetition_penalty": parameters.get("repetition_penalty", self.repetition_penalty),
+            # "bad_words_ids": parameters.get("bad_words_ids", self.bad_words_ids),
+            # "bos_token_id": parameters.get("bos_token_id", self.bos_token_id),
+            # "pad_token_id": parameters.get("pad_token_id", self.pad_token_id),
+            # "eos_token_id": parameters.get("eos_token_id", self.eos_token_id),
+            "return_result": parameters.get("return_result", self.return_result),
+            "skip_special_tokens": parameters.get("skip_special_tokens", self.skip_special_tokens),
+            "no_repeat_ngram_size": parameters.get("no_repeat_ngram_size", self.no_repeat_ngram_size),
+            "num_return_sequences": parameters.get("sequences", self.sequences),  # if num_beams == 1 or num_beams < sequences else num_beams,
+            "decoder_start_token_id": parameters.get("decoder_start_token_id", self.decoder_start_token_id),
+            "use_cache": parameters.get("use_cache", self.use_cache),
+            "seed": parameters.get("seed", self.seed),
         }
         if "top_k" in kwargs and "do_sample" in kwargs and not kwargs["do_sample"]:
             del kwargs["top_k"]
@@ -346,9 +331,9 @@ class TransformerBaseHandler(BaseHandler):
 
     def handle_request(self, data: dict) -> str:
         self._processing_request = True
-        kwargs = self.prepare_input_args()
-        self.do_set_seed(kwargs.get("seed"))
         self.process_data(data)
+        self.override_parameters = self.prepare_input_args()
+        self.do_set_seed(self.override_parameters.get("seed"))
         self.load()
         self._processing_request = True
         return self.generate()

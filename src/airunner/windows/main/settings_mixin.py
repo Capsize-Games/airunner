@@ -230,6 +230,9 @@ class SettingsMixin:
                             "This is **MANDATORY**."
                         )
                     ])
+                },
+                "chatbot": {
+                    "use_system_datetime_in_system_prompt": False
                 }
             },
             llm_templates={
@@ -405,9 +408,10 @@ class SettingsMixin:
                     Default=DEFAULT_CHATBOT
                 ),
                 embeddings_model_path="BAAI/bge-small-en-v1.5",
-                prompt_template="StableLM 2 Zephyr: Default Chatbot",
+                prompt_template="Mistral 7B Instruct: Default Chatbot",
                 batch_size=1,
                 cache_llm_to_disk=True,
+                max_new_tokens=100,
             ),
             tts_settings=tts_settings_default,
             stt_settings=dict(
