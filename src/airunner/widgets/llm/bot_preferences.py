@@ -1,3 +1,4 @@
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from airunner.settings import DEFAULT_CHATBOT
@@ -156,3 +157,13 @@ class BotPreferencesWidget(BaseWidget):
         for button in buttons:
             dialog.addButton(button, QMessageBox.ButtonRole.AcceptRole)
         return dialog.exec()
+
+    @Slot(bool)
+    def toggle_use_image_generator(self, val: bool):
+        self.ui.use_image_generator_checkbox.blockSignals(True)
+        self.ui.use_image_generator_checkbox.setChecked(val)
+        self.ui.use_image_generator_checkbox.blockSignals(False)
+
+    @Slot(bool)
+    def agent_type_changed(self, val: str):
+        print("agent type changed", val)

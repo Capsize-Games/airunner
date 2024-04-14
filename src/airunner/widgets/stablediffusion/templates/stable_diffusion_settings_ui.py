@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'stable_diffusion_settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -132,6 +132,7 @@ class Ui_stable_diffusion_settings_widget(object):
         self.reload_selected_preset = QPushButton(stable_diffusion_settings_widget)
         self.reload_selected_preset.setObjectName(u"reload_selected_preset")
         self.reload_selected_preset.setMaximumSize(QSize(32, 16777215))
+        self.reload_selected_preset.setCursor(QCursor(Qt.PointingHandCursor))
         icon = QIcon()
         icon.addFile(u":/icons/light/exchange-refresh-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.reload_selected_preset.setIcon(icon)
@@ -262,7 +263,7 @@ class Ui_stable_diffusion_settings_widget(object):
         self.steps_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Steps", None))
         self.scale_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Scale", None))
         self.samples.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Samples", None))
-        self.samples.setProperty("settings_property", QCoreApplication.translate("stable_diffusion_settings_widget", u"n_samples", None))
+        self.samples.setProperty("settings_property", QCoreApplication.translate("stable_diffusion_settings_widget", u"generator_settings.n_samples", None))
         self.clip_skip_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Clip Skip", None))
         self.label.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Presets", None))
     # retranslateUi

@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'seed.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -24,7 +24,7 @@ class Ui_seed_widget(object):
     def setupUi(self, seed_widget):
         if not seed_widget.objectName():
             seed_widget.setObjectName(u"seed_widget")
-        seed_widget.resize(558, 43)
+        seed_widget.resize(558, 45)
         self.gridLayout = QGridLayout(seed_widget)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -32,6 +32,7 @@ class Ui_seed_widget(object):
         self.random_button.setObjectName(u"random_button")
         self.random_button.setMinimumSize(QSize(24, 24))
         self.random_button.setMaximumSize(QSize(24, 24))
+        self.random_button.setCursor(QCursor(Qt.PointingHandCursor))
         icon = QIcon()
         icon.addFile(u":/icons/dark/dice-game-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.random_button.setIcon(icon)

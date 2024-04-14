@@ -2,18 +2,15 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
-from airunner.enums import SignalCode, ServiceCode
-from airunner.service_locator import ServiceLocator
+from airunner.enums import SignalCode
 from airunner.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
 from airunner.widgets.font_settings.font_settings_widget import FontSettingsWidget
 from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 from airunner.widgets.image_generator_preferences.image_generator_preferences_widget import ImageGeneratorPreferencesWidget
-
 from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
 from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
-from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
 from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
 from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
 from airunner.widgets.paths.paths_widget import PathsWidget
@@ -119,11 +116,6 @@ class SettingsWindow(BaseWindow):
                         )
                     },
                     {
-                        "name": "stable_diffusion_preferences",
-                        "display_name": "Stable Diffusion",
-                        "checkable": False
-                    },
-                    {
                         "name": "lora_settings",
                         "display_name": "LoRA",
                         "checkable": False
@@ -197,12 +189,7 @@ class SettingsWindow(BaseWindow):
                 "files": [
                     {
                         "name": "bot_preferences",
-                        "display_name": "Chatbot Preferences",
-                        "checkable": False
-                    },
-                    {
-                        "name": "llm_preferences",
-                        "display_name": "LLM Preferences",
+                        "display_name": "Agent Preferences",
                         "checkable": False
                     },
                     {
@@ -388,7 +375,6 @@ class SettingsWindow(BaseWindow):
             "translation_preferences": TranslationPreferencesWidget,
             "tts_preferences": TTSPreferencesWidget,
             "bot_preferences": BotPreferencesWidget,
-            "llm_preferences": LLMSettingsWidget,
             "font_settings": FontSettingsWidget,
         }
         if name in widgets:
