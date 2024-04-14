@@ -68,6 +68,7 @@ class MainWindow(
     loaded = Signal()
     window_opened = Signal()
     ui_class_ = Ui_MainWindow
+    _window_title = f"AI Runner"
     icons = [
         ("pencil-icon", "toggle_brush_button"),
         ("eraser-icon", "toggle_eraser_button"),
@@ -978,7 +979,7 @@ class MainWindow(
         Overrides base method to set the window title
         :return:
         """
-        self.setWindowTitle(f"AI Runner")
+        self.setWindowTitle(self._window_title)
 
     def new_document(self):
         self.is_saved = False
