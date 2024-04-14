@@ -43,7 +43,6 @@ class TransformerBaseHandler(BaseHandler):
         self.llm_int8_enable_fp32_cpu_offload = kwargs.get("llm_int8_enable_fp32_cpu_offload", True)
         self.generator_name = kwargs.get("generator_name", "")
         self.default_model_path = kwargs.get("default_model_path", "")
-        self.request_type = kwargs.get("request_type", "")
         self.return_result = kwargs.get("return_result", True)
         self.skip_special_tokens = kwargs.get("skip_special_tokens", True)
         self.do_sample = kwargs.get("do_sample", True)
@@ -336,4 +335,5 @@ class TransformerBaseHandler(BaseHandler):
         self.do_set_seed(self.override_parameters.get("seed"))
         self.load()
         self._processing_request = True
-        return self.generate()
+        result = self.generate()
+        return result
