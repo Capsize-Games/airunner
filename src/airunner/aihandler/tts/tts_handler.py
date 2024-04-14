@@ -1,6 +1,8 @@
 import inflect
 import re
 from queue import Queue
+
+import torch.cuda
 from transformers import AutoTokenizer
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode
@@ -428,7 +430,11 @@ class TTSHandler(BaseHandler):
             if self.do_interrupt or self.paused:
                 return None
 
-            return self.do_generate(message)
+            try:
+                return self.do_generate(message)
+            except torch.cuda.OutOfMemoryError:
+                self.logger.error("Out of memory")
+                return None
 
     def replace_unspeakable_characters(self, text):
         # strip things like eplisis, etc
