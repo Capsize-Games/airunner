@@ -18,7 +18,6 @@ from airunner.utils import default_hf_cache_dir
 
 tts_settings_default = {
     "use_bark": False,
-    "enable_tts": True,
     "use_cuda": True,
     "use_sentence_chunks": True,
     "use_word_chunks": False,
