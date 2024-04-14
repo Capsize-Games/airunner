@@ -40,28 +40,7 @@ class AIRunnerAgent(
         self.streamer = kwargs.pop("streamer", None)
         self.tools = kwargs.pop("tools", None)
         self.chat_template = kwargs.pop("chat_template", "")
-        self.bot_mood = kwargs.pop("bot_mood", None)
-        self.bot_personality = kwargs.pop("bot_personality", None)
-        self.max_new_tokens = kwargs.pop("max_new_tokens", self.settings["llm_generator_settings"]["max_new_tokens"])
-        self.min_length = kwargs.pop("min_length", self.settings["llm_generator_settings"]["min_length"])
-        #self.max_length = kwargs.pop("max_length", self.settings["llm_generator_settings"]["max_length"])
-        self.num_beams = kwargs.pop("num_beams", self.settings["llm_generator_settings"]["num_beams"])
-        self.do_sample = kwargs.pop("do_sample", self.settings["llm_generator_settings"]["do_sample"])
-        self.top_k = kwargs.pop("top_k", self.settings["llm_generator_settings"]["top_k"])
-        self.eta_cutoff = kwargs.pop("eta_cutoff", self.settings["llm_generator_settings"]["eta_cutoff"])
-        self.sequences = kwargs.pop("sequences", self.settings["llm_generator_settings"]["sequences"])
-        self.early_stopping = kwargs.pop("early_stopping", self.settings["llm_generator_settings"]["early_stopping"])
-        self.repetition_penalty = kwargs.pop("repetition_penalty", self.settings["llm_generator_settings"]["repetition_penalty"])
-        self.temperature = kwargs.pop("temperature", self.settings["llm_generator_settings"]["temperature"])
         self.is_mistral = kwargs.pop("is_mistral", True)
-        self.top_p = kwargs.pop("top_p", self.settings["llm_generator_settings"]["top_p"])
-        self.guardrails_prompt = kwargs.pop("guardrails_prompt", "")
-        self.use_guardrails = kwargs.pop("use_guardrails", True)
-        self.system_instructions = kwargs.pop("system_instructions", "")
-        self.use_system_instructions = kwargs.pop("use_system_instructions", True)
-        self.user_evaluation = kwargs.pop("user_evaluation", None)
-        self.use_mood = kwargs.pop("use_mood", True)
-        self.use_personality = kwargs.pop("use_personality", True)
         self.logger = Logger(prefix=self.__class__.__name__)
         super().__init__(*args, **kwargs)
         self.register(SignalCode.LLM_RESPOND_TO_USER_SIGNAL, self.do_response)
@@ -71,19 +50,19 @@ class AIRunnerAgent(
         self.thread = None
         self.do_interrupt = False
         self.response_worker = create_worker(AgentWorker)
-        #self.summarize_worker = create_worker(AgentWorker)
 
     @property
     def chatbot(self):
-        return self.settings["llm_generator_settings"]["current_chatbot"]
+        chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
+        return self.settings["llm_generator_settings"]["saved_chatbots"][chatbot_name]
 
     @property
     def username(self):
-        return self.settings["llm_generator_settings"]["saved_chatbots"][self.chatbot]["username"]
+        return self.chatbot["username"]
 
     @property
     def botname(self):
-        return self.settings["llm_generator_settings"]["saved_chatbots"][self.chatbot]["botname"]
+        return self.chatbot["botname"]
 
     def unload(self):
         self.model = None
@@ -110,32 +89,25 @@ class AIRunnerAgent(
     def build_system_prompt(
         self,
         action: LLMActionType,
-        vision_history: list = [],
-        username: str = "",
-        botname: str = "",
-        bot_mood: str = "",
-        bot_personality: str = "",
-        guardrails_prompt: str = "",
-        system_instructions: str = "",
-        use_guardrails: bool = True,
-        use_system_instructions: bool = True,
-        user_evaluation: str = "",
-        use_mood: bool = True,
-        use_personality: bool = True,
-        use_names: bool = True
+        vision_history: list = []
     ):
-        use_guardrails = self.use_guardrails if use_guardrails is None else use_guardrails
-        use_system_instructions = self.use_system_instructions if use_system_instructions is None else use_system_instructions
-        system_instructions = system_instructions if use_system_instructions else ""
-        if not use_system_instructions:
-            system_instructions = ""
-        if not use_guardrails:
-            guardrails_prompt = ""
+        system_instructions = ""
+        guardrails_prompt = ""
+        use_mood = self.chatbot["use_mood"]
+        use_personality = self.chatbot["use_personality"]
+        use_names = self.chatbot["assign_names"]
+        use_system_instructions = self.chatbot["use_system_instructions"]
+        use_guardrails = self.chatbot["use_guardrails"]
+        bot_mood = self.chatbot["bot_mood"]
+        bot_personality = self.chatbot["bot_personality"]
+        username = self.chatbot["username"]
+        botname = self.chatbot["botname"]
+        if use_system_instructions:
+            system_instructions = self.chatbot["system_instructions"]
+        if use_guardrails:
+            guardrails_prompt = self.chatbot["guardrails_prompt"]
+
         system_prompt = []
-        username = self.username if username == "" or not username is None else username
-        botname = self.botname if botname == "" or not botname else botname
-        bot_mood = self.bot_mood if bot_mood == "" or not bot_mood else bot_mood
-        bot_personality = self.bot_personality if bot_personality == "" or not bot_personality else bot_personality
 
         if action == LLMActionType.CHAT:
             """
@@ -222,37 +194,13 @@ class AIRunnerAgent(
         self,
         action: LLMActionType,
         use_latest_human_message: bool = True,
-        vision_history: list = [],
-        username: str = "",
-        botname: str = "",
-        bot_mood: str = "",
-        bot_personality: str = "",
-        guardrails_prompt: str = "",
-        system_instructions: str = "",
-        use_guardrails: bool = True,
-        use_system_instructions: bool = True,
-        user_evaluation: str = "",
-        use_mood: bool = True,
-        use_personality: bool = True,
-        use_names: bool = True
+        vision_history: list = []
     ) -> list:
         messages = [
             {
                 "content": self.build_system_prompt(
                     action,
-                    vision_history=vision_history,
-                    username=username,
-                    botname=botname,
-                    bot_mood=bot_mood,
-                    bot_personality=bot_personality,
-                    guardrails_prompt=guardrails_prompt,
-                    system_instructions=system_instructions,
-                    use_guardrails=use_guardrails,
-                    use_system_instructions=use_system_instructions,
-                    user_evaluation=user_evaluation,
-                    use_mood=use_mood,
-                    use_personality=use_personality,
-                    use_names=use_names
+                    vision_history=vision_history
                 ),
                 "role": LLMChatRole.SYSTEM.value
             }
@@ -298,6 +246,94 @@ class AIRunnerAgent(
             max_new_tokens=message["args"][0]
         )
 
+    @property
+    def system_instructions(self):
+        return self.chatbot["system_instructions"]
+
+    @property
+    def generator_settings(self):
+        return self.chatbot["generator_settings"]
+
+    @property
+    def max_new_tokens(self):
+        return self.generator_settings["max_new_tokens"]
+
+    @property
+    def min_length(self):
+        return self.generator_settings["min_length"]
+
+    @property
+    def num_beams(self):
+        return self.generator_settings["num_beams"]
+
+    @property
+    def do_sample(self):
+        return self.generator_settings["do_sample"]
+
+    @property
+    def top_k(self):
+        return self.generator_settings["top_k"]
+
+    @property
+    def eta_cutoff(self):
+        return self.generator_settings["eta_cutoff"]
+
+    @property
+    def sequences(self):
+        return self.generator_settings["sequences"]
+
+    @property
+    def early_stopping(self):
+        return self.generator_settings["early_stopping"]
+
+    @property
+    def repetition_penalty(self):
+        return self.generator_settings["repetition_penalty"]
+
+    @property
+    def temperature(self):
+        return self.generator_settings["temperature"]
+
+    @property
+    def top_p(self):
+        return self.generator_settings["top_p"]
+
+    @property
+    def user_evaluation(self):
+        return self.generator_settings["user_evaluation"]
+
+    @property
+    def seed(self):
+        return self.generator_settings["seed"]
+
+    @property
+    def no_repeat_ngram_size(self):
+        return self.generator_settings["no_repeat_ngram_size"]
+
+    @property
+    def return_result(self):
+        return self.generator_settings["return_result"]
+
+    @property
+    def skip_special_tokens(self):
+        return self.generator_settings["skip_special_tokens"]
+
+    @property
+    def ngram_size(self):
+        return self.generator_settings["ngram_size"]
+
+    @property
+    def length_penalty(self):
+        return self.generator_settings["length_penalty"]
+
+    @property
+    def use_cache(self):
+        return self.generator_settings["use_cache"]
+
+    @property
+    def decoder_start_token_id(self):
+        return self.generator_settings["decoder_start_token_id"]
+
     def get_model_inputs(
         self,
         action,
@@ -305,55 +341,10 @@ class AIRunnerAgent(
         **kwargs
     ):
         self.chat_template = kwargs.get("chat_template", self.chat_template)
-        self.bot_mood = kwargs.get("bot_mood", self.bot_mood)
-        self.bot_personality = kwargs.get("bot_personality", self.bot_personality)
-        self.max_new_tokens = kwargs.get("max_new_tokens", self.max_new_tokens)
-        self.min_length = kwargs.get("min_length", self.min_length)
-        #self.max_length = kwargs.get("max_length", self.max_length)
-        self.num_beams = kwargs.get("num_beams", self.num_beams)
-        self.do_sample = kwargs.get("do_sample", self.do_sample)
-        self.top_k = kwargs.get("top_k", self.top_k)
-        self.eta_cutoff = kwargs.get("eta_cutoff", self.eta_cutoff)
-        self.sequences = kwargs.get("sequences", self.sequences)
-        self.early_stopping = kwargs.get("early_stopping", self.early_stopping)
-        self.repetition_penalty = kwargs.get("repetition_penalty", self.repetition_penalty)
-        self.temperature = kwargs.get("temperature", self.temperature)
-        self.top_p = kwargs.get("top_p", self.top_p)
-        self.guardrails_prompt = kwargs.get("guardrails_prompt", self.guardrails_prompt)
-        self.use_guardrails = kwargs.get("use_guardrails", self.use_guardrails)
-        self.system_instructions = kwargs.get("system_instructions", self.system_instructions)
-        self.use_system_instructions = kwargs.get("use_system_instructions", self.use_system_instructions)
-        self.user_evaluation = kwargs.get("user_evaluation", self.user_evaluation)
-        self.use_mood = kwargs.get("use_mood", self.use_mood)
-        self.use_personality = kwargs.get("use_personality", self.use_personality)
-        self.seed = kwargs.get("seed", 42)
-        self.no_repeat_ngram_size = kwargs.get("no_repeat_ngram_size", 2)
-        self.return_result = kwargs.get("return_result", True)
-        self.skip_special_tokens = kwargs.get("skip_special_tokens", True)
-        self.sequences = kwargs.get("sequences", 1)
-        self.ngram_size = kwargs.get("ngram_size", 2)
-        self.length_penalty = kwargs.get("length_penalty", 0.5)
-        self.use_cache = kwargs.get("use_cache", True)
-        self.decoder_start_token_id = kwargs.get("decoder_start_token_id", None)
-        self.skip_special_tokens = kwargs.get("skip_special_tokens", True)
-        self.no_repeat_ngram_size = kwargs.get("no_repeat_ngram_size", 2)
-        self.use_names = kwargs.get("use_names", True)
 
         conversation = self.prepare_messages(
             action,
-            vision_history=vision_history,
-            username=self.username,
-            botname=self.botname,
-            bot_mood=self.bot_mood,
-            bot_personality=self.bot_personality,
-            guardrails_prompt=self.guardrails_prompt,
-            system_instructions=self.system_instructions,
-            use_guardrails=self.use_guardrails,
-            use_system_instructions=self.use_system_instructions,
-            user_evaluation=self.user_evaluation,
-            use_mood=self.use_mood,
-            use_personality=self.use_personality,
-            use_names=self.use_names
+            vision_history=vision_history
         )
 
         self.rendered_template = self.get_rendered_template(
@@ -384,20 +375,6 @@ class AIRunnerAgent(
         self.prompt = prompt
         streamer = self.streamer
         system_instructions = kwargs.get("system_instructions", self.system_instructions)
-
-        # res = self.do_run(
-        #     action,
-        #     vision_history,
-        #     **kwargs,
-        #     system_instructions=(
-        #         "You will evaluate the conversation and determine the approximate "
-        #         "word length that is required to respond to {{ username }}. "
-        #     ),
-        #     do_add_response_to_history=False,
-        #     streamer=None,
-        #     do_emit_response=False,
-        #     use_names=False,
-        # )
 
         return self.do_run(
             action,
@@ -519,13 +496,6 @@ class AIRunnerAgent(
         is_first_message = True
         if streamer:
             for new_text in streamer:
-                # if self.do_interrupt:
-                #     print("DO INTERRUPT PRESSED")
-                #     self.do_interrupt = False
-                #     streamed_template = None
-                #     streamer.on_finalized_text("", stream_end=True)
-                #     break
-
                 # strip all newlines from new_text
                 parsed_new_text = new_text.replace("\n", " ")
                 streamed_template += parsed_new_text
@@ -565,11 +535,6 @@ class AIRunnerAgent(
                         )
                     )
                     is_first_message = False
-
-        # self.add_message_to_history(
-        #     self.prompt,
-        #     LLMChatRole.HUMAN
-        # )
 
         if streamed_template is not None:
             if action == LLMActionType.CHAT:
