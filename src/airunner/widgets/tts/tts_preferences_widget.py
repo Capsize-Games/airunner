@@ -19,7 +19,7 @@ class TTSPreferencesWidget(BaseWidget):
             element.blockSignals(True)
 
         tts_model = self.settings["tts_settings"]["model"]
-        self.ui.enable_tts.setChecked(self.settings["tts_settings"]["enable_tts"])
+        self.ui.enable_tts.setChecked(self.settings["tts_enabled"])
         self.ui.model_combobox.clear()
         models = ["Bark", "SpeechT5", "Espeak"]
         self.ui.model_combobox.addItems(models)
@@ -33,7 +33,7 @@ class TTSPreferencesWidget(BaseWidget):
 
     def enable_tts_changed(self, val):
         settings = self.settings
-        settings["tts_settings"]["enable_tts"] = val
+        settings["tts_enabled"] = val
         self.settings = settings
 
     def model_changed(self, val):
