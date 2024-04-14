@@ -79,6 +79,8 @@ DEFAULT_CHATBOT = {
     ),
     "generator_settings": {
         "max_new_tokens": 30,
+        "model_type": "llm",
+        "model_version": "mistralai/Mistral-7B-Instruct-v0.2",
         "min_length": 1,
         "do_sample": True,
         "early_stopping": True,
@@ -98,6 +100,11 @@ DEFAULT_CHATBOT = {
         "length_penalty": 0.1,
         "ngram_size": 2,
         "sequences": 1,
+        "dtype": "4bit",
+        "use_tool_filter": False,
+        "cache_llm_to_disk": True,
+        "use_gpu": True,
+        "random_seed": True,
     }
 }
 
