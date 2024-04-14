@@ -64,6 +64,14 @@ class AIRunnerAgent(
     def botname(self):
         return self.chatbot["botname"]
 
+    @property
+    def bot_mood(self):
+        return self.chatbot["bot_mood"]
+
+    @property
+    def bot_personality(self):
+        return self.chatbot["bot_personality"]
+
     def unload(self):
         self.model = None
         self.tokenizer = None
