@@ -240,8 +240,8 @@ class SliderWidget(BaseWidget):
         position = val
         single_step = self.ui.slider.singleStep()
         adjusted_value = round(position / single_step) * single_step
-        if adjusted_value < self.slider_minimum:
-            adjusted_value = self.slider_minimum
+        if adjusted_value < self.slider_minimum():
+            adjusted_value = self.slider_minimum()
 
         self.ui.slider.blockSignals(True)
         self.ui.slider.setValue(adjusted_value)
