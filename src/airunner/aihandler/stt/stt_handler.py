@@ -135,26 +135,83 @@ class STTHandler(BaseHandler):
             inputs = inputs.to(torch.bfloat16)
         return inputs
 
-    def run(self, inputs) -> Any | None:
+    def run(
+        self,
+        inputs,
+        role: LLMChatRole = LLMChatRole.HUMAN,
+    ) -> Any | None:
         """
         Run the model on the given inputs.
         :param inputs: str - The transcription of the audio data.
         :return:
         """
+        # Extract the tensor from the BatchFeature object
+        try:
+            input_tensor = inputs.input_values
+        except AttributeError:
+            input_tensor = inputs.input_features
+
+        if torch.isnan(input_tensor).any():
+            self.logger.error("Inputs contain NaN values.")
+
         self.logger.debug("Running model")
         input_features = inputs.input_features
 
         # Generate ids
-        generated_ids = self.model.generate(input_features)
+        if torch.isnan(input_features).any():
+            print("Model output contains NaN values.")
+            return None
 
-        transcription = self.process_transcription(generated_ids)
+        try:
+            # check model.generation_config.lang_to_id for supported languages
+            generated_ids = self.model.generate(
+                input_features=input_features,
+                # generation_config=None,
+                # logits_processor=None,
+                # stopping_criteria=None,
+                # prefix_allowed_tokens_fn=None,
+                # synced_gpus=True,
+                # return_timestamps=None,
+                # task="transcribe",
+                # language="en",
+                # is_multilingual=True,
+                # prompt_ids=None,
+                # prompt_condition_type=None,
+                # condition_on_prev_tokens=None,
+                temperature=0.8,
+                # compression_ratio_threshold=None,
+                # logprob_threshold=None,
+                # no_speech_threshold=None,
+                # num_segment_frames=None,
+                # attention_mask=None,
+                # time_precision=0.02,
+                # return_token_timestamps=None,
+                # return_segments=False,
+                # return_dict_in_generate=None,
+            )
+        except Exception as e:
+            self.logger.error(e)
+            return None
+
+        try:
+            if torch.isnan(generated_ids).any():
+                self.logger.error("Model output contains NaN values.")
+        except Exception as e:
+            self.logger.error(e)
+
+        try:
+            transcription = self.process_transcription(generated_ids)
+        except Exception as e:
+            self.logger.error(e)
+            return None
 
         if len(transcription) == 0 or len(transcription.split(" ")) == 1:
             return None
 
         # Emit the transcription so that other handlers can use it
         self.emit_signal(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, {
-            "transcription": transcription
+            "transcription": transcription,
+            "role": role
         })
 
         return transcription
@@ -179,3 +236,46 @@ class STTHandler(BaseHandler):
 
     def encrypt_transcription(self, transcription):
         return transcription
+
+    def process_human_speech(self, transcription: str = None):
+        """
+        Process the human speech.
+        This method is called when the model has processed the human speech
+        and the transcription is ready to be added to the chat history.
+        This should only be used for human speech.
+        :param transcription:
+        :return:
+        """
+        self.logger.debug("Processing human speech")
+        data = {
+            "message": transcription,
+            "role": LLMChatRole.HUMAN
+        }
+        self.emit_signal(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, data)
+        # self.emit_signal(SignalCode.STT_AUDIO_PROCESSED, {
+        #     "message": transcription
+        # })
+
+    def process_given_speech(
+        self,
+        data: dict
+    ):
+        """
+        This is currently used to process the speech from the AI in real time
+        in order to simulate the AI hearing itself
+        so that heard speech can be added to the chat history
+        because we do not want to add all generated text to the history, only the text that the user hears.
+        :param data:
+        :return:
+        """
+        self.logger.debug("Processing speech")
+        transcription = data["message"]
+
+        if transcription is not None:
+            data = {
+                "message": transcription,
+                "role": data["role"]
+            }
+            self.emit_signal(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, data)
+        else:
+            self.logger.warning("No AI speech detected")
