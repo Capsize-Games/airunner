@@ -408,7 +408,7 @@ class SDHandler(
             self.logger.debug("Loading controlnet processor " + controlnet_type)
             self.current_controlnet_type = controlnet_type
             try:
-                self.processor = Processor(controlnet_type, local_files_only=local_files_only)
+                self.processor = Processor(controlnet_type)
             except Exception as e:
                 if "We couldn't connect to 'https://huggingface.co'" in str(e) and local_files_only is True:
                     return self.preprocess_for_controlnet(image, local_files_only=False)

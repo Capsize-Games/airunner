@@ -7,8 +7,12 @@ from airunner.workers.worker import Worker
 class LLMGenerateWorker(Worker):
     llm = None
 
+    def __init__(self, *args, do_load_on_init: bool = False, **kwargs):
+        self.do_load_on_init = do_load_on_init
+        super().__init__(*args, **kwargs)
+
     def register_signals(self):
-        self.llm = CausalLMTransformerBaseHandler()
+        self.llm = CausalLMTransformerBaseHandler(do_load_on_init=self.do_load_on_init)
         self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal)
         self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal)
 

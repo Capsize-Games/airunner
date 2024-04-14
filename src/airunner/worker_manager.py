@@ -1,6 +1,9 @@
 import traceback
 import numpy as np
 from PySide6.QtCore import QObject, Signal
+
+from airunner.aihandler.stt.whisper_handler import WhisperHandler
+from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 from airunner.enums import SignalCode, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -40,6 +43,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         disable_tts: bool = False,
         disable_stt: bool = False,
         disable_vision_capture: bool = False,
+        do_load_llm_on_init: bool = False,
+        tts_handler_class=EspeakTTSHandler,
         **kwargs
     ):
         MediatorMixin.__init__(self)
@@ -70,21 +75,22 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.register(SignalCode.TTS_REQUEST, self.on_tts_request)
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
 
-        self.sd_state = "loaded"
-
-        self.sd_worker = create_worker(SDWorker)
+        self.sd_state = None
+        if not disable_sd:
+            self.sd_worker = create_worker(SDWorker)
+            self.sd_state = "loaded"
 
         if not disable_tts:
-            self.tts_generator_worker = create_worker(TTSGeneratorWorker)
+            self.tts_generator_worker = create_worker(TTSGeneratorWorker, tts_handler_class=tts_handler_class)
             self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
 
         if not disable_llm:
             self.llm_request_worker = create_worker(LLMRequestWorker)
-            self.llm_generate_worker = create_worker(LLMGenerateWorker)
+            self.llm_generate_worker = create_worker(LLMGenerateWorker, do_load_on_init=do_load_llm_on_init)
 
         if not disable_stt:
             self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-            self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
+            self.stt_audio_processor_worker = create_worker(AudioProcessorWorker, stt_handler_class=WhisperHandler)
 
         if not disable_vision_capture:
             self.vision_capture_worker = create_worker(VisionCaptureWorker)
@@ -181,7 +187,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def on_text_generate_request_signal(self, data: dict):
         move_unused_model_to_cpu = self.settings["memory_settings"]["move_unused_model_to_cpu"]
         unload_unused_models = self.settings["memory_settings"]["unload_unused_models"]
-        signal_code = SignalCode.LLM_REQUEST_SIGNAL
         if self.sd_state == "loaded":
             message = {
                 'callback': lambda _message=data: self.emit_signal(
@@ -190,12 +195,11 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
                 )
             }
             if move_unused_model_to_cpu:
-                signal_code = SignalCode.SD_MOVE_TO_CPU_SIGNAL
+                self.emit_signal(SignalCode.SD_MOVE_TO_CPU_SIGNAL, message)
             elif unload_unused_models:
-                signal_code = SignalCode.SD_UNLOAD_SIGNAL
-            else:
-                message = data
-        self.emit_signal(signal_code, message)
+                self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL, message)
+        else:
+            self.emit_signal(SignalCode.LLM_REQUEST_SIGNAL, data)
 
     def do_listen(self):
         # self.stt_controller.do_listen()
@@ -218,7 +222,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def do_tts_request(self, message: str, is_end_of_message: bool=False):
         if self.settings["tts_enabled"]:
             self.emit_signal(SignalCode.TTS_REQUEST, {
-                'message': message.replace("</s>", ""),
+                'message': message.replace("</s>", "") + ("." if is_end_of_message else ""),
                 'tts_settings': self.settings["tts_settings"],
                 'is_end_of_message': is_end_of_message,
             })

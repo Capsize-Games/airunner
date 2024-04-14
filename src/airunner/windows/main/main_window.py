@@ -7,7 +7,7 @@ from functools import partial
 from PySide6 import QtGui
 from PySide6.QtCore import Slot, Signal
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QApplication, QMainWindow, QDialog, QMessageBox, QCheckBox, QVBoxLayout
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QCheckBox
 
 from airunner.aihandler.logger import Logger
 from airunner.settings import STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
@@ -36,6 +36,7 @@ from airunner.windows.setup_wizard.setup_wizard import SetupWizard
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.worker_manager import WorkerManager
+from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 
 
 class History:
@@ -66,9 +67,31 @@ class MainWindow(
     load_image_object = Signal(object)
     loaded = Signal()
     window_opened = Signal()
+    ui_class_ = Ui_MainWindow
+    icons = [
+        ("pencil-icon", "toggle_brush_button"),
+        ("eraser-icon", "toggle_eraser_button"),
+        ("frame-grid-icon", "toggle_grid_button"),
+        ("circle-center-icon", "focus_button"),
+        ("artificial-intelligence-ai-chip-icon", "ai_button"),
+        ("setting-line-icon", "settings_button"),
+        ("object-selected-icon", "toggle_active_grid_area_button"),
+        ("select-svgrepo-com", "toggle_select_button"),
+    ]
 
-    def __init__(self, *args, **kwargs):
-        self.ui = Ui_MainWindow()
+    def __init__(
+        self,
+        *args,
+        disable_sd: bool = False,
+        disable_llm: bool = False,
+        disable_tts: bool = False,
+        disable_stt: bool = False,
+        disable_vision_capture: bool = False,
+        do_load_llm_on_init: bool = False,
+        tts_handler_class=EspeakTTSHandler,
+        **kwargs
+    ):
+        self.ui = self.ui_class_()
         self._override_system_theme = None
         self._dark_mode_enabled = None
         self.update_popup = None
@@ -128,17 +151,21 @@ class MainWindow(
         self.register_services()
         self.create_airunner_paths()
         self.register_signals()
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
         self.initialize_ui()
-        self.worker_manager = WorkerManager()
+        self.worker_manager = WorkerManager(
+            disable_sd=disable_sd,
+            disable_llm=disable_llm,
+            disable_tts=disable_tts,
+            disable_stt=disable_stt,
+            disable_vision_capture=disable_vision_capture,
+            do_load_llm_on_init=do_load_llm_on_init,
+            tts_handler_class=tts_handler_class
+        )
         self.is_started = True
         self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
         self.image_window = None
-
         self.register(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal)
-
-        self.ui.enable_controlnet.blockSignals(True)
-        self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
-        self.ui.enable_controlnet.blockSignals(False)
         self._updating_settings = False
 
         if (
@@ -248,7 +275,6 @@ class MainWindow(
         self.register(SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda _message: self.action_toggle_eraser(True))
         self.register(SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True))
         self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True))
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
         self.register(SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal)
         self.register(SignalCode.WRITE_FILE, self.on_write_file_signal)
 
@@ -320,7 +346,9 @@ class MainWindow(
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
 
         self.set_stylesheet()
+        self.initialize_widget_elements()
 
+    def initialize_widget_elements(self):
         self.ui.mode_tab_widget.tabBar().hide()
         self.ui.center_tab.tabBar().hide()
         self.ui.ocr_button.blockSignals(True)
@@ -332,6 +360,9 @@ class MainWindow(
         self.ui.ocr_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
+        self.ui.enable_controlnet.blockSignals(True)
+        self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
+        self.ui.enable_controlnet.blockSignals(False)
         self.logger.debug("Setting buttons")
         self.initialize_tool_section_buttons()
 
@@ -846,16 +877,7 @@ class MainWindow(
                 self.logger.debug("Using system theme")
                 ui.setStyleSheet("")
 
-            for icon_data in [
-                ("pencil-icon", "toggle_brush_button"),
-                ("eraser-icon", "toggle_eraser_button"),
-                ("frame-grid-icon", "toggle_grid_button"),
-                ("circle-center-icon", "focus_button"),
-                ("artificial-intelligence-ai-chip-icon", "ai_button"),
-                ("setting-line-icon", "settings_button"),
-                ("object-selected-icon", "toggle_active_grid_area_button"),
-                ("select-svgrepo-com", "toggle_select_button"),
-            ]:
+            for icon_data in self.icons:
                 self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
 
     def show_setup_wizard(self):
