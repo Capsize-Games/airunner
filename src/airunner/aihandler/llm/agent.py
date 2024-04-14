@@ -4,16 +4,15 @@ import time
 import traceback
 from typing import AnyStr
 import torch
-import threading
 from PySide6.QtCore import QObject
 from transformers import StoppingCriteria
-
 from airunner.aihandler.logger import Logger
 from airunner.json_extractor import JSONExtractor
 from airunner.mediator_mixin import MediatorMixin
-from airunner.enums import SignalCode, LLMChatRole, LLMActionType, ImageCategory
-from airunner.utils import get_torch_device, clear_memory
+from airunner.enums import SignalCode, LLMChatRole, LLMActionType, ImageCategory, QueueType
+from airunner.utils import get_torch_device, clear_memory, create_worker
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.workers.agent_worker import AgentWorker
 
 
 class ExternalConditionStoppingCriteria(StoppingCriteria):
@@ -25,6 +24,7 @@ class ExternalConditionStoppingCriteria(StoppingCriteria):
         return self.external_condition_callable()
 
 
+
 class AIRunnerAgent(
     QObject,
     MediatorMixin,
@@ -33,14 +33,13 @@ class AIRunnerAgent(
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+
         self.rendered_template = None
         self.model = kwargs.pop("model", None)
         self.tokenizer = kwargs.pop("tokenizer", None)
         self.streamer = kwargs.pop("streamer", None)
         self.tools = kwargs.pop("tools", None)
         self.chat_template = kwargs.pop("chat_template", "")
-        self.username = kwargs.pop("username", "User")
-        self.botname = kwargs.pop("botname", "AI Runner")
         self.bot_mood = kwargs.pop("bot_mood", None)
         self.bot_personality = kwargs.pop("bot_personality", None)
         self.max_new_tokens = kwargs.pop("max_new_tokens", self.settings["llm_generator_settings"]["max_new_tokens"])
@@ -58,7 +57,6 @@ class AIRunnerAgent(
         self.top_p = kwargs.pop("top_p", self.settings["llm_generator_settings"]["top_p"])
         self.guardrails_prompt = kwargs.pop("guardrails_prompt", "")
         self.use_guardrails = kwargs.pop("use_guardrails", True)
-        print(kwargs)
         self.system_instructions = kwargs.pop("system_instructions", "")
         self.use_system_instructions = kwargs.pop("use_system_instructions", True)
         self.user_evaluation = kwargs.pop("user_evaluation", None)
@@ -67,10 +65,25 @@ class AIRunnerAgent(
         self.logger = Logger(prefix=self.__class__.__name__)
         super().__init__(*args, **kwargs)
         self.register(SignalCode.LLM_RESPOND_TO_USER_SIGNAL, self.do_response)
+        self.register(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history)
         self.prompt = ""
         self.history = []
         self.thread = None
         self.do_interrupt = False
+        self.response_worker = create_worker(AgentWorker)
+        #self.summarize_worker = create_worker(AgentWorker)
+
+    @property
+    def chatbot(self):
+        return self.settings["llm_generator_settings"]["current_chatbot"]
+
+    @property
+    def username(self):
+        return self.settings["llm_generator_settings"]["saved_chatbots"][self.chatbot]["username"]
+
+    @property
+    def botname(self):
+        return self.settings["llm_generator_settings"]["saved_chatbots"][self.chatbot]["botname"]
 
     def unload(self):
         self.model = None
@@ -119,10 +132,10 @@ class AIRunnerAgent(
         if not use_guardrails:
             guardrails_prompt = ""
         system_prompt = []
-        username = self.username if username == "" else username
-        botname = self.botname if botname == "" else botname
-        bot_mood = self.bot_mood if bot_mood == "" else bot_mood
-        bot_personality = self.bot_personality if bot_personality == "" else bot_personality
+        username = self.username if username == "" or not username is None else username
+        botname = self.botname if botname == "" or not botname else botname
+        bot_mood = self.bot_mood if bot_mood == "" or not bot_mood else bot_mood
+        bot_personality = self.bot_personality if bot_personality == "" or not bot_personality else bot_personality
 
         if action == LLMActionType.CHAT:
             """
@@ -292,8 +305,6 @@ class AIRunnerAgent(
         **kwargs
     ):
         self.chat_template = kwargs.get("chat_template", self.chat_template)
-        self.username = kwargs.get("username", self.username)
-        self.botname = kwargs.get("botname", self.botname)
         self.bot_mood = kwargs.get("bot_mood", self.bot_mood)
         self.bot_personality = kwargs.get("bot_personality", self.bot_personality)
         self.max_new_tokens = kwargs.get("max_new_tokens", self.max_new_tokens)
@@ -322,8 +333,6 @@ class AIRunnerAgent(
         self.sequences = kwargs.get("sequences", 1)
         self.ngram_size = kwargs.get("ngram_size", 2)
         self.length_penalty = kwargs.get("length_penalty", 0.5)
-        self.username = kwargs.get("username", "User")
-        self.botname = kwargs.get("botname", "AI Runner")
         self.use_cache = kwargs.get("use_cache", True)
         self.decoder_start_token_id = kwargs.get("decoder_start_token_id", None)
         self.skip_special_tokens = kwargs.get("skip_special_tokens", True)
@@ -347,7 +356,6 @@ class AIRunnerAgent(
             use_names=self.use_names
         )
 
-        print("CONVERSATION", conversation)
         self.rendered_template = self.get_rendered_template(
             conversation,
             chat_template=self.chat_template
@@ -376,29 +384,27 @@ class AIRunnerAgent(
         self.prompt = prompt
         streamer = self.streamer
         system_instructions = kwargs.get("system_instructions", self.system_instructions)
-        print("DO RUN LINE 380")
-        res = self.do_run(
-            action,
-            vision_history,
-            **kwargs,
-            system_instructions=(
-                "You will evaluate the conversation and determine the approximate "
-                "word length that is required to respond to {{ username }}. "
-            ),
-            do_add_response_to_history=False,
-            streamer=None,
-            do_emit_response=False,
-            use_names=False,
-        )
 
-        print("RESPONSE", res)
+        # res = self.do_run(
+        #     action,
+        #     vision_history,
+        #     **kwargs,
+        #     system_instructions=(
+        #         "You will evaluate the conversation and determine the approximate "
+        #         "word length that is required to respond to {{ username }}. "
+        #     ),
+        #     do_add_response_to_history=False,
+        #     streamer=None,
+        #     do_emit_response=False,
+        #     use_names=False,
+        # )
 
         return self.do_run(
             action,
             vision_history,
             **kwargs,
             system_instructions=system_instructions,
-            do_add_response_to_history=True,
+            do_add_response_to_history=False,
             use_names=True,
             streamer=streamer
         )
@@ -482,9 +488,6 @@ class AIRunnerAgent(
         # Generate the response
         self.logger.debug("Generating...")
 
-        if self.thread is not None:
-            self.thread.join()
-
         self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
 
         stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
@@ -494,14 +497,13 @@ class AIRunnerAgent(
         data["streamer"] = streamer
 
         try:
-            self.thread = threading.Thread(
-                target=self.model.generate,
-                kwargs=data
-            )
+            self.response_worker.add_to_queue({
+                "model": self.model,
+                "kwargs": data
+            })
             self.do_interrupt = False
-            self.thread.start()
         except Exception as e:
-            print("An error occurred in model.generate:")
+            print("545: An error occurred in model.generate:")
             print(str(e))
             print(traceback.format_exc())
         # strip all new lines from rendered_template:
@@ -515,13 +517,14 @@ class AIRunnerAgent(
         replaced = False
         is_end_of_message = False
         is_first_message = True
-        for new_text in self.streamer:
-            # if self.do_interrupt:
-            #     print("DO INTERRUPT PRESSED")
-            #     self.do_interrupt = False
-            #     streamed_template = None
-            #     self.streamer.on_finalized_text("", stream_end=True)
-            #     break
+        if streamer:
+            for new_text in streamer:
+                # if self.do_interrupt:
+                #     print("DO INTERRUPT PRESSED")
+                #     self.do_interrupt = False
+                #     streamed_template = None
+                #     streamer.on_finalized_text("", stream_end=True)
+                #     break
 
                 # strip all newlines from new_text
                 parsed_new_text = new_text.replace("\n", " ")
@@ -563,11 +566,10 @@ class AIRunnerAgent(
                     )
                     is_first_message = False
 
-        if do_add_response_to_history:
-            self.add_message_to_history(
-                self.prompt,
-                LLMChatRole.HUMAN
-            )
+        # self.add_message_to_history(
+        #     self.prompt,
+        #     LLMChatRole.HUMAN
+        # )
 
         if streamed_template is not None:
             if action == LLMActionType.CHAT:
@@ -588,6 +590,14 @@ class AIRunnerAgent(
 
         return streamed_template
 
+    def add_chatbot_response_to_history(self, response: dict):
+        if response["message"] is None:
+            return
+        self.add_message_to_history(
+            response["message"],
+            response["role"]
+        )
+
     def extract_json_objects(self, s):
         extractor = JSONExtractor()
         try:
@@ -601,12 +611,27 @@ class AIRunnerAgent(
         content: AnyStr,
         role: LLMChatRole = LLMChatRole.ASSISTANT
     ):
-        if role == LLMChatRole.ASSISTANT:
+        if role == LLMChatRole.ASSISTANT and content:
             content = content.replace(f"{self.botname}:", "")
             content = content.replace(f"{self.botname}", "")
 
-        self.history.append({
-            'content': content,
-            'role': role.value
-        })
+        last_item = self.history.pop() if len(self.history) > 0 else {}
+        last_item_role = last_item.get("role", None)
+        last_item_role_is_current_role = last_item_role == role.value
 
+        # if the last_item is of the same role as the current message, append the content to the last_item
+        if not last_item_role_is_current_role and len(last_item.keys()) > 0:
+            self.history.append(last_item)
+
+        if last_item_role_is_current_role:
+            item = {
+                "role": role.value,
+                "content": content
+            }
+            item["content"] += last_item.get("content", "") + "\n" + content
+            self.history.append(item)
+        else:
+            self.history.append({
+                "role": role.value,
+                "content": content
+            })
