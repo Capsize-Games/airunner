@@ -2,10 +2,10 @@ import queue
 
 from PySide6.QtCore import QThread
 
+from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 from airunner.enums import SignalCode, QueueType
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
-from airunner.aihandler.tts.tts_handler import TTSHandler
 
 
 class TTSGeneratorWorker(Worker):
@@ -15,8 +15,9 @@ class TTSGeneratorWorker(Worker):
     tokens = []
 
     def __init__(self, *args, **kwargs):
+        tts_handler_class_ = kwargs.pop("tts_handler_class", EspeakTTSHandler)
         super().__init__(*args, **kwargs)
-        self.tts = TTSHandler()
+        self.tts = tts_handler_class_()
         self.tts.run()
         self.play_queue = []
         self.play_queue_started = False
@@ -55,7 +56,6 @@ class TTSGeneratorWorker(Worker):
         return super().get_item_from_queue()
 
     def on_interrupt_process_signal(self, _message: dict):
-        self.logger.debug("Aborting TTS generation...")
         self.play_queue = []
         self.play_queue_started = False
         self.tokens = []
@@ -75,31 +75,38 @@ class TTSGeneratorWorker(Worker):
         # Add the incoming tokens to the list
         self.logger.debug("Adding tokens to list...")
         self.tokens.extend(data["message"])
+        finalize = data.get("finalize", False)
 
         # Convert the tokens to a string
         text = "".join(self.tokens)
 
-        # Split text at punctuation
-        if self.tts.use_bark:
-            punctuation = ["\n"]
+        if finalize:
+            self.generate(text)
+            self.play_queue_started = True
+            self.tokens = []
         else:
-            punctuation = [".", "?", "!", ";", ":", "\n", ","]
-        for p in punctuation:
-            if self.do_interrupt:
-                return
-            text = text.strip()
-            if p in text:
-                split_text = text.split(p, 1)  # Split at the first occurrence of punctuation
-                if len(split_text) > 1:
-                    sentence = split_text[0]
-                    self.generate(sentence)
-                    self.play_queue_started = True
+            # Split text at punctuation
+            if self.tts.target_model == "bark":
+                punctuation = ["\n"]
+            else:
+                punctuation = [".", "?", "!", ";", ":", "\n", ","]
 
-                    # Convert the remaining string back to a list of tokens
-                    remaining_text = split_text[1].strip()
-                    if not self.do_interrupt:
-                        self.tokens = list(remaining_text)
-                        break
+            for p in punctuation:
+                if self.do_interrupt:
+                    return
+                text = text.strip()
+                if p in text:
+                    split_text = text.split(p, 1)  # Split at the first occurrence of punctuation
+                    if len(split_text) > 1:
+                        sentence = split_text[0]
+                        self.generate(sentence)
+                        self.play_queue_started = True
+
+                        # Convert the remaining string back to a list of tokens
+                        remaining_text = split_text[1].strip()
+                        if not self.do_interrupt:
+                            self.tokens = list(remaining_text)
+                            break
         if self.do_interrupt:
             self.on_interrupt_process_signal({})
 

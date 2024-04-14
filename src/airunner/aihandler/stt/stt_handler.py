@@ -127,7 +127,10 @@ class STTHandler(BaseHandler):
         # Remove any extra whitespace
         transcription = " ".join(transcription.split())
 
-        if self.settings["tts_settings"]["use_encryption"]:
+        if False:
             transcription = self.encrypt_transcription(transcription)
 
+        return transcription
+
+    def encrypt_transcription(self, transcription):
         return transcription

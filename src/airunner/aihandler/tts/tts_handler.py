@@ -88,8 +88,6 @@ class TTSHandler(BaseHandler):
             "-": " "
         }
         self.text_queue = Queue()
-        # self.single_character_sentence_enders = [".", "?", "!", "...", "…"]
-        # self.double_character_sentence_enders = [".”", "?”", "!”", "...”", "…”", ".'", "?'", "!'", "...'", "…'"]
         self.single_character_sentence_enders = [".", "?", "!", "…"]
         self.double_character_sentence_enders = [".”", "?”", "!”", "…”", ".'", "?'", "!'", "…'"]
         self.sentence_delay_time = 1500
@@ -138,7 +136,6 @@ class TTSHandler(BaseHandler):
         )
 
     def on_interrupt_process_signal(self, _message: dict):
-        self.logger.debug("Aborting TTS generation...")
         self.do_interrupt = True
         self.cancel_generated_speech = False
         self.paused = True
@@ -217,7 +214,6 @@ class TTSHandler(BaseHandler):
                 self.load_dataset()
             if self.corpus is None:
                 self.load_corpus()
-            self.logger.debug("Setting current model to " + target_model)
             self.current_model = target_model
             self.loaded = True
     
@@ -289,19 +285,20 @@ class TTSHandler(BaseHandler):
     def load_processor(self, local_files_only=True):
         self.logger.debug("Loading Procesor")
         processor_class_ = self.processor_class_
-        try:
-            self.processor = processor_class_.from_pretrained(
-                self.processor_path,
-                local_files_only=local_files_only
-            )
-        except OSError as e:
-            if "Incorrect path_or_model_id" in str(e):
-                self.logger.error("Failed to load processor")
-                return
-            #return self.load_processor(local_files_only=False)
+        if processor_class_:
+            try:
+                self.processor = processor_class_.from_pretrained(
+                    self.processor_path,
+                    local_files_only=local_files_only
+                )
+            except OSError as e:
+                if "Incorrect path_or_model_id" in str(e):
+                    self.logger.error("Failed to load processor")
+                    return
+                #return self.load_processor(local_files_only=False)
 
-        if self.use_cuda:
-            self.processor = self.processor
+            if self.use_cuda:
+                self.processor = self.processor
 
     def load_dataset(self, local_files_only=True):
         """

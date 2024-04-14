@@ -1,5 +1,4 @@
 from airunner.enums import SignalCode
-from airunner.aihandler.stt.stt_handler import STTHandler
 from airunner.workers.worker import Worker
 
 
@@ -10,9 +9,9 @@ class AudioProcessorWorker(Worker):
     """ 
     fs = 0
 
-    def __init__(self, prefix):
+    def __init__(self, prefix, stt_handler_class=None):
         super().__init__(prefix=prefix)
-        self.stt = STTHandler()
+        self.stt = stt_handler_class()
 
     def handle_message(self, audio_data):
         self.emit_signal(SignalCode.STT_PROCESS_AUDIO_SIGNAL, {

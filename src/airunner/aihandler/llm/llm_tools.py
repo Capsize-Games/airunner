@@ -36,7 +36,7 @@ class BaseTool(Tool, MediatorMixin):
         super().__init__(*args, **kwargs)
 
 
-def create_application_control_tool_class(description, name, signal_code):
+def create_application_control_tool_class(description: str, name: str, signal_code: SignalCode):
     """
     Factory function to create a class for an application control tool.
     Used for huggingface tools.
@@ -58,7 +58,7 @@ def create_application_control_tool_class(description, name, signal_code):
             super().__init__(*args, **kwargs)
 
         def __call__(self, *args, **kwargs):
-            print(args, kwargs)
+            print("ApplicationControlTool called")
             self.emit_signal(
                 self.signal_code,
                 {
@@ -167,8 +167,9 @@ WriteFileTool = create_application_control_tool_class(
 
 RespondToUserTool = create_application_control_tool_class(
     (
-        "This is a default tool. It is the tool to use when no other tool is applicable. "
-        "Takes no input and returns nothing."
+        "Analyze the conversation. Chooses the length of the response by evaluating the input message. "
+        "The length must be between 1 and 100.\n"
+        "Takes an integer as input and returns nothing."
     ),
     LLMToolName.DEFAULT_TOOL.value,
     SignalCode.LLM_RESPOND_TO_USER_SIGNAL

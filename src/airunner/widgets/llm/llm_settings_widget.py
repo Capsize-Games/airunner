@@ -74,8 +74,7 @@ class LLMSettingsWidget(
             element.blockSignals(True)
 
         self.ui.top_p.initialize()
-        self.ui.max_length.initialize()
-        self.ui.max_length.initialize()
+        # self.ui.max_length.initialize()
         self.ui.repetition_penalty.initialize()
         self.ui.min_length.initialize()
         self.ui.length_penalty.initialize()
@@ -234,7 +233,7 @@ class LLMSettingsWidget(
         llm_generator_settings = self.settings["llm_generator_settings"]
         self.initialize_form()
         self.ui.top_p.set_slider_and_spinbox_values(llm_generator_settings["top_p"])
-        self.ui.max_length.set_slider_and_spinbox_values(llm_generator_settings["max_length"])
+        # self.ui.max_length.set_slider_and_spinbox_values(llm_generator_settings["max_length"])
         self.ui.repetition_penalty.set_slider_and_spinbox_values(llm_generator_settings["repetition_penalty"])
         self.ui.min_length.set_slider_and_spinbox_values(llm_generator_settings["min_length"])
         self.ui.length_penalty.set_slider_and_spinbox_values(llm_generator_settings["length_penalty"])

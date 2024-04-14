@@ -17,7 +17,7 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
         self.processor = None
         self.do_sample = False
         self.num_beams = 1
-        self.max_length = 256
+        # self.max_length = 256
         self.min_length = 1
         self.top_p = 1.0
         self.repetition_penalty = 1.0
@@ -97,7 +97,7 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
                 **inputs,
                 do_sample=self.do_sample,
                 num_beams=self.num_beams,
-                max_length=self.max_length,
+                # max_length=self.max_length,
                 min_length=self.min_length,
                 top_p=self.top_p,
                 repetition_penalty=self.repetition_penalty,
