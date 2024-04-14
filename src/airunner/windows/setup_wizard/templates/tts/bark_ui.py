@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'bark.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -27,8 +27,8 @@ class Ui_bark_setup(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.line = QFrame(bark_setup)
         self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.HLine)
-        self.line.setFrameShadow(QFrame.Sunken)
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line, 2, 0, 1, 1)
 

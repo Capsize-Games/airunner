@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -25,7 +25,6 @@ from airunner.widgets.active_grid_settings.active_grid_settings_widget import Ac
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
-from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
 from airunner.widgets.upscale.upscale_widget import UpscaleWidget
 import airunner.resources_light_rc
@@ -321,7 +320,7 @@ class Ui_MainWindow(object):
         sizePolicy1.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
         self.centralwidget.setSizePolicy(sizePolicy1)
         self.centralwidget.setMinimumSize(QSize(0, 0))
-        self.centralwidget.setLayoutDirection(Qt.LeftToRight)
+        self.centralwidget.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         self.gridLayout_3 = QGridLayout(self.centralwidget)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setContentsMargins(1, 0, 1, 0)
@@ -329,19 +328,19 @@ class Ui_MainWindow(object):
         self.header_widget.setObjectName(u"header_widget")
         self.header_widget.setEnabled(True)
         self.header_widget.setMaximumSize(QSize(16777215, 48))
-        self.header_widget.setFrameShape(QFrame.Panel)
-        self.header_widget.setFrameShadow(QFrame.Raised)
+        self.header_widget.setFrameShape(QFrame.Shape.Panel)
+        self.header_widget.setFrameShadow(QFrame.Shadow.Raised)
         self.horizontalLayout = QHBoxLayout(self.header_widget)
         self.horizontalLayout.setSpacing(0)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.scrollArea_3 = QScrollArea(self.header_widget)
         self.scrollArea_3.setObjectName(u"scrollArea_3")
-        self.scrollArea_3.setFrameShape(QFrame.NoFrame)
-        self.scrollArea_3.setFrameShadow(QFrame.Sunken)
+        self.scrollArea_3.setFrameShape(QFrame.Shape.NoFrame)
+        self.scrollArea_3.setFrameShadow(QFrame.Shadow.Sunken)
         self.scrollArea_3.setMidLineWidth(0)
-        self.scrollArea_3.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scrollArea_3.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scrollArea_3.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scrollArea_3.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollAreaWidgetContents_3 = QWidget()
         self.scrollAreaWidgetContents_3.setObjectName(u"scrollAreaWidgetContents_3")
@@ -352,8 +351,8 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.text_generator_header_tools = QFrame(self.scrollAreaWidgetContents_3)
         self.text_generator_header_tools.setObjectName(u"text_generator_header_tools")
-        self.text_generator_header_tools.setFrameShape(QFrame.StyledPanel)
-        self.text_generator_header_tools.setFrameShadow(QFrame.Raised)
+        self.text_generator_header_tools.setFrameShape(QFrame.Shape.StyledPanel)
+        self.text_generator_header_tools.setFrameShadow(QFrame.Shadow.Raised)
         self.horizontalLayout_5 = QHBoxLayout(self.text_generator_header_tools)
         self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
         self.horizontalLayout_5.setContentsMargins(0, 0, 0, 0)
@@ -362,8 +361,8 @@ class Ui_MainWindow(object):
 
         self.image_generator_header_tools = QFrame(self.scrollAreaWidgetContents_3)
         self.image_generator_header_tools.setObjectName(u"image_generator_header_tools")
-        self.image_generator_header_tools.setFrameShape(QFrame.NoFrame)
-        self.image_generator_header_tools.setFrameShadow(QFrame.Sunken)
+        self.image_generator_header_tools.setFrameShape(QFrame.Shape.NoFrame)
+        self.image_generator_header_tools.setFrameShadow(QFrame.Shadow.Sunken)
         self.horizontalLayout_4 = QHBoxLayout(self.image_generator_header_tools)
         self.horizontalLayout_4.setSpacing(0)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
@@ -448,8 +447,8 @@ class Ui_MainWindow(object):
 
         self.line_2 = QFrame(self.image_generator_header_tool_buttons)
         self.line_2.setObjectName(u"line_2")
-        self.line_2.setFrameShape(QFrame.VLine)
-        self.line_2.setFrameShadow(QFrame.Sunken)
+        self.line_2.setFrameShape(QFrame.Shape.VLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.horizontalLayout_3.addWidget(self.line_2)
 
@@ -519,7 +518,7 @@ class Ui_MainWindow(object):
         self.mode_tab_widget.setObjectName(u"mode_tab_widget")
         self.mode_tab_widget.setAutoFillBackground(False)
         self.mode_tab_widget.setStyleSheet(u"QTabWidget#mode_tab_widget::pane { border: 0; background: transparent; }")
-        self.mode_tab_widget.setTabShape(QTabWidget.Rounded)
+        self.mode_tab_widget.setTabShape(QTabWidget.TabShape.Rounded)
         self.mode_tab_widget.setTabBarAutoHide(False)
         self.art = QWidget()
         self.art.setObjectName(u"art")
@@ -527,7 +526,7 @@ class Ui_MainWindow(object):
         self.gridLayout_6.setObjectName(u"gridLayout_6")
         self.content_splitter = QSplitter(self.art)
         self.content_splitter.setObjectName(u"content_splitter")
-        self.content_splitter.setOrientation(Qt.Horizontal)
+        self.content_splitter.setOrientation(Qt.Orientation.Horizontal)
         self.generator_widget = GeneratorForm(self.content_splitter)
         self.generator_widget.setObjectName(u"generator_widget")
         self.content_splitter.addWidget(self.generator_widget)
@@ -574,7 +573,7 @@ class Ui_MainWindow(object):
         self.splitter = QSplitter(self.scrollAreaWidgetContents)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setMaximumSize(QSize(16777215, 16777215))
-        self.splitter.setOrientation(Qt.Vertical)
+        self.splitter.setOrientation(Qt.Orientation.Vertical)
         self.tool_tab_widget = QTabWidget(self.splitter)
         self.tool_tab_widget.setObjectName(u"tool_tab_widget")
         self.tool_tab_widget.setMinimumSize(QSize(0, 0))
@@ -624,16 +623,6 @@ class Ui_MainWindow(object):
         self.gridLayout_11.addWidget(self.widget, 0, 0, 1, 1)
 
         self.tool_tab_widget.addTab(self.tab_3, "")
-        self.tab = QWidget()
-        self.tab.setObjectName(u"tab")
-        self.gridLayout_2 = QGridLayout(self.tab)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.llm_preferences_widget = LLMSettingsWidget(self.tab)
-        self.llm_preferences_widget.setObjectName(u"llm_preferences_widget")
-
-        self.gridLayout_2.addWidget(self.llm_preferences_widget, 0, 0, 1, 1)
-
-        self.tool_tab_widget.addTab(self.tab, "")
         self.splitter.addWidget(self.tool_tab_widget)
 
         self.gridLayout.addWidget(self.splitter, 0, 0, 1, 1)
@@ -652,8 +641,8 @@ class Ui_MainWindow(object):
         self.button_menu.setSizePolicy(sizePolicy3)
         self.button_menu.setMinimumSize(QSize(0, 0))
         self.button_menu.setMaximumSize(QSize(65, 16777215))
-        self.button_menu.setFrameShape(QFrame.NoFrame)
-        self.button_menu.setFrameShadow(QFrame.Raised)
+        self.button_menu.setFrameShape(QFrame.Shape.NoFrame)
+        self.button_menu.setFrameShadow(QFrame.Shadow.Raised)
         self.verticalLayout = QVBoxLayout(self.button_menu)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(4, 9, 4, 9)
@@ -693,8 +682,8 @@ class Ui_MainWindow(object):
 
         self.line_7 = QFrame(self.button_menu)
         self.line_7.setObjectName(u"line_7")
-        self.line_7.setFrameShape(QFrame.HLine)
-        self.line_7.setFrameShadow(QFrame.Sunken)
+        self.line_7.setFrameShape(QFrame.Shape.HLine)
+        self.line_7.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.verticalLayout.addWidget(self.line_7)
 
@@ -737,8 +726,8 @@ class Ui_MainWindow(object):
         sizePolicy5.setVerticalStretch(0)
         sizePolicy5.setHeightForWidth(self.line.sizePolicy().hasHeightForWidth())
         self.line.setSizePolicy(sizePolicy5)
-        self.line.setFrameShape(QFrame.HLine)
-        self.line.setFrameShadow(QFrame.Sunken)
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.verticalLayout.addWidget(self.line)
 
@@ -777,8 +766,8 @@ class Ui_MainWindow(object):
         self.line_4.setObjectName(u"line_4")
         sizePolicy5.setHeightForWidth(self.line_4.sizePolicy().hasHeightForWidth())
         self.line_4.setSizePolicy(sizePolicy5)
-        self.line_4.setFrameShape(QFrame.HLine)
-        self.line_4.setFrameShadow(QFrame.Sunken)
+        self.line_4.setFrameShape(QFrame.Shape.HLine)
+        self.line_4.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.verticalLayout.addWidget(self.line_4)
 
@@ -797,8 +786,8 @@ class Ui_MainWindow(object):
 
         self.line_3 = QFrame(self.button_menu)
         self.line_3.setObjectName(u"line_3")
-        self.line_3.setFrameShape(QFrame.HLine)
-        self.line_3.setFrameShadow(QFrame.Sunken)
+        self.line_3.setFrameShape(QFrame.Shape.HLine)
+        self.line_3.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.verticalLayout.addWidget(self.line_3)
 
@@ -819,8 +808,8 @@ class Ui_MainWindow(object):
 
         self.line_8 = QFrame(self.button_menu)
         self.line_8.setObjectName(u"line_8")
-        self.line_8.setFrameShape(QFrame.HLine)
-        self.line_8.setFrameShadow(QFrame.Sunken)
+        self.line_8.setFrameShape(QFrame.Shape.HLine)
+        self.line_8.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.verticalLayout.addWidget(self.line_8)
 
@@ -1293,7 +1282,6 @@ class Ui_MainWindow(object):
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_active_grid), QCoreApplication.translate("MainWindow", u"Active Grid", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u"Upscale", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_3), QCoreApplication.translate("MainWindow", u"StableDiffusion", None))
-        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab), QCoreApplication.translate("MainWindow", u"LLM", None))
 #if QT_CONFIG(tooltip)
         self.toggle_active_grid_area_button.setToolTip(QCoreApplication.translate("MainWindow", u"Active grid area selection tool", None))
 #endif // QT_CONFIG(tooltip)

@@ -87,12 +87,12 @@ class MainWindow(
         disable_llm: bool = False,
         disable_tts: bool = False,
         disable_stt: bool = False,
+        disable_vision_capture: bool = False,
         use_cuda: bool = True,
         ocr_enabled: bool = False,
         tts_enabled: bool = False,
         stt_enabled: bool = False,
         ai_mode: bool = True,
-        disable_vision_capture: bool = False,
         do_load_llm_on_init: bool = False,
         tts_handler_class=EspeakTTSHandler,
         **kwargs
