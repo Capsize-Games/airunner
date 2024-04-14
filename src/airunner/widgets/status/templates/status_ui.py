@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'status.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -34,8 +34,8 @@ class Ui_status_widget(object):
 
         self.line_5 = QFrame(status_widget)
         self.line_5.setObjectName(u"line_5")
-        self.line_5.setFrameShape(QFrame.VLine)
-        self.line_5.setFrameShadow(QFrame.Sunken)
+        self.line_5.setFrameShape(QFrame.Shape.VLine)
+        self.line_5.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.horizontalLayout.addWidget(self.line_5)
 
@@ -46,8 +46,8 @@ class Ui_status_widget(object):
 
         self.nsfw_line = QFrame(status_widget)
         self.nsfw_line.setObjectName(u"nsfw_line")
-        self.nsfw_line.setFrameShape(QFrame.VLine)
-        self.nsfw_line.setFrameShadow(QFrame.Sunken)
+        self.nsfw_line.setFrameShape(QFrame.Shape.VLine)
+        self.nsfw_line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.horizontalLayout.addWidget(self.nsfw_line)
 
@@ -58,8 +58,8 @@ class Ui_status_widget(object):
 
         self.line_4 = QFrame(status_widget)
         self.line_4.setObjectName(u"line_4")
-        self.line_4.setFrameShape(QFrame.VLine)
-        self.line_4.setFrameShadow(QFrame.Sunken)
+        self.line_4.setFrameShape(QFrame.Shape.VLine)
+        self.line_4.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.horizontalLayout.addWidget(self.line_4)
 
@@ -70,8 +70,8 @@ class Ui_status_widget(object):
 
         self.line = QFrame(status_widget)
         self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.VLine)
-        self.line.setFrameShadow(QFrame.Sunken)
+        self.line.setFrameShape(QFrame.Shape.VLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.horizontalLayout.addWidget(self.line)
 
@@ -82,8 +82,8 @@ class Ui_status_widget(object):
 
         self.line_3 = QFrame(status_widget)
         self.line_3.setObjectName(u"line_3")
-        self.line_3.setFrameShape(QFrame.VLine)
-        self.line_3.setFrameShadow(QFrame.Sunken)
+        self.line_3.setFrameShape(QFrame.Shape.VLine)
+        self.line_3.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.horizontalLayout.addWidget(self.line_3)
 
