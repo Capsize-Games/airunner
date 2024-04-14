@@ -8,7 +8,7 @@ import numpy as np
 from cryptography.fernet import Fernet
 
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, LLMChatRole
 
 
 class STTHandler(BaseHandler):
@@ -31,6 +31,7 @@ class STTHandler(BaseHandler):
         self.load_processor()
         self.load_feature_extractor()
         self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
+        self.register(SignalCode.PROCESS_SPEECH_SIGNAL, self.process_given_speech)
         self.model_type = "stt"
         self.fs = 16000
 
@@ -39,29 +40,73 @@ class STTHandler(BaseHandler):
         return torch.cuda.is_available()
 
     def on_process_audio(self, data: dict):
-        audio_data = data["message"]
         with self.lock:
+            audio_data = data["message"]
             # Convert the byte string to a float32 array
             inputs = np.frombuffer(audio_data, dtype=np.int16)
             inputs = inputs.astype(np.float32) / 32767.0
+            transcription = self.process_inputs(inputs)
+            if transcription is not None:
+                self.process_human_speech(transcription)
 
-            # Convert numpy array to PyTorch tensor
+    def process_inputs(
+        self,
+        inputs: np.ndarray,
+        role: LLMChatRole = LLMChatRole.HUMAN,
+    ) -> str:
+        transcription = "'"
+        try:
             inputs = torch.from_numpy(inputs)
+            if torch.isnan(inputs).any():
+                self.logger.error("NaN values found after converting numpy array to PyTorch tensor.")
+                return
+        except Exception as e:
+            self.logger.error("Failed to convert numpy array to PyTorch tensor.")
+            self.logger.error(e)
+            return
 
-            # Extract features from the audio data
+        try:
             inputs = self.feature_extractor(inputs, sampling_rate=self.fs, return_tensors="pt")
+            if torch.isnan(inputs.input_features).any():
+                self.logger.error("NaN values found after feature extraction.")
+                return
+        except Exception as e:
+            self.logger.error("Failed to extract features from inputs.")
+            self.logger.error(e)
+            return
 
-            # Convert inputs to BFloat16 if CUDA is available
+        try:
             if self.use_cuda:
                 inputs["input_features"] = inputs["input_features"].to(torch.bfloat16)
+                if torch.isnan(inputs.input_features).any():
+                    self.logger.error("NaN values found after converting inputs to BFloat16.")
+                    return
+        except Exception as e:
+            self.logger.error("Failed to convert inputs to BFloat16.")
+            self.logger.error(e)
+            return
 
-            # Move inputs to device
+        try:
             inputs = inputs.to(self.model.device)
+            if torch.isnan(inputs.input_features).any():
+                self.logger.error("NaN values found after moving inputs to device.")
+                return
+        except Exception as e:
+            self.logger.error("Failed to move inputs to device.")
+            self.logger.error(e)
+            return
 
-            # Run the model
-            transcription = self.run(inputs)
+        try:
+            transcription = self.run(inputs, role)
+            if transcription is None or 'nan' in transcription:
+                self.logger.error("NaN values found in the transcription.")
+                return
+        except Exception as e:
+            self.logger.error("Failed to run model.")
+            self.logger.error(e)
+            return
 
-            self.emit_signal(SignalCode.STT_AUDIO_PROCESSED, transcription)
+        return transcription
 
     def load_model(self, local_files_only=True):
         pass
