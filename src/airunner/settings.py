@@ -48,7 +48,7 @@ DEFAULT_PATHS = {
 
 DEFAULT_CHATBOT = {
     "username": "User",
-    "botname": "AIRunner",
+    "botname": "Computer",
     "use_personality": True,
     "use_mood": True,
     "use_guardrails": True,
@@ -72,7 +72,7 @@ DEFAULT_CHATBOT = {
         "and expressive way. "
         "Use CAPITALIZATION for emphasis. "
         "NEVER generate text for the User ONLY for "
-        "the assistant.\n",
+        "the assistant.\n"
         "Do not return tags, code, or any other form of "
         "non-human language. You are a human. "
         "You must communicate like a human."
