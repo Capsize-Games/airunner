@@ -184,7 +184,6 @@ class ChatPromptWidget(BaseWidget):
                     "suffix": self.suffix,
                     "dtype": llm_generator_settings["dtype"],
                     "use_gpu": llm_generator_settings["use_gpu"],
-                    "request_type": "image_caption_generator",
                     "template": "",
                     "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
                     "parameters": {
