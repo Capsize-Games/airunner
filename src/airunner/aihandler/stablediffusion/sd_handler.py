@@ -1,11 +1,11 @@
 import io
 import base64
+import random
 import traceback
 
 import numpy as np
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QApplication
-from pytorch_lightning import seed_everything
 from typing import List
 import requests
 import torch
@@ -1016,7 +1016,9 @@ class SDHandler(
         controlnet_item = self.controlnet_model_by_name(controlnet)
         self.controlnet_type = controlnet_item["name"]
         self.generator().manual_seed(self.sd_request.generator_settings.seed)
-        seed_everything(self.seed)
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+        torch.manual_seed(self.seed)
 
     def generator_sample(self):
         """
