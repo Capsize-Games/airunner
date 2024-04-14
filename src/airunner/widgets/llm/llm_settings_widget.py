@@ -4,6 +4,8 @@ This class should be used to create a window widget for the LLM.
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 
+from airunner.enums import SignalCode
+from airunner.settings import DEFAULT_CHATBOT
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
 from airunner.windows.main.ai_model_mixin import AIModelMixin
@@ -28,12 +30,35 @@ class LLMSettingsWidget(
         super().__init__(*args, **kwargs)
 
     @property
+    def chatbot(self) -> dict:
+        current_chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
+        chatbot = self.settings["llm_generator_settings"]["saved_chatbots"].get(current_chatbot_name, DEFAULT_CHATBOT)
+        return chatbot
+
+    @property
+    def generator_settings(self) -> dict:
+        return self.chatbot["generator_settings"]
+
+    @property
     def current_generator(self):
         return self.settings["current_llm_generator"]
 
     def showEvent(self, event):
         super().showEvent(event)
+        self.emit_signal(SignalCode.WINDOW_LOADED_SIGNAL)
         self.initialize_form()
+
+        # self.ui.top_p.set_slider_and_spinbox_values(self.generator_settings["top_p"])
+        # self.ui.repetition_penalty.set_slider_and_spinbox_values(self.generator_settings["repetition_penalty"])
+        # self.ui.min_length.set_slider_and_spinbox_values(self.generator_settings["min_length"])
+        # self.ui.length_penalty.set_slider_and_spinbox_values(self.generator_settings["length_penalty"])
+        # self.ui.num_beams.set_slider_and_spinbox_values(self.generator_settings["num_beams"])
+        # self.ui.ngram_size.set_slider_and_spinbox_values(self.generator_settings["ngram_size"])
+        # self.ui.temperature.set_slider_and_spinbox_values(self.generator_settings["temperature"])
+        # self.ui.sequences.set_slider_and_spinbox_values(self.generator_settings["sequences"])
+        # self.ui.top_k.set_slider_and_spinbox_values(self.generator_settings["top_k"])
+        # self.ui.do_sample.setChecked(self.generator_settings["do_sample"])
+        # self.ui.early_stopping.setChecked(self.generator_settings["early_stopping"])
 
     def early_stopping_toggled(self, val):
         settings = self.settings
@@ -53,6 +78,7 @@ class LLMSettingsWidget(
             self.settings = settings
 
     def initialize_form(self):
+        print(self.generator_settings)
         elements = [
             self.ui.prompt_template,
             self.ui.model,
@@ -73,22 +99,22 @@ class LLMSettingsWidget(
         for element in elements:
             element.blockSignals(True)
 
-        self.ui.top_p.initialize()
-        # self.ui.max_length.initialize()
-        self.ui.repetition_penalty.initialize()
-        self.ui.min_length.initialize()
-        self.ui.length_penalty.initialize()
-        self.ui.num_beams.initialize()
-        self.ui.ngram_size.initialize()
-        self.ui.temperature.initialize()
-        self.ui.sequences.initialize()
-        self.ui.top_k.initialize()
+        self.ui.top_p.init(callback=self.callback, current_value=self.generator_settings["top_p"])
+        self.ui.max_new_tokens.init(callback=self.callback, current_value=self.generator_settings["max_new_tokens"])
+        self.ui.repetition_penalty.init(callback=self.callback, current_value=self.generator_settings["repetition_penalty"])
+        self.ui.min_length.init(callback=self.callback, current_value=self.generator_settings["min_length"])
+        self.ui.length_penalty.init(callback=self.callback, current_value=self.generator_settings["length_penalty"])
+        self.ui.num_beams.init(callback=self.callback, current_value=self.generator_settings["num_beams"])
+        self.ui.ngram_size.init(callback=self.callback, current_value=self.generator_settings["ngram_size"])
+        self.ui.temperature.init(callback=self.callback, current_value=self.generator_settings["temperature"])
+        self.ui.sequences.init(callback=self.callback, current_value=self.generator_settings["sequences"])
+        self.ui.top_k.init(callback=self.callback, current_value=self.generator_settings["top_k"])
 
         self.ui.leave_in_vram.setChecked(not self.settings["memory_settings"]["unload_unused_models"] and not self.settings["memory_settings"]["move_unused_model_to_cpu"])
         self.ui.move_to_cpu.setChecked(self.settings["memory_settings"]["move_unused_model_to_cpu"])
         self.ui.unload_model.setChecked(self.settings["memory_settings"]["unload_unused_models"])
 
-        llm_generator_settings = self.settings["llm_generator_settings"]
+        llm_generator_settings = self.generator_settings
 
         dtype = llm_generator_settings["dtype"]
         self.set_dtype_by_gpu(llm_generator_settings["use_gpu"])
@@ -109,7 +135,7 @@ class LLMSettingsWidget(
 
         templates = self.settings["llm_templates"]
         names = [v["name"] for k, v in templates.items()]
-        
+
         self.ui.prompt_template.blockSignals(True)
         self.ui.prompt_template.clear()
         self.ui.prompt_template.addItems(names)
@@ -128,10 +154,15 @@ class LLMSettingsWidget(
         self.ui.do_sample.setChecked(llm_generator_settings["do_sample"])
         self.ui.early_stopping.setChecked(llm_generator_settings["early_stopping"])
         self.ui.use_gpu_checkbox.setChecked(llm_generator_settings["use_gpu"])
-        self.ui.override_parameters.setChecked(self.settings["llm_generator_settings"]["override_parameters"])
 
         for element in elements:
             element.blockSignals(False)
+
+    def callback(self, attr_name, value, widget):
+        chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
+        settings = self.settings
+        settings["llm_generator_settings"]["saved_chatbots"][chatbot_name]["generator_settings"][attr_name] = value
+        self.settings = settings
 
     def model_text_changed(self, val):
         settings = self.settings
@@ -233,7 +264,6 @@ class LLMSettingsWidget(
         llm_generator_settings = self.settings["llm_generator_settings"]
         self.initialize_form()
         self.ui.top_p.set_slider_and_spinbox_values(llm_generator_settings["top_p"])
-        # self.ui.max_length.set_slider_and_spinbox_values(llm_generator_settings["max_length"])
         self.ui.repetition_penalty.set_slider_and_spinbox_values(llm_generator_settings["repetition_penalty"])
         self.ui.min_length.set_slider_and_spinbox_values(llm_generator_settings["min_length"])
         self.ui.length_penalty.set_slider_and_spinbox_values(llm_generator_settings["length_penalty"])
