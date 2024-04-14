@@ -262,86 +262,6 @@ class AIRunnerAgent(
     def generator_settings(self):
         return self.chatbot["generator_settings"]
 
-    @property
-    def max_new_tokens(self):
-        return self.generator_settings["max_new_tokens"]
-
-    @property
-    def min_length(self):
-        return self.generator_settings["min_length"]
-
-    @property
-    def num_beams(self):
-        return self.generator_settings["num_beams"]
-
-    @property
-    def do_sample(self):
-        return self.generator_settings["do_sample"]
-
-    @property
-    def top_k(self):
-        return self.generator_settings["top_k"]
-
-    @property
-    def eta_cutoff(self):
-        return self.generator_settings["eta_cutoff"]
-
-    @property
-    def sequences(self):
-        return self.generator_settings["sequences"]
-
-    @property
-    def early_stopping(self):
-        return self.generator_settings["early_stopping"]
-
-    @property
-    def repetition_penalty(self):
-        return self.generator_settings["repetition_penalty"]
-
-    @property
-    def temperature(self):
-        return self.generator_settings["temperature"]
-
-    @property
-    def top_p(self):
-        return self.generator_settings["top_p"]
-
-    @property
-    def user_evaluation(self):
-        return self.generator_settings["user_evaluation"]
-
-    @property
-    def seed(self):
-        return self.generator_settings["seed"]
-
-    @property
-    def no_repeat_ngram_size(self):
-        return self.generator_settings["no_repeat_ngram_size"]
-
-    @property
-    def return_result(self):
-        return self.generator_settings["return_result"]
-
-    @property
-    def skip_special_tokens(self):
-        return self.generator_settings["skip_special_tokens"]
-
-    @property
-    def ngram_size(self):
-        return self.generator_settings["ngram_size"]
-
-    @property
-    def length_penalty(self):
-        return self.generator_settings["length_penalty"]
-
-    @property
-    def use_cache(self):
-        return self.generator_settings["use_cache"]
-
-    @property
-    def decoder_start_token_id(self):
-        return self.generator_settings["decoder_start_token_id"]
-
     def get_model_inputs(
         self,
         action,
@@ -444,22 +364,7 @@ class AIRunnerAgent(
     def prepare_generate_data(self, model_inputs, stopping_criteria):
         return dict(
             **model_inputs,
-            no_repeat_ngram_size=self.no_repeat_ngram_size,
-            decoder_start_token_id=self.decoder_start_token_id,
-            use_cache=self.use_cache,
-            length_penalty=self.length_penalty,
-            min_length=self.min_length,
-            max_new_tokens=self.max_new_tokens,
-            num_beams=self.num_beams,
-            do_sample=self.do_sample,
-            top_k=self.top_k,
-            eta_cutoff=self.eta_cutoff,
-            top_p=self.top_p,
-            num_return_sequences=self.sequences,
-            eos_token_id=self.tokenizer.eos_token_id,
-            early_stopping=self.early_stopping,
-            repetition_penalty=self.repetition_penalty,
-            temperature=self.temperature,
+            **self.generator_settings,
             stopping_criteria=[stopping_criteria]
         )
 
