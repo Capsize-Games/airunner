@@ -190,7 +190,7 @@ class ChatPromptWidget(BaseWidget):
                     "parameters": {
                         "override_parameters": self.settings["llm_generator_settings"]["override_parameters"],
                         "top_p": llm_generator_settings["top_p"] / 100.0,
-                        "max_length": llm_generator_settings["max_length"],
+                        # "max_length": llm_generator_settings["max_length"],
                         "repetition_penalty": llm_generator_settings["repetition_penalty"] / 100.0,
                         "min_length": llm_generator_settings["min_length"],
                         "length_penalty": llm_generator_settings["length_penalty"] / 100,
