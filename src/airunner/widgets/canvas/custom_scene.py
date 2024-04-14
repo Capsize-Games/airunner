@@ -5,9 +5,9 @@ import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageOps
 from PIL.ImageQt import QImage
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent
+from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
-from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog
+from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent
 
 from airunner.aihandler.logger import Logger
 from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, ServiceCode, EngineResponseCode
@@ -502,7 +502,7 @@ class CustomScene(
         self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
     def handle_mouse_event(self, event, is_press_event) -> bool:
-        if event.button() == Qt.MouseButton.LeftButton:
+        if isinstance(event, QMouseEvent) and event.button() == Qt.MouseButton.LeftButton:
             view = self.views()[0]
             pos = view.mapFromScene(event.scenePos())
             if (
@@ -521,15 +521,19 @@ class CustomScene(
         return False
 
     def handle_left_mouse_press(self, event) -> bool:
-        self.start_pos = event.scenePos()
+        try:
+            self.start_pos = event.scenePos()
+        except AttributeError:
+            self.logger.error("Failed to get scenePos from left click event")
         return self.handle_mouse_event(event, True)
 
     def handle_left_mouse_release(self, event) -> bool:
         return self.handle_mouse_event(event, False)
 
     def mousePressEvent(self, event):
-        if not self.handle_left_mouse_press(event):
-            super(CustomScene, self).mousePressEvent(event)
+        if isinstance(event, QGraphicsSceneMouseEvent):
+            if not self.handle_left_mouse_press(event):
+                super(CustomScene, self).mousePressEvent(event)
         self.handle_cursor(event)
         self.last_pos = event.scenePos()
         self.update()
