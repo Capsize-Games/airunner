@@ -37,7 +37,7 @@ setup(
         "torch==2.2.2",
         "torchvision==0.17.2",
         "torchaudio==2.2.2",
-        "optimum==1.18.0",
+        "optimum==1.18.1",
         "inflect==7.2.0",
         "tiktoken==0.6.0",
         "mediapipe==0.10.11",
