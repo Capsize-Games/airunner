@@ -8,7 +8,8 @@ from airunner.windows.setup_wizard.model_setup.stable_diffusion_setup.stable_dif
 from airunner.windows.setup_wizard.model_setup.stt.stt_setup import STTSetup
 from airunner.windows.setup_wizard.welcome_page import WelcomePage
 from airunner.windows.setup_wizard.user_agreement.user_agreement import UserAgreement
-from airunner.windows.setup_wizard.model_setup.stable_diffusion_setup.stable_diffusion_license import StableDiffusionLicense
+from airunner.windows.setup_wizard.model_setup.stable_diffusion_setup.stable_diffusion_license import \
+    StableDiffusionLicense
 from airunner.windows.setup_wizard.ai_runner_license.ai_runner_license import AIRunnerLicense
 from airunner.windows.setup_wizard.path_settings.path_settings import PathSettings
 from airunner.windows.setup_wizard.model_setup.controlnet.controlnet_download import ControlnetDownload
