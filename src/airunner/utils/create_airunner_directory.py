@@ -20,11 +20,6 @@ def create_airunner_paths(path_settings: dict):
     print("Creating directories...")
 
     for k, path in path_settings.items():
-        # Path validation
-        if not re.match(r'^[a-zA-Z0-9_/\\]*$', path):
-            print(f"Invalid path: {path}")
-            continue
-
         # Path sanitization
         path = path.replace('..', '')
 
