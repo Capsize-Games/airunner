@@ -6,9 +6,12 @@ from airunner.enums import SignalCode
 from airunner.widgets.model_merger.templates.model_merger_model_ui import Ui_model_merger_model
 from airunner.widgets.model_merger.templates.model_merger_ui import Ui_model_merger
 from airunner.windows.base_window import BaseWindow
+from airunner.windows.main.ai_model_mixin import AIModelMixin
 
 
-class ModelMerger(BaseWindow):
+class ModelMerger(
+    BaseWindow
+):
     template_class_ = Ui_model_merger
     widgets = []
     total_models = 1
@@ -24,12 +27,12 @@ class ModelMerger(BaseWindow):
         model_types = ["txt2img / img2img", "inpaint / outpaint", "depth2img", "pix2pix", "upscale", "superresolution"]
         self.ui.model_types.addItems(model_types)
         self.ui.model_types.currentIndexChanged.connect(self.change_model_type)
-        self.ui.base_models.addItems(self.get_service("ai_model_names_by_section")("txt2img"))
+        self.ui.base_models.addItems(self.ai_model_names_by_section("txt2img"))
 
         # get standard models from model_base_path
         # load the model_merger_model widget that will be used to add models
         for n in range(len(self.widgets), self.total_models):
-            self.add_model(self.get_service("ai_model_names_by_section")("txt2img"), n)
+            self.add_model(self.ai_model_names_by_section("txt2img"), n)
         layout = QVBoxLayout()
         self.ui.models.setLayout(layout)
         self.ui.merge_button.clicked.connect(self.merge_models)
@@ -62,7 +65,7 @@ class ModelMerger(BaseWindow):
     def change_model_type(self, index):
         self.model_type = self.ui.model_types.currentText()
         self.ui.base_models.clear()
-        self.ui.base_models.addItems(self.get_service("ai_model_names_by_section")(self.section))
+        self.ui.base_models.addItems(self.ai_model_names_by_section(self.section))
     
     def add_new_model(self):
         self.total_models += 1
@@ -161,7 +164,7 @@ class ModelMerger(BaseWindow):
 
         model = self.ui.base_models.currentText()
         section = self.section
-        available_models_by_section = self.get_service("ai_models_by_category")(category=section)
+        available_models_by_section = self.ai_models_by_category(category=section)
         model_data = None
         for data in available_models_by_section:
             if data["name"] == model:

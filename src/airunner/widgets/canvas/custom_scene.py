@@ -10,9 +10,8 @@ from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent
 
 from airunner.aihandler.logger import Logger
-from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, ServiceCode, EngineResponseCode
+from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.service_locator import ServiceLocator
 from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils import snap_to_grid, convert_base64_to_image, convert_image_to_base64
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
@@ -80,10 +79,6 @@ class CustomScene(
     def scene_is_active(self):
         return self.canvas_type == self.settings["canvas_settings"]["active_canvas"]
 
-    @staticmethod
-    def current_draggable_pixmap(self):
-        return ServiceLocator.get(ServiceCode.CURRENT_DRAGGABLE_PIXMAP)()
-
     def register_signals(self):
         signals = [
             (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
@@ -130,10 +125,14 @@ class CustomScene(
             return
         self.load_image(file_path)
 
+    def current_layer(self):
+        # TODO
+        return None
+
     @property
     def image_pivot_point(self):
         try:
-            layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)()
+            layer = self.current_layer()
             return QPoint(layer["pivot_point_x"], layer["pivot_point_y"])
         except Exception as e:
             self.logger.error(e)
@@ -259,7 +258,7 @@ class CustomScene(
 
         pivot_point = self.image_pivot_point
         root_point = QPoint(0, 0)
-        layer = ServiceLocator.get(ServiceCode.CURRENT_LAYER)()
+        layer = self.current_layer()
         current_image_position = QPoint(layer["pos_x"], layer["pos_y"])
 
         is_drawing_left = outpaint_box_rect.x() < current_image_position.x()
