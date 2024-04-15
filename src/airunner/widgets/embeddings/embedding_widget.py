@@ -1,4 +1,4 @@
-from airunner.enums import SignalCode, ServiceCode
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_trigger_word_widget import EmbeddingTriggerWordWidget
 from airunner.widgets.embeddings.templates.embedding_ui import Ui_embedding

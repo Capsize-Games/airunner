@@ -1,5 +1,4 @@
 from airunner.enums import SignalCode, GeneratorSection, ImageGenerator, StableDiffusionVersion
-from airunner.service_locator import ServiceLocator
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 
 
@@ -9,22 +8,6 @@ class AIModelMixin:
         self.settings = None
         self.settings = None
         self.settings = None
-        services = [
-            "ai_model_paths", 
-            "ai_models_find", 
-            "ai_model_categories", 
-            "ai_model_pipeline_actions", 
-            "ai_model_versions", 
-            "ai_model_get_disabled_default", 
-            "ai_model_get_all", 
-            "ai_model_update", 
-            "ai_model_get_by_filter", 
-            "ai_model_names_by_section", 
-            "ai_models_by_category",
-        ]
-
-        for service in services:
-            ServiceLocator.register(service, getattr(self, service))
 
     def ai_model_get_by_filter(self, filter_dict):
         return [item for item in self.settings["ai_models"] if all(item.get(k) == v for k, v in filter_dict.items())]
