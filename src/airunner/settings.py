@@ -234,7 +234,7 @@ DIFFUSERS_VERBOSITY = "error"
 # and for research purposes. Never set this to True unless you are
 # researching.
 ####################################################################
-TRUST_REMOTE_CODE = False
+TRUST_REMOTE_CODE = "False"
 
 ####################################################################
 # DEFAULT_HF_HUB_OFFLINE is set to "0" to allow for online access
@@ -333,6 +333,80 @@ LOG_LEVEL = logging.WARNING
 ####################################################################
 DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.2"
 DEFAULT_STT_HF_PATH = "openai/whisper-tiny.en"  # WAS ORIGINALLY USING "openai/whisper-base" for feature extractor
+DEFAULT_SPEECHT5_MODEL_PATHS = {
+    "embeddings_path": "Matthijs/cmu-arctic-xvectors",
+    "vocoder_path": "microsoft/speecht5_hifigan",
+    "model_path": "microsoft/speecht5_tts",
+    "processor_path": "microsoft/speecht5_tts"
+}
+DEFAULT_BARK_MODEL_PATHS = {
+    "processor": "suno/bark-small",
+    "model": "suno/bark-small",
+}
+EMBEDDINGS_MODEL_PATH = ""
+DEFAULT_OCR_MODEL_PATH = "Salesforce/blip-vqa-base"
+
+####################################################################
+# Default system prompts
+####################################################################
+DEFAULT_IMAGE_SYSTEM_PROMPT = "\n".join([
+    (
+        "You are an image captioning expert. You will be given the "
+        "description of an image. Your goal is to convert that "
+        "description into a better, more fitting description which "
+        "will capture the essence and the details of the image."
+    ),
+    (
+        "You may ask the user for more details before "
+        "proceeding. You may also ask the user to clarify the "
+        "description if it is not clear."
+    ),
+    "------"
+    "Examples:",
+    "User: create an image of a cat in the woods",
+    (
+        "Assistant: A (fluffy, tabby cat)+ exploring the depths of "
+        "an (enchanting forest). (well-lit), sunlight filters, "
+        "professional portrait."
+    ),
+    "User: the chat should look like a superhero",
+    (
+        "Assistant: " "A (cat dressed in a superhero costume), "
+        "standing in the (middle of a forest)."
+    ),
+    "------",
+    "Use parentheses to indicate the most important details of the "
+    "image. Add a plus sign after a word or parenthesis to add "
+    "extra emphasis. More plus signs indicate more emphasis. Minus "
+    "signs can be used to indicate less emphasis.",
+    "You should describe the image type (professional photograph, "
+    "portrait, illustration etc)",
+    (
+        "You should also describe the lighting (well-lit, dim, "
+        "dark etc), "
+        "the color, the composition and the mood."
+    ),
+    (
+        "When returning prompts you must choose either "
+        "\"art\" or \"photo\" and you absolutely must include "
+        "the following JSON format:\n"
+        "```json\n{\"prompt\": \"your prompt here\", \"type\": \"your type here\"}\n```\n"
+        "You must **NEVER** deviate from that format. You must "
+        "always return the prompt and type as JSON format. "
+        "This is **MANDATORY**."
+    )
+])
+
+####################################################################
+# This is the default system prompt for the text-to-image model.
+# The LLM will use this "guardrails" prompt along with the system
+# prompt to generate text.
+# You can adjust this prompt to be more specific or general.
+####################################################################
+DEFAULT_IMAGE_LLM_GUARDRAILS = (
+    "Avoid generating images that are illegal, "
+    "harmful, or might be seen as offensive."
+)
 
 ####################################################################
 # BASE_PATH is the base folder where the application data and
@@ -345,38 +419,42 @@ BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 # for the application data and models. By default, these
 # are stored under the BASE_PATH directory.
 ####################################################################
+BASE_ART_MODELS_PATH = os.path.join(BASE_PATH, "art", "models")
+BASE_ART_OTHER_PATH = os.path.join(BASE_PATH, "art", "other")
+BASE_TEXT_MODELS_PATH = os.path.join(BASE_PATH, "text", "models")
+BASE_TEXT_OTHER_PATH = os.path.join(BASE_PATH, "text", "other")
 DEFAULT_PATHS = {
     "art": {
         "models": {
-            "txt2img": os.path.join(BASE_PATH, "art", "models", "txt2img"),
-            "depth2img": os.path.join(BASE_PATH, "art", "models", "depth2img"),
-            "pix2pix": os.path.join(BASE_PATH, "art", "models", "pix2pix"),
-            "inpaint": os.path.join(BASE_PATH, "art", "models", "inpaint"),
-            "upscale": os.path.join(BASE_PATH, "art", "models", "upscale"),
-            "txt2vid": os.path.join(BASE_PATH, "art", "models", "txt2vid"),
-            "embeddings": os.path.join(BASE_PATH, "art", "models", "embeddings"),
-            "lora": os.path.join(BASE_PATH, "art", "models", "lora"),
-            "vae": os.path.join(BASE_PATH, "art", "models", "vae"),
+            "txt2img": os.path.join(BASE_ART_MODELS_PATH, "txt2img"),
+            "depth2img": os.path.join(BASE_ART_MODELS_PATH, "depth2img"),
+            "pix2pix": os.path.join(BASE_ART_MODELS_PATH, "pix2pix"),
+            "inpaint": os.path.join(BASE_ART_MODELS_PATH, "inpaint"),
+            "upscale": os.path.join(BASE_ART_MODELS_PATH, "upscale"),
+            "txt2vid": os.path.join(BASE_ART_MODELS_PATH, "txt2vid"),
+            "embeddings": os.path.join(BASE_ART_MODELS_PATH, "embeddings"),
+            "lora": os.path.join(BASE_ART_MODELS_PATH, "lora"),
+            "vae": os.path.join(BASE_ART_MODELS_PATH, "vae"),
         },
         "other": {
-            "images": os.path.join(BASE_PATH, "art", "other", "images"),
-            "videos": os.path.join(BASE_PATH, "art", "other", "videos"),
+            "images": os.path.join(BASE_ART_OTHER_PATH, "images"),
+            "videos": os.path.join(BASE_ART_OTHER_PATH, "videos"),
         },
     },
     "text": {
         "models": {
-            "casuallm": os.path.join(BASE_PATH, "text", "models", "casuallm"),
-            "seq2seq": os.path.join(BASE_PATH, "text", "models", "seq2seq"),
-            "visualqa": os.path.join(BASE_PATH, "text", "models", "visualqa"),
-            "casuallm_cache": os.path.join(BASE_PATH, "text", "models", "casuallm", "cache"),
-            "seq2seq_cache": os.path.join(BASE_PATH, "text", "models", "seq2seq", "cache"),
-            "visualqa_cache": os.path.join(BASE_PATH, "text", "models", "visualqa", "cache"),
-            "misc_cache": os.path.join(BASE_PATH, "text", "models", "misc", "cache"),
+            "casuallm": os.path.join(BASE_TEXT_MODELS_PATH, "casuallm"),
+            "seq2seq": os.path.join(BASE_TEXT_MODELS_PATH, "seq2seq"),
+            "visualqa": os.path.join(BASE_TEXT_MODELS_PATH, "visualqa"),
+            "casuallm_cache": os.path.join(BASE_TEXT_MODELS_PATH, "casuallm", "cache"),
+            "seq2seq_cache": os.path.join(BASE_TEXT_MODELS_PATH, "seq2seq", "cache"),
+            "visualqa_cache": os.path.join(BASE_TEXT_MODELS_PATH, "visualqa", "cache"),
+            "misc_cache": os.path.join(BASE_TEXT_MODELS_PATH, "misc", "cache"),
         },
         "other": {
-            "ebooks": os.path.join(BASE_PATH, "text", "other", "ebooks"),
-            "documents": os.path.join(BASE_PATH, "text", "other", "documents"),
-            "llama_index": os.path.join(BASE_PATH, "text", "other", "llama_index"),
+            "ebooks": os.path.join(BASE_TEXT_OTHER_PATH, "ebooks"),
+            "documents": os.path.join(BASE_TEXT_OTHER_PATH, "documents"),
+            "llama_index": os.path.join(BASE_TEXT_OTHER_PATH, "llama_index"),
         }
     }
 }
