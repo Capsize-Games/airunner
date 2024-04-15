@@ -136,10 +136,10 @@ class SDHandler(
             self.inpaint_vae_model = None
 
         self.handler_type = HandlerType.DIFFUSER
-        self._previous_model: str = ""
+        self._previous_model = ""
         self.cross_attention_kwargs_scale: float = 1.0
-        self._initialized: bool = False
-        self._reload_model: bool = False
+        self._initialized = False
+        self._reload_model = False
         self.current_model_branch = None
         self.state = None
         self.lora_loaded = False
@@ -170,20 +170,20 @@ class SDHandler(
         self.tokenizer = None
         self._safety_checker = None
         self._controlnet = None
-        self.current_model: str = ""
-        self.seed: int = 42
-        self.batch_size: int = 1
-        self.use_prompt_converter: bool = True
+        self.current_model = ""
+        self.seed = 42
+        self.batch_size = 1
+        self.use_prompt_converter = True
         self.depth_map = None
         self.model_data = None
-        self.model_version: str = ""
-        self.use_tiled_vae: bool = False
-        self.use_accelerated_transformers: bool = False
-        self.use_torch_compile: bool = False
-        self.is_sd_xl: bool = False
-        self.is_sd_xl_turbo: bool = False
-        self.is_turbo: bool = False
-        self.use_compel: bool = False
+        self.model_version = ""
+        self.use_tiled_vae = False
+        self.use_accelerated_transformers = False
+        self.use_torch_compile = False
+        self.is_sd_xl = False
+        self.is_sd_xl_turbo = False
+        self.is_turbo = False
+        self.use_compel = False
         self.controlnet_guess_mode = None
         self.filters = None
         self.original_model_data = None
@@ -194,7 +194,7 @@ class SDHandler(
         self.initialized = False
         self.reload_model = False
         self.extra_args = None
-        self.do_set_seed: bool = True
+        self.do_set_seed = True
         self._controlnet_image = None
         self.is_dev_env = AIRUNNER_ENVIRONMENT == "dev"
         self.latents = None
