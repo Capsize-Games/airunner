@@ -57,6 +57,20 @@ DEFAULT_CHATBOT = {
     "bot_personality": "happy. He loves {{ username }}",
     "bot_mood": "",
     "prompt_template": "Mistral 7B Instruct: Default Chatbot",
+
+    "use_tool_filter": False,
+    "use_gpu": True,
+    "skip_special_tokens": True,
+    "sequences": 1,
+    "seed": 42,
+    "random_seed": True,
+    "model_version": "mistralai/Mistral-7B-Instruct-v0.2",
+    "model_type": "llm",
+    "dtype": "4bit",
+    "cache_llm_to_disk": True,
+    "ngram_size": 2,
+    "return_result": True,
+
     "guardrails_prompt": (
         "Always assist with care, respect, and truth. "
         "Respond with utmost utility yet securely. "
@@ -79,8 +93,6 @@ DEFAULT_CHATBOT = {
     ),
     "generator_settings": {
         "max_new_tokens": 30,
-        "model_type": "llm",
-        "model_version": "mistralai/Mistral-7B-Instruct-v0.2",
         "min_length": 1,
         "do_sample": True,
         "early_stopping": True,
@@ -91,21 +103,11 @@ DEFAULT_CHATBOT = {
         "top_k": 50,
         "eta_cutoff": 0.2,
         "repetition_penalty": 1.0,
-        "return_result": True,
-        "skip_special_tokens": True,
         "num_return_sequences": 1,
         "decoder_start_token_id": None,
         "use_cache": True,
-        "seed": 42,
         "length_penalty": 0.1,
-        "ngram_size": 2,
-        "sequences": 1,
-        "dtype": "4bit",
-        "use_tool_filter": False,
-        "cache_llm_to_disk": True,
-        "use_gpu": True,
-        "random_seed": True,
-    }
+    },
 }
 
 AVAILABLE_IMAGE_FILTERS = [
