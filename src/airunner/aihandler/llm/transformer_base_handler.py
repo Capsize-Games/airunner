@@ -33,7 +33,6 @@ class TransformerBaseHandler(BaseHandler):
         self.model_path = kwargs.get("model_path", None)
         self.prompt = kwargs.get("prompt", None)
         self.current_model_path = kwargs.get("current_model_path", "")
-        self.local_files_only = kwargs.get("local_files_only", False)
         self.use_cache = kwargs.get("use_cache", True)
         self.history = []
         self.sequences = kwargs.get("sequences", 1)
@@ -107,10 +106,9 @@ class TransformerBaseHandler(BaseHandler):
             )
         return config
 
-    def model_params(self, local_files_only) -> dict:
-        local_files_only = self.local_files_only if local_files_only is None else local_files_only
+    def model_params(self) -> dict:
         return {
-            'local_files_only': local_files_only,
+            'local_files_only': True,
             'use_cache': self.use_cache,
             'trust_remote_code': self.settings["trust_remote_code"]
         }
@@ -136,8 +134,8 @@ class TransformerBaseHandler(BaseHandler):
                 return local_path
         return path
 
-    def load_model(self, local_files_only=True):
-        params = self.model_params(local_files_only=local_files_only)
+    def load_model(self):
+        params = self.model_params()
         if self.request_data:
             params["token"] = self.request_data.get(
                 "hf_api_key_read_key",
@@ -168,10 +166,7 @@ class TransformerBaseHandler(BaseHandler):
             )
         except OSError as e:
             if "We couldn't connect" in str(e):
-                if local_files_only:
-                    return self.load_model(local_files_only=False)
-                else:
-                    self.logger.error(e)
+                self.logger.error(e)
         except Exception as e:
             self.logger.error(e)
 
@@ -185,7 +180,7 @@ class TransformerBaseHandler(BaseHandler):
             if self.model and self.cache_llm_to_disk and not os.path.exists(cache_path):
                 self.model.save_pretrained(cache_path)
 
-    def load_tokenizer(self, local_files_only=None):
+    def load_tokenizer(self):
         pass
 
     def unload(self, do_clear_memory: bool = False):

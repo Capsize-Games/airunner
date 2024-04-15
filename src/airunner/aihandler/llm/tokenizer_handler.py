@@ -36,15 +36,14 @@ class TokenizerHandler(TransformerBaseHandler):
     def post_load(self):
         self.load_tokenizer()
 
-    def load_tokenizer(self, local_files_only=True):
+    def load_tokenizer(self):
         #path = self.get_tokenizer_path(self.current_model_path)
         if self.tokenizer is not None:
             return
         path = self.current_model_path
         self.logger.debug(f"Loading tokenizer from {path}")
-        local_files_only = self.local_files_only if local_files_only is None else local_files_only
         kwargs = {
-            "local_files_only": local_files_only,
+            "local_files_only": True,
             "token": self.request_data.get("hf_api_key_read_key"),
             "device_map": get_torch_device(self.settings["memory_settings"]["default_gpu"][self.model_type]),
             "trust_remote_code": True,
@@ -67,13 +66,7 @@ class TokenizerHandler(TransformerBaseHandler):
             self.logger.debug("Tokenizer loaded")
         except OSError as e:
             if "Checkout your internet connection" in str(e):
-                if local_files_only:
-                    self.logger.warning(
-                        "Unable to load tokenizer, model does not exist locally, trying to load from remote"
-                    )
-                    return self.load_tokenizer(local_files_only=False)
-                else:
-                    self.logger.error(e)
+                self.logger.error(e)
         except Exception as e:
             self.logger.error(e)
 

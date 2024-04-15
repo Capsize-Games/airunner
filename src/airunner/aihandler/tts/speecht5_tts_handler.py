@@ -28,24 +28,24 @@ class SpeechT5TTSHandler(TTSHandler):
     def speaker_embeddings_dataset_path(self):
         return self.settings["tts_settings"]["speecht5"]["embeddings_path"]
 
-    def load_vocoder(self, local_files_only=True):
+    def load_vocoder(self):
         self.logger.debug("Loading Vocoder")
         try:
             self.vocoder = SpeechT5HifiGan.from_pretrained(
                 self.vocoder_path,
-                local_files_only=local_files_only,
+                local_files_only=True,
                 torch_dtype=torch.float16,
                 device_map=self.device
             )
         except OSError as _e:
-            return self.load_vocoder(local_files_only=False)
+            return self.load_vocoder()
 
-    def load_dataset(self, local_files_only=True):
+    def load_dataset(self):
         """
         load xvector containing speaker's voice characteristics from a dataset
         :return:
         """
-        os.environ["HF_DATASETS_OFFLINE"] = str(int(local_files_only))
+        os.environ["HF_DATASETS_OFFLINE"] = str(int(True))
 
         embeddings_dataset = None
         self.logger.debug("Loading Dataset")
@@ -55,13 +55,8 @@ class SpeechT5TTSHandler(TTSHandler):
                 split="validation"
             )
         except OSError as e:
-            if local_files_only:
-                return self.load_dataset(
-                    local_files_only=False
-                )
-            else:
-                self.logger.error("Failed to load dataset")
-                self.logger.error(e)
+            self.logger.error("Failed to load dataset")
+            self.logger.error(e)
         if embeddings_dataset:
             self.speaker_embeddings = torch.tensor(
                 embeddings_dataset[7306]["xvector"]

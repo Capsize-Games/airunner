@@ -1,7 +1,6 @@
 import inflect
 import re
 from queue import Queue
-
 import torch.cuda
 from transformers import AutoTokenizer
 from airunner.aihandler.base_handler import BaseHandler
@@ -106,7 +105,6 @@ class TTSHandler(BaseHandler):
         self.current_model = None
         self.do_offload_to_cpu = True
         self.message = ""
-        self.local_files_only = True
         self.loaded = False
         self.model = None
         self.tokenizer = None
@@ -263,7 +261,7 @@ class TTSHandler(BaseHandler):
         try:
             self.model = model_class_.from_pretrained(
                 self.model_path,
-                local_files_only=self.local_files_only,
+                local_files_only=True,
                 torch_dtype=self.torch_dtype,
                 device_map=self.device
             )
@@ -271,38 +269,37 @@ class TTSHandler(BaseHandler):
             self.logger.error("Failed to load model")
             return
 
-    def load_tokenizer(self, local_files_only=True):
+    def load_tokenizer(self):
         self.logger.debug("Loading tokenizer")
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_path,
             #device_map=self.device,
             #torch_dtype=self.torch_dtype,
-            local_files_only=local_files_only,
+            local_files_only=True,
             trust_remote_code=False
         )
     
-    def load_vocoder(self, local_files_only=True):
+    def load_vocoder(self):
         pass
 
-    def load_processor(self, local_files_only=True):
+    def load_processor(self):
         self.logger.debug("Loading Procesor")
         processor_class_ = self.processor_class_
         if processor_class_:
             try:
                 self.processor = processor_class_.from_pretrained(
                     self.processor_path,
-                    local_files_only=local_files_only
+                    local_files_only=True
                 )
             except OSError as e:
                 if "Incorrect path_or_model_id" in str(e):
                     self.logger.error("Failed to load processor")
                     return
-                #return self.load_processor(local_files_only=False)
 
             if self.use_cuda:
                 self.processor = self.processor
 
-    def load_dataset(self, local_files_only=True):
+    def load_dataset(self):
         """
         load xvector containing speaker's voice characteristics from a dataset
         :return:

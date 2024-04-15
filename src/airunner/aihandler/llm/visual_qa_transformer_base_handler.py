@@ -31,10 +31,10 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
         if do_load_processor:
             self.load_processor()
 
-    def load_processor(self, local_files_only=True):
+    def load_processor(self):
         self.logger.debug(f"Loading processor {self.model_path}")
         kwargs = {
-            'local_files_only': local_files_only,
+            'local_files_only': True,
             'trust_remote_code': True,
 
         }
@@ -53,11 +53,8 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
                 **kwargs
             )
         except OSError as _e:
-            if local_files_only:
-                return self.load_processor(local_files_only=False)
-            else:
-                self.logger.error("Failed to load processor")
-                return False
+            self.logger.error("Failed to load processor")
+            return False
         if self.processor:
             self.logger.debug("Processor loaded")
         else:
@@ -122,7 +119,7 @@ class VisualQATransformerBaseHandler(TransformerBaseHandler):
             kwargs.pop(key)
         return kwargs
 
-    def model_params(self, local_files_only) -> dict:
-        params = super().model_params(local_files_only)
+    def model_params(self) -> dict:
+        params = super().model_params()
         del params["use_cache"]
         return params

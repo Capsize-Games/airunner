@@ -7,49 +7,44 @@ class WhisperHandler(STTHandler):
     """
     Handler for the Whisper model from OpenAI.
     """
-    def load_model(self, local_files_only=True):
+    def load_model(self):
         self.logger.debug("Loading model")
         try:
             self.model = WhisperForConditionalGeneration.from_pretrained(
                 "openai/whisper-tiny.en",
-                local_files_only=local_files_only,
+                local_files_only=True,
                 torch_dtype=torch.bfloat16,
                 device_map=self.device
             )
         except OSError as _e:
-            return self.load_model(local_files_only=False)
+            return self.load_model(local_files_only=True)
         except NotImplementedError as _e:
             self.logger.error("Failed to load model")
             self.logger.error(_e)
             return None
 
-    def load_processor(self, local_files_only=True):
+    def load_processor(self):
         self.logger.debug("Loading processor")
         try:
             self.processor = AutoProcessor.from_pretrained(
                 "openai/whisper-tiny.en",
-                local_files_only=local_files_only,
+                local_files_only=True,
                 torch_dtype=torch.bfloat16,
                 device_map=self.device
             )
-        except OSError as _e:
-            return self.load_processor(local_files_only=False)
-        except NotImplementedError as _e:
+        except Exception as e:
             self.logger.error("Failed to load processor")
-            self.logger.error(_e)
+            self.logger.error(e)
             return None
 
-    def load_feature_extractor(self, local_files_only=True):
+    def load_feature_extractor(self):
         try:
             self.feature_extractor = AutoFeatureExtractor.from_pretrained(
                 "openai/whisper-base",
-                local_files_only=local_files_only,
+                local_files_only=True,
                 torch_dtype=torch.bfloat16,
                 device_map=self.device
             )
         except OSError as _e:
-            if local_files_only:
-                return self.load_feature_extractor(local_files_only=False)
-            else:
-                self.logger.error("Failed to load extractor")
-                return None
+            self.logger.error("Failed to load extractor")
+            return None
