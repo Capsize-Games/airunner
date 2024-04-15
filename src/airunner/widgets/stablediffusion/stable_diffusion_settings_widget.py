@@ -1,4 +1,4 @@
-from airunner.enums import SignalCode, ServiceCode, GeneratorSection, ImageGenerator
+from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 from airunner.windows.main.pipeline_mixin import PipelineMixin
