@@ -1,4 +1,4 @@
-from airunner.settings import VOICES
+from airunner.settings import BARK_VOICES
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.tts.templates.speecht5_preferences_ui import Ui_speecht5_preferences
 
@@ -8,7 +8,7 @@ class SpeechT5PreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.voices = VOICES
+        self.voices = BARK_VOICES
         self.initialize_form()
 
     def initialize_form(self):
