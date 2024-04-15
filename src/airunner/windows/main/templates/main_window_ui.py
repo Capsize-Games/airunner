@@ -928,7 +928,6 @@ class Ui_MainWindow(object):
         self.menuAbout.addAction(self.actionAbout)
         self.menuAbout.addAction(self.actionBug_report)
         self.menuAbout.addAction(self.actionReport_vulnerability)
-        self.menuAbout.addAction(self.actionDiscord)
         self.menuImage.addSeparator()
         self.menuImage.addAction(self.menuCanvas_Image.menuAction())
         self.menuImage.addAction(self.menuDrawingpad.menuAction())
