@@ -31,7 +31,6 @@ class TTSVocalizerWorker(Worker):
         self.register(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal)
 
     def on_interrupt_process_signal(self, _message: dict):
-        self.logger.debug("Aborting TTS stream...")
         self.stream.abort()
         self.accept_message = False
         self.queue = Queue()
