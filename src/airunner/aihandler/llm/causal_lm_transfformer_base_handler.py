@@ -88,17 +88,17 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
     @staticmethod
     def load_tools() -> dict:
         return {
-            LLMToolName.QUIT_APPLICATION.value: QuitApplicationTool(),
-            LLMToolName.VISION_START_CAPTURE.value: StartVisionCaptureTool(),
-            LLMToolName.VISION_STOP_CAPTURE.value: StopVisionCaptureTool(),
-            LLMToolName.STT_START_CAPTURE.value: StartAudioCaptureTool(),
-            LLMToolName.STT_STOP_CAPTURE.value: StopAudioCaptureTool(),
-            LLMToolName.TTS_ENABLE.value: StartSpeakersTool(),
-            LLMToolName.TTS_DISABLE.value: StopSpeakersTool(),
-            LLMToolName.DESCRIBE_IMAGE.value: ProcessVisionTool,
-            LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
-            LLMToolName.BASH_EXECUTE.value: BashExecuteTool(),
-            LLMToolName.WRITE_FILE.value: WriteFileTool(),
+            # LLMToolName.QUIT_APPLICATION.value: QuitApplicationTool(),
+            # LLMToolName.VISION_START_CAPTURE.value: StartVisionCaptureTool(),
+            # LLMToolName.VISION_STOP_CAPTURE.value: StopVisionCaptureTool(),
+            # LLMToolName.STT_START_CAPTURE.value: StartAudioCaptureTool(),
+            # LLMToolName.STT_STOP_CAPTURE.value: StopAudioCaptureTool(),
+            # LLMToolName.TTS_ENABLE.value: StartSpeakersTool(),
+            # LLMToolName.TTS_DISABLE.value: StopSpeakersTool(),
+            # LLMToolName.DESCRIBE_IMAGE.value: ProcessVisionTool,
+            # LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
+            # LLMToolName.BASH_EXECUTE.value: BashExecuteTool(),
+            # LLMToolName.WRITE_FILE.value: WriteFileTool(),
             #LLMToolName.DEFAULT_TOOL.value: RespondToUserTool(),
         }
 
