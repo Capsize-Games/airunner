@@ -61,7 +61,7 @@ airunner.src.utils.set_huggingface_environment_variables
 # Only change this to True if you want to create an application
 # that can automatically download required models from huggingface.co
 ####################################################################
-HF_ALLOW_DOWNLOADS = False
+HF_ALLOW_DOWNLOADS = False  # This is an AI Runner specific variable
 
 ####################################################################
 # HF_HUB_DISABLE_TELEMETRY is used to disable telemetry for
@@ -223,8 +223,8 @@ DIFFUSERS_VERBOSITY = "error"
 # Prevents remote code from being downloaded from huggingface and
 # executed on the host machine.
 # Huge security risk if set to True. Huggingface Transformers
-# library (nor any library) should not have this capability.
-# Note that this is not an environment varriable and is passed into
+# library should not have this capability - no library should.
+# Note that this is not an environment variable and is passed into
 # functions which download models and code.
 # For example, the stabilityai zeyphr library has a flag to
 # trust remote code.
@@ -271,7 +271,14 @@ APPLICATION_NAME = "AI Runner"
 ####################################################################
 PROMPT_FOR_ONLINE_ACCESS = True
 
-
+####################################################################
+# LOG_LEVEL is the logging level for the application.
+# We log things such as errors, warnings, and info messages.
+# We do not log things such as prompts, user input or other
+# non-essential or sensitive information.
+# These logs are not stored and are used for development
+# purposes only.
+####################################################################
 LOG_LEVEL = logging.WARNING
 
 ####################################################################
@@ -288,7 +295,7 @@ BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
 
 ####################################################################
 # DEFAULT_PATHS is a dictionary that contains the default paths
-# for the application data and models. By default these
+# for the application data and models. By default, these
 # are stored under the BASE_PATH directory.
 ####################################################################
 DEFAULT_PATHS = {
