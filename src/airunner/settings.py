@@ -1,15 +1,295 @@
+"""
+██████████████████████████████████████████████████████████████
+██                                 A REAL INTERNET COMPANY  ██
+██  █████  ██████  ██████   ██████  ██████  ██████  ██████  ██
+██  ██     ██  ██  ██   ██  ██        ██        ██  ██      ██
+██  ██     ██████  ██████   ██████    ██      ██    ████    ██
+██  ██     ██  ██  ██           ██    ██    ██      ██      ██
+██  █████  ██  ██  ██       ██████  ██████  ██████  ██████  ██
+██                                           █    █    ███  ██
+██                                           █    █    █    ██
+██                                           ███  ███  ███  ██
+██████████████████████████████████████████████████████████████
+
+See the user agreement and
+license agreement and
+other applicable agreements
+before using this software.
+"""
 import os
 import logging
 from PySide6.QtCore import Qt
 from PySide6 import QtCore
-from airunner.enums import GeneratorSection, StableDiffusionVersion, ImageGenerator, Scheduler, SignalCode
+
+"""
+██████████████████████████████████████████████████████████████████████████████████   
+█                                                                                █ 
+█  ██    ██  ████████  ████████  ██    ██  ████████  ██    ██  ████████  ██  ██  █ 
+█  ██    ██  ██    ██  ██    ██  ██    ██     ██     ██    ██  ██        ██  ██  █ 
+█  ██    ██  ████████  ██████    ████  ██     ██     ████  ██  ██  ████  ██  ██  █ 
+█  ██ ██ ██  ██    ██  ██    ██  ██  ████     ██     ██  ████  ██    ██          █ 
+█  ███  ███  ██    ██  ██    ██  ██    ██  ████████  ██    ██  ████████  ██  ██  █ 
+█                                                                                █ 
+██████████████████████████████████████████████████████████████████████████████████
+
+====================================================================
+--------------------------------------------------------------------
+HUGGINGFACE.CO IS A WEBSITE THAT HOSTS AI MODELS AND ALLOWS PEOPLE 
+TO CREATE SERVERS THAT CAN USE THESE MODELS. SOME OF THE DEFAULT 
+SETTINGS PRESENT A SECURITY RISK. HUGGINGFACE.CO LIBRARIES SHOULD 
+FIX THEIR DEFAULT SETTINGS AND REMOVE THE ABILITY TO DOWNLOAD AND 
+EXECUTE CODE. CAREFULLY READ THE FOLLOWING SETTINGS AND COMMENTS
+BEFORE YOU CHANGE ANYTHING. DO NOT CHANGE ANYTHING UNLESS YOU KNOW 
+WHAT YOU ARE DOING.
+--------------------------------------------------------------------
+====================================================================
+"""
 
 
-AIRUNNER_ENVIRONMENT = os.environ.get("AIRUNNER_ENVIRONMENT", "dev")  # dev or prod
-LOG_LEVEL = logging.FATAL if AIRUNNER_ENVIRONMENT == "prod" else logging.WARNING
+"""
+Environment variables for huggingface libraries
+The following environment variables control huggingface libraries.
+
+DO NOT CHANGE THESE VARIABLES UNLESS YOU KNOW WHAT YOU ARE DOING!
+
+For implementation, see the function
+airunner.src.utils.set_huggingface_environment_variables
+"""
+
+####################################################################
+# This is the default mode to prevent HF from accessing the internet
+# Only change this to True if you want to create an application
+# that can automatically download required models from huggingface.co
+####################################################################
+HF_ALLOW_DOWNLOADS = False
+
+####################################################################
+# HF_HUB_DISABLE_TELEMETRY is used to disable telemetry for
+# huggingface models. Never enable telemetry. Setting this to "0"
+# will send telemetry to huggingface. Huggingface libraries should
+# NOT have the ability to send telemetry.
+####################################################################
+HF_HUB_DISABLE_TELEMETRY = "1"
+
+####################################################################
+# HF_HUB_OFFLINE
+# 1 == Disable internet access.
+# Internet access will only be used when downloading models with the
+# model manager or setup wizard.
+####################################################################
+HF_HUB_OFFLINE = "1"
+
+####################################################################
+# HF_CACHE_DIR is the directory where huggingface models are stored.
+# Default value is "~/.cache/huggingface" but we have changed it to
+# "~/.airunner/huggingface"
+# It is safe to change this to a different directory. It can also
+# be changed in the GUI.
+# If you would like to use the default directory (in order to use
+# your existing cache), set it to "~/.cache/huggingface"
+####################################################################
+HF_CACHE_DIR = "~/.airunner/huggingface"
+
+####################################################################
+# HF_HOME is the directory where huggingface models are stored.
+# We set this to HF_CACHE_DIR
+####################################################################
+HF_HOME = HF_CACHE_DIR
+
+####################################################################
+# HF_ASSETS_CACHE is the directory where huggingface assets are stored.
+# Default value is "$HF_HOME/assets"
+# Here we hard code it to the same directory as HF_HOME
+####################################################################
+HF_ASSETS_CACHE = HF_CACHE_DIR
+
+####################################################################
+# HF_ENDPOINT is the huggingface endpoint.
+# Default value is "https://huggingface.co" but we have changed it to
+# "https://huggingface.co"
+# in order to force prevention of ineternet access.
+####################################################################
+HF_ENDPOINT = ""
+
+####################################################################
+# HF_INFERENCE_ENDPOINT is the huggingface inference endpoint.
+# Default value is "https://api-inference.huggingface.com" but we
+# have changed it to ""
+# in order to force prevention of internet access. This ensures
+# that no inadvertent data
+# transmissions occur, maintaining privacy and security by avoiding
+# external API calls.
+####################################################################
+HF_INFERENCE_ENDPOINT = ""
+
+####################################################################
+# HF_HUB_DISABLE_PROGRESS_BARS is used to disable progress bars for
+# huggingface models.
+# Default value is "0", we have kept this to show when models are
+# being downloaded
+# in the terminal. This transparency is useful for monitoring
+# download progress and debugging,
+# but can be disabled to reduce terminal clutter if preferred.
+####################################################################
+HF_HUB_DISABLE_PROGRESS_BARS = "0"
+
+####################################################################
+# HF_HUB_DISABLE_SYMLINKS_WARNING is used to suppress warnings
+# related to symlink creation.
+# Default value is "0". Keeping this setting as default aids in
+# debugging file system issues,
+# especially on Windows where symlink creation might require elevated
+# permissions.
+####################################################################
+HF_HUB_DISABLE_SYMLINKS_WARNING = "0"
+
+####################################################################
+# HF_HUB_DISABLE_EXPERIMENTAL_WARNING is used to disable warnings
+# for experimental features.
+# Default value is "0". By not changing this, users are kept
+# informed about the potential
+# instability of experimental features, enhancing awareness and
+# preventive caution.
+####################################################################
+HF_HUB_DISABLE_EXPERIMENTAL_WARNING = "0"
+
+####################################################################
+# HF_TOKEN is used for authentication. By setting this to an empty
+# string "",
+# we ensure that no credentials are stored or used inadvertently,
+# enhancing security by
+# preventing unauthorized access to private repositories or features.
+####################################################################
+HF_TOKEN = ""
+
+####################################################################
+# HF_HUB_VERBOSITY is set to "error" to minimize logging output.
+# This setting reduces the
+# risk of sensitive information being logged accidentally, thereby
+# enhancing privacy and security.
+####################################################################
+HF_HUB_VERBOSITY = "error"
+
+####################################################################
+# HF_HUB_LOCAL_DIR_AUTO_SYMLINK_THRESHOLD is set to "0" to disable
+# the use of symlinks.
+# This can prevent symlink attacks and avoids complications on
+# systems where symlinks
+# are not well-supported, enhancing file system security.
+####################################################################
+HF_HUB_LOCAL_DIR_AUTO_SYMLINK_THRESHOLD = "0"
+
+####################################################################
+# HF_HUB_DOWNLOAD_TIMEOUT and HF_HUB_ETAG_TIMEOUT are set to "30"
+# seconds to balance between
+# usability and security. Increased timeouts reduce the risk of
+# interruptions during data
+# transfers which could leave files in an insecure state.
+####################################################################
+HF_HUB_DOWNLOAD_TIMEOUT = "30"
+HF_HUB_ETAG_TIMEOUT = "30"
+
+####################################################################
+# HF_HUB_DISABLE_IMPLICIT_TOKEN is set to "1" to avoid automatically
+# sending authentication tokens
+# with each request. This prevents potential leaks of credentials
+# and ensures that tokens are
+# only sent when explicitly required by the user, thereby
+# enhancing security.
+####################################################################
+HF_HUB_DISABLE_IMPLICIT_TOKEN = "1"
+
+####################################################################
+# HF_DATASETS_OFFLINE and TRANSFORMERS_OFFLINE are set to "1" to
+# ensure that all operations
+# with datasets and transformers are conducted offline.
+# This eliminates any reliance on
+# external networks, which maximizes security by preventing
+# exposure to network-based threats.
+####################################################################
+HF_DATASETS_OFFLINE = "1"
+TRANSFORMERS_OFFLINE = "1"
+
+####################################################################
+# DIFFUSERS_VERBOSITY is set to "error" to keep the logging level
+# minimal for the diffusers
+# library, consistent with the setting for other Hugging Face tools.
+# This consistency helps in
+# maintaining a secure and quiet operational environment.
+####################################################################
+DIFFUSERS_VERBOSITY = "error"
+
+####################################################################
+# Prevents remote code from being downloaded from huggingface and
+# executed on the host machine.
+# Huge security risk if set to True. Huggingface Transformers
+# library (nor any library) should not have this capability.
+# Note that this is not an environment varriable and is passed into
+# functions which download models and code.
+# For example, the stabilityai zeyphr library has a flag to
+# trust remote code.
+# Allegedly, this is safe, but I do not trust it.
+# This flag has been left in the code in case a developer
+# automatically sets it to true in one of the functions
+# and for research purposes. Never set this to True unless you are
+# researching.
+####################################################################
+TRUST_REMOTE_CODE = False
+
+####################################################################
+# The following environment variables are used by the huggingface
+# libraries to control the
+# behavior of the model manager and the setup wizard.
+####################################################################
+DEFAULT_HF_HUB_OFFLINE = "0"
+DEFAULT_HF_ENDPOINT = "https://huggingface.co"
+DEFAULT_HF_INFERENCE_ENDPOINT = "https://api-inference.huggingface.com"
+
+"""
+█████████████████████████████████████████
+END OF HUGGINGFACE ENVIRONMENT VARIABLES
+█████████████████████████████████████████
+"""
+from airunner.enums import (
+    GeneratorSection,
+    StableDiffusionVersion,
+    ImageGenerator,
+    Scheduler,
+    SignalCode
+)
+
+####################################################################
+# These can be changed.
+####################################################################
+ORGANIZATION = "Capsize Games"
+APPLICATION_NAME = "AI Runner"
+
+####################################################################
+# PROMPT_FOR_ONLINE_ACCESS is used to prompt the user for online
+# access when downloading models.
+####################################################################
+PROMPT_FOR_ONLINE_ACCESS = True
+
+
+LOG_LEVEL = logging.WARNING
+
+####################################################################
+# Default models for the core application
+####################################################################
+DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.2"
+DEFAULT_STT_HF_PATH = "openai/whisper-tiny.en"  # WAS ORIGINALLY USING "openai/whisper-base" for feature extractor
+
+####################################################################
+# BASE_PATH is the base folder where the application data and
+# models are stored. This can be changed in the GUI.
+####################################################################
 BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
-SQLITE_DB_NAME = "airunner.db"
-SQLITE_DB_PATH = os.path.join(BASE_PATH, SQLITE_DB_NAME)
+
+####################################################################
+# DEFAULT_PATHS is a dictionary that contains the default paths
+# for the application data and models. By default these
+# are stored under the BASE_PATH directory.
+####################################################################
 DEFAULT_PATHS = {
     "art": {
         "models": {
@@ -46,6 +326,11 @@ DEFAULT_PATHS = {
     }
 }
 
+
+####################################################################
+# DEFAULT_CHATBOT is a dictionary that contains the default settings
+# for the chatbot. New chatbots can be created in the GUI.
+####################################################################
 DEFAULT_CHATBOT = {
     "username": "User",
     "botname": "Computer",
@@ -64,7 +349,7 @@ DEFAULT_CHATBOT = {
     "sequences": 1,
     "seed": 42,
     "random_seed": True,
-    "model_version": "mistralai/Mistral-7B-Instruct-v0.2",
+    "model_version": DEFAULT_LLM_HF_PATH,
     "model_type": "llm",
     "dtype": "4bit",
     "cache_llm_to_disk": True,
@@ -110,19 +395,12 @@ DEFAULT_CHATBOT = {
     },
 }
 
-AVAILABLE_IMAGE_FILTERS = [
-    "SaturationFilter",
-    "ColorBalanceFilter",
-    "RGBNoiseFilter",
-    "PixelFilter",
-    "HalftoneFilter",
-    "RegistrationErrorFilter"
-]
 
-"""
-Used in the TTS Bark Preferences widget to selected a voice
-"""
-VOICES = {
+####################################################################
+# BARK_VOICES is a dictionary that contains the available voices for
+# the text-to-speech feature used with the Bark model.
+####################################################################
+BARK_VOICES = {
     "English": {
         "Male": [
             "v2/en_speaker_0",
@@ -331,6 +609,11 @@ VOICES = {
         ],
     },
 }
+
+####################################################################
+# TRANSLATION_LANGUAGES is a list of languages that are available
+# for translation. This feature is to be implemented in the future.
+####################################################################
 TRANSLATION_LANGUAGES = [
     "English",
     "Spanish",
@@ -339,47 +622,61 @@ TRANSLATION_MODELS = {
     "English": None,
     "Spanish": None,
 }
+
+####################################################################
+# Gender constants
+# TODO: move this to enums
+####################################################################
 MALE = "Male"
 FEMALE = "Female"
+
+# Default negative prompt for photorealistic images
 PHOTO_REALISTIC_NEGATIVE_PROMPT = (
     "illustration, drawing, cartoon, not real, fake, cgi, 3d animation, "
     "3d art, sculpture, animation, anime, Digital art, Concept art, Pixel art"
 )
+
+# Default negative prompt for non-photorealistic images
 ILLUSTRATION_NEGATIVE_PROMPT = (
-    "photo, photograph, photography, high-definition, video, realistic, hyper-realistic, film"
+    "photo, photograph, photography, high-definition, video, "
+    "realistic, hyper-realistic, film"
 )
 
-BUG_REPORT_LINK = "https://github.com/Capsize-Games/airunner/issues/new?assignees=&labels=&template=bug_report.md&title="
-DISCORD_LINK = "https://discord.gg/ukcgjEpc5f"
-VULNERABILITY_REPORT_LINK = "https://github.com/Capsize-Games/airunner/security/advisories/new"
+####################################################################
+# Default links which are displayed in the application
+####################################################################
+BUG_REPORT_LINK = (
+    "https://github.com/Capsize-Games/airunner/issues/new"
+    "?assignees=&labels=&template=bug_report.md&title="
+)
+VULNERABILITY_REPORT_LINK = (
+    "https://github.com/Capsize-Games/airunner/security/advisories/new"
+)
 
-# Set default models, currently only for stablediffusion (later Kandinsky as well)
-DEFAULT_MODELS = {}
-sd_key = ImageGenerator.STABLEDIFFUSION.value
-DEFAULT_MODELS[sd_key] = {}
-DEFAULT_MODELS[sd_key][GeneratorSection.TXT2IMG] = {
-    "version": StableDiffusionVersion.SDXL_TURBO,
-    "model": "stabilityai/sd-turbo",
-}
-DEFAULT_MODELS[sd_key][GeneratorSection.IMG2IMG] = {
-    "version": StableDiffusionVersion.SDXL_TURBO,
-    "model": "stabilityai/sd-turbo",
-}
-DEFAULT_MODELS[sd_key][GeneratorSection.INPAINT] = {
-    "version": StableDiffusionVersion.SD1_5,
-    "model": "runwayml/stable-diffusion-inpainting",
-}
-DEFAULT_MODELS[sd_key][GeneratorSection.OUTPAINT] = DEFAULT_MODELS[sd_key][GeneratorSection.INPAINT]
-DEFAULT_MODELS[sd_key][GeneratorSection.DEPTH2IMG] = {
-    "version": StableDiffusionVersion.SD1_5,
-    "model": "stabilityai/stable-diffusion-2-depth",
-}
-DEFAULT_MODELS[sd_key][GeneratorSection.PIX2PIX] = {
-    "version": StableDiffusionVersion.SD1_5,
-    "model": "timbrooks/instruct-pix2pix",
-}
-DEFAULT_MODELS_VERSION = "b4ab6a2d996cb4c8ba0e30918fa4f4201dd2fa5ebfe3470b4ebede8e2db48f4e"
-LLM_TEMPLATES_VERSION="b4ab6a2d996cb4c8ba0e30918fa4f4201dd2fa5ebfe3470b4ebede8e2db48f4e"
+####################################################################
+# Set default models, currently only for Stable Diffusion
+####################################################################
+
+SD_DEFAULT_MODEL_PATH = "stabilityai/sd-turbo"
+SD_DEFAULT_VERSION = "SDXL Turbo"
+SD_DEFAULT_MODEL = dict(
+    version=SD_DEFAULT_VERSION,
+    model=SD_DEFAULT_MODEL_PATH,
+)
+DEFAULT_MODELS = dict(
+    stablediffusion=dict(
+        txt2img=SD_DEFAULT_MODEL,
+        img2img=SD_DEFAULT_MODEL,
+        inpaint=SD_DEFAULT_MODEL,
+        outpaint=SD_DEFAULT_MODEL,
+        depth2img=SD_DEFAULT_MODEL,
+        pix2pix=SD_DEFAULT_MODEL,
+    )
+)
+
+####################################################################
+# Default config files used for each Stable Diffusion version
+####################################################################
 CONFIG_FILES = {
     "v1": "v1.yaml",
     "v2": "v2.yaml",
@@ -387,6 +684,61 @@ CONFIG_FILES = {
     "xl_refiner": "sd_xl_refiner.yaml",
     "controlnet": "controlnet.yaml",
 }
+
+SERVER = {
+    "host": "127.0.0.1",
+    "port": 50006,
+    "chunk_size": 1024,
+}
+
+"""
+Theme settings
+"""
+DEFAULT_BRUSH_PRIMARY_COLOR = "#ffffff"
+DEFAULT_BRUSH_SECONDARY_COLOR = "#000000"
+AVAILABLE_DTYPES = ("2bit", "4bit", "8bit")
+STATUS_ERROR_COLOR = "#ff0000"
+STATUS_NORMAL_COLOR_LIGHT = "#000000"
+STATUS_NORMAL_COLOR_DARK = "#ffffff"
+DARK_THEME_NAME = "dark_theme"
+LIGHT_THEME_NAME = "light_theme"
+
+# Image import / export settings
+VALID_IMAGE_FILES = "Image Files (*.png *.jpg *.jpeg)"
+
+####################################################################
+# Espeak settings
+####################################################################
+ESPEAK_SETTINGS = {
+    "voices": {
+        "male": [
+            "m1", "m2", "m3",
+        ],
+        "female": [
+            "f1", "f2", "f3",
+        ],
+    },
+    "rate": {
+        "min": -100,
+        "max": 100,
+        "default": 0
+    },
+    "pitch": {
+        "min": -100,
+        "max": 100,
+        "default": 0
+    },
+    "volume": {
+        "min": 0,
+        "max": 100,
+        "default": 100
+    },
+    "punctuation_modes": ["none", "all", "some"],
+}
+
+####################################################################
+# Image generator settings
+####################################################################
 SCHEDULER_CLASSES = {
     Scheduler.EULER_ANCESTRAL.value: "EulerAncestralDiscreteScheduler",
     Scheduler.EULER.value: "EulerDiscreteScheduler",
@@ -405,13 +757,6 @@ SCHEDULER_CLASSES = {
     Scheduler.DPM_2M_SDE_K.value: "DPMSolverMultistepScheduler",
     Scheduler.PLMS.value: "PNDMScheduler",
     Scheduler.DPM.value: "DPMSolverMultistepScheduler",
-    # "DDIM Inverse": "DDIMInverseScheduler",
-    # "IPNM": "IPNDMScheduler",
-    # "RePaint": "RePaintScheduler",
-    # "Karras Variance exploding": "KarrasVeScheduler",
-    # "VE-SDE": "ScoreSdeVeScheduler",
-    # "VP-SDE": "ScoreSdeVpScheduler",
-    # "VQ Diffusion": " VQDiffusionScheduler",
 }
 MIN_SEED = 0
 MAX_SEED = 4294967295
@@ -427,24 +772,13 @@ AVAILABLE_SCHEDULERS_BY_ACTION.update({
     "upscale": [Scheduler.EULER.value],
     "superresolution": [Scheduler.DDIM.value, Scheduler.LMS.value, Scheduler.PLMS.value],
 })
-SERVER = {
-    "host": "127.0.0.1",
-    "port": 50006,
-    "chunk_size": 1024,
-}
-DEFAULT_BRUSH_PRIMARY_COLOR = "#ffffff"
-DEFAULT_BRUSH_SECONDARY_COLOR = "#000000"
-AVAILABLE_DTYPES = ("2bit", "4bit", "8bit")
-STATUS_ERROR_COLOR = "#ff0000"
-STATUS_NORMAL_COLOR_LIGHT = "#000000"
-STATUS_NORMAL_COLOR_DARK = "#ffffff"
-DARK_THEME_NAME = "dark_theme"
-LIGHT_THEME_NAME = "light_theme"
-VALID_IMAGE_FILES = "Image Files (*.png *.jpg *.jpeg)"
+MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
 NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
+
+####################################################################
+# Application settings
+####################################################################
 SLEEP_TIME_IN_MS = 50
-ORGANIZATION = "Capsize Games"
-APPLICATION_NAME = "AI Runner"
 DEFAULT_SHORTCUTS = {
     "Generate Image": {
         "text": "F5",
@@ -496,32 +830,45 @@ DEFAULT_SHORTCUTS = {
         "signal": SignalCode.QUIT_APPLICATION.value
     },
 }
-ESPEAK_SETTINGS = {
-    "voices": {
-        "male": [
-            "m1", "m2", "m3",
-        ],
-        "female": [
-            "f1", "f2", "f3",
-        ],
-    },
-    "rate": {
-        "min": -100,
-        "max": 100,
-        "default": 0
-    },
-    "pitch": {
-        "min": -100,
-        "max": 100,
-        "default": 0
-    },
-    "volume": {
-        "min": 0,
-        "max": 100,
-        "default": 100
-    },
-    "punctuation_modes": ["none", "all", "some"],
-}
-MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
+
+"""
+#################################
+## Stable Diffusion guardrails ##
+#################################
+ ---------- WARNING ----------
+ DO NOT CHANGE THESE VALUES!!!
+ These values are used to
+ prevent the generation of
+ potentially harmful content
+ and should only be modified
+ by a researcher or
+ qualified expert.
+ -----------------------------
+ When the safety checker is
+ disabled the encrypted
+ guardrail words will be
+ removed from the prompt and
+ added to the negative prompt
+ in an effort to prevent the
+ generation of harmful content.
+ If researchers or experts
+ have a better method, please
+ contact us.
+ -----------------------------
+ Although our best attempt has
+ been made to prevent harmful
+ content, certain prompts and
+ models may still be capable of
+ generating harmful content. 
+ It is advised that you leave 
+ the safety checker enabled at 
+ all times And only use image 
+ models that are incapable of
+ generating unwanted content.
+ 
+ See the Stable Diffusion license
+ for more information.
+#################################
+"""
 SD_GUARDRAILS_KEY = b'hRn5d-cm2ow_lbGJjYoQgXsmzbWa0XGfHDAv-qu91F4='
 SD_GUARDRAILS = b'gAAAAABmACEW3HIFcd-f_dqgImUzesVq4aNDdLc0rkiLw_X0gX_hv_eoDUhaPU8g03NtDVnXWY7nPNhtAWNhhhgTxux2Ws2ZQXYXFf2MUFWIwTzr88-kpMY='
