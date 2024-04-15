@@ -1316,7 +1316,7 @@ class SDHandler(
             "load_safety_checker": False,
         }
         if self.settings["generator_settings"]["enable_controlnet"]:
-            kwargs["controlnet"] = self.controlnet()
+            data["controlnet"] = self.controlnet()
         try:
             pipe = download_from_original_stable_diffusion_ckpt(**data)
         except Exception as e:
