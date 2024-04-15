@@ -1,6 +1,6 @@
 from PySide6.QtCore import Slot
 
-from airunner.enums import ServiceCode, SignalCode, StableDiffusionVersion, ImageGenerator, GeneratorSection
+from airunner.enums import SignalCode, StableDiffusionVersion, ImageGenerator, GeneratorSection
 from airunner.utils import create_worker
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
