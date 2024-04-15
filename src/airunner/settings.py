@@ -663,7 +663,6 @@ VULNERABILITY_REPORT_LINK = (
 ####################################################################
 # Set default models, currently only for Stable Diffusion
 ####################################################################
-
 SD_DEFAULT_MODEL_PATH = "stabilityai/sd-turbo"
 SD_DEFAULT_VERSION = "SDXL Turbo"
 SD_DEFAULT_MODEL = dict(
@@ -692,6 +691,9 @@ CONFIG_FILES = {
     "controlnet": "controlnet.yaml",
 }
 
+####################################################################
+# Server settings - currently unused
+####################################################################
 SERVER = {
     "host": "127.0.0.1",
     "port": 50006,
@@ -844,7 +846,7 @@ DEFAULT_SHORTCUTS = {
 #################################
  ---------- WARNING ----------
  DO NOT CHANGE THESE VALUES!!!
- These values are used to
+ These values are used to help
  prevent the generation of
  potentially harmful content
  and should only be modified
