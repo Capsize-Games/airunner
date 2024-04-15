@@ -48,7 +48,6 @@ from airunner.aihandler.mixins.lora_mixin import LoraMixin
 from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
-from airunner.settings import AIRUNNER_ENVIRONMENT
 from airunner.settings import CONFIG_FILES
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
@@ -196,7 +195,6 @@ class SDHandler(
         self.extra_args = None
         self.do_set_seed = True
         self._controlnet_image = None
-        self.is_dev_env = AIRUNNER_ENVIRONMENT == "dev"
         self.latents = None
         self.sd_mode = None
         self.safety_checker = None
