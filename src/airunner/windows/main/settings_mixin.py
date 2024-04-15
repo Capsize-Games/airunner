@@ -1,20 +1,45 @@
 import traceback
-from PySide6.QtCore import QSettings, QByteArray, QDataStream, QIODevice
+from PySide6.QtCore import (
+    QSettings,
+    QByteArray,
+    QDataStream,
+    QIODevice
+)
 from airunner.settings import (
     DEFAULT_BRUSH_PRIMARY_COLOR,
     DEFAULT_BRUSH_SECONDARY_COLOR,
-    DEFAULT_SCHEDULER, ORGANIZATION, APPLICATION_NAME, DEFAULT_SHORTCUTS
+    DEFAULT_SCHEDULER,
+    ORGANIZATION,
+    APPLICATION_NAME,
+    DEFAULT_SHORTCUTS,
+    DEFAULT_BARK_MODEL_PATHS,
+    DEFAULT_LLM_HF_PATH,
+    DEFAULT_SPEECHT5_MODEL_PATHS,
+    DEFAULT_OCR_MODEL_PATH,
+    DEFAULT_IMAGE_SYSTEM_PROMPT,
+    DEFAULT_IMAGE_LLM_GUARDRAILS
 )
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType, ImageGenerator, GeneratorSection, \
-    ImageCategory, Controlnet
-from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS
-from airunner.settings import DEFAULT_PATHS
-from airunner.settings import DEFAULT_CHATBOT
-from airunner.settings import TRUST_REMOTE_CODE
+from airunner.enums import (
+    Mode,
+    SignalCode,
+    CanvasToolName,
+    LLMActionType,
+    ImageGenerator,
+    GeneratorSection,
+    ImageCategory,
+    Controlnet
+)
+from airunner.settings import (
+    BASE_PATH,
+    MALE,
+    DEFAULT_MODELS,
+    DEFAULT_PATHS,
+    DEFAULT_CHATBOT
+)
 from airunner.utils import default_hf_cache_dir
 
 tts_settings_default = {
@@ -28,12 +53,7 @@ tts_settings_default = {
     "play_queue_buffer_length": 1,
     "enable_cpu_offload": True,
     "model": "SpeechT5",
-    "speecht5": {
-        "embeddings_path": "Matthijs/cmu-arctic-xvectors",
-        "vocoder_path": "microsoft/speecht5_hifigan",
-        "model_path": "microsoft/speecht5_tts",
-        "processor_path": "microsoft/speecht5_tts"
-    },
+    "speecht5": DEFAULT_SPEECHT5_MODEL_PATHS,
     "espeak": {
         "gender": "male",
         "voice": "male1",
@@ -45,13 +65,13 @@ tts_settings_default = {
     },
     "bark": {
         "language": "English",
-        "processor_path": "suno/bark-small",
-        "model_path": "suno/bark-small",
         "voice": "v2/en_speaker_6",
         "gender": "Male",
         "fine_temperature": 80,
         "coarse_temperature": 40,
         "semantic_temperature": 80,
+        "processor_path": DEFAULT_BARK_MODEL_PATHS["processor"],
+        "model_path": DEFAULT_BARK_MODEL_PATHS["model"],
     },
 }
 STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
@@ -126,7 +146,7 @@ class SettingsMixin:
         self.default_settings = dict(
             installation_path="~/airunner",
             paths_initialized=False,
-            trust_remote_code=TRUST_REMOTE_CODE,
+            trust_remote_code=False,  # Leave this hardcoded. We will never trust remote code.
             use_cuda=use_cuda,
             current_layer_index=0,
             ocr_enabled=ocr_enabled,
@@ -163,7 +183,7 @@ class SettingsMixin:
             autoload_llm=False,
             show_nsfw_warning=True,
             ocr_settings=dict(
-                model_path="Salesforce/blip-vqa-base",
+                model_path=DEFAULT_OCR_MODEL_PATH,
             ),
             document_settings={
                 "width": 512,
@@ -183,76 +203,17 @@ class SettingsMixin:
                 "image": {
                     "use_guardrails": True,
                     "template_name": "image",
-                    "guardrails": (
-                        "Avoid generating images that are illegal, "
-                        "harmful, or might be seen as offensive."
-                    ),
-                    "system": "\n".join([
-                        (
-                            "You are an image captioning expert. You will be given the "
-                            "description of an image. Your goal is to convert that "
-                            "description into a better, more fitting description which "
-                            "will capture the essence and the details of the image."
-                        ),
-                        (
-                            "You may ask the user for more details before "
-                            "proceeding. You may also ask the user to clarify the "
-                            "description if it is not clear."
-                        ),
-                        "------"
-                        "Examples:",
-                        "User: create an image of a cat in the woods",
-                        (
-                            "Assistant: A (fluffy, tabby cat)+ exploring the depths of "
-                            "an (enchanting forest). (well-lit), sunlight filters, "
-                            "professional portrait."
-                        ),
-                        "User: the chat should look like a superhero",
-                        (
-                            "Assistant: " "A (cat dressed in a superhero costume), "
-                            "standing in the (middle of a forest)."
-                        ),
-                        "------",
-                        "Use parentheses to indicate the most important details of the "
-                        "image. Add a plus sign after a word or parenthesis to add "
-                        "extra emphasis. More plus signs indicate more emphasis. Minus "
-                        "signs can be used to indicate less emphasis.",
-                        "You should describe the image type (professional photograph, "
-                        "portrait, illustration etc)",
-                        (
-                            "You should also describe the lighting (well-lit, dim, "
-                            "dark etc), "
-                            "the color, the composition and the mood."
-                        ),
-                        (
-                            "When returning prompts you must choose either "
-                            "\"art\" or \"photo\" and you absolutely must include "
-                            "the following JSON format:\n"
-                            "```json\n{\"prompt\": \"your prompt here\", \"type\": \"your type here\"}\n```\n"
-                            "You must **NEVER** deviate from that format. You must "
-                            "always return the prompt and type as JSON format. "
-                            "This is **MANDATORY**."
-                        )
-                    ])
+                    "guardrails": DEFAULT_IMAGE_LLM_GUARDRAILS,
+                    "system": DEFAULT_IMAGE_SYSTEM_PROMPT,
                 },
                 "chatbot": {
                     "use_system_datetime_in_system_prompt": False
                 }
             },
             llm_templates={
-                "Stable Diffusion Prompt Template": dict(
-                    name="Stable Diffusion Prompt Template",
-                    model="mistralai/Mistral-7B-Instruct-v0.2",
-                    llm_category="casuallm",
-                ),
                 "Mistral 7B Instruct: Default Chatbot": dict(
                     name="Mistral 7B Instruct: Default Chatbot",
-                    model="mistralai/Mistral-7B-Instruct-v0.2",
-                    llm_category="casuallm",
-                ),
-                "StableLM 2 Zephyr: Default Chatbot": dict(
-                    name="StableLM 2 Zephyr: Default Chatbot",
-                    model="stabilityai/stablelm-2-zephyr-1_6b",
+                    model=DEFAULT_LLM_HF_PATH,
                     llm_category="casuallm",
                 ),
             },
@@ -402,7 +363,7 @@ class SettingsMixin:
                 eta_cutoff=10,
                 early_stopping=True,
                 random_seed=False,
-                model_version="mistralai/Mistral-7B-Instruct-v0.2",
+                model_version=DEFAULT_LLM_HF_PATH,
                 dtype="4bit",
                 use_gpu=True,
                 message_type="chat",
@@ -411,7 +372,6 @@ class SettingsMixin:
                 saved_chatbots=dict(
                     Default=DEFAULT_CHATBOT
                 ),
-                embeddings_model_path="BAAI/bge-small-en-v1.5",
                 prompt_template="Mistral 7B Instruct: Default Chatbot",
                 batch_size=1,
                 cache_llm_to_disk=True,
@@ -535,7 +495,11 @@ class SettingsMixin:
 
     def recursive_update(self, current, default):
         for k, v in default.items():
-            if k not in current or k not in current or (not isinstance(current[k], type(v)) and v is not None):
+            if k not in current or k not in current or (
+                not isinstance(
+                    current[k], type(v)
+                ) and v is not None
+            ):
                 current[k] = v
             elif isinstance(v, dict):
                 self.recursive_update(current[k], v)
@@ -568,11 +532,20 @@ class SettingsMixin:
             print(e)
 
     def get_settings(self):
-        application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
+        application_settings = QSettings(
+            ORGANIZATION,
+            APPLICATION_NAME
+        )
         try:
-            settings_byte_array = application_settings.value("settings", QByteArray())
+            settings_byte_array = application_settings.value(
+                "settings",
+                QByteArray()
+            )
             if settings_byte_array:
-                data_stream = QDataStream(settings_byte_array, QIODevice.ReadOnly)
+                data_stream = QDataStream(
+                    settings_byte_array,
+                    QIODevice.ReadOnly
+                )
                 settings = data_stream.readQVariant()
                 return settings
             else:
