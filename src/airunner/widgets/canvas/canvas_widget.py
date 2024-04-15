@@ -6,7 +6,6 @@ from PySide6.QtCore import Qt, QPoint, QRect, Slot
 
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, CanvasToolName
-from airunner.settings import AVAILABLE_IMAGE_FILTERS
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
 from airunner.widgets.canvas.grid_handler import GridHandler
@@ -252,10 +251,6 @@ class CanvasWidget(BaseWidget):
         self.ui.canvas_position.setText(
             f"X {-self.settings['canvas_settings']['pos_x']: 05d} Y {self.settings['canvas_settings']['pos_y']: 05d}"
         )
-
-    @staticmethod
-    def filter_with_filter(filter_object: ImageFilter.Filter):
-        return type(filter_object).__name__ in AVAILABLE_IMAGE_FILTERS
 
     def save_image(self, image_path, image=None):
         self.image_handler.save_image(image_path, image, self.scene.items())
