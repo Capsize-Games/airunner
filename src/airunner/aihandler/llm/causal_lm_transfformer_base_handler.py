@@ -4,6 +4,7 @@ from transformers import AutoModelForCausalLM, TextIteratorStreamer
 from airunner.aihandler.llm.llm_tools import RespondToUserTool
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode, LLMToolName, LLMActionType
+from airunner.utils.get_current_chatbot import get_current_chatbot_property
 
 
 class CausalLMTransformerBaseHandler(TokenizerHandler):
@@ -217,7 +218,8 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
 
         if self.chat_agent is not None:
             if self.action != LLMActionType.GENERATE_IMAGE:
-                if self.settings["llm_generator_settings"]["use_tool_filter"]:
+                use_tool_filter = get_current_chatbot_property(self.settings, "use_tool_filter")
+                if use_tool_filter:
                     self.tool_agent.run(self.prompt)
                 self.chat_agent.run(
                     self.prompt,
