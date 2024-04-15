@@ -10,10 +10,11 @@ from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_boots
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType, ImageGenerator, GeneratorSection, \
-    ImageCategory, Controlnet
-from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS, DEFAULT_MODELS_VERSION, LLM_TEMPLATES_VERSION
+    ImageCategory
+from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS
 from airunner.settings import DEFAULT_PATHS
 from airunner.settings import DEFAULT_CHATBOT
+from airunner.settings import TRUST_REMOTE_CODE
 from airunner.utils import default_hf_cache_dir
 
 tts_settings_default = {
@@ -124,7 +125,8 @@ class SettingsMixin:
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = dict(
             installation_path="~/airunner",
-            trust_remote_code=False,
+            paths_initialized=False,
+            trust_remote_code=TRUST_REMOTE_CODE,
             use_cuda=use_cuda,
             current_layer_index=0,
             ocr_enabled=ocr_enabled,
@@ -154,8 +156,6 @@ class SettingsMixin:
             pipeline="txt2img",
             pipeline_version="",
             is_maximized=False,
-            llm_templates_version=LLM_TEMPLATES_VERSION,
-            default_models_version=DEFAULT_MODELS_VERSION,
             pivot_point_x=0,
             pivot_point_y=0,
             mode=Mode.IMAGE.value,
@@ -530,20 +530,6 @@ class SettingsMixin:
         else:
             self.recursive_update(current_settings, default_settings)
         self.logger.debug("Settings updated")
-
-        # update llm_templates_version
-        llm_templates_version = self.default_settings["llm_templates_version"]
-        if llm_templates_version != current_settings["llm_templates_version"]:
-            self.logger.debug("Updating LLM templates")
-            current_settings["llm_templates"] = self.default_settings["llm_templates"]
-            current_settings["llm_templates_version"] = llm_templates_version
-
-        # update default_models_version
-        default_models_version = self.default_settings["default_models_version"]
-        if default_models_version != current_settings["default_models_version"]:
-            self.logger.debug("Updating default models")
-            current_settings["ai_models"] = model_bootstrap_data
-            current_settings["default_models_version"] = default_models_version
 
         self.settings = current_settings
 

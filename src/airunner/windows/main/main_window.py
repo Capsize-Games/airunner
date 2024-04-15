@@ -163,9 +163,11 @@ class MainWindow(
         PipelineMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
-        self.create_airunner_paths()
+        self._updating_settings = False
+
         self.register_signals()
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+
         self.initialize_ui()
         self.worker_manager = WorkerManager(
             disable_sd=disable_sd,
@@ -177,18 +179,10 @@ class MainWindow(
             tts_handler_class=tts_handler_class
         )
         self.is_started = True
-        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
         self.image_window = None
-        self.register(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal)
-        self._updating_settings = False
 
-        if (
-            self.settings["run_setup_wizard"] or not
-            self.settings["agreements"]["user"] or not
-            self.settings["agreements"]["stable_diffusion"] or not
-            self.settings["agreements"]["airunner"]
-        ):
-            self.show_setup_wizard()
+        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
+        self.register(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal)
 
 
     def keyPressEvent(self, event):
@@ -380,11 +374,6 @@ class MainWindow(
         if not self.listening:
             self.listening = True
             self.worker_manager.do_listen()
-    
-    def create_airunner_paths(self):
-        for k, path in self.settings["path_settings"].items():
-            if not os.path.exists(path):
-                os.makedirs(path)
     
     def mode_tab_index_changed(self, index):
         settings = self.settings
@@ -594,7 +583,7 @@ class MainWindow(
 
     @Slot()
     def action_open_discord(self):
-        webbrowser.open(DISCORD_LINK)
+        pass
 
     """
     End slot functions
