@@ -1,6 +1,6 @@
-from airunner.windows.setup_wizard.download_thread import DownloadThread
-from airunner.windows.setup_wizard.download_wizard import DownloadWizard
-from airunner.windows.setup_wizard.templates.tts.bark_ui import Ui_bark_setup
+from airunner.windows.setup_wizard.download_wizard.download_thread import DownloadThread
+from airunner.windows.setup_wizard.download_wizard.download_wizard import DownloadWizard
+from airunner.windows.setup_wizard.model_setup.tts.templates.bark_ui import Ui_bark_setup
 
 
 class TTSBarkSetup(DownloadWizard):
