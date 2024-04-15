@@ -10,7 +10,7 @@ from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_boots
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 from airunner.enums import Mode, SignalCode, CanvasToolName, LLMActionType, ImageGenerator, GeneratorSection, \
-    ImageCategory
+    ImageCategory, Controlnet
 from airunner.settings import BASE_PATH, MALE, DEFAULT_MODELS
 from airunner.settings import DEFAULT_PATHS
 from airunner.settings import DEFAULT_CHATBOT
@@ -107,7 +107,7 @@ for category in ImageCategory:
         # TODO: default upscale model?
         if section == GeneratorSection.UPSCALE:
             continue
-        default_model = DEFAULT_MODELS[ImageGenerator.STABLEDIFFUSION.value][section]
+        default_model = DEFAULT_MODELS[ImageGenerator.STABLEDIFFUSION.value][section.value]
         GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value][
             section.value] = STABLEDIFFUSION_GENERATOR_SETTINGS.copy()
 
