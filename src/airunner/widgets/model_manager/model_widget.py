@@ -34,6 +34,11 @@ class ModelWidget(BaseWidget):
         self.ui.details.item(5, 1).setText(self.pipeline_class)
         self.ui.details.item(6, 1).setText(",".join(self.prompts))
 
+    @Slot(int, int)
+    def action_cell_changed(self, row: int, column: int):
+        # TODO: Implement this method
+        pass
+
     def hide_details(self):
         # self.ui.details is a QGridLayout
         self.ui.details.hide()
