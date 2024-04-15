@@ -1380,7 +1380,6 @@
     <addaction name="actionAbout"/>
     <addaction name="actionBug_report"/>
     <addaction name="actionReport_vulnerability"/>
-    <addaction name="actionDiscord"/>
    </widget>
    <widget class="QMenu" name="menuImage">
     <property name="title">
