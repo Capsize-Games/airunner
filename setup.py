@@ -33,7 +33,7 @@ setup(
         "urllib3==2.2.1",
         "sympy==1.12.0",
         "regex==2023.12.25",
-        "matplotlib==3.8.3",
+        "matplotlib==3.8.4",
         "torch==2.2.2",
         "torchvision==0.17.2",
         "torchaudio==2.2.2",
