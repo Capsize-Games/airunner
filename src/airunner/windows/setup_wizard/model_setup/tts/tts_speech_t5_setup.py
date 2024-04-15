@@ -1,6 +1,6 @@
-from airunner.windows.setup_wizard.download_thread import DownloadThread
-from airunner.windows.setup_wizard.download_wizard import DownloadWizard
-from airunner.windows.setup_wizard.templates.tts.speech_t5_ui import Ui_speecht5_setup
+from airunner.windows.setup_wizard.download_wizard.download_thread import DownloadThread
+from airunner.windows.setup_wizard.download_wizard.download_wizard import DownloadWizard
+from airunner.windows.setup_wizard.model_setup.tts.templates.speech_t5_ui import Ui_speecht5_setup
 
 
 class TTSSpeechT5Setup(DownloadWizard):

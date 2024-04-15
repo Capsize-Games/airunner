@@ -1,7 +1,7 @@
 from airunner.settings import DEFAULT_LLM_HF_PATH
-from airunner.windows.setup_wizard.download_thread import DownloadThread
-from airunner.windows.setup_wizard.download_wizard import DownloadWizard
-from airunner.windows.setup_wizard.templates.llm.llm_setup_ui import Ui_llm_setup
+from airunner.windows.setup_wizard.download_wizard.download_thread import DownloadThread
+from airunner.windows.setup_wizard.download_wizard.download_wizard import DownloadWizard
+from airunner.windows.setup_wizard.model_setup.llm.templates.llm_setup_ui import Ui_llm_setup
 
 
 class LLMSetup(DownloadWizard):

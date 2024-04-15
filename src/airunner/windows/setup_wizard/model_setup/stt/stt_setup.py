@@ -1,7 +1,6 @@
-from airunner.settings import DEFAULT_STT_HF_PATH
-from airunner.windows.setup_wizard.download_thread import DownloadThread
-from airunner.windows.setup_wizard.download_wizard import DownloadWizard
-from airunner.windows.setup_wizard.templates.stt.templates.stt_setup_ui import Ui_stt_setup
+from airunner.windows.setup_wizard.download_wizard.download_thread import DownloadThread
+from airunner.windows.setup_wizard.download_wizard.download_wizard import DownloadWizard
+from airunner.windows.setup_wizard.model_setup.stt.templates.stt_setup_ui import Ui_stt_setup
 
 
 class STTSetup(DownloadWizard):

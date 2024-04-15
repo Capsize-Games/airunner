@@ -6,8 +6,8 @@ from airunner.windows.setup_wizard.base_wizard import BaseWizard
 class AgreementPage(BaseWizard):
     setting_key = ""
 
-    def __init__(self):
-        super(AgreementPage, self).__init__()
+    def __init__(self, *args):
+        super(AgreementPage, self).__init__(*args)
         self.user_agreement_clicked = False
 
     @Slot(bool)
@@ -16,8 +16,4 @@ class AgreementPage(BaseWizard):
         settings = self.settings
         settings["agreements"][self.setting_key] = val
         self.settings = settings
-
-    def nextId(self):
-        if self.user_agreement_clicked:
-            return super().nextId()
 
