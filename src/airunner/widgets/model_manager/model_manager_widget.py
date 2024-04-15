@@ -130,12 +130,12 @@ class ModelManagerWidget(
     def handle_edit_model(self, model, index):
         self.toggle_model_form_frame(show=True)
 
-        categories = self.get_service("ai_model_categories")()
+        categories = self.ai_model_categories()
         self.ui.model_form.category.clear()
         self.ui.model_form.category.addItems(categories)
         self.ui.model_form.category.setCurrentText(model.category)
 
-        actions = self.get_service("ai_model_pipeline_actions")()
+        actions = self.ai_model_pipeline_actions()
         self.ui.model_form.pipeline_action.clear()
         self.ui.model_form.pipeline_action.addItems(actions)
         self.ui.model_form.pipeline_action.setCurrentText(model.pipeline_action)
@@ -150,7 +150,7 @@ class ModelManagerWidget(
         self.ui.model_form.enabled.setChecked(True)
         self.ui.model_form.path_line_edit.setText(model.path)
 
-        versions = self.get_service("ai_model_versions")()
+        versions = self.ai_model_versions()
         self.ui.model_form.versions.clear()
         self.ui.model_form.versions.addItems(versions)
         self.ui.model_form.versions.setCurrentText(model.version)
