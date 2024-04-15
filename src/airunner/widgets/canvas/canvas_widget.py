@@ -5,8 +5,7 @@ from PySide6 import QtWidgets
 from PySide6.QtCore import Qt, QPoint, QRect, Slot
 
 from airunner.cursors.circle_brush import CircleCursor
-from airunner.enums import SignalCode, ServiceCode, CanvasToolName
-from airunner.service_locator import ServiceLocator
+from airunner.enums import SignalCode, CanvasToolName
 from airunner.settings import AVAILABLE_IMAGE_FILTERS
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler

@@ -28,27 +28,6 @@ class FilterType(Enum):
     PIXEL_ART = "pixelart"
 
 
-class ServiceCode(Enum):
-    CURRENT_LAYER = "current_layer"
-    CURRENT_DRAGGABLE_PIXMAP = "current_draggable_pixmap"
-    CURRENT_ACTIVE_IMAGE = "current_active_image"
-    GET_IMAGE_FROM_LAYER = "get_image_from_layer"
-    GET_LINE_IMAGE_FROM_LAYER = "get_line_image_from_layer"
-    GET_EMBEDDINGS = "get_embeddings"
-    DELETE_MISSING_EMBEDDINGS = "delete_missing_embeddings"
-    SCAN_FOR_EMBEDDINGS = "scan_for_embeddings"
-    UPDATE_EMBEDDING = "update_embedding"
-    GET_PIPELINE_CLASSNAME = "get_pipeline_classname"
-    PIPELINE_ACTIONS = "pipeline_actions"
-    GET_PIPELINES = "get_pipelines"
-    GET_LLM_WIDGET = "get_llm_widget"
-    DISPLAY_IMPORT_IMAGE_DIALOG = "display_import_image_dialog"
-    GET_SETTINGS_VALUE = "get_settings_value"
-    GET_CALLBACK_FOR_SLIDER = "get_callback_for_slider"
-    GET_PREFERENCES_CALLBACK_FOR_SLIDER = "get_preferences_callback_for_slider"
-    CANVAS_REGISTER_LINE_DATA = "canvas_register_line_data"
-
-
 class SignalCode(Enum):
     ENABLE_BRUSH_TOOL_SIGNAL = "enable_brush_tool_signal"
     ENABLE_ERASER_TOOL_SIGNAL = "enable_eraser_tool_signal"

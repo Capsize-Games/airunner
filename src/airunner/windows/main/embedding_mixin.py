@@ -1,9 +1,5 @@
 import os
-
-from PySide6.QtCore import Slot
-
-from airunner.enums import ServiceCode, SignalCode
-from airunner.service_locator import ServiceLocator
+from airunner.enums import SignalCode
 
 
 class EmbeddingMixin:

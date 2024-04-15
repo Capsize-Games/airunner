@@ -6,9 +6,8 @@ from PySide6.QtGui import QMouseEvent, QColor, QBrush
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsLineItem
 
 from airunner.aihandler.logger import Logger
-from airunner.enums import CanvasToolName, SignalCode, CanvasType, ServiceCode
+from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
-from airunner.service_locator import ServiceLocator
 from airunner.utils import snap_to_grid
 from airunner.widgets.canvas.brush_scene import BrushScene
 from airunner.widgets.canvas.controlnet_scene import ControlnetScene
@@ -53,11 +52,6 @@ class CustomGraphicsView(
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
-
-        ServiceLocator.register(
-            ServiceCode.CANVAS_REGISTER_LINE_DATA,
-            self.register_line_data
-        )
 
         self.line_group = None
         self.last_pos = QPoint(0, 0)

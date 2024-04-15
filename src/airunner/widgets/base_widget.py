@@ -6,7 +6,6 @@ from PySide6.QtWidgets import QWidget
 
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
-from airunner.service_locator import ServiceLocator
 from airunner.settings import DARK_THEME_NAME, LIGHT_THEME_NAME
 from airunner.utils import create_worker
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -50,7 +49,6 @@ class BaseWidget(
         :return:
         """
         self.register_signals()
-        self.register_services()
         self.initialize_workers()
 
     def register_signals(self):
@@ -67,21 +65,6 @@ class BaseWidget(
         """
         for signal, handler in self.signal_handlers.items():
             self.register(signal, handler)
-
-    def register_services(self):
-        """
-        Set services dict in order to register services.
-
-        services should be a dictionary of ServiceCode enums and functions.
-        Example:
-        services = {
-            ServiceCode.GET_SETTINGS: self.get_settings,
-            ServiceCode.SET_SETTINGS: self.set_settings
-        }
-        :return:
-        """
-        for name, service in self.services.items():
-            self.register_service(name, service)
 
     def initialize_workers(self):
         """

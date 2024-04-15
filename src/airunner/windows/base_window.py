@@ -1,18 +1,17 @@
 import os
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
-
-from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.service_locator import ServiceLocator
 from airunner.settings import DARK_THEME_NAME, LIGHT_THEME_NAME
+from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class BaseWindow(
     QDialog,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    AIModelMixin
 ):
     template_class_ = None
     template = None
@@ -22,6 +21,7 @@ class BaseWindow(
     def __init__(self, **kwargs):
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        AIModelMixin.__init__(self)
         super().__init__()
         self.do_exec = kwargs.get("exec", True)
 
