@@ -3,7 +3,9 @@ This class should be used to create a window widget for the LLM.
 """
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
-
+from airunner.enums import SignalCode
+from airunner.settings import DEFAULT_CHATBOT
+from airunner.utils.get_current_chatbot import get_current_chatbot_property, set_current_chatbot_property
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
 from airunner.windows.main.ai_model_mixin import AIModelMixin
@@ -28,21 +30,32 @@ class LLMSettingsWidget(
         super().__init__(*args, **kwargs)
 
     @property
+    def chatbot(self) -> dict:
+        current_chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
+        chatbot = self.settings["llm_generator_settings"]["saved_chatbots"].get(current_chatbot_name, DEFAULT_CHATBOT)
+        return chatbot
+
+    @property
+    def generator_settings(self) -> dict:
+        return self.chatbot["generator_settings"]
+
+    @property
     def current_generator(self):
         return self.settings["current_llm_generator"]
 
     def showEvent(self, event):
         super().showEvent(event)
+        self.emit_signal(SignalCode.WINDOW_LOADED_SIGNAL)
         self.initialize_form()
 
     def early_stopping_toggled(self, val):
         settings = self.settings
-        settings["llm_generator_settings"]["early_stopping"] = val
+        settings = set_current_chatbot_property(settings, "early_stopping", val)
         self.settings = settings
 
     def do_sample_toggled(self, val):
         settings = self.settings
-        settings["llm_generator_settings"]["do_sample"] = val
+        settings = set_current_chatbot_property(settings, ["generator_settings", "do_sample"], val)
         self.settings = settings
     
     def toggle_leave_model_in_vram(self, val):
@@ -73,31 +86,33 @@ class LLMSettingsWidget(
         for element in elements:
             element.blockSignals(True)
 
-        self.ui.top_p.initialize()
-        self.ui.max_length.initialize()
-        self.ui.max_length.initialize()
-        self.ui.repetition_penalty.initialize()
-        self.ui.min_length.initialize()
-        self.ui.length_penalty.initialize()
-        self.ui.num_beams.initialize()
-        self.ui.ngram_size.initialize()
-        self.ui.temperature.initialize()
-        self.ui.sequences.initialize()
-        self.ui.top_k.initialize()
+        self.ui.top_p.init(callback=self.callback, current_value=self.generator_settings["top_p"])
+        self.ui.max_new_tokens.init(callback=self.callback, current_value=self.generator_settings["max_new_tokens"])
+        self.ui.repetition_penalty.init(callback=self.callback, current_value=self.generator_settings["repetition_penalty"])
+        self.ui.min_length.init(callback=self.callback, current_value=self.generator_settings["min_length"])
+        self.ui.length_penalty.init(callback=self.callback, current_value=self.generator_settings["length_penalty"])
+        self.ui.num_beams.init(callback=self.callback, current_value=self.generator_settings["num_beams"])
+        self.ui.ngram_size.init(callback=self.callback, current_value=self.chatbot["ngram_size"])
+        self.ui.temperature.init(callback=self.callback, current_value=self.generator_settings["temperature"])
+        self.ui.sequences.init(callback=self.callback, current_value=self.chatbot["sequences"])
+        self.ui.top_k.init(callback=self.callback, current_value=self.generator_settings["top_k"])
 
         self.ui.leave_in_vram.setChecked(not self.settings["memory_settings"]["unload_unused_models"] and not self.settings["memory_settings"]["move_unused_model_to_cpu"])
         self.ui.move_to_cpu.setChecked(self.settings["memory_settings"]["move_unused_model_to_cpu"])
         self.ui.unload_model.setChecked(self.settings["memory_settings"]["unload_unused_models"])
 
-        llm_generator_settings = self.settings["llm_generator_settings"]
+        llm_generator_settings = self.generator_settings
 
-        dtype = llm_generator_settings["dtype"]
-        self.set_dtype_by_gpu(llm_generator_settings["use_gpu"])
+        dtype = get_current_chatbot_property(self.settings, "dtype")
+        use_gpu = get_current_chatbot_property(self.settings, "use_gpu")
+        self.set_dtype_by_gpu(use_gpu)
         self.set_dtype(dtype)
 
-        self.ui.automatic_tools.setChecked(llm_generator_settings["use_tool_filter"])
-        self.ui.manual_tools.setChecked(not llm_generator_settings["use_tool_filter"])
-        self.ui.cache_quantized_model_toggle.setChecked(llm_generator_settings["cache_llm_to_disk"])
+        use_toll_filter = get_current_chatbot_property(self.settings, "use_tool_filter")
+        cache_llm_to_disk = get_current_chatbot_property(self.settings, "cache_llm_to_disk")
+        self.ui.automatic_tools.setChecked(use_toll_filter)
+        self.ui.manual_tools.setChecked(not use_toll_filter)
+        self.ui.cache_quantized_model_toggle.setChecked(cache_llm_to_disk)
 
         # get unique model names
         self.ui.model.clear()
@@ -110,7 +125,7 @@ class LLMSettingsWidget(
 
         templates = self.settings["llm_templates"]
         names = [v["name"] for k, v in templates.items()]
-        
+
         self.ui.prompt_template.blockSignals(True)
         self.ui.prompt_template.clear()
         self.ui.prompt_template.addItems(names)
@@ -124,15 +139,29 @@ class LLMSettingsWidget(
         self.ui.prompt_template.blockSignals(False)
 
         self.update_model_version_combobox()
-        self.ui.model_version.setCurrentText(llm_generator_settings["model_version"])
-        self.ui.random_seed.setChecked(llm_generator_settings["random_seed"])
-        self.ui.do_sample.setChecked(llm_generator_settings["do_sample"])
-        self.ui.early_stopping.setChecked(llm_generator_settings["early_stopping"])
-        self.ui.use_gpu_checkbox.setChecked(llm_generator_settings["use_gpu"])
-        self.ui.override_parameters.setChecked(self.settings["llm_generator_settings"]["override_parameters"])
+        self.ui.model_version.setCurrentText(
+            get_current_chatbot_property(self.settings, "model_version")
+        )
+        self.ui.random_seed.setChecked(
+            get_current_chatbot_property(self.settings, "random_seed")
+        )
+        self.ui.do_sample.setChecked(
+            get_current_chatbot_property(self.settings, ["generator_settings", "do_sample"])
+        )
+        self.ui.early_stopping.setChecked(
+            get_current_chatbot_property(self.settings, ["generator_settings", "early_stopping"])
+        )
+        self.ui.use_gpu_checkbox.setChecked(
+            get_current_chatbot_property(self.settings, "use_gpu")
+        )
 
         for element in elements:
             element.blockSignals(False)
+
+    def callback(self, attr_name, value, widget):
+        settings = self.settings
+        settings = set_current_chatbot_property(settings, attr_name, value)
+        self.settings = settings
 
     def model_text_changed(self, val):
         settings = self.settings
@@ -144,7 +173,7 @@ class LLMSettingsWidget(
 
     def model_version_changed(self, val):
         settings = self.settings
-        settings["llm_generator_settings"]["model_version"] = val
+        settings = set_current_chatbot_property(settings, "model_version", val)
         self.settings = settings
     
     def toggle_move_model_to_cpu(self, val):
@@ -186,12 +215,12 @@ class LLMSettingsWidget(
         
     def random_seed_toggled(self, val):
         settings = self.settings
-        settings["llm_generator_settings"]["random_seed"] = val
+        settings = set_current_chatbot_property(settings, "random_seed", val)
         self.settings = settings
         
     def seed_changed(self, val):
         settings = self.settings
-        settings["llm_generator_settings"]["seed"] = val
+        settings = set_current_chatbot_property(settings, "seed", val)
         self.settings = settings
         
     def toggle_unload_model(self, val):
@@ -203,13 +232,13 @@ class LLMSettingsWidget(
     
     def use_gpu_toggled(self, val):
         settings = self.settings
-        settings["llm_generator_settings"]["use_gpu"] = val
+        settings = set_current_chatbot_property(settings, "use_gpu", val)
         self.settings = settings
         self.set_dtype_by_gpu(val)
     
     def set_dtype_by_gpu(self, use_gpu):
         settings = self.settings
-        dtype = settings["llm_generator_settings"]["dtype"]
+        dtype = get_current_chatbot_property(settings, "dtype")
         if not use_gpu:
             if dtype in ["2bit", "4bit", "8bit"]:
                 dtype = "16bit"
@@ -234,7 +263,6 @@ class LLMSettingsWidget(
         llm_generator_settings = self.settings["llm_generator_settings"]
         self.initialize_form()
         self.ui.top_p.set_slider_and_spinbox_values(llm_generator_settings["top_p"])
-        self.ui.max_length.set_slider_and_spinbox_values(llm_generator_settings["max_length"])
         self.ui.repetition_penalty.set_slider_and_spinbox_values(llm_generator_settings["repetition_penalty"])
         self.ui.min_length.set_slider_and_spinbox_values(llm_generator_settings["min_length"])
         self.ui.length_penalty.set_slider_and_spinbox_values(llm_generator_settings["length_penalty"])
@@ -243,7 +271,6 @@ class LLMSettingsWidget(
         self.ui.temperature.set_slider_and_spinbox_values(llm_generator_settings["temperature"])
         self.ui.sequences.set_slider_and_spinbox_values(llm_generator_settings["sequences"])
         self.ui.top_k.set_slider_and_spinbox_values(llm_generator_settings["top_k"])
-        self.ui.eta_cutoff.set_slider_and_spinbox_values(llm_generator_settings["eta_cutoff"])
         self.ui.random_seed.setChecked(llm_generator_settings["random_seed"])
 
     def set_dtype(self, dtype):
@@ -268,16 +295,16 @@ class LLMSettingsWidget(
 
     def enable_automatic_tools(self):
         settings = self.settings
-        settings["llm_generator_settings"]["use_tool_filter"] = True
+        settings = set_current_chatbot_property(settings, "use_tool_filter", True)
         self.settings = settings
 
     def enable_manual_tools(self):
         settings = self.settings
-        settings["llm_generator_settings"]["use_tool_filter"] = False
+        settings = set_current_chatbot_property(settings, "use_tool_filter", False)
         self.settings = settings
 
     @Slot(bool)
     def toggle_cache_quantized_model(self, val: bool):
         settings = self.settings
-        settings["llm_generator_settings"]["cache_llm_to_disk"] = val
+        settings = set_current_chatbot_property(settings, "cache_llm_to_disk", val)
         self.settings = settings

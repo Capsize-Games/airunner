@@ -39,27 +39,9 @@ from PySide6.QtWidgets import QApplication, QSplashScreen
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QPixmap
 
-from airunner.process_qss import Watcher, process_qss, build_ui
 from airunner.windows.main.main_window import MainWindow
 from airunner.settings import SERVER
 from airunner.utils import get_version
-
-def watch_frontend_files():
-    # get absolute path to this file
-    here = os.path.abspath(os.path.dirname(__file__))
-    directories_to_watch = [
-        os.path.join(here, "styles/dark_theme"), 
-        # os.path.join(here, "styles/light_theme"),
-        os.path.join(here, "widgets"),  # Add the widgets directory
-        os.path.join(here, "windows")  # Add the windows directory
-    ]  # Add more directories as needed
-    scripts_to_run = {".qss": process_qss, ".ui": build_ui}  # Change this to your desired script paths
-    ignore_files = ["styles.qss"]          # List of filenames to ignore
-    
-    watcher = Watcher(directories_to_watch, scripts_to_run, ignore_files)
-    watcher_thread = threading.Thread(target=watcher.run)
-    watcher_thread.start()
-    return watcher
 
 
 if __name__ == "__main__":
@@ -90,11 +72,6 @@ if __name__ == "__main__":
     def show_main_application(app, splash, watch_files=False):
         try:
             window = MainWindow()
-            if watch_files:
-                print("Watching style files for changes...")
-                # get existing app
-                watcher = watch_frontend_files()
-                watcher.emitter.file_changed.connect(window.redraw)
         except Exception as e:
             traceback.print_exc()
             print(e)

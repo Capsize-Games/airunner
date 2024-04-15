@@ -4,16 +4,15 @@ import time
 import traceback
 from typing import AnyStr
 import torch
-import threading
 from PySide6.QtCore import QObject
 from transformers import StoppingCriteria
-
 from airunner.aihandler.logger import Logger
 from airunner.json_extractor import JSONExtractor
 from airunner.mediator_mixin import MediatorMixin
-from airunner.enums import SignalCode, LLMChatRole, LLMActionType, ImageCategory
-from airunner.utils import get_torch_device, clear_memory
+from airunner.enums import SignalCode, LLMChatRole, LLMActionType, ImageCategory, QueueType
+from airunner.utils import get_torch_device, clear_memory, create_worker
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.workers.agent_worker import AgentWorker
 
 
 class ExternalConditionStoppingCriteria(StoppingCriteria):
@@ -25,6 +24,7 @@ class ExternalConditionStoppingCriteria(StoppingCriteria):
         return self.external_condition_callable()
 
 
+
 class AIRunnerAgent(
     QObject,
     MediatorMixin,
@@ -33,41 +33,44 @@ class AIRunnerAgent(
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+
+        self.rendered_template = None
         self.model = kwargs.pop("model", None)
         self.tokenizer = kwargs.pop("tokenizer", None)
         self.streamer = kwargs.pop("streamer", None)
         self.tools = kwargs.pop("tools", None)
-        self.chat_template = kwargs.pop("chat_template", None)
-        self.username = kwargs.pop("username", None)
-        self.botname = kwargs.pop("botname", None)
-        self.bot_mood = kwargs.pop("bot_mood", None)
-        self.bot_personality = kwargs.pop("bot_personality", None)
-        self.min_length = kwargs.pop("min_length", None)
-        self.max_length = kwargs.pop("max_length", None)
-        self.num_beams = kwargs.pop("num_beams", None)
-        self.do_sample = kwargs.pop("do_sample", None)
-        self.top_k = kwargs.pop("top_k", None)
-        self.eta_cutoff = kwargs.pop("eta_cutoff", None)
-        self.sequences = kwargs.pop("sequences", None)
-        self.early_stopping = kwargs.pop("early_stopping", None)
-        self.repetition_penalty = kwargs.pop("repetition_penalty", None)
-        self.temperature = kwargs.pop("temperature", None)
-        self.is_mistral = kwargs.pop("is_mistral", None)
-        self.top_p = kwargs.pop("top_p", None)
-        self.guardrails_prompt = kwargs.pop("guardrails_prompt", None)
-        self.use_guardrails = kwargs.pop("use_guardrails", None)
-        self.system_instructions = kwargs.pop("system_instructions", None)
-        self.use_system_instructions = kwargs.pop("use_system_instructions", None)
-        self.user_evaluation = kwargs.pop("user_evaluation", None)
-        self.use_mood = kwargs.pop("use_mood", None)
-        self.use_personality = kwargs.pop("use_personality", None)
+        self.chat_template = kwargs.pop("chat_template", "")
+        self.is_mistral = kwargs.pop("is_mistral", True)
         self.logger = Logger(prefix=self.__class__.__name__)
         super().__init__(*args, **kwargs)
         self.register(SignalCode.LLM_RESPOND_TO_USER_SIGNAL, self.do_response)
+        self.register(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history)
         self.prompt = ""
         self.history = []
         self.thread = None
         self.do_interrupt = False
+        self.response_worker = create_worker(AgentWorker)
+
+    @property
+    def chatbot(self):
+        chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
+        return self.settings["llm_generator_settings"]["saved_chatbots"][chatbot_name]
+
+    @property
+    def username(self):
+        return self.chatbot["username"]
+
+    @property
+    def botname(self):
+        return self.chatbot["botname"]
+
+    @property
+    def bot_mood(self):
+        return self.chatbot["bot_mood"]
+
+    @property
+    def bot_personality(self):
+        return self.chatbot["bot_personality"]
 
     def unload(self):
         self.model = None
@@ -91,30 +94,47 @@ class AIRunnerAgent(
     def cuda_index(self):
         return 0
 
-    def build_system_prompt(self, action: LLMActionType, vision_history: list = []):
-        guardrails = self.guardrails_prompt if self.use_guardrails else ""
-        system_instructions = self.system_instructions if self.use_system_instructions else ""
+    def build_system_prompt(
+        self,
+        action: LLMActionType,
+        vision_history: list = []
+    ):
+        system_instructions = ""
+        guardrails_prompt = ""
+        use_mood = self.chatbot["use_mood"]
+        use_personality = self.chatbot["use_personality"]
+        use_names = self.chatbot["assign_names"]
+        use_system_instructions = self.chatbot["use_system_instructions"]
+        use_guardrails = self.chatbot["use_guardrails"]
+        bot_mood = self.chatbot["bot_mood"]
+        bot_personality = self.chatbot["bot_personality"]
+        username = self.chatbot["username"]
+        botname = self.chatbot["botname"]
+        if use_system_instructions:
+            system_instructions = self.chatbot["system_instructions"]
+        if use_guardrails:
+            guardrails_prompt = self.chatbot["guardrails_prompt"]
+
         system_prompt = []
 
         if action == LLMActionType.CHAT:
             """
             Build the system prompt for chat template
             """
-            names = f"Your name is {self.botname}. \nThe user's name is {self.username}."
+            names = f"Your name is {botname}. \nThe user's name is {username}." if use_names else ""
             mood = (
-                f"{self.botname} is not a computer or a bot, you are a human with emotions. "
-                f"{self.botname}'s mood changes depending on the conversation and other factors.\n"
-                f"{self.botname}'s current mood: {self.bot_mood}.\n"
-                #f"{self.botname}'s evaluation of {self.username}: {self.user_evaluation}"
-            ) if (self.use_mood and self.bot_mood != "") else ""
+                f"{botname} is not a computer or a bot, you are a human with emotions. "
+                f"{botname}'s mood changes depending on the conversation and other factors.\n"
+                f"{botname}'s current mood: {bot_mood}.\n"
+                #f"{botname}'s evaluation of {username}: {self.user_evaluation}"
+            ) if (use_mood and bot_mood != "") else ""
             personality = (
-                f"Your personality: {self.bot_personality}."
-            ) if self.use_personality else ""
+                f"Your personality: {bot_personality}."
+            ) if use_personality else ""
 
             system_prompt = [
-                guardrails,
+                guardrails_prompt,
                 system_instructions,
-                "Do not return tags, code, or any other form of non-human language. You are a human. You must communicate like a human.",
                 names,
                 mood,
                 personality,
@@ -138,13 +158,13 @@ class AIRunnerAgent(
             """
             Append the date, time and timezone
             """
-            current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
-            current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
-            current_timezone = time.tzname
-            system_prompt.append("\n======\n")
-            system_prompt.append(f"Current Date: {current_date}")
-            system_prompt.append(f"Current Time: {current_time}")
-            system_prompt.append(f"Current Timezone: {current_timezone}")
+            if self.settings["prompt_templates"]["chatbot"]["use_system_datetime_in_system_prompt"]:
+                current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
+                current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
+                current_timezone = time.tzname
+                system_prompt.append("\n======\n")
+                system_prompt.append(f"Use the following information to help you with your response, but do not include it in your response or reference it directly unless asked.")
+                system_prompt.append(f"Date: {current_date}, Time: {current_time}, Timezone: {current_timezone}")
 
         elif action == LLMActionType.ANALYZE_VISION_HISTORY:
             vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
@@ -186,7 +206,10 @@ class AIRunnerAgent(
     ) -> list:
         messages = [
             {
-                "content": self.build_system_prompt(action, vision_history=vision_history),
+                "content": self.build_system_prompt(
+                    action,
+                    vision_history=vision_history
+                ),
                 "role": LLMChatRole.SYSTEM.value
             }
         ]
@@ -202,10 +225,11 @@ class AIRunnerAgent(
     def get_rendered_template(
         self,
         conversation,
-        use_latest_human_message: bool = True
+        use_latest_human_message: bool = True,
+        chat_template: str = ""
     ):
         rendered_template = self.tokenizer.apply_chat_template(
-            chat_template=self.chat_template,
+            chat_template=chat_template,
             conversation=conversation,
             tokenize=False
         )
@@ -219,125 +243,219 @@ class AIRunnerAgent(
             "bot_personality": self.bot_personality,
         }
         for key, value in variables.items():
+            value = value or ""
             rendered_template = rendered_template.replace("{{ " + key + " }}", value)
         return rendered_template
 
-    def do_response(self, _message: dict):
-        self.run(self.prompt, LLMActionType.CHAT)
+    def do_response(self, message):
+        self.run(
+            prompt=self.prompt,
+            action=LLMActionType.CHAT,
+            max_new_tokens=message["args"][0]
+        )
 
-    def run(self, prompt, action: LLMActionType, vision_history: list = []):
-        self.logger.debug("Running...")
-        self.prompt = prompt
-        conversation = self.prepare_messages(action, vision_history=vision_history)
-        rendered_template = self.get_rendered_template(conversation)
+    @property
+    def system_instructions(self):
+        return self.chatbot["system_instructions"]
+
+    @property
+    def generator_settings(self):
+        return self.chatbot["generator_settings"]
+
+    def get_model_inputs(
+        self,
+        action,
+        vision_history,
+        **kwargs
+    ):
+        self.chat_template = kwargs.get("chat_template", self.chat_template)
+
+        conversation = self.prepare_messages(
+            action,
+            vision_history=vision_history
+        )
+
+        self.rendered_template = self.get_rendered_template(
+            conversation,
+            chat_template=self.chat_template
+        )
 
         # Encode the rendered template
-        encoded = self.tokenizer(rendered_template, return_tensors="pt")
-        model_inputs = encoded.to(get_torch_device(self.settings["memory_settings"]["default_gpu"]["llm"]))
+        encoded = self.tokenizer(
+            self.rendered_template,
+            return_tensors="pt"
+        )
+        model_inputs = encoded.to(
+            get_torch_device(
+                self.settings["memory_settings"]["default_gpu"]["llm"]
+            )
+        )
+        return model_inputs
 
+    def run(
+        self,
+        prompt: str,
+        action: LLMActionType = LLMActionType.CHAT,
+        vision_history: list = [],
+        **kwargs
+    ):
+        self.logger.debug("Running...")
+        self.prompt = prompt
+        streamer = self.streamer
+        system_instructions = kwargs.get("system_instructions", self.system_instructions)
+
+        return self.do_run(
+            action,
+            vision_history,
+            **kwargs,
+            system_instructions=system_instructions,
+            do_add_response_to_history=False,
+            use_names=True,
+            streamer=streamer
+        )
+
+    def do_run(
+        self,
+        prompt: str,
+        action: LLMActionType = LLMActionType.CHAT,
+        vision_history: list = [],
+        do_add_response_to_history: bool = True,
+        streamer=None,
+        do_emit_response: bool = True,
+        use_names: bool = True,
+        **kwargs
+    ):
+        model_inputs = self.get_model_inputs(
+            LLMActionType.CHAT,
+            vision_history,
+            use_names=use_names,
+            **kwargs
+        )
+
+        if streamer:
+            self.run_with_thread(
+                model_inputs,
+                action=LLMActionType.CHAT,
+                do_add_response_to_history=do_add_response_to_history,
+                streamer=streamer,
+                do_emit_response=do_emit_response,
+                **kwargs
+            )
+        else:
+            self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
+            stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
+            data = self.prepare_generate_data(model_inputs, stopping_criteria)
+            res = self.model.generate(
+                **data
+            )
+            response = self.tokenizer.decode(res[0])
+            if do_emit_response:
+                self.emit_signal(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    dict(
+                        message=response,
+                        is_first_message=True,
+                        is_end_of_message=True,
+                        name=self.botname,
+                    )
+                )
+            return response
+
+    def prepare_generate_data(self, model_inputs, stopping_criteria):
+        return dict(
+            **model_inputs,
+            **self.generator_settings,
+            stopping_criteria=[stopping_criteria]
+        )
+
+    def run_with_thread(
+        self,
+        model_inputs,
+        do_add_response_to_history: bool = True,
+        action: LLMActionType = LLMActionType.CHAT,
+        **kwargs,
+    ):
         # Generate the response
         self.logger.debug("Generating...")
-
-        if self.thread is not None:
-            self.thread.join()
 
         self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
 
         stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
+
+        data = self.prepare_generate_data(model_inputs, stopping_criteria)
+        streamer = kwargs.get("streamer", self.streamer)
+        data["streamer"] = streamer
+
         try:
-            self.thread = threading.Thread(target=self.model.generate, kwargs=dict(
-                **model_inputs,
-                min_length=self.min_length,
-                max_length=self.max_length,
-                num_beams=self.num_beams,
-                do_sample=self.do_sample,
-                top_k=self.top_k,
-                eta_cutoff=self.eta_cutoff,
-                top_p=self.top_p,
-                num_return_sequences=self.sequences,
-                eos_token_id=self.tokenizer.eos_token_id,
-                early_stopping=True,
-                repetition_penalty=self.repetition_penalty,
-                temperature=self.temperature,
-                streamer=self.streamer,
-                stopping_criteria=[stopping_criteria],
-            ))
+            self.response_worker.add_to_queue({
+                "model": self.model,
+                "kwargs": data
+            })
             self.do_interrupt = False
-            self.thread.start()
         except Exception as e:
-            print("An error occurred in model.generate:")
+            print("545: An error occurred in model.generate:")
             print(str(e))
             print(traceback.format_exc())
         # strip all new lines from rendered_template:
-        rendered_template = rendered_template.replace("\n", " ")
+        self.rendered_template = self.rendered_template.replace("\n", " ")
         eos_token = self.tokenizer.eos_token
         bos_token = self.tokenizer.bos_token
         if self.is_mistral:
-            rendered_template = bos_token + rendered_template
+            self.rendered_template = bos_token + self.rendered_template
         skip = True
         streamed_template = ""
         replaced = False
         is_end_of_message = False
         is_first_message = True
-        for new_text in self.streamer:
-            # if self.do_interrupt:
-            #     print("DO INTERRUPT PRESSED")
-            #     self.do_interrupt = False
-            #     streamed_template = None
-            #     self.streamer.on_finalized_text("", stream_end=True)
-            #     break
-
-            # strip all newlines from new_text
-            parsed_new_text = new_text.replace("\n", " ")
-            streamed_template += parsed_new_text
-            if self.is_mistral:
-                streamed_template = streamed_template.replace(f"{bos_token} [INST]", f"{bos_token}[INST]")
-                streamed_template = streamed_template.replace("  [INST]", " [INST]")
-            # iterate over every character in rendered_template and
-            # check if we have the same character in streamed_template
-            if not replaced:
-                for i, char in enumerate(rendered_template):
-                    try:
-                        if char == streamed_template[i]:
-                            skip = False
-                        else:
+        if streamer:
+            for new_text in streamer:
+                # strip all newlines from new_text
+                parsed_new_text = new_text.replace("\n", " ")
+                streamed_template += parsed_new_text
+                if self.is_mistral:
+                    streamed_template = streamed_template.replace(f"{bos_token} [INST]", f"{bos_token}[INST]")
+                    streamed_template = streamed_template.replace("  [INST]", " [INST]")
+                # iterate over every character in rendered_template and
+                # check if we have the same character in streamed_template
+                if not replaced:
+                    for i, char in enumerate(self.rendered_template):
+                        try:
+                            if char == streamed_template[i]:
+                                skip = False
+                            else:
+                                skip = True
+                                break
+                        except IndexError:
                             skip = True
                             break
-                    except IndexError:
-                        skip = True
-                        break
-            if skip:
-                continue
-            elif not replaced:
-                replaced = True
-                streamed_template = streamed_template.replace(rendered_template, "")
-            else:
-                if eos_token in new_text:
-                    streamed_template = streamed_template.replace(eos_token, "")
-                    new_text = new_text.replace(eos_token, "")
-                    is_end_of_message = True
-                self.emit_signal(
-                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    dict(
-                        message=new_text,
-                        is_first_message=is_first_message,
-                        is_end_of_message=is_end_of_message,
-                        name=self.botname,
+                if skip:
+                    continue
+                elif not replaced:
+                    replaced = True
+                    streamed_template = streamed_template.replace(self.rendered_template, "")
+                else:
+                    if eos_token in new_text:
+                        streamed_template = streamed_template.replace(eos_token, "")
+                        new_text = new_text.replace(eos_token, "")
+                        is_end_of_message = True
+                    self.emit_signal(
+                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                        dict(
+                            message=new_text,
+                            is_first_message=is_first_message,
+                            is_end_of_message=is_end_of_message,
+                            name=self.botname,
+                        )
                     )
-                )
-                is_first_message = False
-
-        self.add_message_to_history(
-            self.prompt,
-            LLMChatRole.HUMAN
-        )
+                    is_first_message = False
 
         if streamed_template is not None:
             if action == LLMActionType.CHAT:
-                self.add_message_to_history(
-                    streamed_template,
-                    LLMChatRole.ASSISTANT
-                )
+                if do_add_response_to_history:
+                    self.add_message_to_history(
+                        streamed_template,
+                        LLMChatRole.ASSISTANT
+                    )
             elif action == LLMActionType.GENERATE_IMAGE:
                 json_objects = self.extract_json_objects(streamed_template)
                 if len(json_objects) > 0:
@@ -349,6 +467,14 @@ class AIRunnerAgent(
                     self.logger.error("No JSON object found in the response.")
 
         return streamed_template
+
+    def add_chatbot_response_to_history(self, response: dict):
+        if response["message"] is None:
+            return
+        self.add_message_to_history(
+            response["message"],
+            response["role"]
+        )
 
     def extract_json_objects(self, s):
         extractor = JSONExtractor()
@@ -363,12 +489,27 @@ class AIRunnerAgent(
         content: AnyStr,
         role: LLMChatRole = LLMChatRole.ASSISTANT
     ):
-        if role == LLMChatRole.ASSISTANT:
+        if role == LLMChatRole.ASSISTANT and content:
             content = content.replace(f"{self.botname}:", "")
             content = content.replace(f"{self.botname}", "")
 
-        self.history.append({
-            'content': content,
-            'role': role.value
-        })
+        last_item = self.history.pop() if len(self.history) > 0 else {}
+        last_item_role = last_item.get("role", None)
+        last_item_role_is_current_role = last_item_role == role.value
 
+        # if the last_item is of the same role as the current message, append the content to the last_item
+        if not last_item_role_is_current_role and len(last_item.keys()) > 0:
+            self.history.append(last_item)
+
+        if last_item_role_is_current_role:
+            item = {
+                "role": role.value,
+                "content": content
+            }
+            item["content"] += last_item.get("content", "") + "\n" + content
+            self.history.append(item)
+        else:
+            self.history.append({
+                "role": role.value,
+                "content": content
+            })
