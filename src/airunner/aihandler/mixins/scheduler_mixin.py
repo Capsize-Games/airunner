@@ -24,7 +24,7 @@ class SchedulerMixin:
         self.do_change_scheduler = True
         self._scheduler = None
 
-    def load_scheduler(self, force_scheduler_name=None, config=None, local_files_only=True):
+    def load_scheduler(self, force_scheduler_name=None, config=None):
         if self.is_sd_xl_turbo:
             return None
         if (
@@ -43,7 +43,7 @@ class SchedulerMixin:
 
         kwargs = {
             "subfolder": "scheduler",
-            "local_files_only": local_files_only,
+            "local_files_only": True,
         }
         if self.current_model_branch:
             kwargs["variant"] = self.current_model_branch
@@ -91,12 +91,6 @@ class SchedulerMixin:
                     f"from {self.sd_request.generator_settings.model}"
                 )
             except OSError as e:
-                if local_files_only:
-                    return self.load_scheduler(
-                        force_scheduler_name=scheduler_name,
-                        config=config,
-                        local_files_only=False
-                    )
                 self.logger.error(
                     f"Unable to load scheduler {scheduler_name} "
                     f"from {self.sd_request.generator_settings.model}"

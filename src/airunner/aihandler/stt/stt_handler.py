@@ -108,13 +108,13 @@ class STTHandler(BaseHandler):
 
         return transcription
 
-    def load_model(self, local_files_only=True):
+    def load_model(self):
         pass
 
-    def load_processor(self, local_files_only=True):
+    def load_processor(self):
         pass
 
-    def load_feature_extractor(self, local_files_only=True):
+    def load_feature_extractor(self):
         pass
 
     def move_to_gpu(self):
