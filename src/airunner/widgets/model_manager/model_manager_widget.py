@@ -34,6 +34,10 @@ class ModelManagerWidget(
             self._current_model_object = ModelData()
         return self._current_model_object
 
+    @Slot()
+    def action_cell_changed(self):
+        print("ACTION CELL CHANGED")
+
     def toggle_all_models(self, key, value):
         for model in self.model_widgets[key]:
             model.name.setChecked(value)
