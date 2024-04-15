@@ -4,8 +4,8 @@ from airunner.windows.setup_wizard.base_wizard import BaseWizard
 
 
 class DownloadWizard(BaseWizard):
-    def __init__(self):
-        super(DownloadWizard, self).__init__()
+    def __init__(self, *args):
+        super(DownloadWizard, self).__init__(*args)
         self.download_thread = None
         self.models_to_download = []
         self.ui.download.clicked.connect(self.download_models)

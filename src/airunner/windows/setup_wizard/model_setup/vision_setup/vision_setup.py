@@ -1,6 +1,6 @@
 from airunner.windows.setup_wizard.setup_wizard import DownloadWizard
 
-from airunner.windows.setup_wizard.templates.vision_setup.download_vision_models_ui import Ui_vision_setup
+from airunner.windows.setup_wizard.model_setup.vision_setup import Ui_vision_setup
 
 
 class VisionSetup(DownloadWizard):

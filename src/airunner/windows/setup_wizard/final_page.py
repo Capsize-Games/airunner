@@ -3,15 +3,14 @@ from airunner.windows.setup_wizard.base_wizard import BaseWizard
 
 
 class FinalPage(BaseWizard):
-    def __init__(self):
-        super(FinalPage, self).__init__()
-
+    def initialize_form(self):
         self.setTitle("Setup Complete")
         layout = QVBoxLayout()
         label = QLabel("Setup is complete. Click Finish to close the wizard.")
         layout.addWidget(label)
         self.setLayout(layout)
 
+    def save_settings(self):
         settings = self.settings
         settings["run_setup_wizard"] = False
         self.settings = settings
