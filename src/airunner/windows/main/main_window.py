@@ -165,7 +165,6 @@ class MainWindow(
         PipelineMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
-        self.register_services()
         self.create_airunner_paths()
         self.register_signals()
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
@@ -274,10 +273,6 @@ class MainWindow(
 
     def show_layers(self):
         self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
-
-    def register_services(self):
-        self.logger.debug("Registering services")
-        pass
 
     def register_signals(self):
         # on window resize:

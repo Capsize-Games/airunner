@@ -1,10 +1,8 @@
 from PySide6 import QtCore
-
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.default_ui import Ui_default_model_widget
 from PySide6 import QtWidgets
-
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 
@@ -86,17 +84,17 @@ class DefaultModelWidget(
     def toggle_all_state_change(self, val: int):
         if val == 0:
             # disable all by setting AIModel.enabled to False where is_default=True
-            for item in self.get_service("ai_model_get_all")():
+            for item in self.ai_model_get_all():
                 item["enabled"] = False
-                self.get_service("ai_model_update")(item)
+                self.ai_model_update(item)
             self.show_items_in_scrollarea()
         elif val == 1:
             # self.ui.toggle_all is a checkbox with tri-state enabled, how can we set it to checked?
             self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Checked)
         elif val == 2:
-            for item in self.get_service("ai_model_get_all")():
+            for item in self.ai_model_get_all():
                 item["enabled"] = True
-                self.get_service("ai_model_update")(item)
+                self.ai_model_update(item)
             self.show_items_in_scrollarea()
 
     def search_text_changed(self, val):
