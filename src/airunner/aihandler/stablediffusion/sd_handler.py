@@ -1,11 +1,11 @@
 import io
 import base64
+import random
 import traceback
 
 import numpy as np
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QApplication
-from pytorch_lightning import seed_everything
 from typing import List
 import requests
 import torch
@@ -136,13 +136,12 @@ class SDHandler(
             self.inpaint_vae_model = None
 
         self.handler_type = HandlerType.DIFFUSER
-        self._previous_model: str = ""
+        self._previous_model = ""
         self.cross_attention_kwargs_scale: float = 1.0
-        self._initialized: bool = False
-        self._reload_model: bool = False
+        self._initialized = False
+        self._reload_model = False
         self.current_model_branch = None
         self.state = None
-        self._local_files_only = True
         self.lora_loaded = False
         self.loaded_lora = []
         self._settings = None
@@ -171,32 +170,31 @@ class SDHandler(
         self.tokenizer = None
         self._safety_checker = None
         self._controlnet = None
-        self.current_model: str = ""
-        self.seed: int = 42
-        self.batch_size: int = 1
-        self.use_prompt_converter: bool = True
+        self.current_model = ""
+        self.seed = 42
+        self.batch_size = 1
+        self.use_prompt_converter = True
         self.depth_map = None
         self.model_data = None
-        self.model_version: str = ""
-        self.use_tiled_vae: bool = False
-        self.use_accelerated_transformers: bool = False
-        self.use_torch_compile: bool = False
-        self.is_sd_xl: bool = False
-        self.is_sd_xl_turbo: bool = False
-        self.is_turbo: bool = False
-        self.use_compel: bool = False
+        self.model_version = ""
+        self.use_tiled_vae = False
+        self.use_accelerated_transformers = False
+        self.use_torch_compile = False
+        self.is_sd_xl = False
+        self.is_sd_xl_turbo = False
+        self.is_turbo = False
+        self.use_compel = False
         self.controlnet_guess_mode = None
         self.filters = None
         self.original_model_data = None
         self.denoise_strength = None
-        self.face_enhance: bool = False
-        self.allow_online_mode: bool = False
-        self.controlnet_type: str = ""
-        self.initialized: bool = False
-        self.reload_model: bool = False
-        self.local_files_only: bool = False
+        self.face_enhance = False
+        self.allow_online_mode = False
+        self.controlnet_type = ""
+        self.initialized = False
+        self.reload_model = False
         self.extra_args = None
-        self.do_set_seed: bool = True
+        self.do_set_seed = True
         self._controlnet_image = None
         self.is_dev_env = AIRUNNER_ENVIRONMENT == "dev"
         self.latents = None
@@ -399,7 +397,7 @@ class SDHandler(
         except Exception as e:
             self.logger.error(f"Error finding model by name: {name}")
 
-    def preprocess_for_controlnet(self, image, local_files_only=True):
+    def preprocess_for_controlnet(self, image):
         controlnet = self.sd_request.generator_settings.controlnet_image_settings.controlnet
         controlnet_item = self.controlnet_model_by_name(controlnet)
         controlnet_type = controlnet_item["name"]
@@ -408,13 +406,9 @@ class SDHandler(
             self.logger.debug("Loading controlnet processor " + controlnet_type)
             self.current_controlnet_type = controlnet_type
             try:
-                self.processor = Processor(controlnet_type, local_files_only=local_files_only)
+                self.processor = Processor(controlnet_type)
             except Exception as e:
-                if "We couldn't connect to 'https://huggingface.co'" in str(e) and local_files_only is True:
-                    return self.preprocess_for_controlnet(image, local_files_only=False)
-                else:
-                    self.logger.error("Unable to load controlnet processor")
-                    self.logger.error(e)
+                self.logger.error(e)
             self.logger.debug("Processor loaded")
         if self.processor is not None and image is not None:
             self.logger.debug("Controlnet: Processing image")
@@ -635,34 +629,28 @@ class SDHandler(
         self.logger.error(error)
         self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, message)
 
-    def initialize_safety_checker(self, local_files_only=True):
+    def initialize_safety_checker(self):
         self.logger.debug(f"Initializing safety checker with {self.safety_checker_model}")
         try:
             return StableDiffusionSafetyChecker.from_pretrained(
                 self.safety_checker_model["path"],
-                local_files_only=local_files_only,
+                local_files_only=True,
                 torch_dtype=self.data_type
             )
         except OSError:
-            if local_files_only:
-                return self.initialize_safety_checker(local_files_only=False)
-            else:
-                self.send_error("Unable to load safety checker")
-                return None
+            self.send_error("Unable to load safety checker")
+            return None
 
-    def initialize_feature_extractor(self, local_files_only=True):
+    def initialize_feature_extractor(self):
         try:
             return AutoFeatureExtractor.from_pretrained(
                 self.safety_checker_model["path"],
-                local_files_only=local_files_only,
+                local_files_only=True,
                 torch_dtype=self.data_type
             )
         except OSError:
-            if local_files_only:
-                return self.initialize_feature_extractor(local_files_only=False)
-            else:
-                self.send_error("Unable to load feature extractor")
-                return None
+            self.send_error("Unable to load feature extractor")
+            return None
 
     @property
     def use_safety_checker(self):
@@ -809,7 +797,6 @@ class SDHandler(
             else:
                 self.log_error(error, error_message)
             self.scheduler_name = ""
-            self.local_files_only = True
 
         self.final_callback()
 
@@ -1016,7 +1003,9 @@ class SDHandler(
         controlnet_item = self.controlnet_model_by_name(controlnet)
         self.controlnet_type = controlnet_item["name"]
         self.generator().manual_seed(self.sd_request.generator_settings.seed)
-        seed_everything(self.seed)
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+        torch.manual_seed(self.seed)
 
     def generator_sample(self):
         """
@@ -1062,7 +1051,7 @@ class SDHandler(
 
             try:
                 self.add_lora_to_pipe()
-            except Exception as _e:
+            except Exception as e:
                 self.error_handler("Selected LoRA are not supported with this model")
                 self.reload_model = True
 
@@ -1172,7 +1161,7 @@ class SDHandler(
         self.controlnet_loaded = True
         return pipeline
 
-    def load_controlnet(self, local_files_only: bool = True):
+    def load_controlnet(self):
         controlnet_name = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
         controlnet_model = self.controlnet_model_by_name(controlnet_name)
         self.logger.debug(f"Loading controlnet {self.controlnet_type} self.controlnet_model {controlnet_model}")
@@ -1182,12 +1171,9 @@ class SDHandler(
             controlnet = ControlNetModel.from_pretrained(
                 controlnet_model["path"],
                 torch_dtype=self.data_type,
-                local_files_only=local_files_only
+                local_files_only=True
             )
         except Exception as e:
-            if "We couldn't connect to 'https://huggingface.co'" in str(e) and local_files_only is True:
-                self.logger.error("Failed to load controlnet from local files, trying to load from huggingface")
-                return self.load_controlnet(local_files_only=False)
             self.logger.error(f"Error loading controlnet {e}")
             return None
         # self.load_controlnet_scheduler()
@@ -1268,8 +1254,8 @@ class SDHandler(
                     self.pipe = self.download_from_original_stable_diffusion_ckpt()
                     if self.pipe is not None:
                         self.pipe.scheduler = self.load_scheduler(config=self.pipe.scheduler.config)
-                except OSError as e:
-                    self.handle_missing_files(self.sd_request.generator_settings.section)
+                except Exception as e:
+                    self.logger.error(f"Failed to load model from ckpt: {e}")
             elif self.model is not None:
                 self.logger.debug(f"Loading model `{self.model['name']}` `{self.model_path}` for {self.sd_request.generator_settings.section}")
                 scheduler = self.load_scheduler()
@@ -1316,38 +1302,29 @@ class SDHandler(
             action = "img2img"
         return action
 
-    def download_from_original_stable_diffusion_ckpt(self, local_files_only=True):
+    def download_from_original_stable_diffusion_ckpt(self):
         pipe = None
-        kwargs = {
+        data = {
             "checkpoint_path_or_dict": self.model_path,
             "device": self.device,
             "scheduler_type": Scheduler.DDIM.value.lower(),
             "from_safetensors": self.is_safetensors,
-            "local_files_only": local_files_only,
+            "local_files_only": True,
             "extract_ema": False,
             "config_files": CONFIG_FILES,
             "pipeline_class": self.pipeline_class(),
             "load_safety_checker": False,
         }
         if self.settings["generator_settings"]["enable_controlnet"]:
-            kwargs["controlnet"] = self.controlnet()
+            data["controlnet"] = self.controlnet()
         try:
-            pipe = download_from_original_stable_diffusion_ckpt(
-                **kwargs
-            )
-        except ValueError:
-            if local_files_only:
-                # missing required files, attempt again with online access
-                return self.download_from_original_stable_diffusion_ckpt(
-                    local_files_only=False
-                )
+            pipe = download_from_original_stable_diffusion_ckpt(**data)
         except Exception as e:
             self.logger.error(f"Failed to load model from ckpt: {e}")
 
         if pipe is not None:
             pipe.safety_checker = self.safety_checker
             pipe.feature_extractor = self.feature_extractor
-
         return pipe
 
     def clear_controlnet(self):
@@ -1357,7 +1334,7 @@ class SDHandler(
         self.reset_applied_memory_settings()
         self.controlnet_loaded = False
 
-    def reuse_pipeline(self, do_load_controlnet, local_files_only=True):
+    def reuse_pipeline(self, do_load_controlnet):
         self.logger.debug("Reusing pipeline")
         pipe = None
         if self.sd_request.is_txt2img:
@@ -1388,7 +1365,7 @@ class SDHandler(
 
                 pipe = pipeline_class_.from_single_file(
                     self.model_path,
-                    local_files_only=local_files_only
+                    local_files_only=True
                 )
                 return pipe
             else:
@@ -1438,32 +1415,3 @@ class SDHandler(
             self.logger.debug("Unloading controlnet")
             self.pipe.controlnet = None
         self.controlnet_loaded = False
-
-    def handle_missing_files(self, action):
-        if not self.attempt_download:
-            if self.is_ckpt_model or self.is_safetensors:
-                self.logger.debug("Required files not found, attempting download")
-            else:
-                traceback.print_exc()
-                self.logger.debug("Model not found, attempting download")
-            # check if we have an internet connection
-            if self.allow_online_when_missing_files:
-                self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Downloading model files")
-                self.local_files_only = False
-            else:
-                self.send_error("Required files not found, enable online access to download")
-                return None
-            self.attempt_download = True
-            if action == "controlnet":
-                self.downloading_controlnet = True
-            return self.generator_sample()
-        else:
-            self.local_files_only = True
-            self.attempt_download = False
-            self.downloading_controlnet = False
-            if self.is_ckpt_model or self.is_safetensors:
-                self.log_error("Unable to download required files, check internet connection")
-            else:
-                self.log_error("Unable to download model, check internet connection")
-            self.initialized = False
-            return None

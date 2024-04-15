@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'path.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -28,8 +28,8 @@ class Ui_path_widget(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.horizontal_line = QFrame(path_widget)
         self.horizontal_line.setObjectName(u"horizontal_line")
-        self.horizontal_line.setFrameShape(QFrame.HLine)
-        self.horizontal_line.setFrameShadow(QFrame.Sunken)
+        self.horizontal_line.setFrameShape(QFrame.Shape.HLine)
+        self.horizontal_line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.horizontal_line, 4, 0, 1, 1)
 
