@@ -66,7 +66,6 @@ class LLMSettingsWidget(
             self.settings = settings
 
     def initialize_form(self):
-        print(self.generator_settings)
         elements = [
             self.ui.prompt_template,
             self.ui.model,
@@ -93,9 +92,9 @@ class LLMSettingsWidget(
         self.ui.min_length.init(callback=self.callback, current_value=self.generator_settings["min_length"])
         self.ui.length_penalty.init(callback=self.callback, current_value=self.generator_settings["length_penalty"])
         self.ui.num_beams.init(callback=self.callback, current_value=self.generator_settings["num_beams"])
-        self.ui.ngram_size.init(callback=self.callback, current_value=self.generator_settings["ngram_size"])
+        self.ui.ngram_size.init(callback=self.callback, current_value=self.chatbot["ngram_size"])
         self.ui.temperature.init(callback=self.callback, current_value=self.generator_settings["temperature"])
-        self.ui.sequences.init(callback=self.callback, current_value=self.generator_settings["sequences"])
+        self.ui.sequences.init(callback=self.callback, current_value=self.chatbot["sequences"])
         self.ui.top_k.init(callback=self.callback, current_value=self.generator_settings["top_k"])
 
         self.ui.leave_in_vram.setChecked(not self.settings["memory_settings"]["unload_unused_models"] and not self.settings["memory_settings"]["move_unused_model_to_cpu"])
@@ -272,7 +271,6 @@ class LLMSettingsWidget(
         self.ui.temperature.set_slider_and_spinbox_values(llm_generator_settings["temperature"])
         self.ui.sequences.set_slider_and_spinbox_values(llm_generator_settings["sequences"])
         self.ui.top_k.set_slider_and_spinbox_values(llm_generator_settings["top_k"])
-        self.ui.eta_cutoff.set_slider_and_spinbox_values(llm_generator_settings["eta_cutoff"])
         self.ui.random_seed.setChecked(llm_generator_settings["random_seed"])
 
     def set_dtype(self, dtype):
