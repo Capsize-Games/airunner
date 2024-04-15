@@ -237,12 +237,30 @@ DIFFUSERS_VERBOSITY = "error"
 TRUST_REMOTE_CODE = False
 
 ####################################################################
-# The following environment variables are used by the huggingface
-# libraries to control the
-# behavior of the model manager and the setup wizard.
+# DEFAULT_HF_HUB_OFFLINE is set to "0" to allow for online access
+# do not change this value, we will switch to it when
+# we want to allow online access (when using download features)
 ####################################################################
 DEFAULT_HF_HUB_OFFLINE = "0"
+
+####################################################################
+# DEFAULT_HF_ENDPOINT is the default huggingface endpoint.
+# Default value is "https://huggingface.co"
+# This is used when the HF_HUB_OFFLINE is set to "0"
+# and online access is allowed.
+# You may change this value if you want to use a different endpoint.
+####################################################################
 DEFAULT_HF_ENDPOINT = "https://huggingface.co"
+
+####################################################################
+# DEFAULT_HF_INFERENCE_ENDPOINT is the default huggingface inference
+# endpoint.
+# Default value is "https://api-inference.huggingface.com"
+# This is used when the HF_HUB_OFFLINE is set to "0"
+# and online access is allowed.
+# You may change this value if you want to use a different endpoint.
+# This variable is currently unused by AI Runner.
+####################################################################
 DEFAULT_HF_INFERENCE_ENDPOINT = "https://api-inference.huggingface.com"
 
 """
@@ -258,6 +276,21 @@ from airunner.enums import (
     SignalCode,
     Gender
 )
+
+####################################################################
+# USE_MODEL_MANAGER is used to enable the model manager.
+# The model manager allows the user to download models from
+# Civitai and huggingface.
+# If set to True, the model manager will be allowed to access the
+# internet independently of the application.
+####################################################################
+USE_MODEL_MANAGER = True
+
+####################################################################
+# ALLOW_CIVITAI_DOWNLOADS is used to allow downloads from Civitai.
+# This only works if the USE_MODEL_MANAGER is set to True
+####################################################################
+ALLOW_CIVITAI_DOWNLOADS = True
 
 ####################################################################
 # These can be changed.
