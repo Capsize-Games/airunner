@@ -255,7 +255,8 @@ from airunner.enums import (
     StableDiffusionVersion,
     ImageGenerator,
     Scheduler,
-    SignalCode
+    SignalCode,
+    Gender
 )
 
 ####################################################################
@@ -625,10 +626,9 @@ TRANSLATION_MODELS = {
 
 ####################################################################
 # Gender constants
-# TODO: move this to enums
 ####################################################################
-MALE = "Male"
-FEMALE = "Female"
+MALE = Gender.MALE
+FEMALE = Gender.FEMALE
 
 # Default negative prompt for photorealistic images
 PHOTO_REALISTIC_NEGATIVE_PROMPT = (
