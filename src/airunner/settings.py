@@ -244,6 +244,20 @@ TRUST_REMOTE_CODE = False
 DEFAULT_HF_HUB_OFFLINE = "0"
 
 ####################################################################
+# DEFAULT_HF_DATASETS_OFFLINE = "0" to allow for online access
+# do not change this value, we will switch to it when
+# we want to allow online access (when using download features)
+####################################################################
+DEFAULT_HF_DATASETS_OFFLINE = "0"
+
+###################################################################
+# TRANSFORMERS_OFFLINE is set to "0" to allow for online access
+# do not change this value, we will switch to it when
+# we want to allow online access (when using download features)
+####################################################################
+DEFAULT_TRANSFORMERS_OFFLINE = "0"
+
+####################################################################
 # DEFAULT_HF_ENDPOINT is the default huggingface endpoint.
 # Default value is "https://huggingface.co"
 # This is used when the HF_HUB_OFFLINE is set to "0"
