@@ -47,8 +47,6 @@ class Logger:
             self.logger.addHandler(self.stream_handler)
 
         self.set_level(LOG_LEVEL)
-        logging.getLogger("lightning").setLevel(logging.WARNING)
-        logging.getLogger("lightning_fabric.utilities.seed").setLevel(logging.WARNING)
 
     def set_level(self, level):
         """

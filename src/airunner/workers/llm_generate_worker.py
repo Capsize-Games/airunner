@@ -1,16 +1,20 @@
+import queue
+
+from PySide6.QtCore import QThread
+
 from airunner.aihandler.llm.causal_lm_transfformer_base_handler import CausalLMTransformerBaseHandler
-from airunner.settings import AVAILABLE_DTYPES
-from airunner.enums import SignalCode
+from airunner.settings import AVAILABLE_DTYPES, SLEEP_TIME_IN_MS
+from airunner.enums import QueueType
 from airunner.workers.worker import Worker
 
 
 class LLMGenerateWorker(Worker):
     llm = None
 
-    def register_signals(self):
-        self.llm = CausalLMTransformerBaseHandler()
-        self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal)
-        self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal)
+    def __init__(self, *args, do_load_on_init: bool = False, **kwargs):
+        self.do_load_on_init = do_load_on_init
+        super().__init__(*args, **kwargs)
+        self.llm = CausalLMTransformerBaseHandler(do_load_on_init=self.do_load_on_init)
 
     def on_unload_llm_signal(self, message: dict):
         """
@@ -39,11 +43,35 @@ class LLMGenerateWorker(Worker):
         if callback:
             callback()
 
+    def run(self):
+        if self.queue_type == QueueType.NONE:
+            return
+        self.logger.debug("Starting")
+        self.running = True
+        while self.running:
+            self.preprocess()
+            try:
+                msg = self.get_item_from_queue()
+                if msg is not None:
+                    self.handle_message(msg)
+            except queue.Empty:
+                msg = None
+            if self.paused:
+                self.logger.debug("Paused")
+                while self.paused:
+                    QThread.msleep(SLEEP_TIME_IN_MS)
+                self.logger.debug("Resumed")
+            QThread.msleep(SLEEP_TIME_IN_MS)
+
     def on_llm_request_worker_response_signal(self, message: dict):
         self.add_to_queue(message)
 
     def handle_message(self, message):
-        self.llm.handle_request(message)
+        try:
+            self.llm.handle_request(message)
+        except Exception as e:
+            self.logger.error(f"Error in handle_message: {e}")
+            self.logger.error(f"Message: {message}")
 
     def unload_llm(self):
         self.logger.debug("Unloading LLM")
