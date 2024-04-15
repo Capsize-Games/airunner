@@ -877,5 +877,5 @@ DEFAULT_SHORTCUTS = {
  for more information.
 #################################
 """
-SD_GUARDRAILS_KEY = b'hRn5d-cm2ow_lbGJjYoQgXsmzbWa0XGfHDAv-qu91F4='
-SD_GUARDRAILS = b'gAAAAABmACEW3HIFcd-f_dqgImUzesVq4aNDdLc0rkiLw_X0gX_hv_eoDUhaPU8g03NtDVnXWY7nPNhtAWNhhhgTxux2Ws2ZQXYXFf2MUFWIwTzr88-kpMY='
+SD_GUARDRAILS_KEY = b"hRn5d-cm2ow_lbGJjYoQgXsmzbWa0XGfHDAv-qu91F4="
+SD_GUARDRAILS = b"gAAAAABmACEW3HIFcd-f_dqgImUzesVq4aNDdLc0rkiLw_X0gX_hv_eoDUhaPU8g03NtDVnXWY7nPNhtAWNhhhgTxux2Ws2ZQXYXFf2MUFWIwTzr88-kpMY="
