@@ -16,8 +16,8 @@ from airunner.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.sd_worker import SDWorker
 from airunner.aihandler.logger import Logger
 from airunner.utils import create_worker
-from airunner.workers.vision_capture_worker import VisionCaptureWorker
-from airunner.workers.vision_processor_worker import VisionProcessorWorker
+# from airunner.workers.vision_capture_worker import VisionCaptureWorker
+# from airunner.workers.vision_processor_worker import VisionProcessorWorker
 
 
 class Message:
@@ -94,12 +94,11 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
             self.stt_audio_processor_worker = create_worker(AudioProcessorWorker, stt_handler_class=WhisperHandler)
 
-        if not disable_vision_capture:
-            self.vision_capture_worker = create_worker(VisionCaptureWorker)
-            self.vision_processor_worker = create_worker(VisionProcessorWorker)
-
-
-        self.toggle_vision_capture()
+        # if not disable_vision_capture:
+        #     self.vision_capture_worker = create_worker(VisionCaptureWorker)
+        #     self.vision_processor_worker = create_worker(VisionProcessorWorker)
+        #
+        # self.toggle_vision_capture()
 
     def do_response(self, response):
         """
