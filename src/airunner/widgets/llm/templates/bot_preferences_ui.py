@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'bot_preferences.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -15,29 +15,50 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QGroupBox,
-    QLabel, QLineEdit, QPlainTextEdit, QPushButton,
-    QSizePolicy, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QGridLayout,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QPlainTextEdit, QPushButton, QSizePolicy, QTabWidget,
+    QVBoxLayout, QWidget)
+
+from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
+from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
 
 class Ui_bot_preferences(object):
     def setupUi(self, bot_preferences):
         if not bot_preferences.objectName():
             bot_preferences.setObjectName(u"bot_preferences")
-        bot_preferences.resize(701, 777)
+        bot_preferences.resize(722, 917)
         self.gridLayout = QGridLayout(bot_preferences)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.guardrails_groupbox = QGroupBox(bot_preferences)
-        self.guardrails_groupbox.setObjectName(u"guardrails_groupbox")
-        self.guardrails_groupbox.setCheckable(True)
-        self.verticalLayout_2 = QVBoxLayout(self.guardrails_groupbox)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.guardrails_prompt = QPlainTextEdit(self.guardrails_groupbox)
-        self.guardrails_prompt.setObjectName(u"guardrails_prompt")
+        self.tabWidget = QTabWidget(bot_preferences)
+        self.tabWidget.setObjectName(u"tabWidget")
+        self.tab = QWidget()
+        self.tab.setObjectName(u"tab")
+        self.gridLayout_4 = QGridLayout(self.tab)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.widget = LLMSettingsWidget(self.tab)
+        self.widget.setObjectName(u"widget")
 
-        self.verticalLayout_2.addWidget(self.guardrails_prompt)
+        self.gridLayout_4.addWidget(self.widget, 0, 0, 1, 1)
 
+        self.tabWidget.addTab(self.tab, "")
+        self.tab_2 = QWidget()
+        self.tab_2.setObjectName(u"tab_2")
+        self.gridLayout_6 = QGridLayout(self.tab_2)
+        self.gridLayout_6.setObjectName(u"gridLayout_6")
+        self.widget_2 = StableDiffusionSettingsWidget(self.tab_2)
+        self.widget_2.setObjectName(u"widget_2")
 
-        self.gridLayout.addWidget(self.guardrails_groupbox, 6, 0, 1, 1)
+        self.gridLayout_6.addWidget(self.widget_2, 1, 0, 1, 1)
+
+        self.use_image_generator_checkbox = QCheckBox(self.tab_2)
+        self.use_image_generator_checkbox.setObjectName(u"use_image_generator_checkbox")
+
+        self.gridLayout_6.addWidget(self.use_image_generator_checkbox, 0, 0, 1, 1)
+
+        self.tabWidget.addTab(self.tab_2, "")
+
+        self.gridLayout.addWidget(self.tabWidget, 12, 0, 1, 1)
 
         self.system_instructions_groupbox = QGroupBox(bot_preferences)
         self.system_instructions_groupbox.setObjectName(u"system_instructions_groupbox")
@@ -50,31 +71,70 @@ class Ui_bot_preferences(object):
         self.verticalLayout_3.addWidget(self.system_instructions)
 
 
-        self.gridLayout.addWidget(self.system_instructions_groupbox, 5, 0, 1, 1)
+        self.gridLayout.addWidget(self.system_instructions_groupbox, 4, 0, 1, 1)
 
-        self.groupBox = QGroupBox(bot_preferences)
-        self.groupBox.setObjectName(u"groupBox")
-        self.gridLayout_3 = QGridLayout(self.groupBox)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.saved_chatbots = QComboBox(self.groupBox)
-        self.saved_chatbots.setObjectName(u"saved_chatbots")
+        self.guardrails_groupbox = QGroupBox(bot_preferences)
+        self.guardrails_groupbox.setObjectName(u"guardrails_groupbox")
+        self.guardrails_groupbox.setCheckable(True)
+        self.verticalLayout_2 = QVBoxLayout(self.guardrails_groupbox)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.guardrails_prompt = QPlainTextEdit(self.guardrails_groupbox)
+        self.guardrails_prompt.setObjectName(u"guardrails_prompt")
 
-        self.gridLayout_3.addWidget(self.saved_chatbots, 0, 0, 1, 1)
-
-        self.create_new_button = QPushButton(self.groupBox)
-        self.create_new_button.setObjectName(u"create_new_button")
-
-        self.gridLayout_3.addWidget(self.create_new_button, 1, 0, 1, 1)
-
-        self.pushButton = QPushButton(self.groupBox)
-        self.pushButton.setObjectName(u"pushButton")
-
-        self.gridLayout_3.addWidget(self.pushButton, 2, 0, 1, 1)
+        self.verticalLayout_2.addWidget(self.guardrails_prompt)
 
 
-        self.gridLayout.addWidget(self.groupBox, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.guardrails_groupbox, 5, 0, 1, 1)
 
-        self.personality_groupbox = QGroupBox(bot_preferences)
+        self.names_groupbox = QGroupBox(bot_preferences)
+        self.names_groupbox.setObjectName(u"names_groupbox")
+        self.names_groupbox.setCheckable(True)
+        self.horizontalLayout = QHBoxLayout(self.names_groupbox)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.verticalLayout_6 = QVBoxLayout()
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.label = QLabel(self.names_groupbox)
+        self.label.setObjectName(u"label")
+        font = QFont()
+        font.setBold(True)
+        self.label.setFont(font)
+
+        self.verticalLayout_6.addWidget(self.label)
+
+        self.botname = QLineEdit(self.names_groupbox)
+        self.botname.setObjectName(u"botname")
+        self.botname.setCursorPosition(9)
+
+        self.verticalLayout_6.addWidget(self.botname)
+
+
+        self.horizontalLayout.addLayout(self.verticalLayout_6)
+
+        self.verticalLayout_5 = QVBoxLayout()
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.label_3 = QLabel(self.names_groupbox)
+        self.label_3.setObjectName(u"label_3")
+        self.label_3.setFont(font)
+
+        self.verticalLayout_5.addWidget(self.label_3)
+
+        self.username = QLineEdit(self.names_groupbox)
+        self.username.setObjectName(u"username")
+
+        self.verticalLayout_5.addWidget(self.username)
+
+
+        self.horizontalLayout.addLayout(self.verticalLayout_5)
+
+
+        self.gridLayout.addWidget(self.names_groupbox, 3, 0, 1, 1)
+
+        self.widget_3 = QWidget(bot_preferences)
+        self.widget_3.setObjectName(u"widget_3")
+        self.gridLayout_7 = QGridLayout(self.widget_3)
+        self.gridLayout_7.setObjectName(u"gridLayout_7")
+        self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
+        self.personality_groupbox = QGroupBox(self.widget_3)
         self.personality_groupbox.setObjectName(u"personality_groupbox")
         self.personality_groupbox.setCheckable(True)
         self.gridLayout_5 = QGridLayout(self.personality_groupbox)
@@ -90,9 +150,9 @@ class Ui_bot_preferences(object):
         self.gridLayout_5.addWidget(self.label_2, 0, 0, 1, 1)
 
 
-        self.gridLayout.addWidget(self.personality_groupbox, 3, 0, 1, 1)
+        self.gridLayout_7.addWidget(self.personality_groupbox, 2, 0, 1, 1)
 
-        self.mood_groupbox = QGroupBox(bot_preferences)
+        self.mood_groupbox = QGroupBox(self.widget_3)
         self.mood_groupbox.setObjectName(u"mood_groupbox")
         self.mood_groupbox.setCheckable(True)
         self.gridLayout_2 = QGridLayout(self.mood_groupbox)
@@ -103,46 +163,52 @@ class Ui_bot_preferences(object):
         self.gridLayout_2.addWidget(self.bot_mood, 0, 0, 1, 1)
 
 
-        self.gridLayout.addWidget(self.mood_groupbox, 4, 0, 1, 1)
-
-        self.names_groupbox = QGroupBox(bot_preferences)
-        self.names_groupbox.setObjectName(u"names_groupbox")
-        self.names_groupbox.setCheckable(True)
-        self.verticalLayout = QVBoxLayout(self.names_groupbox)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout_5 = QVBoxLayout()
-        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
-        self.label_3 = QLabel(self.names_groupbox)
-        self.label_3.setObjectName(u"label_3")
-
-        self.verticalLayout_5.addWidget(self.label_3)
-
-        self.username = QLineEdit(self.names_groupbox)
-        self.username.setObjectName(u"username")
-
-        self.verticalLayout_5.addWidget(self.username)
+        self.gridLayout_7.addWidget(self.mood_groupbox, 3, 0, 1, 1)
 
 
-        self.verticalLayout.addLayout(self.verticalLayout_5)
+        self.gridLayout.addWidget(self.widget_3, 8, 0, 1, 1)
 
-        self.verticalLayout_6 = QVBoxLayout()
-        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
-        self.label = QLabel(self.names_groupbox)
-        self.label.setObjectName(u"label")
+        self.groupBox = QGroupBox(bot_preferences)
+        self.groupBox.setObjectName(u"groupBox")
+        self.gridLayout_3 = QGridLayout(self.groupBox)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.create_new_button = QPushButton(self.groupBox)
+        self.create_new_button.setObjectName(u"create_new_button")
+        self.create_new_button.setMaximumSize(QSize(40, 16777215))
+        icon = QIcon(QIcon.fromTheme(u"list-add"))
+        self.create_new_button.setIcon(icon)
 
-        self.verticalLayout_6.addWidget(self.label)
+        self.gridLayout_3.addWidget(self.create_new_button, 0, 1, 1, 1)
 
-        self.botname = QLineEdit(self.names_groupbox)
-        self.botname.setObjectName(u"botname")
-        self.botname.setCursorPosition(9)
+        self.saved_chatbots = QComboBox(self.groupBox)
+        self.saved_chatbots.setObjectName(u"saved_chatbots")
 
-        self.verticalLayout_6.addWidget(self.botname)
+        self.gridLayout_3.addWidget(self.saved_chatbots, 0, 0, 1, 1)
+
+        self.pushButton = QPushButton(self.groupBox)
+        self.pushButton.setObjectName(u"pushButton")
+        self.pushButton.setMaximumSize(QSize(40, 16777215))
+        icon1 = QIcon(QIcon.fromTheme(u"process-stop"))
+        self.pushButton.setIcon(icon1)
+
+        self.gridLayout_3.addWidget(self.pushButton, 0, 2, 1, 1)
 
 
-        self.verticalLayout.addLayout(self.verticalLayout_6)
+        self.gridLayout.addWidget(self.groupBox, 1, 0, 1, 1)
+
+        self.groupBox_2 = QGroupBox(bot_preferences)
+        self.groupBox_2.setObjectName(u"groupBox_2")
+        self.gridLayout_8 = QGridLayout(self.groupBox_2)
+        self.gridLayout_8.setObjectName(u"gridLayout_8")
+        self.comboBox = QComboBox(self.groupBox_2)
+        self.comboBox.addItem("")
+        self.comboBox.addItem("")
+        self.comboBox.setObjectName(u"comboBox")
+
+        self.gridLayout_8.addWidget(self.comboBox, 0, 0, 1, 1)
 
 
-        self.gridLayout.addWidget(self.names_groupbox, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.groupBox_2, 0, 0, 1, 1)
 
 
         self.retranslateUi(bot_preferences)
@@ -160,30 +226,48 @@ class Ui_bot_preferences(object):
         self.saved_chatbots.currentTextChanged.connect(bot_preferences.saved_chatbots_changed)
         self.create_new_button.clicked.connect(bot_preferences.create_new_chatbot_clicked)
         self.pushButton.clicked.connect(bot_preferences.delete_clicked)
+        self.use_image_generator_checkbox.toggled.connect(bot_preferences.toggle_use_image_generator)
+        self.comboBox.currentTextChanged.connect(bot_preferences.agent_type_changed)
+
+        self.tabWidget.setCurrentIndex(0)
+
 
         QMetaObject.connectSlotsByName(bot_preferences)
     # setupUi
 
     def retranslateUi(self, bot_preferences):
         bot_preferences.setWindowTitle(QCoreApplication.translate("bot_preferences", u"Form", None))
-        self.guardrails_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Guardrails", None))
-        self.guardrails_prompt.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"The guardrails prompt is used to moderate results.", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("bot_preferences", u"LLM Settings", None))
+        self.use_image_generator_checkbox.setText(QCoreApplication.translate("bot_preferences", u"Use Image Generator", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("bot_preferences", u"Image Generator Settings", None))
         self.system_instructions_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"System Instructions", None))
         self.system_instructions.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"Instructions for the LLM", None))
-        self.groupBox.setTitle(QCoreApplication.translate("bot_preferences", u"Chatbots", None))
-        self.create_new_button.setText(QCoreApplication.translate("bot_preferences", u"Create New", None))
-        self.pushButton.setText(QCoreApplication.translate("bot_preferences", u"Delete", None))
+        self.guardrails_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Guardrails", None))
+        self.guardrails_prompt.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"The guardrails prompt is used to moderate results.", None))
+        self.names_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Use names", None))
+        self.label.setText(QCoreApplication.translate("bot_preferences", u"Assistant name", None))
+        self.botname.setText(QCoreApplication.translate("bot_preferences", u"AI Runner", None))
+        self.botname.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"Bot name", None))
+        self.label_3.setText(QCoreApplication.translate("bot_preferences", u"User name", None))
+        self.username.setText(QCoreApplication.translate("bot_preferences", u"User", None))
+        self.username.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"User name", None))
         self.personality_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Bot Personality", None))
         self.bot_personality.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"EXAMPLE: {{ botname }} is very helpful and {{ gender }} loves {{ username }}.", None))
         self.label_2.setText(QCoreApplication.translate("bot_preferences", u"A brief description of the bot's personality", None))
         self.mood_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Bot Mood", None))
         self.bot_mood.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"EXAMPLE: Excited", None))
-        self.names_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Use names", None))
-        self.label_3.setText(QCoreApplication.translate("bot_preferences", u"User name", None))
-        self.username.setText(QCoreApplication.translate("bot_preferences", u"User", None))
-        self.username.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"User name", None))
-        self.label.setText(QCoreApplication.translate("bot_preferences", u"Assistant name", None))
-        self.botname.setText(QCoreApplication.translate("bot_preferences", u"AI Runner", None))
-        self.botname.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"Bot name", None))
+        self.groupBox.setTitle(QCoreApplication.translate("bot_preferences", u"Existing Agents", None))
+#if QT_CONFIG(tooltip)
+        self.create_new_button.setToolTip(QCoreApplication.translate("bot_preferences", u"Add new agent", None))
+#endif // QT_CONFIG(tooltip)
+        self.create_new_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.pushButton.setToolTip(QCoreApplication.translate("bot_preferences", u"Delete agent", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton.setText("")
+        self.groupBox_2.setTitle(QCoreApplication.translate("bot_preferences", u"Agent Type", None))
+        self.comboBox.setItemText(0, QCoreApplication.translate("bot_preferences", u"Chatbot", None))
+        self.comboBox.setItemText(1, QCoreApplication.translate("bot_preferences", u"Tool", None))
+
     # retranslateUi
 

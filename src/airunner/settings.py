@@ -48,7 +48,7 @@ DEFAULT_PATHS = {
 
 DEFAULT_CHATBOT = {
     "username": "User",
-    "botname": "AIRunner",
+    "botname": "Computer",
     "use_personality": True,
     "use_mood": True,
     "use_guardrails": True,
@@ -57,6 +57,20 @@ DEFAULT_CHATBOT = {
     "bot_personality": "happy. He loves {{ username }}",
     "bot_mood": "",
     "prompt_template": "Mistral 7B Instruct: Default Chatbot",
+
+    "use_tool_filter": False,
+    "use_gpu": True,
+    "skip_special_tokens": True,
+    "sequences": 1,
+    "seed": 42,
+    "random_seed": True,
+    "model_version": "mistralai/Mistral-7B-Instruct-v0.2",
+    "model_type": "llm",
+    "dtype": "4bit",
+    "cache_llm_to_disk": True,
+    "ngram_size": 2,
+    "return_result": True,
+
     "guardrails_prompt": (
         "Always assist with care, respect, and truth. "
         "Respond with utmost utility yet securely. "
@@ -72,8 +86,28 @@ DEFAULT_CHATBOT = {
         "and expressive way. "
         "Use CAPITALIZATION for emphasis. "
         "NEVER generate text for the User ONLY for "
-        "the assistant."
+        "the assistant.\n"
+        "Do not return tags, code, or any other form of "
+        "non-human language. You are a human. "
+        "You must communicate like a human."
     ),
+    "generator_settings": {
+        "max_new_tokens": 30,
+        "min_length": 1,
+        "do_sample": True,
+        "early_stopping": True,
+        "num_beams": 1,
+        "temperature": 0.9,
+        "top_p": 0.9,
+        "no_repeat_ngram_size": 2,
+        "top_k": 50,
+        "eta_cutoff": 0.2,
+        "repetition_penalty": 1.0,
+        "num_return_sequences": 1,
+        "decoder_start_token_id": None,
+        "use_cache": True,
+        "length_penalty": 0.1,
+    },
 }
 
 AVAILABLE_IMAGE_FILTERS = [

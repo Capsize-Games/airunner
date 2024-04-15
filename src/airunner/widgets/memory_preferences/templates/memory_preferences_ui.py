@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'memory_preferences.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -72,29 +72,29 @@ class Ui_memory_preferences(object):
 
         self.line_9 = QFrame(memory_preferences)
         self.line_9.setObjectName(u"line_9")
-        self.line_9.setFrameShape(QFrame.HLine)
-        self.line_9.setFrameShadow(QFrame.Sunken)
+        self.line_9.setFrameShape(QFrame.Shape.HLine)
+        self.line_9.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line_9, 37, 0, 1, 5)
 
         self.line_4 = QFrame(memory_preferences)
         self.line_4.setObjectName(u"line_4")
-        self.line_4.setFrameShape(QFrame.HLine)
-        self.line_4.setFrameShadow(QFrame.Sunken)
+        self.line_4.setFrameShape(QFrame.Shape.HLine)
+        self.line_4.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line_4, 16, 0, 1, 5)
 
         self.line_8 = QFrame(memory_preferences)
         self.line_8.setObjectName(u"line_8")
-        self.line_8.setFrameShape(QFrame.HLine)
-        self.line_8.setFrameShadow(QFrame.Sunken)
+        self.line_8.setFrameShape(QFrame.Shape.HLine)
+        self.line_8.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line_8, 10, 0, 1, 5)
 
         self.line_6 = QFrame(memory_preferences)
         self.line_6.setObjectName(u"line_6")
-        self.line_6.setFrameShape(QFrame.HLine)
-        self.line_6.setFrameShadow(QFrame.Sunken)
+        self.line_6.setFrameShape(QFrame.Shape.HLine)
+        self.line_6.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line_6, 34, 0, 1, 5)
 
@@ -125,8 +125,8 @@ class Ui_memory_preferences(object):
 
         self.line_3 = QFrame(memory_preferences)
         self.line_3.setObjectName(u"line_3")
-        self.line_3.setFrameShape(QFrame.HLine)
-        self.line_3.setFrameShadow(QFrame.Sunken)
+        self.line_3.setFrameShape(QFrame.Shape.HLine)
+        self.line_3.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line_3, 28, 0, 1, 5)
 
@@ -145,8 +145,8 @@ class Ui_memory_preferences(object):
 
         self.line = QFrame(memory_preferences)
         self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.HLine)
-        self.line.setFrameShadow(QFrame.Sunken)
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line, 22, 0, 1, 5)
 
@@ -166,8 +166,8 @@ class Ui_memory_preferences(object):
 
         self.line_5 = QFrame(memory_preferences)
         self.line_5.setObjectName(u"line_5")
-        self.line_5.setFrameShape(QFrame.HLine)
-        self.line_5.setFrameShadow(QFrame.Sunken)
+        self.line_5.setFrameShape(QFrame.Shape.HLine)
+        self.line_5.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line_5, 31, 0, 1, 5)
 
@@ -215,8 +215,8 @@ class Ui_memory_preferences(object):
 
         self.line_2 = QFrame(memory_preferences)
         self.line_2.setObjectName(u"line_2")
-        self.line_2.setFrameShape(QFrame.HLine)
-        self.line_2.setFrameShadow(QFrame.Sunken)
+        self.line_2.setFrameShape(QFrame.Shape.HLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line_2, 25, 0, 1, 5)
 
@@ -246,8 +246,8 @@ class Ui_memory_preferences(object):
 
         self.line_7 = QFrame(memory_preferences)
         self.line_7.setObjectName(u"line_7")
-        self.line_7.setFrameShape(QFrame.HLine)
-        self.line_7.setFrameShadow(QFrame.Sunken)
+        self.line_7.setFrameShape(QFrame.Shape.HLine)
+        self.line_7.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line_7, 3, 0, 1, 1)
 

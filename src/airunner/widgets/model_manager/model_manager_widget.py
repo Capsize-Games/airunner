@@ -1,6 +1,5 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog
-
 from airunner.enums import SignalCode
 from airunner.models.modeldata import ModelData
 from airunner.widgets.model_manager.templates.model_manager_ui import Ui_model_manager
@@ -34,6 +33,10 @@ class ModelManagerWidget(
         if not self._current_model_object:
             self._current_model_object = ModelData()
         return self._current_model_object
+
+    @Slot()
+    def action_cell_changed(self):
+        print("ACTION CELL CHANGED")
 
     def toggle_all_models(self, key, value):
         for model in self.model_widgets[key]:

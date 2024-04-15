@@ -1,35 +1,33 @@
 from airunner.aihandler.llm.agent import AIRunnerAgent
 from airunner.aihandler.llm.local_agent import LocalAgent
 from transformers import AutoModelForCausalLM, TextIteratorStreamer
-
-from airunner.aihandler.llm.llm_tools import QuitApplicationTool, StartVisionCaptureTool, StopVisionCaptureTool, \
-    StartAudioCaptureTool, StopAudioCaptureTool, StartSpeakersTool, StopSpeakersTool, ProcessVisionTool, \
-    ProcessAudioTool, BashExecuteTool, WriteFileTool
+from airunner.aihandler.llm.llm_tools import RespondToUserTool
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode, LLMToolName, LLMActionType
+from airunner.utils.get_current_chatbot import get_current_chatbot_property
 
 
 class CausalLMTransformerBaseHandler(TokenizerHandler):
     auto_class_ = AutoModelForCausalLM
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.streamer = None
+        self.chat_engine = None
+        self.chat_agent = None
+        self.tool_agent = None
         self.llm_with_tools = None
         self.agent_executor = None
         self.embed_model = None
         self.service_context_model = None
         self.use_query_engine: bool = False
         self.use_chat_engine: bool = True
-        self.chat_engine = None
-        self.action: LLMActionType = LLMActionType.CHAT
         self._username: str = ""
         self._botname: str = ""
         self.bot_mood: str = ""
         self.bot_personality: str = ""
         self.user_evaluation: str = ""
-        self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal)
-        self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
+        self.tools: dict = self.load_tools()
+        self.action: LLMActionType = LLMActionType.CHAT
         self.use_personality: bool = False
         self.use_mood: bool = False
         self.use_guardrails: bool = False
@@ -38,13 +36,15 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
         self.prompt_template: str = ""
         self.guardrails_prompt: str = ""
         self.system_instructions: str = ""
-        self.chat_agent = None
-        self.tool_agent = None
-        self.tools: dict = self.load_tools()
         self.restrict_tools_to_additional: bool = True
         self.return_agent_code: bool = False
         self.batch_size: int = 1
         self.vision_history: list = []
+
+        super().__init__(*args, **kwargs)
+
+        self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal)
+        self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
 
     def on_interrupt_process_signal(self, _message: dict):
         if self.chat_agent is not None:
@@ -152,6 +152,7 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
         self.tool_agent = LocalAgent(
             model=self.model,
             tokenizer=self.tokenizer,
+            run_prompt_template=f"Always use the {LLMToolName.DEFAULT_TOOL.value} tool",
             additional_tools=self.tools,
             restrict_tools_to_additional=self.restrict_tools_to_additional,
         )
@@ -162,29 +163,6 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
             streamer=self.streamer,
             tools=self.tools,
             chat_template=self.chat_template,
-            username=self.username,
-            botname=self.botname,
-            bot_mood=self.bot_mood,
-            bot_personality=self.bot_personality,
-            min_length=self.min_length,
-            max_length=self.max_length,
-            num_beams=self.num_beams,
-            do_sample=self.do_sample,
-            top_k=self.top_k,
-            eta_cutoff=self.eta_cutoff,
-            sequences=self.sequences,
-            early_stopping=self.early_stopping,
-            repetition_penalty=self.repetition_penalty,
-            temperature=self.temperature,
-            is_mistral=self.is_mistral,
-            top_p=self.top_p,
-            guardrails_prompt=self.guardrails_prompt,
-            use_guardrails=self.use_guardrails,
-            system_instructions=self.system_instructions,
-            use_system_instructions=self.use_system_instructions,
-            user_evaluation=self.user_evaluation,
-            use_mood=self.use_mood,
-            use_personality=self.use_personality
         )
 
     def unload_agent(self):
@@ -240,12 +218,14 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
 
         if self.chat_agent is not None:
             if self.action != LLMActionType.GENERATE_IMAGE:
-                if self.settings["llm_generator_settings"]["use_tool_filter"]:
+                use_tool_filter = get_current_chatbot_property(self.settings, "use_tool_filter")
+                if use_tool_filter:
                     self.tool_agent.run(self.prompt)
                 self.chat_agent.run(
                     self.prompt,
                     self.action,
-                    vision_history=self.vision_history
+                    vision_history=self.vision_history,
+                    **self.override_parameters
                 )
             else:
                 self.chat_agent.run(

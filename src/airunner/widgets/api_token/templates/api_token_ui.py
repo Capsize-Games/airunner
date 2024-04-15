@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'api_token.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -52,8 +52,8 @@ class Ui_api_token(object):
 
         self.line = QFrame(api_token)
         self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.HLine)
-        self.line.setFrameShadow(QFrame.Sunken)
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line, 4, 0, 1, 1)
 
@@ -87,8 +87,8 @@ class Ui_api_token(object):
 
         self.line_2 = QFrame(api_token)
         self.line_2.setObjectName(u"line_2")
-        self.line_2.setFrameShape(QFrame.HLine)
-        self.line_2.setFrameShadow(QFrame.Sunken)
+        self.line_2.setFrameShape(QFrame.Shape.HLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line_2, 1, 0, 1, 1)
 

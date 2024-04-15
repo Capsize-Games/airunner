@@ -1,8 +1,6 @@
 from typing import Any, List
-
-from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QLabel, QDoubleSpinBox
-
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QDoubleSpinBox
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget
@@ -98,17 +96,20 @@ class SliderWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.settings_property = None
         self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
+        self.register(SignalCode.WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
         self.ui.slider.sliderReleased.connect(self.handle_slider_release)
+        self._callback = None
 
     def on_main_window_loaded_signal(self, _message):
         self.init()
 
     def init(self, **kwargs):
+        self._callback = kwargs.get("callback", None)
         slider_minimum = kwargs.get("slider_minimum", self.property("slider_minimum") or 0)
         slider_maximum = kwargs.get("slider_maximum", self.property("slider_maximum") or 100)
         spinbox_minimum = kwargs.get("spinbox_minimum", self.property("spinbox_minimum") or 0.0)
         spinbox_maximum = kwargs.get("spinbox_maximum", self.property("spinbox_maximum") or 100.0)
-        current_value = kwargs.get("current_value", self.property("current_value") or 0)
+        current_value = kwargs.get("current_value", self.property("current_value") or None)
         settings_property = kwargs.get("settings_property", self.property("settings_property") or None)
         label_text = kwargs.get("label_text", self.property("label_text") or "")
         display_as_float = kwargs.get("display_as_float", self.property("display_as_float") or False)
@@ -125,8 +126,11 @@ class SliderWidget(BaseWidget):
 
         divide_by = self.property("divide_by") or 1.0
 
-        if settings_property is not None:
-            current_value = self.get_settings_value(settings_property)
+        if current_value is None:
+            if settings_property is not None:
+                current_value = self.get_settings_value(settings_property)
+            else:
+                current_value = 0
 
         # set slider and spinbox names
         if slider_name:
@@ -169,7 +173,10 @@ class SliderWidget(BaseWidget):
         :param widget: the widget that triggered the callback
         :return:
         """
-        self.set_settings_value(attr_name, value)
+        if self._callback:
+            self._callback(attr_name, value, widget)
+        else:
+            self.set_settings_value(attr_name, value)
 
     def get_settings_value(self, settings_property):
         keys = settings_property.split(".")

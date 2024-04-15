@@ -60,6 +60,7 @@ class SignalCode(Enum):
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"
     AI_MODELS_CREATE_SIGNAL = "ai_models_create_signal"
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
+    WINDOW_LOADED_SIGNAL = "window_loaded_signal"
     APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"
     APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION = "add_bot_message_to_conversation"
     APPLICATION_MODELS_CHANGED_SIGNAL = "models_changed_signal"
@@ -227,6 +228,9 @@ class SignalCode(Enum):
     UPSCALE_SIGNAL = "upscale_signal"
     BASH_EXECUTE_SIGNAL = "bash_execute_signal"
     WRITE_FILE = "write_file_signal"
+    LLM_CHOOSE_RESPONSE_LENGTH_SIGNAL = "choose_response_length_signal"
+    PROCESS_SPEECH_SIGNAL = "process_speech_signal"
+    ADD_CHATBOT_MESSAGE_SIGNAL = "add_chatbot_message_signal"
 
 
 class EngineResponseCode(Enum):
@@ -320,6 +324,7 @@ class LLMToolName(Enum):
     VISION_STOP_CAPTURE = "vision_stop_capture"
     BASH_EXECUTE = "bash_execute"
     WRITE_FILE = "write_file"
+    CHOOSE_RESPONSE_LENGTH = "choose_response_length"
 
 
 class LLMActionType(Enum):

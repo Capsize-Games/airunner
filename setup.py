@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='airunner',
-    version="3.0.0.dev2",
+    version="3.0.0.dev3",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -15,57 +15,62 @@ setup(
     packages=find_packages("src"),
     python_requires=">=3.10.0",
     install_requires=[
-        "einops==0.7.0",
-        "ninja==1.11.1.1",
-        "JIT==0.2.7",
+        # Core application dependencies
         "tqdm==4.66.2",
-        "omegaconf==2.3.0",
         "accelerate==0.29.2",
-        "controlnet_aux==0.0.8",
-        "diffusers==0.27.2",
         "huggingface-hub==0.22.2",
         "numpy==1.26.4",
-        "Pillow==10.3.0",
         "pip==24.0",
         "PySide6==6.7.0",
         "PySide6_Addons==6.7.0",
         "PySide6_Essentials==6.7.0",
-        "pyre-extensions==0.0.30",
-        "lightning==2.2.1",
         "requests==2.31.0",
         "requests-oauthlib==2.0.0",
-        "safetensors==0.4.2",
         "scipy==1.13.0",
         "tokenizers==0.15.2",
-        "tqdm==4.66.2",
         "charset-normalizer==3.3.2",
-        "opencv-python-headless==4.9.0.80",
-        "setuptools==69.2.0",
         "typing_extensions==4.11.0",
         "urllib3==2.2.1",
-        "transformers==4.39.1",
-        "compel==2.0.2",
         "sympy==1.12.0",
-        "regex",
+        "regex==2023.12.25",
         "matplotlib==3.8.3",
         "torch==2.2.2",
         "torchvision==0.17.2",
         "torchaudio==2.2.2",
-        "auto-gptq==0.7.1",
         "optimum==1.18.0",
-        "bitsandbytes==0.43.0",
-        "tomesd==0.1.3",
-        "watchdog==4.0.0",
-        "sounddevice==0.4.6",
-        "datasets==2.18.0",
-        "sentence_transformers==2.6.1",
         "inflect==7.2.0",
         "tiktoken==0.6.0",
-        "pycountry==23.12.11",
-        "pyttsx3==2.90",
         "mediapipe==0.10.11",
-        "coverage==7.4.4",
-        "cryptography==42.0.5"
+        "cryptography==42.0.5",
+        "coverage==7.4.4",  # Required for testing
+        # "watchdog==4.0.0",  # Required for file watching
+        
+        # LLM Dependencies
+        "transformers==4.39.1",  
+        "auto-gptq==0.7.1",
+        "bitsandbytes==0.43.0",
+        "datasets==2.18.0",
+        "sentence_transformers==2.6.1",
+        "pycountry==23.12.11",
+        "sounddevice==0.4.6",  # Required for tts and stt
+        "pyttsx3==2.90",  # Required for tts
+
+        # Pyinstaller Dependencies
+        "ninja==1.11.1.1",
+        "JIT==0.2.7",
+        # "opencv-python-headless==4.9.0.80",
+        "setuptools==69.2.0",
+
+        # Stable Diffusion Dependencies
+        "omegaconf==2.3.0",
+        "diffusers==0.27.2",
+        "controlnet_aux==0.0.8",
+        "einops==0.7.0",  # Required for controlnet_aux
+        "Pillow==10.3.0",
+        "pyre-extensions==0.0.30",
+        "safetensors==0.4.2",
+        "compel==2.0.2",
+        "tomesd==0.1.3",
     ],
     dependency_links=[]
 )

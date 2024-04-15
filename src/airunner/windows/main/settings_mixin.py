@@ -18,7 +18,6 @@ from airunner.utils import default_hf_cache_dir
 
 tts_settings_default = {
     "use_bark": False,
-    "enable_tts": True,
     "use_cuda": True,
     "use_sentence_chunks": True,
     "use_word_chunks": False,
@@ -113,18 +112,25 @@ for category in ImageCategory:
 
 
 class SettingsMixin:
-    def __init__(self):
+    def __init__(
+        self,
+        use_cuda: bool = True,
+        ocr_enabled: bool = False,
+        tts_enabled: bool = False,
+        stt_enabled: bool = False,
+        ai_mode: bool = True,
+    ):
         self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = dict(
             installation_path="~/airunner",
             trust_remote_code=False,
-            use_cuda=True,
+            use_cuda=use_cuda,
             current_layer_index=0,
-            ocr_enabled=False,
-            tts_enabled=False,
-            stt_enabled=False,
-            ai_mode=True,
+            ocr_enabled=ocr_enabled,
+            tts_enabled=tts_enabled,
+            stt_enabled=stt_enabled,
+            ai_mode=ai_mode,
             nsfw_filter=True,
             resize_on_paste=True,
             image_to_new_layer=True,
@@ -177,8 +183,6 @@ class SettingsMixin:
                 "image": {
                     "use_guardrails": True,
                     "template_name": "image",
-                    "username": "User",
-                    "botname": "AIRunner",
                     "guardrails": (
                         "Avoid generating images that are illegal, "
                         "harmful, or might be seen as offensive."
@@ -230,6 +234,9 @@ class SettingsMixin:
                             "This is **MANDATORY**."
                         )
                     ])
+                },
+                "chatbot": {
+                    "use_system_datetime_in_system_prompt": False
                 }
             },
             llm_templates={
@@ -405,9 +412,10 @@ class SettingsMixin:
                     Default=DEFAULT_CHATBOT
                 ),
                 embeddings_model_path="BAAI/bge-small-en-v1.5",
-                prompt_template="StableLM 2 Zephyr: Default Chatbot",
+                prompt_template="Mistral 7B Instruct: Default Chatbot",
                 batch_size=1,
                 cache_llm_to_disk=True,
+                max_new_tokens=100
             ),
             tts_settings=tts_settings_default,
             stt_settings=dict(
