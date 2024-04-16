@@ -1,10 +1,21 @@
 from PIL import Image
-from PySide6.QtCore import QObject, QRect
+from PySide6.QtCore import (
+    QObject,
+    QRect
+)
 from cryptography.fernet import Fernet
-
-from airunner.enums import SDMode, GeneratorSection, Controlnet
+from airunner.enums import (
+    SDMode,
+    GeneratorSection,
+    Controlnet
+)
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import DEFAULT_SCHEDULER, MIN_NUM_INFERENCE_STEPS_IMG2IMG, SD_GUARDRAILS_KEY, SD_GUARDRAILS
+from airunner.settings import (
+    DEFAULT_SCHEDULER,
+    MIN_NUM_INFERENCE_STEPS_IMG2IMG,
+    SD_GUARDRAILS_KEY,
+    SD_GUARDRAILS
+)
 from airunner.utils import convert_base64_to_image
 from airunner.windows.main.settings_mixin import SettingsMixin
 

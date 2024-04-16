@@ -1,5 +1,4 @@
 import os
-import re
 
 
 def create_airunner_paths(path_settings: dict):
