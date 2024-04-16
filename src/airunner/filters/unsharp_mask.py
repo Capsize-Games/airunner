@@ -1,5 +1,4 @@
 from PIL.ImageFilter import UnsharpMask
-
 from airunner.filters.base_filter import BaseFilter
 
 

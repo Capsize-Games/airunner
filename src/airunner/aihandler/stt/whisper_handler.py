@@ -1,5 +1,9 @@
 import torch
-from transformers import AutoProcessor, WhisperForConditionalGeneration, AutoFeatureExtractor
+from transformers import (
+    AutoProcessor,
+    WhisperForConditionalGeneration,
+    AutoFeatureExtractor
+)
 from airunner.aihandler.stt.stt_handler import STTHandler
 from airunner.settings import DEFAULT_STT_HF_PATH
 

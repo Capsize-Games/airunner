@@ -8,7 +8,11 @@ from PySide6.QtWidgets import QApplication
 from typing import List
 import requests
 import torch
-from PIL import Image, ImageDraw, ImageFont
+from PIL import (
+    Image,
+    ImageDraw,
+    ImageFont
+)
 from controlnet_aux.processor import Processor
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import download_from_original_stable_diffusion_ckpt
 from diffusers.utils.torch_utils import randn_tensor

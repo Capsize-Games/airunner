@@ -9,8 +9,17 @@ from transformers import StoppingCriteria
 from airunner.aihandler.logger import Logger
 from airunner.json_extractor import JSONExtractor
 from airunner.mediator_mixin import MediatorMixin
-from airunner.enums import SignalCode, LLMChatRole, LLMActionType, ImageCategory, QueueType
-from airunner.utils import get_torch_device, clear_memory, create_worker
+from airunner.enums import (
+    SignalCode,
+    LLMChatRole,
+    LLMActionType,
+    ImageCategory
+)
+from airunner.utils import (
+    get_torch_device,
+    clear_memory,
+    create_worker
+)
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.agent_worker import AgentWorker
 
