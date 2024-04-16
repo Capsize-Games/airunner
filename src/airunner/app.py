@@ -1,7 +1,6 @@
 ####################################################################################################
 # SECURITY AND PRIVACY SETTINGS APPLIED HERE. DO NOT MODIFY THIS BLOCK
 ####################################################################################################
-import argparse
 import socket
 import sys
 
@@ -15,7 +14,6 @@ import sys
 def disable_network():
     def no_network(*args, **kwargs):
         raise RuntimeError("Network access is disabled")
-
     socket.socket = no_network
     socket.create_connection = no_network
     socket.connect = no_network
@@ -43,14 +41,17 @@ from airunner.settings import (
     HF_TOKEN,
     HF_HUB_VERBOSITY,
     HF_HUB_LOCAL_DIR_AUTO_SYMLINK_THRESHOLD,
-    HF_HUB_DISABLE_IMPLICIT_TOKEN, HF_ALLOW_DOWNLOADS,
+    HF_HUB_DISABLE_IMPLICIT_TOKEN,
     HF_HUB_OFFLINE,
     HF_DATASETS_OFFLINE,
     TRANSFORMERS_OFFLINE,
     DIFFUSERS_VERBOSITY,
     DEFAULT_HF_INFERENCE_ENDPOINT,
     DEFAULT_HF_HUB_OFFLINE,
-    DEFAULT_HF_ENDPOINT, DEFAULT_HF_DATASETS_OFFLINE, DEFAULT_TRANSFORMERS_OFFLINE, TRUST_REMOTE_CODE,
+    DEFAULT_HF_ENDPOINT,
+    DEFAULT_HF_DATASETS_OFFLINE,
+    DEFAULT_TRANSFORMERS_OFFLINE,
+    TRUST_REMOTE_CODE,
 )
 
 
@@ -116,7 +117,6 @@ from PySide6.QtCore import QObject, QTimer
 from PySide6.QtGui import QGuiApplication, QPixmap, Qt, QWindow
 from PySide6.QtWidgets import QApplication, QSplashScreen
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import SERVER
 from airunner.utils import get_version
 from airunner.windows.main.main_window import MainWindow
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -142,14 +142,11 @@ class App(
         """
         self.main_window_class_ = main_window_class or MainWindow
         self.wizard = None
-        self.args = self.prepare_argument_parser()
 
         """
-        If the --enable-network flag is passed then network access is enabled.
-        By default we are disabling network access.
+        Disable the network to prevent any network access.
         """
-        if not self.args.enable_network:
-            disable_network()
+        disable_network()
 
         """
         Mediator and Settings mixins are initialized here, enabling the application
@@ -159,14 +156,7 @@ class App(
         SettingsMixin.__init__(self)
         super(App, self).__init__()
 
-        """
-        If the --ss flag is passed, we will start a socket server.
-        By default the application is loaded as a GUI.
-        """
-        if self.args.ss:
-            self.run_socket_server()
-        else:
-            self.run_gui_application()
+        self.start()
 
     @property
     def do_show_setup_wizard(self) -> bool:
@@ -184,32 +174,11 @@ class App(
             not self.settings["agreements"]["airunner"]
         )
 
-    def run_socket_server(self):
+    def start(self):
         """
-        Run as a socket server if --ss flag is passed.
-        This can be used to run the application on a remote machine or
-        to be accessed by other applications.
-        The old socket server implementation has been removed so this method is empty.
+        Conditionally initialize and display the setup wizard.
+        :return:
         """
-        # SocketServer(
-        #     host=args.host,
-        #     port=args.port,
-        #     keep_alive=args.keep_alive,
-        #     packet_size=args.packet_size
-        # )
-        pass
-
-    def run_gui_application(self):
-        """
-        Run as a GUI application.
-        A splash screen is displayed while the application is loading
-        and a main window is displayed once the application is ready.
-        """
-        signal.signal(signal.SIGINT, self.signal_handler)
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
-        app = QApplication([])
-
-        # Initialize and conditionally display the setup wizard
         if self.do_show_setup_wizard:
             self.wizard = SetupWizard()
             self.wizard.exec()
@@ -217,6 +186,18 @@ class App(
         # Quit the application if the setup wizard was not completed
         if self.do_show_setup_wizard:
             sys.exit(0)
+
+    def run(self):
+        """
+        Run as a GUI application.
+        A splash screen is displayed while the application is loading
+        and a main window is displayed once the application is ready.
+
+        Override this method to run the application in a different mode.
+        """
+        signal.signal(signal.SIGINT, self.signal_handler)
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
+        app = QApplication([])
 
         # Continue with application execution
         splash = self.display_splash_screen(app)
@@ -304,18 +285,3 @@ class App(
         app.main_window = window
         splash.finish(window)
         window.raise_()
-
-    @staticmethod
-    def prepare_argument_parser():
-        """
-        Prepare the argument parser for the application.
-        :return:
-        """
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--enable-network", action="store_true", default=False)
-        parser.add_argument("--ss", action="store_true", default=False)
-        parser.add_argument("--host", default=SERVER["host"])
-        parser.add_argument("--port", default=SERVER["port"])
-        parser.add_argument("--keep-alive", action="store_true", default=False)
-        parser.add_argument("--packet-size", default=SERVER["port"])
-        return parser.parse_args()
