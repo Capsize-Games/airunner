@@ -10,7 +10,6 @@ class PathSettings(BaseWizard):
         self.ui.base_path.setText(self.settings["path_settings"]["base_path"])
 
     def save_settings(self):
-        print("CREATING AI RUNNER PATHS")
         settings = self.settings
         settings["path_settings"]["base_path"] = self.ui.base_path.text()
         create_airunner_paths(self.settings["path_settings"])
