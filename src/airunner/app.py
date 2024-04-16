@@ -65,14 +65,15 @@ def set_huggingface_environment_variables(
     :param allow_remote_inference:
     :return:
     """
-    # The only reason this isn't hard coded is in case they change the
-    # expected value in the future.
     os.environ["HF_HUB_DISABLE_TELEMETRY"] = HF_HUB_DISABLE_TELEMETRY
 
     """
     Conditionally set environment variables which are used 
     to control the ability of the Hugging Face Hub and other
     related services to access the internet.
+    
+    We set environment variables so that we can ensure the applications
+    are not overridden from any other source.
     """
     hf_hub_offline = HF_HUB_OFFLINE if not allow_downloads else DEFAULT_HF_HUB_OFFLINE
     hf_datasets_offline = HF_DATASETS_OFFLINE if not allow_downloads else DEFAULT_HF_DATASETS_OFFLINE
