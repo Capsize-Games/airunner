@@ -1,32 +1,9 @@
-####################################################################################################
-# SECURITY AND PRIVACY SETTINGS APPLIED HERE. DO NOT MODIFY THIS BLOCK
-####################################################################################################
-import socket
 import sys
-
-
-####################################################################################################
-# NETWORK ACCESS CONTROL
-# Completely disable network access
-# OS environment variables must be initialized here before importing any other modules.
-# This is due to the way huggingface diffusion models are imported.
-####################################################################################################
-def disable_network():
-    def no_network(*args, **kwargs):
-        raise RuntimeError("Network access is disabled")
-    socket.socket = no_network
-    socket.create_connection = no_network
-    socket.connect = no_network
-    socket.bind = no_network
-####################################################################################################
-# END OF NETWORK ACCESS CONTROL
-####################################################################################################
-
+import os
 
 ####################################################################################################
 # Set Hugging Face environment variables
 ####################################################################################################
-import os
 from airunner.settings import (
     HF_HUB_DISABLE_TELEMETRY,
     HF_HOME,
@@ -144,11 +121,6 @@ class App(
         self.main_window_class_ = main_window_class or MainWindow
         self.wizard = None
         self.app = None
-
-        """
-        Disable the network to prevent any network access.
-        """
-        disable_network()
 
         """
         Mediator and Settings mixins are initialized here, enabling the application
