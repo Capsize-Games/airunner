@@ -428,9 +428,9 @@ BASE_ART_MODELS_PATH = os.path.join(BASE_PATH, "art", "models")
 BASE_ART_OTHER_PATH = os.path.join(BASE_PATH, "art", "other")
 BASE_TEXT_MODELS_PATH = os.path.join(BASE_PATH, "text", "models")
 BASE_TEXT_OTHER_PATH = os.path.join(BASE_PATH, "text", "other")
-
 DEFAULT_PATHS = {
     "hf_cache_path": HF_CACHE_DIR,
+    "base_path": BASE_PATH,
     "txt2img_model_path": os.path.join(BASE_ART_MODELS_PATH, "txt2img"),
     "depth2img_model_path": os.path.join(BASE_ART_MODELS_PATH, "depth2img"),
     "pix2pix_model_path": os.path.join(BASE_ART_MODELS_PATH, "pix2pix"),
