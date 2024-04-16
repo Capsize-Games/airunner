@@ -1,9 +1,15 @@
 from airunner.aihandler.llm.agent import AIRunnerAgent
 from airunner.aihandler.llm.local_agent import LocalAgent
-from transformers import AutoModelForCausalLM, TextIteratorStreamer
-from airunner.aihandler.llm.llm_tools import RespondToUserTool
+from transformers import (
+    AutoModelForCausalLM,
+    TextIteratorStreamer
+)
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
-from airunner.enums import SignalCode, LLMToolName, LLMActionType
+from airunner.enums import (
+    SignalCode,
+    LLMToolName,
+    LLMActionType
+)
 from airunner.utils.get_current_chatbot import get_current_chatbot_property
 
 

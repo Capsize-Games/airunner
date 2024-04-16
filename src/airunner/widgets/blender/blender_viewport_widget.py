@@ -1,7 +1,11 @@
-from PySide6.QtWidgets import QVBoxLayout, QLabel, QSpinBox, QPushButton
+from PySide6.QtWidgets import (
+    QVBoxLayout,
+    QLabel,
+    QSpinBox,
+    QPushButton
+)
 from PySide6.QtGui import QPixmap
 from threading import Lock
-
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 
