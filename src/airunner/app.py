@@ -142,6 +142,7 @@ class App(
         """
         self.main_window_class_ = main_window_class or MainWindow
         self.wizard = None
+        self.app = None
 
         """
         Disable the network to prevent any network access.
@@ -179,6 +180,10 @@ class App(
         Conditionally initialize and display the setup wizard.
         :return:
         """
+        signal.signal(signal.SIGINT, self.signal_handler)
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
+        self.app = QApplication([])
+
         if self.do_show_setup_wizard:
             self.wizard = SetupWizard()
             self.wizard.exec()
@@ -195,23 +200,20 @@ class App(
 
         Override this method to run the application in a different mode.
         """
-        signal.signal(signal.SIGINT, self.signal_handler)
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
-        app = QApplication([])
 
         # Continue with application execution
-        splash = self.display_splash_screen(app)
+        splash = self.display_splash_screen(self.app)
 
         # Show the main application window
         QTimer.singleShot(
             50,
             partial(
                 self.show_main_application,
-                app,
+                self.app,
                 splash
             )
         )
-        sys.exit(app.exec())
+        sys.exit(self.app.exec())
 
     @staticmethod
     def signal_handler(
