@@ -4,17 +4,45 @@ import subprocess
 import webbrowser
 from functools import partial
 from PySide6 import QtGui
-from PySide6.QtCore import Slot, Signal
+from PySide6.QtCore import (
+    Slot,
+    Signal
+)
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QCheckBox
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QMessageBox,
+    QCheckBox
+)
 from airunner.aihandler.logger import Logger
-from airunner.settings import STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
-    DARK_THEME_NAME, LIGHT_THEME_NAME, NSFW_CONTENT_DETECTED_MESSAGE
-from airunner.enums import Mode, SignalCode, CanvasToolName, WindowSection, GeneratorSection
+from airunner.settings import (
+    STATUS_ERROR_COLOR,
+    STATUS_NORMAL_COLOR_LIGHT,
+    STATUS_NORMAL_COLOR_DARK,
+    DARK_THEME_NAME,
+    LIGHT_THEME_NAME,
+    NSFW_CONTENT_DETECTED_MESSAGE
+)
+from airunner.enums import (
+    Mode,
+    SignalCode,
+    CanvasToolName,
+    WindowSection,
+    GeneratorSection
+)
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
-from airunner.settings import BASE_PATH, BUG_REPORT_LINK, VULNERABILITY_REPORT_LINK
-from airunner.utils import get_version, set_widget_state, clear_memory
+from airunner.settings import (
+    BASE_PATH,
+    BUG_REPORT_LINK,
+    VULNERABILITY_REPORT_LINK
+)
+from airunner.utils import (
+    get_version,
+    set_widget_state,
+    clear_memory
+)
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -267,7 +295,6 @@ class MainWindow(
         self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     def register_signals(self):
-        # on window resize:
         self.logger.debug("Connecting signals")
         self.register(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
         self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
