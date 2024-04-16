@@ -20,7 +20,8 @@ from diffusers import (
     AutoPipelineForInpainting,
     StableDiffusionInstructPix2PixPipeline,
     ControlNetModel,
-    StableDiffusionImg2ImgPipeline, StableDiffusionInpaintPipeline
+    StableDiffusionImg2ImgPipeline,
+    StableDiffusionInpaintPipeline
 )
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers import (
