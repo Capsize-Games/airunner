@@ -61,7 +61,7 @@ airunner.src.utils.set_huggingface_environment_variables
 # the model downloader (in the setup wizard) as well as the model
 # manager to download models from huggingface and Civitai.
 ####################################################################
-HF_ALLOW_DOWNLOADS = False  # This is an AI Runner specific variable
+HF_ALLOW_DOWNLOADS = True  # This is an AI Runner specific variable
 
 ####################################################################
 # HF_HUB_DISABLE_TELEMETRY is used to disable telemetry for
