@@ -3,7 +3,11 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
-class BaseWizard(QWizardPage, MediatorMixin, SettingsMixin):
+class BaseWizard(
+    QWizardPage,
+    MediatorMixin,
+    SettingsMixin
+):
     class_name_ = None
     widget_class_ = None
 
