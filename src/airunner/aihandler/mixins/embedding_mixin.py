@@ -1,5 +1,4 @@
 import os
-
 from airunner.enums import SignalCode
 
 
