@@ -288,7 +288,12 @@ from airunner.enums import (
     ImageGenerator,
     Scheduler,
     SignalCode,
-    Gender
+    Gender,
+    CanvasToolName,
+    Controlnet,
+    Mode,
+    LLMActionType,
+    ImageCategory
 )
 
 ####################################################################
@@ -423,40 +428,30 @@ BASE_ART_MODELS_PATH = os.path.join(BASE_PATH, "art", "models")
 BASE_ART_OTHER_PATH = os.path.join(BASE_PATH, "art", "other")
 BASE_TEXT_MODELS_PATH = os.path.join(BASE_PATH, "text", "models")
 BASE_TEXT_OTHER_PATH = os.path.join(BASE_PATH, "text", "other")
+
 DEFAULT_PATHS = {
-    "art": {
-        "models": {
-            "txt2img": os.path.join(BASE_ART_MODELS_PATH, "txt2img"),
-            "depth2img": os.path.join(BASE_ART_MODELS_PATH, "depth2img"),
-            "pix2pix": os.path.join(BASE_ART_MODELS_PATH, "pix2pix"),
-            "inpaint": os.path.join(BASE_ART_MODELS_PATH, "inpaint"),
-            "upscale": os.path.join(BASE_ART_MODELS_PATH, "upscale"),
-            "txt2vid": os.path.join(BASE_ART_MODELS_PATH, "txt2vid"),
-            "embeddings": os.path.join(BASE_ART_MODELS_PATH, "embeddings"),
-            "lora": os.path.join(BASE_ART_MODELS_PATH, "lora"),
-            "vae": os.path.join(BASE_ART_MODELS_PATH, "vae"),
-        },
-        "other": {
-            "images": os.path.join(BASE_ART_OTHER_PATH, "images"),
-            "videos": os.path.join(BASE_ART_OTHER_PATH, "videos"),
-        },
-    },
-    "text": {
-        "models": {
-            "casuallm": os.path.join(BASE_TEXT_MODELS_PATH, "casuallm"),
-            "seq2seq": os.path.join(BASE_TEXT_MODELS_PATH, "seq2seq"),
-            "visualqa": os.path.join(BASE_TEXT_MODELS_PATH, "visualqa"),
-            "casuallm_cache": os.path.join(BASE_TEXT_MODELS_PATH, "casuallm", "cache"),
-            "seq2seq_cache": os.path.join(BASE_TEXT_MODELS_PATH, "seq2seq", "cache"),
-            "visualqa_cache": os.path.join(BASE_TEXT_MODELS_PATH, "visualqa", "cache"),
-            "misc_cache": os.path.join(BASE_TEXT_MODELS_PATH, "misc", "cache"),
-        },
-        "other": {
-            "ebooks": os.path.join(BASE_TEXT_OTHER_PATH, "ebooks"),
-            "documents": os.path.join(BASE_TEXT_OTHER_PATH, "documents"),
-            "llama_index": os.path.join(BASE_TEXT_OTHER_PATH, "llama_index"),
-        }
-    }
+    "hf_cache_path": HF_CACHE_DIR,
+    "txt2img_model_path": os.path.join(BASE_ART_MODELS_PATH, "txt2img"),
+    "depth2img_model_path": os.path.join(BASE_ART_MODELS_PATH, "depth2img"),
+    "pix2pix_model_path": os.path.join(BASE_ART_MODELS_PATH, "pix2pix"),
+    "inpaint_model_path": os.path.join(BASE_ART_MODELS_PATH, "inpaint"),
+    "upscale_model_path": os.path.join(BASE_ART_MODELS_PATH, "upscale"),
+    "txt2vid_model_path": os.path.join(BASE_ART_MODELS_PATH, "txt2vid"),
+    "vae_model_path": os.path.join(BASE_ART_MODELS_PATH, "vae"),
+    "embeddings_model_path": os.path.join(BASE_ART_MODELS_PATH, "embeddings"),
+    "lora_model_path": os.path.join(BASE_ART_MODELS_PATH, "lora"),
+    "image_path": os.path.join(BASE_ART_OTHER_PATH, "images"),
+    "video_path": os.path.join(BASE_ART_OTHER_PATH, "videos"),
+    "ebooks_path": os.path.join(BASE_TEXT_OTHER_PATH, "ebooks"),
+    "documents_path": os.path.join(BASE_TEXT_OTHER_PATH, "documents"),
+    "llm_casuallm_model_path": os.path.join(BASE_TEXT_MODELS_PATH, "casuallm"),
+    "llm_seq2seq_model_path": os.path.join(BASE_TEXT_MODELS_PATH, "seq2seq"),
+    "llm_visualqa_model_path": os.path.join(BASE_TEXT_MODELS_PATH, "visualqa"),
+    "llm_misc_model_path": os.path.join(BASE_TEXT_MODELS_PATH, "misc"),
+    "llm_casuallm_cache_path": os.path.join(BASE_TEXT_MODELS_PATH, "casuallm", "cache"),
+    "llm_seq2seq_cache_path": os.path.join(BASE_TEXT_MODELS_PATH, "seq2seq", "cache"),
+    "llm_visualqa_cache_path": os.path.join(BASE_TEXT_MODELS_PATH, "visualqa", "cache"),
+    "llm_misc_cache_path": os.path.join(BASE_TEXT_MODELS_PATH, "misc", "cache"),
 }
 
 
@@ -532,215 +527,234 @@ DEFAULT_CHATBOT = {
 ####################################################################
 # BARK_VOICES is a dictionary that contains the available voices for
 # the text-to-speech feature used with the Bark model.
+# Uncomment the languages you want to use.
+# By default, only English is enabled and only one two voices
+# are downloaded
 ####################################################################
 BARK_VOICES = {
     "English": {
         "Male": [
-            "v2/en_speaker_0",
-            "v2/en_speaker_1",
-            "v2/en_speaker_2",
-            "v2/en_speaker_3",
-            "v2/en_speaker_4",
-            "v2/en_speaker_5",
+            # "v2/en_speaker_0",
+            # "v2/en_speaker_1",
+            # "v2/en_speaker_2",
+            # "v2/en_speaker_3",
+            # "v2/en_speaker_4",
+            # "v2/en_speaker_5",
             "v2/en_speaker_6",
-            "v2/en_speaker_7",
-            "v2/en_speaker_8",
+            # "v2/en_speaker_7",
+            # "v2/en_speaker_8",
         ],
         "Female": [
             "v2/en_speaker_9"
         ],
     },
-    "Chinese (Simplified)": {
-        "Male": [
-            "v2/zh_speaker_0",
-            "v2/zh_speaker_1",
-            "v2/zh_speaker_2",
-            "v2/zh_speaker_3",
-            "v2/zh_speaker_5",
-            "v2/zh_speaker_8",
-        ],
-        "Female": [
-            "v2/zh_speaker_4",
-            "v2/zh_speaker_6",
-            "v2/zh_speaker_7",
-            "v2/zh_speaker_9",
-        ],
-    },
-    "French": {
-        "Male": [
-            "v2/fr_speaker_0",
-            "v2/fr_speaker_3",
-            "v2/fr_speaker_4",
-            "v2/fr_speaker_6",
-            "v2/fr_speaker_7",
-            "v2/fr_speaker_8",
-            "v2/fr_speaker_9",
-        ],
-        "Female": [
-            "v2/fr_speaker_1",
-            "v2/fr_speaker_2",
-            "v2/fr_speaker_5",
-        ],
-    },
-    "German": {
-        "Male": [
-            "v2/de_speaker_0",
-            "v2/de_speaker_1",
-            "v2/de_speaker_2",
-            "v2/de_speaker_4",
-            "v2/de_speaker_5",
-            "v2/de_speaker_6",
-            "v2/de_speaker_7",
-            "v2/de_speaker_9",
-        ],
-        "Female": [
-            "v2/de_speaker_3",
-            "v2/de_speaker_8",
-        ],
-    },
-    "Hindi": {
-        "Male": [
-            "v2/hi_speaker_2",
-            "v2/hi_speaker_5",
-            "v2/hi_speaker_6",
-            "v2/hi_speaker_7",
-            "v2/hi_speaker_8",
-        ],
-        "Female": [
-            "v2/hi_speaker_0",
-            "v2/hi_speaker_1",
-            "v2/hi_speaker_3",
-            "v2/hi_speaker_4",
-            "v2/hi_speaker_9",
-        ],
-    },
-    "Italian": {
-        "Male": [
-            "v2/it_speaker_0",
-            "v2/it_speaker_1",
-            "v2/it_speaker_3",
-            "v2/it_speaker_4",
-            "v2/it_speaker_5",
-            "v2/it_speaker_6",
-            "v2/it_speaker_8",
-        ],
-        "Female": [
-            "v2/it_speaker_2",
-            "v2/it_speaker_7",
-            "v2/it_speaker_9",
-        ],
-    },
-    "Japanese": {
-        "Male": [
-            "v2/ja_speaker_2",
-            "v2/ja_speaker_6",
-        ],
-        "Female": [
-            "v2/ja_speaker_0",
-            "v2/ja_speaker_1",
-            "v2/ja_speaker_3",
-            "v2/ja_speaker_4",
-            "v2/ja_speaker_5",
-            "v2/ja_speaker_7",
-            "v2/ja_speaker_8",
-            "v2/ja_speaker_9",
-        ],
-    },
-    "Korean": {
-        "Male": [
-            "v2/ko_speaker_1",
-            "v2/ko_speaker_2",
-            "v2/ko_speaker_3",
-            "v2/ko_speaker_4",
-            "v2/ko_speaker_5",
-            "v2/ko_speaker_6",
-            "v2/ko_speaker_7",
-            "v2/ko_speaker_8",
-            "v2/ko_speaker_9",
-        ],
-        "Female": [
-            "v2/ko_speaker_0",
-        ],
-    },
-    "Polish": {
-        "Male": [
-            "v2/pl_speaker_0",
-            "v2/pl_speaker_1",
-            "v2/pl_speaker_2",
-            "v2/pl_speaker_3",
-            "v2/pl_speaker_5",
-            "v2/pl_speaker_7",
-            "v2/pl_speaker_8",
-        ],
-        "Female": [
-            "v2/pl_speaker_4",
-            "v2/pl_speaker_6",
-            "v2/pl_speaker_9",
-        ],
-    },
-    "Portuguese": {
-        "Male": [
-            "v2/pt_speaker_0",
-            "v2/pt_speaker_1",
-            "v2/pt_speaker_2",
-            "v2/pt_speaker_3",
-            "v2/pt_speaker_4",
-            "v2/pt_speaker_5",
-            "v2/pt_speaker_6",
-            "v2/pt_speaker_7",
-            "v2/pt_speaker_8",
-            "v2/pt_speaker_9",
-        ],
-        "Female": [],
-    },
-    "Russian": {
-        "Male": [
-            "v2/ru_speaker_0",
-            "v2/ru_speaker_1",
-            "v2/ru_speaker_2",
-            "v2/ru_speaker_3",
-            "v2/ru_speaker_4",
-            "v2/ru_speaker_7",
-            "v2/ru_speaker_8",
-        ],
-        "Female": [
-            "v2/ru_speaker_5",
-            "v2/ru_speaker_6",
-            "v2/ru_speaker_9",
-        ],
-    },
-    "Spanish": {
-        "Male": [
-            "v2/es_speaker_0",
-            "v2/es_speaker_1",
-            "v2/es_speaker_2",
-            "v2/es_speaker_3",
-            "v2/es_speaker_4",
-            "v2/es_speaker_5",
-            "v2/es_speaker_6",
-            "v2/es_speaker_7",
-        ],
-        "Female": [
-            "v2/es_speaker_8",
-            "v2/es_speaker_9",
-        ],
-    },
-    "Turkish": {
-        "Male": [
-            "v2/tr_speaker_0",
-            "v2/tr_speaker_1",
-            "v2/tr_speaker_2",
-            "v2/tr_speaker_3",
-            "v2/tr_speaker_6",
-            "v2/tr_speaker_7",
-            "v2/tr_speaker_8",
-            "v2/tr_speaker_9",
-        ],
-        "Female": [
-            "v2/tr_speaker_4",
-            "v2/tr_speaker_5",
-        ],
-    },
+    # "Chinese (Simplified)": {
+    #     "Male": [
+    #         "v2/zh_speaker_0",
+    #         "v2/zh_speaker_1",
+    #         "v2/zh_speaker_2",
+    #         "v2/zh_speaker_3",
+    #         "v2/zh_speaker_5",
+    #         "v2/zh_speaker_8",
+    #     ],
+    #     "Female": [
+    #         "v2/zh_speaker_4",
+    #         "v2/zh_speaker_6",
+    #         "v2/zh_speaker_7",
+    #         "v2/zh_speaker_9",
+    #     ],
+    # },
+    # "French": {
+    #     "Male": [
+    #         "v2/fr_speaker_0",
+    #         "v2/fr_speaker_3",
+    #         "v2/fr_speaker_4",
+    #         "v2/fr_speaker_6",
+    #         "v2/fr_speaker_7",
+    #         "v2/fr_speaker_8",
+    #         "v2/fr_speaker_9",
+    #     ],
+    #     "Female": [
+    #         "v2/fr_speaker_1",
+    #         "v2/fr_speaker_2",
+    #         "v2/fr_speaker_5",
+    #     ],
+    # },
+    # "German": {
+    #     "Male": [
+    #         "v2/de_speaker_0",
+    #         "v2/de_speaker_1",
+    #         "v2/de_speaker_2",
+    #         "v2/de_speaker_4",
+    #         "v2/de_speaker_5",
+    #         "v2/de_speaker_6",
+    #         "v2/de_speaker_7",
+    #         "v2/de_speaker_9",
+    #     ],
+    #     "Female": [
+    #         "v2/de_speaker_3",
+    #         "v2/de_speaker_8",
+    #     ],
+    # },
+    # "Hindi": {
+    #     "Male": [
+    #         "v2/hi_speaker_2",
+    #         "v2/hi_speaker_5",
+    #         "v2/hi_speaker_6",
+    #         "v2/hi_speaker_7",
+    #         "v2/hi_speaker_8",
+    #     ],
+    #     "Female": [
+    #         "v2/hi_speaker_0",
+    #         "v2/hi_speaker_1",
+    #         "v2/hi_speaker_3",
+    #         "v2/hi_speaker_4",
+    #         "v2/hi_speaker_9",
+    #     ],
+    # },
+    # "Italian": {
+    #     "Male": [
+    #         "v2/it_speaker_0",
+    #         "v2/it_speaker_1",
+    #         "v2/it_speaker_3",
+    #         "v2/it_speaker_4",
+    #         "v2/it_speaker_5",
+    #         "v2/it_speaker_6",
+    #         "v2/it_speaker_8",
+    #     ],
+    #     "Female": [
+    #         "v2/it_speaker_2",
+    #         "v2/it_speaker_7",
+    #         "v2/it_speaker_9",
+    #     ],
+    # },
+    # "Japanese": {
+    #     "Male": [
+    #         "v2/ja_speaker_2",
+    #         "v2/ja_speaker_6",
+    #     ],
+    #     "Female": [
+    #         "v2/ja_speaker_0",
+    #         "v2/ja_speaker_1",
+    #         "v2/ja_speaker_3",
+    #         "v2/ja_speaker_4",
+    #         "v2/ja_speaker_5",
+    #         "v2/ja_speaker_7",
+    #         "v2/ja_speaker_8",
+    #         "v2/ja_speaker_9",
+    #     ],
+    # },
+    # "Korean": {
+    #     "Male": [
+    #         "v2/ko_speaker_1",
+    #         "v2/ko_speaker_2",
+    #         "v2/ko_speaker_3",
+    #         "v2/ko_speaker_4",
+    #         "v2/ko_speaker_5",
+    #         "v2/ko_speaker_6",
+    #         "v2/ko_speaker_7",
+    #         "v2/ko_speaker_8",
+    #         "v2/ko_speaker_9",
+    #     ],
+    #     "Female": [
+    #         "v2/ko_speaker_0",
+    #     ],
+    # },
+    # "Polish": {
+    #     "Male": [
+    #         "v2/pl_speaker_0",
+    #         "v2/pl_speaker_1",
+    #         "v2/pl_speaker_2",
+    #         "v2/pl_speaker_3",
+    #         "v2/pl_speaker_5",
+    #         "v2/pl_speaker_7",
+    #         "v2/pl_speaker_8",
+    #     ],
+    #     "Female": [
+    #         "v2/pl_speaker_4",
+    #         "v2/pl_speaker_6",
+    #         "v2/pl_speaker_9",
+    #     ],
+    # },
+    # "Portuguese": {
+    #     "Male": [
+    #         "v2/pt_speaker_0",
+    #         "v2/pt_speaker_1",
+    #         "v2/pt_speaker_2",
+    #         "v2/pt_speaker_3",
+    #         "v2/pt_speaker_4",
+    #         "v2/pt_speaker_5",
+    #         "v2/pt_speaker_6",
+    #         "v2/pt_speaker_7",
+    #         "v2/pt_speaker_8",
+    #         "v2/pt_speaker_9",
+    #     ],
+    #     "Female": [],
+    # },
+    # "Russian": {
+    #     "Male": [
+    #         "v2/ru_speaker_0",
+    #         "v2/ru_speaker_1",
+    #         "v2/ru_speaker_2",
+    #         "v2/ru_speaker_3",
+    #         "v2/ru_speaker_4",
+    #         "v2/ru_speaker_7",
+    #         "v2/ru_speaker_8",
+    #     ],
+    #     "Female": [
+    #         "v2/ru_speaker_5",
+    #         "v2/ru_speaker_6",
+    #         "v2/ru_speaker_9",
+    #     ],
+    # },
+    # "Spanish": {
+    #     "Male": [
+    #         "v2/es_speaker_0",
+    #         "v2/es_speaker_1",
+    #         "v2/es_speaker_2",
+    #         "v2/es_speaker_3",
+    #         "v2/es_speaker_4",
+    #         "v2/es_speaker_5",
+    #         "v2/es_speaker_6",
+    #         "v2/es_speaker_7",
+    #     ],
+    #     "Female": [
+    #         "v2/es_speaker_8",
+    #         "v2/es_speaker_9",
+    #     ],
+    # },
+    # "Turkish": {
+    #     "Male": [
+    #         "v2/tr_speaker_0",
+    #         "v2/tr_speaker_1",
+    #         "v2/tr_speaker_2",
+    #         "v2/tr_speaker_3",
+    #         "v2/tr_speaker_6",
+    #         "v2/tr_speaker_7",
+    #         "v2/tr_speaker_8",
+    #         "v2/tr_speaker_9",
+    #     ],
+    #     "Female": [
+    #         "v2/tr_speaker_4",
+    #         "v2/tr_speaker_5",
+    #     ],
+    # },
+}
+
+####################################################################
+# DEFAULT_BARK_SETTINGS is a dictionary that contains the default
+# settings for the Bark model.
+# These settings can be changed in the GUI or here.
+####################################################################
+DEFAULT_BARK_SETTINGS = {
+    "language": "English",
+    "voice": "v2/en_speaker_6",
+    "gender": "Male",
+    "fine_temperature": 80,
+    "coarse_temperature": 40,
+    "semantic_temperature": 80,
+    "processor_path": DEFAULT_BARK_MODEL_PATHS["processor"],
+    "model_path": DEFAULT_BARK_MODEL_PATHS["model"],
 }
 
 ####################################################################
@@ -908,6 +922,66 @@ AVAILABLE_SCHEDULERS_BY_ACTION.update({
 })
 MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
 NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
+####################################################################
+# Create the GENERATOR_SETTINGS so that we have the presets for
+# Each generator category.
+####################################################################
+STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
+    prompt="",
+    negative_prompt="",
+    steps=20,
+    ddim_eta=0.5,
+    height=512,
+    width=512,
+    scale=0,
+    seed=42,
+    random_seed=True,
+    model="",
+    scheduler=DEFAULT_SCHEDULER,
+    prompt_triggers="",
+    strength=50,
+    image_guidance_scale=150,
+    n_samples=1,
+    enable_controlnet=False,
+    clip_skip=0,
+    variation=False,
+    use_prompt_builder=False,
+    version="",
+    is_preset=False,
+    input_image=None,
+)
+DEFAULT_GENERATOR_SETTINGS = dict(
+    controlnet_image_settings=dict(
+        imported_image_base64=None,
+        link_to_input_image=True,
+        use_imported_image=False,
+        use_grid_image=False,
+        recycle_grid_image=False,
+        mask_link_input_image=False,
+        mask_use_imported_image=False,
+        controlnet=Controlnet.CANNY.value,
+        conditioning_scale=100,
+        guidance_scale=750,
+        controlnet_image_base64=None
+    ),
+    section="txt2img",
+    generator_name="stablediffusion",
+    presets={},
+)
+GENERATOR_SETTINGS = DEFAULT_GENERATOR_SETTINGS.copy()
+GENERATOR_SETTINGS.update(STABLEDIFFUSION_GENERATOR_SETTINGS)
+for category in ImageCategory:
+    GENERATOR_SETTINGS["presets"][category.value] = {}
+    GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value] = {}
+
+    for section in GeneratorSection:
+        # TODO: default upscale model?
+        if section == GeneratorSection.UPSCALE:
+            continue
+        default_model = DEFAULT_MODELS[ImageGenerator.STABLEDIFFUSION.value][section.value]
+        GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value][
+            section.value] = STABLEDIFFUSION_GENERATOR_SETTINGS.copy()
+
 
 ####################################################################
 # Application settings
@@ -964,6 +1038,376 @@ DEFAULT_SHORTCUTS = {
         "signal": SignalCode.QUIT_APPLICATION.value
     },
 }
+
+
+####################################################################
+# DEFAULT_TTS_SETTINGS is a dictionary that contains the default
+# settings for the text-to-speech feature.
+# These settings can be changed in the GUI or here.
+####################################################################
+TTS_SETTINGS_DEFAULT = {
+    "use_bark": False,
+    "use_cuda": True,
+    "use_sentence_chunks": True,
+    "use_word_chunks": False,
+    "cuda_index": 0,
+    "word_chunks": 1,
+    "sentence_chunks": 1,
+    "play_queue_buffer_length": 1,
+    "enable_cpu_offload": True,
+    "model": "SpeechT5",
+    "speecht5": DEFAULT_SPEECHT5_MODEL_PATHS,
+    "espeak": {
+        "gender": "male",
+        "voice": "male1",
+        "language": "en-US",
+        "rate": 100,
+        "pitch": 100,
+        "volume": 100,
+        "punctuation_mode": "none",
+    },
+    "bark": DEFAULT_BARK_SETTINGS,
+}
+
+
+####################################################################
+# DEFAULT_APPLICATION_SETTINGS
+# This is a collection of all the settings required to
+# run the AI Runner application
+####################################################################
+from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
+from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
+from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
+from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
+
+DEFAULT_USE_CUDA = True
+DEFAULT_OCR_ENABLED = False
+DEFAULT_TTS_ENABLED = False
+DEFAULT_STT_ENABLED = False
+DEFAULT_AI_MODE = False
+
+DEFAULT_APPLICATION_SETTINGS = dict(
+    ####################################################################
+    # SettingsMixin overrides the following settings
+    # This is so that we can easily override these at runtime without
+    # changing the default settings here.
+    ####################################################################
+    use_cuda=DEFAULT_USE_CUDA,
+    ocr_enabled=DEFAULT_OCR_ENABLED,
+    tts_enabled=DEFAULT_TTS_ENABLED,
+    stt_enabled=DEFAULT_STT_ENABLED,
+    ai_mode=DEFAULT_AI_MODE,
+    ####################################################################
+    # End of SettingsMixin overrides
+    ####################################################################
+
+    installation_path=BASE_PATH,
+    current_layer_index=0,
+    paths_initialized=False,
+    trust_remote_code=False,  # Leave this hardcoded. We will never trust remote code.
+    nsfw_filter=True,
+    resize_on_paste=True,
+    image_to_new_layer=True,
+    dark_mode_enabled=True,
+    override_system_theme=True,
+    latest_version_check=True,
+    app_version="",
+    allow_online_mode=True,
+    current_version_stablediffusion="",
+    current_tool=CanvasToolName.ACTIVE_GRID_AREA,
+    image_export_type="png",
+    auto_export_images=True,
+    show_active_image_area=True,
+    working_width=512,
+    working_height=512,
+    current_llm_generator="casuallm",
+    current_image_generator=ImageGenerator.STABLEDIFFUSION.value,
+    generator_section=GeneratorSection.TXT2IMG.value,
+    hf_api_key_read_key="",
+    hf_api_key_write_key="",
+    pipeline="txt2img",
+    pipeline_version="",
+    is_maximized=False,
+    pivot_point_x=0,
+    pivot_point_y=0,
+    mode=Mode.IMAGE.value,
+    autoload_sd=True,
+    autoload_llm=False,
+    show_nsfw_warning=True,
+    ocr_settings=dict(
+        model_path=DEFAULT_OCR_MODEL_PATH,
+    ),
+    document_settings={
+        "width": 512,
+        "height": 512,
+    },
+    font_settings={
+        "chat": {
+            "font_family": "Arial",
+            "font_size": 12,
+        },
+        "primary": {
+            "font_family": "Arial",
+            "font_size": 12,
+        }
+    },
+    prompt_templates={
+        "image": {
+            "use_guardrails": True,
+            "template_name": "image",
+            "guardrails": DEFAULT_IMAGE_LLM_GUARDRAILS,
+            "system": DEFAULT_IMAGE_SYSTEM_PROMPT,
+        },
+        "chatbot": {
+            "use_system_datetime_in_system_prompt": False
+        }
+    },
+    llm_templates={
+        "Mistral 7B Instruct: Default Chatbot": dict(
+            name="Mistral 7B Instruct: Default Chatbot",
+            model=DEFAULT_LLM_HF_PATH,
+            llm_category="casuallm",
+        ),
+    },
+    shortcut_key_settings=DEFAULT_SHORTCUTS,
+    window_settings=dict(
+        content_splitter=None,
+        splitter=None,
+        mode_tab_widget_index=0,
+        tool_tab_widget_index=0,
+        center_tab_index=0,
+        generator_tab_index=0,
+        is_maximized=False,
+        is_fullscreen=False,
+        canvas_splitter=None,
+        canvas_side_splitter=None,
+        canvas_side_splitter_2=None
+    ),
+    memory_settings=dict(
+        use_last_channels=True,
+        use_attention_slicing=False,
+        use_tf32=False,
+        use_enable_vae_slicing=True,
+        use_accelerated_transformers=True,
+        use_tiled_vae=True,
+        enable_model_cpu_offload=False,
+        use_enable_sequential_cpu_offload=False,
+        use_cudnn_benchmark=True,
+        use_torch_compile=False,
+        use_tome_sd=True,
+        tome_sd_ratio=600,
+        move_unused_model_to_cpu=False,
+        unload_unused_models=True,
+        default_gpu=dict(
+            sd=0,
+            llm=0,
+            tts=0,
+            stt=0,
+        )
+    ),
+    grid_settings=dict(
+        cell_size=64,
+        line_width=1,
+        line_color="#101010",
+        snap_to_grid=True,
+        canvas_color="#000000",
+        show_grid=True,
+        zoom_level=1,
+        zoom_in_step=0.1,
+        zoom_out_step=0.1
+    ),
+    brush_settings=dict(
+        size=20,
+        primary_color=DEFAULT_BRUSH_PRIMARY_COLOR,
+        secondary_color=DEFAULT_BRUSH_SECONDARY_COLOR,
+    ),
+    path_settings=DEFAULT_PATHS,
+    active_grid_settings=dict(
+        enabled=True,
+        render_border=True,
+        render_fill=False,
+        border_opacity=50,
+        fill_opacity=50,
+        border_color="#00FF00",
+        fill_color="#FF0000",
+        pos_x=0,
+        pos_y=0,
+        width=512,
+        height=512,
+    ),
+    canvas_settings=dict(
+        pos_x=0,
+        pos_y=0,
+        mask=None,
+        image=None,
+        active_canvas="",
+        document_outline_color=(255, 0, 255, 144),
+        document_outline_width=2,
+    ),
+    controlnet_settings=dict(
+        image=None
+    ),
+    outpaint_settings=dict(
+        image=None,
+        enabled=True,
+    ),
+    drawing_pad_settings=dict(
+        image=None,
+        mask=None,
+        enabled=True,
+        enable_automatic_drawing=True
+    ),
+    metadata_settings=dict(
+        image_export_metadata_prompt=True,
+        image_export_metadata_negative_prompt=True,
+        image_export_metadata_scale=True,
+        image_export_metadata_seed=True,
+        image_export_metadata_steps=True,
+        image_export_metadata_ddim_eta=True,
+        image_export_metadata_iterations=True,
+        image_export_metadata_samples=True,
+        image_export_metadata_model=True,
+        image_export_metadata_model_branch=True,
+        image_export_metadata_scheduler=True,
+        export_metadata=True,
+        import_metadata=True,
+    ),
+    generator_settings=GENERATOR_SETTINGS,
+    llm_generator_settings=dict(
+        action=LLMActionType.CHAT.value,
+        use_tool_filter=False,
+        top_p=90,
+        max_length=50,
+        repetition_penalty=100,
+        min_length=10,
+        length_penalty=100,
+        num_beams=1,
+        ngram_size=0,
+        temperature=1000,
+        sequences=1,
+        top_k=0,
+        seed=0,
+        do_sample=False,
+        eta_cutoff=10,
+        early_stopping=True,
+        random_seed=False,
+        model_version=DEFAULT_LLM_HF_PATH,
+        dtype="4bit",
+        use_gpu=True,
+        message_type="chat",
+        override_parameters=False,
+        current_chatbot="Default",
+        saved_chatbots=dict(
+            Default=DEFAULT_CHATBOT
+        ),
+        prompt_template="Mistral 7B Instruct: Default Chatbot",
+        batch_size=1,
+        cache_llm_to_disk=True,
+        max_new_tokens=100
+    ),
+    tts_settings=TTS_SETTINGS_DEFAULT,
+    stt_settings=dict(
+        duration=10,
+        fs=16000,
+        channels=1,
+        volume_input_threshold=0.08,
+        silence_buffer_seconds=1.0,
+        chunk_duration=0.03,
+    ),
+    upscale_settings=dict(
+        model="",
+        face_enhance=False,
+        upscale_amount=1,
+    ),
+    schedulers=[
+        dict(
+            name="EULER_ANCESTRAL",
+            display_name="Euler A",
+        ),
+        dict(
+            name="EULER",
+            display_name="Euler",
+        ),
+        dict(
+            name="LMS",
+            display_name="LMS",
+        ),
+        dict(
+            name="HEUN",
+            display_name="Heun",
+        ),
+        dict(
+            name="DPM2",
+            display_name="DPM2",
+        ),
+        dict(
+            name="DPM_PP_2M",
+            display_name="DPM++ 2M",
+        ),
+        dict(
+            name="DPM2_K",
+            display_name="DPM2 Karras",
+        ),
+        dict(
+            name="DPM2_A_K",
+            display_name="DPM2 a Karras",
+        ),
+        dict(
+            name="DPM_PP_2M_K",
+            display_name="DPM++ 2M Karras",
+        ),
+        dict(
+            name="DPM_PP_2M_SDE_K",
+            display_name="DPM++ 2M SDE Karras",
+        ),
+        dict(
+            name="DDIM",
+            display_name="DDIM",
+        ),
+        dict(
+            name="UNIPC",
+            display_name="UniPC",
+        ),
+        dict(
+            name="DDPM",
+            display_name="DDPM",
+        ),
+        dict(
+            name="DEIS",
+            display_name="DEIS",
+        ),
+        dict(
+            name="DPM_2M_SDE_K",
+            display_name="DPM 2M SDE Karras",
+        ),
+        dict(
+            name="PLMS",
+            display_name="PLMS",
+        ),
+    ],
+    translation_settings=dict(
+        language="English",
+        gender=MALE,
+        voice="",
+        translation_model="",
+        enabled=False,
+    ),
+    saved_prompts=[],
+    presets=[],
+    lora=[],
+    embeddings=[],
+    pipelines=pipeline_bootstrap_data,
+    controlnet=controlnet_bootstrap_data,
+    ai_models=model_bootstrap_data,
+    image_filters=imagefilter_bootstrap_data,
+    trusted_huggingface_repos=[],
+    run_setup_wizard=True,
+    agreements=dict(
+        stable_diffusion=False,
+        airunner=False,
+        user=False,
+    ),
+)
 
 """
 #################################
