@@ -2,7 +2,6 @@ import io
 import base64
 import random
 import traceback
-
 import numpy as np
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QApplication
