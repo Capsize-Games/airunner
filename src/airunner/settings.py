@@ -61,9 +61,9 @@ airunner.src.utils.set_huggingface_environment_variables
 # Only change this to False if you want to create an application
 # that is never allowed to access the internet.
 # In the core AI Runner application, this flag is referenced in ONE
-# file (set_huggingface_environment_variables.py and is used in allow
-# the model downloader (in the setup wizard) as well as the model
-# manager to download models from huggingface and Civitai.
+# file and is used to allow the model downloader
+# (in the setup wizard) as well as the model manager to download
+# models from huggingface and Civitai.
 ####################################################################
 HF_ALLOW_DOWNLOADS = True  # This is an AI Runner specific variable
 
@@ -101,16 +101,16 @@ HF_CACHE_DIR = "~/.airunner/huggingface"
 HF_HOME = HF_CACHE_DIR
 
 ####################################################################
-# HF_ASSETS_CACHE is the directory where huggingface assets are stored.
-# Default value is "$HF_HOME/assets"
+# HF_ASSETS_CACHE is the directory where huggingface assets are
+# stored. Default value is "$HF_HOME/assets"
 # Here we hard code it to the same directory as HF_HOME
 ####################################################################
 HF_ASSETS_CACHE = HF_CACHE_DIR
 
 ####################################################################
 # HF_ENDPOINT is the huggingface endpoint.
-# Default value is "https://huggingface.co" but we have changed it to
-# "https://huggingface.co"
+# Default value is "https://huggingface.co" but we have changed it
+# to "https://huggingface.co"
 # in order to force prevention of ineternet access.
 ####################################################################
 HF_ENDPOINT = ""
@@ -142,8 +142,8 @@ HF_HUB_DISABLE_PROGRESS_BARS = "0"
 # related to symlink creation.
 # Default value is "0". Keeping this setting as default aids in
 # debugging file system issues,
-# especially on Windows where symlink creation might require elevated
-# permissions.
+# especially on Windows where symlink creation might require
+# elevated permissions.
 ####################################################################
 HF_HUB_DISABLE_SYMLINKS_WARNING = "0"
 
@@ -161,8 +161,8 @@ HF_HUB_DISABLE_EXPERIMENTAL_WARNING = "0"
 # HF_TOKEN is used for authentication. By setting this to an empty
 # string "",
 # we ensure that no credentials are stored or used inadvertently,
-# enhancing security by
-# preventing unauthorized access to private repositories or features.
+# enhancing security by preventing unauthorized access to private
+# repositories or features.
 ####################################################################
 HF_TOKEN = ""
 
@@ -279,7 +279,9 @@ DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 # You may change this value if you want to use a different endpoint.
 # This variable is currently unused by AI Runner.
 ####################################################################
-DEFAULT_HF_INFERENCE_ENDPOINT = "https://api-inference.huggingface.com"
+DEFAULT_HF_INFERENCE_ENDPOINT = (
+    "https://api-inference.huggingface.com"
+)
 
 """
 ====================================================================
@@ -343,7 +345,8 @@ LOG_LEVEL = logging.WARNING
 # Default models for the core application
 ####################################################################
 DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.2"
-DEFAULT_STT_HF_PATH = "openai/whisper-tiny.en"  # WAS ORIGINALLY USING "openai/whisper-base" for feature extractor
+# WAS ORIGINALLY USING "openai/whisper-base" for feature extractor
+DEFAULT_STT_HF_PATH = "openai/whisper-tiny.en"
 DEFAULT_SPEECHT5_MODEL_PATHS = {
     "embeddings_path": "Matthijs/cmu-arctic-xvectors",
     "vocoder_path": "microsoft/speecht5_hifigan",
@@ -401,7 +404,10 @@ DEFAULT_IMAGE_SYSTEM_PROMPT = "\n".join([
         "When returning prompts you must choose either "
         "\"art\" or \"photo\" and you absolutely must include "
         "the following JSON format:\n"
-        "```json\n{\"prompt\": \"your prompt here\", \"type\": \"your type here\"}\n```\n"
+        "```json\n{"
+        "\"prompt\": \"your prompt here\", "
+        "\"type\": \"your type here\""
+        "}\n```\n"
         "You must **NEVER** deviate from that format. You must "
         "always return the prompt and type as JSON format. "
         "This is **MANDATORY**."
@@ -918,13 +924,25 @@ SCHEDULERS = [e.value for e in Scheduler]
 DEFAULT_SCHEDULER = Scheduler.DPM_PP_2M_K.value
 AVAILABLE_SCHEDULERS_BY_ACTION = {
     action: SCHEDULERS for action in [
-        "txt2img", "img2img", "depth2img", "pix2pix", "vid2vid",
-        "outpaint", "controlnet", "txt2vid"
+        "txt2img",
+        "img2img",
+        "depth2img",
+        "pix2pix",
+        "vid2vid",
+        "outpaint",
+        "controlnet",
+        "txt2vid"
     ]
 }
 AVAILABLE_SCHEDULERS_BY_ACTION.update({
-    "upscale": [Scheduler.EULER.value],
-    "superresolution": [Scheduler.DDIM.value, Scheduler.LMS.value, Scheduler.PLMS.value],
+    "upscale": [
+        Scheduler.EULER.value
+    ],
+    "superresolution": [
+        Scheduler.DDIM.value,
+        Scheduler.LMS.value,
+        Scheduler.PLMS.value
+    ],
 })
 MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
 NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
@@ -986,7 +1004,8 @@ for category in ImageCategory:
             continue
         default_model = DEFAULT_MODELS[ImageGenerator.STABLEDIFFUSION.value][section.value]
         GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value][
-            section.value] = STABLEDIFFUSION_GENERATOR_SETTINGS.copy()
+            section.value
+        ] = STABLEDIFFUSION_GENERATOR_SETTINGS.copy()
 
 
 ####################################################################
