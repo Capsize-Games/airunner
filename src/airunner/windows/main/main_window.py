@@ -14,7 +14,7 @@ from airunner.enums import Mode, SignalCode, CanvasToolName, WindowSection, Gene
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
 from airunner.settings import BASE_PATH, BUG_REPORT_LINK, VULNERABILITY_REPORT_LINK
-from airunner.utils import get_version, default_hf_cache_dir, set_widget_state, clear_memory
+from airunner.utils import get_version, set_widget_state, clear_memory
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -492,7 +492,7 @@ class MainWindow(
 
     @Slot()
     def action_show_hf_cache_manager(self):
-        self.show_settings_path("hf_cache_path", default_hf_cache_dir())
+        self.show_settings_path("hf_cache_path", self.settings["path_settings"]["hf_cache_path"])
 
     @Slot()
     def action_show_images_path(self):
