@@ -3,18 +3,16 @@ from PySide6.QtCore import (
     QSettings,
     QByteArray,
     QDataStream,
-    QIODevice
+    QIODevice,
 )
 from airunner.settings import (
     ORGANIZATION,
     APPLICATION_NAME,
-    DEFAULT_APPLICATION_SETTINGS
+    DEFAULT_APPLICATION_SETTINGS,
+    DEFAULT_PATHS,
 )
 from airunner.enums import (
     SignalCode,
-)
-from airunner.settings import (
-    DEFAULT_PATHS,
 )
 
 
@@ -68,6 +66,10 @@ class SettingsMixin:
             print(e)
 
     def update_settings(self):
+        """
+        Update the application settings.
+        :return:
+        """
         self.logger.debug("Updating settings")
         default_settings = self.default_settings
         current_settings = self.settings
@@ -80,6 +82,12 @@ class SettingsMixin:
         self.settings = current_settings
 
     def recursive_update(self, current, default):
+        """
+        Recursively update the settings.
+        :param current:
+        :param default:
+        :return:
+        """
         for k, v in default.items():
             if k not in current or k not in current or (
                 not isinstance(
@@ -96,7 +104,11 @@ class SettingsMixin:
         self.application_settings.sync()
         self.settings = self.settings
 
-    def get_settings(self):
+    def get_settings(self) -> dict:
+        """
+        Get the application settings.
+        :return:
+        """
         application_settings = QSettings(
             ORGANIZATION,
             APPLICATION_NAME
@@ -121,6 +133,11 @@ class SettingsMixin:
             return self.default_settings
 
     def set_settings(self, val):
+        """
+        Set the application settings.
+        :param val:
+        :return:
+        """
         application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         if val:
             settings_byte_array = QByteArray()
@@ -130,10 +147,18 @@ class SettingsMixin:
             self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
     def save_settings(self):
+        """
+        Save the application settings.
+        :return:
+        """
         application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         application_settings.sync()
 
     def reset_paths(self):
+        """
+        Reset the application paths to the default paths.
+        :return:
+        """
         settings = self.settings
         settings["path_settings"] = DEFAULT_PATHS
         self.settings = settings

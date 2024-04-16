@@ -21,6 +21,8 @@ import logging
 from PySide6.QtCore import Qt
 from PySide6 import QtCore
 
+from airunner.windows.main.settings_mixin import GENERATOR_SETTINGS
+
 """
 ██████████████████████████████████████████████████████████████████████████████████   
 █                                                                                █ 
@@ -288,12 +290,7 @@ from airunner.enums import (
     ImageGenerator,
     Scheduler,
     SignalCode,
-    Gender,
-    CanvasToolName,
-    Controlnet,
-    Mode,
-    LLMActionType,
-    ImageCategory
+    Gender, CanvasToolName, Controlnet, Mode, LLMActionType
 )
 
 ####################################################################
@@ -922,10 +919,24 @@ AVAILABLE_SCHEDULERS_BY_ACTION.update({
 })
 MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
 NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
-####################################################################
-# Create the GENERATOR_SETTINGS so that we have the presets for
-# Each generator category.
-####################################################################
+DEFAULT_GENERATOR_SETTINGS = dict(
+    controlnet_image_settings=dict(
+        imported_image_base64=None,
+        link_to_input_image=True,
+        use_imported_image=False,
+        use_grid_image=False,
+        recycle_grid_image=False,
+        mask_link_input_image=False,
+        mask_use_imported_image=False,
+        controlnet=Controlnet.CANNY.value,
+        conditioning_scale=100,
+        guidance_scale=750,
+        controlnet_image_base64=None
+    ),
+    section="txt2img",
+    generator_name="stablediffusion",
+    presets={},
+)
 STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     prompt="",
     negative_prompt="",
@@ -950,38 +961,6 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     is_preset=False,
     input_image=None,
 )
-DEFAULT_GENERATOR_SETTINGS = dict(
-    controlnet_image_settings=dict(
-        imported_image_base64=None,
-        link_to_input_image=True,
-        use_imported_image=False,
-        use_grid_image=False,
-        recycle_grid_image=False,
-        mask_link_input_image=False,
-        mask_use_imported_image=False,
-        controlnet=Controlnet.CANNY.value,
-        conditioning_scale=100,
-        guidance_scale=750,
-        controlnet_image_base64=None
-    ),
-    section="txt2img",
-    generator_name="stablediffusion",
-    presets={},
-)
-GENERATOR_SETTINGS = DEFAULT_GENERATOR_SETTINGS.copy()
-GENERATOR_SETTINGS.update(STABLEDIFFUSION_GENERATOR_SETTINGS)
-for category in ImageCategory:
-    GENERATOR_SETTINGS["presets"][category.value] = {}
-    GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value] = {}
-
-    for section in GeneratorSection:
-        # TODO: default upscale model?
-        if section == GeneratorSection.UPSCALE:
-            continue
-        default_model = DEFAULT_MODELS[ImageGenerator.STABLEDIFFUSION.value][section.value]
-        GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value][
-            section.value] = STABLEDIFFUSION_GENERATOR_SETTINGS.copy()
-
 
 ####################################################################
 # Application settings
