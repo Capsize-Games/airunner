@@ -1,4 +1,8 @@
-from typing import Any, Union, List
+from typing import (
+    Any,
+    Union,
+    List
+)
 
 
 def get_current_chatbot(

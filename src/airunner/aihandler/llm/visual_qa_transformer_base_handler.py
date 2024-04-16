@@ -1,4 +1,7 @@
-from transformers import BlipForConditionalGeneration, BlipProcessor, BlipForQuestionAnswering, AutoProcessor, AutoModel
+from transformers import (
+    BlipForQuestionAnswering,
+    AutoProcessor
+)
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
 from airunner.utils import clear_memory
 

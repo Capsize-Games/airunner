@@ -1,7 +1,14 @@
 import diffusers
 from airunner.settings import AVAILABLE_SCHEDULERS_BY_ACTION
-from airunner.enums import Scheduler, SignalCode, SchedulerAlgorithm
-from airunner.settings import SCHEDULER_CLASSES, DEFAULT_SCHEDULER
+from airunner.enums import (
+    Scheduler,
+    SignalCode,
+    SchedulerAlgorithm
+)
+from airunner.settings import (
+    SCHEDULER_CLASSES,
+    DEFAULT_SCHEDULER
+)
 
 
 class SchedulerMixin:

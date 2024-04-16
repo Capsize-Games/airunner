@@ -1,10 +1,11 @@
 import os
 import requests
 from PySide6.QtCore import QObject, Signal
-
 from airunner.aihandler.logger import Logger
 
+
 logger = Logger(prefix="DownloadWorker")
+
 
 class DownloadWorker(QObject):
     progress = Signal(int, int)  # current, total

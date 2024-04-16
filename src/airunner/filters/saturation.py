@@ -1,5 +1,4 @@
 from PIL import ImageEnhance
-
 from airunner.filters.base_filter import BaseFilter
 
 

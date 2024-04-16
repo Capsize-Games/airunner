@@ -1,5 +1,4 @@
 from PySide6.QtWidgets import QColorDialog
-
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.brush.templates.brush_widget_ui import Ui_brush_widget

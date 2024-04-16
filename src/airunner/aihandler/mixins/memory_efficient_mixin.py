@@ -2,10 +2,8 @@ import functools
 import os
 from dataclasses import dataclass
 from typing import Optional
-
 import tomesd
 import torch
-
 from airunner.utils import clear_memory
 
 
