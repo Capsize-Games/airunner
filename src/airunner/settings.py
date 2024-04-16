@@ -1,20 +1,22 @@
 """
 ██████████████████████████████████████████████████████████████
-██                                 A REAL INTERNET COMPANY  ██
-██  █████  ██████  ██████   ██████  ██████  ██████  ██████  ██
-██  ██     ██  ██  ██   ██  ██        ██        ██  ██      ██
-██  ██     ██████  ██████   ██████    ██      ██    ████    ██
-██  ██     ██  ██  ██           ██    ██    ██      ██      ██
-██  █████  ██  ██  ██       ██████  ██████  ██████  ██████  ██
-██                                           █    █    ███  ██
-██                                           █    █    █    ██
-██                                           ███  ███  ███  ██
+██                                             CAPSIZE LLC  ██
 ██████████████████████████████████████████████████████████████
 
-See the user agreement and
-license agreement and
-other applicable agreements
-before using this software.
+See the user agreement and license agreement and other applicable
+agreements before using this software.
+
+If you find any application which uses AI Runner as a backend,
+audit the application by using this repository as a reference.
+
+All current and future security documentation will be contained
+within this file.
+
+--------------------------------------------------------------------
+The following file is response for
+setting huggingface environment variables
+- airunner/src/airunner/utils/set_huggingface_environment_variables.py
+--------------------------------------------------------------------
 """
 import os
 import logging
@@ -22,15 +24,9 @@ from PySide6.QtCore import Qt
 from PySide6 import QtCore
 
 """
-██████████████████████████████████████████████████████████████████████████████████   
-█                                                                                █ 
-█  ██    ██  ████████  ████████  ██    ██  ████████  ██    ██  ████████  ██  ██  █ 
-█  ██    ██  ██    ██  ██    ██  ██    ██     ██     ██    ██  ██        ██  ██  █ 
-█  ██    ██  ████████  ██████    ████  ██     ██     ████  ██  ██  ████  ██  ██  █ 
-█  ██ ██ ██  ██    ██  ██    ██  ██  ████     ██     ██  ████  ██    ██          █ 
-█  ███  ███  ██    ██  ██    ██  ██    ██  ████████  ██    ██  ████████  ██  ██  █ 
-█                                                                                █ 
-██████████████████████████████████████████████████████████████████████████████████
+██████████████████████████████████████████████████████████████ 
+██               HUGGINGFACE ENVIRONMENT VARIABLES WARNING  ██ 
+██████████████████████████████████████████████████████████████
 
 ====================================================================
 --------------------------------------------------------------------
@@ -58,8 +54,12 @@ airunner.src.utils.set_huggingface_environment_variables
 
 ####################################################################
 # This is the default mode to prevent HF from accessing the internet
-# Only change this to True if you want to create an application
-# that can automatically download required models from huggingface.co
+# Only change this to False if you want to create an application
+# that is never allowed to access the internet.
+# In the core AI Runner application, this flag is referenced in ONE
+# file (set_huggingface_environment_variables.py and is used in allow
+# the model downloader (in the setup wizard) as well as the model
+# manager to download models from huggingface and Civitai.
 ####################################################################
 HF_ALLOW_DOWNLOADS = False  # This is an AI Runner specific variable
 
@@ -69,7 +69,7 @@ HF_ALLOW_DOWNLOADS = False  # This is an AI Runner specific variable
 # will send telemetry to huggingface. Huggingface libraries should
 # NOT have the ability to send telemetry.
 ####################################################################
-HF_HUB_DISABLE_TELEMETRY = "1"
+HF_HUB_DISABLE_TELEMETRY = "1"  # Never change this variable
 
 ####################################################################
 # HF_HUB_OFFLINE
@@ -278,9 +278,9 @@ DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 DEFAULT_HF_INFERENCE_ENDPOINT = "https://api-inference.huggingface.com"
 
 """
-█████████████████████████████████████████
-END OF HUGGINGFACE ENVIRONMENT VARIABLES
-█████████████████████████████████████████
+██████████████████████████████████████████████████████████████
+██                END OF HUGGINGFACE ENVIRONMENT VARIABLES  ██
+██████████████████████████████████████████████████████████████
 """
 from airunner.enums import (
     GeneratorSection,
