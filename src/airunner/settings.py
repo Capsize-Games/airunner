@@ -20,7 +20,6 @@ setting huggingface environment variables
 - airunner/src/airunner/utils/set_huggingface_environment_variables.py
 --------------------------------------------------------------------
 """
-import os
 import logging
 from PySide6.QtCore import Qt
 from PySide6 import QtCore
@@ -292,7 +291,6 @@ END OF HUGGINGFACE ENVIRONMENT VARIABLES
 """
 from airunner.enums import (
     GeneratorSection,
-    StableDiffusionVersion,
     ImageGenerator,
     Scheduler,
     SignalCode,
@@ -428,43 +426,9 @@ DEFAULT_IMAGE_LLM_GUARDRAILS = (
 ####################################################################
 # BASE_PATH is the base folder where the application data and
 # models are stored. This can be changed in the GUI.
+# By default, this is set to ~/.airunner
 ####################################################################
-BASE_PATH = os.path.join(os.path.expanduser("~"), ".airunner")
-
-####################################################################
-# DEFAULT_PATHS is a dictionary that contains the default paths
-# for the application data and models. By default, these
-# are stored under the BASE_PATH directory.
-####################################################################
-BASE_ART_MODELS_PATH = os.path.join(BASE_PATH, "art", "models")
-BASE_ART_OTHER_PATH = os.path.join(BASE_PATH, "art", "other")
-BASE_TEXT_MODELS_PATH = os.path.join(BASE_PATH, "text", "models")
-BASE_TEXT_OTHER_PATH = os.path.join(BASE_PATH, "text", "other")
-DEFAULT_PATHS = {
-    "hf_cache_path": HF_CACHE_DIR,
-    "base_path": BASE_PATH,
-    "txt2img_model_path": os.path.join(BASE_ART_MODELS_PATH, "txt2img"),
-    "depth2img_model_path": os.path.join(BASE_ART_MODELS_PATH, "depth2img"),
-    "pix2pix_model_path": os.path.join(BASE_ART_MODELS_PATH, "pix2pix"),
-    "inpaint_model_path": os.path.join(BASE_ART_MODELS_PATH, "inpaint"),
-    "upscale_model_path": os.path.join(BASE_ART_MODELS_PATH, "upscale"),
-    "txt2vid_model_path": os.path.join(BASE_ART_MODELS_PATH, "txt2vid"),
-    "vae_model_path": os.path.join(BASE_ART_MODELS_PATH, "vae"),
-    "embeddings_model_path": os.path.join(BASE_ART_MODELS_PATH, "embeddings"),
-    "lora_model_path": os.path.join(BASE_ART_MODELS_PATH, "lora"),
-    "image_path": os.path.join(BASE_ART_OTHER_PATH, "images"),
-    "video_path": os.path.join(BASE_ART_OTHER_PATH, "videos"),
-    "ebooks_path": os.path.join(BASE_TEXT_OTHER_PATH, "ebooks"),
-    "documents_path": os.path.join(BASE_TEXT_OTHER_PATH, "documents"),
-    "llm_casuallm_model_path": os.path.join(BASE_TEXT_MODELS_PATH, "casuallm"),
-    "llm_seq2seq_model_path": os.path.join(BASE_TEXT_MODELS_PATH, "seq2seq"),
-    "llm_visualqa_model_path": os.path.join(BASE_TEXT_MODELS_PATH, "visualqa"),
-    "llm_misc_model_path": os.path.join(BASE_TEXT_MODELS_PATH, "misc"),
-    "llm_casuallm_cache_path": os.path.join(BASE_TEXT_MODELS_PATH, "casuallm", "cache"),
-    "llm_seq2seq_cache_path": os.path.join(BASE_TEXT_MODELS_PATH, "seq2seq", "cache"),
-    "llm_visualqa_cache_path": os.path.join(BASE_TEXT_MODELS_PATH, "visualqa", "cache"),
-    "llm_misc_cache_path": os.path.join(BASE_TEXT_MODELS_PATH, "misc", "cache"),
-}
+BASE_PATH = "~/.airunner"
 
 
 ####################################################################
@@ -946,6 +910,7 @@ AVAILABLE_SCHEDULERS_BY_ACTION.update({
 })
 MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
 NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
+
 ####################################################################
 # Create the GENERATOR_SETTINGS so that we have the presets for
 # Each generator category.
@@ -992,25 +957,44 @@ DEFAULT_GENERATOR_SETTINGS = dict(
     generator_name="stablediffusion",
     presets={},
 )
-GENERATOR_SETTINGS = DEFAULT_GENERATOR_SETTINGS.copy()
-GENERATOR_SETTINGS.update(STABLEDIFFUSION_GENERATOR_SETTINGS)
-for category in ImageCategory:
-    GENERATOR_SETTINGS["presets"][category.value] = {}
-    GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value] = {}
 
+# Define the generator settings
+GENERATOR_SETTINGS = {
+    **DEFAULT_GENERATOR_SETTINGS,
+    **STABLEDIFFUSION_GENERATOR_SETTINGS
+}
+
+# Define the image generator name
+img_gen_name = ImageGenerator.STABLEDIFFUSION.value
+
+# Iterate over each category in ImageCategory
+for category in ImageCategory:
+    cat = category.value
+    GENERATOR_SETTINGS["presets"][cat] = {img_gen_name: {}}
+
+    # Iterate over each section in GeneratorSection
     for section in GeneratorSection:
-        # TODO: default upscale model?
+        # Skip the upscale model
         if section == GeneratorSection.UPSCALE:
             continue
-        default_model = DEFAULT_MODELS[ImageGenerator.STABLEDIFFUSION.value][section.value]
-        GENERATOR_SETTINGS["presets"][category.value][ImageGenerator.STABLEDIFFUSION.value][
-            section.value
-        ] = STABLEDIFFUSION_GENERATOR_SETTINGS.copy()
+
+        sec = section.value
+        default_model = DEFAULT_MODELS[img_gen_name][sec]
+
+        # Update the generator settings for the specific category, generator name, and section
+        GENERATOR_SETTINGS["presets"][cat][img_gen_name][sec] = STABLEDIFFUSION_GENERATOR_SETTINGS.copy()
 
 
 ####################################################################
 # Application settings
 ####################################################################
+
+"""
+--------------------------------------------------------------------
+End of system feature flags
+--------------------------------------------------------------------
+"""
+
 SLEEP_TIME_IN_MS = 50
 DEFAULT_SHORTCUTS = {
     "Generate Image": {
@@ -1246,7 +1230,9 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         primary_color=DEFAULT_BRUSH_PRIMARY_COLOR,
         secondary_color=DEFAULT_BRUSH_SECONDARY_COLOR,
     ),
-    path_settings=DEFAULT_PATHS,
+    path_settings={
+        "base_path": BASE_PATH
+    },
     active_grid_settings=dict(
         enabled=True,
         render_border=True,
@@ -1427,6 +1413,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     image_filters=imagefilter_bootstrap_data,
     trusted_huggingface_repos=[],
     run_setup_wizard=True,
+    download_wizard_completed=False,
     agreements=dict(
         stable_diffusion=False,
         airunner=False,
