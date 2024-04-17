@@ -27,6 +27,7 @@ class Ui_controlnet_download(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.radioButton = QRadioButton(controlnet_download)
         self.radioButton.setObjectName(u"radioButton")
+        self.radioButton.setChecked(True)
 
         self.gridLayout.addWidget(self.radioButton, 4, 0, 1, 1)
 
