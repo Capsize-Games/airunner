@@ -34,13 +34,26 @@ class SetupWizard(
         self.reset_paths()
         super(SetupWizard, self).__init__(*args)
 
-        self.page_ids = {}
+        # Reset agreements
+        settings = self.settings
+        settings["agreements"]["user"] = False
+        settings["agreements"]["stable_diffusion"] = False
+        settings["agreements"]["airunner"] = False
+        self.settings = settings
 
-        self.do_download_sd_models = True
-        self.do_download_controlnet_models = True
-        self.do_download_llm = True
-        self.do_download_tts_models = True
-        self.do_download_stt_models = True
+        self.setup_settings = dict(
+            user_agreement_completed=False,
+            airunner_license_completed=False,
+            sd_license_completed=False,
+            base_path=False,
+            enable_controlnet=False,
+            enable_sd=False,
+            enable_llm=False,
+            enable_tts=False,
+            enable_stt=False,
+        )
+
+        self.page_ids = {}
 
         self.pages = {
             "welcome_page": WelcomePage(self),
@@ -105,9 +118,6 @@ class SetupWizard(
             self.final_page_id,
         ]
 
-        if self.do_download_controlnet_models:
-            page_order.append(self.controlnet_download_id)  # controlnet_download
-
 
         page_order.append(self.meta_data_settings_id)
         page_order.append(self.final_page_id)
@@ -121,11 +131,20 @@ class SetupWizard(
 
                 # final page conditional
                 if current_id == self.final_page_id:
-                    setup_settings = dict(
+                    self.setup_settings = dict(
+                        user_agreement_completed=self.pages["user_agreement"].agreed,
+                        airunner_license_completed=self.pages["airunner_license"].agreed,
+                        sd_license_completed=self.pages["stable_diffusion_license"].agreed,
                         base_path=self.pages["path_settings"].ui.base_path.text(),
+                        enable_sd=self.pages["sd_welcome_screen"].toggled_yes,
+                        enable_controlnet=self.pages["controlnet_download"].toggled_yes,
+                        enable_llm=self.pages["llm_welcome_page"].toggled_yes,
+                        enable_tts=self.pages["tts_welcome_page"].toggled_yes,
+                        enable_stt=self.pages["stt_welcome_page"].toggled_yes,
                     )
 
                     return -1
+
 
                 elif current_id == self.welcome_page_id:
                     if not self.settings["agreements"]["user"]:
@@ -156,37 +175,49 @@ class SetupWizard(
                     if self.pages["sd_welcome_screen"].toggled_yes:
                         return page_order[current_index + 1]
                     elif self.pages["sd_welcome_screen"].toggled_no:
-                        return page_order[current_index + 4]
+                        return page_order[current_index + 3]
                     else:
                         return page_order[current_index]
 
                 # Controlnet conditional
                 elif current_id == self.controlnet_download_id:
-                    if self.pages["controlnet_download"].toggled_yes or self.pages["controlnet_download"].toggled_no:
-                        return page_order[current_index + 1]
-                    else:
+                    if self.pages["controlnet_download"].toggled_yes is False \
+                            and self.pages["controlnet_download"].toggled_no is False:
                         return page_order[current_index]
+                    else:
+                        return page_order[current_index + 1]
 
                 # LLM conditional
                 elif current_id == self.llm_welcome_page_id:
-                    if self.pages["llm_welcome_page"].toggled_yes or self.pages["llm_welcome_page"].toggled_no:
-                        return page_order[current_index + 1]
-                    else:
+                    if self.pages["llm_welcome_page"].toggled_yes is False \
+                            and self.pages["llm_welcome_page"].toggled_no is False:
                         return page_order[current_index]
+                    else:
+                        return page_order[current_index + 1]
 
                 # TTS conditional
                 elif current_id == self.tts_welcome_page_id:
-                    if self.pages["tts_welcome_page"].toggled_yes or self.pages["llm_welcome_page"].toggled_no:
-                        return page_order[current_index + 1]
-                    else:
+                    if self.pages["tts_welcome_page"].toggled_yes is False \
+                            and self.pages["tts_welcome_page"].toggled_no is False:
                         return page_order[current_index]
+                    else:
+                        return page_order[current_index + 1]
 
                 # STT conditional
                 elif current_id == self.stt_welcome_page_id:
-                    if self.pages["stt_welcome_page"].toggled_yes or self.pages["llm_welcome_page"].toggled_no:
-                        return page_order[current_index + 1]
-                    else:
+                    if self.pages["stt_welcome_page"].toggled_yes is False \
+                            and self.pages["stt_welcome_page"].toggled_no is False:
                         return page_order[current_index]
+                    else:
+                        return page_order[current_index + 1]
+
+                # Metadata conditional
+                elif current_id == self.meta_data_settings_id:
+                    if self.pages["meta_data_settings"].toggled_yes is False \
+                            and self.pages["meta_data_settings"].toggled_no is False:
+                        return page_order[current_index]
+                    else:
+                        return page_order[current_index + 1]
 
                 # Stable Diffusion license conditional
                 elif current_id == self.stable_diffusion_license_id:
