@@ -19,6 +19,9 @@
      <property name="text">
       <string>Yes</string>
      </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
     </widget>
    </item>
    <item row="0" column="0">
@@ -75,6 +78,9 @@
     <widget class="QRadioButton" name="radioButton_2">
      <property name="text">
       <string>No</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
