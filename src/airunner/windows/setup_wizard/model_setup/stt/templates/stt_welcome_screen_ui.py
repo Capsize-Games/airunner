@@ -36,6 +36,7 @@ class Ui_stt_welcome_screen(object):
 
         self.radioButton = QRadioButton(stt_welcome_screen)
         self.radioButton.setObjectName(u"radioButton")
+        self.radioButton.setChecked(True)
 
         self.gridLayout.addWidget(self.radioButton, 4, 0, 1, 1)
 

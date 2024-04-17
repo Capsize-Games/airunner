@@ -9,7 +9,7 @@ class STTWelcomeScreen(BaseWizard):
     def __init__(self, *args):
         super(STTWelcomeScreen, self).__init__(*args)
         self.toggled_no = False
-        self.toggled_yes = False
+        self.toggled_yes = True
 
     @Slot(bool)
     def no_toggled(self, val: bool):

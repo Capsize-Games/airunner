@@ -9,7 +9,7 @@ class LLMWelcomeScreen(BaseWizard):
     def __init__(self, *args):
         super(LLMWelcomeScreen, self).__init__(*args)
         self.toggled_no = False
-        self.toggled_yes = False
+        self.toggled_yes = True
 
     @Slot(bool)
     def no_toggled(self, val: bool):

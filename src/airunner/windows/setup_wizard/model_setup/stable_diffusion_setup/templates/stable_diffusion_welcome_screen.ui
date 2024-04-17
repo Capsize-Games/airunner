@@ -52,6 +52,9 @@
      <property name="text">
       <string>Yes</string>
      </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
    <item row="5" column="0">
