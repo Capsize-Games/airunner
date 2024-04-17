@@ -96,52 +96,33 @@ class SetupWizard(
             self.airunner_license_id,
             self.path_settings_id,
             self.sd_welcome_screen_id,
-            # self.stable_diffusion_setup_page_id,
             self.stable_diffusion_license_id,
-            # self.model_setup_page_id,
             self.controlnet_download_id,
             self.meta_data_settings_id,
-            # self.llm_setup_id,
-            # self.tts_speech_t5_setup_id,
-            # self.tts_bark_setup_id,
-            # self.stt_setup_id,
             self.llm_welcome_page_id,
             self.tts_welcome_page_id,
             self.stt_welcome_page_id,
             self.final_page_id,
         ]
 
-        #if self.do_download_sd_models:
-            #page_order.append(self.pageIds()[6])  # stable_diffusion_setup_page
         if self.do_download_controlnet_models:
             page_order.append(self.controlnet_download_id)  # controlnet_download
 
-        # if self.do_download_llm:
-        #     page_order.append(self.llm_setup_id)  # llm_setup
-        # if self.do_download_tts_models:
-        #     page_order.append(self.tts_speech_t5_setup_id)  # tts_speech_t5_setup
-        #     page_order.append(self.tts_bark_setup_id)  # tts_bark_setup
-        # if self.do_download_stt_models:
-        #     page_order.append(self.stt_setup_id)  # stt_setup
 
-        page_order.append(self.meta_data_settings_id)  # meta_data_settings is always last before final_page
-        page_order.append(self.final_page_id)  # final_page is always last
+        page_order.append(self.meta_data_settings_id)
+        page_order.append(self.final_page_id)
 
         # If the ID of the current page is in the order list, return the ID of the next page
         if current_id in page_order:
             current_index = page_order.index(current_id)
+
             # If this is not the last page in the list, return the ID of the next page
             if current_index < len(page_order) - 1:
+
                 # final page conditional
                 if current_id == self.final_page_id:
                     setup_settings = dict(
                         base_path=self.pages["path_settings"].ui.base_path.text(),
-                        # use_tts=self.settings["use_tts"],
-                        # use_stt=self.settings["use_stt"],
-                        # use_llm=self.settings["use_llm"],
-                        # use_sd=self.settings["use_sd"],
-                        # use_controlnet=self.settings["use_controlnet"],
-                        # base_path=self.settings["base_path"],
                     )
 
                     return -1
