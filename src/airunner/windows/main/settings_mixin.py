@@ -13,9 +13,6 @@ from airunner.settings import (
 from airunner.enums import (
     SignalCode,
 )
-from airunner.settings import (
-    DEFAULT_PATHS,
-)
 
 
 class SettingsMixin:
@@ -45,9 +42,14 @@ class SettingsMixin:
         self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = DEFAULT_APPLICATION_SETTINGS
+        self.update_settings()
 
     @property
     def settings(self):
+        """
+        Gets the settings dictionary.
+        :return:
+        """
         try:
             settings = self.get_settings()
             if settings == {} or settings == "" or settings is None:
@@ -61,21 +63,44 @@ class SettingsMixin:
 
     @settings.setter
     def settings(self, val):
+        """
+        Sets the settings dictionary and updates the paths if the base path has changed.
+        :param val:
+        :return:
+        """
+        val = self.construct_paths_if_base_path_changed(val)
+
         try:
             self.set_settings(val)
         except Exception as e:
             print("Failed to set settings")
             print(e)
 
+    def construct_paths_if_base_path_changed(self, updated_settings: dict) -> dict:
+        """
+        Constructs the paths if the base path has changed.
+        :param updated_settings:
+        :return:
+        """
+        settings = self.get_settings()
+        if settings["path_settings"].get("base_path", "") != updated_settings["path_settings"].get("base_path", ""):
+            updated_settings["path_settings"] = self.construct_paths(
+                settings["path_settings"]["base_path"]
+            )
+            return updated_settings
+        return updated_settings
+
     def update_settings(self):
-        self.logger.debug("Updating settings")
+        """
+        Updates the settings.
+        :return:
+        """
         default_settings = self.default_settings
         current_settings = self.settings
         if current_settings is None:
             current_settings = default_settings
         else:
             self.recursive_update(current_settings, default_settings)
-        self.logger.debug("Settings updated")
 
         self.settings = current_settings
 
@@ -91,7 +116,7 @@ class SettingsMixin:
                 self.recursive_update(current[k], v)
 
     def on_reset_settings_signal(self, _message: dict):
-        self.logger.debug("Resetting settings")
+        print("Resetting settings")
         self.application_settings.clear()
         self.application_settings.sync()
         self.settings = self.settings
@@ -133,7 +158,84 @@ class SettingsMixin:
         application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         application_settings.sync()
 
+    def is_valid_path(self, path: str) -> bool:
+        try:
+            return self.validate_path(path)
+        except ValueError as e:
+            print(f"Invalid base path: {e}")
+            return {}
+
+    def validate_path(self, path) -> bool:
+        """
+        Validates the provided file path to ensure it is secure against common security threats
+        like path traversal. Raises ValueError if an invalid path is detected.
+
+        Parameters:
+            path (str): The file path to validate.
+
+        Returns:
+            str: The original path if it is deemed safe.
+
+        Raises:
+            ValueError: If the path contains dangerous patterns.
+        """
+        import re
+        # Disallow characters that might indicate insecure paths
+        if re.search(r'[<>:"\\|?*]', path):  # Removed '/' from the pattern
+            print(f"Invalid characters in path: {path}")
+            raise ValueError("Invalid characters in path.")
+        # Block path traversal and absolute paths
+        if '..' in path or path.startswith(('/', '\\')):
+            raise ValueError("Path traversal attempt detected.")
+
+    def construct_paths(self, base_path):
+        """
+        Constructs a dictionary of paths used throughout the application based on the base path.
+        Validates the base path to prevent security issues before using it to build other paths.
+
+        Parameters:
+            base_path (str): The base directory for building subpaths.
+
+        Returns:
+            dict: A dictionary containing all the constructed and validated paths.
+        """
+        # Validate the base path to prevent security issues
+        if not self.is_valid_path(base_path):
+            return {}
+
+        paths = {
+            "base_path": base_path,
+            "art_models": f"{base_path}/art/models",
+            "art_other": f"{base_path}/art/other",
+            "text_models": f"{base_path}/text/models",
+            "text_other": f"{base_path}/text/other",
+            "txt2img_model": f"{base_path}/art/models/txt2img",
+            "depth2img_model": f"{base_path}/art/models/depth2img",
+            "pix2pix_model": f"{base_path}/art/models/pix2pix",
+            "inpaint_model": f"{base_path}/art/models/inpaint",
+            "upscale_model": f"{base_path}/art/models/upscale",
+            "txt2vid_model": f"{base_path}/art/models/txt2vid",
+            "vae_model": f"{base_path}/art/models/vae",
+            "embeddings_model": f"{base_path}/art/models/embeddings",
+            "lora_model": f"{base_path}/art/models/lora",
+            "image_path": f"{base_path}/art/other/images",
+            "video_path": f"{base_path}/art/other/videos",
+            "ebooks_path": f"{base_path}/text/other/ebooks",
+            "documents_path": f"{base_path}/text/other/documents",
+            "llm_casuallm_model": f"{base_path}/text/models/casuallm",
+            "llm_seq2seq_model": f"{base_path}/text/models/seq2seq",
+            "llm_visualqa_model": f"{base_path}/text/models/visualqa",
+            "llm_misc_model": f"{base_path}/text/models/misc",
+            "llm_casuallm_cache": f"{base_path}/text/models/casuallm/cache",
+            "llm_seq2seq_cache": f"{base_path}/text/models/seq2seq/cache",
+            "llm_visualqa_cache": f"{base_path}/text/models/visualqa/cache",
+            "llm_misc_cache": f"{base_path}/text/models/misc/cache",
+        }
+        return paths
+
     def reset_paths(self):
         settings = self.settings
-        settings["path_settings"] = DEFAULT_PATHS
+        settings["path_settings"] = self.construct_paths(
+            self.settings["path_settings"]["base_path"]
+        )
         self.settings = settings

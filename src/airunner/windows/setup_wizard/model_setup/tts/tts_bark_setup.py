@@ -1,9 +1,9 @@
-from airunner.windows.setup_wizard.download_wizard.download_thread import DownloadThread
-from airunner.windows.setup_wizard.download_wizard.download_wizard import DownloadWizard
+from airunner.windows.download_wizard.download_thread import DownloadThread
+from airunner.windows.download_wizard.download_wizard_page import DownloadWizardPage
 from airunner.windows.setup_wizard.model_setup.tts.templates.bark_ui import Ui_bark_setup
 
 
-class TTSBarkSetup(DownloadWizard):
+class TTSBarkSetup(DownloadWizardPage):
     class_name_ = Ui_bark_setup
 
     def start_download(self):

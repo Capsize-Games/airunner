@@ -20,8 +20,8 @@ from airunner.security import restrict_os_access
 ################################################################
 # Import the main application class for AI Runner.
 ################################################################
-from airunner.app import App
+from airunner.app_installer import AppInstaller
 
 
 if __name__ == "__main__":
-    App()
+    AppInstaller()
