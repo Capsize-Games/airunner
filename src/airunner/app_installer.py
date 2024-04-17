@@ -5,7 +5,6 @@
 from airunner.security import set_huggingface_env_variables
 import sys
 import signal
-import traceback
 from functools import partial
 from PySide6 import QtCore
 from PySide6.QtCore import (
@@ -31,7 +30,7 @@ from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
 from airunner.aihandler.logger import Logger
 
 
-class App(
+class AppInstaller(
     QObject,
     SettingsMixin,
     MediatorMixin
@@ -61,7 +60,7 @@ class App(
         """
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
-        super(App, self).__init__()
+        super(AppInstaller, self).__init__()
 
         self.start()
 
@@ -99,9 +98,8 @@ class App(
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
         self.app = QApplication([])
 
-        if self.do_show_setup_wizard:
-            self.wizard = SetupWizard()
-            self.wizard.exec()
+        self.wizard = SetupWizard()
+        self.wizard.exec()
 
         # Quit the application if the setup wizard was not completed
         if self.do_show_setup_wizard:
@@ -186,27 +184,3 @@ class App(
         app.processEvents()
         return splash
 
-    def show_main_application(
-        self,
-        app,
-        splash
-    ):
-        """
-        Show the main application window.
-        :param app:
-        :param splash:
-        :return:
-        """
-        try:
-            window = self.main_window_class_()
-        except Exception as e:
-            traceback.print_exc()
-            print(e)
-            splash.finish(None)
-            sys.exit("""
-                An error occurred while initializing the application. 
-                Please report this issue on GitHub or Discord."
-            """)
-        app.main_window = window
-        splash.finish(window)
-        window.raise_()

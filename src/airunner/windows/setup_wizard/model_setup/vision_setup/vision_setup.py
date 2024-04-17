@@ -1,4 +1,4 @@
-from airunner.windows.setup_wizard.setup_wizard import DownloadWizard
+from airunner.windows.setup_wizard.setup_wizard_window import DownloadWizard
 
 from airunner.windows.setup_wizard.model_setup.vision_setup import Ui_vision_setup
 
