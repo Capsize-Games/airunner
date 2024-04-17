@@ -18,11 +18,13 @@ class BaseWizard(
         if self.class_name_:
             self.ui = self.class_name_()
             self.ui.setupUi(self)
+
         if self.widget_class_:
             widget = self.widget_class_()
             layout = QVBoxLayout()
             layout.addWidget(widget)
             self.setLayout(layout)
+
         self.initialize_form()
 
         # attach to parent page id changed signal

@@ -1,26 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>controlnet_download</class>
- <widget class="QWidget" name="controlnet_download">
+ <class>stt_welcome_screen</class>
+ <widget class="QWidget" name="stt_welcome_screen">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>566</width>
-    <height>375</height>
+    <width>403</width>
+    <height>223</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="4" column="0">
-    <widget class="QRadioButton" name="radioButton">
-     <property name="text">
-      <string>Yes</string>
-     </property>
-    </widget>
-   </item>
    <item row="0" column="0">
     <widget class="QLabel" name="label">
      <property name="font">
@@ -30,14 +23,33 @@
       </font>
      </property>
      <property name="text">
-      <string>Stable Diffusion: Controlnet</string>
+      <string>Speech-To-Text setup</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QRadioButton" name="radioButton">
+     <property name="text">
+      <string>Yes</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QRadioButton" name="radioButton_2">
+     <property name="text">
+      <string>No</string>
      </property>
     </widget>
    </item>
    <item row="3" column="0">
-    <widget class="QLabel" name="label_3">
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <bold>true</bold>
+      </font>
+     </property>
      <property name="text">
-      <string>Would you like to use Controlnet with Stable Diffusion</string>
+      <string>Would you like to use the Speech-to-Text feature?</string>
      </property>
     </widget>
    </item>
@@ -49,7 +61,7 @@
      <property name="sizeHint" stdset="0">
       <size>
        <width>20</width>
-       <height>40</height>
+       <height>139</height>
       </size>
      </property>
     </spacer>
@@ -62,19 +74,12 @@
     </widget>
    </item>
    <item row="1" column="0">
-    <widget class="QLabel" name="label_2">
+    <widget class="QLabel" name="label_3">
      <property name="text">
-      <string>These models allow for greater control over the output of your AI Art and are required for AI Runner to function properly</string>
+      <string>Speech-to-text requires the download of an AI model and access to your microphone.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0">
-    <widget class="QRadioButton" name="radioButton_2">
-     <property name="text">
-      <string>No</string>
      </property>
     </widget>
    </item>
@@ -85,31 +90,31 @@
   <connection>
    <sender>radioButton</sender>
    <signal>toggled(bool)</signal>
-   <receiver>controlnet_download</receiver>
+   <receiver>stt_welcome_screen</receiver>
    <slot>yes_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>34</x>
-     <y>122</y>
+     <x>61</x>
+     <y>198</y>
     </hint>
     <hint type="destinationlabel">
-     <x>240</x>
-     <y>-4</y>
+     <x>100</x>
+     <y>-11</y>
     </hint>
    </hints>
   </connection>
   <connection>
    <sender>radioButton_2</sender>
    <signal>toggled(bool)</signal>
-   <receiver>controlnet_download</receiver>
+   <receiver>stt_welcome_screen</receiver>
    <slot>no_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>57</x>
-     <y>152</y>
+     <x>45</x>
+     <y>227</y>
     </hint>
     <hint type="destinationlabel">
-     <x>399</x>
+     <x>239</x>
      <y>-7</y>
     </hint>
    </hints>

@@ -17,7 +17,6 @@ def create_airunner_paths(path_settings: dict):
     None
     """
     print("Creating directories...")
-
     for k, path in path_settings.items():
         # Path sanitization
         path = path.replace('..', '')

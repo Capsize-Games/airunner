@@ -1,9 +1,9 @@
-from airunner.windows.setup_wizard.download_wizard.download_thread import DownloadThread
-from airunner.windows.setup_wizard.download_wizard.download_wizard import DownloadWizard
+from airunner.windows.download_wizard.download_thread import DownloadThread
+from airunner.windows.download_wizard.download_wizard_page import DownloadWizardPage
 from airunner.windows.setup_wizard.model_setup.tts.templates.speech_t5_ui import Ui_speecht5_setup
 
 
-class TTSSpeechT5Setup(DownloadWizard):
+class TTSSpeechT5Setup(DownloadWizardPage):
     class_name_ = Ui_speecht5_setup
 
     def start_download(self):

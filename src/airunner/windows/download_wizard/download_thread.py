@@ -1,7 +1,6 @@
 from PySide6.QtCore import QThread, Signal
-
-from airunner.windows.setup_wizard.custom_tqdm_progress_bar import CustomTqdmProgressBar
 from huggingface_hub import snapshot_download
+from airunner.windows.download_wizard.custom_tqdm_progress_bar import CustomTqdmProgressBar
 
 
 class DownloadThread(QThread):
