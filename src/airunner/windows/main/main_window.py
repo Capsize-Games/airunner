@@ -316,7 +316,7 @@ class MainWindow(
         self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True))
         self.register(SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal)
         self.register(SignalCode.WRITE_FILE, self.on_write_file_signal)
-        self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.settings.reset_paths)
+        self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.reset_paths)
 
     def on_write_file_signal(self, data: dict):
         """

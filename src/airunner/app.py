@@ -24,10 +24,8 @@ from PySide6.QtWidgets import (
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.utils import get_version
-from airunner.windows.download_wizard.download_wizard_window import DownloadWizardWindow
 from airunner.windows.main.main_window import MainWindow
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
 from airunner.aihandler.logger import Logger
 
 
@@ -50,8 +48,6 @@ class App(
         """
 
         self.main_window_class_ = main_window_class or MainWindow
-        self.wizard = None
-        self.download_wizard = None
         self.app = None
         self.logger = Logger(prefix=self.__class__.__name__)
 
@@ -64,31 +60,7 @@ class App(
         super(App, self).__init__()
 
         self.start()
-
-    @property
-    def do_show_setup_wizard(self) -> bool:
-        """
-        This flag is used to determine if the setup wizard should be displayed.
-        If the setup wizard has not been dcompleted, various agreements have not been accepted,
-        or the paths have not been initialized, the setup wizard will be displayed.
-        :return: bool
-        """
-        return (
-            self.settings["run_setup_wizard"] or
-            not self.settings["paths_initialized"] or
-            not self.settings["agreements"]["user"] or
-            not self.settings["agreements"]["stable_diffusion"] or
-            not self.settings["agreements"]["airunner"]
-        )
-
-    @property
-    def do_show_download_wizard(self) -> bool:
-        """
-        This flag is used to determine if the download wizard should be displayed.
-        If the download wizard has not been completed, the download wizard will be displayed.
-        :return: bool
-        """
-        return not self.settings["download_wizard_completed"]
+        self.run()
 
     def start(self):
         """
@@ -98,22 +70,6 @@ class App(
         signal.signal(signal.SIGINT, self.signal_handler)
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
         self.app = QApplication([])
-
-        if self.do_show_setup_wizard:
-            self.wizard = SetupWizard()
-            self.wizard.exec()
-
-        # Quit the application if the setup wizard was not completed
-        if self.do_show_setup_wizard:
-            sys.exit(0)
-
-        if self.do_show_download_wizard:
-            self.download_wizard = DownloadWizardWindow()
-            self.download_wizard.exec()
-
-        # Quit the application if the download wizard was not completed
-        if self.do_show_download_wizard:
-            sys.exit(0)
 
     def run(self):
         """
@@ -177,7 +133,6 @@ class App(
             QtCore.Qt.WindowType.WindowStaysOnTopHint
         )
         splash.show()
-        # make message white
         splash.showMessage(
             f"Loading AI Runner v{get_version()}",
             QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignCenter,

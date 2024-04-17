@@ -83,11 +83,16 @@ class SettingsMixin:
         :return:
         """
         settings = self.get_settings()
-        if settings["path_settings"].get("base_path", "") != updated_settings["path_settings"].get("base_path", ""):
+        if (
+            settings is not None and
+            updated_settings is not None and
+            "path_settings" in settings and
+            "path_settings" in updated_settings and
+            settings["path_settings"].get("base_path", "") != updated_settings["path_settings"].get("base_path", "")
+        ):
             updated_settings["path_settings"] = self.construct_paths(
                 settings["path_settings"]["base_path"]
             )
-            return updated_settings
         return updated_settings
 
     def update_settings(self):
