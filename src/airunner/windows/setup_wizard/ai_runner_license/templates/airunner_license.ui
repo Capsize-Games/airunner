@@ -648,6 +648,9 @@ SUCH DAMAGES.
   If the disclaimer of warranty and limitation of liability provided
 above cannot be given local legal effect </string>
          </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+         </property>
         </widget>
        </item>
       </layout>

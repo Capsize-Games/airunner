@@ -32,6 +32,9 @@
      <property name="text">
       <string>Yes</string>
      </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
    <item row="5" column="0">
@@ -91,8 +94,8 @@
    <slot>yes_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>61</x>
-     <y>198</y>
+     <x>70</x>
+     <y>113</y>
     </hint>
     <hint type="destinationlabel">
      <x>100</x>
@@ -107,8 +110,8 @@
    <slot>no_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>45</x>
-     <y>227</y>
+     <x>54</x>
+     <y>142</y>
     </hint>
     <hint type="destinationlabel">
      <x>239</x>

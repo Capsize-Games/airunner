@@ -35,6 +35,7 @@ class Ui_airunner_license(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.label_2 = QLabel(self.scrollAreaWidgetContents)
         self.label_2.setObjectName(u"label_2")
+        self.label_2.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.gridLayout.addWidget(self.label_2, 0, 0, 1, 1)
 

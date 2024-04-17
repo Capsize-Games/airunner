@@ -27,6 +27,7 @@ class Ui_metadata_setup(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.radioButton = QRadioButton(metadata_setup)
         self.radioButton.setObjectName(u"radioButton")
+        self.radioButton.setChecked(False)
 
         self.gridLayout.addWidget(self.radioButton, 4, 0, 1, 1)
 
@@ -63,6 +64,7 @@ class Ui_metadata_setup(object):
 
         self.radioButton_2 = QRadioButton(metadata_setup)
         self.radioButton_2.setObjectName(u"radioButton_2")
+        self.radioButton_2.setChecked(True)
 
         self.gridLayout.addWidget(self.radioButton_2, 5, 0, 1, 1)
 

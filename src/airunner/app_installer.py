@@ -63,6 +63,7 @@ class AppInstaller(
         super(AppInstaller, self).__init__()
 
         self.start()
+        sys.exit(0)
 
     @property
     def do_show_setup_wizard(self) -> bool:
@@ -106,12 +107,12 @@ class AppInstaller(
             sys.exit(0)
 
         if self.do_show_download_wizard:
-            self.download_wizard = DownloadWizardWindow()
+            print("STARTING DOWNLOAD WIZARD")
+            self.download_wizard = DownloadWizardWindow(self.wizard.setup_settings)
             self.download_wizard.exec()
+            print("continuing")
 
-        # Quit the application if the download wizard was not completed
-        if self.do_show_download_wizard:
-            sys.exit(0)
+
 
     def run(self):
         """

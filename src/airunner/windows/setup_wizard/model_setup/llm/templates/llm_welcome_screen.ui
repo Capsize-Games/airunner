@@ -32,6 +32,9 @@
      <property name="text">
       <string>Yes</string>
      </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
    <item row="5" column="0">
@@ -95,11 +98,11 @@
    <hints>
     <hint type="sourcelabel">
      <x>61</x>
-     <y>198</y>
+     <y>147</y>
     </hint>
     <hint type="destinationlabel">
      <x>100</x>
-     <y>-11</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -111,11 +114,11 @@
    <hints>
     <hint type="sourcelabel">
      <x>45</x>
-     <y>227</y>
+     <y>176</y>
     </hint>
     <hint type="destinationlabel">
      <x>239</x>
-     <y>-7</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
