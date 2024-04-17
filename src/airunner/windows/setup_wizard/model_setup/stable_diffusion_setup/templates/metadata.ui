@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>controlnet_download</class>
- <widget class="QWidget" name="controlnet_download">
+ <class>metadata_setup</class>
+ <widget class="QWidget" name="metadata_setup">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -30,14 +30,14 @@
       </font>
      </property>
      <property name="text">
-      <string>Stable Diffusion: Controlnet</string>
+      <string>Metadata Setup</string>
      </property>
     </widget>
    </item>
    <item row="3" column="0">
     <widget class="QLabel" name="label_3">
      <property name="text">
-      <string>Would you like to use Controlnet with Stable Diffusion</string>
+      <string>Would you like to enable metadata in images?</string>
      </property>
     </widget>
    </item>
@@ -64,7 +64,7 @@
    <item row="1" column="0">
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>These models allow for greater control over the output of your AI Art and are required for AI Runner to function properly</string>
+      <string>Metadata is attached to PNGs in order to help facilitate the creation of similar images. You may adjust this setting in the preferences of the main application.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -85,7 +85,7 @@
   <connection>
    <sender>radioButton</sender>
    <signal>toggled(bool)</signal>
-   <receiver>controlnet_download</receiver>
+   <receiver>metadata_setup</receiver>
    <slot>yes_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -101,7 +101,7 @@
   <connection>
    <sender>radioButton_2</sender>
    <signal>toggled(bool)</signal>
-   <receiver>controlnet_download</receiver>
+   <receiver>metadata_setup</receiver>
    <slot>no_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
