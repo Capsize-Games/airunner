@@ -640,32 +640,21 @@ class SDHandler(
                 local_files_only=True,
                 torch_dtype=self.data_type
             )
-            self.emit_signal(
-                SignalCode.SAFETY_CHECKER_LOADED_SIGNAL,
-                {
-                    "message": "success"
-                }
-            )
         except OSError:
             self.send_error("Unable to load safety checker")
-            self.emit_signal(
-                SignalCode.SAFETY_CHECKER_FAILED_SIGNAL,
-                {
-                    "message": "success"
-                }
-            )
         return safety_checker
 
     def initialize_feature_extractor(self):
+        feature_extractor = None
         try:
-            return AutoFeatureExtractor.from_pretrained(
+            feature_extractor = AutoFeatureExtractor.from_pretrained(
                 self.safety_checker_model["path"],
                 local_files_only=True,
                 torch_dtype=self.data_type
             )
         except OSError:
             self.send_error("Unable to load feature extractor")
-            return None
+        return feature_extractor
 
     @property
     def use_safety_checker(self):
@@ -677,6 +666,13 @@ class SDHandler(
 
         if self.use_safety_checker and self.feature_extractor is None and "path" in self.safety_checker_model:
             self.feature_extractor = self.initialize_feature_extractor()
+
+        if self.use_safety_checker and self.safety_checker and self.feature_extractor:
+            self.emit_signal(SignalCode.SAFETY_CHECKER_LOADED_SIGNAL)
+        elif self.use_safety_checker:
+            self.emit_signal(SignalCode.SAFETY_CHECKER_FAILED_SIGNAL)
+        else:
+            self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOADED_SIGNAL)
 
     def do_sample(self):
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
