@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QWizard
 from airunner.mediator_mixin import MediatorMixin
 from airunner.utils.os_utils.validate_path import validate_path
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.windows.setup_wizard.age_restriction.age_restriction_warning import AgeRestrictionWarning
 from airunner.windows.setup_wizard.model_setup.controlnet.controlnet_setup import ControlnetSetup
 from airunner.windows.setup_wizard.model_setup.llm_welcome_screen import LLMWelcomeScreen
 from airunner.windows.setup_wizard.model_setup.metadata_setup import MetaDataSetup
@@ -42,6 +43,8 @@ class SetupWizard(
         self.settings = settings
 
         self.setup_settings = dict(
+            age_restriction_agreed=False,
+            read_age_restriction_agreement=False,
             user_agreement_completed=False,
             airunner_license_completed=False,
             sd_license_completed=False,
@@ -61,6 +64,7 @@ class SetupWizard(
 
         self.pages = {
             "welcome_page": WelcomePage(self),
+            "age_restriction_warning": AgeRestrictionWarning(self),
             "user_agreement": UserAgreement(self),
             "airunner_license": AIRunnerLicense(self),
             "path_settings": PathSettings(self),
@@ -80,19 +84,20 @@ class SetupWizard(
             self.addPage(page)
 
         self.welcome_page_id = self.pageIds()[0]
-        self.user_agreement_id = self.pageIds()[1]
-        self.airunner_license_id = self.pageIds()[2]
-        self.path_settings_id = self.pageIds()[3]
-        self.sd_welcome_screen_id = self.pageIds()[4]
-        self.stable_diffusion_license_id = self.pageIds()[5]
-        self.stable_diffusion_setup_page_id = self.pageIds()[6]
-        self.choose_model_page_id = self.pageIds()[7]
-        self.controlnet_download_id = self.pageIds()[8]
-        self.final_page_id = self.pageIds()[9]
-        self.llm_welcome_page_id = self.pageIds()[10]
-        self.tts_welcome_page_id = self.pageIds()[11]
-        self.stt_welcome_page_id = self.pageIds()[12]
-        self.meta_data_settings_id = self.pageIds()[13]
+        self.age_restriction_agreement_id = self.pageIds()[1]
+        self.user_agreement_id = self.pageIds()[2]
+        self.airunner_license_id = self.pageIds()[3]
+        self.path_settings_id = self.pageIds()[4]
+        self.sd_welcome_screen_id = self.pageIds()[5]
+        self.stable_diffusion_license_id = self.pageIds()[6]
+        self.stable_diffusion_setup_page_id = self.pageIds()[7]
+        self.choose_model_page_id = self.pageIds()[8]
+        self.controlnet_download_id = self.pageIds()[9]
+        self.final_page_id = self.pageIds()[10]
+        self.llm_welcome_page_id = self.pageIds()[11]
+        self.tts_welcome_page_id = self.pageIds()[12]
+        self.stt_welcome_page_id = self.pageIds()[13]
+        self.meta_data_settings_id = self.pageIds()[14]
 
     def addPage(self, page):
         page_id = super().addPage(page)
@@ -109,6 +114,7 @@ class SetupWizard(
         # Define the order of the pages based on the boolean values
         page_order = [
             self.welcome_page_id,
+            self.age_restriction_agreement_id,
             self.user_agreement_id,
             self.airunner_license_id,
             self.path_settings_id,
@@ -123,7 +129,6 @@ class SetupWizard(
             self.final_page_id,
         ]
 
-
         page_order.append(self.meta_data_settings_id)
         page_order.append(self.final_page_id)
 
@@ -137,6 +142,8 @@ class SetupWizard(
                 # final page conditional
                 if current_id == self.final_page_id:
                     self.setup_settings = dict(
+                        age_restriction_agreed=self.pages["age_restriction_warning"].age_restriction_agreed,
+                        read_age_restriction_agreement=self.pages["age_restriction_warning"].read_age_restriction_agreement,
                         user_agreement_completed=self.pages["user_agreement"].agreed,
                         airunner_license_completed=self.pages["airunner_license"].agreed,
                         sd_license_completed=self.pages["stable_diffusion_license"].agreed,
@@ -154,6 +161,12 @@ class SetupWizard(
 
                     return -1
 
+                elif current_id == self.age_restriction_agreement_id:
+                    if self.pages["age_restriction_warning"].age_restriction_agreed and \
+                            self.pages["age_restriction_warning"].read_age_restriction_agreement:
+                        return page_order[current_index + 1]
+                    else:
+                        return page_order[current_index]
 
                 elif current_id == self.welcome_page_id:
                     if not self.settings["agreements"]["user"]:
