@@ -778,8 +778,8 @@ VULNERABILITY_REPORT_LINK = (
 ####################################################################
 # Set default models, currently only for Stable Diffusion
 ####################################################################
-SD_DEFAULT_MODEL_PATH = "stabilityai/sd-turbo"
-SD_DEFAULT_VERSION = "SDXL Turbo"
+SD_DEFAULT_MODEL_PATH = "runwayml/stable-diffusion-v1-5"
+SD_DEFAULT_VERSION = "SD 1.5"
 SD_DEFAULT_MODEL = dict(
     version=SD_DEFAULT_VERSION,
     model=SD_DEFAULT_MODEL_PATH,
