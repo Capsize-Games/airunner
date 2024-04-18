@@ -1,7 +1,5 @@
-from airunner.aihandler.logger import Logger
 from compel import Compel, DiffusersTextualInversionManager
-
-from airunner.utils import clear_memory, get_torch_device
+from airunner.utils import get_torch_device
 
 
 class CompelMixin:

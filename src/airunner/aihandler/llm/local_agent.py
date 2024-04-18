@@ -1,6 +1,8 @@
-from transformers import LocalAgent as LocalAgentBase, StoppingCriteriaList
+from transformers import (
+    LocalAgent as LocalAgentBase,
+    StoppingCriteriaList
+)
 from transformers.tools.agents import StopSequenceCriteria
-
 from airunner.utils import clear_memory
 
 

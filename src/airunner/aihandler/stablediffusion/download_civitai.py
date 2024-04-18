@@ -2,7 +2,6 @@ import os
 import requests
 from json.decoder import JSONDecodeError
 from PySide6.QtCore import QThread
-
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.stablediffusion.download_worker import DownloadWorker
 from airunner.enums import SignalCode

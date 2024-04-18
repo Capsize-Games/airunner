@@ -1,7 +1,5 @@
 import torch
-
 from PySide6.QtCore import QObject
-
 from airunner.enums import HandlerType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.aihandler.logger import Logger

@@ -1,7 +1,8 @@
 import os
-
-from transformers import AutoTokenizer, RagTokenizer
-
+from transformers import (
+    AutoTokenizer,
+    RagTokenizer
+)
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
 from airunner.utils import get_torch_device
 

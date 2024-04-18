@@ -1,22 +1,48 @@
 import os
-import platform
-import subprocess
 import webbrowser
 from functools import partial
-
 from PySide6 import QtGui
-from PySide6.QtCore import Slot, Signal
+from PySide6.QtCore import (
+    Slot,
+    Signal
+)
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QCheckBox
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QMessageBox,
+    QCheckBox
+)
 
+from airunner.agents.actions.bash_execute import bash_execute
 from airunner.aihandler.logger import Logger
-from airunner.settings import STATUS_ERROR_COLOR, STATUS_NORMAL_COLOR_LIGHT, STATUS_NORMAL_COLOR_DARK, \
-    DARK_THEME_NAME, LIGHT_THEME_NAME, NSFW_CONTENT_DETECTED_MESSAGE
-from airunner.enums import Mode, SignalCode, CanvasToolName, WindowSection, GeneratorSection
+from airunner.settings import (
+    STATUS_ERROR_COLOR,
+    STATUS_NORMAL_COLOR_LIGHT,
+    STATUS_NORMAL_COLOR_DARK,
+    DARK_THEME_NAME,
+    LIGHT_THEME_NAME,
+    NSFW_CONTENT_DETECTED_MESSAGE
+)
+from airunner.enums import (
+    Mode,
+    SignalCode,
+    CanvasToolName,
+    WindowSection,
+    GeneratorSection
+)
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
-from airunner.settings import BASE_PATH, DISCORD_LINK, BUG_REPORT_LINK, VULNERABILITY_REPORT_LINK
-from airunner.utils import get_version, default_hf_cache_dir, set_widget_state, clear_memory
+from airunner.settings import (
+    BASE_PATH,
+    BUG_REPORT_LINK,
+    VULNERABILITY_REPORT_LINK
+)
+from airunner.utils import (
+    get_version,
+    set_widget_state,
+    clear_memory
+)
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -32,7 +58,7 @@ from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.model_merger import ModelMerger
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
-from airunner.windows.setup_wizard.setup_wizard import SetupWizard
+from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
 from airunner.worker_manager import WorkerManager
@@ -165,9 +191,14 @@ class MainWindow(
         PipelineMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
-        self.create_airunner_paths()
+        self._updating_settings = False
+
         self.register_signals()
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        self.register(
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
+            self.on_application_settings_changed_signal
+        )
+
         self.initialize_ui()
         self.worker_manager = WorkerManager(
             disable_sd=disable_sd,
@@ -179,18 +210,15 @@ class MainWindow(
             tts_handler_class=tts_handler_class
         )
         self.is_started = True
-        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL)
         self.image_window = None
-        self.register(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal)
-        self._updating_settings = False
 
-        if (
-            self.settings["run_setup_wizard"] or not
-            self.settings["agreements"]["user"] or not
-            self.settings["agreements"]["stable_diffusion"] or not
-            self.settings["agreements"]["airunner"]
-        ):
-            self.show_setup_wizard()
+        self.emit_signal(
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL
+        )
+        self.register(
+            SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL,
+            self.on_ai_models_save_or_update_signal
+        )
 
 
     def keyPressEvent(self, event):
@@ -275,7 +303,6 @@ class MainWindow(
         self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     def register_signals(self):
-        # on window resize:
         self.logger.debug("Connecting signals")
         self.register(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
         self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
@@ -289,6 +316,7 @@ class MainWindow(
         self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True))
         self.register(SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal)
         self.register(SignalCode.WRITE_FILE, self.on_write_file_signal)
+        self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.reset_paths)
 
     def on_write_file_signal(self, data: dict):
         """
@@ -305,7 +333,7 @@ class MainWindow(
         with open("output.txt", "w") as f:
             f.write(message)
 
-    def on_bash_execute_signal(self, data: dict):
+    def on_bash_execute_signal(self, data: dict) -> str:
         """
         Takes a message from the LLM and strips bash commands from it.
         Passes bash command to the bash_execute function.
@@ -313,23 +341,7 @@ class MainWindow(
         :return:
         """
         args = data["args"]
-        val = self.bash_execute(args[0])
-        print(val)
-
-    def bash_execute(self, command: str):
-        """
-        Executes a bash command.
-        :param command: str
-        :return: str
-        """
-        self.logger.debug(f"Executing bash command {command}")
-        try:
-            command = command.split(" ")
-            result = subprocess.check_output(command, shell=False)
-            return result.decode("utf-8")
-        except Exception as e:
-            self.logger.error(e)
-            return str(e)
+        return bash_execute(args[0])
 
     def on_application_settings_changed_signal(self, _message: dict):
         if not self._updating_settings:
@@ -382,11 +394,6 @@ class MainWindow(
         if not self.listening:
             self.listening = True
             self.worker_manager.do_listen()
-    
-    def create_airunner_paths(self):
-        for k, path in self.settings["path_settings"].items():
-            if not os.path.exists(path):
-                os.makedirs(path)
     
     def mode_tab_index_changed(self, index):
         settings = self.settings
@@ -505,7 +512,7 @@ class MainWindow(
 
     @Slot()
     def action_show_hf_cache_manager(self):
-        self.show_settings_path("hf_cache_path", default_hf_cache_dir())
+        self.show_settings_path("hf_cache_path", self.settings["path_settings"]["hf_cache_path"])
 
     @Slot()
     def action_show_images_path(self):
@@ -555,16 +562,6 @@ class MainWindow(
         path = self.settings["path_settings"][name]
         self.show_path(default_path if default_path and path == "" else path)
 
-    def show_path(self, path):
-        if not os.path.isdir(path):
-            return
-        if platform.system() == "Windows":
-            subprocess.Popen(["explorer", os.path.realpath(path)])
-        elif platform.system() == "Darwin":
-            subprocess.Popen(["open", os.path.realpath(path)])
-        else:
-            subprocess.Popen(["xdg-open", os.path.realpath(path)])
-
     def set_icons(self, icon_name, widget_name, theme):
         icon = QtGui.QIcon()
         icon.addPixmap(
@@ -596,7 +593,7 @@ class MainWindow(
 
     @Slot()
     def action_open_discord(self):
-        webbrowser.open(DISCORD_LINK)
+        pass
 
     """
     End slot functions

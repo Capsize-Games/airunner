@@ -1,10 +1,15 @@
 import os
 import random
 import torch
-from transformers import BitsAndBytesConfig, GPTQConfig
-
+from transformers import (
+    BitsAndBytesConfig,
+    GPTQConfig
+)
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.utils import clear_memory, get_torch_device
+from airunner.utils import (
+    clear_memory,
+    get_torch_device
+)
 
 
 class TransformerBaseHandler(BaseHandler):

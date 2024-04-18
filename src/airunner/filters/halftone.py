@@ -1,5 +1,4 @@
 from PIL import Image, ImageDraw
-
 from airunner.filters.base_filter import BaseFilter
 
 

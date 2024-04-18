@@ -3,8 +3,8 @@ from airunner.windows.setup_wizard.base_wizard import BaseWizard
 
 
 class WelcomePage(BaseWizard):
-    def __init__(self):
-        super(WelcomePage, self).__init__()
+    def __init__(self, *args):
+        super(WelcomePage, self).__init__(*args)
 
         self.setTitle("Welcome")
         layout = QVBoxLayout()
