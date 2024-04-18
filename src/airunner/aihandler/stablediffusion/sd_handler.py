@@ -633,6 +633,7 @@ class SDHandler(
 
     def initialize_safety_checker(self):
         self.logger.debug(f"Initializing safety checker with {self.safety_checker_model}")
+        safety_checker = None
         try:
             safety_checker = StableDiffusionSafetyChecker.from_pretrained(
                 self.safety_checker_model["path"],
@@ -653,7 +654,7 @@ class SDHandler(
                     "message": "success"
                 }
             )
-            return None
+        return safety_checker
 
     def initialize_feature_extractor(self):
         try:
