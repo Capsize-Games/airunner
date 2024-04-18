@@ -13,6 +13,7 @@ from airunner.settings import (
 from airunner.enums import (
     SignalCode,
 )
+from airunner.utils.os_utils.validate_path import validate_path
 
 
 class SettingsMixin:
@@ -90,9 +91,10 @@ class SettingsMixin:
             "path_settings" in updated_settings and
             settings["path_settings"].get("base_path", "") != updated_settings["path_settings"].get("base_path", "")
         ):
-            updated_settings["path_settings"] = self.construct_paths(
-                settings["path_settings"]["base_path"]
-            )
+            path = settings["path_settings"].get("base_path", "")
+            if path == "":
+                return updated_settings
+            updated_settings["path_settings"] = self.construct_paths(path)
         return updated_settings
 
     def update_settings(self):
@@ -165,33 +167,10 @@ class SettingsMixin:
 
     def is_valid_path(self, path: str) -> bool:
         try:
-            return self.validate_path(path)
+            return validate_path(path)
         except ValueError as e:
             print(f"Invalid base path: {e}")
             return {}
-
-    def validate_path(self, path) -> bool:
-        """
-        Validates the provided file path to ensure it is secure against common security threats
-        like path traversal. Raises ValueError if an invalid path is detected.
-
-        Parameters:
-            path (str): The file path to validate.
-
-        Returns:
-            str: The original path if it is deemed safe.
-
-        Raises:
-            ValueError: If the path contains dangerous patterns.
-        """
-        import re
-        # Disallow characters that might indicate insecure paths
-        if re.search(r'[<>:"\\|?*]', path):  # Removed '/' from the pattern
-            print(f"Invalid characters in path: {path}")
-            raise ValueError("Invalid characters in path.")
-        # Block path traversal and absolute paths
-        if '..' in path or path.startswith(('/', '\\')):
-            raise ValueError("Path traversal attempt detected.")
 
     def construct_paths(self, base_path):
         """
@@ -240,7 +219,8 @@ class SettingsMixin:
 
     def reset_paths(self):
         settings = self.settings
-        settings["path_settings"] = self.construct_paths(
-            self.settings["path_settings"]["base_path"]
-        )
+        path = self.settings["path_settings"].get("base_path", "")
+        if path == "":
+            return
+        settings["path_settings"] = self.construct_paths(path)
         self.settings = settings
