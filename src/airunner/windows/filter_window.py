@@ -1,6 +1,5 @@
 import importlib
 from functools import partial
-
 from airunner.enums import SignalCode
 from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.windows.base_window import BaseWindow
