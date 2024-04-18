@@ -634,13 +634,25 @@ class SDHandler(
     def initialize_safety_checker(self):
         self.logger.debug(f"Initializing safety checker with {self.safety_checker_model}")
         try:
-            return StableDiffusionSafetyChecker.from_pretrained(
+            safety_checker = StableDiffusionSafetyChecker.from_pretrained(
                 self.safety_checker_model["path"],
                 local_files_only=True,
                 torch_dtype=self.data_type
             )
+            self.emit_signal(
+                SignalCode.SAFETY_CHECKER_LOADED_SIGNAL,
+                {
+                    "message": "success"
+                }
+            )
         except OSError:
             self.send_error("Unable to load safety checker")
+            self.emit_signal(
+                SignalCode.SAFETY_CHECKER_FAILED_SIGNAL,
+                {
+                    "message": "success"
+                }
+            )
             return None
 
     def initialize_feature_extractor(self):
@@ -1266,11 +1278,17 @@ class SDHandler(
 
                 pipeline_classname_ = self.pipeline_class()
 
+                print(kwargs)
+                print("model_path", self.model_path)
+                print("data_type", self.data_type)
+                print("safety_checker", self.safety_checker)
+                print("feature_extractor", self.feature_extractor)
                 self.pipe = pipeline_classname_.from_pretrained(
                     self.model_path,
                     torch_dtype=self.data_type,
                     safety_checker=self.safety_checker,
                     feature_extractor=self.feature_extractor,
+                    use_safetensors=True,
                     **kwargs
                 )
 
