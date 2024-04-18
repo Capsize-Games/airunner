@@ -213,6 +213,8 @@ class SignalCode(Enum):
     SAFETY_CHECKER_LOADED_SIGNAL = "safety_checker_loaded_signal"
     SAFETY_CHECKER_UNLOADED_SIGNAL = "safety_checker_unloaded_signal"
     SAFETY_CHECKER_FAILED_SIGNAL = "safety_checker_load_failed_signal"
+    UNLOAD_SAFETY_CHECKER_SIGNAL = "unload_safety_checker"
+    LOAD_SAFETY_CHECKER_SIGNAL = "load_safety_checker"
 
 
 class EngineResponseCode(Enum):
