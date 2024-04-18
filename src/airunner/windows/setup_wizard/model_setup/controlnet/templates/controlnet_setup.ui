@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>controlnet_download</class>
- <widget class="QWidget" name="controlnet_download">
+ <class>controlnet_setup</class>
+ <widget class="QWidget" name="controlnet_setup">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -88,7 +88,7 @@
   <connection>
    <sender>radioButton</sender>
    <signal>toggled(bool)</signal>
-   <receiver>controlnet_download</receiver>
+   <receiver>controlnet_setup</receiver>
    <slot>yes_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -104,7 +104,7 @@
   <connection>
    <sender>radioButton_2</sender>
    <signal>toggled(bool)</signal>
-   <receiver>controlnet_download</receiver>
+   <receiver>controlnet_setup</receiver>
    <slot>no_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">

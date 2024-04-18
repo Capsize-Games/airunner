@@ -1,10 +1,11 @@
-import os
 from PySide6.QtWidgets import QWizard
 from airunner.mediator_mixin import MediatorMixin
+from airunner.utils.os_utils.validate_path import validate_path
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.windows.setup_wizard.model_setup.controlnet.controlnet_setup import ControlnetSetup
 from airunner.windows.setup_wizard.model_setup.llm_welcome_screen import LLMWelcomeScreen
 from airunner.windows.setup_wizard.model_setup.metadata_setup import MetaDataSetup
-from airunner.windows.setup_wizard.model_setup.model_setup_page.model_setup_page import ModelSetupPage
+from airunner.windows.setup_wizard.model_setup.stable_diffusion_setup.choose_model import ChooseModel
 from airunner.windows.setup_wizard.model_setup.stable_diffusion_setup.stable_diffusion_setup import (
     StableDiffusionSetupPage
 )
@@ -19,7 +20,6 @@ from airunner.windows.setup_wizard.model_setup.stable_diffusion_setup.stable_dif
 )
 from airunner.windows.setup_wizard.ai_runner_license.ai_runner_license import AIRunnerLicense
 from airunner.windows.setup_wizard.path_settings.path_settings import PathSettings
-from airunner.windows.setup_wizard.model_setup.controlnet.controlnet_download import ControlnetDownload
 from airunner.windows.setup_wizard.final_page import FinalPage
 
 
@@ -51,6 +51,10 @@ class SetupWizard(
             enable_llm=False,
             enable_tts=False,
             enable_stt=False,
+            model_version="",
+            model="",
+            custom_model="",
+            using_custom_model=False,
         )
 
         self.page_ids = {}
@@ -61,10 +65,10 @@ class SetupWizard(
             "airunner_license": AIRunnerLicense(self),
             "path_settings": PathSettings(self),
             "sd_welcome_screen": StableDiffusionWelcomeScreen(self),
-            "model_setup_page": ModelSetupPage(self),
             "stable_diffusion_license": StableDiffusionLicense(self),
             "stable_diffusion_setup_page": StableDiffusionSetupPage(self),
-            "controlnet_download": ControlnetDownload(self),
+            "choose_model_page": ChooseModel(self),
+            "controlnet_download": ControlnetSetup(self),
             "final_page": FinalPage(self),
             "llm_welcome_page": LLMWelcomeScreen(self),
             "tts_welcome_page": TTSWelcomeScreen(self),
@@ -80,9 +84,9 @@ class SetupWizard(
         self.airunner_license_id = self.pageIds()[2]
         self.path_settings_id = self.pageIds()[3]
         self.sd_welcome_screen_id = self.pageIds()[4]
-        self.model_setup_page_id = self.pageIds()[5]
-        self.stable_diffusion_license_id = self.pageIds()[6]
-        self.stable_diffusion_setup_page_id = self.pageIds()[7]
+        self.stable_diffusion_license_id = self.pageIds()[5]
+        self.stable_diffusion_setup_page_id = self.pageIds()[6]
+        self.choose_model_page_id = self.pageIds()[7]
         self.controlnet_download_id = self.pageIds()[8]
         self.final_page_id = self.pageIds()[9]
         self.llm_welcome_page_id = self.pageIds()[10]
@@ -110,6 +114,7 @@ class SetupWizard(
             self.path_settings_id,
             self.sd_welcome_screen_id,
             self.stable_diffusion_license_id,
+            self.choose_model_page_id,
             self.controlnet_download_id,
             self.meta_data_settings_id,
             self.llm_welcome_page_id,
@@ -141,6 +146,10 @@ class SetupWizard(
                         enable_llm=self.pages["llm_welcome_page"].toggled_yes,
                         enable_tts=self.pages["tts_welcome_page"].toggled_yes,
                         enable_stt=self.pages["stt_welcome_page"].toggled_yes,
+                        model_version=self.pages["choose_model_page"].model_version,
+                        model=self.pages["choose_model_page"].model,
+                        custom_model=self.pages["choose_model_page"].custom_model,
+                        using_custom_model=self.pages["choose_model_page"].using_custom_model,
                     )
 
                     return -1
@@ -178,6 +187,15 @@ class SetupWizard(
                         return page_order[current_index + 3]
                     else:
                         return page_order[current_index]
+
+                # Model setup page conditional
+                # elif current_id == self.choose_model_page_id:
+                #     if self.pages["choose_model_page"].toggled_yes:
+                #         return page_order[current_index + 1]
+                #     elif self.pages["choose_model_page"].toggled_no:
+                #         return page_order[current_index + 2]
+                #     else:
+                #         return page_order[current_index]
 
                 # Controlnet conditional
                 elif current_id == self.controlnet_download_id:
@@ -240,7 +258,9 @@ class SetupWizard(
                     in the UI.
                     """
                     path: str = self.pages["path_settings"].ui.base_path.text()
-                    if self.validate_path(path):
+                    is_valid_path = validate_path(path)
+                    print(path, is_valid_path)
+                    if is_valid_path:
                         return page_order[current_index + 1]
                     else:
                         return page_order[current_index]
@@ -250,14 +270,3 @@ class SetupWizard(
 
         # If the ID of the current page is not in the order list, use the default next page logic
         return super(SetupWizard, self).nextId()
-
-    def validate_path(self, path: str) -> bool:
-        """
-        Determine if this is a valid path.
-        :param path: str
-        :return: bool
-        """
-        valid_path = False
-        if os.path.exists(path):
-            valid_path = True
-        return valid_path

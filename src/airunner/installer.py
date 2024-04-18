@@ -1,22 +1,9 @@
-"""
-----------------------------------------------------------------
-Import order is crucial for AI Runner to work as expected.
-Do not remove the no_internet_socket import.
-Do not change the order of the imports.
-----------------------------------------------------------------
-"""
 ################################################################
-# Importing this module ensures that the internet is completely
-# disabled for the AI Runner application.
+# Importing this module sets the Hugging Face environment
+# variables for the application.
 ################################################################
-from airunner.security import no_internet_socket
-
-################################################################
-# Importing this restricts access to potentially dangerous OS
-# operations, such as system calls and subprocess invocations.
-################################################################
-from airunner.security import restrict_os_access
-
+from airunner.security.set_huggingface_env_variables import set_huggingface_environment_variables
+set_huggingface_environment_variables(allow_downloads=True)
 ################################################################
 # Import the main application class for AI Runner.
 ################################################################
