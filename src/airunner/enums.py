@@ -210,6 +210,9 @@ class SignalCode(Enum):
     LLM_CHOOSE_RESPONSE_LENGTH_SIGNAL = "choose_response_length_signal"
     PROCESS_SPEECH_SIGNAL = "process_speech_signal"
     ADD_CHATBOT_MESSAGE_SIGNAL = "add_chatbot_message_signal"
+    SAFETY_CHECKER_LOADED_SIGNAL = "safety_checker_loaded_signal"
+    SAFETY_CHECKER_UNLOADED_SIGNAL = "safety_checker_unloaded_signal"
+    SAFETY_CHECKER_FAILED_SIGNAL = "safety_checker_load_failed_signal"
 
 
 class EngineResponseCode(Enum):
@@ -404,3 +407,9 @@ class DeviceName(Enum):
 class Gender(Enum):
     MALE = "Male"
     FEMALE = "Female"
+
+
+class SafetyCheckerStatus(Enum):
+    UNLOADED = "Unloaded"
+    LOADED = "Loaded"
+    FAILED = "Failed"
