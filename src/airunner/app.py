@@ -1,8 +1,9 @@
-####################################################################################################
-# Do not remove the following import statement or change
-# the order of the imports.
-####################################################################################################
+################################################################
+# Importing this module sets the Hugging Face environment
+# variables for the application.
+################################################################
 from airunner.security import set_huggingface_env_variables
+
 import sys
 import signal
 import traceback
