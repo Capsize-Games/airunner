@@ -7,7 +7,8 @@ class DownloadWizardPage(BaseWizard):
         super(DownloadWizardPage, self).__init__(*args)
         self.download_thread = None
         self.models_to_download = []
-        self.ui.download.clicked.connect(self.download_models)
+        if self.ui:
+            self.ui.download.clicked.connect(self.download_models)
         self._original_text = self.ui.download.text()
         self.downloading = False
         self.ui.download.show()
@@ -17,9 +18,10 @@ class DownloadWizardPage(BaseWizard):
     def download_models(self):
         if not self.downloading:
             self.downloading = True
-            self.ui.download.setText("Cancel")
-            self.ui.download.hide()
-            self.ui.cancel.show()
+            if self.ui:
+                self.ui.download.setText("Cancel")
+                self.ui.download.hide()
+                self.ui.cancel.show()
             self.start_download()
 
     def start_download(self):
@@ -32,9 +34,10 @@ class DownloadWizardPage(BaseWizard):
     @Slot()
     def cancel(self):
         self.downloading = False
-        self.ui.download.setText(self._original_text)
-        self.ui.download.show()
-        self.ui.cancel.hide()
+        if self.ui:
+            self.ui.download.setText(self._original_text)
+            self.ui.download.show()
+            self.ui.cancel.hide()
 
     def update_progress(self, current, total):
         for data in self.models_to_download:
