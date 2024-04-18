@@ -5,7 +5,6 @@ from airunner.utils.clear_memory import clear_memory
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 from airunner.utils.create_worker import create_worker
-from airunner.utils.default_hf_cache_dir import default_hf_cache_dir
 from airunner.utils.delete_image import delete_image
 from airunner.utils.get_main_window import get_main_window
 from airunner.utils.get_torch_device import get_torch_device

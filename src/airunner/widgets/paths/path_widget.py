@@ -1,10 +1,7 @@
 import os
-
 from PySide6.QtWidgets import QFileDialog
-
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.paths.templates.path_ui import Ui_path_widget
-from airunner.utils import default_hf_cache_dir
 
 
 class PathWidget(BaseWidget):
@@ -32,7 +29,7 @@ class PathWidget(BaseWidget):
         self.ui.description_label.setText(self.description)
         path = self.path
         if self.path_name == "hf_cache" and path == "":
-            path = default_hf_cache_dir()
+            path = self.settings["path_settings"]["hf_cache_path"]
         obj = getattr(self.ui, f"path")
         obj.setText(path)
 
