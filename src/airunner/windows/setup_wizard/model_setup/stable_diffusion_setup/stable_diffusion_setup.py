@@ -9,13 +9,5 @@ class StableDiffusionSetupPage(BaseWizard):
 
     def __init__(self, *args):
         super(StableDiffusionSetupPage, self).__init__(*args)
-        self.no_toggled = False
-        self.yes_toggled = False
 
-    @Slot(bool)
-    def no_toggled(self, val: bool):
-        self.no_toggled = val
-
-    @Slot(bool)
-    def yes_toggled(self, val: bool):
-        self.yes_toggled = val
+        self

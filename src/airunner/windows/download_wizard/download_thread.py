@@ -1,15 +1,17 @@
 from PySide6.QtCore import QThread, Signal
-from huggingface_hub import snapshot_download
+from huggingface_hub import hf_hub_download, snapshot_download
 from airunner.windows.download_wizard.custom_tqdm_progress_bar import CustomTqdmProgressBar
 
 
 class DownloadThread(QThread):
     progress_updated = Signal(int, int)
     download_finished = Signal()
+    file_download_finished = Signal()
 
     def __init__(self, models_to_download):
         super().__init__()
         self.models_to_download = models_to_download
+        print(self.models_to_download)
         self._stop_event = False
 
     def run(self):
@@ -31,11 +33,20 @@ class DownloadThread(QThread):
             else:
                 repo_type = None
             try:
-                snapshot_download(
-                    repo_id=model["path"],
-                    tqdm_class=tqdm_class,
-                    repo_type=repo_type
-                )
+                if "files" in model:
+                    for filename in model["files"]:
+                        hf_hub_download(
+                            repo_id=model["path"],
+                            filename=filename,
+                            repo_type=repo_type
+                        )
+                        self.file_download_finished.emit()
+                else:
+                    snapshot_download(
+                        repo_id=model["path"],
+                        repo_type=repo_type,
+                        tqdm_class=tqdm_class
+                    )
             except Exception as e:
                 print(e)
                 continue
