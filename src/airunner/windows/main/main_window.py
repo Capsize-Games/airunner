@@ -887,7 +887,11 @@ class MainWindow(
                 ui.setStyleSheet("")
 
             for icon_data in self.icons:
-                self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
+                self.set_icons(
+                    icon_data[0],
+                    icon_data[1],
+                    "dark" if self.settings["dark_mode_enabled"] else "light"
+                )
 
     def show_setup_wizard(self):
         wizard = SetupWizard()
