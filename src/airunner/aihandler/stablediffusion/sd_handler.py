@@ -44,7 +44,7 @@ from airunner.enums import (
     Scheduler,
     SDMode,
     StableDiffusionVersion,
-    EngineResponseCode
+    EngineResponseCode, SafetyCheckerStatus
 )
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
@@ -140,6 +140,7 @@ class SDHandler(
 
         self.handler_type = HandlerType.DIFFUSER
         self._previous_model = ""
+        self.safety_checker_status = SafetyCheckerStatus.UNLOADED
         self.cross_attention_kwargs_scale: float = 1.0
         self._initialized = False
         self._reload_model = False
@@ -211,6 +212,8 @@ class SDHandler(
             "action": "txt2img",
         }
         signals = {
+            SignalCode.UNLOAD_SAFETY_CHECKER_SIGNAL: self.unload_safety_checker,
+            SignalCode.LOAD_SAFETY_CHECKER_SIGNAL: self.load_safety_checker,
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
             SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_stablediffusion_signal,
             SignalCode.SD_MOVE_TO_CPU_SIGNAL: self.on_move_to_cpu,
@@ -660,7 +663,13 @@ class SDHandler(
     def use_safety_checker(self):
         return self.settings["nsfw_filter"]
 
-    def load_safety_checker(self):
+    def unload_safety_checker(self, data_: dict = None):
+        self.safety_checker = None
+        self.feature_extractor = None
+        self.safety_checker_status = SafetyCheckerStatus.UNLOADED
+        self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOADED_SIGNAL)
+
+    def load_safety_checker(self, data_: dict = None):
         if self.use_safety_checker and self.safety_checker is None and "path" in self.safety_checker_model:
             self.safety_checker = self.initialize_safety_checker()
 
@@ -669,10 +678,13 @@ class SDHandler(
 
         if self.use_safety_checker and self.safety_checker and self.feature_extractor:
             self.emit_signal(SignalCode.SAFETY_CHECKER_LOADED_SIGNAL)
+            self.safety_checker_status = SafetyCheckerStatus.LOADED
         elif self.use_safety_checker:
             self.emit_signal(SignalCode.SAFETY_CHECKER_FAILED_SIGNAL)
+            self.safety_checker_status = SafetyCheckerStatus.FAILED
         else:
             self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOADED_SIGNAL)
+            self.safety_checker_status = SafetyCheckerStatus.UNLOADED
 
     def do_sample(self):
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
@@ -732,7 +744,12 @@ class SDHandler(
         Generate an image using the pipe
         :return:
         """
-        if self.pipe:
+        if (self.pipe and ((
+            self.use_safety_checker and
+            self.safety_checker_status is SafetyCheckerStatus.LOADED
+        ) or (
+            not self.use_safety_checker
+        ))):
             data = self.data
             for k, v in self.generator_request_data.items():
                 data[k] = v
