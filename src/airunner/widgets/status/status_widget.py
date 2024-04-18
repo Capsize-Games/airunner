@@ -3,7 +3,7 @@ from PySide6.QtCore import QTimer
 import psutil
 import torch
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, SafetyCheckerStatus
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.status.templates.status_ui import Ui_status_widget
 
@@ -16,10 +16,26 @@ class StatusWidget(BaseWidget):
         self.register(SignalCode.APPLICATION_STATUS_INFO_SIGNAL, self.on_status_info_signal)
         self.register(SignalCode.APPLICATION_STATUS_ERROR_SIGNAL, self.on_status_error_signal)
         self.register(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
+        self.register(SignalCode.SAFETY_CHECKER_FAILED_SIGNAL, self.on_safety_checker_failed_signal)
+        self.register(SignalCode.SAFETY_CHECKER_LOADED_SIGNAL, self.on_safety_checker_loaded_signal)
+        self.register(SignalCode.SAFETY_CHECKER_UNLOADED_SIGNAL, self.on_safety_checker_unloaded_signal)
+        self.safety_checker_status = SafetyCheckerStatus.UNLOADED
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_system_stats)
         self.timer.start(1000)
+
+    def on_safety_checker_failed_signal(self, _ignore):
+        self.safety_checker_status = SafetyCheckerStatus.FAILED
+        self.update_system_stats()
+
+    def on_safety_checker_loaded_signal(self, _ignore):
+        self.safety_checker_status = SafetyCheckerStatus.LOADED
+        self.update_system_stats()
+
+    def on_safety_checker_unloaded_signal(self, _ignore):
+        self.safety_checker_status = SafetyCheckerStatus.UNLOADED
+        self.update_system_stats()
 
     def on_status_info_signal(self, message):
         self.set_system_status(message, error=False)
@@ -33,7 +49,9 @@ class StatusWidget(BaseWidget):
     def update_system_stats(self, queue_size=0):
         nsfw_filter = self.settings["nsfw_filter"]
         has_cuda = torch.cuda.is_available()
-        nsfw_status = f"Safety Checker {'On' if nsfw_filter else 'Off'}"
+        nsfw_status = f"Safety Checker {'On' if nsfw_filter else 'Off'} and {'Loaded' if self.safety_checker_status == SafetyCheckerStatus.LOADED else 'Not Loaded'}"
+        if self.safety_checker_status == SafetyCheckerStatus.FAILED:
+            nsfw_status = "Safety Checker Failed to Load"
         queue_stats = f"Queued items: {queue_size}"
         cuda_status = f"Using {'GPU' if has_cuda else 'CPU'}"
         vram_stats = f"VRAM allocated {torch.cuda.memory_allocated() / 1024 ** 3:.1f}GB cached {torch.cuda.memory_cached() / 1024 ** 3:.1f}GB"
@@ -46,6 +64,8 @@ class StatusWidget(BaseWidget):
 
         enabled_css = "QLabel { color: #00ff00; }"
         disabled_css = "QLabel { color: #ff0000; }"
+
+        nsfw_filter = False if self.safety_checker_status == SafetyCheckerStatus.FAILED else nsfw_filter
 
         self.ui.nsfw_status.setStyleSheet(enabled_css if nsfw_filter else disabled_css)
         self.ui.cuda_status.setStyleSheet(enabled_css if has_cuda else disabled_css)
