@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWizard
 from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.download_wizard.download_wizard_page import DownloadWizardPage
+from airunner.utils.os_utils.create_airunner_directory import create_airunner_paths
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.installation_settings.install_failed_page import InstallFailedPage
 from airunner.windows.setup_wizard.installation_settings.install_page import InstallPage
@@ -30,7 +30,9 @@ class DownloadWizardWindow(
             setup_settings["user_agreement_completed"] and
             setup_settings["airunner_license_completed"]
         ):
-            print("Download wizard window")
+            self.construct_paths(self.settings["path_settings"]["base_path"])
+            create_airunner_paths(self.settings["path_settings"])
+
             self.enable_sd = setup_settings["enable_sd"]
             self.enable_controlnet = setup_settings["enable_controlnet"]
 
