@@ -399,3 +399,8 @@ class SDMode(Enum):
 class DeviceName(Enum):
     CUDA = "cuda"
     CPU = "cpu"
+
+
+class Gender(Enum):
+    MALE = "Male"
+    FEMALE = "Female"

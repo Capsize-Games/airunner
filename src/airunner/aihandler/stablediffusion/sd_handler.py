@@ -2,14 +2,17 @@ import io
 import base64
 import random
 import traceback
-
 import numpy as np
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QApplication
 from typing import List
 import requests
 import torch
-from PIL import Image, ImageDraw, ImageFont
+from PIL import (
+    Image,
+    ImageDraw,
+    ImageFont
+)
 from controlnet_aux.processor import Processor
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import download_from_original_stable_diffusion_ckpt
 from diffusers.utils.torch_utils import randn_tensor
@@ -21,7 +24,8 @@ from diffusers import (
     AutoPipelineForInpainting,
     StableDiffusionInstructPix2PixPipeline,
     ControlNetModel,
-    StableDiffusionImg2ImgPipeline, StableDiffusionInpaintPipeline
+    StableDiffusionImg2ImgPipeline,
+    StableDiffusionInpaintPipeline
 )
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers import (
@@ -48,7 +52,6 @@ from airunner.aihandler.mixins.lora_mixin import LoraMixin
 from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
-from airunner.settings import AIRUNNER_ENVIRONMENT
 from airunner.settings import CONFIG_FILES
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
@@ -196,7 +199,6 @@ class SDHandler(
         self.extra_args = None
         self.do_set_seed = True
         self._controlnet_image = None
-        self.is_dev_env = AIRUNNER_ENVIRONMENT == "dev"
         self.latents = None
         self.sd_mode = None
         self.safety_checker = None

@@ -4,7 +4,6 @@ from PySide6.QtGui import QPainterPath
 from PySide6.QtGui import QPen, QPixmap, QPainter
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QFileDialog
-
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils import convert_image_to_base64
