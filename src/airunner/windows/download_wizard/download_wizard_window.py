@@ -50,4 +50,6 @@ class DownloadWizardWindow(
                 self.show()
 
         if failed:
-            self.addPage(InstallFailedPage(self))
+            self.addPage(
+                InstallFailedPage(self)
+            )
