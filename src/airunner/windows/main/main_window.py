@@ -160,6 +160,7 @@ class MainWindow(
         self._generator = None
         self._generator_settings = None
         self.listening = False
+        self.intialized = False
         self.history = History()
 
         self.splitter_names = [
@@ -389,6 +390,7 @@ class MainWindow(
         self.ui.enable_controlnet.blockSignals(False)
         self.logger.debug("Setting buttons")
         self.initialize_tool_section_buttons()
+        self.intialized = True
 
     def do_listen(self):
         if not self.listening:
@@ -563,6 +565,9 @@ class MainWindow(
         self.show_path(default_path if default_path and path == "" else path)
 
     def set_icons(self, icon_name, widget_name, theme):
+        if not self.intialized:
+            return
+
         icon = QtGui.QIcon()
         icon.addPixmap(
             QtGui.QPixmap(f":/icons/{theme}/{icon_name}.svg"), 
