@@ -342,7 +342,7 @@ LOG_LEVEL = logging.WARNING
 ####################################################################
 # Default models for the core application
 ####################################################################
-DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.2"
+DEFAULT_LLM_HF_PATH = "w4ffl35/Mistral-7B-Instruct-v0.2-safetensors"
 # WAS ORIGINALLY USING "openai/whisper-base" for feature extractor
 DEFAULT_STT_HF_PATH = "openai/whisper-tiny.en"
 DEFAULT_SPEECHT5_MODEL_PATHS = {
