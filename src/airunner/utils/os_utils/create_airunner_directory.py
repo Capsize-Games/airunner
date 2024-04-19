@@ -23,6 +23,7 @@ def create_airunner_paths(path_settings: dict):
 
         # Permission check and directory creation
         try:
+            path = os.path.expanduser(path)
             if not os.path.exists(path):
                 os.makedirs(path)
         except PermissionError:
