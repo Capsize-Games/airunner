@@ -215,6 +215,10 @@ class SignalCode(Enum):
     SAFETY_CHECKER_FAILED_SIGNAL = "safety_checker_load_failed_signal"
     UNLOAD_SAFETY_CHECKER_SIGNAL = "unload_safety_checker"
     LOAD_SAFETY_CHECKER_SIGNAL = "load_safety_checker"
+    DOWNLOAD_PROGRESS = "download_progress"
+    UPDATE_DOWNLOAD_LOG = "update_download_log"
+    CLEAR_DOWNLOAD_STATUS_BAR = "clear_download_status_bar"
+    SET_DOWNLOAD_STATUS_LABEL = "set_download_status_label"
 
 
 class EngineResponseCode(Enum):
