@@ -1,5 +1,6 @@
 import io
 import base64
+import os
 import random
 import traceback
 import numpy as np
@@ -636,14 +637,35 @@ class SDHandler(
 
     def initialize_safety_checker(self):
         self.logger.debug(f"Initializing safety checker with {self.safety_checker_model}")
+        path = self.safety_checker_model["path"]
         safety_checker = None
+        path = os.path.join(self.settings["path_settings"]["safety_checker_model_path"],  path)
+        path = os.path.expanduser(path)
+        config = StableDiffusionSafetyChecker.config_class.from_pretrained(
+            os.path.expanduser(
+                os.path.join(
+                    self.settings["path_settings"]["txt2img_model_path"],
+                    "runwayml/stable-diffusion-v1-5/safety_checker/config.json"
+                )
+            ),
+            local_files_only=True
+        )
         try:
             safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-                self.safety_checker_model["path"],
+                os.path.expanduser(
+                    os.path.join(
+                        self.settings["path_settings"]["txt2img_model_path"],
+                        "runwayml/stable-diffusion-v1-5/safety_checker/model.fp16.safetensors"
+                    )
+                ),
                 local_files_only=True,
-                torch_dtype=self.data_type
+                torch_dtype=self.data_type,
+                use_safetensors=True,
+                config=config
             )
-        except OSError:
+            print("safety checker loaded")
+        except OSError as e:
+            print(e)
             self.send_error("Unable to load safety checker")
         return safety_checker
 
@@ -651,11 +673,18 @@ class SDHandler(
         feature_extractor = None
         try:
             feature_extractor = AutoFeatureExtractor.from_pretrained(
-                self.safety_checker_model["path"],
+                os.path.expanduser(
+                    os.path.join(
+                        self.settings["path_settings"]["feature_extractor_model_path"],
+                        "openai/clip-vit-large-patch14/preprocessor_config.json"
+                    )
+                ),
                 local_files_only=True,
-                torch_dtype=self.data_type
+                torch_dtype=self.data_type,
+                use_safetensors=True
             )
-        except OSError:
+        except OSError as e:
+            print(e)
             self.send_error("Unable to load feature extractor")
         return feature_extractor
 
