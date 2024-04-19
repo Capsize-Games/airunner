@@ -5,8 +5,14 @@ cd "$(dirname "$0")"
 
 # Linux prerequisites
 sudo apt update
-sudo apt install fonts-noto-color-emoji
-sudo apt install libportaudio2 libxcb-cursor0 espeak xclip
+sudo apt install -y fonts-noto-color-emoji
+sudo apt install -y libportaudio2
+sudo apt install -y libxcb-cursor0
+sudo apt install -y espeak
+sudo apt install -y xclip
+sudo apt install -y git
+sudo apt install -y python3-pip
+sudo apt install -y python3.10-venv
 
 # Create and activate virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
