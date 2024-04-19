@@ -36,8 +36,7 @@ class DownloadWizardWindow(
             self.enable_sd = setup_settings["enable_sd"]
             self.enable_controlnet = setup_settings["enable_controlnet"]
 
-            if not self.enable_sd or self.enable_sd and setup_settings["sd_license_completed"]:
-
+            if not self.enable_sd or (self.enable_sd and setup_settings["sd_license_completed"]):
                 self.enable_llm = setup_settings["enable_llm"]
                 self.enable_tts = setup_settings["enable_tts"]
                 self.enable_stt = setup_settings["enable_stt"]
@@ -45,7 +44,6 @@ class DownloadWizardWindow(
                 self.setWindowTitle("AI Runner Download Wizard")
                 self.setWizardStyle(QWizard.ModernStyle)
                 self.setOption(QWizard.IndependentPages, True)
-
                 self.addPage(InstallPage(self, setup_settings))
                 self.addPage(InstallSuccessPage(self))
                 failed = False
