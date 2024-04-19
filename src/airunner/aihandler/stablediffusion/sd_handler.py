@@ -663,7 +663,6 @@ class SDHandler(
                 use_safetensors=True,
                 config=config
             )
-            print("safety checker loaded")
         except OSError as e:
             print(e)
             self.send_error("Unable to load safety checker")
