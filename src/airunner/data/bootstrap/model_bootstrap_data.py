@@ -99,17 +99,6 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
-        "name": "Stable Diffusion 1.5",
-        "path": "runwayml/stable-diffusion-v1-5",
-        "branch": "fp16",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "pipeline_action": "controlnet",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
         "name": "Stability AI 4x resolution",
         "path": "stabilityai/stable-diffusion-x4-upscaler",
         "branch": "fp16",
@@ -132,34 +121,12 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
-        "name": "SD Image Variations",
-        "path": "lambdalabs/sd-image-variations-diffusers",
-        "branch": "v2.0",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "pipeline_action": "vid2vid",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
         "name": "sd-x2-latent-upscaler",
         "path": "stabilityai/sd-x2-latent-upscaler",
         "branch": "fp16",
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "upscale",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
-        "name": "CompVis Safety Checker",
-        "path": "CompVis/stable-diffusion-safety-checker",
-        "branch": "fp16",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "pipeline_action": "safety_checker",
         "enabled": True,
         "model_type": "art",
         "is_default": True
@@ -204,6 +171,17 @@ model_bootstrap_data = [
         "version": "SDXL Turbo",
         "category": "stablediffusion",
         "pipeline_action": "safety_checker",
+        "enabled": True,
+        "model_type": "art",
+        "is_default": True
+    },
+    {
+        "name": "CompVis Feature Extractor",
+        "path": "openai/clip-vit-large-patch14",
+        "branch": "main",
+        "version": "SD 1.5",
+        "category": "stablediffusion",
+        "pipeline_action": "feature_extractor",
         "enabled": True,
         "model_type": "art",
         "is_default": True
