@@ -1,5 +1,4 @@
 from PySide6.QtWidgets import QTableWidgetItem, QHeaderView, QApplication
-
 from airunner.enums import SignalCode, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stats.templates.stats_ui import Ui_stats_widget
@@ -63,10 +62,15 @@ class StatsWidget(
 
         self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged)
         # add items
+        self.initialize_model_stats_ui()
+        self.initialize_module_stats_ui()
+
+        self.safety_checker_model_status = ModelStatus.UNLOADED
+
+    def initialize_model_stats_ui(self):
         self.ui.model_stats.setRowCount(11)
         self.ui.model_stats.setColumnCount(3)
         self.ui.model_stats.setHorizontalHeaderLabels(["Model", "Status", "Actions", "Size"])
-
 
         # Model Name
         self.ui.model_stats.setItem(0, 0, QTableWidgetItem("SD Safety Checker"))
@@ -98,7 +102,8 @@ class StatsWidget(
         self.ui.model_stats.verticalHeader().setVisible(False)
         self.ui.model_stats.horizontalHeader().setVisible(False)
 
-        self.safety_checker_model_status = ModelStatus.UNLOADED
+    def initialize_module_stats_ui(self):
+        pass
 
     def on_safety_checker_loaded(self, data=None):
         self.safety_checker_model_status = ModelStatus.LOADED

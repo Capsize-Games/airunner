@@ -1,8 +1,5 @@
 from PySide6.QtCore import QTimer
-
 import psutil
-import torch
-
 from airunner.enums import SignalCode, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.status.templates.status_ui import Ui_status_widget
@@ -47,6 +44,8 @@ class StatusWidget(BaseWidget):
         self.set_system_status("", error=False)
 
     def update_system_stats(self, queue_size=0):
+        import torch
+
         nsfw_filter = self.settings["nsfw_filter"]
         has_cuda = torch.cuda.is_available()
         nsfw_status = f"Safety Checker {'On' if nsfw_filter else 'Off'} and {'Loaded' if self.safety_checker_status == ModelStatus.LOADED else 'Not Loaded'}"
@@ -65,7 +64,7 @@ class StatusWidget(BaseWidget):
         enabled_css = "QLabel { color: #00ff00; }"
         disabled_css = "QLabel { color: #ff0000; }"
 
-        nsfw_filter = False if self.safety_checker_status == ModelStatus.FAILED else nsfw_filter
+        nsfw_filter = False if self.safety_checker_status != ModelStatus.LOADED else nsfw_filter
 
         self.ui.nsfw_status.setStyleSheet(enabled_css if nsfw_filter else disabled_css)
         self.ui.cuda_status.setStyleSheet(enabled_css if has_cuda else disabled_css)

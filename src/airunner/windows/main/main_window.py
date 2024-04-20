@@ -1,6 +1,7 @@
 import os
 import webbrowser
 from functools import partial
+
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
@@ -37,9 +38,9 @@ from airunner.settings import (
     BUG_REPORT_LINK,
     VULNERABILITY_REPORT_LINK
 )
+from airunner.utils.file_system.file_system_operations import FileSystemOperations
 from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
-from airunner.utils.clear_memory import clear_memory
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -58,8 +59,6 @@ from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
-from airunner.worker_manager import WorkerManager
-from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 
 
 class History:
@@ -117,10 +116,21 @@ class MainWindow(
         stt_enabled: bool = False,
         ai_mode: bool = True,
         do_load_llm_on_init: bool = False,
-        tts_handler_class=EspeakTTSHandler,
+        tts_handler_class=None,
+        restrict_os_access=None,
         **kwargs
     ):
         self.ui = self.ui_class_()
+
+        self.disable_sd = disable_sd
+        self.disable_llm = disable_llm
+        self.disable_tts = disable_tts
+        self.disable_stt = disable_stt
+        self.disable_vision_capture = disable_vision_capture
+        self.do_load_llm_on_init = do_load_llm_on_init
+        self.tts_handler_class = tts_handler_class
+
+        self.restrict_os_access = restrict_os_access
         self._override_system_theme = None
         self._dark_mode_enabled = None
         self.update_popup = None
@@ -198,15 +208,7 @@ class MainWindow(
         )
 
         self.initialize_ui()
-        self.worker_manager = WorkerManager(
-            disable_sd=disable_sd,
-            disable_llm=disable_llm,
-            disable_tts=disable_tts,
-            disable_stt=disable_stt,
-            disable_vision_capture=disable_vision_capture,
-            do_load_llm_on_init=do_load_llm_on_init,
-            tts_handler_class=tts_handler_class
-        )
+        self.worker_manager = None
         self.is_started = True
         self.image_window = None
 
@@ -898,10 +900,8 @@ class MainWindow(
 
             if self._override_system_theme:
                 self.logger.debug("Setting stylesheet")
-                theme_name = DARK_THEME_NAME if self.settings["dark_mode_enabled"] else LIGHT_THEME_NAME
-                here = os.path.dirname(os.path.realpath(__file__))
-                with open(os.path.join(here, "..", "..", "styles", theme_name, "styles.qss"), "r") as f:
-                    stylesheet = f.read()
+
+                stylesheet = FileSystemOperations().read_stylesheet()
                 ui.setStyleSheet(stylesheet)
             else:
                 self.logger.debug("Using system theme")
@@ -923,9 +923,33 @@ class MainWindow(
         # self.automatic_filter_manager = AutomaticFilterManager()
         # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
 
+        # print("*"*1000)
+        # for filename, modules in self.restrict_os_access.logging_importer.imported_files.items():
+        #     print(filename)
+        #     for module, submodules in modules.items():
+        #         print(f"    {module}")
+        #         for submodule in submodules:
+        #             print(f"        {submodule}")
+
         self.initialize_window()
         self.initialize_default_buttons()
         self.initialize_filter_actions()
+        self.initialize_worker_manager()
+
+    def initialize_worker_manager(self):
+        from airunner.worker_manager import WorkerManager
+        if self.tts_handler_class is None:
+            from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
+            self.tts_handler_class = EspeakTTSHandler
+        self.worker_manager = WorkerManager(
+            disable_sd=self.disable_sd,
+            disable_llm=self.disable_llm,
+            disable_tts=self.disable_tts,
+            disable_stt=self.disable_stt,
+            disable_vision_capture=self.disable_vision_capture,
+            do_load_llm_on_init=self.do_load_llm_on_init,
+            tts_handler_class=self.tts_handler_class
+        )
 
     def initialize_filter_actions(self):
         # add more filters:
@@ -1103,6 +1127,7 @@ class MainWindow(
 
     @Slot()
     def action_clear_memory(self):
+        from airunner.utils.clear_memory import clear_memory
         clear_memory()
 
     @Slot(bool)
