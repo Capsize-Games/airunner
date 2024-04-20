@@ -1,5 +1,4 @@
 from PySide6.QtCore import QObject, QThread, Slot, Signal
-from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
 from airunner.data.bootstrap.llm_file_bootstrap_data import LLM_FILE_BOOTSTRAP_DATA
@@ -7,9 +6,8 @@ from airunner.data.bootstrap.whisper import WHISPER_FILES
 from airunner.data.bootstrap.speech_t5 import SPEECH_T5_FILES
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import DEFAULT_LLM_HF_PATH, DEFAULT_STT_HF_PATH
+from airunner.settings import DEFAULT_LLM_HF_PATH
 from airunner.utils.network.huggingface_downloader import HuggingfaceDownloader
-from airunner.windows.download_wizard.download_thread import DownloadThread
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.windows.setup_wizard.installation_settings.templates.install_page_ui import Ui_install_page
@@ -68,7 +66,6 @@ class InstallWorker(
         else:
             for action in SD_FILE_BOOTSTRAP_DATA[model_version]:
                 for model in model_bootstrap_data:
-
                     if model["pipeline_action"] != action:
                         continue
                     if model["category"] != "stablediffusion":
