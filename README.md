@@ -12,19 +12,34 @@
 
 ---
 
-### Stable Diffusion on your own hardware 
+# AI RUNNER 
 
-No web server to run, additional requirements to install or technical knowledge required. 
+## v3.0.0.dev
 
-[Just download the compiled package](https://capsizegames.itch.io/ai-runner) and start generating AI Art!
+AI Runner can be compiled with `pyinstaller` however the current version
+is not yet stable (check the releases for stable versions).
 
-![Screenshot from 2023-06-30 10-43-49](https://github.com/Capsize-Games/airunner/assets/25737761/72e0dd26-53ca-4d5c-8f07-b6327a59b50c)
+Version 3.0 is a major upgrade which aims to move the application out of
+prototype stage and into a more stable and user-friendly state.
+
+It comes with a new UI, new features, and a more robust codebase, security
+updates, and a more streamlined installation process and much more.
+
+We plan to release future distributions via Snap on Linux.
+
+---
+
+## Stable Diffusion on your own hardware 
+
+
+
+![img_3.png](img_3.png)
 
 ---
 
 ## ⭐ Features
 
-AI Runner is a multi-modal AI application which allows you to run open-source 
+AI Runner is a multi-modal AI interface which allows you to run open-source 
 large language models and AI image generators on your own hardware.
 
 | Feature                                           | Description                                              |
