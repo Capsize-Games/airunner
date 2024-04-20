@@ -1,7 +1,7 @@
 from PySide6.QtCore import Slot
 
 from airunner.enums import SignalCode
-from airunner.utils import random_seed
+from airunner.utils.random_seed import random_seed
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.seed.templates.seed_ui import Ui_seed_widget
 

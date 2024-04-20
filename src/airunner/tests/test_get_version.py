@@ -1,6 +1,6 @@
 import os
 import unittest
-from airunner.utils import get_version
+from airunner.utils.get_version import get_version
 
 
 class TestVersion(unittest.TestCase):

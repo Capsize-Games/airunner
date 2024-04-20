@@ -6,10 +6,8 @@ from transformers import (
     GPTQConfig
 )
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.utils import (
-    clear_memory,
-    get_torch_device
-)
+from airunner.utils.clear_memory import clear_memory
+from airunner.utils.get_torch_device import get_torch_device
 
 
 class TransformerBaseHandler(BaseHandler):

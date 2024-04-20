@@ -4,7 +4,7 @@ from transformers import (
     RagTokenizer
 )
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
-from airunner.utils import get_torch_device
+from airunner.utils.get_torch_device import get_torch_device
 
 
 class TokenizerHandler(TransformerBaseHandler):

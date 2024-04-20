@@ -16,7 +16,7 @@ from airunner.settings import (
     SD_GUARDRAILS_KEY,
     SD_GUARDRAILS
 )
-from airunner.utils import convert_base64_to_image
+from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 

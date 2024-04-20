@@ -1,4 +1,4 @@
-from airunner.utils import auto_export_image
+from airunner.utils.auto_export_image import auto_export_image
 from airunner.workers.worker import Worker
 
 

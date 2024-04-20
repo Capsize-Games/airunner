@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QFileDialog
 
 from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES
-from airunner.utils import convert_image_to_base64
+from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 from airunner.widgets.canvas.brush_scene import BrushScene
 
 

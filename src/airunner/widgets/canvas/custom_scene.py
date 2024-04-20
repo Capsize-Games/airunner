@@ -13,7 +13,9 @@ from airunner.aihandler.logger import Logger
 from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import VALID_IMAGE_FILES
-from airunner.utils import snap_to_grid, convert_base64_to_image, convert_image_to_base64
+from airunner.utils.snap_to_grid import snap_to_grid
+from airunner.utils.convert_base64_to_image import convert_base64_to_image
+from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.widgets.canvas.image_handler import ImageHandler

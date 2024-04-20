@@ -15,11 +15,9 @@ from airunner.enums import (
     LLMActionType,
     ImageCategory
 )
-from airunner.utils import (
-    get_torch_device,
-    clear_memory,
-    create_worker
-)
+from airunner.utils.get_torch_device import get_torch_device
+from airunner.utils.clear_memory import clear_memory
+from airunner.utils.create_worker import create_worker
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.agent_worker import AgentWorker
 
