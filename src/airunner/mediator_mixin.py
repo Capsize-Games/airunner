@@ -1,5 +1,4 @@
 from typing import Callable
-
 from airunner.enums import SignalCode
 from airunner.signal_mediator import SignalMediator
 
