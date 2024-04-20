@@ -214,7 +214,7 @@ GeneratorTabWidget#generator_widget GeneratorForm QWidget#scrollAreaWidgetConten
 QFrame#button_menu {
 }
 GeneratorTabWidget#generator_widget QTabWidget QTabBar::tab {
-    border-radius: 0px; 
+    border-radius: 0px;
     margin: 0px;
     padding: 5px 10px;
     border: 0px;
@@ -233,7 +233,7 @@ GeneratorTabWidget#generator_widget QTabBar::tab:selected {
     background-color: @primary-color;
 }
 
-GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget::pane { 
+GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget::pane {
     border: 0;
     border-left: 0;
     border-radius: 0px;
@@ -608,22 +608,24 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::ta
     border: 1px solid @darkerprimary-color;
 }
 
+
 QTableWidget {
-    border: none;
-    background-color: @dark-color;
+    background-color: #ff0000;  /* Set the background color to match the dark theme */
+    alternate-background-color: #222222;  /* Set the alternate background color */
+    color: #ffffff;  /* Set the text color */
+    gridline-color: #333333;  /* Set the grid line color */
 }
 
 QTableWidget::item {
-    background-color: @dark-color;
-}
-
-QTableWidget::item:hover {
-    background-color: @darkerprimary-color;
+    padding: 4px;
+    border: none;
 }
 
 QTableWidget::item:selected {
-    background-color: @darkerprimary-color;
+    background-color: #444444;  /* Set the background color for selected items */
+    color: #ffffff;
 }
+
 
 #standard_image_widget QPushButton,
 #image_widget QPushButton {
