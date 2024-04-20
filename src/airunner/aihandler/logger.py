@@ -1,4 +1,8 @@
+import inspect
 import logging
+
+from airunner.enums import SignalCode
+from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import LOG_LEVEL
 import warnings
 import time
@@ -14,7 +18,9 @@ class PrefixFilter(logging.Filter):
         return True
 
 
-class Logger:
+class Logger(
+    MediatorMixin
+):
     """
     Wrapper class for logging
     """
@@ -29,6 +35,7 @@ class Logger:
     FATAL = logging.FATAL
     
     def __init__(self, *args, **kwargs):
+        MediatorMixin.__init__(self)
         self.prefix = kwargs.pop("prefix", "")
         self.name = kwargs.pop("name", "AI Runner")
         # Append current time to name to make it unique
@@ -66,6 +73,7 @@ class Logger:
         :return: None
         """
         self.logger.debug(msg)
+        self.emit_message(msg, self.DEBUG, "DEBUG")
 
     def info(self, msg):
         """
@@ -74,6 +82,7 @@ class Logger:
         :return: None
         """
         self.logger.debug(msg)
+        self.emit_message(msg, self.INFO, "INFO")
 
     def warning(self, msg):
         """
@@ -82,6 +91,7 @@ class Logger:
         :return: None
         """
         self.logger.warning(msg)
+        self.emit_message(msg, self.WARNING, "WARNING")
 
     def error(self, msg):
         """
@@ -90,3 +100,26 @@ class Logger:
         :return: None
         """
         self.logger.error(msg)
+        self.emit_message(msg, self.ERROR, "ERROR")
+
+    def emit_message(self, msg, level: int, level_name: str):
+        # Get the current frame
+        frame = inspect.currentframe().f_back
+
+        # Get the information about the source code from the frame
+        pathname = frame.f_code.co_filename
+        lineno = frame.f_lineno
+
+        # Create a LogRecord
+        record = logging.LogRecord(self.name, level, pathname, lineno, msg, args=None, exc_info=None, func=None)
+
+        # Add the prefix to the record
+        record.prefix = self.prefix
+
+        # Format the record
+        formatted_message = self.formatter.format(record)
+
+        self.emit_signal(SignalCode.LOG_LOGGED_SIGNAL, {
+            "message": formatted_message,
+            "level": level_name
+        })
