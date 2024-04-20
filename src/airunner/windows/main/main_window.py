@@ -378,16 +378,23 @@ class MainWindow(
         self.ui.ocr_button.blockSignals(True)
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)
+        self.ui.sd_toggle_button.blockSignals(True)
+        self.ui.sd_toggle_button.blockSignals(True)
+        self.ui.enable_controlnet.blockSignals(True)
+        self.ui.controlnet_toggle_button.blockSignals(True)
         self.ui.ocr_button.setChecked(self.settings["ocr_enabled"])
         self.ui.tts_button.setChecked(self.settings["tts_enabled"])
         self.ui.v2t_button.setChecked(self.settings["stt_enabled"])
+        self.ui.sd_toggle_button.setChecked(self.settings["sd_enabled"])
+        self.ui.enable_controlnet.setChecked(self.settings["controlnet_enabled"])
+        self.ui.controlnet_toggle_button.setChecked(self.settings["controlnet_enabled"])
         self.ui.ocr_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
-        self.ui.enable_controlnet.blockSignals(True)
-        self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
+        self.ui.sd_toggle_button.blockSignals(False)
         self.ui.enable_controlnet.blockSignals(False)
-        self.logger.debug("Setting buttons")
+        self.ui.sd_toggle_button.blockSignals(False)
+        self.ui.controlnet_toggle_button.blockSignals(False)
         self.initialize_tool_section_buttons()
         self.intialized = True
 
@@ -1067,7 +1074,7 @@ class MainWindow(
 
     def action_toggle_controlnet(self, val):
         settings = self.settings
-        settings["generator_settings"]["enable_controlnet"] = val
+        settings["controlnet_enabled"] = val
         self.settings = settings
 
     def import_controlnet_image(self):
@@ -1117,3 +1124,23 @@ class MainWindow(
     @Slot()
     def action_run_setup_wizard_clicked(self):
         self.show_setup_wizard()
+
+    @Slot(bool)
+    def action_image_generator_toggled(self, val: bool):
+        settings = self.settings
+        settings["sd_enabled"] = val
+        self.settings = settings
+        if val:
+            self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
+        else:
+            self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
+
+    @Slot(bool)
+    def action_controlnet_toggled(self, val: bool):
+        settings = self.settings
+        settings["controlnet_enabled"] = val
+        self.settings = settings
+        if val:
+            self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
+        else:
+            self.emit_signal(SignalCode.CONTROLNET_UNLOAD_SIGNAL)
