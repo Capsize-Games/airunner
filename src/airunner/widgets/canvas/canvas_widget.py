@@ -66,7 +66,7 @@ class CanvasWidget(BaseWidget):
 
         self.ui.controlnet_groupbox.blockSignals(True)
         self.ui.drawing_pad_groupbox.blockSignals(True)
-        self.ui.controlnet_groupbox.checked = self.settings["generator_settings"]["enable_controlnet"]
+        self.ui.controlnet_groupbox.checked = self.settings["controlnet_enabled"]
         self.ui.drawing_pad_groupbox.checked = self.settings["drawing_pad_settings"]["enabled"]
         self.ui.controlnet_groupbox.blockSignals(False)
         self.ui.drawing_pad_groupbox.blockSignals(False)
@@ -119,7 +119,7 @@ class CanvasWidget(BaseWidget):
     @Slot(bool)
     def toggle_controlnet(self, val: bool):
         settings = self.settings
-        settings["generator_settings"]["enable_controlnet"] = val
+        settings["controlnet_enabled"] = val
         self.settings = settings
 
     @Slot(bool)
