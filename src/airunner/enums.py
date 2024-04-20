@@ -166,6 +166,9 @@ class SignalCode(Enum):
     SD_MERGE_MODELS_SIGNAL = "sd_merge_models_signal"
     SD_CANCEL_SIGNAL = "sd_cancel_signal"
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
+    SD_LOAD_SIGNAL = "load_stablediffusion_signal"
+    CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
+    CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
     SD_UPDATE_SAVED_PROMPT_SIGNAL = "update_saved_stablediffusion_prompt_signal"
     SD_SAVE_PROMPT_SIGNAL = "save_stablediffusion_prompt_signal"
     SD_LOAD_PROMPT_SIGNAL = "load_saved_stablediffuion_prompt_signal"
@@ -269,6 +272,8 @@ class SignalCode(Enum):
     STT_DATASET_LOADED_SIGNAL = "stt_dataset_loaded_signal"
     STT_DATASET_UNLOADED_SIGNAL = "stt_dataset_unloaded_signal"
     STT_DATASET_FAILED_SIGNAL = "stt_dataset_load_failed_signal"
+
+    LOG_LOGGED_SIGNAL = "log_logged_signal"
 
 
 class EngineResponseCode(Enum):
