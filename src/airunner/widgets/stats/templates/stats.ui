@@ -33,7 +33,6 @@
      </property>
      <widget class="QTableWidget" name="model_stats"/>
      <widget class="QTextEdit" name="console"/>
-     <widget class="QTableWidget" name="module_stats"/>
     </widget>
    </item>
   </layout>

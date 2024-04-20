@@ -36,9 +36,6 @@ class Ui_stats_widget(object):
         self.console = QTextEdit(self.splitter)
         self.console.setObjectName(u"console")
         self.splitter.addWidget(self.console)
-        self.module_stats = QTableWidget(self.splitter)
-        self.module_stats.setObjectName(u"module_stats")
-        self.splitter.addWidget(self.module_stats)
 
         self.gridLayout.addWidget(self.splitter, 0, 0, 1, 1)
 
