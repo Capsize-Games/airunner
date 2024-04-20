@@ -32,15 +32,12 @@ class AppInstaller(
     This class can be run as a GUI application or as a socket server.
     """
     def __init__(
-        self,
-        main_window_class: QWindow = None
+        self
     ):
         """
         Initialize the application and run as a GUI application or a socket server.
-        :param main_window_class: The main window class to use for the application.
         """
 
-        self.main_window_class_ = main_window_class or MainWindow
         self.wizard = None
         self.download_wizard = None
         self.app = None
