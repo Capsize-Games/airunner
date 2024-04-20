@@ -7,7 +7,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>841</width>
+    <width>1263</width>
     <height>787</height>
    </rect>
   </property>
@@ -128,7 +128,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>837</width>
+            <width>1259</width>
             <height>46</height>
            </rect>
           </property>
@@ -615,8 +615,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>354</width>
-              <height>636</height>
+              <width>555</width>
+              <height>640</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout">
@@ -660,7 +660,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>4</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -747,6 +747,16 @@
                   </property>
                   <item row="0" column="0">
                    <widget class="StableDiffusionSettingsWidget" name="widget" native="true"/>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="tab">
+                 <attribute name="title">
+                  <string>Stats</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_2">
+                  <item row="0" column="0">
+                   <widget class="StatsWidget" name="stats_widget" native="true"/>
                   </item>
                  </layout>
                 </widget>
@@ -1325,8 +1335,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>841</width>
-     <height>26</height>
+     <width>1263</width>
+     <height>22</height>
     </rect>
    </property>
    <property name="font">
@@ -2257,6 +2267,12 @@
    <class>UpscaleWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/upscale/upscale_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>StatsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/stats/stats_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
