@@ -20,6 +20,8 @@ class SettingsMixin:
     def __init__(
         self,
         use_cuda: bool = DEFAULT_APPLICATION_SETTINGS["use_cuda"],
+        sd_enabled: bool = DEFAULT_APPLICATION_SETTINGS["sd_enabled"],
+        controlnet_enabled: bool = DEFAULT_APPLICATION_SETTINGS["controlnet_enabled"],
         ocr_enabled: bool = DEFAULT_APPLICATION_SETTINGS["ocr_enabled"],
         tts_enabled: bool = DEFAULT_APPLICATION_SETTINGS["tts_enabled"],
         stt_enabled: bool = DEFAULT_APPLICATION_SETTINGS["stt_enabled"],
@@ -29,12 +31,15 @@ class SettingsMixin:
         Constructor for the SettingsMixin class.
         Changes the default settings to the given parameters.
         :param use_cuda:
+        :param sd_enabled:
         :param ocr_enabled:
         :param tts_enabled:
         :param stt_enabled:
         :param ai_mode:
         """
         DEFAULT_APPLICATION_SETTINGS["use_cuda"] = use_cuda
+        DEFAULT_APPLICATION_SETTINGS["sd_enabled"] = sd_enabled
+        DEFAULT_APPLICATION_SETTINGS["controlnet_enabled"] = controlnet_enabled
         DEFAULT_APPLICATION_SETTINGS["ocr_enabled"] = ocr_enabled
         DEFAULT_APPLICATION_SETTINGS["tts_enabled"] = tts_enabled
         DEFAULT_APPLICATION_SETTINGS["stt_enabled"] = stt_enabled
