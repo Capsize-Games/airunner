@@ -1,14 +1,6 @@
 import socket
 import logging
 
-# Setup basic logging configuration to log all unauthorized network access attempts.
-# Logs are stored in 'network_access_attempts.log' with a timestamp and the log level information.
-logging.basicConfig(
-    filename='network_access_attempts.log',  # Log file name
-    level=logging.INFO,  # Logging level set to INFO
-    format='%(asctime)s - %(levelname)s - %(message)s'  # Log entry format
-)
-
 
 class NoInternetSocket:
     """
@@ -34,7 +26,13 @@ class NoInternetSocket:
         Raises:
             ConnectionError: Always thrown to indicate that network connections are disabled.
         """
-        logging.info("Socket creation attempted and blocked.")
+        self.logger = logging.getLogger(__name__)
+        handler = logging.FileHandler('network_access_attempts.log')
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+        self.logger.setLevel(logging.INFO)
+        self.logger.info("Socket creation attempted and blocked.")
         raise ConnectionError("This application does not allow internet connections.")
 
     def connect(self, *args, **kwargs):
@@ -49,7 +47,7 @@ class NoInternetSocket:
         Raises:
             ConnectionError: Always thrown to prevent any form of network connection.
         """
-        logging.info("Connection attempt blocked.")
+        self.logger.info("Connection attempt blocked.")
         raise ConnectionError("This application does not allow internet connections.")
 
 
