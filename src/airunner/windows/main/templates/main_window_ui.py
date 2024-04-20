@@ -26,6 +26,7 @@ from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
+from airunner.widgets.stats.stats_widget import StatsWidget
 from airunner.widgets.upscale.upscale_widget import UpscaleWidget
 import airunner.resources_light_rc
 import airunner.resources_dark_rc
@@ -34,7 +35,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(841, 787)
+        MainWindow.resize(1263, 787)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -344,7 +345,7 @@ class Ui_MainWindow(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollAreaWidgetContents_3 = QWidget()
         self.scrollAreaWidgetContents_3.setObjectName(u"scrollAreaWidgetContents_3")
-        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 837, 46))
+        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 1259, 46))
         self.horizontalLayout_2 = QHBoxLayout(self.scrollAreaWidgetContents_3)
         self.horizontalLayout_2.setSpacing(0)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
@@ -566,7 +567,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 354, 636))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 555, 640))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -623,6 +624,16 @@ class Ui_MainWindow(object):
         self.gridLayout_11.addWidget(self.widget, 0, 0, 1, 1)
 
         self.tool_tab_widget.addTab(self.tab_3, "")
+        self.tab = QWidget()
+        self.tab.setObjectName(u"tab")
+        self.gridLayout_2 = QGridLayout(self.tab)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.stats_widget = StatsWidget(self.tab)
+        self.stats_widget.setObjectName(u"stats_widget")
+
+        self.gridLayout_2.addWidget(self.stats_widget, 0, 0, 1, 1)
+
+        self.tool_tab_widget.addTab(self.tab, "")
         self.splitter.addWidget(self.tool_tab_widget)
 
         self.gridLayout.addWidget(self.splitter, 0, 0, 1, 1)
@@ -813,12 +824,42 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.line_8)
 
+        self.sd_toggle_button = QPushButton(self.button_menu)
+        self.sd_toggle_button.setObjectName(u"sd_toggle_button")
+        self.sd_toggle_button.setMinimumSize(QSize(50, 45))
+        icon17 = QIcon(QIcon.fromTheme(u"applications-graphics"))
+        self.sd_toggle_button.setIcon(icon17)
+        self.sd_toggle_button.setIconSize(QSize(24, 32))
+        self.sd_toggle_button.setCheckable(True)
+        self.sd_toggle_button.setChecked(False)
+        self.sd_toggle_button.setFlat(True)
+
+        self.verticalLayout.addWidget(self.sd_toggle_button)
+
+        self.controlnet_toggle_button = QPushButton(self.button_menu)
+        self.controlnet_toggle_button.setObjectName(u"controlnet_toggle_button")
+        self.controlnet_toggle_button.setMinimumSize(QSize(50, 45))
+        icon18 = QIcon(QIcon.fromTheme(u"insert-image"))
+        self.controlnet_toggle_button.setIcon(icon18)
+        self.controlnet_toggle_button.setIconSize(QSize(24, 32))
+        self.controlnet_toggle_button.setCheckable(True)
+        self.controlnet_toggle_button.setFlat(True)
+
+        self.verticalLayout.addWidget(self.controlnet_toggle_button)
+
+        self.line_5 = QFrame(self.button_menu)
+        self.line_5.setObjectName(u"line_5")
+        self.line_5.setFrameShape(QFrame.Shape.HLine)
+        self.line_5.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.verticalLayout.addWidget(self.line_5)
+
         self.tts_button = QPushButton(self.button_menu)
         self.tts_button.setObjectName(u"tts_button")
         self.tts_button.setMinimumSize(QSize(50, 45))
         self.tts_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon17 = QIcon(QIcon.fromTheme(u"audio-volume-high"))
-        self.tts_button.setIcon(icon17)
+        icon19 = QIcon(QIcon.fromTheme(u"audio-volume-high"))
+        self.tts_button.setIcon(icon19)
         self.tts_button.setIconSize(QSize(32, 32))
         self.tts_button.setCheckable(True)
         self.tts_button.setFlat(True)
@@ -829,9 +870,9 @@ class Ui_MainWindow(object):
         self.v2t_button.setObjectName(u"v2t_button")
         self.v2t_button.setMinimumSize(QSize(50, 45))
         self.v2t_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon18 = QIcon(QIcon.fromTheme(u"audio-input-microphone"))
-        self.v2t_button.setIcon(icon18)
-        self.v2t_button.setIconSize(QSize(18, 18))
+        icon20 = QIcon(QIcon.fromTheme(u"audio-input-microphone"))
+        self.v2t_button.setIcon(icon20)
+        self.v2t_button.setIconSize(QSize(19, 32))
         self.v2t_button.setCheckable(True)
         self.v2t_button.setFlat(True)
 
@@ -841,9 +882,9 @@ class Ui_MainWindow(object):
         self.ocr_button.setObjectName(u"ocr_button")
         self.ocr_button.setMinimumSize(QSize(50, 45))
         self.ocr_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon19 = QIcon(QIcon.fromTheme(u"camera-web"))
-        self.ocr_button.setIcon(icon19)
-        self.ocr_button.setIconSize(QSize(16, 16))
+        icon21 = QIcon(QIcon.fromTheme(u"camera-web"))
+        self.ocr_button.setIcon(icon21)
+        self.ocr_button.setIconSize(QSize(20, 32))
         self.ocr_button.setCheckable(True)
         self.ocr_button.setFlat(True)
 
@@ -863,7 +904,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 841, 26))
+        self.menubar.setGeometry(QRect(0, 0, 1263, 22))
         font1 = QFont()
         font1.setPointSize(11)
         self.menubar.setFont(font1)
@@ -1039,10 +1080,12 @@ class Ui_MainWindow(object):
         self.outpaint_enabled.toggled.connect(MainWindow.action_outpaint_toggled)
         self.outpaint_import.triggered.connect(MainWindow.action_outpaint_import)
         self.actionRun_setup_wizard_2.triggered.connect(MainWindow.action_run_setup_wizard_clicked)
+        self.sd_toggle_button.toggled.connect(MainWindow.action_image_generator_toggled)
+        self.controlnet_toggle_button.toggled.connect(MainWindow.action_controlnet_toggled)
 
         self.mode_tab_widget.setCurrentIndex(0)
         self.center_tab.setCurrentIndex(0)
-        self.tool_tab_widget.setCurrentIndex(0)
+        self.tool_tab_widget.setCurrentIndex(4)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -1281,6 +1324,7 @@ class Ui_MainWindow(object):
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_active_grid), QCoreApplication.translate("MainWindow", u"Active Grid", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u"Upscale", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_3), QCoreApplication.translate("MainWindow", u"StableDiffusion", None))
+        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab), QCoreApplication.translate("MainWindow", u"Stats", None))
 #if QT_CONFIG(tooltip)
         self.toggle_active_grid_area_button.setToolTip(QCoreApplication.translate("MainWindow", u"Active grid area selection tool", None))
 #endif // QT_CONFIG(tooltip)
@@ -1311,11 +1355,19 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.settings_button.setText("")
 #if QT_CONFIG(tooltip)
-        self.tts_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Text to Speech", None))
+        self.sd_toggle_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Image Generator", None))
+#endif // QT_CONFIG(tooltip)
+        self.sd_toggle_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.controlnet_toggle_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Controlnet", None))
+#endif // QT_CONFIG(tooltip)
+        self.controlnet_toggle_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.tts_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Text-to-Speech", None))
 #endif // QT_CONFIG(tooltip)
         self.tts_button.setText("")
 #if QT_CONFIG(tooltip)
-        self.v2t_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Speech To Text", None))
+        self.v2t_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Speech-to-Text", None))
 #endif // QT_CONFIG(tooltip)
         self.v2t_button.setText("")
 #if QT_CONFIG(tooltip)

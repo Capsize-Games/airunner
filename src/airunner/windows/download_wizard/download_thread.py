@@ -1,6 +1,5 @@
 from PySide6.QtCore import QThread, Signal
-from huggingface_hub import hf_hub_download, snapshot_download
-from airunner.windows.download_wizard.custom_tqdm_progress_bar import CustomTqdmProgressBar
+from airunner.utils.network.huggingface_downloader import HuggingfaceDownloader
 
 
 class DownloadThread(QThread):
@@ -15,43 +14,35 @@ class DownloadThread(QThread):
         self._stop_event = False
 
     def run(self):
+        self.hf_downloader = HuggingfaceDownloader()
+        self.hf_downloader.completed.connect(
+            lambda: self.file_download_finished.emit()
+        )
         for index, data in enumerate(self.models_to_download):
             if self._stop_event:
                 break
             if "progress_bar" in self.models_to_download[index]:
                 self.models_to_download[index]["progress_bar"].setValue(0)
             model = data["model"]
-            tqdm_class = None
-            if "tqdm_class" in data:
-                tqdm_class = data["tqdm_class"]
-            if "progress_bar" in data:
-                tqdm_class = CustomTqdmProgressBar(data["progress_bar"])
-                data["tqdm_class"] = tqdm_class
             self.models_to_download[index] = data
-            if "repo_type" in model:
-                repo_type = model["repo_type"]
-            else:
-                repo_type = None
             try:
                 if "files" in model:
                     for filename in model["files"]:
-                        hf_hub_download(
-                            repo_id=model["path"],
-                            filename=filename,
-                            repo_type=repo_type
+                        # hf_hub_download(
+                        #     repo_id=model["path"],
+                        #     filename=filename,
+                        #     repo_type=repo_type
+                        # )
+                        self.hf_downloader.download_model(
+                            path=model["path"],
+                            file_name=filename,
+                            callback=self.progress_updated.emit
                         )
-                        self.file_download_finished.emit()
                 else:
-                    snapshot_download(
-                        repo_id=model["path"],
-                        repo_type=repo_type,
-                        tqdm_class=tqdm_class
-                    )
+                    print("Skipping download for model with no files {}".format(model["name"]))
             except Exception as e:
                 print(e)
                 continue
-            if tqdm_class is not None:
-                self.progress_updated.emit(tqdm_class.n, tqdm_class.total)
         self.download_finished.emit()
 
     def stop(self):

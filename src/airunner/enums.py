@@ -166,6 +166,9 @@ class SignalCode(Enum):
     SD_MERGE_MODELS_SIGNAL = "sd_merge_models_signal"
     SD_CANCEL_SIGNAL = "sd_cancel_signal"
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
+    SD_LOAD_SIGNAL = "load_stablediffusion_signal"
+    CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
+    CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
     SD_UPDATE_SAVED_PROMPT_SIGNAL = "update_saved_stablediffusion_prompt_signal"
     SD_SAVE_PROMPT_SIGNAL = "save_stablediffusion_prompt_signal"
     SD_LOAD_PROMPT_SIGNAL = "load_saved_stablediffuion_prompt_signal"
@@ -210,6 +213,67 @@ class SignalCode(Enum):
     LLM_CHOOSE_RESPONSE_LENGTH_SIGNAL = "choose_response_length_signal"
     PROCESS_SPEECH_SIGNAL = "process_speech_signal"
     ADD_CHATBOT_MESSAGE_SIGNAL = "add_chatbot_message_signal"
+    DOWNLOAD_PROGRESS = "download_progress"
+    UPDATE_DOWNLOAD_LOG = "update_download_log"
+    CLEAR_DOWNLOAD_STATUS_BAR = "clear_download_status_bar"
+    SET_DOWNLOAD_STATUS_LABEL = "set_download_status_label"
+
+    UNLOAD_SAFETY_CHECKER_SIGNAL = "unload_safety_checker"
+    LOAD_SAFETY_CHECKER_SIGNAL = "load_safety_checker"
+
+    SAFETY_CHECKER_LOADED_SIGNAL = "safety_checker_loaded_signal"
+    SAFETY_CHECKER_UNLOADED_SIGNAL = "safety_checker_unloaded_signal"
+    SAFETY_CHECKER_FAILED_SIGNAL = "safety_checker_load_failed_signal"
+
+    FEATURE_EXTRACTOR_LOADED_SIGNAL = "feature_extractor_loaded_signal"
+    FEATURE_EXTRACTOR_UNLOADED_SIGNAL = "feature_extractor_unloaded_signal"
+    FEATURE_EXTRACTOR_FAILED_SIGNAL = "feature_extractor_load_failed_signal"
+
+    STABLE_DIFFUSION_LOADED_SIGNAL = "stable_diffusion_loaded_signal"
+    STABLE_DIFFUSION_UNLOADED_SIGNAL = "stable_diffusion_unloaded_signal"
+    STABLE_DIFFUSION_FAILED_SIGNAL = "stable_diffusion_load_failed_signal"
+
+    CONTROLNET_LOADED_SIGNAL = "controlnet_loaded_signal"
+    CONTROLNET_UNLOADED_SIGNAL = "controlnet_unloaded_signal"
+    CONTROLNET_FAILED_SIGNAL = "controlnet_load_failed_signal"
+
+    TTS_MODEL_LOADED_SIGNAL = "tts_model_loaded_signal"
+    TTS_MODEL_UNLOADED_SIGNAL = "tts_model_unloaded_signal"
+    TTS_MODEL_FAILED_SIGNAL = "tts_model_load_failed_signal"
+
+    TTS_PROCESSOR_LOADED_SIGNAL = "tts_processor_loaded_signal"
+    TTS_PROCESSOR_UNLOADED_SIGNAL = "tts_processor_unloaded_signal"
+    TTS_PROCESSOR_FAILED_SIGNAL = "tts_processor_load_failed_signal"
+
+    TTS_FEATURE_EXTRACTOR_LOADED_SIGNAL = "tts_feature_extractor_loaded_signal"
+    TTS_FEATURE_EXTRACTOR_UNLOADED_SIGNAL = "tts_feature_extractor_unloaded_signal"
+    TTS_FEATURE_EXTRACTOR_FAILED_SIGNAL = "tts_feature_extractor_load_failed_signal"
+
+    STT_PROCESSOR_LOADED_SIGNAL = "stt_processor_loaded_signal"
+    STT_PROCESSOR_UNLOADED_SIGNAL = "stt_processor_unloaded_signal"
+    STT_PROCESSOR_FAILED_SIGNAL = "stt_processor_load_failed_signal"
+
+    STT_TOKENIZER_LOADED_SIGNAL = "stt_tokenizer_loaded_signal"
+    STT_TOKENIZER_UNLOADED_SIGNAL = "stt_tokenizer_unloaded_signal"
+    STT_TOKENIZER_FAILED_SIGNAL = "stt_tokenizer_load_failed_signal"
+
+    STT_MODEL_LOADED_SIGNAL = "stt_model_loaded_signal"
+    STT_MODEL_UNLOADED_SIGNAL = "stt_model_unloaded_signal"
+    STT_MODEL_FAILED_SIGNAL = "stt_model_load_failed_signal"
+
+    STT_VOCODER_LOADED_SIGNAL = "stt_vocoder_loaded_signal"
+    STT_VOCODER_UNLOADED_SIGNAL = "stt_vocoder_unloaded_signal"
+    STT_VOCODER_FAILED_SIGNAL = "stt_vocoder_load_failed_signal"
+
+    STT_SPEAKER_EMBEDDINGS_LOADED_SIGNAL = "stt_speaker_embeddings_loaded_signal"
+    STT_SPEAKER_EMBEDDINGS_UNLOADED_SIGNAL = "stt_speaker_embeddings_unloaded_signal"
+    STT_SPEAKER_EMBEDDINGS_FAILED_SIGNAL = "stt_speaker_embeddings_load_failed_signal"
+
+    STT_DATASET_LOADED_SIGNAL = "stt_dataset_loaded_signal"
+    STT_DATASET_UNLOADED_SIGNAL = "stt_dataset_unloaded_signal"
+    STT_DATASET_FAILED_SIGNAL = "stt_dataset_load_failed_signal"
+
+    LOG_LOGGED_SIGNAL = "log_logged_signal"
 
 
 class EngineResponseCode(Enum):
@@ -404,3 +468,10 @@ class DeviceName(Enum):
 class Gender(Enum):
     MALE = "Male"
     FEMALE = "Female"
+
+
+class ModelStatus(Enum):
+    UNLOADED = "Unloaded"
+    LOADED = "Loaded"
+    LOADING = "Loading"
+    FAILED = "Failed"

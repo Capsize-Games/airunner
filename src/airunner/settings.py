@@ -301,6 +301,7 @@ from airunner.enums import (
     LLMActionType,
     ImageCategory
 )
+from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
 
 ####################################################################
 # USE_MODEL_MANAGER is used to enable the model manager.
@@ -342,9 +343,9 @@ LOG_LEVEL = logging.WARNING
 ####################################################################
 # Default models for the core application
 ####################################################################
-DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.2"
+DEFAULT_LLM_HF_PATH = "w4ffl35/Mistral-7B-Instruct-v0.2-safetensors"
 # WAS ORIGINALLY USING "openai/whisper-base" for feature extractor
-DEFAULT_STT_HF_PATH = "openai/whisper-tiny.en"
+DEFAULT_STT_HF_PATH = "openai/whisper-tiny"
 DEFAULT_SPEECHT5_MODEL_PATHS = {
     "embeddings_path": "Matthijs/cmu-arctic-xvectors",
     "vocoder_path": "microsoft/speecht5_hifigan",
@@ -778,8 +779,8 @@ VULNERABILITY_REPORT_LINK = (
 ####################################################################
 # Set default models, currently only for Stable Diffusion
 ####################################################################
-SD_DEFAULT_MODEL_PATH = "stabilityai/sd-turbo"
-SD_DEFAULT_VERSION = "SDXL Turbo"
+SD_DEFAULT_VERSION = "SD 1.5"
+SD_DEFAULT_MODEL_PATH = "runwayml/stable-diffusion-v1-5"
 SD_DEFAULT_MODEL = dict(
     version=SD_DEFAULT_VERSION,
     model=SD_DEFAULT_MODEL_PATH,
@@ -1090,10 +1091,12 @@ from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 
 DEFAULT_USE_CUDA = True
-DEFAULT_OCR_ENABLED = False
-DEFAULT_TTS_ENABLED = False
-DEFAULT_STT_ENABLED = False
-DEFAULT_AI_MODE = False
+DEFAULT_SD_ENABLED = True
+DEFAULT_CONTROLNET_ENABLED = True
+DEFAULT_OCR_ENABLED = True
+DEFAULT_TTS_ENABLED = True
+DEFAULT_STT_ENABLED = True
+DEFAULT_AI_MODE = True
 
 DEFAULT_APPLICATION_SETTINGS = dict(
     ####################################################################
@@ -1102,6 +1105,8 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     # changing the default settings here.
     ####################################################################
     use_cuda=DEFAULT_USE_CUDA,
+    sd_enabled=DEFAULT_SD_ENABLED,
+    controlnet_enabled=DEFAULT_CONTROLNET_ENABLED,
     ocr_enabled=DEFAULT_OCR_ENABLED,
     tts_enabled=DEFAULT_TTS_ENABLED,
     stt_enabled=DEFAULT_STT_ENABLED,

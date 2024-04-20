@@ -7,7 +7,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>841</width>
+    <width>1263</width>
     <height>787</height>
    </rect>
   </property>
@@ -128,7 +128,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>837</width>
+            <width>1259</width>
             <height>46</height>
            </rect>
           </property>
@@ -615,8 +615,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>354</width>
-              <height>636</height>
+              <width>555</width>
+              <height>640</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout">
@@ -660,7 +660,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>4</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -747,6 +747,16 @@
                   </property>
                   <item row="0" column="0">
                    <widget class="StableDiffusionSettingsWidget" name="widget" native="true"/>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="tab">
+                 <attribute name="title">
+                  <string>Stats</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_2">
+                  <item row="0" column="0">
+                   <widget class="StatsWidget" name="stats_widget" native="true"/>
                   </item>
                  </layout>
                 </widget>
@@ -1197,6 +1207,78 @@
             </widget>
            </item>
            <item>
+            <widget class="QPushButton" name="sd_toggle_button">
+             <property name="minimumSize">
+              <size>
+               <width>50</width>
+               <height>45</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Toggle Image Generator</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="applications-graphics"/>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>32</height>
+              </size>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="controlnet_toggle_button">
+             <property name="minimumSize">
+              <size>
+               <width>50</width>
+               <height>45</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Toggle Controlnet</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="insert-image"/>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>24</width>
+               <height>32</height>
+              </size>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="Line" name="line_5">
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QPushButton" name="tts_button">
              <property name="minimumSize">
               <size>
@@ -1208,7 +1290,7 @@
               <cursorShape>PointingHandCursor</cursorShape>
              </property>
              <property name="toolTip">
-              <string>Toggle Text to Speech</string>
+              <string>Toggle Text-to-Speech</string>
              </property>
              <property name="text">
               <string/>
@@ -1242,7 +1324,7 @@
               <cursorShape>PointingHandCursor</cursorShape>
              </property>
              <property name="toolTip">
-              <string>Toggle Speech To Text</string>
+              <string>Toggle Speech-to-Text</string>
              </property>
              <property name="text">
               <string/>
@@ -1252,8 +1334,8 @@
              </property>
              <property name="iconSize">
               <size>
-               <width>18</width>
-               <height>18</height>
+               <width>19</width>
+               <height>32</height>
               </size>
              </property>
              <property name="checkable">
@@ -1286,8 +1368,8 @@
              </property>
              <property name="iconSize">
               <size>
-               <width>16</width>
-               <height>16</height>
+               <width>20</width>
+               <height>32</height>
               </size>
              </property>
              <property name="checkable">
@@ -1325,8 +1407,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>841</width>
-     <height>26</height>
+     <width>1263</width>
+     <height>22</height>
     </rect>
    </property>
    <property name="font">
@@ -2259,6 +2341,12 @@
    <header>airunner/widgets/upscale/upscale_widget</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>StatsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/stats/stats_widget</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <resources>
   <include location="../../../resources_light.qrc"/>
@@ -2768,8 +2856,8 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>826</x>
-     <y>564</y>
+     <x>1248</x>
+     <y>510</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -2784,8 +2872,8 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>826</x>
-     <y>393</y>
+     <x>1248</x>
+     <y>361</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -2800,8 +2888,8 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>826</x>
-     <y>171</y>
+     <x>1248</x>
+     <y>167</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -2816,8 +2904,8 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>826</x>
-     <y>333</y>
+     <x>1248</x>
+     <y>308</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2832,8 +2920,8 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>826</x>
-     <y>282</y>
+     <x>1248</x>
+     <y>264</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2896,8 +2984,8 @@
    <slot>action_center_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>826</x>
-     <y>444</y>
+     <x>1248</x>
+     <y>404</y>
     </hint>
     <hint type="destinationlabel">
      <x>806</x>
@@ -2912,8 +3000,8 @@
    <slot>action_ai_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>826</x>
-     <y>504</y>
+     <x>1248</x>
+     <y>457</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -3008,8 +3096,8 @@
    <slot>tts_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>826</x>
-     <y>624</y>
+     <x>1248</x>
+     <y>660</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -3024,8 +3112,8 @@
    <slot>v2t_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>826</x>
-     <y>675</y>
+     <x>1248</x>
+     <y>704</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -3040,8 +3128,8 @@
    <slot>ocr_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>826</x>
-     <y>726</y>
+     <x>1248</x>
+     <y>748</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -3072,8 +3160,8 @@
    <slot>action_toggle_select(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>826</x>
-     <y>222</y>
+     <x>1248</x>
+     <y>211</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -3305,6 +3393,38 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>sd_toggle_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_image_generator_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1229</x>
+     <y>543</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1158</x>
+     <y>-7</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>controlnet_toggle_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_controlnet_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1215</x>
+     <y>594</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1216</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -3410,5 +3530,7 @@
   <slot>action_outpaint_export()</slot>
   <slot>action_outpaint_import()</slot>
   <slot>action_run_setup_wizard_clicked()</slot>
+  <slot>action_image_generator_toggled(bool)</slot>
+  <slot>action_controlnet_toggled(bool)</slot>
  </slots>
 </ui>
