@@ -1,7 +1,5 @@
 from typing import Callable
-
 from PySide6.QtCore import QObject, Signal as BaseSignal, Slot
-
 from airunner.enums import SignalCode
 
 
