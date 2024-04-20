@@ -31,14 +31,27 @@ class SpeechT5TTSHandler(TTSHandler):
     def load_vocoder(self):
         self.logger.debug("Loading Vocoder")
         try:
-            self.vocoder = SpeechT5HifiGan.from_pretrained(
+            vocoder = self.vocoder = SpeechT5HifiGan.from_pretrained(
                 self.vocoder_path,
                 local_files_only=True,
                 torch_dtype=torch.float16,
                 device_map=self.device
             )
-        except OSError as _e:
-            return self.load_vocoder()
+            self.emit_signal(
+                SignalCode.STT_VOCODER_LOADED_SIGNAL,
+                {
+                    "path": self.vocoder_path
+                }
+            )
+            return vocoder
+        except Exception as e:
+            self.emit_signal(
+                SignalCode.STT_VOCODER_FAILED_SIGNAL,
+                {
+                    "path": self.vocoder_path
+                }
+            )
+            return None
 
     def load_dataset(self):
         """
@@ -54,16 +67,28 @@ class SpeechT5TTSHandler(TTSHandler):
                 self.speaker_embeddings_dataset_path,
                 split="validation"
             )
-        except OSError as e:
+            if embeddings_dataset:
+                self.speaker_embeddings = torch.tensor(
+                    embeddings_dataset[7306]["xvector"]
+                ).unsqueeze(0)
+
+            if self.use_cuda and self.speaker_embeddings is not None:
+                self.speaker_embeddings = self.speaker_embeddings.half().cuda()
+            self.emit_signal(
+                SignalCode.STT_SPEAKER_EMBEDDINGS_LOADED_SIGNAL,
+                {
+                    "path": self.vocoder_path
+                }
+            )
+        except Exception as e:
             self.logger.error("Failed to load dataset")
             self.logger.error(e)
-        if embeddings_dataset:
-            self.speaker_embeddings = torch.tensor(
-                embeddings_dataset[7306]["xvector"]
-            ).unsqueeze(0)
-
-        if self.use_cuda and self.speaker_embeddings is not None:
-            self.speaker_embeddings = self.speaker_embeddings.half().cuda()
+            self.emit_signal(
+                SignalCode.STT_DATASET_FAILED_SIGNAL,
+                {
+                    "path": self.vocoder_path
+                }
+            )
 
     def do_generate(self, message):
         self.logger.debug("Generating TTS with T5")
