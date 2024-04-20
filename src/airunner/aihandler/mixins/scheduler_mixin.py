@@ -1,3 +1,4 @@
+import os
 import diffusers
 from airunner.settings import AVAILABLE_SCHEDULERS_BY_ACTION
 from airunner.enums import (
@@ -34,17 +35,22 @@ class SchedulerMixin:
     def load_scheduler(self, force_scheduler_name=None, config=None):
         if self.is_sd_xl_turbo:
             return None
+
         if (
-            not force_scheduler_name and
-            self._scheduler and not self.do_change_scheduler and
-            self.settings["generator_settings"]["scheduler"] != self.sd_request.generator_settings.scheduler
+                not force_scheduler_name and
+                self._scheduler and
+                not self.do_change_scheduler and
+                self.settings["generator_settings"]["scheduler"] != self.sd_request.generator_settings.scheduler
         ):
             return self._scheduler
+
         self.current_scheduler_name = force_scheduler_name if force_scheduler_name else self.sd_request.generator_settings.scheduler
-        self.logger.debug(f"Loading scheduler")
+        self.logger.debug("Loading scheduler")
+
         scheduler_name = force_scheduler_name if force_scheduler_name else self.scheduler_name
         if not force_scheduler_name and scheduler_name not in AVAILABLE_SCHEDULERS_BY_ACTION[self.scheduler_section]:
             scheduler_name = AVAILABLE_SCHEDULERS_BY_ACTION[self.scheduler_section][0]
+
         scheduler_class_name = self.schedulers[scheduler_name]
         scheduler_class = getattr(diffusers, scheduler_class_name)
 
@@ -83,38 +89,45 @@ class SchedulerMixin:
                 else:
                     algorithm_type = SchedulerAlgorithm.DPM_SOLVER
                 kwargs["algorithm_type"] = algorithm_type.value
+
             try:
                 self.logger.debug(
                     f"Loading scheduler `{scheduler_name}` "
                     f"from pretrained path `{self.model_path}`"
                 )
                 self._scheduler = scheduler_class.from_pretrained(
-                    self.model_path,
+                    os.path.expanduser(
+                        os.path.join(
+                            self.settings["path_settings"]["feature_extractor_model_path"],
+                            f"{self.feature_extractor_path}/preprocessor_config.json"
+                        )
+                    ),
                     **kwargs
                 )
-            except NotImplementedError as e:
+            except NotImplementedError:
                 self.logger.error(
                     f"Unable to load scheduler {scheduler_name} "
                     f"from {self.sd_request.generator_settings.model}"
                 )
-            except OSError as e:
+            except Exception as e:
                 self.logger.error(
                     f"Unable to load scheduler {scheduler_name} "
                     f"from {self.sd_request.generator_settings.model}"
                 )
+                self.logger.error(e)
+
         return self._scheduler
 
     def change_scheduler(self):
         if not self.do_change_scheduler or not self.pipe:
             return
+
         if self.sd_request.generator_settings.model and self.sd_request.generator_settings.model != "":
             config = self._scheduler.config if self._scheduler else None
             self.pipe.scheduler = self.load_scheduler(config=config)
             self.do_change_scheduler = False
         else:
-            self.logger.warning(
-                "Unable to change scheduler, model_path is not set"
-            )
+            self.logger.warning("Unable to change scheduler, model_path is not set")
 
     def prepare_scheduler(self):
         scheduler_name = self.sd_request.generator_settings.scheduler
