@@ -15,7 +15,7 @@ from airunner.workers.llm_request_worker import LLMRequestWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.sd_worker import SDWorker
 from airunner.aihandler.logger import Logger
-from airunner.utils import create_worker
+from airunner.utils.create_worker import create_worker
 # from airunner.workers.vision_capture_worker import VisionCaptureWorker
 # from airunner.workers.vision_processor_worker import VisionProcessorWorker
 

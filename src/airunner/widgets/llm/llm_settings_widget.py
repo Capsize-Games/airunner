@@ -5,7 +5,8 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 from airunner.enums import SignalCode
 from airunner.settings import DEFAULT_CHATBOT
-from airunner.utils.get_current_chatbot import get_current_chatbot_property, set_current_chatbot_property
+from airunner.utils.get_current_chatbot import get_current_chatbot_property
+from airunner.utils.get_current_chatbot import set_current_chatbot_property
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
 from airunner.windows.main.ai_model_mixin import AIModelMixin
