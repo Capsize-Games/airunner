@@ -205,15 +205,15 @@ class TTSHandler(BaseHandler):
             self.logger.debug(f"Loading {target_model}...")
             target_model = target_model or self.current_model
             if self.current_model is None or self.model is None:
-                self.load_model()
+                self.model = self.load_model()
             if self.vocoder is None:
-                self.load_vocoder()
+                self.vocoder = self.load_vocoder()
             if self.processor is None:
-                self.load_processor()
+                self.processor = self.load_processor()
             if self.speaker_embeddings is None:
-                self.load_dataset()
+                self.dataset = self.load_dataset()
             if self.corpus is None:
-                self.load_corpus()
+                self.corpus = self.load_corpus()
             self.current_model = target_model
             self.loaded = True
     
@@ -226,21 +226,25 @@ class TTSHandler(BaseHandler):
         try:
             self.model = None
             do_clear_memory = True
+            self.emit_signal(SignalCode.STT_MODEL_UNLOADED_SIGNAL)
         except AttributeError:
             pass
         try:
             self.processor = None
             do_clear_memory = True
+            self.emit_signal(SignalCode.STT_PROCESSOR_UNLOADED_SIGNAL)
         except AttributeError:
             pass
         try:
             self.vocoder = None
             do_clear_memory = True
+            self.emit_signal(SignalCode.STT_VOCODER_UNLOADED_SIGNAL)
         except AttributeError:
             pass
         try:
             self.speaker_embeddings = None
             do_clear_memory = True
+            self.emit_signal(SignalCode.STT_SPEAKER_EMBEDDINGS_UNLOADED_SIGNAL)
         except AttributeError:
             pass
         self.current_model = None
@@ -259,25 +263,47 @@ class TTSHandler(BaseHandler):
             return
 
         try:
-            self.model = model_class_.from_pretrained(
+            model = model_class_.from_pretrained(
                 self.model_path,
                 local_files_only=True,
                 torch_dtype=self.torch_dtype,
                 device_map=self.device
             )
+            self.emit_signal(
+                SignalCode.STT_MODEL_LOADED_SIGNAL, {
+                    "path": self.model_path
+                }
+            )
+            return model
         except EnvironmentError as _e:
             self.logger.error("Failed to load model")
             return
 
     def load_tokenizer(self):
         self.logger.debug("Loading tokenizer")
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_path,
-            #device_map=self.device,
-            #torch_dtype=self.torch_dtype,
-            local_files_only=True,
-            trust_remote_code=False
-        )
+
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(
+                self.model_path,
+                #device_map=self.device,
+                #torch_dtype=self.torch_dtype,
+                local_files_only=True,
+                trust_remote_code=False
+            )
+            self.emit_signal(
+                SignalCode.STT_TOKENIZER_LOADED_SIGNAL, {
+                    "path": self.model_path
+                }
+            )
+            return tokenizer
+        except Exception as e:
+            self.logger.error("Failed to load tokenizer")
+            self.logger.error(e)
+            self.emit_signal(
+                SignalCode.STT_TOKENIZER_FAILED_SIGNAL, {
+                    "path": self.model_path
+                }
+            )
     
     def load_vocoder(self):
         pass
@@ -287,17 +313,24 @@ class TTSHandler(BaseHandler):
         processor_class_ = self.processor_class_
         if processor_class_:
             try:
-                self.processor = processor_class_.from_pretrained(
+                processor = processor_class_.from_pretrained(
                     self.processor_path,
                     local_files_only=True
                 )
-            except OSError as e:
-                if "Incorrect path_or_model_id" in str(e):
-                    self.logger.error("Failed to load processor")
-                    return
-
-            if self.use_cuda:
-                self.processor = self.processor
+                self.emit_signal(
+                    SignalCode.STT_PROCESSOR_LOADED_SIGNAL, {
+                        "path": self.processor_path
+                    }
+                )
+                return processor
+            except Exception as e:
+                self.logger.error("Failed to load processor")
+                self.logger.error(e)
+                self.emit_signal(
+                    SignalCode.STT_PROCESSOR_FAILED_SIGNAL, {
+                        "path": self.processor_path
+                    }
+                )
 
     def load_dataset(self):
         """

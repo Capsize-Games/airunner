@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QFileDialog
 from PySide6.QtCore import Slot
 
 from airunner.settings import BASE_PATH
-from airunner.utils.create_airunner_directory import create_airunner_paths
+from airunner.utils.os_utils.create_airunner_directory import create_airunner_paths
 from airunner.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.windows.setup_wizard.path_settings.templates.path_settings_ui import Ui_PathSettings
 
