@@ -473,4 +473,5 @@ class Gender(Enum):
 class ModelStatus(Enum):
     UNLOADED = "Unloaded"
     LOADED = "Loaded"
+    LOADING = "Loading"
     FAILED = "Failed"
