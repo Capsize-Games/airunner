@@ -35,11 +35,11 @@ class STTHandler(BaseHandler):
         self.model_type = "stt"
         self.fs = 16000
 
-    def start_capture(self):
+    def start_capture(self, data: dict = None):
         self.listening = True
         self.loaded = self.load()
 
-    def stop_capture(self):
+    def stop_capture(self, data: dict):
         clear_memory()
         self.listening = False
 
