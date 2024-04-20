@@ -14,6 +14,7 @@ import re
 import subprocess
 from pathlib import Path
 
+from airunner.process_qss import generate_resources
 from airunner.utils import get_venv_python_executable
 
 
@@ -56,26 +57,7 @@ def build_ui(path):
 
         adjust_resource_imports(ui_file_py, ui_file_py)
 
-def generate_resources():
-    print("Generating resources.py")
-    subprocess.run(
-        [
-            "pyside6-rcc",
-            "-o",
-            "src/airunner/resources_light_rc.py",
-            "src/airunner/resources_light.qrc",
-        ],
-        cwd=str(Path(__file__).parent.parent),
-    )
-    subprocess.run(
-        [
-            "pyside6-rcc",
-            "-o",
-            "src/airunner/resources_dark_rc.py",
-            "src/airunner/resources_dark.qrc",
-        ],
-        cwd=str(Path(__file__).parent.parent),
-    )
+
 
 
 if __name__ == "__main__":
