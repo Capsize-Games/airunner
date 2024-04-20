@@ -1,6 +1,4 @@
-import torch
 from PySide6.QtCore import Slot
-
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.memory_preferences.templates.memory_preferences_ui import Ui_memory_preferences
 
@@ -28,6 +26,7 @@ class MemoryPreferencesWidget(BaseWidget):
             getattr(self.ui, ui_element).setChecked(self.settings["memory_settings"][setting] is True)
             getattr(self.ui, ui_element).blockSignals(False)
 
+        import torch
         device_count = torch.cuda.device_count()
         available_devices = [f"{torch.cuda.get_device_name(i)}" for i in range(device_count)]
         self.available_devices = available_devices
