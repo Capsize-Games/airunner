@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QFileDialog
 
 from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES
-from airunner.utils import create_worker
+from airunner.utils.create_worker import create_worker
 from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.workers.mask_generator_worker import MaskGeneratorWorker
 

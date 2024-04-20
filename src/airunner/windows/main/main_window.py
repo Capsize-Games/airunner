@@ -37,11 +37,9 @@ from airunner.settings import (
     BUG_REPORT_LINK,
     VULNERABILITY_REPORT_LINK
 )
-from airunner.utils import (
-    get_version,
-    set_widget_state,
-    clear_memory
-)
+from airunner.utils.get_version import get_version
+from airunner.utils.set_widget_state import set_widget_state
+from airunner.utils.clear_memory import clear_memory
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow

@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
     QSplashScreen
 )
 from airunner.mediator_mixin import MediatorMixin
-from airunner.utils import get_version
 from airunner.windows.main.main_window import MainWindow
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.aihandler.logger import Logger

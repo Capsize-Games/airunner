@@ -3,7 +3,7 @@ from transformers import (
     StoppingCriteriaList
 )
 from transformers.tools.agents import StopSequenceCriteria
-from airunner.utils import clear_memory
+from airunner.utils.clear_memory import clear_memory
 
 
 class LocalAgent(LocalAgentBase):
