@@ -1,9 +1,8 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
-
 from airunner.enums import SignalCode, LLMActionType
-from airunner.utils import convert_base64_to_image
+from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.llm.loading_widget import LoadingWidget
