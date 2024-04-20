@@ -217,6 +217,9 @@ class SDHandler(
             SignalCode.LOAD_SAFETY_CHECKER_SIGNAL: self.load_safety_checker,
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
             SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_stablediffusion_signal,
+            SignalCode.SD_LOAD_SIGNAL: self.on_load_stablediffusion_signal,
+            SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
+            SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
             SignalCode.SD_MOVE_TO_CPU_SIGNAL: self.on_move_to_cpu,
             SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
             SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
@@ -242,6 +245,14 @@ class SDHandler(
         self.do_interrupt = False
         self.feature_extractor_path = "openai/clip-vit-large-patch14"
         self.latents_worker = create_worker(LatentsWorker)
+
+    def on_load_controlnet_signal(self):
+        if self.do_load_controlnet:
+            self.load_controlnet()
+
+    def on_unload_controlnet_signal(self):
+        if self.do_unload_controlnet:
+            self.unload_controlnet()
 
     def on_interrupt_process_signal(self, _message: dict):
         self.do_interrupt = True
@@ -436,13 +447,13 @@ class SDHandler(
     @property
     def do_load_controlnet(self) -> bool:
         return (
-            (not self.controlnet_loaded and self.settings["generator_settings"]["enable_controlnet"]) or
-            (self.controlnet_loaded and self.settings["generator_settings"]["enable_controlnet"])
+            (not self.controlnet_loaded and self.settings["controlnet_enabled"]) or
+            (self.controlnet_loaded and self.settings["controlnet_enabled"])
         )
 
     @property
     def do_unload_controlnet(self) -> bool:
-        return not self.settings["generator_settings"]["enable_controlnet"] and (self.controlnet_loaded)
+        return not self.settings["controlnet_enabled"] and (self.controlnet_loaded)
 
     @property
     def do_reuse_pipeline(self) -> bool:
@@ -594,7 +605,7 @@ class SDHandler(
             message["callback"]()
 
     def initialize(self):
-        if (
+        if self.settings["sd_enabled"] and (
             self.initialized is False or
             self.reload_model is True or
             self.pipe is None
@@ -607,7 +618,7 @@ class SDHandler(
             self.reload_model = False
 
     def controlnet(self):
-        if (
+        if self.settings["controlnet_enabled"] and (
             self._controlnet is None or
             self.current_controlnet_type != self.controlnet_type
         ):
@@ -673,7 +684,7 @@ class SDHandler(
             self.safety_checker = self.initialize_safety_checker()
 
         if self.use_safety_checker and self.feature_extractor is None and "path" in self.safety_checker_model:
-            self.feature_extractor = self.initialize_feature_extractor()
+            self.feature_extractor = self.load_feature_extractor()
 
         if self.use_safety_checker and self.safety_checker and self.feature_extractor:
             self.emit_signal(SignalCode.SAFETY_CHECKER_LOADED_SIGNAL, {
@@ -698,7 +709,7 @@ class SDHandler(
         clear_memory()
         self.emit_signal(SignalCode.FEATURE_EXTRACTOR_UNLOADED_SIGNAL)
 
-    def initialize_feature_extractor(self):
+    def load_feature_extractor(self):
         feature_extractor = None
         try:
             feature_extractor = AutoFeatureExtractor.from_pretrained(
@@ -713,9 +724,9 @@ class SDHandler(
                 use_safetensors=True,
                 device_map=self.device
             )
-        except OSError as e:
+        except Exception as e:
+            self.logger.error("Unable to load feature extractor")
             print(e)
-            self.send_error("Unable to load feature extractor")
             self.emit_signal(SignalCode.FEATURE_EXTRACTOR_FAILED_SIGNAL, {
                 "path": self.feature_extractor_path
             })
@@ -780,8 +791,8 @@ class SDHandler(
         :return:
         """
         if (self.pipe and ((
-                                   self.use_safety_checker and
-                                   self.safety_checker_status is ModelStatus.LOADED
+           self.use_safety_checker and
+           self.safety_checker_status is ModelStatus.LOADED
         ) or (
             not self.use_safety_checker
         ))):
@@ -946,6 +957,12 @@ class SDHandler(
     @Slot(object)
     def on_unload_stablediffusion_signal(self, _message):
         self.unload()
+        self.emit_signal(SignalCode.UNLOAD_SAFETY_CHECKER_SIGNAL)
+
+    @Slot(object)
+    def on_load_stablediffusion_signal(self, message):
+        self.load()
+        self.emit_signal(SignalCode.LOAD_SAFETY_CHECKER_SIGNAL)
 
     def unload(self):
         self.unload_model()
@@ -1073,6 +1090,14 @@ class SDHandler(
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
 
+    def load(self):
+        if not self._scheduler:
+            self.load_scheduler()
+
+        if not self.pipe:
+            self.prepare_model()
+            self.initialize()
+
     def generator_sample(self):
         """
         Called from sd_generate_worker, kicks off the generation process.
@@ -1085,17 +1110,15 @@ class SDHandler(
             self._negative_prompt_embeds = None
 
         if (
-            (self.controlnet_loaded and not self.settings["generator_settings"]["enable_controlnet"]) or
-            (not self.controlnet_loaded and self.settings["generator_settings"]["enable_controlnet"])
+            (self.controlnet_loaded and not self.settings["controlnet_enabled"]) or
+            (not self.controlnet_loaded and self.settings["controlnet_enabled"])
         ):
             self.initialized = False
 
         self.load_generator_arguments()
 
         if self.do_load:
-            self.prepare_scheduler()
-            self.prepare_model()
-            self.initialize()
+            self.load()
 
         self.change_scheduler()
 
@@ -1244,14 +1267,18 @@ class SDHandler(
         self.current_controlnet_type = self.controlnet_type
         try:
             controlnet = ControlNetModel.from_pretrained(
-                controlnet_model["path"],
+                os.path.expanduser(
+                    os.path.join(
+                        self.settings["path_settings"]["controlnet_model_path"],
+                        controlnet_model["path"]
+                    )
+                ),
                 torch_dtype=self.data_type,
                 local_files_only=True
             )
         except Exception as e:
             self.logger.error(f"Error loading controlnet {e}")
             return None
-        # self.load_controlnet_scheduler()
         return controlnet
 
     def unload_unused_models(self):
@@ -1274,7 +1301,7 @@ class SDHandler(
         self.reset_applied_memory_settings()
 
     def pipeline_class(self):
-        if self.settings["generator_settings"]["enable_controlnet"] and self.controlnet() is not None:
+        if self.settings["controlnet_enabled"] and self.controlnet() is not None:
             if self.sd_request.is_img2img:
                 pipeline_classname_ = StableDiffusionControlNetImg2ImgPipeline
             elif self.sd_request.is_txt2img:
@@ -1318,7 +1345,7 @@ class SDHandler(
             self.reset_applied_memory_settings()
             self.send_model_loading_message(self.model_path)
 
-            if self.settings["generator_settings"]["enable_controlnet"]:
+            if self.settings["controlnet_enabled"]:
                 kwargs["controlnet"] = self.controlnet()
 
             self.load_safety_checker()
@@ -1341,7 +1368,12 @@ class SDHandler(
 
                 try:
                     self.pipe = pipeline_classname_.from_pretrained(
-                        self.model_path,
+                        os.path.expanduser(
+                            os.path.join(
+                                self.settings["path_settings"][f"{self.sd_request.generator_settings.section}_model_path"],
+                                self.model_path
+                            )
+                        ),
                         torch_dtype=self.data_type,
                         safety_checker=self.safety_checker,
                         feature_extractor=self.feature_extractor,
@@ -1380,7 +1412,7 @@ class SDHandler(
             #         torch_dtype=self.data_type
             #     )
 
-            self.controlnet_loaded = self.settings["generator_settings"]["enable_controlnet"]
+            self.controlnet_loaded = self.settings["controlnet_enabled"]
 
     def get_pipeline_action(self, action=None):
         action = self.sd_request.generator_settings.section if not action else action
@@ -1401,7 +1433,7 @@ class SDHandler(
             "pipeline_class": self.pipeline_class(),
             "load_safety_checker": False,
         }
-        if self.settings["generator_settings"]["enable_controlnet"]:
+        if self.settings["controlnet_enabled"]:
             data["controlnet"] = self.controlnet()
         try:
             pipe = download_from_original_stable_diffusion_ckpt(**data)
@@ -1460,7 +1492,12 @@ class SDHandler(
                 components["controlnet"] = self.controlnet()
 
                 pipe = AutoPipelineForText2Image.from_pretrained(
-                    self.model_path,
+                    os.path.expanduser(
+                        os.path.join(
+                            self.settings["path_settings"]["txt2img_model_path"],
+                            self.model_path
+                        )
+                    ),
                     **components
                 )
 
