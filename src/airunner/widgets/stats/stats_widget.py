@@ -26,6 +26,7 @@ class StatsWidget(
         self.register(SignalCode.STABLE_DIFFUSION_FAILED_SIGNAL, self.on_stable_diffusion_failed)
 
         self.register(SignalCode.CONTROLNET_LOADED_SIGNAL, self.on_controlnet_loaded)
+        self.register(SignalCode.CONTROLNET_LOADING_SIGNAL, self.on_controlnet_loading)
         self.register(SignalCode.CONTROLNET_UNLOADED_SIGNAL, self.on_controlnet_unloaded)
         self.register(SignalCode.CONTROLNET_FAILED_SIGNAL, self.on_controlnet_failed)
 
@@ -158,6 +159,11 @@ class StatsWidget(
     def on_controlnet_loaded(self, data=None):
         self.ui.model_stats.item(3, 1).setText(ModelStatus.LOADED.value)
         self.ui.model_stats.item(3, 2).setText(data["path"])
+
+    def on_controlnet_loading(self, data=None):
+        self.ui.model_stats.item(3, 1).setText(ModelStatus.LOADING.value)
+        self.ui.model_stats.item(3, 2).setText(data["path"])
+        QApplication.processEvents()
 
     def on_controlnet_unloaded(self, data=None):
         self.ui.model_stats.item(3, 1).setText(ModelStatus.UNLOADED.value)
