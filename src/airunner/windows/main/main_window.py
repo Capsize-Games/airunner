@@ -478,14 +478,6 @@ class MainWindow(
     @Slot()
     def action_show_model_manager(self):
         ModelManagerWidget()
-        # self.dialog = QDialog()
-        # self.dialog.setWindowTitle("Model Manager")
-        # self.layout = QVBoxLayout()
-        # self.model_manager_widget = ModelManagerWidget()
-        # self.layout.addWidget(self.model_manager_widget)
-        # self.dialog.setLayout(self.layout)
-        # self.set_stylesheet(ui=self.dialog)
-        # self.dialog.show()
 
     @Slot()
     def action_show_controlnet(self):

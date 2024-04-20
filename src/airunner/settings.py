@@ -912,6 +912,29 @@ AVAILABLE_SCHEDULERS_BY_ACTION.update({
 MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
 NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
 
+DEFAULT_MEMORY_SETTINGS = dict(
+    use_last_channels=True,
+    use_attention_slicing=False,
+    use_tf32=False,
+    use_enable_vae_slicing=True,
+    use_accelerated_transformers=True,
+    use_tiled_vae=True,
+    enable_model_cpu_offload=False,
+    use_enable_sequential_cpu_offload=False,
+    use_cudnn_benchmark=True,
+    use_torch_compile=False,
+    use_tome_sd=True,
+    tome_sd_ratio=600,
+    move_unused_model_to_cpu=False,
+    unload_unused_models=True,
+    default_gpu=dict(
+        sd=0,
+        llm=0,
+        tts=0,
+        stt=0,
+    )
+)
+
 ####################################################################
 # Create the GENERATOR_SETTINGS so that we have the presets for
 # Each generator category.
@@ -923,14 +946,14 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     ddim_eta=0.5,
     height=512,
     width=512,
-    scale=0,
+    scale=750,
     seed=42,
     random_seed=True,
-    model="",
+    model=SD_DEFAULT_MODEL_PATH,
     scheduler=DEFAULT_SCHEDULER,
     prompt_triggers="",
     strength=50,
-    image_guidance_scale=150,
+    image_guidance_scale=750,  # pix2pix
     n_samples=1,
     enable_controlnet=False,
     clip_skip=0,
@@ -1127,7 +1150,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     latest_version_check=True,
     app_version="",
     allow_online_mode=True,
-    current_version_stablediffusion="",
+    current_version_stablediffusion=SD_DEFAULT_VERSION,
     current_tool=CanvasToolName.ACTIVE_GRID_AREA,
     image_export_type="png",
     auto_export_images=True,
@@ -1197,28 +1220,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         canvas_side_splitter=None,
         canvas_side_splitter_2=None
     ),
-    memory_settings=dict(
-        use_last_channels=True,
-        use_attention_slicing=False,
-        use_tf32=False,
-        use_enable_vae_slicing=True,
-        use_accelerated_transformers=True,
-        use_tiled_vae=True,
-        enable_model_cpu_offload=False,
-        use_enable_sequential_cpu_offload=False,
-        use_cudnn_benchmark=True,
-        use_torch_compile=False,
-        use_tome_sd=True,
-        tome_sd_ratio=600,
-        move_unused_model_to_cpu=False,
-        unload_unused_models=True,
-        default_gpu=dict(
-            sd=0,
-            llm=0,
-            tts=0,
-            stt=0,
-        )
-    ),
+    memory_settings=DEFAULT_MEMORY_SETTINGS,
     grid_settings=dict(
         cell_size=64,
         line_width=1,
@@ -1234,8 +1236,13 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         size=20,
         primary_color=DEFAULT_BRUSH_PRIMARY_COLOR,
         secondary_color=DEFAULT_BRUSH_SECONDARY_COLOR,
+        strength_slider=950,
+        strength=950,
+        conditioning_scale=550,
+        guidance_scale=750,
     ),
     path_settings={
+        "initialized": False,
         "base_path": BASE_PATH
     },
     active_grid_settings=dict(
