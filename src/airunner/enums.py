@@ -234,6 +234,7 @@ class SignalCode(Enum):
     STABLE_DIFFUSION_FAILED_SIGNAL = "stable_diffusion_load_failed_signal"
 
     CONTROLNET_LOADED_SIGNAL = "controlnet_loaded_signal"
+    CONTROLNET_LOADING_SIGNAL = "controlnet_loading_signal"
     CONTROLNET_UNLOADED_SIGNAL = "controlnet_unloaded_signal"
     CONTROLNET_FAILED_SIGNAL = "controlnet_load_failed_signal"
 
