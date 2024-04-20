@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QTableWidgetItem, QHeaderView
+from PySide6.QtWidgets import QTableWidgetItem, QHeaderView, QApplication
 
 from airunner.enums import SignalCode, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
@@ -58,10 +58,15 @@ class StatsWidget(
         self.register(SignalCode.STT_SPEAKER_EMBEDDINGS_UNLOADED_SIGNAL, self.on_stt_embeddings_unloaded)
         self.register(SignalCode.STT_SPEAKER_EMBEDDINGS_FAILED_SIGNAL, self.on_stt_embeddings_failed)
 
+        self.register(SignalCode.LOAD_SAFETY_CHECKER_SIGNAL, self.on_load_safety_checker)
+        self.register(SignalCode.SD_LOAD_SIGNAL, self.on_load_safety_checker)
+
+        self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged)
         # add items
         self.ui.model_stats.setRowCount(11)
         self.ui.model_stats.setColumnCount(3)
         self.ui.model_stats.setHorizontalHeaderLabels(["Model", "Status", "Actions", "Size"])
+
 
         # Model Name
         self.ui.model_stats.setItem(0, 0, QTableWidgetItem("SD Safety Checker"))
@@ -93,17 +98,33 @@ class StatsWidget(
         self.ui.model_stats.verticalHeader().setVisible(False)
         self.ui.model_stats.horizontalHeader().setVisible(False)
 
+        self.safety_checker_model_status = ModelStatus.UNLOADED
+
     def on_safety_checker_loaded(self, data=None):
-        self.ui.model_stats.item(0, 1).setText(ModelStatus.LOADED.value)
-        self.ui.model_stats.item(0, 2).setText(data["path"])
+        self.safety_checker_model_status = ModelStatus.LOADED
+        self.update_safety_checker_model_status(data["path"])
 
     def on_safety_checker_unloaded(self, data=None):
-        self.ui.model_stats.item(0, 1).setText(ModelStatus.UNLOADED.value)
-        self.ui.model_stats.item(0, 2).setText("")
+        if self.safety_checker_model_status is not ModelStatus.UNLOADED:
+            self.safety_checker_model_status = ModelStatus.UNLOADED
+            self.update_safety_checker_model_status("")
 
     def on_safety_checker_failed(self, data=None):
-        self.ui.model_stats.item(0, 1).setText(ModelStatus.FAILED.value)
-        self.ui.model_stats.item(0, 2).setText(data["path"])
+        self.safety_checker_model_status = ModelStatus.FAILED
+        self.update_safety_checker_model_status(data["path"])
+
+    def on_load_safety_checker(self, data=None):
+        if self.safety_checker_model_status is not ModelStatus.LOADING:
+            self.safety_checker_model_status = ModelStatus.LOADING
+            self.update_safety_checker_model_status("")
+
+    def on_log_logged(self, data=None):
+        self.ui.console.append(str(data["message"]))
+
+    def update_safety_checker_model_status(self, path: str):
+        self.ui.model_stats.item(0, 1).setText(self.safety_checker_model_status.value)
+        self.ui.model_stats.item(0, 2).setText(path)
+        QApplication.processEvents()
 
     def on_feature_extractor_loaded(self, data=None):
         self.ui.model_stats.item(1, 1).setText(ModelStatus.LOADED.value)
