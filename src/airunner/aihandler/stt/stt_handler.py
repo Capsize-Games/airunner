@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode, LLMChatRole
-from airunner.utils import clear_memory
+from airunner.utils.clear_memory import clear_memory
 
 
 class STTHandler(BaseHandler):

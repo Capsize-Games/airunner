@@ -5,26 +5,18 @@
 from airunner.security import set_huggingface_env_variables
 import sys
 import signal
-from functools import partial
-from PySide6 import QtCore
 from PySide6.QtCore import (
     QObject,
-    QTimer
 )
 from PySide6.QtGui import (
-    QGuiApplication,
-    QPixmap,
     Qt,
     QWindow
 )
 from PySide6.QtWidgets import (
     QApplication,
-    QSplashScreen
 )
 from airunner.mediator_mixin import MediatorMixin
-from airunner.utils import get_version
 from airunner.windows.download_wizard.download_wizard_window import DownloadWizardWindow
-from airunner.windows.main.main_window import MainWindow
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
 from airunner.aihandler.logger import Logger
