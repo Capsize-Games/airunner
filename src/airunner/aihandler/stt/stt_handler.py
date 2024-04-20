@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode, LLMChatRole
+from airunner.utils import clear_memory
 
 
 class STTHandler(BaseHandler):
@@ -16,19 +17,40 @@ class STTHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.lock = threading.Lock()
+        self.model_path = ""
         self.model = None
         self.model = None
         self.processor = None
         self.feature_extractor = None
         self.model = None
         self.is_on_gpu = False
-        self.load_model()
-        self.load_processor()
-        self.load_feature_extractor()
+
+        if self.settings["stt_enabled"]:
+            self.start_capture()
+
         self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
         self.register(SignalCode.PROCESS_SPEECH_SIGNAL, self.process_given_speech)
+        self.register(SignalCode.STT_STOP_CAPTURE_SIGNAL, self.stop_capture)
+        self.register(SignalCode.STT_START_CAPTURE_SIGNAL, self.start_capture)
         self.model_type = "stt"
         self.fs = 16000
+
+    def start_capture(self):
+        self.listening = True
+        self.loaded = self.load()
+
+    def stop_capture(self):
+        clear_memory()
+        self.listening = False
+
+    def load(self):
+        self.model = self.load_model()
+        self.processor = self.load_processor()
+        self.feature_extractor = self.load_feature_extractor()
+
+        if self.model is not None and self.processor is not None and self.feature_extractor is not None:
+            return True
+        return False
 
     @property
     def use_cuda(self):
