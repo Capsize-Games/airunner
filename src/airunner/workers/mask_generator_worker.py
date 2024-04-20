@@ -1,8 +1,7 @@
 from PIL import Image, ImageDraw
 from PySide6.QtCore import QRect
-
 from airunner.enums import SignalCode
-from airunner.utils import convert_base64_to_image
+from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.workers.worker import Worker
 
 

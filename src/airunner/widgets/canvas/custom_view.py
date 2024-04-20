@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsLineIt
 from airunner.aihandler.logger import Logger
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
-from airunner.utils import snap_to_grid
+from airunner.utils.snap_to_grid import snap_to_grid
 from airunner.widgets.canvas.brush_scene import BrushScene
 from airunner.widgets.canvas.controlnet_scene import ControlnetScene
 from airunner.widgets.canvas.custom_scene import CustomScene

@@ -3,7 +3,7 @@ from transformers import (
     AutoProcessor
 )
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
-from airunner.utils import clear_memory
+from airunner.utils.clear_memory import clear_memory
 
 
 class VisualQATransformerBaseHandler(TransformerBaseHandler):

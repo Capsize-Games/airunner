@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 import tomesd
 import torch
-from airunner.utils import clear_memory
+from airunner.utils.clear_memory import clear_memory
 
 
 @dataclass
