@@ -1,5 +1,5 @@
 from compel import Compel, DiffusersTextualInversionManager
-from airunner.utils import get_torch_device
+from airunner.utils.get_torch_device import get_torch_device
 
 
 class CompelMixin:
