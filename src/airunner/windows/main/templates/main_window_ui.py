@@ -26,6 +26,7 @@ from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
+from airunner.widgets.stats.stats_widget import StatsWidget
 from airunner.widgets.upscale.upscale_widget import UpscaleWidget
 import airunner.resources_light_rc
 import airunner.resources_dark_rc
@@ -34,7 +35,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(841, 787)
+        MainWindow.resize(1263, 787)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -344,7 +345,7 @@ class Ui_MainWindow(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollAreaWidgetContents_3 = QWidget()
         self.scrollAreaWidgetContents_3.setObjectName(u"scrollAreaWidgetContents_3")
-        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 837, 46))
+        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 1259, 46))
         self.horizontalLayout_2 = QHBoxLayout(self.scrollAreaWidgetContents_3)
         self.horizontalLayout_2.setSpacing(0)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
@@ -566,7 +567,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 354, 636))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 555, 640))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -623,6 +624,16 @@ class Ui_MainWindow(object):
         self.gridLayout_11.addWidget(self.widget, 0, 0, 1, 1)
 
         self.tool_tab_widget.addTab(self.tab_3, "")
+        self.tab = QWidget()
+        self.tab.setObjectName(u"tab")
+        self.gridLayout_2 = QGridLayout(self.tab)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.stats_widget = StatsWidget(self.tab)
+        self.stats_widget.setObjectName(u"stats_widget")
+
+        self.gridLayout_2.addWidget(self.stats_widget, 0, 0, 1, 1)
+
+        self.tool_tab_widget.addTab(self.tab, "")
         self.splitter.addWidget(self.tool_tab_widget)
 
         self.gridLayout.addWidget(self.splitter, 0, 0, 1, 1)
@@ -863,7 +874,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 841, 26))
+        self.menubar.setGeometry(QRect(0, 0, 1263, 22))
         font1 = QFont()
         font1.setPointSize(11)
         self.menubar.setFont(font1)
@@ -1042,7 +1053,7 @@ class Ui_MainWindow(object):
 
         self.mode_tab_widget.setCurrentIndex(0)
         self.center_tab.setCurrentIndex(0)
-        self.tool_tab_widget.setCurrentIndex(0)
+        self.tool_tab_widget.setCurrentIndex(4)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -1281,6 +1292,7 @@ class Ui_MainWindow(object):
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_active_grid), QCoreApplication.translate("MainWindow", u"Active Grid", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u"Upscale", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_3), QCoreApplication.translate("MainWindow", u"StableDiffusion", None))
+        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab), QCoreApplication.translate("MainWindow", u"Stats", None))
 #if QT_CONFIG(tooltip)
         self.toggle_active_grid_area_button.setToolTip(QCoreApplication.translate("MainWindow", u"Active grid area selection tool", None))
 #endif // QT_CONFIG(tooltip)
