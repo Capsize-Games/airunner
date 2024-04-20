@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QCheckBox
 )
-
 from airunner.agents.actions.bash_execute import bash_execute
 from airunner.aihandler.logger import Logger
 from airunner.settings import (
@@ -160,6 +159,7 @@ class MainWindow(
         self._generator = None
         self._generator_settings = None
         self.listening = False
+        self.intialized = False
         self.history = History()
 
         self.splitter_names = [
@@ -378,17 +378,25 @@ class MainWindow(
         self.ui.ocr_button.blockSignals(True)
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)
+        self.ui.sd_toggle_button.blockSignals(True)
+        self.ui.sd_toggle_button.blockSignals(True)
+        self.ui.enable_controlnet.blockSignals(True)
+        self.ui.controlnet_toggle_button.blockSignals(True)
         self.ui.ocr_button.setChecked(self.settings["ocr_enabled"])
         self.ui.tts_button.setChecked(self.settings["tts_enabled"])
         self.ui.v2t_button.setChecked(self.settings["stt_enabled"])
+        self.ui.sd_toggle_button.setChecked(self.settings["sd_enabled"])
+        self.ui.enable_controlnet.setChecked(self.settings["controlnet_enabled"])
+        self.ui.controlnet_toggle_button.setChecked(self.settings["controlnet_enabled"])
         self.ui.ocr_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
-        self.ui.enable_controlnet.blockSignals(True)
-        self.ui.enable_controlnet.setChecked(self.settings["generator_settings"]["enable_controlnet"])
+        self.ui.sd_toggle_button.blockSignals(False)
         self.ui.enable_controlnet.blockSignals(False)
-        self.logger.debug("Setting buttons")
+        self.ui.sd_toggle_button.blockSignals(False)
+        self.ui.controlnet_toggle_button.blockSignals(False)
         self.initialize_tool_section_buttons()
+        self.intialized = True
 
     def do_listen(self):
         if not self.listening:
@@ -563,6 +571,9 @@ class MainWindow(
         self.show_path(default_path if default_path and path == "" else path)
 
     def set_icons(self, icon_name, widget_name, theme):
+        if not self.intialized:
+            return
+
         icon = QtGui.QIcon()
         icon.addPixmap(
             QtGui.QPixmap(f":/icons/{theme}/{icon_name}.svg"), 
@@ -784,56 +795,68 @@ class MainWindow(
     @Slot(bool)
     def action_toggle_nsfw_filter_triggered(self, val: bool):
         if val is False:
-            if self.settings["show_nsfw_warning"]:
-                """
-                Display a popup window which asks the user if they are sure they want to disable the NSFW filter
-                along with a checkbox that allows the user to disable the warning in the future.
-                """
-                self.show_nsfw_warning_popup()
+            self.show_nsfw_warning_popup()
         else:
             settings = self.settings
             settings["nsfw_filter"] = val
             self.settings = settings
             self.toggle_nsfw_filter()
+            self.emit_signal(SignalCode.LOAD_SAFETY_CHECKER_SIGNAL)
 
     def show_nsfw_warning_popup(self):
-        msg_box = QMessageBox()
-        msg_box.setWindowTitle("Disable Safety Checker Warning")
-        msg_box.setText(
-            (
-                "WARNING\n\n"
-                "You are attempting to disable the safety checker (NSFW filter).\n"
-                "It is strongly recommended that you keep this enabled at all times.\n"
-                "The Safety Checker prevents potentially harmful content from being displayed.\n"
-                "Only disable it if you are sure the Image model you are using is not capable of generating harmful content.\n"
-                "Disabling the safety checker is intended as a last resort for continual false positives and as a research feature.\n"
-                "\n\n"
-                "Are you sure you want to disable the filter?"
+        if self.settings["show_nsfw_warning"]:
+            """
+            Display a popup window which asks the user if they are sure they want to disable the NSFW filter
+            along with a checkbox that allows the user to disable the warning in the future.
+            """
+            msg_box = QMessageBox()
+            msg_box.setWindowTitle("Disable Safety Checker Warning")
+            msg_box.setText(
+                (
+                    "WARNING\n\n"
+                    "You are attempting to disable the safety checker (NSFW filter).\n"
+                    "It is strongly recommended that you keep this enabled at all times.\n"
+                    "The Safety Checker prevents potentially harmful content from being displayed.\n"
+                    "Only disable it if you are sure the Image model you are using is not capable of generating harmful content.\n"
+                    "Disabling the safety checker is intended as a last resort for continual false positives and as a research feature.\n"
+                    "\n\n"
+                    "Are you sure you want to disable the filter?"
+                )
             )
-        )
-        msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            msg_box.setDefaultButton(QMessageBox.StandardButton.No)
 
-        # Create a QCheckBox
-        checkbox = QCheckBox("Do not show this warning again")
-        # Add the checkbox to the message box
-        msg_box.setCheckBox(checkbox)
+            # Create a QCheckBox
+            checkbox = QCheckBox("Do not show this warning again")
+            # Add the checkbox to the message box
+            msg_box.setCheckBox(checkbox)
 
-        result = msg_box.exec()
+            result = msg_box.exec()
 
-        if result == QMessageBox.StandardButton.Yes:
-            # User confirmed to disable the NSFW filter
-            # Update the settings accordingly
-            settings = self.settings
-            settings["nsfw_filter"] = False
-            # Update the show_nsfw_warning setting based on the checkbox state
-            settings["show_nsfw_warning"] = not checkbox.isChecked()
-            self.settings = settings
-            self.toggle_nsfw_filter()
+            if result == QMessageBox.StandardButton.Yes:
+                self._disable_nsfw_filter(not checkbox.isChecked())
 
-        self.ui.actionSafety_Checker.blockSignals(True)
-        self.ui.actionSafety_Checker.setChecked(self.settings["nsfw_filter"])
-        self.ui.actionSafety_Checker.blockSignals(False)
+            self.ui.actionSafety_Checker.blockSignals(True)
+            self.ui.actionSafety_Checker.setChecked(self.settings["nsfw_filter"])
+            self.ui.actionSafety_Checker.blockSignals(False)
+        else:
+            self._disable_nsfw_filter()
+
+    def _disable_nsfw_filter(self, show_nsfw_warning=None):
+        """
+        Do not call this function directly.
+        :return:
+        """
+        # User confirmed to disable the NSFW filter
+        # Update the settings accordingly
+        settings = self.settings
+        settings["nsfw_filter"] = False
+        # Update the show_nsfw_warning setting based on the checkbox state
+        if show_nsfw_warning is not None:
+            settings["show_nsfw_warning"] = show_nsfw_warning
+        self.settings = settings
+        self.toggle_nsfw_filter()
+        self.emit_signal(SignalCode.UNLOAD_SAFETY_CHECKER_SIGNAL)
 
     def action_toggle_darkmode(self):
         self.set_stylesheet()
@@ -887,7 +910,11 @@ class MainWindow(
                 ui.setStyleSheet("")
 
             for icon_data in self.icons:
-                self.set_icons(icon_data[0], icon_data[1], "dark" if self.settings["dark_mode_enabled"] else "light")
+                self.set_icons(
+                    icon_data[0],
+                    icon_data[1],
+                    "dark" if self.settings["dark_mode_enabled"] else "light"
+                )
 
     def show_setup_wizard(self):
         wizard = SetupWizard()
@@ -1047,7 +1074,7 @@ class MainWindow(
 
     def action_toggle_controlnet(self, val):
         settings = self.settings
-        settings["generator_settings"]["enable_controlnet"] = val
+        settings["controlnet_enabled"] = val
         self.settings = settings
 
     def import_controlnet_image(self):
@@ -1097,3 +1124,23 @@ class MainWindow(
     @Slot()
     def action_run_setup_wizard_clicked(self):
         self.show_setup_wizard()
+
+    @Slot(bool)
+    def action_image_generator_toggled(self, val: bool):
+        settings = self.settings
+        settings["sd_enabled"] = val
+        self.settings = settings
+        if val:
+            self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
+        else:
+            self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
+
+    @Slot(bool)
+    def action_controlnet_toggled(self, val: bool):
+        settings = self.settings
+        settings["controlnet_enabled"] = val
+        self.settings = settings
+        if val:
+            self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
+        else:
+            self.emit_signal(SignalCode.CONTROLNET_UNLOAD_SIGNAL)
