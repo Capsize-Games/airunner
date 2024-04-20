@@ -20,6 +20,8 @@ class SettingsMixin:
     def __init__(
         self,
         use_cuda: bool = DEFAULT_APPLICATION_SETTINGS["use_cuda"],
+        sd_enabled: bool = DEFAULT_APPLICATION_SETTINGS["sd_enabled"],
+        controlnet_enabled: bool = DEFAULT_APPLICATION_SETTINGS["controlnet_enabled"],
         ocr_enabled: bool = DEFAULT_APPLICATION_SETTINGS["ocr_enabled"],
         tts_enabled: bool = DEFAULT_APPLICATION_SETTINGS["tts_enabled"],
         stt_enabled: bool = DEFAULT_APPLICATION_SETTINGS["stt_enabled"],
@@ -29,12 +31,15 @@ class SettingsMixin:
         Constructor for the SettingsMixin class.
         Changes the default settings to the given parameters.
         :param use_cuda:
+        :param sd_enabled:
         :param ocr_enabled:
         :param tts_enabled:
         :param stt_enabled:
         :param ai_mode:
         """
         DEFAULT_APPLICATION_SETTINGS["use_cuda"] = use_cuda
+        DEFAULT_APPLICATION_SETTINGS["sd_enabled"] = sd_enabled
+        DEFAULT_APPLICATION_SETTINGS["controlnet_enabled"] = controlnet_enabled
         DEFAULT_APPLICATION_SETTINGS["ocr_enabled"] = ocr_enabled
         DEFAULT_APPLICATION_SETTINGS["tts_enabled"] = tts_enabled
         DEFAULT_APPLICATION_SETTINGS["stt_enabled"] = stt_enabled
@@ -193,23 +198,28 @@ class SettingsMixin:
             "art_other": f"{base_path}/art/other",
             "text_models": f"{base_path}/text/models",
             "text_other": f"{base_path}/text/other",
-            "txt2img_model": f"{base_path}/art/models/txt2img",
-            "depth2img_model": f"{base_path}/art/models/depth2img",
-            "pix2pix_model": f"{base_path}/art/models/pix2pix",
-            "inpaint_model": f"{base_path}/art/models/inpaint",
-            "upscale_model": f"{base_path}/art/models/upscale",
-            "txt2vid_model": f"{base_path}/art/models/txt2vid",
-            "vae_model": f"{base_path}/art/models/vae",
-            "embeddings_model": f"{base_path}/art/models/embeddings",
-            "lora_model": f"{base_path}/art/models/lora",
+            "txt2img_model_path": f"{base_path}/art/models/txt2img",
+            "depth2img_model_path": f"{base_path}/art/models/depth2img",
+            "pix2pix_model_path": f"{base_path}/art/models/pix2pix",
+            "inpaint_model_path": f"{base_path}/art/models/inpaint",
+            "upscale_model_path": f"{base_path}/art/models/upscale",
+            "txt2vid_model_path": f"{base_path}/art/models/txt2vid",
+            "vae_model_path": f"{base_path}/art/models/vae",
+            "safety_checker_model_path": f"{base_path}/art/models/safety_checker",
+            "feature_extractor_model_path": f"{base_path}/art/models/feature_extractor",
+            "controlnet_model_path": f"{base_path}/art/models/controlnet",
+            "embeddings_model_path": f"{base_path}/art/models/embeddings",
+            "lora_model_path": f"{base_path}/art/models/lora",
             "image_path": f"{base_path}/art/other/images",
             "video_path": f"{base_path}/art/other/videos",
             "ebooks_path": f"{base_path}/text/other/ebooks",
             "documents_path": f"{base_path}/text/other/documents",
-            "llm_casuallm_model": f"{base_path}/text/models/casuallm",
-            "llm_seq2seq_model": f"{base_path}/text/models/seq2seq",
-            "llm_visualqa_model": f"{base_path}/text/models/visualqa",
-            "llm_misc_model": f"{base_path}/text/models/misc",
+            "tts_model_path": f"{base_path}/text/models/tts",
+            "stt_model_path": f"{base_path}/text/models/stt",
+            "llm_casuallm_model_path": f"{base_path}/text/models/casuallm",
+            "llm_seq2seq_model_path": f"{base_path}/text/models/seq2seq",
+            "llm_visualqa_model_path": f"{base_path}/text/models/visualqa",
+            "llm_misc_model_path": f"{base_path}/text/models/misc",
             "llm_casuallm_cache": f"{base_path}/text/models/casuallm/cache",
             "llm_seq2seq_cache": f"{base_path}/text/models/seq2seq/cache",
             "llm_visualqa_cache": f"{base_path}/text/models/visualqa/cache",
