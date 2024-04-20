@@ -1,8 +1,7 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox
-
 from airunner.settings import DEFAULT_CHATBOT
-from airunner.utils import toggle_signals
+from airunner.utils.toggle_signals import toggle_signals
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.bot_preferences_ui import Ui_bot_preferences
 
