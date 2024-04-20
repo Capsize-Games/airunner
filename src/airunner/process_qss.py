@@ -5,8 +5,6 @@ import time
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
-from watchdog.events import FileSystemEventHandler
-from watchdog.observers import Observer
 
 
 def build_ui(path):
@@ -130,42 +128,3 @@ def process_qss(_path=None):
 
 class SignalEmitter(QObject):
     file_changed = Signal()
-
-class Watcher:
-    def __init__(self, directories_to_watch, scripts_to_run, ignore_files=[]):
-        self.DIRECTORIES_TO_WATCH = directories_to_watch
-        self.SCRIPTS_TO_RUN = scripts_to_run
-        self.IGNORE_FILES = ignore_files
-        self.emitter = SignalEmitter()
-
-    def run(self):
-        event_handler = Handler(self.SCRIPTS_TO_RUN, self.IGNORE_FILES, self.emitter)
-        observer = Observer()
-        for directory in self.DIRECTORIES_TO_WATCH:
-            observer.schedule(event_handler, directory, recursive=True)
-        observer.start()
-
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            observer.stop()
-        observer.join()
-
-class Handler(FileSystemEventHandler):
-    def __init__(self, scripts_to_run, ignore_files=[], emitter=None):
-        self.SCRIPTS_TO_RUN = scripts_to_run
-        self.IGNORE_FILES = ignore_files
-        self.emitter = emitter
-
-    def on_modified(self, event):
-        if event.is_directory:
-            return
-        filename = event.src_path.split('/')[-1]
-        if filename not in self.IGNORE_FILES:
-            file_extension = os.path.splitext(filename)[1]
-            if file_extension in self.SCRIPTS_TO_RUN:
-                print(f"Detected changes in file: {event.src_path}. Running script...")
-                self.SCRIPTS_TO_RUN[file_extension]()
-                if self.emitter:
-                    self.emitter.file_changed.emit()
