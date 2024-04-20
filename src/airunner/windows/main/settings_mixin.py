@@ -15,7 +15,6 @@ from airunner.enums import (
 )
 from airunner.utils.os_utils.validate_path import validate_path
 
-
 class SettingsMixin:
     def __init__(
         self,

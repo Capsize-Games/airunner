@@ -6,7 +6,8 @@ from PySide6.QtWidgets import QApplication
 
 from airunner.enums import SignalCode, GeneratorSection, ImageCategory
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
-from airunner.utils import convert_base64_to_image, create_worker
+from airunner.utils.create_worker import create_worker
+from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
 from airunner.workers.model_scanner_worker import ModelScannerWorker
