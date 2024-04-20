@@ -27,7 +27,13 @@
     <number>0</number>
    </property>
    <item row="0" column="0">
-    <widget class="QTableWidget" name="model_stats"/>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <widget class="QTableWidget" name="model_stats"/>
+     <widget class="QTextEdit" name="console"/>
+    </widget>
    </item>
   </layout>
  </widget>
