@@ -30,8 +30,8 @@ class ControlnetImageSettings:
         self.mask_link_input_image = data.get("mask_link_input_image", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["mask_link_input_image"])
         self.mask_use_imported_image = data.get("mask_use_imported_image", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["mask_use_imported_image"])
         self.controlnet = data.get("controlnet", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["controlnet"])
-        self.conditioning_scale = data.get("conditioning_scale", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["conditioning_scale"] / 100.0)
-        self.guidance_scale = data.get("guidance_scale", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["guidance_scale"] / 100.0)
+        self.conditioning_scale = data.get("conditioning_scale", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["conditioning_scale"]) / 100.0
+        self.guidance_scale = data.get("guidance_scale", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["guidance_scale"]) / 100.0
         self.controlnet_image_base64 = data.get("controlnet_image_base64", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["controlnet_image_base64"])
 
 
@@ -45,14 +45,14 @@ class GeneratorSettings:
         self.ddim_eta = generator_settings.get("ddim_eta", STABLEDIFFUSION_GENERATOR_SETTINGS["ddim_eta"])
         self.height = generator_settings.get("height", STABLEDIFFUSION_GENERATOR_SETTINGS["height"])
         self.width = generator_settings.get("width", STABLEDIFFUSION_GENERATOR_SETTINGS["width"])
-        self.scale = generator_settings.get("scale", STABLEDIFFUSION_GENERATOR_SETTINGS["scale"] / 100.0)
+        self.scale = generator_settings.get("scale", STABLEDIFFUSION_GENERATOR_SETTINGS["scale"]) / 100.0
         self.seed = generator_settings.get("seed", STABLEDIFFUSION_GENERATOR_SETTINGS["seed"])
         self.random_seed = generator_settings.get("random_seed", STABLEDIFFUSION_GENERATOR_SETTINGS["random_seed"])
         self.model = generator_settings.get("model", STABLEDIFFUSION_GENERATOR_SETTINGS["model"])
         self.scheduler = generator_settings.get("scheduler", STABLEDIFFUSION_GENERATOR_SETTINGS["scheduler"])
         self.prompt_triggers = generator_settings.get("prompt_triggers", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt_triggers"])
-        self.strength = generator_settings.get("strength", STABLEDIFFUSION_GENERATOR_SETTINGS["strength"] / 100.0)
-        self.image_guidance_scale = generator_settings.get("image_guidance_scale", STABLEDIFFUSION_GENERATOR_SETTINGS["image_guidance_scale"] / 100.0)
+        self.strength = generator_settings.get("strength", STABLEDIFFUSION_GENERATOR_SETTINGS["strength"]) / 100.0
+        self.image_guidance_scale = generator_settings.get("image_guidance_scale", STABLEDIFFUSION_GENERATOR_SETTINGS["image_guidance_scale"]) / 100.0
         self.n_samples = generator_settings.get("n_samples", STABLEDIFFUSION_GENERATOR_SETTINGS["n_samples"])
         self.enable_controlnet = generator_settings.get("enable_controlnet", STABLEDIFFUSION_GENERATOR_SETTINGS["enable_controlnet"])
         self.clip_skip = generator_settings.get("clip_skip", STABLEDIFFUSION_GENERATOR_SETTINGS["clip_skip"])
