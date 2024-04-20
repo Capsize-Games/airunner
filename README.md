@@ -33,7 +33,7 @@ We plan to release future distributions via Snap on Linux.
 
 
 
-![img_3.png](img_3.png)
+![img_3.png](img.png)
 
 ---
 
