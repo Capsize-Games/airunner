@@ -61,6 +61,12 @@ class App(
         SettingsMixin.__init__(self)
         super(App, self).__init__()
 
+        if (
+            not self.settings["path_settings"]["initialized"] or
+            "txt2img_model_path" not in self.settings["path_settings"]
+        ):
+            self.reset_paths()
+
         self.start()
         self.run()
 
