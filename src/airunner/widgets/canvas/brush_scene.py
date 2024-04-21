@@ -178,7 +178,7 @@ class BrushScene(CustomScene):
             if not self.is_brush_or_eraser:
                 super().mousePressEvent(event)
             elif self.settings["drawing_pad_settings"]["enable_automatic_drawing"]:
-                self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+                self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)

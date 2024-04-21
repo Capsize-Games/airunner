@@ -19,7 +19,7 @@ class SchedulerMixin:
         self.registered_schedulers: dict = {}
         self.current_scheduler_name: str = ""
         self.do_change_scheduler: bool = False
-        self._scheduler = None
+        self.scheduler = None
 
     @property
     def scheduler_section(self):
@@ -30,7 +30,7 @@ class SchedulerMixin:
         self.scheduler_name = ""
         self.current_scheduler_name = ""
         self.do_change_scheduler = True
-        self._scheduler = None
+        self.scheduler = None
 
     def load_scheduler(self, force_scheduler_name=None, config=None):
         self.logger.info(f"load_scheduler called with {force_scheduler_name}")
@@ -46,12 +46,12 @@ class SchedulerMixin:
 
         if (
             not force_scheduler_name and
-            self._scheduler and
+            self.scheduler and
             not self.do_change_scheduler and
             self.settings["generator_settings"]["scheduler"] == self.sd_request.generator_settings.scheduler
         ):
             self.logger.info(f"Scheduler already loaded for {self.sd_request.generator_settings.scheduler}")
-            return self._scheduler
+            return self.scheduler
 
         self.current_scheduler_name = force_scheduler_name if force_scheduler_name else self.sd_request.generator_settings.scheduler
         self.logger.debug("Loading scheduler")
@@ -98,7 +98,7 @@ class SchedulerMixin:
             if algorithm_type is not None:
                 config["algorithm_type"] = algorithm_type.value
 
-            self._scheduler = scheduler_class.from_config(config)
+            self.scheduler = scheduler_class.from_config(config)
         else:
             if scheduler_name == Scheduler.DPM_PP_2M_K.value:
                 kwargs["use_karras_sigmas"] = True
@@ -114,7 +114,7 @@ class SchedulerMixin:
                     f"Loading scheduler `{scheduler_name}` "
                     f"from pretrained path `{self.model_path}`"
                 )
-                self._scheduler = scheduler_class.from_pretrained(
+                self.scheduler = scheduler_class.from_pretrained(
                     os.path.expanduser(
                         os.path.join(
                             self.settings["path_settings"]["feature_extractor_model_path"],
@@ -145,14 +145,14 @@ class SchedulerMixin:
             }
         )
 
-        return self._scheduler
+        return self.scheduler
 
     def change_scheduler(self):
         if not self.do_change_scheduler or not self.pipe:
             return
 
         if self.sd_request.generator_settings.model and self.sd_request.generator_settings.model != "":
-            config = self._scheduler.config if self._scheduler else None
+            config = self.scheduler.config if self.scheduler else None
             self.pipe.scheduler = self.load_scheduler(config=config)
             self.do_change_scheduler = False
         else:
