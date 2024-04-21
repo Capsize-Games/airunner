@@ -3,7 +3,7 @@ from typing import Any
 import torch
 import numpy as np
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.enums import SignalCode, LLMChatRole
+from airunner.enums import SignalCode, LLMChatRole, ModelStatus, ModelType
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -25,32 +25,55 @@ class STTHandler(BaseHandler):
         self.model = None
         self.is_on_gpu = False
 
-        if self.settings["stt_enabled"]:
-            self.start_capture()
-
         self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
         self.register(SignalCode.PROCESS_SPEECH_SIGNAL, self.process_given_speech)
-        self.register(SignalCode.STT_STOP_CAPTURE_SIGNAL, self.stop_capture)
-        self.register(SignalCode.STT_START_CAPTURE_SIGNAL, self.start_capture)
-        self.model_type = "stt"
+        self.register(SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal)
+        self.register(SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal)
         self.fs = 16000
 
-    def start_capture(self, data: dict = None):
-        self.listening = True
-        self.loaded = self.load()
+        if self.settings["stt_enabled"]:
+            self.load()
 
-    def stop_capture(self, data: dict):
-        clear_memory()
-        self.listening = False
+    def on_stt_start_capture_signal(self, data: dict):
+        self.load()
+
+    def on_stt_stop_capture_signal(self, data: dict):
+        self.unload()
 
     def load(self):
+        self.logger.debug("Loading model")
         self.model = self.load_model()
         self.processor = self.load_processor()
         self.feature_extractor = self.load_feature_extractor()
+        return (
+            self.model is not None and
+            self.processor is not None and
+            self.feature_extractor is not None
+        )
 
-        if self.model is not None and self.processor is not None and self.feature_extractor is not None:
-            return True
-        return False
+    def unload(self):
+        self.logger.debug("Unloading model")
+        self.model = None
+        self.processor = None
+        self.feature_extractor = None
+        clear_memory()
+        self.is_on_gpu = False
+        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+            "model": ModelType.STT,
+            "status": ModelStatus.UNLOADED,
+            "path": ""
+        })
+        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+            "model": ModelType.STT_PROCESSOR,
+            "status": ModelStatus.UNLOADED,
+            "path": ""
+        })
+        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+            "model": ModelType.STT_FEATURE_EXTRACTOR,
+            "status": ModelStatus.UNLOADED,
+            "path": ""
+        })
+
 
     @property
     def use_cuda(self):
@@ -268,7 +291,10 @@ class STTHandler(BaseHandler):
             "message": transcription,
             "role": LLMChatRole.HUMAN
         }
-        self.emit_signal(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, data)
+        self.emit_signal(
+            SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL,
+            data
+        )
         # self.emit_signal(SignalCode.STT_AUDIO_PROCESSED, {
         #     "message": transcription
         # })
@@ -293,6 +319,9 @@ class STTHandler(BaseHandler):
                 "message": transcription,
                 "role": data["role"]
             }
-            self.emit_signal(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, data)
+            self.emit_signal(
+                SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL,
+                data
+            )
         else:
             self.logger.warning("No AI speech detected")

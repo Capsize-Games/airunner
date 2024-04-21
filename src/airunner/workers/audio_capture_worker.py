@@ -3,7 +3,7 @@ import time
 import sounddevice as sd
 import numpy as np
 from PySide6.QtCore import QThread, Slot
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ModelStatus
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
@@ -83,11 +83,23 @@ class AudioCaptureWorker(Worker):
         self.listening = True
         fs = self.settings["stt_settings"]["fs"]
         channels = self.settings["stt_settings"]["channels"]
-        self.stream = sd.InputStream(samplerate=fs, channels=channels)
-        self.stream.start()
+        if self.stream is None:
+            self.stream = sd.InputStream(samplerate=fs, channels=channels)
+
+        try:
+            self.stream.start()
+        except Exception as e:
+            self.logger.error(e)
 
     def stop_listening(self, _message):
         self.logger.debug("Stop listening")
         self.listening = False
-        self.stream.stop()
-        self.stream.close()
+        try:
+            self.stream.stop()
+        except Exception as e:
+            self.logger.error(e)
+
+        try:
+            self.stream.close()
+        except Exception as e:
+            self.logger.error(e)
