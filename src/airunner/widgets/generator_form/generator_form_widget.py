@@ -118,7 +118,16 @@ class GeneratorForm(BaseWidget):
         pass
 
     def do_generate_image_from_image_signal_handler(self, res):
-        self.call_generate()
+        self.do_generate()
+
+    def do_generate(self):
+        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, {
+            "callback": self.call_generate
+        })
+
+    def call_generate(self):
+        print("GENERATE CALLED")
+        self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
     def on_application_settings_changed_signal(self, _message: dict):
         self.activate_ai_mode()
@@ -158,12 +167,12 @@ class GeneratorForm(BaseWidget):
         self.generate()
 
     def handle_interrupt_button_clicked(self):
-        self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
     def generate(self):
         if self.settings["generator_settings"]["n_samples"] > 1:
             self.emit_signal(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL)
-        self.call_generate()
+        self.do_generate()
         self.seed_override = None
         self.emit_signal(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
 
@@ -205,15 +214,7 @@ class GeneratorForm(BaseWidget):
                 "image": new_image.convert("RGB")
             })
         else:
-            self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
-
-    def call_generate(self):
-        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, {
-            'do_unload_model': self.settings["memory_settings"]["unload_unused_models"],
-            'move_unused_model_to_cpu': self.settings["memory_settings"]["move_unused_model_to_cpu"],
-            'dtype': self.settings["llm_generator_settings"]["dtype"],
-            'callback': lambda: self.do_generate_image()
-        })
+            self.do_generate()
 
     def on_llm_image_prompt_generated_signal(self, data):
         prompt = data.get("prompt", None)

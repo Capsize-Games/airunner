@@ -72,5 +72,5 @@ setup(
         "compel==2.0.2",
         "tomesd==0.1.3",
     ],
-    dependency_links=[]
+    dependency_links=[],
 )

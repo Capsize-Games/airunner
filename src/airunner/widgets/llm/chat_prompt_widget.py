@@ -2,6 +2,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
 from airunner.enums import SignalCode, LLMActionType
+from airunner.exceptions import PromptTemplateNotFoundExeption
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.custom_scene import CustomScene
@@ -149,7 +150,7 @@ class ChatPromptWidget(BaseWidget):
         if template_name in self.settings["llm_templates"]:
             prompt_template = self.settings["llm_templates"][template_name]
         else:
-            raise Exception("Prompt template not found for "+self.settings["llm_generator_settings"]["prompt_template"])
+            raise PromptTemplateNotFoundExeption()
 
         llm_generator_settings = self.settings["llm_generator_settings"]
 

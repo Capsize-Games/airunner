@@ -35,6 +35,7 @@ class SignalCode(Enum):
     ENABLE_SELECTION_TOOL_SIGNAL = "enable_selection_tool_signal"
     ENABLE_MOVE_TOOL_SIGNAL = "enable_move_tool_signal"
     INTERRUPT_PROCESS_SIGNAL = "interrupt_process_signal"
+    INTERRUPT_IMAGE_GENERATION_SIGNAL = "interrupt_image_generation_signal"
     AI_MODELS_REFRESH_SIGNAL = "refresh_ai_models_signal"
     AI_MODELS_SAVE_OR_UPDATE_SIGNAL = "ai_models_save_or_update_signal"
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"
@@ -295,6 +296,7 @@ class SignalCode(Enum):
 
     MODEL_STATUS_CHANGED_SIGNAL = "model_status_changed_signal"
 
+    PIPE_MOVED_SIGNAL = "pipe_moved_signal"
 
 class EngineResponseCode(Enum):
     STATUS = 100
@@ -522,7 +524,8 @@ class ModelType(Enum):
     SCHEDULER = "SD Scheduler"
 
 
-class PipeNotLoaded(Exception):
-    def __init__(self, message="Pipe not loaded"):
-        self.message = message
-        super().__init__(self.message)
+class HandlerState(Enum):
+    INITIALIZED = "Initialized"
+    READY = "Ready"
+    GENERATING = "Generating"
+    ERROR = "Error"

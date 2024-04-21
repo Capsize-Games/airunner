@@ -1,7 +1,6 @@
 import io
 import base64
 import os
-from random import random
 import numpy as np
 from PySide6.QtWidgets import QApplication
 from typing import List
@@ -15,8 +14,6 @@ from diffusers.pipelines.stable_diffusion.convert_from_ckpt import download_from
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers import (
     StableDiffusionPipeline,
-    StableDiffusionXLPipeline,
-    AutoPipelineForText2Image,
     StableDiffusionDepth2ImgPipeline,
     AutoPipelineForInpainting,
     StableDiffusionInstructPix2PixPipeline,
@@ -37,8 +34,9 @@ from airunner.enums import (
     SDMode,
     StableDiffusionVersion,
     ModelStatus,
-    ModelType, PipeNotLoaded
+    ModelType
 )
+from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException
 from airunner.settings import (
     CONFIG_FILES,
     AVAILABLE_ACTIONS
@@ -115,25 +113,12 @@ class ModelMixin:
 
         self.do_generate = False
 
-        try:
-            self.__swap_pipeline(sd_request)
-        except Exception as e:
-            self.log_error(e, "Failed to swap pipeline")
-
-        try:
-            return self.__generate(generator_request_data)
-        except TypeError as e:
-            error_message = f"TypeError during generation"
-            self.log_error(e, error_message)
-        except Exception as e:
-            self.log_error(e, "Failed to generate image")
-            return None
-
-        self.__final_callback()
+        self.__swap_pipeline(sd_request)
+        return self.__generate(generator_request_data)
 
     def __swap_pipeline(self, sd_request: SDRequest):
         if not self.pipe:
-            raise Exception(PipeNotLoaded)
+            raise PipeNotLoadedException()
 
         is_txt2img = sd_request.is_txt2img
         is_outpaint = sd_request.is_outpaint
@@ -197,13 +182,6 @@ class ModelMixin:
     def __is_pipe_on_cpu(self) -> bool:
         return self.__has_pipe() and self.pipe.device.type == "cpu"
 
-    def __final_callback(self):
-        self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
-            "step": self.sd_request.generator_settings.steps,
-            "total": self.sd_request.generator_settings.steps,
-        })
-        self.latents_set = True
-
     def __callback(self, step: int, _time_step, latents):
         self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
             "step": step,
@@ -213,22 +191,6 @@ class ModelMixin:
             self.latents = latents
         QApplication.processEvents()
         return {}
-
-    def __process_sample(self, output):
-        nsfw_content_detected = None
-        images = None
-        if output:
-            try:
-                images = output.images
-            except AttributeError:
-                self.logger.error("Unable to get images from output")
-            if self.sd_request.action_has_safety_checker:
-                try:
-                    nsfw_content_detected = output.nsfw_content_detected
-                except AttributeError:
-                    self.logger.error("Unable to get nsfw_content_detected from output")
-        self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
-        return images, nsfw_content_detected
 
     def __generate_latents(self):
         self.logger.debug("Generating latents")
@@ -275,55 +237,43 @@ class ModelMixin:
         :return:
         """
         if not self.__safety_checker_ready():
-            raise Exception("Safety checker not ready")
+            raise SafetyCheckerNotLoadedException()
 
         data = self.__prepare_request_data(generator_request_data)
 
-        return self.pipe(
-            **data,
-            callback_on_step_end=self.__interrupt_callback
-        )
+        data["callback_on_step_end"] = self.__interrupt_callback
+
+        results = self.pipe(**data)
+        images = results.get("images", [])
+        nsfw_content_detected = results.get("nsfw_content_detected", None)
+        if nsfw_content_detected is None:
+            nsfw_content_detected = [False] * len(images)
+        return images, nsfw_content_detected
 
     def __interrupt_callback(self, pipe, i, t, callback_kwargs):
-        if self.do_interrupt:
-            self.do_interrupt = False
-            raise Exception("Interrupted")
+        if self.do_interrupt_image_generation:
+            self.do_interrupt_image_generation = False
+            raise InterruptedException()
         return callback_kwargs
 
     def __generate(self, generator_request_data: dict):
         if not self.pipe:
-            raise Exception(PipeNotLoaded)
+            raise PipeNotLoadedException()
 
         self.logger.debug("sample_diffusers_model")
-        self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, f"Generating media")
-        images, nsfw_content_detected = self.__do_sample(generator_request_data)
-        return self.__image_handler(
-            images,
-            self.requested_data,
-            nsfw_content_detected
-        )
 
-    def __do_sample(self, generator_request_data: dict):
+        self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, f"Generating media")
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
         self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
-        try:
-            output = self.__call_pipe(generator_request_data)
-        except Exception as e:
-            error_message = str(e)
-            if error_message == "Interrupted":
-                self.__final_callback()
-                return
 
-            if self.__is_pytorch_error(e):
-                error_message = self.__cuda_error_message
-            elif "Scheduler.step() got an unexpected keyword argument" in str(e):
-                error_message = "Invalid scheduler"
-                self.clear_scheduler()
-            else:
-                error_message = "Something went wrong during generation"
-            self.log_error(error_message)
-            output = None
-        return self.__process_sample(output)
+        images, nsfw_content_detected = self.__call_pipe(generator_request_data)
+
+        self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
+
+        return self.__image_handler(
+            images,
+            nsfw_content_detected
+        )
 
     def __convert_image_to_base64(self, image):
         img_byte_arr = io.BytesIO()
@@ -349,7 +299,7 @@ class ModelMixin:
         )
         return image
 
-    def __process_images(self, images, do_base64, has_filters, nsfw_content_detected):
+    def __process_images(self, images: List[Image.Image], do_base64: bool, has_filters: bool, nsfw_content_detected: List[bool]):
         for i, image in enumerate(images):
             if has_filters:
                 image = self.__apply_filters_to_image(image)
@@ -360,23 +310,24 @@ class ModelMixin:
             images[i] = image
         return images
 
-    def __image_handler(self, images: List[Image.Image], data: dict, nsfw_content_detected: List[bool] = None):
-        self.__final_callback()
+    def __image_handler(self, images: List[Image.Image], nsfw_content_detected: List[bool]):
+        self._final_callback()
         if images is None:
             return
 
-        if data is not None:
-            data["original_model_data"] = self.original_model_data or {}
+        if self.requested_data is not None:
+            self.requested_data["original_model_data"] = self.original_model_data or {}
+
         has_nsfw = True in nsfw_content_detected if nsfw_content_detected is not None else False
 
         if images:
-            do_base64 = data.get("do_base64", False)
+            do_base64 = self.requested_data.get("do_base64", False)
             has_filters = self.filters is not None and len(self.filters) > 0
             images = self.__process_images(images, do_base64, has_filters, nsfw_content_detected)
 
         return dict(
             images=images,
-            data=data,
+            data=self.requested_data,
             nsfw_content_detected=has_nsfw,
         )
 
@@ -463,12 +414,8 @@ class ModelMixin:
 
             self.logger.debug(
                 f"Loading model from scratch {self.reload_model} for {self.sd_request.generator_settings.section}")
+
             self.reset_applied_memory_settings()
-
-            if self.settings["controlnet_enabled"]:
-                kwargs["controlnet"] = self.controlnet
-
-            self.load_safety_checker()
 
             if self.is_single_file:
                 try:
@@ -481,9 +428,6 @@ class ModelMixin:
             elif self.model is not None:
                 self.logger.debug(
                     f"Loading model `{self.model['name']}` `{self.model_path}` for {self.sd_request.generator_settings.section}")
-                scheduler = self.load_scheduler()
-                if scheduler:
-                    kwargs["scheduler"] = scheduler
 
                 pipeline_classname_ = self.__pipeline_class()
 
@@ -500,6 +444,8 @@ class ModelMixin:
                         safety_checker=self.safety_checker,
                         feature_extractor=self.feature_extractor,
                         use_safetensors=True,
+                        controlnet=self.controlnet,
+                        scheduler=self.scheduler,
                         **kwargs
                     )
                 except Exception as e:
@@ -515,6 +461,8 @@ class ModelMixin:
                     }
                 )
                 return
+
+            self.make_stable_diffusion_memory_efficient()
 
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
@@ -654,13 +602,12 @@ class ModelMixin:
         """
         requested_model = settings["generator_settings"]["model"]
         model = sd_request.generator_settings.model
-        self.logger.debug(
-            f"Model changed clearing debugger: {model['name']} != {requested_model}"
-        )
+        self.logger.debug(f"Model changed clearing")
+
         model_changed = (
             model is not None and
-            model["name"] is not None and
-            model["name"] != requested_model
+            model is not None and
+            model != requested_model
         )
         if model_changed:
             self.__handle_model_changed()
@@ -737,10 +684,6 @@ class ModelMixin:
                 not self.is_sd_xl_turbo and
                 not self.is_turbo
         )
-        controlnet = settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
-        controlnet_item = self.controlnet_model_by_name(controlnet)
-        self.controlnet_type = controlnet_item["name"]
         self.__generator().manual_seed(sd_request.generator_settings.seed)
-        random.seed(self.seed)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)

@@ -1,5 +1,7 @@
 import os
 
+from airunner.exceptions import AutoExportSeedException
+
 
 def auto_export_image(
         base_path,
@@ -11,7 +13,7 @@ def auto_export_image(
         type="image",
 ):
     if seed is None:
-        raise Exception("Seed must be set when auto exporting an image")
+        raise AutoExportSeedException()
 
     data["options"]["seed"] = seed
 

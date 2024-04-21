@@ -88,7 +88,82 @@ class ControlnetHandlerMixin:
         return controlnet_image
 
     def on_load_controlnet_signal(self, _message: dict):
-        self.controlnet = self.load_controlnet()
+        self.load_controlnet()
+
+    def load_controlnet(self):
+        self.load_controlnet_model()
+        self.load_controlnet_processor()
+        self.make_controlnet_memory_efficient()
+
+    def load_controlnet_model(self):
+        self.logger.debug(f"Loading controlnet {self.controlnet_type}")
+
+        path = self.controlnet_path
+        short_path = self.controlnet_model["path"]
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.CONTROLNET,
+                "status": ModelStatus.LOADING,
+                "path": short_path
+            }
+        )
+        try:
+            self.controlnet = ControlNetModel.from_pretrained(
+                path,
+                torch_dtype=self.data_type,
+                local_files_only=True,
+                device_map="auto"
+            )
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.CONTROLNET,
+                    "status": ModelStatus.LOADED,
+                    "path": short_path
+                }
+            )
+        except Exception as e:
+            self.logger.error(f"Error loading controlnet {e}")
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.CONTROLNET,
+                    "status": ModelStatus.FAILED,
+                    "path": short_path
+                }
+            )
+            return None
+
+    def load_controlnet_processor(self):
+        self.logger.debug("Loading controlnet processor")
+
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.CONTROLNET_PROCESSOR,
+                "status": ModelStatus.LOADING,
+                "path": self.controlnet_type
+            }
+        )
+        try:
+            self.processor = Processor(
+                self.controlnet_type,
+                local_files_only=True,
+            )
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.CONTROLNET_PROCESSOR,
+                    "status": ModelStatus.LOADED,
+                    "path": self.controlnet_type
+                }
+            )
+        except Exception as e:
+            self.logger.error(e)
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.CONTROLNET_PROCESSOR,
+                    "status": ModelStatus.FAILED,
+                    "path": self.controlnet_type
+                }
+            )
+        self.logger.debug("Processor loaded")
 
     def on_unload_controlnet_signal(self, _message: dict):
         self.unload_controlnet()
@@ -142,43 +217,6 @@ class ControlnetHandlerMixin:
         )
         return path
 
-    def load_controlnet(self):
-        self.logger.debug(f"Loading controlnet {self.controlnet_type}")
-
-        path = self.controlnet_path
-        short_path = self.controlnet_model["path"]
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.CONTROLNET,
-                "status": ModelStatus.LOADING,
-                "path": short_path
-            }
-        )
-        try:
-            controlnet = ControlNetModel.from_pretrained(
-                path,
-                torch_dtype=self.data_type,
-                local_files_only=True,
-                device_map="auto"
-            )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.CONTROLNET,
-                    "status": ModelStatus.LOADED,
-                    "path": short_path
-                }
-            )
-            return controlnet
-        except Exception as e:
-            self.logger.error(f"Error loading controlnet {e}")
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.CONTROLNET,
-                    "status": ModelStatus.FAILED,
-                    "path": short_path
-                }
-            )
-            return None
     def preprocess_for_controlnet(self, image):
         if self.processor is not None and image is not None:
             self.logger.debug("Controlnet: Processing image")
@@ -196,43 +234,9 @@ class ControlnetHandlerMixin:
             return image
         self.logger.error("No controlnet processor found")
 
-    def load_controlnet_processor(self):
-        self.logger.debug("Loading controlnet processor")
-
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.CONTROLNET_PROCESSOR,
-                "status": ModelStatus.LOADING,
-                "path": self.controlnet_type
-            }
-        )
-        try:
-            self.processor = Processor(
-                self.controlnet_type,
-                local_files_only=True,
-            )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.CONTROLNET_PROCESSOR,
-                    "status": ModelStatus.LOADED,
-                    "path": self.controlnet_type
-                }
-            )
-        except Exception as e:
-            self.logger.error(e)
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.CONTROLNET_PROCESSOR,
-                    "status": ModelStatus.FAILED,
-                    "path": self.controlnet_type
-                }
-            )
-        self.logger.debug("Processor loaded")
-
     def unload_controlnet(self):
-        if self.controlnet:
-            self.logger.debug("Unloading controlnet")
-            self.clear_controlnet()
+        self.logger.debug("Unloading controlnet")
+        self.clear_controlnet()
 
     def clear_controlnet(self):
         self.logger.debug("Clearing controlnet")

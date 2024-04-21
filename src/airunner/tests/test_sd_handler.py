@@ -56,9 +56,9 @@ class TestSDHandler(unittest.TestCase):
         self.assertTrue(self.sd_handler.moved_to_cpu)
 
     def test_on_interrupt_process_signal(self):
-        self.sd_handler.do_interrupt = False
+        self.sd_handler.do_interrupt_image_generation = False
         self.sd_handler.on_interrupt_process_signal({})
-        self.assertTrue(self.sd_handler.do_interrupt)
+        self.assertTrue(self.sd_handler.do_interrupt_image_generation)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,7 @@
 import os
 
+from airunner.exceptions import PythonExecutableNotFoundException
+
 
 def get_venv_python_executable():
     """
@@ -34,5 +36,5 @@ def get_venv_python_executable():
             "python3.exe",
         )
     if not os.path.exists(venv_python_executable):
-        raise Exception("Could not find python executable in venv")
+        raise PythonExecutableNotFoundException()
     return venv_python_executable

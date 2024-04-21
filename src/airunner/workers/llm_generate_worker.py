@@ -26,10 +26,9 @@ class LLMGenerateWorker(Worker):
 
         The choice is dependent on the current dtype and other settings.
         """
-        self.logger.debug("on_unload_llm_signal")
-        dtype = message.get("dtype", self.settings['llm_generator_settings']["dtype"])
-        do_unload_model = message.get("do_unload_model", self.settings["memory_settings"]["unload_unused_models"] or dtype in AVAILABLE_DTYPES)
-        move_unused_model_to_cpu = message.get("move_unused_model_to_cpu", False)
+        dtype = self.settings["llm_generator_settings"]["dtype"]
+        do_unload_model = self.settings["memory_settings"]["unload_unused_models"]
+        move_unused_model_to_cpu = self.settings["memory_settings"]["move_unused_model_to_cpu"]
         do_move_to_cpu = not do_unload_model and move_unused_model_to_cpu
         callback = message.get("callback", None)
         if dtype in AVAILABLE_DTYPES:
@@ -40,6 +39,7 @@ class LLMGenerateWorker(Worker):
             self.llm.move_to_cpu()
         elif do_unload_model:
             self.unload_llm()
+        print(callback)
         if callback:
             callback()
 

@@ -1141,7 +1141,7 @@ DEFAULT_CONTROLNET_ENABLED = True
 DEFAULT_OCR_ENABLED = True
 DEFAULT_TTS_ENABLED = True
 DEFAULT_STT_ENABLED = True
-DEFAULT_AI_MODE = True
+DEFAULT_AI_MODE = False
 
 DEFAULT_APPLICATION_SETTINGS = dict(
     ####################################################################
@@ -1173,7 +1173,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     app_version="",
     allow_online_mode=True,
     current_version_stablediffusion=SD_DEFAULT_VERSION,
-    current_tool=CanvasToolName.ACTIVE_GRID_AREA,
+    current_tool=CanvasToolName.BRUSH,
     image_export_type="png",
     auto_export_images=True,
     show_active_image_area=True,
@@ -1236,7 +1236,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         tool_tab_widget_index=0,
         center_tab_index=0,
         generator_tab_index=0,
-        is_maximized=False,
+        is_maximized=True,
         is_fullscreen=False,
         canvas_splitter=None,
         canvas_side_splitter=None,
@@ -1255,7 +1255,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         zoom_out_step=0.1
     ),
     brush_settings=dict(
-        size=20,
+        size=75,
         primary_color=DEFAULT_BRUSH_PRIMARY_COLOR,
         secondary_color=DEFAULT_BRUSH_SECONDARY_COLOR,
         strength_slider=950,
