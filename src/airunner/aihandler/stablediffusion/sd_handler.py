@@ -1,5 +1,4 @@
 import traceback
-import numpy as np
 import torch
 from PIL import Image
 from airunner.aihandler.base_handler import BaseHandler
@@ -31,36 +30,12 @@ from airunner.utils.clear_memory import clear_memory
 from airunner.utils.random_seed import random_seed
 from airunner.utils.create_worker import create_worker
 from airunner.utils.get_torch_device import get_torch_device
-from airunner.workers.worker import Worker
+from airunner.workers.latents_worker import LatentsWorker
+
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
     SDMode.DRAWING,
 )
-
-
-class LatentsWorker(Worker):
-    def __init__(self, prefix="LatentsWorker"):
-        super().__init__(prefix=prefix)
-        self.register(SignalCode.HANDLE_LATENTS_SIGNAL, self.on_handle_latents_signal)
-
-    def on_handle_latents_signal(self, data: dict):
-        latents = data.get("latents")
-        sd_request = data.get("sd_request")
-        # convert latents to PIL image
-        latents = latents[0].detach().cpu().numpy().astype(np.uint8)  # convert to uint8
-        latents = latents.transpose(1, 2, 0)
-        image = Image.fromarray(latents)
-        image = image.resize((self.settings["working_width"], self.settings["working_height"]))
-        image = image.convert("RGBA")
-        self.emit_signal(
-            SignalCode.SD_IMAGE_GENERATED_SIGNAL,
-            {
-                "images": [image],
-                "action": sd_request.generator_settings.section,
-                "outpaint_box_rect": sd_request.active_rect,
-            }
-        )
-        self.sd_request = None
 
 
 class SDHandler(
