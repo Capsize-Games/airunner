@@ -147,6 +147,20 @@ class SchedulerMixin:
 
         return self.scheduler
 
+    def unload_scheduler(self):
+        self.logger.debug("Unloading scheduler")
+        self.scheduler_name = ""
+        self.current_scheduler_name = ""
+        self.do_change_scheduler = True
+        self.scheduler = None
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.SCHEDULER,
+                "status": ModelStatus.UNLOADED,
+                "path": "",
+            }
+        )
+
     def change_scheduler(self):
         if not self.do_change_scheduler or not self.pipe:
             return
