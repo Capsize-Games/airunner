@@ -122,7 +122,6 @@ class SDRequest(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         self.model_data = kwargs.get("model_data", None)
-        self.do_set_seed = False
         self.memory_settings = MemorySettings(**self.settings["memory_settings"])
         self.generator_settings = None
         self.action_has_safety_checker = False
@@ -175,8 +174,6 @@ class SDRequest(
     ) -> dict:
         self.model_data = model_data
         self.memory_settings = MemorySettings(**self.settings["memory_settings"])
-        if self.generator_settings is not None:
-            self.do_set_seed = self.generator_settings.seed != self.settings["generator_settings"]["seed"]
         self.load_generator_settings()
         self.latents = latents
         self.callback_steps: int = 1

@@ -192,7 +192,6 @@ class SDHandler(
         self.initialized = False
         self.reload_model = False
         self.extra_args = None
-        self.do_set_seed = True
         self.latents = None
         self.sd_mode = None
         self.safety_checker = None
@@ -435,16 +434,6 @@ class SDHandler(
         self.generator_request_data = message
 
     def run(self):
-        self.do_set_seed = (
-            not self.initialized or
-            (
-                self.sd_request and
-                self.sd_request.generator_settings and
-                self.settings is not None and
-                self.sd_request.generator_settings.seed != self.settings["generator_settings"]["seed"]
-            )
-        )
-
         if (
             self.settings["generator_settings"]["prompt"] != self.cur_prompt or
             self.settings["generator_settings"]["negative_prompt"] != self.cur_neg_prompt
