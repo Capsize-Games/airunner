@@ -109,17 +109,14 @@ class ModelMixin:
         sd_request: SDRequest,
         generator_request_data: dict
     ):
+        if not self.pipe:
+            raise PipeNotLoadedException()
         self.__load_generator_arguments(settings, sd_request, generator_request_data)
-
         self.do_generate = False
-
         self.__swap_pipeline(sd_request)
         return self.__generate(generator_request_data)
 
     def __swap_pipeline(self, sd_request: SDRequest):
-        if not self.pipe:
-            raise PipeNotLoadedException()
-
         is_txt2img = sd_request.is_txt2img
         is_outpaint = sd_request.is_outpaint
         is_img2img = sd_request.is_img2img
