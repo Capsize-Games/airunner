@@ -23,7 +23,7 @@ class Ui_stats_widget(object):
     def setupUi(self, stats_widget):
         if not stats_widget.objectName():
             stats_widget.setObjectName(u"stats_widget")
-        stats_widget.resize(477, 380)
+        stats_widget.resize(527, 664)
         self.gridLayout = QGridLayout(stats_widget)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)

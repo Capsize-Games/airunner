@@ -40,7 +40,8 @@ class App(
     """
     def __init__(
         self,
-        main_window_class: QWindow = None
+        main_window_class: QWindow = None,
+        restrict_os_access=None
     ):
         """
         Initialize the application and run as a GUI application or a socket server.
@@ -50,6 +51,7 @@ class App(
         self.main_window_class_ = main_window_class or MainWindow
         self.app = None
         self.logger = Logger(prefix=self.__class__.__name__)
+        self.restrict_os_access = restrict_os_access
 
         """
         Mediator and Settings mixins are initialized here, enabling the application
@@ -58,6 +60,11 @@ class App(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super(App, self).__init__()
+
+        if (
+            "txt2img_model_path" not in self.settings["path_settings"]
+        ):
+            self.reset_paths()
 
         self.start()
         self.run()
@@ -134,7 +141,7 @@ class App(
         )
         splash.show()
         splash.showMessage(
-            f"Loading AI Runner v{get_version()}",
+            f"Loading AI Runner",
             QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignCenter,
             QtCore.Qt.GlobalColor.white
         )
@@ -153,7 +160,7 @@ class App(
         :return:
         """
         try:
-            window = self.main_window_class_()
+            window = self.main_window_class_(restrict_os_access=self.restrict_os_access)
         except Exception as e:
             traceback.print_exc()
             print(e)

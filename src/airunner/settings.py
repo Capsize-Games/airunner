@@ -53,6 +53,17 @@ DO NOT CHANGE THESE VARIABLES UNLESS YOU KNOW WHAT YOU ARE DOING!
 
 For implementation, see the function
 airunner.src.utils.set_huggingface_environment_variables
+
+--------------------------------------------------------------------
+
+We leave this implementation in the codebase however we have
+also taken steps to disable this functionality by preventing
+the application from accessing the internet as well as preventing
+huggingface libraries from performing write operations to the
+cache folder.
+
+See README.md for more information.
+
 """
 
 ####################################################################
@@ -338,7 +349,7 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.WARNING
+LOG_LEVEL = logging.INFO
 
 ####################################################################
 # Default models for the core application
@@ -781,6 +792,7 @@ VULNERABILITY_REPORT_LINK = (
 ####################################################################
 SD_DEFAULT_VERSION = "SD 1.5"
 SD_DEFAULT_MODEL_PATH = "runwayml/stable-diffusion-v1-5"
+SD_FEATURE_EXTRACTOR_PATH = "openai/clip-vit-large-patch14"
 SD_DEFAULT_MODEL = dict(
     version=SD_DEFAULT_VERSION,
     model=SD_DEFAULT_MODEL_PATH,
@@ -819,7 +831,7 @@ SERVER = {
 """
 Theme settings
 """
-DEFAULT_BRUSH_PRIMARY_COLOR = "#ffffff"
+DEFAULT_BRUSH_PRIMARY_COLOR = "#99C1F1"
 DEFAULT_BRUSH_SECONDARY_COLOR = "#000000"
 AVAILABLE_DTYPES = ("2bit", "4bit", "8bit")
 STATUS_ERROR_COLOR = "#ff0000"
@@ -864,6 +876,15 @@ ESPEAK_SETTINGS = {
 ####################################################################
 # Image generator settings
 ####################################################################
+AVAILABLE_ACTIONS = [
+    "txt2img",
+    "img2img",
+    "pix2pix",
+    "outpaint",
+    "depth2img",
+    "controlnet",
+    "safety_checker",
+]
 SCHEDULER_CLASSES = {
     Scheduler.EULER_ANCESTRAL.value: "EulerAncestralDiscreteScheduler",
     Scheduler.EULER.value: "EulerDiscreteScheduler",
@@ -912,6 +933,29 @@ AVAILABLE_SCHEDULERS_BY_ACTION.update({
 MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
 NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
 
+DEFAULT_MEMORY_SETTINGS = dict(
+    use_last_channels=True,
+    use_attention_slicing=False,
+    use_tf32=False,
+    use_enable_vae_slicing=True,
+    use_accelerated_transformers=True,
+    use_tiled_vae=True,
+    enable_model_cpu_offload=False,
+    use_enable_sequential_cpu_offload=False,
+    use_cudnn_benchmark=True,
+    use_torch_compile=False,
+    use_tome_sd=True,
+    tome_sd_ratio=600,
+    move_unused_model_to_cpu=False,
+    unload_unused_models=True,
+    default_gpu=dict(
+        sd=0,
+        llm=0,
+        tts=0,
+        stt=0,
+    )
+)
+
 ####################################################################
 # Create the GENERATOR_SETTINGS so that we have the presets for
 # Each generator category.
@@ -923,14 +967,15 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     ddim_eta=0.5,
     height=512,
     width=512,
-    scale=0,
+    scale=750,
     seed=42,
     random_seed=True,
-    model="",
+    model_name="",
+    model=SD_DEFAULT_MODEL_PATH,
     scheduler=DEFAULT_SCHEDULER,
     prompt_triggers="",
     strength=50,
-    image_guidance_scale=150,
+    image_guidance_scale=750,  # pix2pix
     n_samples=1,
     enable_controlnet=False,
     clip_skip=0,
@@ -1096,7 +1141,7 @@ DEFAULT_CONTROLNET_ENABLED = True
 DEFAULT_OCR_ENABLED = True
 DEFAULT_TTS_ENABLED = True
 DEFAULT_STT_ENABLED = True
-DEFAULT_AI_MODE = True
+DEFAULT_AI_MODE = False
 
 DEFAULT_APPLICATION_SETTINGS = dict(
     ####################################################################
@@ -1127,8 +1172,8 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     latest_version_check=True,
     app_version="",
     allow_online_mode=True,
-    current_version_stablediffusion="",
-    current_tool=CanvasToolName.ACTIVE_GRID_AREA,
+    current_version_stablediffusion=SD_DEFAULT_VERSION,
+    current_tool=CanvasToolName.BRUSH,
     image_export_type="png",
     auto_export_images=True,
     show_active_image_area=True,
@@ -1191,34 +1236,13 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         tool_tab_widget_index=0,
         center_tab_index=0,
         generator_tab_index=0,
-        is_maximized=False,
+        is_maximized=True,
         is_fullscreen=False,
         canvas_splitter=None,
         canvas_side_splitter=None,
         canvas_side_splitter_2=None
     ),
-    memory_settings=dict(
-        use_last_channels=True,
-        use_attention_slicing=False,
-        use_tf32=False,
-        use_enable_vae_slicing=True,
-        use_accelerated_transformers=True,
-        use_tiled_vae=True,
-        enable_model_cpu_offload=False,
-        use_enable_sequential_cpu_offload=False,
-        use_cudnn_benchmark=True,
-        use_torch_compile=False,
-        use_tome_sd=True,
-        tome_sd_ratio=600,
-        move_unused_model_to_cpu=False,
-        unload_unused_models=True,
-        default_gpu=dict(
-            sd=0,
-            llm=0,
-            tts=0,
-            stt=0,
-        )
-    ),
+    memory_settings=DEFAULT_MEMORY_SETTINGS,
     grid_settings=dict(
         cell_size=64,
         line_width=1,
@@ -1231,9 +1255,13 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         zoom_out_step=0.1
     ),
     brush_settings=dict(
-        size=20,
+        size=75,
         primary_color=DEFAULT_BRUSH_PRIMARY_COLOR,
         secondary_color=DEFAULT_BRUSH_SECONDARY_COLOR,
+        strength_slider=950,
+        strength=950,
+        conditioning_scale=550,
+        guidance_scale=75,
     ),
     path_settings={
         "base_path": BASE_PATH
