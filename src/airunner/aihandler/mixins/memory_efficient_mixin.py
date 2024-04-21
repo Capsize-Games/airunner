@@ -1,9 +1,9 @@
-import functools
 import os
+import torch
+import functools
 from dataclasses import dataclass
 from typing import Optional
 import tomesd
-import torch
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -23,11 +23,13 @@ class TracedUNet(torch.nn.Module):
         unet_traced = torch.jit.load("unet_traced.pt")
         sample = unet_traced(latent_model_input, t, encoder_hidden_states)[0]
         return UNet2DConditionOutput(sample=sample)
-            
 
 
 class MemoryEfficientMixin:
     def __init__(self):
+        """
+        Apply memory efficient settings to the Stable Diffusion pipeline.
+        """
         self.torch_compile_applied: bool = False
         self.last_channels_applied: bool = Optional[None]
         self.vae_slicing_applied: bool = Optional[None]
@@ -50,6 +52,25 @@ class MemoryEfficientMixin:
     def tome_sd_ratio(self):
         return self.settings["memory_settings"]["tome_sd_ratio"] / 1000
 
+    def apply_memory_efficient_settings(self):
+        if self.pipe is None:
+            self.logger.debug("Pipe is None, skipping memory efficient settings")
+            return
+        self.__apply_last_channels()
+        self.__enable_memory_chunking()
+        self.__apply_vae_slicing()
+        self.__apply_cpu_offload()
+        self.__apply_model_offload()
+        self.__move_pipe_to_cuda()
+        self.__apply_attention_slicing()
+        self.__apply_tiled_vae()
+        self.__apply_accelerated_transformers()
+        self.__apply_tome()
+
+        # TODO
+        #self.apply_torch_compile()
+        #self.apply_torch_trace()
+
     def reset_applied_memory_settings(self):
         self.last_channels_applied = None
         self.vae_slicing_applied = None
@@ -61,7 +82,7 @@ class MemoryEfficientMixin:
         self.use_enable_sequential_cpu_offload = None
         self.enable_model_cpu_offload = None
 
-    def apply_last_channels(self):
+    def __apply_last_channels(self):
         if self.last_channels_applied == self.settings["memory_settings"]["use_last_channels"]:
             return
         self.last_channels_applied = self.settings["memory_settings"]["use_last_channels"]
@@ -72,7 +93,7 @@ class MemoryEfficientMixin:
             self.logger.debug("Disabling torch.channels_last")
             self.pipe.unet.to(memory_format=torch.contiguous_format)
 
-    def apply_vae_slicing(self):
+    def __apply_vae_slicing(self):
         if self.vae_slicing_applied == self.settings["memory_settings"]["use_enable_vae_slicing"]:
             return
         self.vae_slicing_applied = self.settings["memory_settings"]["use_enable_vae_slicing"]
@@ -93,7 +114,7 @@ class MemoryEfficientMixin:
                 except AttributeError:
                     pass
 
-    def apply_attention_slicing(self):
+    def __apply_attention_slicing(self):
         if self.attention_slicing_applied == self.settings["memory_settings"]["use_attention_slicing"]:
             return
         self.attention_slicing_applied = self.settings["memory_settings"]["use_attention_slicing"]
@@ -105,7 +126,7 @@ class MemoryEfficientMixin:
             self.logger.debug("Disabling attention slicing")
             self.pipe.disable_attention_slicing()
 
-    def apply_tiled_vae(self):
+    def __apply_tiled_vae(self):
         if self.tiled_vae_applied == self.settings["memory_settings"]["use_tiled_vae"]:
             return
         self.tiled_vae_applied = self.settings["memory_settings"]["use_tiled_vae"]
@@ -119,7 +140,7 @@ class MemoryEfficientMixin:
             except AttributeError:
                 self.logger.warning("Tiled vae not supported for this model")
 
-    def apply_accelerated_transformers(self):
+    def __apply_accelerated_transformers(self):
         if self.accelerated_transformers_applied == self.settings["memory_settings"]["use_accelerated_transformers"]:
             return
         self.accelerated_transformers_applied = self.settings["memory_settings"]["use_accelerated_transformers"]
@@ -131,19 +152,19 @@ class MemoryEfficientMixin:
         else:
             self.pipe.unet.set_attn_processor(AttnProcessor2_0())
 
-    def save_unet(self, file_path, file_name):
+    def __save_unet(self, file_path, file_name):
         self.logger.debug(f"Saving compiled torch model {file_name}")
         unet_file = os.path.join(file_path, file_name)
         if not os.path.exists(file_path):
             os.makedirs(file_path)
         torch.save(self.pipe.unet.state_dict(), unet_file)
 
-    def load_unet(self, file_path, file_name):
+    def __load_unet(self, file_path, file_name):
         self.logger.debug(f"Loading compiled torch model {file_name}")
         unet_file = os.path.join(file_path, file_name)
         self.pipe.unet.state_dict = torch.load(unet_file, map_location="cuda")
 
-    def apply_torch_compile(self):
+    def __apply_torch_compile(self):
         """
         Torch compile has limited support
             - No support for Windows
@@ -169,11 +190,10 @@ class MemoryEfficientMixin:
         # self.save_unet(file_path, file_name)
         self.torch_compile_applied = True
     
-    def apply_torch_trace(self):
+    def __apply_torch_trace(self):
         self.pipe.unet = TracedUNet(self.pipe)
 
-    
-    def save_torch_trace(self):
+    def __save_torch_trace(self):
         torch.set_grad_enabled(False)
         unet = self.pipe.unet
         unet.eval()
@@ -199,10 +219,16 @@ class MemoryEfficientMixin:
         print("done tracing")
         unet_traced.save("unet_traced.pt")
 
-    def enable_memory_chunking(self):
+    def __remove_tome_sd(self):
+        self.logger.debug("Removing ToMe SD weight merging")
+        tomesd.remove_patch(self.pipe)
+        self.tome_ratio = None
+        self.tome_sd_applied = False
+
+    def __enable_memory_chunking(self):
         return
 
-    def move_pipe_to_cuda(self):
+    def __move_pipe_to_cuda(self):
         if self.use_enable_sequential_cpu_offload == self.settings["memory_settings"]["use_enable_sequential_cpu_offload"] and self.enable_model_cpu_offload == self.settings["memory_settings"]["enable_model_cpu_offload"]:
             return
 
@@ -228,7 +254,7 @@ class MemoryEfficientMixin:
                     self.logger.debug("Changing controlnet dtype to float16")
                     self.pipe.controlnet.half()
 
-    def move_pipe_to_cpu(self):
+    def __move_pipe_to_cpu(self):
         self.logger.debug("Moving to cpu")
         if not self.pipe:
             return
@@ -245,21 +271,21 @@ class MemoryEfficientMixin:
             except AttributeError:
                 pass
 
-    def apply_cpu_offload(self):
+    def __apply_cpu_offload(self):
         if self.cpu_offload_applied == self.settings["memory_settings"]["enable_model_cpu_offload"]:
             return
         self.cpu_offload_applied = self.settings["memory_settings"]["enable_model_cpu_offload"]
 
         if self.settings["memory_settings"]["use_enable_sequential_cpu_offload"] and not self.settings["memory_settings"]["enable_model_cpu_offload"]:
             self.logger.debug("Enabling sequential cpu offload")
-            self.move_pipe_to_cpu()
+            self.__move_pipe_to_cpu()
             try:
                 self.pipe.enable_sequential_cpu_offload()
             except NotImplementedError:
                 self.logger.warning("Not implemented error when applying sequential cpu offload")
-                self.move_pipe_to_cuda()
+                self.__move_pipe_to_cuda()
 
-    def apply_model_offload(self):
+    def __apply_model_offload(self):
         if self.model_cpu_offload_applied == self.settings["memory_settings"]["enable_model_cpu_offload"]:
             return
         self.model_cpu_offload_applied = self.settings["memory_settings"]["enable_model_cpu_offload"]
@@ -268,10 +294,10 @@ class MemoryEfficientMixin:
            and not self.settings["memory_settings"]["use_enable_sequential_cpu_offload"] \
            and hasattr(self.pipe, "enable_model_cpu_offload"):
             self.logger.debug("Enabling model cpu offload")
-            self.move_pipe_to_cpu()
+            self.__move_pipe_to_cpu()
             self.pipe.enable_model_cpu_offload()
     
-    def apply_tome(self):
+    def __apply_tome(self):
         if self.use_tome_sd == self.settings["memory_settings"]["use_tome_sd"] and self.tome_ratio == self.settings["memory_settings"]["tome_sd_ratio"]:
             return
         self.use_tome_sd = self.settings["memory_settings"]["use_tome_sd"]
@@ -279,36 +305,14 @@ class MemoryEfficientMixin:
 
         if self.use_tome_sd:
             if self.tome_sd_applied:
-                self.remove_tome_sd()
-            self.apply_tome_sd()
+                self.__remove_tome_sd()
+            self.__apply_tome_sd()
         elif self.do_remove_tome_sd:
-            self.remove_tome_sd()
+            self.__remove_tome_sd()
     
-    def apply_tome_sd(self):
+    def __apply_tome_sd(self):
         self.logger.debug(f"Applying ToMe SD weight merging with ratio {self.tome_sd_ratio}")
         tomesd.apply_patch(self.pipe, ratio=self.tome_sd_ratio)
         self.tome_sd_applied = True
         self.tome_ratio = self.tome_sd_ratio
-    
-    def remove_tome_sd(self):
-        self.logger.debug("Removing ToMe SD weight merging")
-        tomesd.remove_patch(self.pipe)
-        self.tome_ratio = None
-        self.tome_sd_applied = False
 
-    def apply_memory_efficient_settings(self):
-        if self.pipe is None:
-            self.logger.debug("Pipe is None, skipping memory efficient settings")
-            return
-        self.apply_last_channels()
-        self.enable_memory_chunking()
-        self.apply_vae_slicing()
-        self.apply_cpu_offload()
-        self.apply_model_offload()
-        self.move_pipe_to_cuda()
-        self.apply_attention_slicing()
-        self.apply_tiled_vae()
-        self.apply_accelerated_transformers()
-        self.apply_tome()
-        #self.apply_torch_compile()
-        #self.apply_torch_trace()
