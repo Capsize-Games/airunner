@@ -4,7 +4,7 @@ from PIL import Image
 from controlnet_aux.processor import Processor
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
     StableDiffusionControlNetInpaintPipeline, ControlNetModel
-from airunner.enums import SignalCode, SDMode
+from airunner.enums import SignalCode, SDMode, ModelType, ModelStatus
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -99,15 +99,22 @@ class ControlnetHandlerMixin:
                 feature_extractor=self.feature_extractor
             )
             self.controlnet_loaded = True
-
-            self.emit_signal(SignalCode.CONTROLNET_LOADED_SIGNAL, {
-                "path": short_path
-            })
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.CONTROLNET,
+                    "status": ModelStatus.LOADED,
+                    "path": short_path
+                }
+            )
             return pipeline
         except Exception as e:
-            self.emit_signal(SignalCode.CONTROLNET_FAILED_SIGNAL, {
-                "path": short_path
-            })
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.CONTROLNET,
+                    "status": ModelStatus.FAILED,
+                    "path": short_path
+                }
+            )
 
     @property
     def controlnet_model(self):
@@ -132,9 +139,13 @@ class ControlnetHandlerMixin:
         print(path)
         short_path = self.controlnet_model["path"]
         self.current_controlnet_type = self.controlnet_type
-        self.emit_signal(SignalCode.CONTROLNET_LOADING_SIGNAL, {
-            "path": short_path
-        })
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.CONTROLNET,
+                "status": ModelStatus.LOADING,
+                "path": short_path
+            }
+        )
         try:
             controlnet = ControlNetModel.from_pretrained(
                 path,
@@ -142,15 +153,23 @@ class ControlnetHandlerMixin:
                 local_files_only=True,
                 device_map="auto"
             )
-            self.emit_signal(SignalCode.CONTROLNET_LOADED_SIGNAL, {
-                "path": short_path
-            })
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.CONTROLNET,
+                    "status": ModelStatus.LOADED,
+                    "path": short_path
+                }
+            )
             return controlnet
         except Exception as e:
             self.logger.error(f"Error loading controlnet {e}")
-            self.emit_signal(SignalCode.CONTROLNET_FAILED_SIGNAL, {
-                "path": short_path
-            })
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.CONTROLNET,
+                    "status": ModelStatus.FAILED,
+                    "path": short_path
+                }
+            )
             return None
     def preprocess_for_controlnet(self, image):
         self.initialize_controlnet_processor()
@@ -181,22 +200,34 @@ class ControlnetHandlerMixin:
             self.load_controlnet_processor()
 
     def load_controlnet_processor(self):
-        self.emit_signal(SignalCode.CONTROLNET_PROCESSOR_LOADING_SIGNAL, {
-            "path": self.current_controlnet_type
-        })
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.CONTROLNET_PROCESSOR,
+                "status": ModelStatus.LOADING,
+                "path": self.current_controlnet_type
+            }
+        )
         try:
             self.processor = Processor(
                 self.current_controlnet_type,
                 local_files_only=True,
             )
-            self.emit_signal(SignalCode.CONTROLNET_PROCESSOR_LOADED_SIGNAL, {
-                "path": self.current_controlnet_type
-            })
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.CONTROLNET_PROCESSOR,
+                    "status": ModelStatus.LOADED,
+                    "path": self.current_controlnet_type
+                }
+            )
         except Exception as e:
             self.logger.error(e)
-            self.emit_signal(SignalCode.CONTROLNET_PROCESSOR_FAILED_SIGNAL, {
-                "path": self.current_controlnet_type
-            })
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.CONTROLNET_PROCESSOR,
+                    "status": ModelStatus.FAILED,
+                    "path": self.current_controlnet_type
+                }
+            )
         self.logger.debug("Processor loaded")
 
     @property
@@ -224,5 +255,17 @@ class ControlnetHandlerMixin:
         clear_memory()
         self.reset_applied_memory_settings()
         self.controlnet_loaded = False
-        self.emit_signal(SignalCode.CONTROLNET_UNLOADED_SIGNAL)
-        self.emit_signal(SignalCode.CONTROLNET_PROCESSOR_UNLOADED_SIGNAL)
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.CONTROLNET,
+                "status": ModelStatus.UNLOADED,
+                "path": ""
+            }
+        )
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.CONTROLNET_PROCESSOR,
+                "status": ModelStatus.UNLOADED,
+                "path": ""
+            }
+        )
