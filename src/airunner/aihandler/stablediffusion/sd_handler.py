@@ -214,6 +214,7 @@ class SDHandler(
             SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
             SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
             SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
+            SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
         }
         for code, handler in signals.items():
             self.register(code, handler)
@@ -232,6 +233,10 @@ class SDHandler(
         self.do_interrupt = False
         self.feature_extractor_path = "openai/clip-vit-large-patch14"
         self.latents_worker = create_worker(LatentsWorker)
+
+    def on_change_scheduler_signal(self, data=None):
+        print("CHANGE SCHEDULER")
+        self.load_scheduler()
 
     def on_interrupt_process_signal(self, _message: dict):
         self.do_interrupt = True
