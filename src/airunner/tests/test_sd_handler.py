@@ -21,13 +21,11 @@ class TestSDHandler(unittest.TestCase):
 
     @patch.object(sd_handler, 'initialized', new_callable=PropertyMock)
     @patch.object(sd_handler, 'do_generate', new_callable=PropertyMock)
-    @patch.object(sd_handler, 'do_set_seed', new_callable=PropertyMock)
     @patch.object(SDHandler, 'generator_sample')
-    def test_run(self, mock_generator_sample, mock_do_set_seed, mock_do_generate, mock_initialized):
+    def test_run(self, mock_generator_sample, mock_do_generate, mock_initialized):
         # Arrange
         mock_initialized.return_value = False
         mock_do_generate.return_value = True
-        mock_do_set_seed.return_value = True
         mock_generator_sample.return_value = {
             "nsfw_content_detected": False,
             "action": "txt2img",
