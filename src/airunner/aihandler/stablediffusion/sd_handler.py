@@ -43,7 +43,7 @@ from airunner.enums import (
     Scheduler,
     SDMode,
     StableDiffusionVersion,
-    EngineResponseCode, ModelStatus
+    EngineResponseCode, ModelStatus, ModelType
 )
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin

@@ -1,6 +1,8 @@
 from PySide6.QtCore import QTimer
 import psutil
-from airunner.enums import SignalCode, ModelStatus
+from PySide6.QtWidgets import QApplication
+
+from airunner.enums import SignalCode, ModelStatus, ModelType
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.status.templates.status_ui import Ui_status_widget
 
@@ -13,26 +15,24 @@ class StatusWidget(BaseWidget):
         self.register(SignalCode.APPLICATION_STATUS_INFO_SIGNAL, self.on_status_info_signal)
         self.register(SignalCode.APPLICATION_STATUS_ERROR_SIGNAL, self.on_status_error_signal)
         self.register(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
-        self.register(SignalCode.SAFETY_CHECKER_FAILED_SIGNAL, self.on_safety_checker_failed_signal)
-        self.register(SignalCode.SAFETY_CHECKER_LOADED_SIGNAL, self.on_safety_checker_loaded_signal)
-        self.register(SignalCode.SAFETY_CHECKER_UNLOADED_SIGNAL, self.on_safety_checker_unloaded_signal)
+        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.safety_checker_status = ModelStatus.UNLOADED
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_system_stats)
         self.timer.start(1000)
 
-    def on_safety_checker_failed_signal(self, _ignore):
-        self.safety_checker_status = ModelStatus.FAILED
-        self.update_system_stats()
-
-    def on_safety_checker_loaded_signal(self, _ignore):
-        self.safety_checker_status = ModelStatus.LOADED
-        self.update_system_stats()
-
-    def on_safety_checker_unloaded_signal(self, _ignore):
         self.safety_checker_status = ModelStatus.UNLOADED
-        self.update_system_stats()
+        self.feature_extractor_status = ModelStatus.UNLOADED
+
+    def on_model_status_changed_signal(self, data):
+        model = data["model"]
+        if model == ModelType.SAFETY_CHECKER:
+            self.safety_checker_status = data["status"]
+            self.update_system_stats()
+        else:
+            self.feature_extractor_status = data["status"]
+            self.update_system_stats()
 
     def on_status_info_signal(self, message):
         self.set_system_status(message, error=False)
@@ -77,3 +77,5 @@ class StatusWidget(BaseWidget):
             self.ui.system_message.setStyleSheet("QLabel { color: #ff0000; }")
         else:
             self.ui.system_message.setStyleSheet("QLabel { color: #ffffff; }")
+        QApplication.processEvents()
+
