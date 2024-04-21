@@ -21,7 +21,7 @@ from airunner.aihandler.mixins.lora_mixin import LoraMixin
 from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
-from airunner.exceptions import InterruptedException
+from airunner.exceptions import InterruptedException, PipeNotLoadedException
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -310,18 +310,27 @@ class SDHandler(
                 self.error_handler("Selected LoRA are not supported with this model")
                 self.reload_model = True
 
-        safety_checker_initialized = not self.use_safety_checker or (
-            self.safety_checker is not None and
-            self.feature_extractor is not None and
-            self.pipe.safety_checker is not None and
-            self.pipe.feature_extractor is not None
-        )
+        safety_checker_initialized = False
+        controlnet_initialized = False
 
-        controlnet_initialized = not self.settings["controlnet_enabled"] or (
-            self.controlnet is not None and
-            self.pipe.controlnet is not None and
-            self.processor is not None
-        )
+        try:
+            safety_checker_initialized = not self.use_safety_checker or (
+                self.safety_checker is not None and
+                self.feature_extractor is not None and
+                self.pipe.safety_checker is not None and
+                self.pipe.feature_extractor is not None
+            )
+        except AttributeError:
+            pass
+
+        try:
+            controlnet_initialized = not self.settings["controlnet_enabled"] or (
+                self.controlnet is not None and
+                self.pipe.controlnet is not None and
+                self.processor is not None
+            )
+        except AttributeError:
+            pass
 
         if (
             self.pipe is not None and
@@ -465,13 +474,20 @@ class SDHandler(
 
     def __run(self):
         self.__reload_prompts()
-        response = self.generate(
-            self.settings,
-            self.sd_request,
-            self.generator_request_data
-        )
-        response["action"] = self.sd_request.generator_settings.section
-        response["outpaint_box_rect"] = self.sd_request.active_rect
+        try:
+            response = self.generate(
+                self.settings,
+                self.sd_request,
+                self.generator_request_data
+            )
+        except PipeNotLoadedException as e:
+            self.logger.warning(e)
+            response = None
+
+        if response:
+            response["action"] = self.sd_request.generator_settings.section
+            response["outpaint_box_rect"] = self.sd_request.active_rect
+
         self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
             'code': EngineResponseCode.IMAGE_GENERATED,
             'message': response
