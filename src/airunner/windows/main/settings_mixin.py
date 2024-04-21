@@ -193,7 +193,6 @@ class SettingsMixin:
             return {}
 
         paths = {
-            "initialized": True,
             "base_path": base_path,
             "art_models": f"{base_path}/art/models",
             "art_other": f"{base_path}/art/other",
