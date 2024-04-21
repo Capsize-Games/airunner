@@ -1244,7 +1244,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         guidance_scale=75,
     ),
     path_settings={
-        "initialized": False,
         "base_path": BASE_PATH
     },
     active_grid_settings=dict(
