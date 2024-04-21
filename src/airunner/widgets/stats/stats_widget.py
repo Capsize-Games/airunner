@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QTableWidgetItem, QHeaderView, QApplication
-from airunner.enums import SignalCode, ModelStatus
+from airunner.enums import SignalCode, ModelStatus, ModelType
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stats.templates.stats_ui import Ui_stats_widget
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -21,67 +21,30 @@ class StatsWidget(
         # Track console history
         self.console_history = []
 
+        model_order = [
+            ModelType.SAFETY_CHECKER,
+            ModelType.FEATURE_EXTRACTOR,
+            ModelType.CONTROLNET,
+            ModelType.CONTROLNET,
+            ModelType.SD,
+            ModelType.CONTROLNET_PROCESSOR,
+            ModelType.SCHEDULER,
+            ModelType.TTS,
+            ModelType.TTS_PROCESSOR,
+            ModelType.TTS_FEATURE_EXTRACTOR,
+            ModelType.TTS_VOCODER,
+            ModelType.TTS_SPEAKER_EMBEDDINGS,
+            ModelType.TTS_TOKENIZER,
+            ModelType.STT,
+            ModelType.STT_PROCESSOR,
+            ModelType.STT_FEATURE_EXTRACTOR,
+        ]
+
         self.models = {
-            "SD Safety Checker": {
+            model_type.value: {
                 "status": ModelStatus.UNLOADED,
                 "path": ""
-            },
-            "SD Feature Extractor": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "SD Controlnet": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "SD Model": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "SD Controlnet Processor": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "SD Scheduler": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "TTS Model": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "TTS Processor": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "TTS Feature Extractor": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "TTS Vocoder": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "TTS Speaker Embeddings": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "TTS Tokenizer": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "STT Model": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "STT Processor": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "STT Feature Extractor": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
+            } for model_type in model_order
         }
 
         # add items
@@ -111,8 +74,11 @@ class StatsWidget(
         self.ui.model_stats.resizeColumnsToContents()
         self.ui.model_stats.resizeRowsToContents()
         self.ui.model_stats.horizontalHeader().setStretchLastSection(True)
-        for n in range(total_columns):
-            self.ui.model_stats.horizontalHeader().setSectionResizeMode(n, QHeaderView.ResizeMode.ResizeToContents)
+        for index in range(total_columns):
+            self.ui.model_stats.horizontalHeader().setSectionResizeMode(
+                index,
+                QHeaderView.ResizeMode.ResizeToContents
+            )
 
         # Hide vertical and horizontal headers
         self.ui.model_stats.verticalHeader().setVisible(False)

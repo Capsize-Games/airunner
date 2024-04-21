@@ -1,10 +1,18 @@
 import os
-
 from PIL import Image
 from controlnet_aux.processor import Processor
-from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
-    StableDiffusionControlNetInpaintPipeline, ControlNetModel
-from airunner.enums import SignalCode, SDMode, ModelType, ModelStatus
+from diffusers import (
+    StableDiffusionControlNetPipeline,
+    StableDiffusionControlNetImg2ImgPipeline,
+    StableDiffusionControlNetInpaintPipeline,
+    ControlNetModel
+)
+from airunner.enums import (
+    SignalCode,
+    SDMode,
+    ModelType,
+    ModelStatus
+)
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -16,23 +24,25 @@ RELOAD_CONTROLNET_IMAGE_CONSTS = (
 
 class ControlnetHandlerMixin:
     def __init__(self, *args, **kwargs):
-        controlnet = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
-        controlnet_item = self.controlnet_model_by_name(controlnet)
         self.controlnet = None
         self._controlnet_image = None
-        self.controlnet_type = ""
         self.controlnet_guess_mode = None
         self.current_load_controlnet = False
-        self.current_controlnet_type = None
         self.controlnet_loaded = False
         self.downloading_controlnet = False
-        self.controlnet_type = controlnet_item["name"]
         signals = {
             SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
             SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
         }
         for code, handler in signals.items():
             self.register(code, handler)
+
+    @property
+    def controlnet_type(self):
+        controlnet = self.sd_request.generator_settings.controlnet_image_settings.controlnet
+        controlnet_item = self.controlnet_model_by_name(controlnet)
+        controlnet_type = controlnet_item["name"]
+        return controlnet_type
 
     @property
     def controlnet_model(self):
@@ -57,9 +67,8 @@ class ControlnetHandlerMixin:
     @property
     def controlnet_image(self):
         if (
-                self._controlnet_image is None or
-                self.do_load or
-                self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
+            self._controlnet_image is None or
+            self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
         ):
             self.logger.debug("Getting controlnet image")
             self._controlnet_image = self.preprocess_for_controlnet(self.sd_request.drawing_pad_image)
@@ -135,9 +144,9 @@ class ControlnetHandlerMixin:
 
     def load_controlnet(self):
         self.logger.debug(f"Loading controlnet {self.controlnet_type}")
+
         path = self.controlnet_path
         short_path = self.controlnet_model["path"]
-        self.current_controlnet_type = self.controlnet_type
         self.emit_signal(
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                 "model": ModelType.CONTROLNET,
@@ -171,8 +180,6 @@ class ControlnetHandlerMixin:
             )
             return None
     def preprocess_for_controlnet(self, image):
-        self.initialize_controlnet_processor()
-
         if self.processor is not None and image is not None:
             self.logger.debug("Controlnet: Processing image")
             try:
@@ -189,33 +196,26 @@ class ControlnetHandlerMixin:
             return image
         self.logger.error("No controlnet processor found")
 
-    def initialize_controlnet_processor(self):
-        controlnet = self.sd_request.generator_settings.controlnet_image_settings.controlnet
-        controlnet_item = self.controlnet_model_by_name(controlnet)
-        controlnet_type = controlnet_item["name"]
-        if self.current_controlnet_type != controlnet_type or not self.processor:
-            self.logger.debug("Loading controlnet processor " + controlnet_type)
-            self.current_controlnet_type = controlnet_type
-            self.load_controlnet_processor()
-
     def load_controlnet_processor(self):
+        self.logger.debug("Loading controlnet processor")
+
         self.emit_signal(
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                 "model": ModelType.CONTROLNET_PROCESSOR,
                 "status": ModelStatus.LOADING,
-                "path": self.current_controlnet_type
+                "path": self.controlnet_type
             }
         )
         try:
             self.processor = Processor(
-                self.current_controlnet_type,
+                self.controlnet_type,
                 local_files_only=True,
             )
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                     "model": ModelType.CONTROLNET_PROCESSOR,
                     "status": ModelStatus.LOADED,
-                    "path": self.current_controlnet_type
+                    "path": self.controlnet_type
                 }
             )
         except Exception as e:
@@ -224,21 +224,10 @@ class ControlnetHandlerMixin:
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                     "model": ModelType.CONTROLNET_PROCESSOR,
                     "status": ModelStatus.FAILED,
-                    "path": self.current_controlnet_type
+                    "path": self.controlnet_type
                 }
             )
         self.logger.debug("Processor loaded")
-
-    @property
-    def do_load_controlnet(self) -> bool:
-        return (
-                (not self.controlnet_loaded and self.settings["controlnet_enabled"]) or
-                (self.controlnet_loaded and self.settings["controlnet_enabled"])
-        )
-
-    @property
-    def do_unload_controlnet(self) -> bool:
-        return not self.settings["controlnet_enabled"] and (self.controlnet_loaded)
 
     def unload_controlnet(self):
         if self.controlnet:

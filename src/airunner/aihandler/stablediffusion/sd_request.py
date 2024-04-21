@@ -199,7 +199,6 @@ class SDRequest(
         self.cross_attention_kwargs_scale = cross_attention_kwargs_scale
         self.controlnet_image = controlnet_image
         self.model_changed = model_changed
-        self.do_load = do_load
         self.generator = generator
         kwargs = self.prepare_args(
             model=model,

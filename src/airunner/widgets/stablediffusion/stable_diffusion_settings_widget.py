@@ -57,7 +57,7 @@ class StableDiffusionSettingsWidget(
         settings = self.settings
         settings["generator_settings"]["scheduler"] = name
         self.settings = settings
-        self.emit_signal(SignalCode.CHANGE_SCHEDULER_SIGNAL)
+        self.emit_signal(SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": name})
     
     def handle_pipeline_changed(self, val):
         if val == f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}":
