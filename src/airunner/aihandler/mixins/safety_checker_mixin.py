@@ -10,73 +10,7 @@ class SafetyCheckerMixin:
     def __init__(self, *args, **kwargs):
         self.safety_checker = None
         self.feature_extractor = None
-        self.safety_checker_status = ModelStatus.UNLOADED
         self.feature_extractor_path = SD_FEATURE_EXTRACTOR_PATH
-
-    @property
-    def is_pipe_loaded(self) -> bool:
-        if self.sd_request.is_txt2img:
-            return self.txt2img is not None
-        elif self.sd_request.is_img2img:
-            return self.img2img is not None
-        elif self.sd_request.is_pix2pix:
-            return self.pix2pix is not None
-        elif self.sd_request.is_outpaint:
-            return self.outpaint is not None
-        elif self.sd_request.is_depth2img:
-            return self.depth2img is not None
-
-    @property
-    def pipe(self):
-        try:
-            if self.sd_request.is_txt2img:
-                return self.txt2img
-            elif self.sd_request.is_img2img:
-                return self.img2img
-            elif self.sd_request.is_outpaint:
-                return self.outpaint
-            elif self.sd_request.is_depth2img:
-                return self.depth2img
-            elif self.sd_request.is_pix2pix:
-                return self.pix2pix
-            else:
-                self.logger.warning(f"Invalid action unable to get pipe")
-                return None
-        except Exception as e:
-            self.logger.error(f"Error getting pipe {e}")
-            return None
-
-    @pipe.setter
-    def pipe(self, value):
-        if self.sd_request.is_txt2img:
-            self.txt2img = value
-        elif self.sd_request.is_img2img:
-            self.img2img = value
-        elif self.sd_request.is_outpaint:
-            self.outpaint = value
-        elif self.sd_request.is_depth2img:
-            self.depth2img = value
-        elif self.sd_request.is_pix2pix:
-            self.pix2pix = value
-
-    @property
-    def model(self):
-        path = self.settings["generator_settings"]["model"]
-        if path == "":
-            name = self.settings["generator_settings"]["model_name"]
-            model = self.ai_model_by_name(name)
-        else:
-            model = self.ai_model_by_path(path)
-        return model
-
-    @property
-    def model_path(self):
-        if self.model is not None:
-            return self.model["path"]
-
-    @property
-    def use_safety_checker(self):
-        return self.settings["nsfw_filter"]
 
     @property
     def safety_checker_model(self):
@@ -95,7 +29,6 @@ class SafetyCheckerMixin:
     def unload_safety_checker(self, data_: dict = None):
         self.safety_checker = None
         self.feature_extractor = None
-        self.safety_checker_status = ModelStatus.UNLOADED
         self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
             "model": ModelType.SAFETY_CHECKER,
             "status": ModelStatus.UNLOADED,

@@ -1,38 +1,7 @@
-import io
-import base64
-import os
-import random
 import traceback
 import numpy as np
-from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QApplication
-from typing import List
 import torch
-from PIL import (
-    Image,
-    ImageDraw,
-    ImageFont
-)
-from diffusers.pipelines.stable_diffusion.convert_from_ckpt import download_from_original_stable_diffusion_ckpt
-from diffusers.utils.torch_utils import randn_tensor
-from diffusers import (
-    StableDiffusionPipeline,
-    StableDiffusionXLPipeline,
-    AutoPipelineForText2Image,
-    StableDiffusionDepth2ImgPipeline,
-    AutoPipelineForInpainting,
-    StableDiffusionInstructPix2PixPipeline,
-    StableDiffusionImg2ImgPipeline,
-    StableDiffusionInpaintPipeline
-)
-from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-from diffusers import (
-    StableDiffusionControlNetPipeline,
-    StableDiffusionControlNetImg2ImgPipeline,
-    StableDiffusionControlNetInpaintPipeline,
-
-)
-from transformers import AutoFeatureExtractor
+from PIL import Image
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.aihandler.mixins.controlnet_mixin import ControlnetHandlerMixin
 from airunner.aihandler.mixins.model_mixin import ModelMixin
@@ -42,10 +11,10 @@ from airunner.enums import (
     FilterType,
     HandlerType,
     SignalCode,
-    Scheduler,
     SDMode,
-    StableDiffusionVersion,
-    EngineResponseCode, ModelStatus, ModelType
+    EngineResponseCode,
+    ModelStatus,
+    ModelType
 )
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
@@ -63,12 +32,10 @@ from airunner.utils.random_seed import random_seed
 from airunner.utils.create_worker import create_worker
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.workers.worker import Worker
-
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
     SDMode.DRAWING,
 )
-
 
 
 class LatentsWorker(Worker):
@@ -156,7 +123,6 @@ class SDHandler(
         self._safety_checker = None
         self.current_model = ""
         self.seed = 42
-        self.batch_size = 1
         self.use_prompt_converter = True
         self.depth_map = None
         self.model_data = None
@@ -173,19 +139,17 @@ class SDHandler(
         self.denoise_strength = None
         self.face_enhance = False
         self.allow_online_mode = False
-        self.initialized = False
-        self.reload_model = False
         self.extra_args = None
         self.latents = None
         self.sd_mode = None
         self.reload_prompts = False
-        self.moved_to_cpu = False
         self.cur_prompt = ""
         self.cur_neg_prompt = ""
         self.data = {
             "action": "txt2img",
         }
         signals = {
+            SignalCode.RESET_APPLIED_MEMORY_SETTINGS: self.on_reset_applied_memory_settings,
             SignalCode.UNLOAD_SAFETY_CHECKER_SIGNAL: self.unload_safety_checker,
             SignalCode.LOAD_SAFETY_CHECKER_SIGNAL: self.load_safety_checker,
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
@@ -209,15 +173,129 @@ class SDHandler(
         self.sd_request = None
         self.sd_request = SDRequest(model_data=self.model)
         self.sd_request.parent = self
-        self.running = True
         self.do_generate = False
         self._generator = None
         self.do_interrupt = False
         self.latents_worker = create_worker(LatentsWorker)
 
+        self.model_status = {}
+        self.model_status[ModelType.SD] = ModelStatus.UNLOADED
+        self.model_status[ModelType.TTS] = ModelStatus.UNLOADED
+        self.model_status[ModelType.TTS_PROCESSOR] = ModelStatus.UNLOADED
+        self.model_status[ModelType.TTS_FEATURE_EXTRACTOR] = ModelStatus.UNLOADED
+        self.model_status[ModelType.TTS_VOCODER] = ModelStatus.UNLOADED
+        self.model_status[ModelType.TTS_SPEAKER_EMBEDDINGS] = ModelStatus.UNLOADED
+        self.model_status[ModelType.TTS_TOKENIZER] = ModelStatus.UNLOADED
+        self.model_status[ModelType.STT] = ModelStatus.UNLOADED
+        self.model_status[ModelType.STT_PROCESSOR] = ModelStatus.UNLOADED
+        self.model_status[ModelType.STT_FEATURE_EXTRACTOR] = ModelStatus.UNLOADED
+        self.model_status[ModelType.CONTROLNET] = ModelStatus.UNLOADED
+        self.model_status[ModelType.CONTROLNET_PROCESSOR] = ModelStatus.UNLOADED
+        self.model_status[ModelType.SAFETY_CHECKER] = ModelStatus.UNLOADED
+        self.model_status[ModelType.FEATURE_EXTRACTOR] = ModelStatus.UNLOADED
+        self.model_status[ModelType.SCHEDULER] = ModelStatus.UNLOADED
+        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
+
+    def on_reset_applied_memory_settings(self, _data: dict):
+        self.reset_applied_memory_settings()
+
+    def on_model_status_changed_signal(self, message: dict):
+        model = message["model"]
+        status = message["status"]
+        self.model_status[model] = status
+
     def on_change_scheduler_signal(self, data=None):
         print("CHANGE SCHEDULER")
         self.load_scheduler()
+
+    @property
+    def model_path(self):
+        if self.model is not None:
+            return self.model["path"]
+
+    @property
+    def is_pipe_loaded(self) -> bool:
+        if self.sd_request.is_txt2img:
+            return self.txt2img is not None
+        elif self.sd_request.is_img2img:
+            return self.img2img is not None
+        elif self.sd_request.is_pix2pix:
+            return self.pix2pix is not None
+        elif self.sd_request.is_outpaint:
+            return self.outpaint is not None
+        elif self.sd_request.is_depth2img:
+            return self.depth2img is not None
+
+    @property
+    def pipe(self):
+        try:
+            if self.sd_request.is_txt2img:
+                return self.txt2img
+            elif self.sd_request.is_img2img:
+                return self.img2img
+            elif self.sd_request.is_outpaint:
+                return self.outpaint
+            elif self.sd_request.is_depth2img:
+                return self.depth2img
+            elif self.sd_request.is_pix2pix:
+                return self.pix2pix
+            else:
+                self.logger.warning(
+                    (
+                        f"Invalid action"
+                        f" for pipe {self.sd_request.generator_settings.section}"
+                        " Unable to load image generator model."
+                    )
+                )
+                return None
+        except Exception as e:
+            self.logger.error(f"Error getting pipe {e}")
+            return None
+
+    @pipe.setter
+    def pipe(self, value):
+        if self.sd_request.is_txt2img:
+            self.txt2img = value
+        elif self.sd_request.is_img2img:
+            self.img2img = value
+        elif self.sd_request.is_outpaint:
+            self.outpaint = value
+        elif self.sd_request.is_depth2img:
+            self.depth2img = value
+        elif self.sd_request.is_pix2pix:
+            self.pix2pix = value
+
+    @property
+    def __cuda_error_message(self) -> str:
+        return (
+            f"VRAM too low for "
+            f"{self.settings['working_width']}x{self.settings['working_height']} "
+            f"resolution. Potential solutions: try again, use a different model, "
+            f"restart the application, use a smaller size, upgrade your GPU."
+        )
+
+    @property
+    def data_type(self):
+        if self.sd_request.memory_settings.use_enable_sequential_cpu_offload:
+            return torch.float32
+        elif self.sd_request.memory_settings.enable_model_cpu_offload:
+            return torch.float16
+        data_type = torch.float16 if self.cuda_is_available else torch.float
+        return data_type
+
+    @property
+    def use_safety_checker(self):
+        return self.settings["nsfw_filter"]
+
+    @property
+    def model(self):
+        path = self.settings["generator_settings"]["model"]
+        if path == "":
+            name = self.settings["generator_settings"]["model_name"]
+            model = self.ai_model_by_name(name)
+        else:
+            model = self.ai_model_by_path(path)
+        return model
 
     @property
     def inpaint_vae_model(self):
@@ -226,16 +304,36 @@ class SDHandler(
         except IndexError:
             return None
 
-    def on_unload_stablediffusion_signal(self, _message):
-        self.unload()
+    def on_unload_stablediffusion_signal(self, _message: dict = None):
+        self.unload_image_generator_model()
 
-    def on_load_stablediffusion_signal(self, message):
-        self.load()
-        self.load_safety_checker()
+    def on_load_stablediffusion_signal(self, _message: dict = None):
+        print("ON LOAD STABLE DIFFUSION SIGNAL TRIGGERED")
+        self.load_stable_diffusion()
+
+    def load_stable_diffusion(self):
+        self.logger.info("Loading stable diffusion")
+
+        if self.settings["nsfw_filter"]:
+            self.load_safety_checker()
+
+        if self.settings["controlnet_enabled"]:
+            self.load_controlnet()
+
+        if not self._scheduler:
+            self.load_scheduler()
+
+        self.load_image_generator_model()
+
+        try:
+            self.add_lora_to_pipe()
+        except Exception as e:
+            self.error_handler("Selected LoRA are not supported with this model")
+            self.reload_model = True
 
     def on_start_auto_image_generation_signal(self, _message: dict):
         # self.sd_mode = SDMode.DRAWING
-        # self.generator_sample()
+        # self.generate()
         pass
 
     def on_sd_cancel_signal(self, _message: dict):
@@ -270,40 +368,10 @@ class SDHandler(
         return self._allow_online_mode
 
     @property
-    def cuda_error_message(self) -> str:
-        return (
-            f"VRAM too low for "
-            f"{self.settings['working_width']}x{self.settings['working_height']} "
-            f"resolution. Potential solutions: try again, use a different model, "
-            f"restart the application, use a smaller size, upgrade your GPU."
-        )
-
-    @property
     def cuda_is_available(self) -> bool:
         if self.settings["memory_settings"]["enable_model_cpu_offload"]:
             return False
         return torch.cuda.is_available()
-
-    @property
-    def is_ckpt_model(self) -> bool:
-        return self.is_ckpt_file(self.model_path)
-
-    @property
-    def is_safetensors(self) -> bool:
-        return self.is_safetensor_file(self.model_path)
-
-    @property
-    def is_single_file(self) -> bool:
-        return self.is_ckpt_model or self.is_safetensors
-
-    @property
-    def data_type(self):
-        if self.sd_request.memory_settings.use_enable_sequential_cpu_offload:
-            return torch.float32
-        elif self.sd_request.memory_settings.enable_model_cpu_offload:
-            return torch.float16
-        data_type = torch.float16 if self.cuda_is_available else torch.float
-        return data_type
 
     def ai_model_by_name(self, name):
         try:
@@ -348,10 +416,6 @@ class SDHandler(
                 image = image.resize((width, height), resample=Image.NEAREST)
         return image
 
-    @staticmethod
-    def is_pytorch_error(e) -> bool:
-        return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
-
     def on_do_generate_signal(self, message: dict):
         self.do_generate = True
         self.generator_request_data = message
@@ -375,37 +439,53 @@ class SDHandler(
             self.reload_prompts = True
 
         response = None
+        generator_settings = self.sd_request.generator_settings
+        action = generator_settings.section
+
         if not self.loaded and self.loading:
             if self.initialized and self.pipe:
                 self.loaded = True
                 self.loading = False
-        elif self.loaded:
-            response = self.generator_sample()
-            self.initialized = True
-        elif self.loaded and not self.loading and self.do_generate:
-            self.do_interrupt = False
-            response = self.generator_sample()
-            # Set random seed if random seed is true
-            if self.settings and self.settings["generator_settings"]["random_seed"]:
-                seed = self.settings["generator_settings"]["seed"]
-                while seed == self.sd_request.generator_settings.seed:
-                    seed = random_seed()
-                settings = self.settings
-                settings["generator_settings"]["seed"] = seed
-                self.settings = settings
+        else:
+            if self.do_load_compel:
+                self.reload_prompts = False
+                self.prompt_embeds = None
+                self.negative_prompt_embeds = None
+                self.load_prompt_embeds(
+                    self.pipe,
+                    prompt=self.sd_request.generator_settings.prompt,
+                    negative_prompt=self.sd_request.generator_settings.negative_prompt
+                )
+                self.data = self.sd_request.initialize_prompt_embeds(
+                    prompt_embeds=self.prompt_embeds,
+                    negative_prompt_embeds=self.negative_prompt_embeds,
+                    args=self.data
+                )
+
+            # ensure only prompt OR prompt_embeds are used
+            if "prompt" in self.data and "prompt_embeds" in self.data:
+                del self.data["prompt"]
+
+            if "negative_prompt" in self.data and "negative_prompt_embeds" in self.data:
+                del self.data["negative_prompt"]
+
+            if self.loaded:
+                response = self.generate(self.settings, self.sd_request, self.generator_request_data)
+            elif self.loaded and not self.loading and self.do_generate:
+                self.do_interrupt = False
+                response = self.generate(self.settings, self.sd_request, self.generator_request_data)
+                # Set random seed if random seed is true
+                if self.settings and self.settings["generator_settings"]["random_seed"]:
+                    seed = self.settings["generator_settings"]["seed"]
+                    while seed == self.sd_request.generator_settings.seed:
+                        seed = random_seed()
+                    settings = self.settings
+                    settings["generator_settings"]["seed"] = seed
+                    self.settings = settings
 
         if response is not None:
-            nsfw_content_detected = response["nsfw_content_detected"]
-
-            # if nsfw_content_detected:
-            #     self.emit_signal(
-            #         SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL,
-            #         response
-            #     )
-            # else:
             response["action"] = self.sd_request.generator_settings.section
             response["outpaint_box_rect"] = self.sd_request.active_rect
-
             self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
                 'code': EngineResponseCode.IMAGE_GENERATED,
                 'message': response
@@ -413,7 +493,7 @@ class SDHandler(
 
     def on_move_to_cpu(self, message: dict = None):
         message = message or {}
-        if not self.is_pipe_on_cpu() and self.has_pipe():
+        if not self.__is_pipe_on_cpu() and self.__has_pipe():
             self.logger.debug("Moving model to CPU")
             self.pipe = self.pipe.to("cpu")
             self.moved_to_cpu = True
@@ -423,6 +503,10 @@ class SDHandler(
 
     def send_error(self, message):
         self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, message)
+
+    def log_error(self, error, message=None):
+        message = str(error) if not message else message
+        self.error_handler(message)
 
     def error_handler(self, error):
         message = str(error)
@@ -434,96 +518,3 @@ class SDHandler(
         traceback.print_exc()
         self.logger.error(error)
         self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, message)
-
-    @Slot(object)
-    def load_generator_arguments(self):
-        """
-        Here we are loading the arguments for the Stable Diffusion generator.
-        :return:
-        """
-        model_changed = self.handle_model_changed()
-
-        # Set a reference to pipe
-        is_txt2img = self.sd_request.is_txt2img
-        is_img2img = self.sd_request.is_img2img
-        is_outpaint = self.sd_request.is_outpaint
-        controlnet_image = self.get_controlnet_image()
-        self.data = self.sd_request(
-            model_data=self.model,
-            extra_options={},
-            callback=self.callback,
-            cross_attention_kwargs_scale=(
-                not self.sd_request.is_pix2pix and
-                len(self.available_lora) > 0 and
-                len(self.loaded_lora) > 0
-            ),
-            latents=self.latents,
-            device=self.device,
-            do_load=self.do_load,
-            generator=self.generator(),
-            model_changed=model_changed,
-            prompt_embeds=self.prompt_embeds,
-            negative_prompt_embeds=self.negative_prompt_embeds,
-            controlnet_image=controlnet_image,
-            generator_request_data=self.generator_request_data
-        )
-
-        pipe = None
-        pipeline_class_ = None
-
-        if self.sd_request.is_txt2img and not is_txt2img:
-            if is_img2img:
-                pipe = self.img2img
-            elif is_outpaint:
-                pipe = self.outpaint
-            if pipe is not None:
-                pipeline_class_ = StableDiffusionPipeline
-                if self.sd_request.generator_settings.enable_controlnet:
-                    pipeline_class_ = StableDiffusionControlNetPipeline
-                self.pipe = pipeline_class_(**pipe.components)
-        elif self.sd_request.is_img2img and not is_img2img:
-            if is_txt2img:
-                pipe = self.txt2img
-            elif is_outpaint:
-                pipe = self.outpaint
-            if pipe is not None:
-                pipeline_class_ = StableDiffusionImg2ImgPipeline
-                if self.sd_request.generator_settings.enable_controlnet:
-                    pipeline_class_ = StableDiffusionControlNetImg2ImgPipeline
-                self.pipe = pipeline_class_(**pipe.components)
-        elif self.sd_request.is_outpaint and not is_outpaint:
-            if is_txt2img:
-                pipe = self.txt2img
-            elif is_img2img:
-                pipe = self.img2img
-            pipeline_class_ = StableDiffusionInpaintPipeline
-            if self.sd_request.generator_settings.enable_controlnet:
-                pipeline_class_ = StableDiffusionControlNetInpaintPipeline
-
-        if pipe is not None and pipeline_class_ is not None:
-            self.pipe = pipeline_class_(**pipe.components)
-
-        self.requested_data = self.data
-        self.model_version = self.sd_request.generator_settings.version
-        self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
-        self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
-        self.is_turbo = self.model_version == StableDiffusionVersion.SD_TURBO.value
-        self.use_compel = (
-           not self.sd_request.memory_settings.use_enable_sequential_cpu_offload and
-           not self.is_sd_xl and
-           not self.is_sd_xl_turbo and
-           not self.is_turbo
-        )
-        controlnet = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
-        controlnet_item = self.controlnet_model_by_name(controlnet)
-        self.controlnet_type = controlnet_item["name"]
-        self.generator().manual_seed(self.sd_request.generator_settings.seed)
-        random.seed(self.seed)
-        np.random.seed(self.seed)
-        torch.manual_seed(self.seed)
-
-    def log_error(self, error, message=None):
-        message = str(error) if not message else message
-        traceback.print_exc()
-        self.error_handler(message)
-

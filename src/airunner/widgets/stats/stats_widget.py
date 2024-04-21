@@ -1,3 +1,4 @@
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QTableWidgetItem, QHeaderView, QApplication
 from airunner.enums import SignalCode, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
@@ -29,11 +30,11 @@ class StatsWidget(
                 "status": ModelStatus.UNLOADED,
                 "path": ""
             },
-            "SD Model": {
+            "SD Controlnet": {
                 "status": ModelStatus.UNLOADED,
                 "path": ""
             },
-            "SD Controlnet": {
+            "SD Model": {
                 "status": ModelStatus.UNLOADED,
                 "path": ""
             },
@@ -77,14 +78,6 @@ class StatsWidget(
                 "status": ModelStatus.UNLOADED,
                 "path": ""
             },
-            "STT Vocoder": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
-            "STT Embeddings": {
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            },
             "STT Feature Extractor": {
                 "status": ModelStatus.UNLOADED,
                 "path": ""
@@ -109,6 +102,9 @@ class StatsWidget(
             self.ui.model_stats.setItem(row, 0, QTableWidgetItem(model_name))
             self.ui.model_stats.setItem(row, 1, QTableWidgetItem(status))
             self.ui.model_stats.setItem(row, 2, QTableWidgetItem(model["path"]))
+
+            self.set_color(row, 1, status)
+
             row += 1
 
         # Resize columns and rows
@@ -156,7 +152,21 @@ class StatsWidget(
         """
         self.ui.model_stats.item(row, 1).setText(status.value)
         self.ui.model_stats.item(row, 2).setText(path)
+
+        self.set_color(row, 1, status)
+
         QApplication.processEvents()
+
+    def set_color(self, row, col, status):
+        # Set the color of the text according to the status
+        if status == ModelStatus.LOADED:
+            self.ui.model_stats.item(row, col).setForeground(Qt.GlobalColor.green)
+        elif status == ModelStatus.LOADING:
+            self.ui.model_stats.item(row, col).setForeground(Qt.GlobalColor.yellow)
+        elif status == ModelStatus.FAILED:
+            self.ui.model_stats.item(row, col).setForeground(Qt.GlobalColor.red)
+        else:
+            self.ui.model_stats.item(row, col).setForeground(Qt.GlobalColor.lightGray)
 
     def on_log_logged_signal(self, data: dict = None):
         """
