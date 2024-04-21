@@ -174,7 +174,7 @@ class SDHandler(
         self.load_stable_diffusion()
 
     def on_reset_applied_memory_settings(self, _data: dict):
-        self.reset_applied_memory_settings()
+        self.__reset_applied_memory_settings()
 
     def on_model_status_changed_signal(self, message: dict):
         model = message["model"]
