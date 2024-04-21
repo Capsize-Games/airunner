@@ -150,6 +150,8 @@ class SDHandler(
         self.do_interrupt_image_generation = False
         self.latents_worker = create_worker(LatentsWorker)
 
+        self.current_state = HandlerState.INITIALIZED
+
         self.model_status = {}
         self.model_status[ModelType.SD] = ModelStatus.UNLOADED
         self.model_status[ModelType.TTS] = ModelStatus.UNLOADED
@@ -169,8 +171,6 @@ class SDHandler(
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
 
         self.load_stable_diffusion()
-
-        self.current_state = HandlerState.INITIALIZED
 
     def on_reset_applied_memory_settings(self, _data: dict):
         self.reset_applied_memory_settings()
