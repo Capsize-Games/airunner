@@ -29,11 +29,13 @@ class FilterType(Enum):
 
 
 class SignalCode(Enum):
+    RESET_APPLIED_MEMORY_SETTINGS = "reset_applied_memory_settings"
     ENABLE_BRUSH_TOOL_SIGNAL = "enable_brush_tool_signal"
     ENABLE_ERASER_TOOL_SIGNAL = "enable_eraser_tool_signal"
     ENABLE_SELECTION_TOOL_SIGNAL = "enable_selection_tool_signal"
     ENABLE_MOVE_TOOL_SIGNAL = "enable_move_tool_signal"
     INTERRUPT_PROCESS_SIGNAL = "interrupt_process_signal"
+    INTERRUPT_IMAGE_GENERATION_SIGNAL = "interrupt_image_generation_signal"
     AI_MODELS_REFRESH_SIGNAL = "refresh_ai_models_signal"
     AI_MODELS_SAVE_OR_UPDATE_SIGNAL = "ai_models_save_or_update_signal"
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"
@@ -218,25 +220,42 @@ class SignalCode(Enum):
     CLEAR_DOWNLOAD_STATUS_BAR = "clear_download_status_bar"
     SET_DOWNLOAD_STATUS_LABEL = "set_download_status_label"
 
+    CHANGE_SCHEDULER_SIGNAL = "change_scheduler_signal"
+
     UNLOAD_SAFETY_CHECKER_SIGNAL = "unload_safety_checker"
     LOAD_SAFETY_CHECKER_SIGNAL = "load_safety_checker"
 
+    SAFETY_CHECKER_LOADING_SIGNAL = "safety_checker_loading_signal"
     SAFETY_CHECKER_LOADED_SIGNAL = "safety_checker_loaded_signal"
     SAFETY_CHECKER_UNLOADED_SIGNAL = "safety_checker_unloaded_signal"
     SAFETY_CHECKER_FAILED_SIGNAL = "safety_checker_load_failed_signal"
 
+    FEATURE_EXTRACTOR_LOADING_SIGNAL = "feature_extractor_loading_signal"
     FEATURE_EXTRACTOR_LOADED_SIGNAL = "feature_extractor_loaded_signal"
     FEATURE_EXTRACTOR_UNLOADED_SIGNAL = "feature_extractor_unloaded_signal"
     FEATURE_EXTRACTOR_FAILED_SIGNAL = "feature_extractor_load_failed_signal"
 
+    STABLE_DIFFUSION_LOADING_SIGNAL = "stable_diffusion_loading_signal"
     STABLE_DIFFUSION_LOADED_SIGNAL = "stable_diffusion_loaded_signal"
     STABLE_DIFFUSION_UNLOADED_SIGNAL = "stable_diffusion_unloaded_signal"
     STABLE_DIFFUSION_FAILED_SIGNAL = "stable_diffusion_load_failed_signal"
 
     CONTROLNET_LOADED_SIGNAL = "controlnet_loaded_signal"
+    CONTROLNET_LOADING_SIGNAL = "controlnet_loading_signal"
     CONTROLNET_UNLOADED_SIGNAL = "controlnet_unloaded_signal"
     CONTROLNET_FAILED_SIGNAL = "controlnet_load_failed_signal"
 
+    CONTROLNET_PROCESSOR_LOADING_SIGNAL = "controlnet_processor_loading_signal"
+    CONTROLNET_PROCESSOR_LOADED_SIGNAL = "controlnet_processor_loaded_signal"
+    CONTROLNET_PROCESSOR_UNLOADED_SIGNAL = "controlnet_processor_unloaded_signal"
+    CONTROLNET_PROCESSOR_FAILED_SIGNAL = "controlnet_processor_load_failed_signal"
+
+    SD_SCHEDULER_LOADING_SIGNAL = "sd_scheduler_loading_signal"
+    SD_SCHEDULER_LOADED_SIGNAL = "sd_scheduler_loaded_signal"
+    SD_SCHEDULER_UNLOADED_SIGNAL = "sd_scheduler_unloaded_signal"
+    SD_SCHEDULER_FAILED_SIGNAL = "sd_scheduler_load_failed_signal"
+
+    TTS_MODEL_LOADING_SIGNAL = "tts_model_loading_signal"
     TTS_MODEL_LOADED_SIGNAL = "tts_model_loaded_signal"
     TTS_MODEL_UNLOADED_SIGNAL = "tts_model_unloaded_signal"
     TTS_MODEL_FAILED_SIGNAL = "tts_model_load_failed_signal"
@@ -275,6 +294,9 @@ class SignalCode(Enum):
 
     LOG_LOGGED_SIGNAL = "log_logged_signal"
 
+    MODEL_STATUS_CHANGED_SIGNAL = "model_status_changed_signal"
+
+    PIPE_MOVED_SIGNAL = "pipe_moved_signal"
 
 class EngineResponseCode(Enum):
     STATUS = 100
@@ -475,3 +497,35 @@ class ModelStatus(Enum):
     LOADED = "Loaded"
     LOADING = "Loading"
     FAILED = "Failed"
+
+
+class StatusColors(Enum):
+    LOADED = "#00ff00"
+    LOADING = "#ffff00"
+    FAILED = "#ff0000"
+    UNLOADED = "#c0c0c0"
+
+
+class ModelType(Enum):
+    SD = "SD Model"
+    TTS = "TTS Model"
+    TTS_PROCESSOR = "TTS Processor"
+    TTS_FEATURE_EXTRACTOR = "TTS Feature Extractor"
+    TTS_VOCODER = "TTS Vocoder"
+    TTS_SPEAKER_EMBEDDINGS = "TTS Speaker Embeddings"
+    TTS_TOKENIZER = "TTS Tokenizer"
+    STT = "STT Model"
+    STT_PROCESSOR = "STT Processor"
+    STT_FEATURE_EXTRACTOR = "STT Feature Extractor"
+    CONTROLNET = "SD Controlnet"
+    CONTROLNET_PROCESSOR = "SD Controlnet Processor"
+    SAFETY_CHECKER = "SD Safety Checker"
+    FEATURE_EXTRACTOR = "SD Feature Extractor"
+    SCHEDULER = "SD Scheduler"
+
+
+class HandlerState(Enum):
+    INITIALIZED = "Initialized"
+    READY = "Ready"
+    GENERATING = "Generating"
+    ERROR = "Error"

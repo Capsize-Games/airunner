@@ -27,10 +27,11 @@ updates, and a more streamlined installation process and much more.
 
 We plan to release future distributions via Snap on Linux.
 
+See `Privacy and Security` for more information.
+
 ---
 
 ## Stable Diffusion on your own hardware 
-
 
 
 ![img_3.png](img.png)
@@ -176,3 +177,59 @@ coverage html
 ```
 
 View results in `htmlcov/index.html`.
+
+---
+
+### Privacy and Security
+
+Although AI Runner v3.0 is built with Huggingface libraries, we have taken
+care to strip the application of any telemetry or tracking features.
+
+The main application itself is unable to access the internet, and we are working
+towards properly sandboxing certain features to ensure user privacy and security.
+
+As this application evolves we will migrate away from the Huggingface libraries.
+
+### Internet access
+
+The core application is incapable of access the internet. However there are two features which require
+internet access. These two features are the `setup wizard` and the `model manager`.
+
+Each of these tools are isolated in their own application windows
+which are capable of directly accessing and downloading files on Huggingface.co and 
+civitai.com (depending on the given URL). Any other URL will be blocked.
+
+The Huggingface Hub library is not used to access these downloads.
+
+For more information see `src/security/no_internet_socket.py`
+
+### Disc access
+
+Write access for the transformers library has been disabled, preventing it from creating a huggingface 
+cache directory at runtime.
+
+The application itself may still access the disc for reading and writing, however we have restricted
+reads and writes to the user provided `airunner` directory (by default this is located at `~/.airunner`).
+
+All other attempts to access the disc are blocked and logged for your review.
+
+For more information see `src/security/restrict_os_access.py`.
+
+### Huggingface Hub
+
+The Huggingface Hub is installed so that Transformers, Diffusers and other Huggingface libraries
+will continue to function as expected, however it has been neutered to prevent it from accessing 
+the internet.
+
+The security measures taken for this library are as follows
+
+- Prevented from accessing the internet
+- Prevented from accessing the disc
+- All environment variables set for maximum security
+- All telemetry disabled
+
+#### Planned security measures for Huggingface Libraries
+
+We plant o remove the Huggingface libraries from the application in the future.
+Although the architecture is currently dependent on these libraries, we will
+migrate to a better solution in the future.

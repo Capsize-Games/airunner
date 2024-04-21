@@ -11,10 +11,10 @@ from airunner.enums import (
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import (
-    DEFAULT_SCHEDULER,
     MIN_NUM_INFERENCE_STEPS_IMG2IMG,
     SD_GUARDRAILS_KEY,
-    SD_GUARDRAILS
+    SD_GUARDRAILS,
+    STABLEDIFFUSION_GENERATOR_SETTINGS, DEFAULT_GENERATOR_SETTINGS, DEFAULT_MEMORY_SETTINGS
 )
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -22,49 +22,48 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 
 class ControlnetImageSettings:
     def __init__(self, **data):
-        self.imported_image_base64 = data.get("imported_image_base64", None)
-        self.link_to_input_image = data.get("link_to_input_image", True)
-        self.use_imported_image = data.get("use_imported_image", False)
-        self.use_grid_image = data.get("use_grid_image", False)
-        self.recycle_grid_image = data.get("recycle_grid_image", False)
-        self.mask_link_input_image = data.get("mask_link_input_image", False)
-        self.mask_use_imported_image = data.get("mask_use_imported_image", False)
-        self.controlnet = data.get("controlnet", Controlnet.CANNY.value)
-        self.conditioning_scale = data.get("conditioning_scale", 100) / 100.0
-        self.guidance_scale = data.get("guidance_scale", 750) / 100.0
-        self.controlnet_image_base64 = data.get("controlnet_image_base64", None)
+        self.imported_image_base64 = data.get("imported_image_base64", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["imported_image_base64"])
+        self.link_to_input_image = data.get("link_to_input_image", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["link_to_input_image"])
+        self.use_imported_image = data.get("use_imported_image", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["use_imported_image"])
+        self.use_grid_image = data.get("use_grid_image", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["use_grid_image"])
+        self.recycle_grid_image = data.get("recycle_grid_image", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["recycle_grid_image"])
+        self.mask_link_input_image = data.get("mask_link_input_image", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["mask_link_input_image"])
+        self.mask_use_imported_image = data.get("mask_use_imported_image", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["mask_use_imported_image"])
+        self.controlnet = data.get("controlnet", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["controlnet"])
+        self.conditioning_scale = data.get("conditioning_scale", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["conditioning_scale"]) / 100.0
+        self.guidance_scale = data.get("guidance_scale", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["guidance_scale"]) / 100.0
+        self.controlnet_image_base64 = data.get("controlnet_image_base64", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["controlnet_image_base64"])
 
 
 class GeneratorSettings:
     def __init__(self, settings: dict):
-        data = settings["generator_settings"]
-        self.prompt = data.get("prompt", "")
-        self.negative_prompt = data.get("negative_prompt", "")
-        self.steps = data.get("steps", 1)
-        self.ddim_eta = data.get("ddim_eta", 0.5)
-        self.height = data.get("height", 512)
-        self.width = data.get("width", 512)
-        self.scale = data.get("scale", 0)
-        self.seed = data.get("seed", 42)
-        self.random_seed = data.get("random_seed", True)
-        self.model = data.get("model", "stabilityai/sd-turbo")
-        self.scheduler = data.get("scheduler", DEFAULT_SCHEDULER)
-        self.prompt_triggers = data.get("prompt_triggers", "")
-        self.strength = data.get("strength", 50) / 100.0
-        self.image_guidance_scale = data.get("image_guidance_scale", 150) / 100.0
-        self.n_samples = data.get("n_samples", 1)
-        self.enable_controlnet = data.get("enable_controlnet", False)
-        self.clip_skip = data.get("clip_skip", 0)
-        self.variation = data.get("variation", False)
-        self.use_prompt_builder = data.get("use_prompt_builder", False)
-        self.version = data.get("version", "SD Turbo")
-        self.is_preset = data.get("is_preset", False)
-        self.input_image = data.get("input_image", None)
-        self.section = data.get("section", "txt2img")
-        self.generator_name = data.get("generator_name", "stablediffusion")
-        self.controlnet_image_settings = self.controlnet_image_settings = ControlnetImageSettings(
-            **data.get("controlnet_image_settings", {})
-        )
+        generator_settings = settings["generator_settings"]
+
+        self.prompt = generator_settings.get("prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt"])
+        self.negative_prompt = generator_settings.get("negative_prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["negative_prompt"])
+        self.steps = generator_settings.get("steps", STABLEDIFFUSION_GENERATOR_SETTINGS["steps"])
+        self.ddim_eta = generator_settings.get("ddim_eta", STABLEDIFFUSION_GENERATOR_SETTINGS["ddim_eta"])
+        self.height = generator_settings.get("height", STABLEDIFFUSION_GENERATOR_SETTINGS["height"])
+        self.width = generator_settings.get("width", STABLEDIFFUSION_GENERATOR_SETTINGS["width"])
+        self.scale = generator_settings.get("scale", STABLEDIFFUSION_GENERATOR_SETTINGS["scale"]) / 100.0
+        self.seed = generator_settings.get("seed", STABLEDIFFUSION_GENERATOR_SETTINGS["seed"])
+        self.random_seed = generator_settings.get("random_seed", STABLEDIFFUSION_GENERATOR_SETTINGS["random_seed"])
+        self.model = generator_settings.get("model", STABLEDIFFUSION_GENERATOR_SETTINGS["model"])
+        self.scheduler = generator_settings.get("scheduler", STABLEDIFFUSION_GENERATOR_SETTINGS["scheduler"])
+        self.prompt_triggers = generator_settings.get("prompt_triggers", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt_triggers"])
+        self.strength = generator_settings.get("strength", STABLEDIFFUSION_GENERATOR_SETTINGS["strength"]) / 100.0
+        self.image_guidance_scale = generator_settings.get("image_guidance_scale", STABLEDIFFUSION_GENERATOR_SETTINGS["image_guidance_scale"]) / 100.0
+        self.n_samples = generator_settings.get("n_samples", STABLEDIFFUSION_GENERATOR_SETTINGS["n_samples"])
+        self.enable_controlnet = generator_settings.get("enable_controlnet", STABLEDIFFUSION_GENERATOR_SETTINGS["enable_controlnet"])
+        self.clip_skip = generator_settings.get("clip_skip", STABLEDIFFUSION_GENERATOR_SETTINGS["clip_skip"])
+        self.variation = generator_settings.get("variation", STABLEDIFFUSION_GENERATOR_SETTINGS["variation"])
+        self.use_prompt_builder = generator_settings.get("use_prompt_builder", STABLEDIFFUSION_GENERATOR_SETTINGS["use_prompt_builder"])
+        self.version = generator_settings.get("version", STABLEDIFFUSION_GENERATOR_SETTINGS["version"])
+        self.is_preset = generator_settings.get("is_preset", STABLEDIFFUSION_GENERATOR_SETTINGS["is_preset"])
+        self.input_image = generator_settings.get("input_image", STABLEDIFFUSION_GENERATOR_SETTINGS["input_image"])
+        self.section = generator_settings.get("section", DEFAULT_GENERATOR_SETTINGS["section"])
+        self.generator_name = generator_settings.get("generator_name", DEFAULT_GENERATOR_SETTINGS["generator_name"])
+        self.controlnet_image_settings = ControlnetImageSettings()
         self.parse_prompt(settings["nsfw_filter"])
 
     def parse_prompt(self, nsfw_filter_active: bool, prompt=None, negative_prompt=None):
@@ -88,20 +87,20 @@ class GeneratorSettings:
 
 class MemorySettings:
     def __init__(self, **data):
-        self.use_last_channels = data.get("use_last_channels", True)
-        self.use_attention_slicing = data.get("use_attention_slicing", False)
-        self.use_tf32 = data.get("use_tf32", False)
-        self.use_enable_vae_slicing = data.get("use_enable_vae_slicing", True)
-        self.use_accelerated_transformers = data.get("use_accelerated_transformers", True)
-        self.use_tiled_vae = data.get("use_tiled_vae", True)
-        self.enable_model_cpu_offload = data.get("enable_model_cpu_offload", False)
-        self.use_enable_sequential_cpu_offload = data.get("use_enable_sequential_cpu_offload", False)
-        self.use_cudnn_benchmark = data.get("use_cudnn_benchmark", True)
-        self.use_torch_compile = data.get("use_torch_compile", False)
-        self.use_tome_sd = data.get("use_tome_sd", True)
-        self.tome_sd_ratio = data.get("tome_sd_ratio", 600)
-        self.move_unused_model_to_cpu = data.get("move_unused_model_to_cpu", False)
-        self.unload_unused_models = data.get("unload_unused_models", True)
+        self.use_last_channels = data.get("use_last_channels", DEFAULT_MEMORY_SETTINGS["use_last_channels"])
+        self.use_attention_slicing = data.get("use_attention_slicing", DEFAULT_MEMORY_SETTINGS["use_attention_slicing"])
+        self.use_tf32 = data.get("use_tf32", DEFAULT_MEMORY_SETTINGS["use_tf32"])
+        self.use_enable_vae_slicing = data.get("use_enable_vae_slicing", DEFAULT_MEMORY_SETTINGS["use_enable_vae_slicing"])
+        self.use_accelerated_transformers = data.get("use_accelerated_transformers", DEFAULT_MEMORY_SETTINGS["use_accelerated_transformers"])
+        self.use_tiled_vae = data.get("use_tiled_vae", DEFAULT_MEMORY_SETTINGS["use_tiled_vae"])
+        self.enable_model_cpu_offload = data.get("enable_model_cpu_offload", DEFAULT_MEMORY_SETTINGS["enable_model_cpu_offload"])
+        self.use_enable_sequential_cpu_offload = data.get("use_enable_sequential_cpu_offload", DEFAULT_MEMORY_SETTINGS["use_enable_sequential_cpu_offload"])
+        self.use_cudnn_benchmark = data.get("use_cudnn_benchmark", DEFAULT_MEMORY_SETTINGS["use_cudnn_benchmark"])
+        self.use_torch_compile = data.get("use_torch_compile", DEFAULT_MEMORY_SETTINGS["use_torch_compile"])
+        self.use_tome_sd = data.get("use_tome_sd", DEFAULT_MEMORY_SETTINGS["use_tome_sd"])
+        self.tome_sd_ratio = data.get("tome_sd_ratio", DEFAULT_MEMORY_SETTINGS["tome_sd_ratio"])
+        self.move_unused_model_to_cpu = data.get("move_unused_model_to_cpu", DEFAULT_MEMORY_SETTINGS["move_unused_model_to_cpu"])
+        self.unload_unused_models = data.get("unload_unused_models", DEFAULT_MEMORY_SETTINGS["unload_unused_models"])
 
 
 class SDRequest(
@@ -109,6 +108,21 @@ class SDRequest(
     MediatorMixin,
     SettingsMixin
 ):
+    def __init__(self, *args, **kwargs):
+        QObject.__init__(self)
+        MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
+        self.model_data = kwargs.get("model_data", None)
+        self.memory_settings = MemorySettings(**self.settings["memory_settings"])
+        self.generator_settings = None
+        self.action_has_safety_checker = False
+        self.active_rect = None
+        self.parent = None
+        self.prompt_embeds = None
+        self.negative_prompt_embeds = None
+        self.input_image = None
+        self.load_generator_settings()
+
     @property
     def drawing_pad_image(self):
         base_64_image = self.settings["drawing_pad_settings"]["image"]
@@ -118,26 +132,29 @@ class SDRequest(
     def image(self):
         return self.drawing_pad_image
 
-    def __init__(self, *args, **kwargs):
-        QObject.__init__(self)
-        MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
-        self.model_data = kwargs.get("model_data", None)
-        self.do_set_seed = False
-        self.memory_settings = MemorySettings(**self.settings["memory_settings"])
-        self.generator_settings = None
-        self.action_has_safety_checker = False
-        self.is_outpaint = False
-        self.is_txt2img = False
-        self.is_upscale = False
-        self.is_img2img = False
-        self.is_depth2img = False
-        self.is_pix2pix = False
-        self.active_rect = None
-        self.parent = None
-        self.prompt_embeds = None
-        self.negative_prompt_embeds = None
-        self.load_generator_settings()
+    @property
+    def is_outpaint(self) -> bool:
+        return self.generator_settings.section == GeneratorSection.OUTPAINT.value
+
+    @property
+    def is_txt2img(self) -> bool:
+        return self.generator_settings.section == GeneratorSection.TXT2IMG.value and self.input_image is None
+
+    @property
+    def is_upscale(self):
+        return self.generator_settings.section == GeneratorSection.UPSCALE.value
+
+    @property
+    def is_img2img(self):
+        return self.generator_settings.section == GeneratorSection.TXT2IMG.value and self.input_image is not None
+
+    @property
+    def is_depth2img(self):
+        return self.generator_settings.section == GeneratorSection.DEPTH2IMG.value
+
+    @property
+    def is_pix2pix(self):
+        return self.generator_settings.section == GeneratorSection.PIX2PIX.value
 
     def load_generator_settings(self):
         self.generator_settings = GeneratorSettings(settings=self.settings)
@@ -176,15 +193,12 @@ class SDRequest(
     ) -> dict:
         self.model_data = model_data
         self.memory_settings = MemorySettings(**self.settings["memory_settings"])
-        if self.generator_settings is not None:
-            self.do_set_seed = self.generator_settings.seed != self.settings["generator_settings"]["seed"]
         self.load_generator_settings()
         self.latents = latents
         self.callback_steps: int = 1
         self.cross_attention_kwargs_scale = cross_attention_kwargs_scale
         self.controlnet_image = controlnet_image
         self.model_changed = model_changed
-        self.do_load = do_load
         self.generator = generator
         kwargs = self.prepare_args(
             model=model,
@@ -200,13 +214,8 @@ class SDRequest(
             generator_request_data=generator_request_data
         )
 
-        input_image = kwargs["image"] if "image" in kwargs else None
-        self.is_outpaint = self.generator_settings.section == GeneratorSection.OUTPAINT.value
-        self.is_txt2img = self.generator_settings.section == GeneratorSection.TXT2IMG.value and input_image is None
-        self.is_upscale = self.generator_settings.section == GeneratorSection.UPSCALE.value
-        self.is_img2img = self.generator_settings.section == GeneratorSection.TXT2IMG.value and input_image is not None
-        self.is_depth2img = self.generator_settings.section == GeneratorSection.DEPTH2IMG.value
-        self.is_pix2pix = self.generator_settings.section == GeneratorSection.PIX2PIX.value
+        self.input_image = kwargs["image"] if "image" in kwargs else None
+
         args = {
             "num_inference_steps": self.generator_settings.steps,
             "callback": callback,

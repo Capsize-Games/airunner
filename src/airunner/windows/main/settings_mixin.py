@@ -36,6 +36,7 @@ class SettingsMixin:
         :param stt_enabled:
         :param ai_mode:
         """
+
         DEFAULT_APPLICATION_SETTINGS["use_cuda"] = use_cuda
         DEFAULT_APPLICATION_SETTINGS["sd_enabled"] = sd_enabled
         DEFAULT_APPLICATION_SETTINGS["controlnet_enabled"] = controlnet_enabled

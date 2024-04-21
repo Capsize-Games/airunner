@@ -4,7 +4,7 @@ from airunner.settings import AVAILABLE_SCHEDULERS_BY_ACTION
 from airunner.enums import (
     Scheduler,
     SignalCode,
-    SchedulerAlgorithm
+    SchedulerAlgorithm, ModelStatus, ModelType
 )
 from airunner.settings import (
     SCHEDULER_CLASSES,
@@ -19,7 +19,7 @@ class SchedulerMixin:
         self.registered_schedulers: dict = {}
         self.current_scheduler_name: str = ""
         self.do_change_scheduler: bool = False
-        self._scheduler = None
+        self.scheduler = None
 
     @property
     def scheduler_section(self):
@@ -30,26 +30,44 @@ class SchedulerMixin:
         self.scheduler_name = ""
         self.current_scheduler_name = ""
         self.do_change_scheduler = True
-        self._scheduler = None
+        self.scheduler = None
 
     def load_scheduler(self, force_scheduler_name=None, config=None):
+        self.logger.info(f"load_scheduler called with {force_scheduler_name}")
         if self.is_sd_xl_turbo:
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.SCHEDULER,
+                    "status": ModelStatus.UNLOADED,
+                    "path": "",
+                }
+            )
             return None
 
         if (
-                not force_scheduler_name and
-                self._scheduler and
-                not self.do_change_scheduler and
-                self.settings["generator_settings"]["scheduler"] != self.sd_request.generator_settings.scheduler
+            not force_scheduler_name and
+            self.scheduler and
+            not self.do_change_scheduler and
+            self.settings["generator_settings"]["scheduler"] == self.sd_request.generator_settings.scheduler
         ):
-            return self._scheduler
+            self.logger.info(f"Scheduler already loaded for {self.sd_request.generator_settings.scheduler}")
+            return self.scheduler
 
         self.current_scheduler_name = force_scheduler_name if force_scheduler_name else self.sd_request.generator_settings.scheduler
         self.logger.debug("Loading scheduler")
 
         scheduler_name = force_scheduler_name if force_scheduler_name else self.scheduler_name
+
         if not force_scheduler_name and scheduler_name not in AVAILABLE_SCHEDULERS_BY_ACTION[self.scheduler_section]:
             scheduler_name = AVAILABLE_SCHEDULERS_BY_ACTION[self.scheduler_section][0]
+
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.SCHEDULER,
+                "status": ModelStatus.LOADING,
+                "path": scheduler_name,
+            }
+        )
 
         scheduler_class_name = self.schedulers[scheduler_name]
         scheduler_class = getattr(diffusers, scheduler_class_name)
@@ -58,6 +76,7 @@ class SchedulerMixin:
             "subfolder": "scheduler",
             "local_files_only": True,
         }
+
         if self.current_model_branch:
             kwargs["variant"] = self.current_model_branch
 
@@ -79,7 +98,7 @@ class SchedulerMixin:
             if algorithm_type is not None:
                 config["algorithm_type"] = algorithm_type.value
 
-            self._scheduler = scheduler_class.from_config(config)
+            self.scheduler = scheduler_class.from_config(config)
         else:
             if scheduler_name == Scheduler.DPM_PP_2M_K.value:
                 kwargs["use_karras_sigmas"] = True
@@ -95,7 +114,7 @@ class SchedulerMixin:
                     f"Loading scheduler `{scheduler_name}` "
                     f"from pretrained path `{self.model_path}`"
                 )
-                self._scheduler = scheduler_class.from_pretrained(
+                self.scheduler = scheduler_class.from_pretrained(
                     os.path.expanduser(
                         os.path.join(
                             self.settings["path_settings"]["feature_extractor_model_path"],
@@ -104,26 +123,50 @@ class SchedulerMixin:
                     ),
                     **kwargs
                 )
-            except NotImplementedError:
-                self.logger.error(
-                    f"Unable to load scheduler {scheduler_name} "
-                    f"from {self.sd_request.generator_settings.model}"
-                )
             except Exception as e:
+                self.emit_signal(
+                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                        "model": ModelType.SCHEDULER,
+                        "status": ModelStatus.FAILED,
+                        "path": scheduler_name,
+                    }
+                )
                 self.logger.error(
                     f"Unable to load scheduler {scheduler_name} "
                     f"from {self.sd_request.generator_settings.model}"
                 )
                 self.logger.error(e)
 
-        return self._scheduler
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.SCHEDULER,
+                "status": ModelStatus.LOADED,
+                "path": scheduler_name,
+            }
+        )
+
+        return self.scheduler
+
+    def unload_scheduler(self):
+        self.logger.debug("Unloading scheduler")
+        self.scheduler_name = ""
+        self.current_scheduler_name = ""
+        self.do_change_scheduler = True
+        self.scheduler = None
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.SCHEDULER,
+                "status": ModelStatus.UNLOADED,
+                "path": "",
+            }
+        )
 
     def change_scheduler(self):
         if not self.do_change_scheduler or not self.pipe:
             return
 
         if self.sd_request.generator_settings.model and self.sd_request.generator_settings.model != "":
-            config = self._scheduler.config if self._scheduler else None
+            config = self.scheduler.config if self.scheduler else None
             self.pipe.scheduler = self.load_scheduler(config=config)
             self.do_change_scheduler = False
         else:
@@ -133,10 +176,6 @@ class SchedulerMixin:
         scheduler_name = self.sd_request.generator_settings.scheduler
         if self.scheduler_name != scheduler_name:
             self.logger.debug("Preparing scheduler")
-            self.emit_signal(
-                SignalCode.LOG_STATUS_SIGNAL,
-                f"Preparing scheduler {scheduler_name}"
-            )
             self.scheduler_name = scheduler_name
             self.do_change_scheduler = True
         else:

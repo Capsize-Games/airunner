@@ -49,13 +49,15 @@ class StableDiffusionSettingsWidget(
 
     def handle_model_changed(self, name):
         settings = self.settings
-        settings["generator_settings"]["model"] = name
+        settings["generator_settings"]["model_name"] = name
+        settings["generator_settings"]["model"] = ""
         self.settings = settings
 
     def handle_scheduler_changed(self, name):
         settings = self.settings
         settings["generator_settings"]["scheduler"] = name
         self.settings = settings
+        self.emit_signal(SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": name})
     
     def handle_pipeline_changed(self, val):
         if val == f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}":
@@ -138,7 +140,8 @@ class StableDiffusionSettingsWidget(
         current_model = settings["generator_settings"]["model"]
         if current_model != "":
             self.ui.model.setCurrentText(current_model)
-        settings["generator_settings"]["model"] = self.ui.model.currentText()
+        settings["generator_settings"]["model_name"] = self.ui.model.currentText()
+        settings["generator_settings"]["model"] = ""
         self.ui.model.blockSignals(False)
         self.settings = settings
 
