@@ -4,7 +4,7 @@ from queue import Queue
 import torch.cuda
 from transformers import AutoTokenizer
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -226,25 +226,49 @@ class TTSHandler(BaseHandler):
         try:
             self.model = None
             do_clear_memory = True
-            self.emit_signal(SignalCode.STT_MODEL_UNLOADED_SIGNAL)
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS,
+                    "status": ModelStatus.UNLOADED,
+                    "path": ""
+                }
+            )
         except AttributeError:
             pass
         try:
             self.processor = None
             do_clear_memory = True
-            self.emit_signal(SignalCode.STT_PROCESSOR_UNLOADED_SIGNAL)
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS_PROCESSOR,
+                    "status": ModelStatus.UNLOADED,
+                    "path": ""
+                }
+            )
         except AttributeError:
             pass
         try:
             self.vocoder = None
             do_clear_memory = True
-            self.emit_signal(SignalCode.STT_VOCODER_UNLOADED_SIGNAL)
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS_VOCODER,
+                    "status": ModelStatus.UNLOADED,
+                    "path": ""
+                }
+            )
         except AttributeError:
             pass
         try:
             self.speaker_embeddings = None
             do_clear_memory = True
-            self.emit_signal(SignalCode.STT_SPEAKER_EMBEDDINGS_UNLOADED_SIGNAL)
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
+                    "status": ModelStatus.UNLOADED,
+                    "path": ""
+                }
+            )
         except AttributeError:
             pass
         self.current_model = None
@@ -270,7 +294,9 @@ class TTSHandler(BaseHandler):
                 device_map=self.device
             )
             self.emit_signal(
-                SignalCode.STT_MODEL_LOADED_SIGNAL, {
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS,
+                    "status": ModelStatus.LOADED,
                     "path": self.model_path
                 }
             )
@@ -291,7 +317,9 @@ class TTSHandler(BaseHandler):
                 trust_remote_code=False
             )
             self.emit_signal(
-                SignalCode.STT_TOKENIZER_LOADED_SIGNAL, {
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS_TOKENIZER,
+                    "status": ModelStatus.LOADED,
                     "path": self.model_path
                 }
             )
@@ -300,7 +328,9 @@ class TTSHandler(BaseHandler):
             self.logger.error("Failed to load tokenizer")
             self.logger.error(e)
             self.emit_signal(
-                SignalCode.STT_TOKENIZER_FAILED_SIGNAL, {
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS_TOKENIZER,
+                    "status": ModelStatus.FAILED,
                     "path": self.model_path
                 }
             )
@@ -318,7 +348,9 @@ class TTSHandler(BaseHandler):
                     local_files_only=True
                 )
                 self.emit_signal(
-                    SignalCode.STT_PROCESSOR_LOADED_SIGNAL, {
+                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                        "model": ModelType.TTS_PROCESSOR,
+                        "status": ModelStatus.LOADED,
                         "path": self.processor_path
                     }
                 )
@@ -327,7 +359,9 @@ class TTSHandler(BaseHandler):
                 self.logger.error("Failed to load processor")
                 self.logger.error(e)
                 self.emit_signal(
-                    SignalCode.STT_PROCESSOR_FAILED_SIGNAL, {
+                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                        "model": ModelType.TTS_PROCESSOR,
+                        "status": ModelStatus.FAILED,
                         "path": self.processor_path
                     }
                 )
