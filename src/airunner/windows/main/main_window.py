@@ -899,13 +899,6 @@ class MainWindow(
                 self.logger.debug("Using system theme")
                 ui.setStyleSheet("")
 
-            for icon_data in self.icons:
-                self.set_icons(
-                    icon_data[0],
-                    icon_data[1],
-                    "dark" if self.settings["dark_mode_enabled"] else "light"
-                )
-
     def show_setup_wizard(self):
         wizard = SetupWizard()
         wizard.exec()
@@ -927,6 +920,13 @@ class MainWindow(
         self.initialize_default_buttons()
         self.initialize_filter_actions()
         self.initialize_worker_manager()
+        self.intialized = True
+        for icon_data in self.icons:
+            self.set_icons(
+                icon_data[0],
+                icon_data[1],
+                "dark" if self.settings["dark_mode_enabled"] else "light"
+            )
 
     def initialize_worker_manager(self):
         from airunner.worker_manager import WorkerManager
