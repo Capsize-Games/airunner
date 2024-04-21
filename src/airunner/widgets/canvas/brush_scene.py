@@ -178,7 +178,7 @@ class BrushScene(CustomScene):
             if not self.is_brush_or_eraser:
                 super().mousePressEvent(event)
             elif self.settings["drawing_pad_settings"]["enable_automatic_drawing"]:
-                self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+                self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
@@ -196,7 +196,13 @@ class BrushScene(CustomScene):
             settings[self.settings_key]["image"] = convert_image_to_base64(pil_image)
             self.settings = settings
             self.do_update = False
-            if self.settings["drawing_pad_settings"]["enable_automatic_drawing"]:
+            if (
+                self.settings["drawing_pad_settings"]["enable_automatic_drawing"] and
+                (
+                    self.settings["current_tool"] is CanvasToolName.BRUSH or
+                    self.settings["current_tool"] is CanvasToolName.ERASER
+                )
+            ):
                 self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
     def mouseMoveEvent(self, event):
