@@ -281,10 +281,10 @@ class SDHandler(
 
     def on_unload_stablediffusion_signal(self, _message: dict = None):
         self.unload_image_generator_model()
+        self.unload_scheduler()
 
     def on_load_stablediffusion_signal(self, _message: dict = None):
-        print("ON LOAD STABLE DIFFUSION SIGNAL TRIGGERED")
-        self.load_stable_diffusion()
+        self.load_stable_diffusion_model()
 
     def load_stable_diffusion(self):
         self.logger.info("Loading stable diffusion")
@@ -295,6 +295,9 @@ class SDHandler(
         if self.settings["controlnet_enabled"]:
             self.load_controlnet()
 
+        self.load_stable_diffusion_model()
+
+    def load_stable_diffusion_model(self):
         if self.settings["sd_enabled"]:
             if not self.scheduler:
                 self.load_scheduler()
@@ -356,16 +359,6 @@ class SDHandler(
             self.sd_mode not in SKIP_RELOAD_CONSTS or
             not self.initialized
         )
-
-    @property
-    def allow_online_when_missing_files(self) -> bool:
-        """
-        This settings prevents the application from going online when a file is missing.
-        :return:
-        """
-        if self._allow_online_mode is None:
-            self._allow_online_mode = self.allow_online_mode
-        return self._allow_online_mode
 
     @property
     def cuda_is_available(self) -> bool:
