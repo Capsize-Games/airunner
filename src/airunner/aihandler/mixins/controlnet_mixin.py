@@ -136,7 +136,6 @@ class ControlnetHandlerMixin:
     def load_controlnet(self):
         self.logger.debug(f"Loading controlnet {self.controlnet_type}")
         path = self.controlnet_path
-        print(path)
         short_path = self.controlnet_model["path"]
         self.current_controlnet_type = self.controlnet_type
         self.emit_signal(

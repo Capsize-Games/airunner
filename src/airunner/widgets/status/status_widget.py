@@ -27,6 +27,7 @@ class StatusWidget(BaseWidget):
 
     def on_model_status_changed_signal(self, data):
         model = data["model"]
+        print(model)
         if model == ModelType.SAFETY_CHECKER:
             self.safety_checker_status = data["status"]
             self.update_system_stats()

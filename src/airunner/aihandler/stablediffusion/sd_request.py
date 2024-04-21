@@ -108,6 +108,21 @@ class SDRequest(
     MediatorMixin,
     SettingsMixin
 ):
+    def __init__(self, *args, **kwargs):
+        QObject.__init__(self)
+        MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
+        self.model_data = kwargs.get("model_data", None)
+        self.memory_settings = MemorySettings(**self.settings["memory_settings"])
+        self.generator_settings = None
+        self.action_has_safety_checker = False
+        self.active_rect = None
+        self.parent = None
+        self.prompt_embeds = None
+        self.negative_prompt_embeds = None
+        self.input_image = None
+        self.load_generator_settings()
+
     @property
     def drawing_pad_image(self):
         base_64_image = self.settings["drawing_pad_settings"]["image"]
@@ -117,25 +132,29 @@ class SDRequest(
     def image(self):
         return self.drawing_pad_image
 
-    def __init__(self, *args, **kwargs):
-        QObject.__init__(self)
-        MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
-        self.model_data = kwargs.get("model_data", None)
-        self.memory_settings = MemorySettings(**self.settings["memory_settings"])
-        self.generator_settings = None
-        self.action_has_safety_checker = False
-        self.is_outpaint = False
-        self.is_txt2img = False
-        self.is_upscale = False
-        self.is_img2img = False
-        self.is_depth2img = False
-        self.is_pix2pix = False
-        self.active_rect = None
-        self.parent = None
-        self.prompt_embeds = None
-        self.negative_prompt_embeds = None
-        self.load_generator_settings()
+    @property
+    def is_outpaint(self) -> bool:
+        return self.generator_settings.section == GeneratorSection.OUTPAINT.value
+
+    @property
+    def is_txt2img(self) -> bool:
+        return self.generator_settings.section == GeneratorSection.TXT2IMG.value and self.input_image is None
+
+    @property
+    def is_upscale(self):
+        return self.generator_settings.section == GeneratorSection.UPSCALE.value
+
+    @property
+    def is_img2img(self):
+        return self.generator_settings.section == GeneratorSection.TXT2IMG.value and self.input_image is not None
+
+    @property
+    def is_depth2img(self):
+        return self.generator_settings.section == GeneratorSection.DEPTH2IMG.value
+
+    @property
+    def is_pix2pix(self):
+        return self.generator_settings.section == GeneratorSection.PIX2PIX.value
 
     def load_generator_settings(self):
         self.generator_settings = GeneratorSettings(settings=self.settings)
@@ -196,13 +215,8 @@ class SDRequest(
             generator_request_data=generator_request_data
         )
 
-        input_image = kwargs["image"] if "image" in kwargs else None
-        self.is_outpaint = self.generator_settings.section == GeneratorSection.OUTPAINT.value
-        self.is_txt2img = self.generator_settings.section == GeneratorSection.TXT2IMG.value and input_image is None
-        self.is_upscale = self.generator_settings.section == GeneratorSection.UPSCALE.value
-        self.is_img2img = self.generator_settings.section == GeneratorSection.TXT2IMG.value and input_image is not None
-        self.is_depth2img = self.generator_settings.section == GeneratorSection.DEPTH2IMG.value
-        self.is_pix2pix = self.generator_settings.section == GeneratorSection.PIX2PIX.value
+        self.input_image = kwargs["image"] if "image" in kwargs else None
+
         args = {
             "num_inference_steps": self.generator_settings.steps,
             "callback": callback,
