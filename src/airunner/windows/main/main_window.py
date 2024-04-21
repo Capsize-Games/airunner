@@ -5,7 +5,7 @@ from functools import partial
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
-    Signal
+    Signal, QTimer
 )
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
@@ -919,7 +919,6 @@ class MainWindow(
         self.initialize_window()
         self.initialize_default_buttons()
         self.initialize_filter_actions()
-        self.initialize_worker_manager()
         self.intialized = True
         for icon_data in self.icons:
             self.set_icons(
@@ -927,6 +926,9 @@ class MainWindow(
                 icon_data[1],
                 "dark" if self.settings["dark_mode_enabled"] else "light"
             )
+
+        # call initialize_worker_manager after 100ms
+        QTimer.singleShot(100, self.initialize_worker_manager)
 
     def initialize_worker_manager(self):
         from airunner.worker_manager import WorkerManager

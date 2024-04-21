@@ -497,6 +497,13 @@ class ModelStatus(Enum):
     FAILED = "Failed"
 
 
+class StatusColors(Enum):
+    LOADED = "#00ff00"
+    LOADING = "#ffff00"
+    FAILED = "#ff0000"
+    UNLOADED = "#c0c0c0"
+
+
 class ModelType(Enum):
     SD = "SD Model"
     TTS = "TTS Model"

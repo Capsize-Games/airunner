@@ -1,8 +1,8 @@
+import torch
 from PySide6.QtCore import QTimer
 import psutil
 from PySide6.QtWidgets import QApplication
-
-from airunner.enums import SignalCode, ModelStatus, ModelType
+from airunner.enums import SignalCode, ModelStatus, ModelType, StatusColors
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.status.templates.status_ui import Ui_status_widget
 
@@ -16,7 +16,6 @@ class StatusWidget(BaseWidget):
         self.register(SignalCode.APPLICATION_STATUS_ERROR_SIGNAL, self.on_status_error_signal)
         self.register(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
-        self.safety_checker_status = ModelStatus.UNLOADED
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_system_stats)
@@ -25,15 +24,16 @@ class StatusWidget(BaseWidget):
         self.safety_checker_status = ModelStatus.UNLOADED
         self.feature_extractor_status = ModelStatus.UNLOADED
 
+        self.update_safety_checker_status()
+
     def on_model_status_changed_signal(self, data):
         model = data["model"]
-        print(model)
         if model == ModelType.SAFETY_CHECKER:
             self.safety_checker_status = data["status"]
-            self.update_system_stats()
+            self.update_safety_checker_status()
         else:
             self.feature_extractor_status = data["status"]
-            self.update_system_stats()
+            self.update_safety_checker_status()
 
     def on_status_info_signal(self, message):
         self.set_system_status(message, error=False)
@@ -45,30 +45,37 @@ class StatusWidget(BaseWidget):
         self.set_system_status("", error=False)
 
     def update_system_stats(self, queue_size=0):
-        import torch
-
-        nsfw_filter = self.settings["nsfw_filter"]
-        has_cuda = torch.cuda.is_available()
-        nsfw_status = f"Safety Checker {'On' if nsfw_filter else 'Off'} and {'Loaded' if self.safety_checker_status == ModelStatus.LOADED else 'Not Loaded'}"
-        if self.safety_checker_status == ModelStatus.FAILED:
-            nsfw_status = "Safety Checker Failed to Load"
         queue_stats = f"Queued items: {queue_size}"
-        cuda_status = f"Using {'GPU' if has_cuda else 'CPU'}"
+        cuda_status = f"Using {'GPU' if torch.cuda.is_available() else 'CPU'}"
         vram_stats = f"VRAM allocated {torch.cuda.memory_allocated() / 1024 ** 3:.1f}GB cached {torch.cuda.memory_cached() / 1024 ** 3:.1f}GB"
         ram_stats = f"RAM used {psutil.virtual_memory().percent:.1f}%"
-        self.ui.nsfw_status.setText(nsfw_status)
+
+        # Color by has_cuda red for disabled, green for enabled
+        color = StatusColors.LOADED if torch.cuda.is_available() else StatusColors.FAILED
+        self.ui.cuda_status.setStyleSheet(
+            "QLabel { color: " + color.value + "; }"
+        )
+
         self.ui.cuda_status.setText(cuda_status)
         self.ui.queue_stats.setText(queue_stats)
         self.ui.vram_stats.setText(vram_stats)
         self.ui.ram_stats.setText(ram_stats)
 
-        enabled_css = "QLabel { color: #00ff00; }"
-        disabled_css = "QLabel { color: #ff0000; }"
+    def update_safety_checker_status(self):
+        # Color by safety checker status red, yellow, green for failed, loading, loaded
+        if self.safety_checker_status == ModelStatus.LOADING:
+            color = StatusColors.LOADING
+        elif self.safety_checker_status == ModelStatus.LOADED:
+            color = StatusColors.LOADED
+        else:
+            color = StatusColors.FAILED
 
-        nsfw_filter = False if self.safety_checker_status != ModelStatus.LOADED else nsfw_filter
-
-        self.ui.nsfw_status.setStyleSheet(enabled_css if nsfw_filter else disabled_css)
-        self.ui.cuda_status.setStyleSheet(enabled_css if has_cuda else disabled_css)
+        self.ui.nsfw_status.setText(
+            f"Safety Checker {self.safety_checker_status.value}"
+        )
+        self.ui.nsfw_status.setStyleSheet(
+            "QLabel { color: " + color.value + "; }"
+        )
 
     def set_system_status(self, txt, error):
         if type(txt) is dict:
@@ -79,4 +86,3 @@ class StatusWidget(BaseWidget):
         else:
             self.ui.system_message.setStyleSheet("QLabel { color: #ffffff; }")
         QApplication.processEvents()
-

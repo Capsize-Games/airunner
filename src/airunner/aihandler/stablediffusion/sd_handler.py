@@ -171,6 +171,8 @@ class SDHandler(
         self.model_status[ModelType.SCHEDULER] = ModelStatus.UNLOADED
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
 
+        self.load_stable_diffusion()
+
     def on_reset_applied_memory_settings(self, _data: dict):
         self.reset_applied_memory_settings()
 
@@ -179,9 +181,8 @@ class SDHandler(
         status = message["status"]
         self.model_status[model] = status
 
-    def on_change_scheduler_signal(self, data=None):
-        print("CHANGE SCHEDULER")
-        self.load_scheduler()
+    def on_change_scheduler_signal(self, data: dict):
+        self.load_scheduler(force_scheduler_name=data["scheduler"])
 
     @property
     def model_path(self):
@@ -295,16 +296,17 @@ class SDHandler(
         if self.settings["controlnet_enabled"]:
             self.load_controlnet()
 
-        if not self._scheduler:
-            self.load_scheduler()
+        if self.settings["sd_enabled"]:
+            if not self._scheduler:
+                self.load_scheduler()
 
-        self.load_image_generator_model()
+            self.load_image_generator_model()
 
-        try:
-            self.add_lora_to_pipe()
-        except Exception as e:
-            self.error_handler("Selected LoRA are not supported with this model")
-            self.reload_model = True
+            try:
+                self.add_lora_to_pipe()
+            except Exception as e:
+                self.error_handler("Selected LoRA are not supported with this model")
+                self.reload_model = True
 
     def on_start_auto_image_generation_signal(self, _message: dict):
         # self.sd_mode = SDMode.DRAWING
@@ -366,8 +368,7 @@ class SDHandler(
             (
                 self.use_compel and (self.prompt_embeds is None or self.negative_prompt_embeds is None)
             ) or
-            self.reload_prompts or
-            self.do_load
+            self.reload_prompts
         )
 
     @staticmethod
