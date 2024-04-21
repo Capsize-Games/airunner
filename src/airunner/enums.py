@@ -29,6 +29,7 @@ class FilterType(Enum):
 
 
 class SignalCode(Enum):
+    RESET_APPLIED_MEMORY_SETTINGS = "reset_applied_memory_settings"
     ENABLE_BRUSH_TOOL_SIGNAL = "enable_brush_tool_signal"
     ENABLE_ERASER_TOOL_SIGNAL = "enable_eraser_tool_signal"
     ENABLE_SELECTION_TOOL_SIGNAL = "enable_selection_tool_signal"
@@ -498,20 +499,23 @@ class ModelStatus(Enum):
 
 class ModelType(Enum):
     SD = "SD Model"
-
     TTS = "TTS Model"
     TTS_PROCESSOR = "TTS Processor"
     TTS_FEATURE_EXTRACTOR = "TTS Feature Extractor"
     TTS_VOCODER = "TTS Vocoder"
     TTS_SPEAKER_EMBEDDINGS = "TTS Speaker Embeddings"
     TTS_TOKENIZER = "TTS Tokenizer"
-
     STT = "STT Model"
     STT_PROCESSOR = "STT Processor"
     STT_FEATURE_EXTRACTOR = "STT Feature Extractor"
-
     CONTROLNET = "SD Controlnet"
     CONTROLNET_PROCESSOR = "SD Controlnet Processor"
     SAFETY_CHECKER = "SD Safety Checker"
     FEATURE_EXTRACTOR = "SD Feature Extractor"
     SCHEDULER = "SD Scheduler"
+
+
+class PipeNotLoaded(Exception):
+    def __init__(self, message="Pipe not loaded"):
+        self.message = message
+        super().__init__(self.message)
