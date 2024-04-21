@@ -38,13 +38,13 @@ class TestSDHandler(unittest.TestCase):
     def test_not_has_pipe(self, mock_is_txt2img):
         mock_is_txt2img.return_value = True
         self.sd_handler.txt2img = None
-        self.assertFalse(self.sd_handler.has_pipe())
+        self.assertFalse(self.sd_handler.__has_pipe())
 
     @patch.object(sd_handler.sd_request, 'is_txt2img', new_callable=PropertyMock)
     def test_has_pipe(self, mock_is_txt2img):
         mock_is_txt2img.return_value = True
         self.sd_handler.txt2img = True
-        self.assertTrue(self.sd_handler.has_pipe())
+        self.assertTrue(self.sd_handler.__has_pipe())
 
     @patch.object(sd_handler.sd_request, 'is_txt2img', new_callable=PropertyMock)
     def test_on_move_to_cpu(self, mock_is_txt2img):

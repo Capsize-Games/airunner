@@ -53,6 +53,17 @@ DO NOT CHANGE THESE VARIABLES UNLESS YOU KNOW WHAT YOU ARE DOING!
 
 For implementation, see the function
 airunner.src.utils.set_huggingface_environment_variables
+
+--------------------------------------------------------------------
+
+We leave this implementation in the codebase however we have
+also taken steps to disable this functionality by preventing
+the application from accessing the internet as well as preventing
+huggingface libraries from performing write operations to the
+cache folder.
+
+See README.md for more information.
+
 """
 
 ####################################################################
@@ -338,7 +349,7 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.WARNING
+LOG_LEVEL = logging.INFO
 
 ####################################################################
 # Default models for the core application
@@ -865,6 +876,15 @@ ESPEAK_SETTINGS = {
 ####################################################################
 # Image generator settings
 ####################################################################
+AVAILABLE_ACTIONS = [
+    "txt2img",
+    "img2img",
+    "pix2pix",
+    "outpaint",
+    "depth2img",
+    "controlnet",
+    "safety_checker",
+]
 SCHEDULER_CLASSES = {
     Scheduler.EULER_ANCESTRAL.value: "EulerAncestralDiscreteScheduler",
     Scheduler.EULER.value: "EulerDiscreteScheduler",
