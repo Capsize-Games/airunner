@@ -332,7 +332,9 @@ class CustomScene(
     def on_image_generated_signal(self, response):
         code = response["code"]
         if code == EngineResponseCode.IMAGE_GENERATED:
-            self.create_image(response["message"]["images"][0].convert("RGBA"))
+            message = response["message"]
+            if message:
+                self.create_image(message["images"][0].convert("RGBA"))
         else:
             self.logger.error(f"Unhandled response code: {code}")
 
