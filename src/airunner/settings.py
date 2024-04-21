@@ -1241,7 +1241,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         strength_slider=950,
         strength=950,
         conditioning_scale=550,
-        guidance_scale=750,
+        guidance_scale=75,
     ),
     path_settings={
         "initialized": False,
