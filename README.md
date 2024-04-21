@@ -29,8 +29,25 @@ We plan to release future distributions via Snap on Linux.
 
 ---
 
-## Stable Diffusion on your own hardware 
+### Privacy and Security
 
+Although AI Runner v3.0 is built with Huggingface libraries, we have taken
+care to strip the application of any telemetry or tracking features.
+The main application itself is unable to access the internet and we are working
+towards properly sandboxing certain features to ensure user privacy and security.
+
+This will always be something we take seriously as we continue to work
+towards making AI Runner a safe and secure application for all users.
+
+The `huggingface_hub` library is still in use so that `Transformers`, `diffusers` and
+other Huggingface libraries will continue to function properly, however we have
+removed its ability to access the internet.
+
+Transformers itself has been modified to remove the ability to access the internet
+
+---
+
+## Stable Diffusion on your own hardware 
 
 
 ![img_3.png](img.png)
