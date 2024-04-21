@@ -37,10 +37,10 @@ class SchedulerMixin:
             return None
 
         if (
-                not force_scheduler_name and
-                self._scheduler and
-                not self.do_change_scheduler and
-                self.settings["generator_settings"]["scheduler"] != self.sd_request.generator_settings.scheduler
+            not force_scheduler_name and
+            self._scheduler and
+            not self.do_change_scheduler and
+            self.settings["generator_settings"]["scheduler"] == self.sd_request.generator_settings.scheduler
         ):
             return self._scheduler
 
