@@ -950,6 +950,7 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     scale=750,
     seed=42,
     random_seed=True,
+    model_name="",
     model=SD_DEFAULT_MODEL_PATH,
     scheduler=DEFAULT_SCHEDULER,
     prompt_triggers="",
