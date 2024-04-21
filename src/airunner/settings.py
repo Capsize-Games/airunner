@@ -781,6 +781,7 @@ VULNERABILITY_REPORT_LINK = (
 ####################################################################
 SD_DEFAULT_VERSION = "SD 1.5"
 SD_DEFAULT_MODEL_PATH = "runwayml/stable-diffusion-v1-5"
+SD_FEATURE_EXTRACTOR_PATH = "openai/clip-vit-large-patch14"
 SD_DEFAULT_MODEL = dict(
     version=SD_DEFAULT_VERSION,
     model=SD_DEFAULT_MODEL_PATH,
