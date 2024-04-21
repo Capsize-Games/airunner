@@ -79,13 +79,8 @@ class ModelMixin:
             (self.sd_request.is_txt2img and self.txt2img is None and self.img2img) or
             (self.sd_request.is_img2img and self.img2img is None and self.txt2img) or
             (
-                (
-                    (self.sd_request.is_txt2img and self.txt2img) or
-                    (self.sd_request.is_img2img and self.img2img)
-                ) and
-                (
-                    self.do_load_controlnet or self.do_unload_controlnet
-                )
+                (self.sd_request.is_txt2img and self.txt2img) or
+                (self.sd_request.is_img2img and self.img2img)
             )
         )
 
@@ -454,10 +449,8 @@ class ModelMixin:
         # move all models except for our current action to the CPU
         if not already_loaded or self.reload_model:
             self.__unload_unused_models()
-        elif self.pipe is None and self.__do_reuse_pipeline or self.pipe and self.do_load_controlnet != self.current_load_controlnet:
-            self.__reuse_pipeline(self.do_load_controlnet)
-
-        self.current_load_controlnet = self.do_load_controlnet
+        # elif self.pipe is None and self.__do_reuse_pipeline or self.pipe:
+        #     self.__reuse_pipeline()
 
         if self.pipe is None or self.reload_model:
             self.emit_signal(
@@ -594,60 +587,60 @@ class ModelMixin:
             self.current_model = self.model_path
             self.current_model_branch = self.model["branch"]
 
-    def __reuse_pipeline(self, do_load_controlnet):
-        self.logger.debug("Reusing pipeline")
-        pipe = None
-        if self.sd_request.is_txt2img:
-            pipe = self.img2img if self.txt2img is None else self.txt2img
-        elif self.sd_request.is_img2img:
-            pipe = self.txt2img if self.img2img is None else self.img2img
-        if pipe is None:
-            self.logger.warning("Failed to reuse pipeline")
-            self.clear_controlnet()
-            return
-        kwargs = pipe.components
-
-        # either load from a pretrained model or from a pipe
-        if do_load_controlnet:
-            pipe = self.load_controlnet_from_ckpt(pipe)
-            kwargs["controlnet"] = self.controlnet
-        else:
-            if "controlnet" in kwargs:
-                del kwargs["controlnet"]
-
-            if self.is_single_file:
-                if self.model_version == "SDXL 1.0":
-                    pipeline_class_ = StableDiffusionXLPipeline
-                else:
-                    pipeline_class_ = StableDiffusionPipeline
-
-                pipe = pipeline_class_.from_single_file(
-                    self.model_path,
-                    local_files_only=True
-                )
-                return pipe
-            else:
-                components = pipe.components
-                if "controlnet" in components:
-                    del components["controlnet"]
-                components["controlnet"] = self.controlnet
-
-                pipe = AutoPipelineForText2Image.from_pretrained(
-                    os.path.expanduser(
-                        os.path.join(
-                            self.settings["path_settings"]["txt2img_model_path"],
-                            self.model_path
-                        )
-                    ),
-                    **components
-                )
-
-        if self.sd_request.is_txt2img:
-            self.txt2img = pipe
-            self.img2img = None
-        elif self.sd_request.is_img2img:
-            self.img2img = pipe
-            self.txt2img = None
+    # def __reuse_pipeline(self):
+    #     self.logger.debug("Reusing pipeline")
+    #     pipe = None
+    #     if self.sd_request.is_txt2img:
+    #         pipe = self.img2img if self.txt2img is None else self.txt2img
+    #     elif self.sd_request.is_img2img:
+    #         pipe = self.txt2img if self.img2img is None else self.img2img
+    #     if pipe is None:
+    #         self.logger.warning("Failed to reuse pipeline")
+    #         self.clear_controlnet()
+    #         return
+    #     kwargs = pipe.components
+    #
+    #     # either load from a pretrained model or from a pipe
+    #     if self.settings["controlnet_enabled"]:
+    #         pipe = self.load_controlnet_from_ckpt(pipe)
+    #         kwargs["controlnet"] = self.controlnet
+    #     else:
+    #         if "controlnet" in kwargs:
+    #             del kwargs["controlnet"]
+    #
+    #         if self.is_single_file:
+    #             if self.model_version == "SDXL 1.0":
+    #                 pipeline_class_ = StableDiffusionXLPipeline
+    #             else:
+    #                 pipeline_class_ = StableDiffusionPipeline
+    #
+    #             pipe = pipeline_class_.from_single_file(
+    #                 self.model_path,
+    #                 local_files_only=True
+    #             )
+    #             return pipe
+    #         else:
+    #             components = pipe.components
+    #             if "controlnet" in components:
+    #                 del components["controlnet"]
+    #             components["controlnet"] = self.controlnet
+    #
+    #             pipe = AutoPipelineForText2Image.from_pretrained(
+    #                 os.path.expanduser(
+    #                     os.path.join(
+    #                         self.settings["path_settings"]["txt2img_model_path"],
+    #                         self.model_path
+    #                     )
+    #                 ),
+    #                 **components
+    #             )
+    #
+    #     if self.sd_request.is_txt2img:
+    #         self.txt2img = pipe
+    #         self.img2img = None
+    #     elif self.sd_request.is_img2img:
+    #         self.img2img = pipe
+    #         self.txt2img = None
 
     def __load_generator_arguments(
         self,
@@ -690,7 +683,6 @@ class ModelMixin:
             ),
             latents=self.latents,
             device=self.device,
-            do_load=self.do_load,
             generator=self.__generator(),
             model_changed=model_changed,
             prompt_embeds=sd_request.prompt_embeds,
