@@ -27,7 +27,7 @@ setup(
         "requests==2.31.0",
         "requests-oauthlib==2.0.0",
         "scipy==1.13.0",
-        "tokenizers==0.15.2",
+        "tokenizers==0.19.1",
         "charset-normalizer==3.3.2",
         "typing_extensions==4.11.0",
         "urllib3==2.2.1",
