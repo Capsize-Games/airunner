@@ -46,7 +46,7 @@ setup(
         # "watchdog==4.0.0",  # Required for file watching
         
         # LLM Dependencies
-        "transformers==4.39.3",  
+        "transformers==4.40.0",  
         "auto-gptq==0.7.1",
         "bitsandbytes==0.43.1",
         "datasets==2.18.0",
