@@ -2,7 +2,7 @@
 # Do not remove the following import statement or change
 # the order of the imports.
 ####################################################################################################
-from airunner.security import set_huggingface_env_variables
+from tcog_utils.security import set_huggingface_env_variables
 import sys
 import signal
 from PySide6.QtCore import (

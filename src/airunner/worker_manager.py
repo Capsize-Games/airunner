@@ -1,7 +1,6 @@
 import traceback
 import numpy as np
 from PySide6.QtCore import QObject, Signal
-
 from airunner.aihandler.stt.whisper_handler import WhisperHandler
 from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 from airunner.enums import SignalCode, EngineResponseCode
