@@ -310,7 +310,8 @@ from airunner.enums import (
     Controlnet,
     Mode,
     LLMActionType,
-    ImageCategory
+    ImageCategory,
+    StableDiffusionVersion
 )
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
 
