@@ -38,7 +38,8 @@ from airunner.settings import (
     BUG_REPORT_LINK,
     VULNERABILITY_REPORT_LINK
 )
-from airunner.utils.file_system.file_system_operations import FileSystemOperations
+from airunner.utils.file_system.operations import FileSystemOperations
+
 from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
