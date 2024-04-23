@@ -1,5 +1,5 @@
-import io
 import base64
+import io
 import os
 import numpy as np
 from PySide6.QtWidgets import QApplication
@@ -20,12 +20,6 @@ from diffusers import (
     StableDiffusionImg2ImgPipeline,
     StableDiffusionInpaintPipeline
 )
-from diffusers import (
-    StableDiffusionControlNetPipeline,
-    StableDiffusionControlNetImg2ImgPipeline,
-    StableDiffusionControlNetInpaintPipeline,
-
-)
 from airunner.aihandler.stablediffusion.sd_request import SDRequest
 from airunner.enums import (
     GeneratorSection,
@@ -42,6 +36,7 @@ from airunner.settings import (
     AVAILABLE_ACTIONS
 )
 from airunner.utils.clear_memory import clear_memory
+
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
     SDMode.DRAWING,
@@ -147,12 +142,9 @@ class ModelMixin:
         )
 
         pipeline_map = {
-            ("txt2img", True): StableDiffusionControlNetPipeline,
-            ("txt2img", False): StableDiffusionPipeline,
-            ("img2img", True): StableDiffusionControlNetImg2ImgPipeline,
-            ("img2img", False): StableDiffusionImg2ImgPipeline,
-            ("outpaint", True): StableDiffusionControlNetInpaintPipeline,
-            ("outpaint", False): StableDiffusionInpaintPipeline,
+            "txt2img": StableDiffusionPipeline,
+            "img2img": StableDiffusionImg2ImgPipeline,
+            "outpaint": StableDiffusionInpaintPipeline,
         }
 
         operation_type = "txt2img" if is_txt2img else "img2img" if is_img2img else "outpaint"
@@ -160,7 +152,7 @@ class ModelMixin:
         if enable_controlnet:
             kwargs["controlnet"] = self.pipe.controlnet
 
-        pipeline_class_ = pipeline_map.get((operation_type, enable_controlnet))
+        pipeline_class_ = pipeline_map.get(operation_type)
 
         if pipeline_class_ is not None:
             self.logger.debug("Swapping pipeline")
@@ -363,16 +355,7 @@ class ModelMixin:
         self.reset_applied_memory_settings()
 
     def __pipeline_class(self):
-        if self.settings["controlnet_enabled"] and self.controlnet is not None:
-            if self.sd_request.is_img2img:
-                pipeline_classname_ = StableDiffusionControlNetImg2ImgPipeline
-            elif self.sd_request.is_txt2img:
-                pipeline_classname_ = StableDiffusionControlNetPipeline
-            elif self.sd_request.generator_settings.section == GeneratorSection.OUTPAINT.value:
-                pipeline_classname_ = StableDiffusionControlNetInpaintPipeline
-            else:
-                pipeline_classname_ = StableDiffusionControlNetPipeline
-        elif self.sd_request.generator_settings.section == GeneratorSection.DEPTH2IMG.value:
+        if self.sd_request.generator_settings.section == GeneratorSection.DEPTH2IMG.value:
             pipeline_classname_ = StableDiffusionDepth2ImgPipeline
         elif self.sd_request.generator_settings.section == GeneratorSection.OUTPAINT.value:
             pipeline_classname_ = AutoPipelineForInpainting
@@ -428,26 +411,26 @@ class ModelMixin:
 
                 pipeline_classname_ = self.__pipeline_class()
 
-                try:
-                    self.pipe = pipeline_classname_.from_pretrained(
-                        os.path.expanduser(
-                            os.path.join(
-                                self.settings["path_settings"][
-                                    f"{self.sd_request.generator_settings.section}_model_path"],
-                                self.model_path
-                            )
-                        ),
-                        torch_dtype=self.data_type,
-                        safety_checker=self.safety_checker,
-                        feature_extractor=self.feature_extractor,
-                        use_safetensors=True,
-                        controlnet=self.controlnet,
-                        scheduler=self.scheduler,
-                        **kwargs
+                kwargs.update(dict(
+                    torch_dtype=self.data_type,
+                    safety_checker=self.safety_checker,
+                    feature_extractor=self.feature_extractor,
+                    use_safetensors=True,
+                    controlnet=self.controlnet,
+                    scheduler=self.scheduler,
+                ))
+                path = os.path.expanduser(
+                    os.path.join(
+                        self.settings["path_settings"][
+                            f"{self.sd_request.generator_settings.section}_model_path"],
+                        self.model_path
                     )
-                except Exception as e:
-                    self.logger.error(e)
-                    self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+                )
+                print(path, kwargs)
+                self.pipe = self.__pipeline_class().from_pretrained(
+                    path,
+                    **kwargs
+                )
 
             if self.pipe is None:
                 self.emit_signal(
@@ -645,8 +628,6 @@ class ModelMixin:
                 pipe = self.outpaint
             if pipe is not None:
                 pipeline_class_ = StableDiffusionPipeline
-                if sd_request.generator_settings.enable_controlnet:
-                    pipeline_class_ = StableDiffusionControlNetPipeline
                 self.pipe = pipeline_class_(**pipe.components)
         elif sd_request.is_img2img and not is_img2img:
             if is_txt2img:
@@ -655,8 +636,6 @@ class ModelMixin:
                 pipe = self.outpaint
             if pipe is not None:
                 pipeline_class_ = StableDiffusionImg2ImgPipeline
-                if sd_request.generator_settings.enable_controlnet:
-                    pipeline_class_ = StableDiffusionControlNetImg2ImgPipeline
                 self.pipe = pipeline_class_(**pipe.components)
         elif sd_request.is_outpaint and not is_outpaint:
             if is_txt2img:
@@ -664,8 +643,6 @@ class ModelMixin:
             elif is_img2img:
                 pipe = self.img2img
             pipeline_class_ = StableDiffusionInpaintPipeline
-            if sd_request.generator_settings.enable_controlnet:
-                pipeline_class_ = StableDiffusionControlNetInpaintPipeline
 
         if pipe is not None and pipeline_class_ is not None:
             self.pipe = pipeline_class_(**pipe.components)
