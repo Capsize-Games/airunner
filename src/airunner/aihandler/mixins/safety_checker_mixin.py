@@ -1,5 +1,6 @@
 import os
-from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
+
+from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 from airunner.enums import SignalCode, ModelStatus, ModelType
 from airunner.settings import SD_FEATURE_EXTRACTOR_PATH
@@ -42,10 +43,10 @@ class SafetyCheckerMixin:
 
     def load_safety_checker(self, data_: dict = None):
         if self.use_safety_checker and self.safety_checker is None and "path" in self.safety_checker_model:
-            self.safety_checker = self.initialize_safety_checker()
+            self.safety_checker = self.__load_safety_checker_model()
 
         if self.use_safety_checker and self.feature_extractor is None and "path" in self.safety_checker_model:
-            self.feature_extractor = self.load_feature_extractor()
+            self.feature_extractor = self.__load_feature_extractor_model()
 
     def unload_feature_extractor(self):
         self.feature_extractor = None
@@ -69,7 +70,7 @@ class SafetyCheckerMixin:
         return model_path.endswith(".safetensors")
 
 
-    def load_feature_extractor(self):
+    def __load_feature_extractor_model(self):
         feature_extractor = None
         self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
             "model": ModelType.FEATURE_EXTRACTOR,
@@ -104,7 +105,7 @@ class SafetyCheckerMixin:
             })
         return feature_extractor
 
-    def initialize_safety_checker(self):
+    def __load_safety_checker_model(self):
         self.logger.debug(f"Initializing safety checker with {self.safety_checker_model}")
         safety_checker = None
         self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
