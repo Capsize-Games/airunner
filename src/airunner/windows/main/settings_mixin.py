@@ -13,7 +13,7 @@ from airunner.settings import (
 from airunner.enums import (
     SignalCode,
 )
-from airunner.utils.os_utils.validate_path import validate_path
+from tcog_utils.os.validate_path import validate_path
 
 class SettingsMixin:
     def __init__(
