@@ -68,7 +68,7 @@ setup(
         "einops==0.7.0",  # Required for controlnet_aux
         "Pillow==10.3.0",
         "pyre-extensions==0.0.30",
-        "safetensors==0.4.2",
+        "safetensors==0.4.3",
         "compel==2.0.2",
         "tomesd==0.1.3",
 
