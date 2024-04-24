@@ -426,7 +426,6 @@ class ModelMixin:
                         self.model_path
                     )
                 )
-                print(path, kwargs)
                 self.pipe = self.__pipeline_class().from_pretrained(
                     path,
                     **kwargs

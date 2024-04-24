@@ -225,7 +225,7 @@ model_bootstrap_data = [
         "branch": "main",
         "version": "2",
         "category": "llm",
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
         "is_default": True
@@ -236,7 +236,7 @@ model_bootstrap_data = [
         "branch": "main",
         "version": "2",
         "category": "llm",
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
         "is_default": True
@@ -247,7 +247,7 @@ model_bootstrap_data = [
         "branch": "main",
         "version": "0.1",
         "category": "llm",
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
         "is_default": True
@@ -258,7 +258,7 @@ model_bootstrap_data = [
         "branch": "main",
         "version": "0.2",
         "category": "llm",
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
         "is_default": True
@@ -269,7 +269,7 @@ model_bootstrap_data = [
         "branch": "main",
         "version": "0.2",
         "category": "llm",
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
         "is_default": True
@@ -280,7 +280,7 @@ model_bootstrap_data = [
         "branch": "main",
         "version": "0.1",
         "category": "llm",
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
         "is_default": True
@@ -291,7 +291,7 @@ model_bootstrap_data = [
         "branch": "main",
         "version": "1",
         "category": "llm",
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
         "is_default": True
@@ -302,7 +302,7 @@ model_bootstrap_data = [
         "branch": "main",
         "version": "1",
         "category": "llm",
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
         "is_default": True
@@ -313,7 +313,7 @@ model_bootstrap_data = [
         "branch": "main",
         "version": "1",
         "category": "llm",
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
         "is_default": True
@@ -324,7 +324,7 @@ model_bootstrap_data = [
         "branch": "main",
         "version": "1",
         "category": "llm",
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
         "is_default": True
@@ -357,7 +357,7 @@ model_bootstrap_data = [
         "branch": "main",
         "version": "1",
         "category": "llm",
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
         "is_default": True

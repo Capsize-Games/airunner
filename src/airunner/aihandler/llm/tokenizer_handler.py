@@ -17,8 +17,8 @@ class TokenizerHandler(TransformerBaseHandler):
     def get_tokenizer_cache_path(self, path):
         model_name = path.split("/")[-1]
         current_llm_generator = self.settings.get("current_llm_generator", "")
-        if current_llm_generator == "casuallm":
-            local_path = self.settings["path_settings"]["llm_casuallm_model_cache_path"]
+        if current_llm_generator == "causallm":
+            local_path = self.settings["path_settings"]["llm_causallm_model_cache_path"]
         elif current_llm_generator == "seq2seq":
             local_path = self.settings["path_settings"]["llm_seq2seq_model_cache_path"]
         elif current_llm_generator == "visualqa":

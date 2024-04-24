@@ -149,7 +149,7 @@ class InstallWorker(
                     self.hf_downloader.download_model(
                         requested_path=DEFAULT_LLM_HF_PATH,
                         requested_file_name=filename,
-                        requested_file_path=self.settings["path_settings"]["llm_casuallm_model_path"],
+                        requested_file_path=self.settings["path_settings"]["llm_causallm_model_path"],
                         requested_callback=self.progress_updated.emit
                     )
                 except Exception as e:

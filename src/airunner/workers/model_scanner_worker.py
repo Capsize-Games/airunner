@@ -26,7 +26,7 @@ class ModelScannerWorker(
         inpaint_model_path = self.settings["path_settings"]["inpaint_model_path"]
         upscale_model_path = self.settings["path_settings"]["upscale_model_path"]
         txt2vid_model_path = self.settings["path_settings"]["txt2vid_model_path"]
-        llm_casuallm_model_path = self.settings["path_settings"]["llm_casuallm_model_path"]
+        llm_causallm_model_path = self.settings["path_settings"]["llm_causallm_model_path"]
         llm_seq2seq_model_path = self.settings["path_settings"]["llm_seq2seq_model_path"]
         diffusers_folders = ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]
         models = []
@@ -37,7 +37,7 @@ class ModelScannerWorker(
             "outpaint": inpaint_model_path,
             "upscale": upscale_model_path,
             "txt2vid": txt2vid_model_path,
-            "casuallm": llm_casuallm_model_path,
+            "causallm": llm_causallm_model_path,
             "seq2seq": llm_seq2seq_model_path,
         }.items():
             if not model_path or not os.path.exists(model_path):
