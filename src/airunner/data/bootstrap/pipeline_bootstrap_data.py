@@ -199,19 +199,19 @@ pipeline_bootstrap_data = [
         "classname": "transformers.AutoModelForSeq2SeqLM",
     },
     {
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "version": "1",
         "category": "llm",
         "classname": "transformers.AutoModelForCausalLM",
     },
     {
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "version": "0.1",
         "category": "llm",
         "classname": "transformers.AutoModelForCausalLM",
     },
     {
-        "pipeline_action": "casuallm",
+        "pipeline_action": "causallm",
         "version": "2",
         "category": "llm",
         "classname": "transformers.AutoModelForCausalLM",
