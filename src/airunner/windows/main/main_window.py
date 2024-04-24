@@ -116,7 +116,7 @@ class MainWindow(
         tts_enabled: bool = False,
         stt_enabled: bool = False,
         ai_mode: bool = True,
-        do_load_llm_on_init: bool = False,
+        do_load_llm_on_init: bool = True,
         tts_handler_class=None,
         restrict_os_access=None,
         **kwargs
