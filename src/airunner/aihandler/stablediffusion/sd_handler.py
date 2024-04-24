@@ -125,7 +125,7 @@ class SDHandler(
         signals = {
             SignalCode.RESET_APPLIED_MEMORY_SETTINGS: self.on_reset_applied_memory_settings,
             SignalCode.UNLOAD_SAFETY_CHECKER_SIGNAL: self.unload_safety_checker,
-            SignalCode.LOAD_SAFETY_CHECKER_SIGNAL: self.load_safety_checker,
+            SignalCode.LOAD_SAFETY_CHECKER_SIGNAL: self.on_load_safety_checker_signal,
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
             SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_stablediffusion_signal,
             SignalCode.SD_LOAD_SIGNAL: self.on_load_stablediffusion_signal,
@@ -347,14 +347,17 @@ class SDHandler(
         # self.generate()
         pass
 
-    def on_sd_cancel_signal(self, _message: dict):
+    def on_sd_cancel_signal(self, _message: dict = None):
         print("on_sd_cancel_signal")
 
-    def on_stop_auto_image_generation_signal(self, _message: dict):
+    def on_load_safety_checker_signal(self, _message: dict = None):
+        self.load_safety_checker()
+
+    def on_stop_auto_image_generation_signal(self, _message: dict = None):
         #self.sd_mode = SDMode.STANDARD
         pass
 
-    def on_interrupt_image_generation_signal(self, _message: dict):
+    def on_interrupt_image_generation_signal(self, _message: dict = None):
         if self.current_state == HandlerState.GENERATING:
             self.do_interrupt_image_generation = True
 

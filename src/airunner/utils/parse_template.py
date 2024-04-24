@@ -4,7 +4,7 @@ def parse_template(template: dict) -> str:
     llm_category = template["llm_category"]
     template = template["template"]
     parsed_template = ""
-    if llm_category == "casuallm":
+    if llm_category == "causallm":
         if model in [
             "mistralai/Mistral-7B-Instruct-v0.1",
             "mistralai/Mistral-7B-Instruct-v0.2"
