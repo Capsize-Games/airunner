@@ -2,7 +2,7 @@
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
-from airunner.security.set_huggingface_env_variables import set_huggingface_environment_variables
+from airunner.utils.security.set_huggingface_environment_variables import set_huggingface_environment_variables
 set_huggingface_environment_variables(allow_downloads=True)
 ################################################################
 # Import the main application class for AI Runner.
