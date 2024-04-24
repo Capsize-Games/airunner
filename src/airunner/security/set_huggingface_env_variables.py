@@ -78,6 +78,3 @@ def set_huggingface_environment_variables(
     os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = HF_HUB_DISABLE_IMPLICIT_TOKEN
     os.environ["DIFFUSERS_VERBOSITY"] = DIFFUSERS_VERBOSITY
     os.environ["TRUST_REMOTE_CODE"] = TRUST_REMOTE_CODE
-
-
-set_huggingface_environment_variables()

@@ -122,7 +122,7 @@ class ChatPromptWidget(BaseWidget):
     def current_active_scene(self) -> CustomScene:
         return
 
-    def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="casuallm"):
+    def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="causallm"):
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
 
         if self.generating:
