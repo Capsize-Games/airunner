@@ -123,6 +123,13 @@ class SchedulerMixin:
                     ),
                     **kwargs
                 )
+                self.emit_signal(
+                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                        "model": ModelType.SCHEDULER,
+                        "status": ModelStatus.LOADED,
+                        "path": scheduler_name,
+                    }
+                )
             except Exception as e:
                 self.emit_signal(
                     SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
@@ -136,14 +143,6 @@ class SchedulerMixin:
                     f"from {self.sd_request.generator_settings.model}"
                 )
                 self.logger.error(e)
-
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.SCHEDULER,
-                "status": ModelStatus.LOADED,
-                "path": scheduler_name,
-            }
-        )
 
         return self.scheduler
 
