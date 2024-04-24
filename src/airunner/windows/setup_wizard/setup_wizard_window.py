@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWizard
 from airunner.mediator_mixin import MediatorMixin
-from tcog_utils.os.validate_path import validate_path
+from airunner.utils.os.validate_path import validate_path
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.age_restriction.age_restriction_warning import AgeRestrictionWarning
 from airunner.windows.setup_wizard.model_setup.controlnet.controlnet_setup import ControlnetSetup
