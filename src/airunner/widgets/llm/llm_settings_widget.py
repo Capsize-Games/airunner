@@ -119,7 +119,7 @@ class LLMSettingsWidget(
         self.ui.model.clear()
         self.ui.model.addItems([
             "seq2seq",
-            "casuallm",
+            "causallm",
             "visualqa",
         ])
         self.ui.model.setCurrentText(self.current_generator)

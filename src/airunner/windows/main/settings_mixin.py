@@ -13,7 +13,7 @@ from airunner.settings import (
 from airunner.enums import (
     SignalCode,
 )
-from airunner.utils.os_utils.validate_path import validate_path
+from airunner.utils.os.validate_path import validate_path
 
 class SettingsMixin:
     def __init__(
@@ -216,11 +216,11 @@ class SettingsMixin:
             "documents_path": f"{base_path}/text/other/documents",
             "tts_model_path": f"{base_path}/text/models/tts",
             "stt_model_path": f"{base_path}/text/models/stt",
-            "llm_casuallm_model_path": f"{base_path}/text/models/casuallm",
+            "llm_causallm_model_path": f"{base_path}/text/models/causallm",
             "llm_seq2seq_model_path": f"{base_path}/text/models/seq2seq",
             "llm_visualqa_model_path": f"{base_path}/text/models/visualqa",
             "llm_misc_model_path": f"{base_path}/text/models/misc",
-            "llm_casuallm_cache": f"{base_path}/text/models/casuallm/cache",
+            "llm_causallm_cache": f"{base_path}/text/models/causallm/cache",
             "llm_seq2seq_cache": f"{base_path}/text/models/seq2seq/cache",
             "llm_visualqa_cache": f"{base_path}/text/models/visualqa/cache",
             "llm_misc_cache": f"{base_path}/text/models/misc/cache",
