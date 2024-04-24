@@ -8,7 +8,7 @@ setup(
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     keywords="ai, stable diffusion, art, ai art, stablediffusion",
-    license="AGPL-3.0",
+    license="GPL-3.0",
     author_email="contact@capsizegames.com",
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "src"},
@@ -71,6 +71,9 @@ setup(
         "safetensors==0.4.2",
         "compel==2.0.2",
         "tomesd==0.1.3",
+
+        # Security
+        "facehuggershield==0.1.3"
     ],
     dependency_links=[],
 )
