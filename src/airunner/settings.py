@@ -13,15 +13,8 @@ audit the application by using this repository as a reference.
 
 All current and future security documentation will be contained
 within this file.
-
---------------------------------------------------------------------
-The following file is response for
-setting huggingface environment variables
-- airunner/src/airunner/utils/set_huggingface_environment_variables.py
---------------------------------------------------------------------
 """
 import logging
-from PySide6.QtCore import Qt
 from PySide6 import QtCore
 
 """
@@ -52,7 +45,7 @@ The following environment variables control huggingface libraries.
 DO NOT CHANGE THESE VARIABLES UNLESS YOU KNOW WHAT YOU ARE DOING!
 
 For implementation, see the function
-airunner.src.utils.set_huggingface_environment_variables
+airunner.src.utils.security.set_huggingface_environment_variables
 
 --------------------------------------------------------------------
 
@@ -1046,49 +1039,49 @@ SLEEP_TIME_IN_MS = 50
 DEFAULT_SHORTCUTS = {
     "Generate Image": {
         "text": "F5",
-        "key": Qt.Key.Key_F5.value,
+        "key": QtCore.Qt.Key.Key_F5.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
         "signal": SignalCode.SD_GENERATE_IMAGE_SIGNAL.value
     },
     "Brush Tool": {
         "text": "B",
-        "key": Qt.Key.Key_B.value,
+        "key": QtCore.Qt.Key.Key_B.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Brush tool key. Responsible for selecting the brush tool.",
         "signal": SignalCode.ENABLE_BRUSH_TOOL_SIGNAL.value
     },
     "Eraser Tool": {
         "text": "E",
-        "key": Qt.Key.Key_E.value,
+        "key": QtCore.Qt.Key.Key_E.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Eraser tool key. Responsible for selecting the eraser tool.",
         "signal": SignalCode.ENABLE_ERASER_TOOL_SIGNAL.value
     },
     "Move Tool": {
         "text": "V",
-        "key": Qt.Key.Key_V.value,
+        "key": QtCore.Qt.Key.Key_V.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Move tool key. Responsible for selecting the move tool.",
         "signal": SignalCode.ENABLE_MOVE_TOOL_SIGNAL.value
     },
     "Select Tool": {
         "text": "S",
-        "key": Qt.Key.Key_S.value,
+        "key": QtCore.Qt.Key.Key_S.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Select tool key. Responsible for selecting the select tool.",
         "signal": SignalCode.ENABLE_SELECTION_TOOL_SIGNAL.value
     },
     "Interrupt": {
         "text": "Shift+Ctrl+I",
-        "key": Qt.Key.Key_I.value,
+        "key": QtCore.Qt.Key.Key_I.value,
         "modifiers": QtCore.Qt.KeyboardModifier.ShiftModifier.value | QtCore.Qt.KeyboardModifier.ControlModifier.value,
         "description": "Interrupt key. Responsible for interrupting the current process.",
         "signal": SignalCode.INTERRUPT_PROCESS_SIGNAL.value
     },
     "Quit": {
         "text": "Ctrl+Q",
-        "key": Qt.Key.Key_Q.value,
+        "key": QtCore.Qt.Key.Key_Q.value,
         "modifiers": QtCore.Qt.KeyboardModifier.ControlModifier.value,
         "description": "Quit key. Responsible for quitting the application.",
         "signal": SignalCode.QUIT_APPLICATION.value
@@ -1180,7 +1173,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     show_active_image_area=True,
     working_width=512,
     working_height=512,
-    current_llm_generator="casuallm",
+    current_llm_generator="causallm",
     current_image_generator=ImageGenerator.STABLEDIFFUSION.value,
     generator_section=GeneratorSection.TXT2IMG.value,
     hf_api_key_read_key="",
@@ -1226,7 +1219,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         "Mistral 7B Instruct: Default Chatbot": dict(
             name="Mistral 7B Instruct: Default Chatbot",
             model=DEFAULT_LLM_HF_PATH,
-            llm_category="casuallm",
+            llm_category="causallm",
         ),
     },
     shortcut_key_settings=DEFAULT_SHORTCUTS,
