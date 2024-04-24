@@ -71,6 +71,9 @@ setup(
         "safetensors==0.4.2",
         "compel==2.0.2",
         "tomesd==0.1.3",
+
+        # Security
+        "facehuggershield==0.1.3"
     ],
     dependency_links=[],
 )
