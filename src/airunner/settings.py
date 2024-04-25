@@ -75,12 +75,7 @@ LOG_LEVEL = logging.ERROR
 DEFAULT_LLM_HF_PATH = "w4ffl35/Mistral-7B-Instruct-v0.2-safetensors"
 # WAS ORIGINALLY USING "openai/whisper-base" for feature extractor
 DEFAULT_STT_HF_PATH = "openai/whisper-tiny"
-DEFAULT_SPEECHT5_MODEL_PATHS = {
-    "embeddings_path": "Matthijs/cmu-arctic-xvectors",
-    "vocoder_path": "microsoft/speecht5_hifigan",
-    "model_path": "microsoft/speecht5_tts",
-    "processor_path": "microsoft/speecht5_tts"
-}
+
 DEFAULT_BARK_MODEL_PATHS = {
     "processor": "suno/bark-small",
     "model": "suno/bark-small",
@@ -829,7 +824,12 @@ TTS_SETTINGS_DEFAULT = {
     "play_queue_buffer_length": 1,
     "enable_cpu_offload": True,
     "model": "SpeechT5",
-    "speecht5": DEFAULT_SPEECHT5_MODEL_PATHS,
+    "speecht5": {
+        "datasets_path": "Matthijs/cmu-arctic-xvectors",
+        "processor_path": "microsoft/speecht5_tts",
+        "vocoder_path": "microsoft/speecht5_hifigan",
+        "model_path": "microsoft/speecht5_tts",
+    },
     "espeak": {
         "gender": "male",
         "voice": "male1",
