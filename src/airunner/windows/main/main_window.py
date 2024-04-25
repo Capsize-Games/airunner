@@ -116,9 +116,10 @@ class MainWindow(
         tts_enabled: bool = False,
         stt_enabled: bool = False,
         ai_mode: bool = True,
-        do_load_llm_on_init: bool = True,
+        do_load_llm_on_init: bool = False,
         tts_handler_class=None,
         restrict_os_access=None,
+        defendatron=None,
         **kwargs
     ):
         self.ui = self.ui_class_()
@@ -132,6 +133,7 @@ class MainWindow(
         self.tts_handler_class = tts_handler_class
 
         self.restrict_os_access = restrict_os_access
+        self.defendatron = defendatron
         self._override_system_theme = None
         self._dark_mode_enabled = None
         self.update_popup = None
@@ -214,7 +216,10 @@ class MainWindow(
         self.image_window = None
 
         self.emit_signal(
-            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL,
+            {
+                "main_window": self
+            }
         )
         self.register(
             SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL,
@@ -622,6 +627,7 @@ class MainWindow(
         new_settings = self.settings
         new_settings["tts_enabled"] = val
         self.settings = new_settings
+        self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL if val else SignalCode.TTS_DISABLE_SIGNAL)
 
     @Slot(bool)
     def ocr_button_toggled(self, val):
@@ -1142,6 +1148,16 @@ class MainWindow(
     @Slot()
     def action_run_setup_wizard_clicked(self):
         self.show_setup_wizard()
+
+    @Slot(bool)
+    def action_toggle_llm(self, val):
+        settings = self.settings
+        settings["llm_enabled"] = val
+        self.settings = settings
+        if val:
+            self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
+        else:
+            self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
 
     @Slot(bool)
     def action_image_generator_toggled(self, val: bool):

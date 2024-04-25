@@ -2,8 +2,6 @@
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
-from airunner.security import set_huggingface_env_variables
-
 import sys
 import signal
 import traceback
@@ -41,7 +39,8 @@ class App(
     def __init__(
         self,
         main_window_class: QWindow = None,
-        restrict_os_access=None
+        restrict_os_access=None,
+        defendatron=None
     ):
         """
         Initialize the application and run as a GUI application or a socket server.
@@ -52,6 +51,7 @@ class App(
         self.app = None
         self.logger = Logger(prefix=self.__class__.__name__)
         self.restrict_os_access = restrict_os_access
+        self.defendatron = defendatron
 
         """
         Mediator and Settings mixins are initialized here, enabling the application
@@ -160,7 +160,10 @@ class App(
         :return:
         """
         try:
-            window = self.main_window_class_(restrict_os_access=self.restrict_os_access)
+            window = self.main_window_class_(
+                restrict_os_access=self.restrict_os_access,
+                defendatron=self.defendatron
+            )
         except Exception as e:
             traceback.print_exc()
             print(e)
