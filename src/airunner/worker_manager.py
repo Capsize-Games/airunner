@@ -200,10 +200,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         # else:
         self.emit_signal(SignalCode.LLM_REQUEST_SIGNAL, data)
 
-    def do_listen(self):
-        # self.stt_controller.do_listen()
-        pass
-    
     def unload_stablediffusion(self):
         """
         Unload the Stable Diffusion model from memory.
