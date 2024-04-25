@@ -78,7 +78,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             self.sd_state = "loaded"
 
         if not disable_tts:
-            self.tts_generator_worker = create_worker(TTSGeneratorWorker, tts_handler_class=tts_handler_class)
+            self.tts_generator_worker = create_worker(TTSGeneratorWorker)
             self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
 
         if not disable_llm:
@@ -89,7 +89,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
         if not disable_stt:
             self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-            self.stt_audio_processor_worker = create_worker(AudioProcessorWorker, stt_handler_class=WhisperHandler)
+            self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
 
         # if not disable_vision_capture:
         #     self.vision_capture_worker = create_worker(VisionCaptureWorker)
