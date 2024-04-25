@@ -2,10 +2,13 @@ import queue
 
 from PySide6.QtCore import QThread
 
+from airunner.aihandler.tts.bark_tts_handler import BarkTTSHandler
 from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
-from airunner.enums import SignalCode, QueueType
+from airunner.aihandler.tts.speecht5_tts_handler import SpeechT5TTSHandler
+from airunner.enums import SignalCode, QueueType, TTSModel
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
+from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 
 
 class TTSGeneratorWorker(Worker):
@@ -15,7 +18,13 @@ class TTSGeneratorWorker(Worker):
     tokens = []
 
     def __init__(self, *args, **kwargs):
-        tts_handler_class_ = kwargs.pop("tts_handler_class", EspeakTTSHandler)
+        tts_model = self.settings["tts_settings"]["tts_model"]
+        if tts_model == TTSModel.ESPEAK:
+            tts_handler_class_ = EspeakTTSHandler
+        elif tts_model == TTSModel.SPEECHT5:
+            tts_handler_class_ = SpeechT5TTSHandler
+        elif tts_model == TTSModel.BARK:
+            tts_handler_class_ = BarkTTSHandler
         super().__init__(*args, **kwargs)
         self.tts = tts_handler_class_()
         self.tts.run()
