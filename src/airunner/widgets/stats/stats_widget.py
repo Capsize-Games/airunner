@@ -28,12 +28,18 @@ class StatsWidget(
             ModelType.CONTROLNET_PROCESSOR,
             ModelType.SCHEDULER,
             ModelType.SD,
+
+            ModelType.LLM,
+            ModelType.LLM_TOKENIZER,
+
             ModelType.TTS,
+            ModelType.TTS_DATASET,
             ModelType.TTS_PROCESSOR,
             ModelType.TTS_FEATURE_EXTRACTOR,
             ModelType.TTS_VOCODER,
             ModelType.TTS_SPEAKER_EMBEDDINGS,
             ModelType.TTS_TOKENIZER,
+
             ModelType.STT,
             ModelType.STT_PROCESSOR,
             ModelType.STT_FEATURE_EXTRACTOR,
