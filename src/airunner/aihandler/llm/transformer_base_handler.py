@@ -155,11 +155,6 @@ class TransformerBaseHandler(BaseHandler):
 
     def load_model(self):
         params = self.model_params()
-        if self.request_data:
-            params["token"] = self.request_data.get(
-                "hf_api_key_read_key",
-                ""
-            )
 
         path = self.get_model_path(self.current_model_path)
 
@@ -204,9 +199,6 @@ class TransformerBaseHandler(BaseHandler):
             )
             self.logger.error(f"Error loading model: {e}")
             self.model = None
-
-
-        #self.save_quantized_model()
 
     def save_quantized_model(self):
         if self.do_quantize_model and self.cache_llm_to_disk:
