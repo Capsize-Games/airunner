@@ -304,7 +304,8 @@ from airunner.enums import (
     Mode,
     LLMActionType,
     ImageCategory,
-    StableDiffusionVersion
+    StableDiffusionVersion,
+    TTSModel
 )
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
 
@@ -343,7 +344,7 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.ERROR
 
 ####################################################################
 # Default models for the core application
@@ -1095,7 +1096,7 @@ DEFAULT_SHORTCUTS = {
 # These settings can be changed in the GUI or here.
 ####################################################################
 TTS_SETTINGS_DEFAULT = {
-    "use_bark": False,
+    "tts_model": TTSModel.SPEECHT5,
     "use_cuda": True,
     "use_sentence_chunks": True,
     "use_word_chunks": False,
@@ -1132,6 +1133,7 @@ from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_d
 DEFAULT_USE_CUDA = True
 DEFAULT_SD_ENABLED = True
 DEFAULT_CONTROLNET_ENABLED = True
+DEFAULT_LLM_ENABLED = True
 DEFAULT_OCR_ENABLED = True
 DEFAULT_TTS_ENABLED = True
 DEFAULT_STT_ENABLED = True
@@ -1146,6 +1148,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     use_cuda=DEFAULT_USE_CUDA,
     sd_enabled=DEFAULT_SD_ENABLED,
     controlnet_enabled=DEFAULT_CONTROLNET_ENABLED,
+    llm_enabled=DEFAULT_LLM_ENABLED,
     ocr_enabled=DEFAULT_OCR_ENABLED,
     tts_enabled=DEFAULT_TTS_ENABLED,
     stt_enabled=DEFAULT_STT_ENABLED,
