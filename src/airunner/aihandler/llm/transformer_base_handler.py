@@ -6,6 +6,7 @@ from transformers import (
     GPTQConfig
 )
 from airunner.aihandler.base_handler import BaseHandler
+from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.get_torch_device import get_torch_device
 
@@ -116,7 +117,20 @@ class TransformerBaseHandler(BaseHandler):
             'trust_remote_code': self.settings["trust_remote_code"]
         }
 
-    def get_model_cache_path(self, path):
+    def get_model_standard_path(self, path) -> str:
+        current_llm_generator = self.settings.get("current_llm_generator", "")
+        if current_llm_generator == "causallm":
+            local_path = self.settings["path_settings"]["llm_causallm_model_path"]
+        elif current_llm_generator == "seq2seq":
+            local_path = self.settings["path_settings"]["llm_seq2seq_model_path"]
+        elif current_llm_generator == "visualqa":
+            local_path = self.settings["path_settings"]["llm_visualqa_model_path"]
+        else:
+            local_path = self.settings["path_settings"]["llm_misc_model_path"]
+        local_path = os.path.join(local_path, path)
+        return os.path.expanduser(local_path)
+
+    def get_model_cache_path(self, path) -> str:
         model_name = path.split("/")[-1]
         current_llm_generator = self.settings.get("current_llm_generator", "")
         if current_llm_generator == "causallm":
@@ -128,13 +142,18 @@ class TransformerBaseHandler(BaseHandler):
         else:
             local_path = self.settings["path_settings"]["llm_misc_model_cache_path"]
         local_path = os.path.join(local_path, self.llm_dtype, model_name)
-        return local_path
+        return os.path.expanduser(local_path)
 
     def get_model_path(self, path):
         if self.do_quantize_model:
             local_path = self.get_model_cache_path(path)
             if self.cache_llm_to_disk and os.path.exists(local_path):
                 return local_path
+            else:
+                local_path = self.get_model_standard_path(path)
+                print("CHECKING", local_path)
+                if os.path.exists(local_path):
+                    return local_path
         return path
 
     def load_model(self):
@@ -159,24 +178,40 @@ class TransformerBaseHandler(BaseHandler):
             params["torch_dtype"] = torch.bfloat16
             params["device_map"] = "auto"
 
-        if path != self.current_model_path:
-            params = {}
-
         try:
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.LLM,
+                    "status": ModelStatus.LOADING,
+                    "path": path
+                }
+            )
             self.model = self.auto_class_.from_pretrained(
                 path,
                 **params
             )
-        except OSError as e:
-            if "We couldn't connect" in str(e):
-                self.logger.error(e)
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.LLM,
+                    "status": ModelStatus.LOADED,
+                    "path": path
+                }
+            )
         except Exception as e:
-            self.logger.error(e)
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.LLM,
+                    "status": ModelStatus.FAILED,
+                    "path": path
+                }
+            )
+            self.logger.error(f"Error loading model: {e}")
+            self.model = None
 
-        if not self.model:
-            self.logger.error(f"Model not loaded from {path}")
-            return
 
+        #self.save_quantized_model()
+
+    def save_quantized_model(self):
         if self.do_quantize_model and self.cache_llm_to_disk:
             self.logger.debug("Saving quantized model to cache")
             cache_path = self.get_model_cache_path(self.current_model_path)
@@ -200,16 +235,28 @@ class TransformerBaseHandler(BaseHandler):
             clear_memory()
 
     def unload_tokenizer(self):
-        if self.tokenizer is not None:
-            self.logger.debug("Unloading tokenizer")
-            self.tokenizer = None
-            return True
+        self.logger.debug("Unloading tokenizer")
+        self.tokenizer = None
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.LLM_TOKENIZER,
+                "status": ModelStatus.UNLOADED,
+                "path": ""
+            }
+        )
+        return True
 
     def unload_model(self):
-        if self.model is not None:
-            self.logger.debug("Unloading model")
-            self.model = None
-            return True
+        self.logger.debug("Unloading model")
+        self.model = None
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.LLM,
+                "status": ModelStatus.UNLOADED,
+                "path": ""
+            }
+        )
+        return True
 
     def pre_load(self):
         """
@@ -220,6 +267,7 @@ class TransformerBaseHandler(BaseHandler):
         self.current_model_path = self.model_path
 
     def load(self):
+        self.logger.debug("Loading model")
         do_load_model = self.do_load_model
         do_load_tokenizer = self.tokenizer is None
 
@@ -248,6 +296,7 @@ class TransformerBaseHandler(BaseHandler):
         raise NotImplementedError
 
     def process_data(self, data: dict) -> None:
+        self.logger.debug("Processing data")
         self.request_data = data.get("request_data", {})
         self.parameters = self.request_data.get("parameters", {})
         self.callback = self.request_data.get("callback", None)
@@ -281,6 +330,7 @@ class TransformerBaseHandler(BaseHandler):
         Prepare the input arguments for the transformer model.
         :return: dict
         """
+        self.logger.debug("Preparing input arguments")
         parameters = self.parameters or {}
 
         kwargs = {
@@ -313,6 +363,7 @@ class TransformerBaseHandler(BaseHandler):
         return kwargs
 
     def do_set_seed(self, seed=None):
+        self.logger.debug("Setting seed")
         seed = self.seed if seed is None else seed
         self.seed = seed
         # _set_seed(self.seed)
@@ -327,6 +378,7 @@ class TransformerBaseHandler(BaseHandler):
             self.tokenizer.seed = self.seed
 
     def handle_request(self, data: dict) -> str:
+        self.logger.debug("Handling request")
         self._processing_request = True
         self.process_data(data)
         self.override_parameters = self.prepare_input_args()
