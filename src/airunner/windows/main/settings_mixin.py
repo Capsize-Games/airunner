@@ -214,16 +214,17 @@ class SettingsMixin:
             "video_path": f"{base_path}/art/other/videos",
             "ebooks_path": f"{base_path}/text/other/ebooks",
             "documents_path": f"{base_path}/text/other/documents",
+            "tts_datasets_path": f"{base_path}/text/models/datasets",
             "tts_model_path": f"{base_path}/text/models/tts",
             "stt_model_path": f"{base_path}/text/models/stt",
             "llm_causallm_model_path": f"{base_path}/text/models/causallm",
             "llm_seq2seq_model_path": f"{base_path}/text/models/seq2seq",
             "llm_visualqa_model_path": f"{base_path}/text/models/visualqa",
             "llm_misc_model_path": f"{base_path}/text/models/misc",
-            "llm_causallm_cache": f"{base_path}/text/models/causallm/cache",
-            "llm_seq2seq_cache": f"{base_path}/text/models/seq2seq/cache",
-            "llm_visualqa_cache": f"{base_path}/text/models/visualqa/cache",
-            "llm_misc_cache": f"{base_path}/text/models/misc/cache",
+            "llm_causallm_model_cache_path": f"{base_path}/text/models/causallm/cache",
+            "llm_seq2seq_model_cache_path": f"{base_path}/text/models/seq2seq/cache",
+            "llm_visualqa_model_cache_path": f"{base_path}/text/models/visualqa/cache",
+            "llm_misc_model_cache_path": f"{base_path}/text/models/misc/cache",
         }
         return paths
 
