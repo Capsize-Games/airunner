@@ -1,15 +1,18 @@
 import os
 import subprocess
 
-from sys import platform
 
-
-def show_path(self, path):
+def show_path(path):
+    path = os.path.expanduser(path)
     if not os.path.isdir(path):
+        print("not a path", path)
         return
-    if platform.system() == "Windows":
+
+    from sys import platform
+    platform = platform.lower()
+    if platform in ["windows", "win32", "cygwin"]:
         subprocess.Popen(["explorer", os.path.realpath(path)])
-    elif platform.system() == "Darwin":
-        subprocess.Popen(["open", os.path.realpath(path)])
-    else:
+    elif platform in ["linux", "linux2"]:
         subprocess.Popen(["xdg-open", os.path.realpath(path)])
+    else:
+        print("unsupported platform", platform)
