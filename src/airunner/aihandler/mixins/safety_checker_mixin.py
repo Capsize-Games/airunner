@@ -28,13 +28,21 @@ class SafetyCheckerMixin:
             return None
 
     def unload_safety_checker(self, data_: dict = None):
+        self._unload_safety_checker_model()
+        self._unload_feature_extractor_model()
+
+    def _unload_safety_checker_model(self):
         self.safety_checker = None
-        self.feature_extractor = None
+        clear_memory()
         self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
             "model": ModelType.SAFETY_CHECKER,
             "status": ModelStatus.UNLOADED,
             "path": "",
         })
+
+    def _unload_feature_extractor_model(self):
+        self.feature_extractor = None
+        clear_memory()
         self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
             "model": ModelType.FEATURE_EXTRACTOR,
             "status": ModelStatus.UNLOADED,
@@ -43,10 +51,10 @@ class SafetyCheckerMixin:
 
     def load_safety_checker(self, data_: dict = None):
         if self.use_safety_checker and self.safety_checker is None and "path" in self.safety_checker_model:
-            self.safety_checker = self.__load_safety_checker_model()
+            self.safety_checker = self._load_safety_checker_model()
 
         if self.use_safety_checker and self.feature_extractor is None and "path" in self.safety_checker_model:
-            self.feature_extractor = self.__load_feature_extractor_model()
+            self.feature_extractor = self._load_feature_extractor_model()
 
     def unload_feature_extractor(self):
         self.feature_extractor = None
@@ -70,7 +78,7 @@ class SafetyCheckerMixin:
         return model_path.endswith(".safetensors")
 
 
-    def __load_feature_extractor_model(self):
+    def _load_feature_extractor_model(self):
         feature_extractor = None
         self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
             "model": ModelType.FEATURE_EXTRACTOR,
@@ -105,7 +113,7 @@ class SafetyCheckerMixin:
             })
         return feature_extractor
 
-    def __load_safety_checker_model(self):
+    def _load_safety_checker_model(self):
         self.logger.debug(f"Initializing safety checker with {self.safety_checker_model}")
         safety_checker = None
         self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {

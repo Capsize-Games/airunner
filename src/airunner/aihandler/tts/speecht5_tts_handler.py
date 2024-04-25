@@ -2,9 +2,9 @@ import os
 import time
 import torch
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
-from datasets import load_dataset
+from datasets import load_from_disk, load_dataset
 from airunner.aihandler.tts.tts_handler import TTSHandler
-from airunner.enums import SignalCode, LLMChatRole
+from airunner.enums import SignalCode, LLMChatRole, ModelType, ModelStatus
 
 
 class SpeechT5TTSHandler(TTSHandler):
@@ -13,44 +13,76 @@ class SpeechT5TTSHandler(TTSHandler):
     processor_class_ = SpeechT5Processor
 
     @property
+    def dataset_path(self):
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["tts_datasets_path"],
+                self.settings["tts_settings"]["speecht5"]["datasets_path"]
+            )
+        )
+
+    @property
     def processor_path(self):
-        return self.settings["tts_settings"]["speecht5"]["processor_path"]
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["tts_model_path"],
+                self.settings["tts_settings"]["speecht5"]["processor_path"]
+            )
+        )
 
     @property
     def model_path(self):
-        return self.settings["tts_settings"]["speecht5"]["model_path"]
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["tts_model_path"],
+                self.settings["tts_settings"]["speecht5"]["model_path"]
+            )
+        )
 
     @property
     def vocoder_path(self):
-        return self.settings["tts_settings"]["speecht5"]["vocoder_path"]
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["tts_model_path"],
+                self.settings["tts_settings"]["speecht5"]["vocoder_path"]
+            )
+        )
 
     @property
-    def speaker_embeddings_dataset_path(self):
-        return self.settings["tts_settings"]["speecht5"]["embeddings_path"]
+    def speaker_embeddings_path(self):
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["tts_speaker_embeddings_path"],
+                "speaker_embeddings"
+            )
+        )
 
     def load_vocoder(self):
-        self.logger.debug("Loading Vocoder")
+        self.logger.debug(f"Loading Vocoder {self.vocoder_path}")
         try:
+            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.TTS_VOCODER,
+                "status": ModelStatus.LOADING,
+                "path": self.vocoder_path
+            })
             vocoder = self.vocoder = SpeechT5HifiGan.from_pretrained(
                 self.vocoder_path,
                 local_files_only=True,
                 torch_dtype=torch.float16,
                 device_map=self.device
             )
-            self.emit_signal(
-                SignalCode.STT_VOCODER_LOADED_SIGNAL,
-                {
-                    "path": self.vocoder_path
-                }
-            )
+            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.TTS_VOCODER,
+                "status": ModelStatus.LOADED,
+                "path": self.vocoder_path
+            })
             return vocoder
         except Exception as e:
-            self.emit_signal(
-                SignalCode.STT_VOCODER_FAILED_SIGNAL,
-                {
-                    "path": self.vocoder_path
-                }
-            )
+            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.TTS_VOCODER,
+                "status": ModelStatus.FAILED,
+                "path": self.vocoder_path
+            })
             return None
 
     def load_dataset(self):
@@ -58,43 +90,55 @@ class SpeechT5TTSHandler(TTSHandler):
         load xvector containing speaker's voice characteristics from a dataset
         :return:
         """
-        os.environ["HF_DATASETS_OFFLINE"] = str(int(True))
-
-        embeddings_dataset = None
         self.logger.debug("Loading Dataset")
-        try:
-            embeddings_dataset = load_dataset(
-                self.speaker_embeddings_dataset_path,
-                split="validation"
-            )
-            if embeddings_dataset:
-                self.speaker_embeddings = torch.tensor(
-                    embeddings_dataset[7306]["xvector"]
-                ).unsqueeze(0)
 
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
+                "status": ModelStatus.LOADING,
+                "path": self.dataset_path
+            }
+        )
+        try:
+            self.speaker_embeddings = torch.load(
+                self.speaker_embeddings_path
+            )
             if self.use_cuda and self.speaker_embeddings is not None:
                 self.speaker_embeddings = self.speaker_embeddings.half().cuda()
+
             self.emit_signal(
-                SignalCode.STT_SPEAKER_EMBEDDINGS_LOADED_SIGNAL,
-                {
-                    "path": self.vocoder_path
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
+                    "status": ModelStatus.LOADED,
+                    "path": self.dataset_path
                 }
             )
+
         except Exception as e:
-            self.logger.error("Failed to load dataset")
+            self.logger.error("Failed to load speaker embeddings")
             self.logger.error(e)
             self.emit_signal(
-                SignalCode.STT_DATASET_FAILED_SIGNAL,
-                {
-                    "path": self.vocoder_path
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
+                    "status": ModelStatus.FAILED,
+                    "path": self.dataset_path
                 }
             )
+
 
     def do_generate(self, message):
         self.logger.debug("Generating TTS with T5")
         text = self.replace_unspeakable_characters(message)
         text = self.replace_numbers_with_words(text)
         text = text.strip()
+
+        import soundfile as sf
+        inputs = self.processor(text="Hello, sir", return_tensors="pt")
+        inputs = self.move_inputs_to_device(inputs)
+        speech = self.model.generate_speech(inputs["input_ids"], self.speaker_embeddings, vocoder=self.vocoder)
+        speech = speech.cpu().to(torch.float32)
+        sf.write("test.wav", speech.numpy(), samplerate=16000)
+
         if text == "":
             return None
 

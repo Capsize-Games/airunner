@@ -1,26 +1,20 @@
+from transformers.generation.streamers import TextIteratorStreamer
+from transformers.models.mistral.modeling_mistral import MistralForCausalLM
+
 from airunner.aihandler.llm.agent import AIRunnerAgent
-from airunner.aihandler.llm.local_agent import LocalAgent
-from transformers import (
-    AutoModelForCausalLM,
-    TextIteratorStreamer
-)
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
-from airunner.enums import (
-    SignalCode,
-    LLMToolName,
-    LLMActionType
-)
+from airunner.enums import SignalCode
+from airunner.enums import LLMActionType
 from airunner.utils.get_current_chatbot import get_current_chatbot_property
 
 
 class CausalLMTransformerBaseHandler(TokenizerHandler):
-    auto_class_ = AutoModelForCausalLM
+    auto_class_ = MistralForCausalLM
 
     def __init__(self, *args, **kwargs):
         self.streamer = None
         self.chat_engine = None
         self.chat_agent = None
-        self.tool_agent = None
         self.llm_with_tools = None
         self.agent_executor = None
         self.embed_model = None
@@ -49,8 +43,12 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
 
         super().__init__(*args, **kwargs)
 
+        self.register(SignalCode.LLM_LOAD_SIGNAL, self.on_load_llm_signal)
         self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal)
         self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
+
+    def on_load_llm_signal(self, _message: dict):
+        self.load()
 
     def on_interrupt_process_signal(self, _message: dict):
         if self.chat_agent is not None:
@@ -63,7 +61,7 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
 
     @property
     def is_mistral(self) -> bool:
-        return "mistral" in self.model_path.lower() or "HuggingFaceH4/zephyr-7b-alpha" in self.model_path
+        return "mistral" in self.model_path
 
     @property
     def chat_template(self):
@@ -155,14 +153,6 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
         #     )
         # )
         self.logger.debug("Loading local agent")
-        self.tool_agent = LocalAgent(
-            model=self.model,
-            tokenizer=self.tokenizer,
-            run_prompt_template=f"Always use the {LLMToolName.DEFAULT_TOOL.value} tool",
-            additional_tools=self.tools,
-            restrict_tools_to_additional=self.restrict_tools_to_additional,
-        )
-        self.logger.debug("Loading chat agent")
         self.chat_agent = AIRunnerAgent(
             model=self.model,
             tokenizer=self.tokenizer,
@@ -178,10 +168,6 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
             self.logger.debug("Unloading chat agent")
             self.chat_agent.unload()
             self.chat_agent = None
-            do_clear_memory = True
-        if self.tool_agent is not None:
-            self.logger.debug("Unloading tool agent")
-            self.tool_agent.unload()
             do_clear_memory = True
         return do_clear_memory
 
@@ -226,7 +212,7 @@ class CausalLMTransformerBaseHandler(TokenizerHandler):
             if self.action != LLMActionType.GENERATE_IMAGE:
                 use_tool_filter = get_current_chatbot_property(self.settings, "use_tool_filter")
                 if use_tool_filter:
-                    self.tool_agent.run(self.prompt)
+                    print("USE TOOL FILTER HERE")
                 self.chat_agent.run(
                     self.prompt,
                     self.action,
