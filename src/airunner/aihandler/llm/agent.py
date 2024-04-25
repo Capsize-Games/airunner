@@ -229,6 +229,20 @@ class AIRunnerAgent(
             )
         return messages
 
+    @property
+    def _chat_template(self):
+        return (
+            "{% for message in messages %}"
+            "{% if message['role'] == 'system' %}"
+            "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
+            "{% elif message['role'] == 'user' %}"
+            "{{ '[INST]' + message['content'] + ' [/INST]' }}"
+            "{% elif message['role'] == 'assistant' %}"
+            "{{ message['content'] + eos_token + ' ' }}"
+            "{% endif %}"
+            "{% endfor %}"
+        ) if self.is_mistral else None
+
     def get_rendered_template(
         self,
         conversation,
@@ -236,7 +250,7 @@ class AIRunnerAgent(
         chat_template: str = ""
     ):
         rendered_template = self.tokenizer.apply_chat_template(
-            chat_template=chat_template,
+            chat_template=self._chat_template,
             conversation=conversation,
             tokenize=False
         )
@@ -445,6 +459,9 @@ class AIRunnerAgent(
                         streamed_template = streamed_template.replace(eos_token, "")
                         new_text = new_text.replace(eos_token, "")
                         is_end_of_message = True
+                    # strip botname from new_text
+                    new_text = new_text.replace(f"{self.botname}:", "")
+                    new_text = new_text.replace(f"{self.botname}", "")
                     self.emit_signal(
                         SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                         dict(
