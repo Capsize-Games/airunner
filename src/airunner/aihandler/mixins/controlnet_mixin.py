@@ -74,6 +74,23 @@ class ControlnetHandlerMixin:
             self._controlnet_image = self.preprocess_for_controlnet(self.sd_request.drawing_pad_image)
         return self._controlnet_image
 
+    @property
+    def controlnet_model(self):
+        controlnet_name = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
+        controlnet_model = self.controlnet_model_by_name(controlnet_name)
+        return controlnet_model
+
+    @property
+    def controlnet_path(self):
+        controlnet_model = self.controlnet_model
+        path = os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["controlnet_model_path"],
+                controlnet_model["path"]
+            )
+        )
+        return path
+
     def get_controlnet_image(self) -> Image.Image:
         controlnet_image = self.controlnet_image
         if controlnet_image:
@@ -144,8 +161,7 @@ class ControlnetHandlerMixin:
         )
         try:
             self.processor = Processor(
-                self.controlnet_type,
-                local_files_only=True,
+                self.controlnet_type
             )
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
@@ -199,23 +215,6 @@ class ControlnetHandlerMixin:
                     "path": short_path
                 }
             )
-
-    @property
-    def controlnet_model(self):
-        controlnet_name = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
-        controlnet_model = self.controlnet_model_by_name(controlnet_name)
-        return controlnet_model
-
-    @property
-    def controlnet_path(self):
-        controlnet_model = self.controlnet_model
-        path = os.path.expanduser(
-            os.path.join(
-                self.settings["path_settings"]["controlnet_model_path"],
-                controlnet_model["path"]
-            )
-        )
-        return path
 
     def preprocess_for_controlnet(self, image):
         if self.processor is not None and image is not None:
