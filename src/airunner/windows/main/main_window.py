@@ -335,21 +335,30 @@ class MainWindow(
 
         styles = "QLabel { color: " + color.value + "; }"
         element_name = ""
+        tool_tip = ""
         if data["model"] == ModelType.SD:
             element_name = "sd_status"
+            tool_tip = "Stable Diffusion"
         elif data["model"] == ModelType.CONTROLNET:
             element_name = "controlnet_status"
+            tool_tip = "Controlnet"
         elif data["model"] == ModelType.LLM:
             element_name = "llm_status"
+            tool_tip = "LLM"
         elif data["model"] == ModelType.TTS:
             element_name = "tts_status"
+            tool_tip = "TTS"
         elif data["model"] == ModelType.STT:
             element_name = "stt_status"
+            tool_tip = "STT"
         # elif data["model"] == ModelType.OCR:
         #     element_name = "ocr_status"
 
+        tool_tip += " model status: " + data["status"].value
+
         if element_name != "":
             getattr(self.ui, element_name).setStyleSheet(styles)
+            getattr(self.ui, element_name).setToolTip(tool_tip)
 
 
 
