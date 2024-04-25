@@ -1,15 +1,13 @@
 import os
-from transformers import (
-    AutoTokenizer,
-    RagTokenizer
-)
+from transformers import RagTokenizer
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
+from transformers.models.llama.tokenization_llama_fast import LlamaTokenizerFast
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.utils.get_torch_device import get_torch_device
 
 
 class TokenizerHandler(TransformerBaseHandler):
-    tokenizer_class_ = AutoTokenizer
+    tokenizer_class_ = LlamaTokenizerFast
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -109,7 +107,6 @@ class TokenizerHandler(TransformerBaseHandler):
                     "path": path
                 }
             )
-            self.logger.info("CLASS", self.tokenizer.__class__)
             self.logger.debug("Tokenizer loaded")
         except Exception as e:
             self.logger.error(e)
