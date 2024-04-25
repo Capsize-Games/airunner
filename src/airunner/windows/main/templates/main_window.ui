@@ -2468,7 +2468,7 @@
   <include location="../../../resources_dark.qrc"/>
  </resources>
  <connections>
- <connection>
+  <connection>
    <sender>actionModel_Merger</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
