@@ -132,13 +132,6 @@ class SpeechT5TTSHandler(TTSHandler):
         text = self.replace_numbers_with_words(text)
         text = text.strip()
 
-        import soundfile as sf
-        inputs = self.processor(text="Hello, sir", return_tensors="pt")
-        inputs = self.move_inputs_to_device(inputs)
-        speech = self.model.generate_speech(inputs["input_ids"], self.speaker_embeddings, vocoder=self.vocoder)
-        speech = speech.cpu().to(torch.float32)
-        sf.write("test.wav", speech.numpy(), samplerate=16000)
-
         if text == "":
             return None
 
