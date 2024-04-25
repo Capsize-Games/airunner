@@ -144,6 +144,7 @@ class SignalCode(Enum):
     LLM_RESPONSE_SIGNAL = "llm_response_signal"
     LLM_TEXT_STREAMED_SIGNAL = "llm_text_streamed_signal"
     LLM_REQUEST_WORKER_RESPONSE_SIGNAL = "LLMRequestWorker_response_signal"
+    LLM_LOAD_SIGNAL = "llm_load_signal"
     LLM_UNLOAD_SIGNAL = "llm_unload_signal"
     LLM_UNLOADED_SIGNAL = "llm_unload_signal"
     LLM_REQUEST_SIGNAL = "llm_request_signal"
@@ -514,6 +515,7 @@ class ModelType(Enum):
     TTS_VOCODER = "TTS Vocoder"
     TTS_SPEAKER_EMBEDDINGS = "TTS Speaker Embeddings"
     TTS_TOKENIZER = "TTS Tokenizer"
+    TTS_DATASET = "TTS Dataset"
     STT = "STT Model"
     STT_PROCESSOR = "STT Processor"
     STT_FEATURE_EXTRACTOR = "STT Feature Extractor"
@@ -522,6 +524,8 @@ class ModelType(Enum):
     SAFETY_CHECKER = "SD Safety Checker"
     FEATURE_EXTRACTOR = "SD Feature Extractor"
     SCHEDULER = "SD Scheduler"
+    LLM = "LLM Model"
+    LLM_TOKENIZER = "LLM Tokenizer"
 
 
 class HandlerState(Enum):
@@ -529,3 +533,9 @@ class HandlerState(Enum):
     READY = "Ready"
     GENERATING = "Generating"
     ERROR = "Error"
+
+
+class TTSModel(Enum):
+    ESPEAK = "espeak"
+    SPEECHT5 = "speecht5"
+    BARK = "bark"
