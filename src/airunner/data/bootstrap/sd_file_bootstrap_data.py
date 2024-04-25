@@ -20,6 +20,9 @@ SD_FILE_BOOTSTRAP_DATA = {
             "v1-5-pruned-emaonly.safetensors",
             "v1-inference.yaml",
         ],
+        "datasets": [
+            "Matthijs/cmu-arctic-xvectors"
+        ],
         "safety_checker": [
             "config.json",
             "preprocessor_config.json",
