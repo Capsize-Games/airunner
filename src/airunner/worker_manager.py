@@ -2,7 +2,6 @@ import traceback
 import numpy as np
 from PySide6.QtCore import QObject, Signal
 from airunner.aihandler.stt.whisper_handler import WhisperHandler
-from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 from airunner.enums import SignalCode, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -43,7 +42,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         disable_stt: bool = False,
         disable_vision_capture: bool = False,
         do_load_llm_on_init: bool = False,
-        tts_handler_class=EspeakTTSHandler,
         **kwargs
     ):
         MediatorMixin.__init__(self)
