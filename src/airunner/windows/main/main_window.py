@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QCheckBox
 )
 from airunner.agents.actions.bash_execute import bash_execute
+from airunner.agents.actions.show_path import show_path
 from airunner.aihandler.logger import Logger
 from airunner.settings import (
     STATUS_ERROR_COLOR,
@@ -29,7 +30,7 @@ from airunner.enums import (
     SignalCode,
     CanvasToolName,
     WindowSection,
-    GeneratorSection
+    GeneratorSection, StatusColors, ModelStatus, ModelType
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
@@ -189,10 +190,7 @@ class MainWindow(
             ai_mode=ai_mode,
         )
 
-        super().__init__(
-            *args,
-            **kwargs
-        )
+        super().__init__(*args, **kwargs)
 
         self._updating_settings = True
         self.update_settings()
@@ -323,6 +321,37 @@ class MainWindow(
         self.register(SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal)
         self.register(SignalCode.WRITE_FILE, self.on_write_file_signal)
         self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.reset_paths)
+        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
+
+    def on_model_status_changed_signal(self, data: dict):
+        if data["status"] == ModelStatus.LOADING:
+            color = StatusColors.LOADING
+        elif data["status"] == ModelStatus.LOADED:
+            color = StatusColors.LOADED
+        elif data["status"] == ModelStatus.FAILED:
+            color = StatusColors.FAILED
+        else:
+            color = StatusColors.UNLOADED
+
+        styles = "QLabel { color: " + color.value + "; }"
+        element_name = ""
+        if data["model"] == ModelType.SD:
+            element_name = "sd_status"
+        elif data["model"] == ModelType.CONTROLNET:
+            element_name = "controlnet_status"
+        elif data["model"] == ModelType.LLM:
+            element_name = "llm_status"
+        elif data["model"] == ModelType.TTS:
+            element_name = "tts_status"
+        elif data["model"] == ModelType.STT:
+            element_name = "stt_status"
+        # elif data["model"] == ModelType.OCR:
+        #     element_name = "ocr_status"
+
+        if element_name != "":
+            getattr(self.ui, element_name).setStyleSheet(styles)
+
+
 
     def on_write_file_signal(self, data: dict):
         """
@@ -404,11 +433,6 @@ class MainWindow(
         self.initialize_tool_section_buttons()
         self.intialized = True
 
-    def do_listen(self):
-        if not self.listening:
-            self.listening = True
-            self.worker_manager.do_listen()
-    
     def mode_tab_index_changed(self, index):
         settings = self.settings
         settings["mode"] = self.ui.mode_tab_widget.tabText(index)
@@ -514,11 +538,7 @@ class MainWindow(
         path = self.settings["path_settings"]["base_path"]
         if path == "":
             path = BASE_PATH
-        self.show_path(path)
-
-    @Slot()
-    def action_show_hf_cache_manager(self):
-        self.show_settings_path("hf_cache_path", self.settings["path_settings"]["hf_cache_path"])
+        show_path(path)
 
     @Slot()
     def action_show_images_path(self):
@@ -566,7 +586,7 @@ class MainWindow(
 
     def show_settings_path(self, name, default_path=None):
         path = self.settings["path_settings"][name]
-        self.show_path(default_path if default_path and path == "" else path)
+        show_path(default_path if default_path and path == "" else path)
 
     def set_icons(self, icon_name, widget_name, theme):
         if not self.intialized:
@@ -800,7 +820,7 @@ class MainWindow(
             settings["nsfw_filter"] = val
             self.settings = settings
             self.toggle_nsfw_filter()
-            self.emit_signal(SignalCode.LOAD_SAFETY_CHECKER_SIGNAL)
+            self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
 
     def show_nsfw_warning_popup(self):
         if self.settings["show_nsfw_warning"]:
@@ -855,7 +875,7 @@ class MainWindow(
             settings["show_nsfw_warning"] = show_nsfw_warning
         self.settings = settings
         self.toggle_nsfw_filter()
-        self.emit_signal(SignalCode.UNLOAD_SAFETY_CHECKER_SIGNAL)
+        self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL)
 
     def action_toggle_darkmode(self):
         self.set_stylesheet()

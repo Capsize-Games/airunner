@@ -499,6 +499,91 @@
                   </spacer>
                  </item>
                  <item>
+                  <widget class="QLabel" name="llm_status">
+                   <property name="font">
+                    <font>
+                     <pointsize>8</pointsize>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>LLM</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="sd_status">
+                   <property name="font">
+                    <font>
+                     <pointsize>8</pointsize>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>SD</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="controlnet_status">
+                   <property name="font">
+                    <font>
+                     <pointsize>8</pointsize>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>CN</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="tts_status">
+                   <property name="font">
+                    <font>
+                     <pointsize>8</pointsize>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>TTS</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="stt_status">
+                   <property name="font">
+                    <font>
+                     <pointsize>8</pointsize>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>STT</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="ocr_status">
+                   <property name="font">
+                    <font>
+                     <pointsize>8</pointsize>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>OCR</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="Line" name="line_4">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Vertical</enum>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <widget class="QPushButton" name="settings_button">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
@@ -722,7 +807,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>5</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -1550,7 +1635,6 @@
     </widget>
     <addaction name="actionPrompt_Browser"/>
     <addaction name="separator"/>
-    <addaction name="actionHuggingface_Cache_manager"/>
     <addaction name="actionBrowse_AI_Runner_Path"/>
     <addaction name="menuBrowse_Models_Path"/>
     <addaction name="separator"/>
@@ -2384,23 +2468,7 @@
   <include location="../../../resources_dark.qrc"/>
  </resources>
  <connections>
-  <connection>
-   <sender>actionHuggingface_Cache_manager</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_hf_cache_manager()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
+ <connection>
    <sender>actionModel_Merger</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -3491,7 +3559,6 @@
   </property>
  </designerdata>
  <slots>
-  <slot>action_show_hf_cache_manager()</slot>
   <slot>action_show_about_window()</slot>
   <slot>action_show_model_merger_window()</slot>
   <slot>action_show_kandinsky()</slot>

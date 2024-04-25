@@ -124,8 +124,8 @@ class SDHandler(
         }
         signals = {
             SignalCode.RESET_APPLIED_MEMORY_SETTINGS: self.on_reset_applied_memory_settings,
-            SignalCode.UNLOAD_SAFETY_CHECKER_SIGNAL: self.unload_safety_checker,
-            SignalCode.LOAD_SAFETY_CHECKER_SIGNAL: self.on_load_safety_checker_signal,
+            SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.unload_safety_checker,
+            SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_safety_checker_load_signal,
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
             SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_stablediffusion_signal,
             SignalCode.SD_LOAD_SIGNAL: self.on_load_stablediffusion_signal,
@@ -135,9 +135,14 @@ class SDHandler(
             SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
             SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
             SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
+            SignalCode.SAFETY_CHECKER_MODEL_LOAD_SIGNAL: self.on_safety_checker_model_load_signal,
+            SignalCode.SAFETY_CHECKER_MODEL_UNLOAD_SIGNAL: self.on_safety_checker_model_unload_signal,
+            SignalCode.FEATURE_EXTRACTOR_LOAD_SIGNAL: self.on_feature_extractor_load_signal,
+            SignalCode.FEATURE_EXTRACTOR_UNLOAD_SIGNAL: self.on_feature_extractor_unload_signal,
         }
         for code, handler in signals.items():
             self.register(code, handler)
+
 
         self.sd_mode = SDMode.DRAWING
         self.loaded = False
@@ -182,6 +187,18 @@ class SDHandler(
 
     def on_change_scheduler_signal(self, data: dict):
         self.load_scheduler(force_scheduler_name=data["scheduler"])
+
+    def on_safety_checker_model_load_signal(self, data_: dict):
+        self._load_safety_checker_model()
+
+    def on_safety_checker_model_unload_signal(self, data_: dict):
+        self._unload_safety_checker_model()
+
+    def on_feature_extractor_load_signal(self, data_: dict):
+        self._load_feature_extractor_model()
+
+    def on_feature_extractor_unload_signal(self, data_: dict):
+        self._unload_feature_extractor_model()
 
     @property
     def model_path(self):
@@ -350,7 +367,7 @@ class SDHandler(
     def on_sd_cancel_signal(self, _message: dict = None):
         print("on_sd_cancel_signal")
 
-    def on_load_safety_checker_signal(self, _message: dict = None):
+    def on_safety_checker_load_signal(self, _message: dict = None):
         self.load_safety_checker()
 
     def on_stop_auto_image_generation_signal(self, _message: dict = None):
