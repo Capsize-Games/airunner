@@ -1,8 +1,8 @@
 import os
 import torch
-from transformers import WhisperForConditionalGeneration
-from transformers import WhisperProcessor
-from transformers import WhisperFeatureExtractor
+from transformers.models.whisper.modeling_whisper import WhisperForConditionalGeneration
+from transformers.models.whisper.processing_whisper import WhisperProcessor
+from transformers.models.whisper.feature_extraction_whisper import WhisperFeatureExtractor
 from airunner.aihandler.stt.stt_handler import STTHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.settings import DEFAULT_STT_HF_PATH
