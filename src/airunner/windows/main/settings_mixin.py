@@ -214,6 +214,7 @@ class SettingsMixin:
             "video_path": f"{base_path}/art/other/videos",
             "ebooks_path": f"{base_path}/text/other/ebooks",
             "documents_path": f"{base_path}/text/other/documents",
+            "tts_speaker_embeddings_path": f"{base_path}/text/models/speaker_embeddings",
             "tts_datasets_path": f"{base_path}/text/models/datasets",
             "tts_model_path": f"{base_path}/text/models/tts",
             "stt_model_path": f"{base_path}/text/models/stt",
