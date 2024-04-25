@@ -2,7 +2,7 @@ import os
 import time
 import torch
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
-from datasets import load_dataset, load_from_disk
+from datasets import load_from_disk, load_dataset
 from airunner.aihandler.tts.tts_handler import TTSHandler
 from airunner.enums import SignalCode, LLMChatRole, ModelType, ModelStatus
 
@@ -13,36 +13,60 @@ class SpeechT5TTSHandler(TTSHandler):
     processor_class_ = SpeechT5Processor
 
     @property
+    def dataset_path(self):
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["tts_datasets_path"],
+                self.settings["tts_settings"]["speecht5"]["datasets_path"]
+            )
+        )
+
+    @property
     def processor_path(self):
-        #return self.settings["tts_settings"]["speecht5"]["processor_path"]
-        return "/home/joe/.airunner/text/models/tts/microsoft/speecht5_tts/"
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["tts_model_path"],
+                self.settings["tts_settings"]["speecht5"]["processor_path"]
+            )
+        )
 
     @property
     def model_path(self):
-        #return self.settings["tts_settings"]["speecht5"]["model_path"]
-        return "/home/joe/.airunner/text/models/tts/microsoft/speecht5_tts/"
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["tts_model_path"],
+                self.settings["tts_settings"]["speecht5"]["model_path"]
+            )
+        )
 
     @property
     def vocoder_path(self):
-        #return self.settings["tts_settings"]["speecht5"]["vocoder_path"]
-        return "/home/joe/.airunner/text/models/tts/microsoft/speecht5_tts/"
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["tts_model_path"],
+                self.settings["tts_settings"]["speecht5"]["vocoder_path"]
+            )
+        )
 
     @property
-    def speaker_embeddings_dataset_path(self):
-        #return self.settings["tts_settings"]["speecht5"]["embeddings_path"]
-        return "/home/joe/.airunner/text/models/tts/microsoft/speecht5_tts/"
+    def speaker_embeddings_path(self):
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["tts_speaker_embeddings_path"],
+                "speaker_embeddings"
+            )
+        )
 
     def load_vocoder(self):
-        self.logger.debug("Loading Vocoder")
+        self.logger.debug(f"Loading Vocoder {self.vocoder_path}")
         try:
-            path = "/home/joe/.airunner/text/models/tts/microsoft/speecht5_tts/"
             self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                 "model": ModelType.TTS_VOCODER,
                 "status": ModelStatus.LOADING,
-                "path": path
+                "path": self.vocoder_path
             })
             vocoder = self.vocoder = SpeechT5HifiGan.from_pretrained(
-                path,
+                self.vocoder_path,
                 local_files_only=True,
                 torch_dtype=torch.float16,
                 device_map=self.device
@@ -50,14 +74,14 @@ class SpeechT5TTSHandler(TTSHandler):
             self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                 "model": ModelType.TTS_VOCODER,
                 "status": ModelStatus.LOADED,
-                "path": path
+                "path": self.vocoder_path
             })
             return vocoder
         except Exception as e:
             self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                 "model": ModelType.TTS_VOCODER,
                 "status": ModelStatus.FAILED,
-                "path": path
+                "path": self.vocoder_path
             })
             return None
 
@@ -68,56 +92,36 @@ class SpeechT5TTSHandler(TTSHandler):
         """
         self.logger.debug("Loading Dataset")
 
-        # dataset_path = os.path.expanduser(
-        #     os.path.join(
-        #         self.settings["path_settings"]["tts_datasets_path"],
-        #         self.speaker_embeddings_dataset_path
-        #     )
-        # )
-        dataset_path = "/home/joe/.airunner/text/models/datasets/Matthijs/cmu-arctic-xvectors"
-
         self.emit_signal(
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                 "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
                 "status": ModelStatus.LOADING,
-                "path": dataset_path
+                "path": self.dataset_path
             }
         )
-        embeddings_dataset = load_dataset(
-            "/home/joe/Projects/huggingface/datasets/src/datasets/utils/datasets/cmu-arctic-xvectors.py",
-            #split="validation",
-            #data_files=dataset_path
-        )
-        if embeddings_dataset:
-            try:
-                self.speaker_embeddings = torch.tensor(
-                    embeddings_dataset[7306]["xvector"]
-                ).unsqueeze(0)
-                if self.use_cuda and self.speaker_embeddings is not None:
-                    self.speaker_embeddings = self.speaker_embeddings.half().cuda()
-                    self.emit_signal(
-                        SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                            "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
-                            "status": ModelStatus.LOADED,
-                            "path": dataset_path
-                        }
-                    )
-            except Exception as e:
-                self.logger.error("Failed to load speaker embeddings")
-                self.logger.error(e)
-                self.emit_signal(
-                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                        "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
-                        "status": ModelStatus.FAILED,
-                        "path": dataset_path
-                    }
-                )
-        else:
+        try:
+            self.speaker_embeddings = torch.load(
+                self.speaker_embeddings_path
+            )
+            if self.use_cuda and self.speaker_embeddings is not None:
+                self.speaker_embeddings = self.speaker_embeddings.half().cuda()
+
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
+                    "status": ModelStatus.LOADED,
+                    "path": self.dataset_path
+                }
+            )
+
+        except Exception as e:
+            self.logger.error("Failed to load speaker embeddings")
+            self.logger.error(e)
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                     "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
                     "status": ModelStatus.FAILED,
-                    "path": self.processor_path
+                    "path": self.dataset_path
                 }
             )
 
@@ -127,6 +131,14 @@ class SpeechT5TTSHandler(TTSHandler):
         text = self.replace_unspeakable_characters(message)
         text = self.replace_numbers_with_words(text)
         text = text.strip()
+
+        import soundfile as sf
+        inputs = self.processor(text="Hello, sir", return_tensors="pt")
+        inputs = self.move_inputs_to_device(inputs)
+        speech = self.model.generate_speech(inputs["input_ids"], self.speaker_embeddings, vocoder=self.vocoder)
+        speech = speech.cpu().to(torch.float32)
+        sf.write("test.wav", speech.numpy(), samplerate=16000)
+
         if text == "":
             return None
 
