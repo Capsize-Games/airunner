@@ -34,12 +34,13 @@ def build_ui(path):
 
 def generate_resources():
     print("Generating resources.py")
+    here = os.path.dirname(os.path.abspath(__file__))
     subprocess.run(
         [
             "pyside6-rcc",
             "-o",
-            "src/airunner/resources_rc.py",
-            "src/airunner/resources.qrc",
+            os.path.join(here, "resources_rc.py"),
+            os.path.join(here, "resources_dark.qrc"),
         ],
         cwd=str(Path(__file__).parent.parent),
     )
