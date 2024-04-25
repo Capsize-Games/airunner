@@ -43,7 +43,7 @@ class NullscreamWidget(BaseWidget):
         return data
 
     def on_application_main_window_loaded_signal(self, data: dict):
-        self.__data = data["main_window"].defendatron.shadowlogger.manager.shadowlogger.intercept_handler.nullscream
+        self.__data = data["main_window"].defendatron.nullscream_tracker.data
         self.display_lists()
 
     def display_lists(self):

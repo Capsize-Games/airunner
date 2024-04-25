@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
+  <layout class="QGridLayout" name="gridLayout_2">
    <property name="leftMargin">
     <number>0</number>
    </property>
@@ -31,12 +31,81 @@
      <property name="orientation">
       <enum>Qt::Orientation::Vertical</enum>
      </property>
-     <widget class="QTableWidget" name="model_stats"/>
+     <widget class="QWidget" name="widget" native="true">
+      <layout class="QGridLayout" name="gridLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="0" colspan="2">
+        <widget class="QTableWidget" name="model_stats"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QPushButton" name="pushButton">
+         <property name="text">
+          <string>Load all</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QPushButton" name="pushButton_2">
+         <property name="text">
+          <string>Unload all</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
      <widget class="QTextEdit" name="console"/>
     </widget>
    </item>
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>stats_widget</receiver>
+   <slot>load_all()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>163</x>
+     <y>267</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>58</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>clicked()</signal>
+   <receiver>stats_widget</receiver>
+   <slot>unload_all()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>320</x>
+     <y>270</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>418</x>
+     <y>-5</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>load_all()</slot>
+  <slot>unload_all()</slot>
+ </slots>
 </ui>
