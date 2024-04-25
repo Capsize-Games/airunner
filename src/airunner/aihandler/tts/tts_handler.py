@@ -287,6 +287,13 @@ class TTSHandler(BaseHandler):
             return
 
         try:
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS,
+                    "status": ModelStatus.LOADING,
+                    "path": self.model_path
+                }
+            )
             model = model_class_.from_pretrained(
                 self.model_path,
                 local_files_only=True,
@@ -303,7 +310,13 @@ class TTSHandler(BaseHandler):
             return model
         except EnvironmentError as _e:
             self.logger.error("Failed to load model")
-            return
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.TTS,
+                    "status": ModelStatus.FAILED,
+                    "path": self.model_path
+                }
+            )
 
     def load_tokenizer(self):
         self.logger.debug("Loading tokenizer")
@@ -343,6 +356,13 @@ class TTSHandler(BaseHandler):
         processor_class_ = self.processor_class_
         if processor_class_:
             try:
+                self.emit_signal(
+                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                        "model": ModelType.TTS_PROCESSOR,
+                        "status": ModelStatus.LOADING,
+                        "path": self.processor_path
+                    }
+                )
                 processor = processor_class_.from_pretrained(
                     self.processor_path,
                     local_files_only=True
