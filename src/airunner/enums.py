@@ -146,6 +146,8 @@ class SignalCode(Enum):
     LLM_REQUEST_WORKER_RESPONSE_SIGNAL = "LLMRequestWorker_response_signal"
     LLM_LOAD_SIGNAL = "llm_load_signal"
     LLM_UNLOAD_SIGNAL = "llm_unload_signal"
+    LLM_TOKENIZER_LOAD_SIGNAL = "llm_tokenizer_load_signal"
+    LLM_TOKENIZER_UNLOAD_SIGNAL = "llm_tokenizer_unload_signal"
     LLM_UNLOADED_SIGNAL = "llm_unload_signal"
     LLM_REQUEST_SIGNAL = "llm_request_signal"
     LLM_TEXT_GENERATE_REQUEST_SIGNAL = "llm_text_generate_request_signal"
