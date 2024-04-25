@@ -11,6 +11,17 @@ from airunner.utils.get_torch_device import get_torch_device
 class TokenizerHandler(TransformerBaseHandler):
     tokenizer_class_ = AutoTokenizer
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.register(SignalCode.LLM_TOKENIZER_LOAD_SIGNAL, self.on_load_tokenizer_signal)
+        self.register(SignalCode.LLM_TOKENIZER_UNLOAD_SIGNAL, self.on_unload_tokenizer_signal)
+
+    def on_load_tokenizer_signal(self, _message: dict):
+        self.load_tokenizer()
+
+    def on_unload_tokenizer_signal(self, _message: dict):
+        self.unload_tokenizer()
+
     @property
     def chat_template(self):
         return None
@@ -98,6 +109,7 @@ class TokenizerHandler(TransformerBaseHandler):
                     "path": path
                 }
             )
+            self.logger.info("CLASS", self.tokenizer.__class__)
             self.logger.debug("Tokenizer loaded")
         except Exception as e:
             self.logger.error(e)

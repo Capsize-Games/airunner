@@ -235,30 +235,28 @@ class TransformerBaseHandler(BaseHandler):
             clear_memory()
 
     def unload_tokenizer(self):
-        if self.tokenizer is not None:
-            self.logger.debug("Unloading tokenizer")
-            self.tokenizer = None
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM_TOKENIZER,
-                    "status": ModelStatus.UNLOADED,
-                    "path": ""
-                }
-            )
-            return True
+        self.logger.debug("Unloading tokenizer")
+        self.tokenizer = None
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.LLM_TOKENIZER,
+                "status": ModelStatus.UNLOADED,
+                "path": ""
+            }
+        )
+        return True
 
     def unload_model(self):
-        if self.model is not None:
-            self.logger.debug("Unloading model")
-            self.model = None
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM,
-                    "status": ModelStatus.UNLOADED,
-                    "path": ""
-                }
-            )
-            return True
+        self.logger.debug("Unloading model")
+        self.model = None
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.LLM,
+                "status": ModelStatus.UNLOADED,
+                "path": ""
+            }
+        )
+        return True
 
     def pre_load(self):
         """

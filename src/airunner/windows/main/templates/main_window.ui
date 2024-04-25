@@ -8,7 +8,7 @@
     <x>0</x>
     <y>0</y>
     <width>1263</width>
-    <height>787</height>
+    <height>894</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -149,30 +149,6 @@
             <number>0</number>
            </property>
            <item>
-            <widget class="QFrame" name="text_generator_header_tools">
-             <property name="frameShape">
-              <enum>QFrame::Shape::StyledPanel</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Shadow::Raised</enum>
-             </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_5">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-             </layout>
-            </widget>
-           </item>
-           <item>
             <widget class="QFrame" name="image_generator_header_tools">
              <property name="frameShape">
               <enum>QFrame::Shape::NoFrame</enum>
@@ -214,6 +190,48 @@
                  <property name="bottomMargin">
                   <number>0</number>
                  </property>
+                 <item>
+                  <widget class="QPushButton" name="ai_button">
+                   <property name="minimumSize">
+                    <size>
+                     <width>50</width>
+                     <height>45</height>
+                    </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>Toggle AI Mode</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="../../../resources_light.qrc">
+                     <normaloff>:/icons/light/artificial-intelligence-ai-chip-icon.svg</normaloff>:/icons/light/artificial-intelligence-ai-chip-icon.svg</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>24</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="Line" name="line_3">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Vertical</enum>
+                   </property>
+                  </widget>
+                 </item>
                  <item>
                   <widget class="QPushButton" name="file_new_button">
                    <property name="minimumSize">
@@ -480,6 +498,50 @@
                    </property>
                   </spacer>
                  </item>
+                 <item>
+                  <widget class="QPushButton" name="settings_button">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>50</width>
+                     <height>45</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>50</width>
+                     <height>45</height>
+                    </size>
+                   </property>
+                   <property name="cursor">
+                    <cursorShape>PointingHandCursor</cursorShape>
+                   </property>
+                   <property name="toolTip">
+                    <string>AI Runner Settings</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="../../../resources_light.qrc">
+                     <normaloff>:/icons/light/setting-line-icon.svg</normaloff>:/icons/light/setting-line-icon.svg</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>18</width>
+                     <height>18</height>
+                    </size>
+                   </property>
+                   <property name="flat">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
                 </layout>
                </widget>
               </item>
@@ -616,7 +678,7 @@
               <x>0</x>
               <y>0</y>
               <width>555</width>
-              <height>640</height>
+              <height>747</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout">
@@ -660,7 +722,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>4</number>
+                 <number>5</number>
                 </property>
                 <widget class="QWidget" name="tab_pen">
                  <attribute name="title">
@@ -755,8 +817,42 @@
                   <string>Stats</string>
                  </attribute>
                  <layout class="QGridLayout" name="gridLayout_2">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
                   <item row="0" column="0">
                    <widget class="StatsWidget" name="stats_widget" native="true"/>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="tab_4">
+                 <attribute name="title">
+                  <string>Facehugger</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_7">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item row="0" column="0">
+                   <widget class="NullscreamWidget" name="nullscream" native="true"/>
                   </item>
                  </layout>
                 </widget>
@@ -1101,43 +1197,30 @@
             </widget>
            </item>
            <item>
-            <widget class="Line" name="line_4">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
+            <widget class="Line" name="line_8">
              <property name="orientation">
               <enum>Qt::Orientation::Horizontal</enum>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="ai_button">
+            <widget class="QPushButton" name="pushButton">
              <property name="minimumSize">
               <size>
                <width>50</width>
                <height>45</height>
               </size>
              </property>
-             <property name="cursor">
-              <cursorShape>PointingHandCursor</cursorShape>
-             </property>
-             <property name="toolTip">
-              <string>Toggle AI Mode</string>
-             </property>
              <property name="text">
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
-               <normaloff>:/icons/light/artificial-intelligence-ai-chip-icon.svg</normaloff>:/icons/light/artificial-intelligence-ai-chip-icon.svg</iconset>
+              <iconset theme="applications-internet"/>
              </property>
              <property name="iconSize">
               <size>
-               <width>18</width>
-               <height>20</height>
+               <width>24</width>
+               <height>24</height>
               </size>
              </property>
              <property name="checkable">
@@ -1145,64 +1228,6 @@
              </property>
              <property name="flat">
               <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="Line" name="line_3">
-             <property name="orientation">
-              <enum>Qt::Orientation::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="settings_button">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>50</width>
-               <height>45</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>50</width>
-               <height>45</height>
-              </size>
-             </property>
-             <property name="cursor">
-              <cursorShape>PointingHandCursor</cursorShape>
-             </property>
-             <property name="toolTip">
-              <string>AI Runner Settings</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../../../resources_light.qrc">
-               <normaloff>:/icons/light/setting-line-icon.svg</normaloff>:/icons/light/setting-line-icon.svg</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>18</width>
-               <height>18</height>
-              </size>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="Line" name="line_8">
-             <property name="orientation">
-              <enum>Qt::Orientation::Horizontal</enum>
              </property>
             </widget>
            </item>
@@ -2347,6 +2372,12 @@
    <header>airunner/widgets/stats/stats_widget</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>NullscreamWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/facehugger/nullscream/nullscream_widget</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <resources>
   <include location="../../../resources_light.qrc"/>
@@ -2856,8 +2887,8 @@
    <slot>action_show_settings()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1248</x>
-     <y>510</y>
+     <x>1254</x>
+     <y>37</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -3000,8 +3031,8 @@
    <slot>action_ai_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1248</x>
-     <y>457</y>
+     <x>57</x>
+     <y>41</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -3016,7 +3047,7 @@
    <slot>action_new_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>45</x>
+     <x>108</x>
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
@@ -3032,7 +3063,7 @@
    <slot>action_export_image_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>171</x>
+     <x>234</x>
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
@@ -3048,7 +3079,7 @@
    <slot>action_undo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>222</x>
+     <x>285</x>
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
@@ -3064,7 +3095,7 @@
    <slot>action_redo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>264</x>
+     <x>327</x>
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
@@ -3097,7 +3128,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1248</x>
-     <y>660</y>
+     <y>662</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -3113,7 +3144,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1248</x>
-     <y>704</y>
+     <y>713</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -3129,7 +3160,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>1248</x>
-     <y>748</y>
+     <y>764</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -3400,12 +3431,12 @@
    <slot>action_image_generator_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1229</x>
-     <y>543</y>
+     <x>1248</x>
+     <y>551</y>
     </hint>
     <hint type="destinationlabel">
      <x>1158</x>
-     <y>-7</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -3416,12 +3447,28 @@
    <slot>action_controlnet_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1215</x>
-     <y>594</y>
+     <x>1248</x>
+     <y>602</y>
     </hint>
     <hint type="destinationlabel">
      <x>1216</x>
-     <y>-13</y>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_llm(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1231</x>
+     <y>475</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1265</x>
+     <y>78</y>
     </hint>
    </hints>
   </connection>
@@ -3532,5 +3579,6 @@
   <slot>action_run_setup_wizard_clicked()</slot>
   <slot>action_image_generator_toggled(bool)</slot>
   <slot>action_controlnet_toggled(bool)</slot>
+  <slot>action_toggle_llm(bool)</slot>
  </slots>
 </ui>

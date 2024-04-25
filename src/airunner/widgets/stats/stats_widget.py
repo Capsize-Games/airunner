@@ -1,5 +1,7 @@
+from functools import partial
+
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QTableWidgetItem, QHeaderView, QApplication
+from PySide6.QtWidgets import QTableWidgetItem, QHeaderView, QApplication, QPushButton
 from airunner.enums import SignalCode, ModelStatus, ModelType
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stats.templates.stats_ui import Ui_stats_widget
@@ -52,24 +54,39 @@ class StatsWidget(
             } for model_type in model_order
         }
 
+        self.model_column = 0
+        self.status_column = 1
+        self.load_button_column = 2
+        self.unload_button_colunm = 3
+        self.path_column = 4
+
         # add items
         self.initialize_model_stats_ui()
 
     def initialize_model_stats_ui(self):
         # Set row and column count
         total_rows = len(self.models.items())
-        total_columns = 3
+        total_columns = 5
         self.ui.model_stats.setRowCount(total_rows)
         self.ui.model_stats.setColumnCount(total_columns)
-        self.ui.model_stats.setHorizontalHeaderLabels(["Model", "Status", "Path"])
+        self.ui.model_stats.setHorizontalHeaderLabels(["Model", "Status", "Load", "Unload", "Path"])
 
         # Display model stats for each model
         row = 0
         for model_name, model in self.models.items():
             status: str = str(model["status"].value)
-            self.ui.model_stats.setItem(row, 0, QTableWidgetItem(model_name))
-            self.ui.model_stats.setItem(row, 1, QTableWidgetItem(status))
-            self.ui.model_stats.setItem(row, 2, QTableWidgetItem(model["path"]))
+            self.ui.model_stats.setItem(row, self.model_column, QTableWidgetItem(model_name))
+            self.ui.model_stats.setItem(row, self.status_column, QTableWidgetItem(status))
+            self.ui.model_stats.setItem(row, self.path_column, QTableWidgetItem(model["path"]))
+
+            button = QPushButton("Load")
+            button.clicked.connect(partial(self.load_model, model_name))
+            self.ui.model_stats.setCellWidget(row, self.load_button_column, button)
+
+            button = QPushButton("Unload")
+            button.clicked.connect(partial(self.unload_model, model_name))
+            self.ui.model_stats.setCellWidget(row, self.unload_button_colunm, button)
+
 
             self.set_color(row, 1, status)
 
@@ -91,6 +108,18 @@ class StatsWidget(
 
         QApplication.processEvents()
 
+    def load_model(self, model: str):
+        if model == ModelType.LLM.value:
+            self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
+        elif model == ModelType.LLM_TOKENIZER.value:
+            self.emit_signal(SignalCode.LLM_TOKENIZER_LOAD_SIGNAL)
+
+    def unload_model(self, model: str):
+        if model == ModelType.LLM.value:
+            self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
+        elif model == ModelType.LLM_TOKENIZER.value:
+            self.emit_signal(SignalCode.LLM_TOKENIZER_UNLOAD_SIGNAL)
+
     def on_model_status_changed_signal(self, data: dict = None):
         self.models[data["model"].value]["status"] = data["status"]
         self.models[data["model"].value]["path"] = data["path"]
@@ -106,7 +135,7 @@ class StatsWidget(
         :return:
         """
         for row in range(self.ui.model_stats.rowCount()):
-            item = self.ui.model_stats.item(row, 0)
+            item = self.ui.model_stats.item(row, self.model_column)
             if item is None:
                 continue
             if item.text() == model:
@@ -121,11 +150,9 @@ class StatsWidget(
         :param path:
         :return:
         """
-        self.ui.model_stats.item(row, 1).setText(status.value)
-        self.ui.model_stats.item(row, 2).setText(path)
-
-        self.set_color(row, 1, status)
-
+        self.ui.model_stats.item(row, self.status_column).setText(status.value)
+        self.ui.model_stats.item(row, self.path_column).setText(path)
+        self.set_color(row, self.status_column, status)
         QApplication.processEvents()
 
     def set_color(self, row, col, status):
