@@ -17,9 +17,10 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
-    QMainWindow, QMenu, QMenuBar, QPushButton,
-    QScrollArea, QSizePolicy, QSpacerItem, QSplitter,
-    QStatusBar, QTabWidget, QVBoxLayout, QWidget)
+    QLabel, QMainWindow, QMenu, QMenuBar,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QSplitter, QStatusBar, QTabWidget, QVBoxLayout,
+    QWidget)
 
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
@@ -513,6 +514,52 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_3.addItem(self.horizontalSpacer)
 
+        self.llm_status = QLabel(self.image_generator_header_tool_buttons)
+        self.llm_status.setObjectName(u"llm_status")
+        font1 = QFont()
+        font1.setPointSize(8)
+        font1.setBold(True)
+        self.llm_status.setFont(font1)
+
+        self.horizontalLayout_3.addWidget(self.llm_status)
+
+        self.sd_status = QLabel(self.image_generator_header_tool_buttons)
+        self.sd_status.setObjectName(u"sd_status")
+        self.sd_status.setFont(font1)
+
+        self.horizontalLayout_3.addWidget(self.sd_status)
+
+        self.controlnet_status = QLabel(self.image_generator_header_tool_buttons)
+        self.controlnet_status.setObjectName(u"controlnet_status")
+        self.controlnet_status.setFont(font1)
+
+        self.horizontalLayout_3.addWidget(self.controlnet_status)
+
+        self.tts_status = QLabel(self.image_generator_header_tool_buttons)
+        self.tts_status.setObjectName(u"tts_status")
+        self.tts_status.setFont(font1)
+
+        self.horizontalLayout_3.addWidget(self.tts_status)
+
+        self.stt_status = QLabel(self.image_generator_header_tool_buttons)
+        self.stt_status.setObjectName(u"stt_status")
+        self.stt_status.setFont(font1)
+
+        self.horizontalLayout_3.addWidget(self.stt_status)
+
+        self.ocr_status = QLabel(self.image_generator_header_tool_buttons)
+        self.ocr_status.setObjectName(u"ocr_status")
+        self.ocr_status.setFont(font1)
+
+        self.horizontalLayout_3.addWidget(self.ocr_status)
+
+        self.line_4 = QFrame(self.image_generator_header_tool_buttons)
+        self.line_4.setObjectName(u"line_4")
+        self.line_4.setFrameShape(QFrame.Shape.VLine)
+        self.line_4.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.horizontalLayout_3.addWidget(self.line_4)
+
         self.settings_button = QPushButton(self.image_generator_header_tool_buttons)
         self.settings_button.setObjectName(u"settings_button")
         sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.MinimumExpanding)
@@ -910,9 +957,9 @@ class Ui_MainWindow(object):
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
         self.menubar.setGeometry(QRect(0, 0, 1263, 22))
-        font1 = QFont()
-        font1.setPointSize(11)
-        self.menubar.setFont(font1)
+        font2 = QFont()
+        font2.setPointSize(11)
+        self.menubar.setFont(font2)
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuEdit = QMenu(self.menubar)
@@ -996,7 +1043,6 @@ class Ui_MainWindow(object):
         self.menuOutpaint.addAction(self.outpaint_enabled)
         self.menuView.addAction(self.actionPrompt_Browser)
         self.menuView.addSeparator()
-        self.menuView.addAction(self.actionHuggingface_Cache_manager)
         self.menuView.addAction(self.actionBrowse_AI_Runner_Path)
         self.menuView.addAction(self.menuBrowse_Models_Path.menuAction())
         self.menuView.addSeparator()
@@ -1020,7 +1066,6 @@ class Ui_MainWindow(object):
         self.menuTools.addAction(self.actionSafety_Checker)
 
         self.retranslateUi(MainWindow)
-        self.actionHuggingface_Cache_manager.triggered.connect(MainWindow.action_show_hf_cache_manager)
         self.actionModel_Merger.triggered.connect(MainWindow.action_show_model_merger_window)
         self.actionAbout.triggered.connect(MainWindow.action_show_about_window)
         self.actionControlNet.triggered.connect(MainWindow.action_show_controlnet)
@@ -1091,7 +1136,7 @@ class Ui_MainWindow(object):
 
         self.mode_tab_widget.setCurrentIndex(0)
         self.center_tab.setCurrentIndex(0)
-        self.tool_tab_widget.setCurrentIndex(5)
+        self.tool_tab_widget.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -1329,6 +1374,12 @@ class Ui_MainWindow(object):
         self.redo_button.setToolTip(QCoreApplication.translate("MainWindow", u"Redo", None))
 #endif // QT_CONFIG(tooltip)
         self.redo_button.setText("")
+        self.llm_status.setText(QCoreApplication.translate("MainWindow", u"LLM", None))
+        self.sd_status.setText(QCoreApplication.translate("MainWindow", u"SD", None))
+        self.controlnet_status.setText(QCoreApplication.translate("MainWindow", u"CN", None))
+        self.tts_status.setText(QCoreApplication.translate("MainWindow", u"TTS", None))
+        self.stt_status.setText(QCoreApplication.translate("MainWindow", u"STT", None))
+        self.ocr_status.setText(QCoreApplication.translate("MainWindow", u"OCR", None))
 #if QT_CONFIG(tooltip)
         self.settings_button.setToolTip(QCoreApplication.translate("MainWindow", u"AI Runner Settings", None))
 #endif // QT_CONFIG(tooltip)
