@@ -1,10 +1,7 @@
 import os
 import random
 import torch
-from transformers import (
-    BitsAndBytesConfig,
-    GPTQConfig
-)
+from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.utils.clear_memory import clear_memory

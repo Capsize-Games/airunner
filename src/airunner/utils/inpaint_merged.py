@@ -1,8 +1,9 @@
 import torch
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
 
 
 class InpaintMerged:
-    from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline
 
     """
     This is the same thing as run_modelmerger, but it is a class that can be extended.

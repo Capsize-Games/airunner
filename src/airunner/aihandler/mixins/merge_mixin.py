@@ -13,15 +13,13 @@ class MergeMixin:
 
     def merge_models(self, options):
         base_model_path, models_to_merge_path, weights, output_path, name, action = options
-        from diffusers import (
-            StableDiffusionPipeline,
-            StableDiffusionInstructPix2PixPipeline,
-            StableDiffusionInpaintPipeline,
-            StableDiffusionDepth2ImgPipeline,
-            StableDiffusionUpscalePipeline,
-            StableDiffusionLatentUpscalePipeline,
-            StableDiffusionXLPipeline
-        )
+        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
+        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
+        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_depth2img import StableDiffusionDepth2ImgPipeline
+        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_instruct_pix2pix import StableDiffusionInstructPix2PixPipeline
+        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import StableDiffusionUpscalePipeline
+        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import StableDiffusionLatentUpscalePipeline
+        from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
         self.data = {
             "action": action,
             "options": {
