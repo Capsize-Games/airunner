@@ -16,7 +16,7 @@ setup(
     python_requires=">=3.10.0",
     install_requires=[
         # Core application dependencies
-        "tqdm==4.66.2",
+        "tqdm==4.66.3",
         "accelerate==0.29.2",
         "huggingface-hub==0.22.2",
         "numpy==1.26.4",
