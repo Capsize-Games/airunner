@@ -234,11 +234,21 @@ class AIRunnerAgent(
 
         return "\n".join(system_prompt)
 
-    def latest_human_message(self) -> dict:
-        return {} if not self.prompt else {
-            "content": self.prompt,
-            "role": LLMChatRole.HUMAN.value
-        }
+    def latest_human_message(
+        self,
+        action: LLMActionType
+    ) -> dict:
+        if self.prompt:
+            prompt = self.prompt
+            if action == LLMActionType.APPLICATION_COMMAND:
+                prompt = (
+                    f"`{prompt}`\n\n"
+                    "Choose an action from THE LIST of commands for the text above. Only return the number of the command."
+                )
+            return {
+                "content": prompt,
+                "role": LLMChatRole.HUMAN.value
+            }
 
     def prepare_messages(
         self,
