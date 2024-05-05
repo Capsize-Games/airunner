@@ -60,24 +60,37 @@ class AIRunnerAgent(
         self.response_worker = create_worker(AgentWorker)
 
     @property
-    def chatbot(self):
-        chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
-        return self.settings["llm_generator_settings"]["saved_chatbots"][chatbot_name]
+    def llm_generator_settings(self):
+        return self.settings["llm_generator_settings"]
 
     @property
-    def username(self):
+    def chatbot_name(self) -> str:
+        if self.action == LLMActionType.APPLICATION_COMMAND:
+            chatbot_name = "Agent"
+        elif self.action == LLMActionType.CHAT:
+            chatbot_name = "Chatbot"
+        else:
+            chatbot_name = self.llm_generator_settings["current_chatbot"]
+        return chatbot_name
+
+    @property
+    def chatbot(self) -> dict:
+        return self.llm_generator_settings["saved_chatbots"][self.chatbot_name]
+
+    @property
+    def username(self) -> str:
         return self.chatbot["username"]
 
     @property
-    def botname(self):
+    def botname(self) -> str:
         return self.chatbot["botname"]
 
     @property
-    def bot_mood(self):
+    def bot_mood(self) -> str:
         return self.chatbot["bot_mood"]
 
     @property
-    def bot_personality(self):
+    def bot_personality(self) -> str:
         return self.chatbot["bot_personality"]
 
     def unload(self):
