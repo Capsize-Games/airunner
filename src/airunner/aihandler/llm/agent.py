@@ -40,6 +40,7 @@ class AIRunnerAgent(
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        self.action = LLMActionType.CHAT
 
         self.rendered_template = None
         self.model = kwargs.pop("model", None)
