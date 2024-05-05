@@ -255,7 +255,6 @@ class AIRunnerAgent(
     def prepare_messages(
         self,
         action: LLMActionType,
-        use_latest_human_message: bool = True,
         vision_history: list = []
     ) -> list:
         messages = [
@@ -268,12 +267,13 @@ class AIRunnerAgent(
             }
         ]
 
-        messages += self.history
+        if action == LLMActionType.CHAT:
+            messages += self.history
 
-        if use_latest_human_message:
-            messages.append(
-                self.latest_human_message()
-            )
+        messages.append(
+            self.latest_human_message(action)
+        )
+
         return messages
 
     @property
@@ -292,10 +292,16 @@ class AIRunnerAgent(
 
     def get_rendered_template(
         self,
-        conversation,
-        use_latest_human_message: bool = True,
-        chat_template: str = ""
+        action,
+        vision_history
     ):
+        conversation = []
+
+        conversation = self.prepare_messages(
+            action,
+            vision_history=vision_history
+        )
+
         rendered_template = self.tokenizer.apply_chat_template(
             chat_template=self._chat_template,
             conversation=conversation,
