@@ -334,7 +334,12 @@ class AIRunnerAgent(
 
     @property
     def generator_settings(self):
-        return self.chatbot["generator_settings"]
+        generator_settings = self.chatbot["generator_settings"]
+        generator_settings["temperature"] = generator_settings["temperature"] / 10000
+        generator_settings["top_p"] = generator_settings["top_p"] / 1000
+        generator_settings["repetition_penalty"] = generator_settings["repetition_penalty"] / 10000
+        generator_settings["length_penalty"] = generator_settings["length_penalty"] / 1000
+        return generator_settings
 
     def get_model_inputs(
         self,
