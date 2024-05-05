@@ -211,6 +211,27 @@ class AIRunnerAgent(
                 guardrails,
                 self.settings["prompt_templates"]["image"]["system"]
             ]
+
+        elif action == LLMActionType.APPLICATION_COMMAND:
+            system_prompt = [
+                (
+                    "You will be given some text. Your goal is to determine if the text has a request, goal, need "
+                    "desire or command. If it does, you must determine the best course of action to "
+                    "fulfill the request based on the list of commands above.\n\n"
+                    "------\n"
+                    "Rules:\n"
+                    "* If the text does not have a request, goal, need, desire or command, you must select 'DO NOTHING'.\n"
+                    "* If there is no good course of action, you must also select 'DO NOTHING'.\n"
+                    "* When making your choice you MUST return only a number from THE LIST of commands. No other text is allowed.\n"
+                    "------\n"
+                    "THE LIST of commands you may choose from:\n"
+                    "1. QUIT: Quit or close the application.\n"
+                    "2. FULL SCREEN: Make the application full screen.\n"
+                    "0. DO NOTHING: None of the above commands will accurately fulfill the task at hand.\n"
+                )
+            ]
+
+
         return "\n".join(system_prompt)
 
     def latest_human_message(self) -> dict:
