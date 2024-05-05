@@ -250,6 +250,8 @@ class AIRunnerAgent(
                 "role": LLMChatRole.HUMAN.value
             }
 
+        return {}
+
     def prepare_messages(
         self,
         action: LLMActionType,
