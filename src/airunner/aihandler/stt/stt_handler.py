@@ -25,7 +25,7 @@ class STTHandler(BaseHandler):
         self.model = None
         self.is_on_gpu = False
 
-        # self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
+        self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
         # self.register(SignalCode.PROCESS_SPEECH_SIGNAL, self.process_given_speech)
         # self.register(SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal)
         # self.register(SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal)

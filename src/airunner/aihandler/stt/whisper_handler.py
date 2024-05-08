@@ -16,6 +16,9 @@ class WhisperHandler(STTHandler):
         self.unload()
         super().stop_capture(data)
 
+    def update_status(self, code: SignalCode, status: ModelStatus):
+        pass
+
     def load_model(self):
         self.logger.debug(f"Loading model")
 

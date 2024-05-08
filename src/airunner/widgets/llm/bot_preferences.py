@@ -123,6 +123,7 @@ class BotPreferencesWidget(BaseWidget):
     def saved_chatbots_changed(self, val):
         self.current_chatbot_name = val
         self.load_form_elements()
+        self.ui.llm_settings_widget.initialize_form()
 
     def load_saved_chatbots(self):
         names = self.settings["llm_generator_settings"]["saved_chatbots"].keys()

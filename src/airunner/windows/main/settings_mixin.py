@@ -48,7 +48,6 @@ class SettingsMixin:
         self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = DEFAULT_APPLICATION_SETTINGS
-        self.update_settings()
 
     @property
     def settings(self):
@@ -222,10 +221,13 @@ class SettingsMixin:
             "llm_seq2seq_model_path": f"{base_path}/text/models/seq2seq",
             "llm_visualqa_model_path": f"{base_path}/text/models/visualqa",
             "llm_misc_model_path": f"{base_path}/text/models/misc",
+            "feature_extraction_model_path": f"{base_path}/text/models/feature_extraction",
             "llm_causallm_model_cache_path": f"{base_path}/text/models/causallm/cache",
             "llm_seq2seq_model_cache_path": f"{base_path}/text/models/seq2seq/cache",
             "llm_visualqa_model_cache_path": f"{base_path}/text/models/visualqa/cache",
             "llm_misc_model_cache_path": f"{base_path}/text/models/misc/cache",
+            "rag_documents_path": f"{base_path}/text/other/rag_temp",
+            "sentence_transformers_path": f"{base_path}/text/models/sentence_transformers",
         }
         return paths
 

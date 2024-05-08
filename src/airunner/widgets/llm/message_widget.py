@@ -89,6 +89,5 @@ class MessageWidget(BaseWidget):
 
     def update_message(self, text):
         self.message += text
-        self.ui.content.moveCursor(QTextCursor.MoveOperation.End)
-        self.ui.content.insertPlainText(text)
+        self.ui.content.setPlainText(self.message)
 

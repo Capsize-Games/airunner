@@ -8,7 +8,9 @@ from airunner.enums import LLMActionType
 from airunner.utils.get_current_chatbot import get_current_chatbot_property
 
 
-class CausalLMTransformerBaseHandler(TokenizerHandler):
+class CausalLMTransformerBaseHandler(
+    TokenizerHandler
+):
     auto_class_ = MistralForCausalLM
 
     def __init__(self, *args, **kwargs):

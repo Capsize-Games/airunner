@@ -32,6 +32,17 @@ from airunner.enums import (
 )
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
 
+# TODO: move the following into the settings dict
+LLM_CUDA_DEVICE_INDEX = 1  # 3060
+LLM_TOKENIZER_DEVICE_INDEX = LLM_CUDA_DEVICE_INDEX
+RAG_AGENT_DEVICE_INDEX = 0  # 2080s
+
+####################################################################
+# NLTK_DOWNLOAD_DIR is the directory where the NLTK files will be
+# downloaded to. We need this for RAG
+####################################################################
+NLTK_DOWNLOAD_DIR = "/home/joe/Projects/airunner/venv/lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/"
+
 ####################################################################
 # USE_MODEL_MANAGER is used to enable the model manager.
 # The model manager allows the user to download models from
@@ -67,7 +78,7 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.ERROR
+LOG_LEVEL = logging.DEBUG
 
 ####################################################################
 # Default models for the core application
@@ -123,18 +134,18 @@ DEFAULT_IMAGE_SYSTEM_PROMPT = "\n".join([
         "dark etc), "
         "the color, the composition and the mood."
     ),
-    (
-        "When returning prompts you must choose either "
-        "\"art\" or \"photo\" and you absolutely must include "
-        "the following JSON format:\n"
-        "```json\n{"
-        "\"prompt\": \"your prompt here\", "
-        "\"type\": \"your type here\""
-        "}\n```\n"
-        "You must **NEVER** deviate from that format. You must "
-        "always return the prompt and type as JSON format. "
-        "This is **MANDATORY**."
-    )
+    # (
+    #     "When returning prompts you must choose either "
+    #     "\"art\" or \"photo\" and you absolutely must include "
+    #     "the following JSON format:\n"
+    #     "```json\n{"
+    #     "\"prompt\": \"your prompt here\", "
+    #     "\"type\": \"your type here\""
+    #     "}\n```\n"
+    #     "You must **NEVER** deviate from that format. You must "
+    #     "always return the prompt and type as JSON format. "
+    #     "This is **MANDATORY**."
+    # )
 ])
 
 ####################################################################
@@ -206,22 +217,40 @@ DEFAULT_CHATBOT = {
         "You must communicate like a human."
     ),
     "generator_settings": {
-        "max_new_tokens": 30,
+        "max_new_tokens": 200,
         "min_length": 1,
         "do_sample": True,
         "early_stopping": True,
         "num_beams": 1,
-        "temperature": 0.9,
-        "top_p": 0.9,
+        "temperature": 900,
+        "top_p": 900,
         "no_repeat_ngram_size": 2,
         "top_k": 50,
-        "eta_cutoff": 0.2,
-        "repetition_penalty": 1.0,
+        "eta_cutoff": 200,
+        "repetition_penalty": 10000,
         "num_return_sequences": 1,
         "decoder_start_token_id": None,
         "use_cache": True,
-        "length_penalty": 0.1,
+        "length_penalty": 1000,
     },
+}
+AGENT_CHATBOT = DEFAULT_CHATBOT.copy()
+AGENT_CHATBOT["generator_settings"] = {
+    "max_new_tokens": 2,
+    "min_length": 1,
+    "do_sample": True,
+    "early_stopping": True,
+    "num_beams": 1,
+    "temperature": 900,
+    "top_p": 900,
+    "no_repeat_ngram_size": 2,
+    "top_k": 50,
+    "eta_cutoff": 200,
+    "repetition_penalty": 10000,
+    "num_return_sequences": 1,
+    "decoder_start_token_id": None,
+    "use_cache": True,
+    "length_penalty": 1000,
 }
 
 
@@ -1060,9 +1089,10 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         use_gpu=True,
         message_type="chat",
         override_parameters=False,
-        current_chatbot="Default",
+        current_chatbot="Chatbot",
         saved_chatbots=dict(
-            Default=DEFAULT_CHATBOT
+            Chatbot=DEFAULT_CHATBOT,
+            Agent=AGENT_CHATBOT,
         ),
         prompt_template="Mistral 7B Instruct: Default Chatbot",
         batch_size=1,

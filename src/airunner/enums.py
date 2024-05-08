@@ -29,6 +29,7 @@ class FilterType(Enum):
 
 
 class SignalCode(Enum):
+    LLM_RAG_SEARCH_SIGNAL = "llm_rag_search_signal"
     RESET_APPLIED_MEMORY_SETTINGS = "reset_applied_memory_settings"
     ENABLE_BRUSH_TOOL_SIGNAL = "enable_brush_tool_signal"
     ENABLE_ERASER_TOOL_SIGNAL = "enable_eraser_tool_signal"
@@ -199,6 +200,8 @@ class SignalCode(Enum):
     VISION_DESCRIBE_IMAGE_SIGNAL = "describe_image_signal"
     VISION_PROCESS_IMAGES = "process_images"
     QUIT_APPLICATION = "quit"
+    TOGGLE_FULLSCREEN_SIGNAL = "fullscreen_signal"
+    TOGGLE_TTS_SIGNAL = "toggle_tts_signal"
     START_AUTO_IMAGE_GENERATION_SIGNAL = "start_auto_image_generation_signal"
     STOP_AUTO_IMAGE_GENERATION_SIGNAL = "stop_auto_image_generation_signal"
     LINES_UPDATED_SIGNAL = "lines_updated_signal"
@@ -361,9 +364,17 @@ class LLMActionType(Enum):
     use_tool_flter flag, the LLM will attempt to determine which action to take
     based on the user's words.
     """
-    CHAT = "Chat"
-    GENERATE_IMAGE = "Generate Image"
-    ANALYZE_VISION_HISTORY = "Analyze Vision History"
+    DO_NOT_RESPOND = "DO NOT RESPOND: Use this option when the user has asked you to stop responding or if the text does not require a response."
+    CHAT = "RESPOND TO THE USER: Respond to the user's message."
+    GENERATE_IMAGE = "GENERATE IMAGE: Generate an image based on the text."
+    ANALYZE_VISION_HISTORY = "ANALYZE VISION HISTORY: Analyze the vision history."
+    APPLICATION_COMMAND = "APPLICATION COMMAND: Execute an application command."
+    UPDATE_MOOD = "UPDATE MOOD: {{ username }} has made you feel a certain way. Respond with an emotion or feeling so that you can update your current mood."
+    QUIT_APPLICATION = "QUIT: Quit or close the application."
+    TOGGLE_FULLSCREEN = "FULL SCREEN: Make the application full screen."
+    TOGGLE_TTS = "TOGGLE TTS: Toggle text-to-speech on or off."
+    PERFORM_RAG_SEARCH = "SEARCH: Perform a search for information related to the user's query or context within the conversation."
+
 
 
 class CanvasToolName(Enum):

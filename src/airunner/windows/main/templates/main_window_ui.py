@@ -865,16 +865,16 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.line_8)
 
-        self.pushButton = QPushButton(self.button_menu)
-        self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setMinimumSize(QSize(50, 45))
+        self.llm_button = QPushButton(self.button_menu)
+        self.llm_button.setObjectName(u"llm_button")
+        self.llm_button.setMinimumSize(QSize(50, 45))
         icon17 = QIcon(QIcon.fromTheme(u"applications-internet"))
-        self.pushButton.setIcon(icon17)
-        self.pushButton.setIconSize(QSize(24, 24))
-        self.pushButton.setCheckable(True)
-        self.pushButton.setFlat(True)
+        self.llm_button.setIcon(icon17)
+        self.llm_button.setIconSize(QSize(24, 24))
+        self.llm_button.setCheckable(True)
+        self.llm_button.setFlat(True)
 
-        self.verticalLayout.addWidget(self.pushButton)
+        self.verticalLayout.addWidget(self.llm_button)
 
         self.sd_toggle_button = QPushButton(self.button_menu)
         self.sd_toggle_button.setObjectName(u"sd_toggle_button")
@@ -1132,7 +1132,7 @@ class Ui_MainWindow(object):
         self.actionRun_setup_wizard_2.triggered.connect(MainWindow.action_run_setup_wizard_clicked)
         self.sd_toggle_button.toggled.connect(MainWindow.action_image_generator_toggled)
         self.controlnet_toggle_button.toggled.connect(MainWindow.action_controlnet_toggled)
-        self.pushButton.toggled.connect(MainWindow.action_toggle_llm)
+        self.llm_button.toggled.connect(MainWindow.action_toggle_llm)
 
         self.mode_tab_widget.setCurrentIndex(0)
         self.center_tab.setCurrentIndex(0)
@@ -1412,7 +1412,7 @@ class Ui_MainWindow(object):
         self.focus_button.setToolTip(QCoreApplication.translate("MainWindow", u"Recenter canvas", None))
 #endif // QT_CONFIG(tooltip)
         self.focus_button.setText("")
-        self.pushButton.setText("")
+        self.llm_button.setText("")
 #if QT_CONFIG(tooltip)
         self.sd_toggle_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Image Generator", None))
 #endif // QT_CONFIG(tooltip)
