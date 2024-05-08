@@ -6,7 +6,7 @@ from llama_index.llms.huggingface import HuggingFaceLLM
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core import Settings
 from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, LLMChatRole
 
 
 class AgentLlamaIndexMixin:
@@ -45,12 +45,13 @@ class AgentLlamaIndexMixin:
     def perform_rag_search(self, prompt, streaming: bool = False):
         query_engine = self.__index.as_query_engine(streaming=streaming)
         response = query_engine.query(prompt)
+        response_text = ""
         if streaming:
             self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
             is_first_message = True
             is_end_of_message = False
             for res in response.response_gen:
-                print(res)
+                response_text += res
                 self.emit_signal(
                     SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                     dict(
@@ -61,18 +62,24 @@ class AgentLlamaIndexMixin:
                     )
                 )
                 is_first_message = False
-        else:
-            return response
 
-        self.emit_signal(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-            dict(
-                message="",
-                is_first_message=is_first_message,
-                is_end_of_message=True,
-                name=self.botname,
+            self.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                dict(
+                    message="",
+                    is_first_message=is_first_message,
+                    is_end_of_message=True,
+                    name=self.botname,
+                )
             )
+
+        self.add_message_to_history(
+            response_text,
+            LLMChatRole.ASSISTANT
         )
+
+        return response
+
 
     def __load_rag_model(self):
         self.logger.debug("Loading RAG model...")
