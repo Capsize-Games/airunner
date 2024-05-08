@@ -12,14 +12,11 @@ from PIL import (
 )
 from diffusers.pipelines.stable_diffusion.convert_from_ckpt import download_from_original_stable_diffusion_ckpt
 from diffusers.utils.torch_utils import randn_tensor
-from diffusers import (
-    StableDiffusionPipeline,
-    StableDiffusionDepth2ImgPipeline,
-    AutoPipelineForInpainting,
-    StableDiffusionInstructPix2PixPipeline,
-    StableDiffusionImg2ImgPipeline,
-    StableDiffusionInpaintPipeline
-)
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_depth2img import StableDiffusionDepth2ImgPipeline
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_instruct_pix2pix import StableDiffusionInstructPix2PixPipeline
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
 from airunner.aihandler.stablediffusion.sd_request import SDRequest
 from airunner.enums import (
     GeneratorSection,
@@ -358,7 +355,7 @@ class ModelMixin:
         if self.sd_request.generator_settings.section == GeneratorSection.DEPTH2IMG.value:
             pipeline_classname_ = StableDiffusionDepth2ImgPipeline
         elif self.sd_request.generator_settings.section == GeneratorSection.OUTPAINT.value:
-            pipeline_classname_ = AutoPipelineForInpainting
+            pipeline_classname_ = StableDiffusionInpaintPipeline
         elif self.sd_request.generator_settings.section == GeneratorSection.PIX2PIX.value:
             pipeline_classname_ = StableDiffusionInstructPix2PixPipeline
         elif self.sd_request.is_img2img:

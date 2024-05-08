@@ -117,7 +117,6 @@ class MainWindow(
         tts_enabled: bool = False,
         stt_enabled: bool = False,
         ai_mode: bool = True,
-        do_load_llm_on_init: bool = False,
         tts_handler_class=None,
         restrict_os_access=None,
         defendatron=None,
@@ -130,7 +129,6 @@ class MainWindow(
         self.disable_tts = disable_tts
         self.disable_stt = disable_stt
         self.disable_vision_capture = disable_vision_capture
-        self.do_load_llm_on_init = do_load_llm_on_init
         self.tts_handler_class = tts_handler_class
 
         self.restrict_os_access = restrict_os_access
@@ -189,6 +187,9 @@ class MainWindow(
             stt_enabled=stt_enabled,
             ai_mode=ai_mode,
         )
+        self.do_load_llm_on_init = self.settings["llm_enabled"]
+
+        self.update_settings()
 
         super().__init__(*args, **kwargs)
 
@@ -322,6 +323,8 @@ class MainWindow(
         self.register(SignalCode.WRITE_FILE, self.on_write_file_signal)
         self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.reset_paths)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
+        self.register(SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal)
+        self.register(SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts)
 
     def on_model_status_changed_signal(self, data: dict):
         if data["status"] == ModelStatus.LOADING:
@@ -335,21 +338,30 @@ class MainWindow(
 
         styles = "QLabel { color: " + color.value + "; }"
         element_name = ""
+        tool_tip = ""
         if data["model"] == ModelType.SD:
             element_name = "sd_status"
+            tool_tip = "Stable Diffusion"
         elif data["model"] == ModelType.CONTROLNET:
             element_name = "controlnet_status"
+            tool_tip = "Controlnet"
         elif data["model"] == ModelType.LLM:
             element_name = "llm_status"
+            tool_tip = "LLM"
         elif data["model"] == ModelType.TTS:
             element_name = "tts_status"
+            tool_tip = "TTS"
         elif data["model"] == ModelType.STT:
             element_name = "stt_status"
+            tool_tip = "STT"
         # elif data["model"] == ModelType.OCR:
         #     element_name = "ocr_status"
 
+        tool_tip += " model status: " + data["status"].value
+
         if element_name != "":
             getattr(self.ui, element_name).setStyleSheet(styles)
+            getattr(self.ui, element_name).setToolTip(tool_tip)
 
 
 
@@ -413,17 +425,20 @@ class MainWindow(
         self.ui.ocr_button.blockSignals(True)
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)
+        self.ui.llm_button.blockSignals(True)
         self.ui.sd_toggle_button.blockSignals(True)
         self.ui.sd_toggle_button.blockSignals(True)
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.controlnet_toggle_button.blockSignals(True)
         self.ui.ocr_button.setChecked(self.settings["ocr_enabled"])
+        self.ui.llm_button.setChecked(self.settings["llm_enabled"])
         self.ui.tts_button.setChecked(self.settings["tts_enabled"])
         self.ui.v2t_button.setChecked(self.settings["stt_enabled"])
         self.ui.sd_toggle_button.setChecked(self.settings["sd_enabled"])
         self.ui.enable_controlnet.setChecked(self.settings["controlnet_enabled"])
         self.ui.controlnet_toggle_button.setChecked(self.settings["controlnet_enabled"])
         self.ui.ocr_button.blockSignals(False)
+        self.ui.llm_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
         self.ui.sd_toggle_button.blockSignals(False)
@@ -636,11 +651,14 @@ class MainWindow(
             f"Click to {'enable' if not self.settings['nsfw_filter'] else 'disable'} NSFW filter"
         )
 
-    def toggle_fullscreen(self):
+    def on_toggle_fullscreen_signal(self, message: dict = None):
         if self.isFullScreen():
             self.showNormal()
         else:
             self.showFullScreen()
+
+    def on_toggle_tts(self, message: dict = None):
+        self.tts_button_toggled(not self.settings["tts_enabled"])
 
     @Slot(bool)
     def tts_button_toggled(self, val):

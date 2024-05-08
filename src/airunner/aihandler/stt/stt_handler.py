@@ -26,9 +26,9 @@ class STTHandler(BaseHandler):
         self.is_on_gpu = False
 
         self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
-        self.register(SignalCode.PROCESS_SPEECH_SIGNAL, self.process_given_speech)
-        self.register(SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal)
-        self.register(SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal)
+        # self.register(SignalCode.PROCESS_SPEECH_SIGNAL, self.process_given_speech)
+        # self.register(SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal)
+        # self.register(SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal)
         self.fs = 16000
 
         if self.settings["stt_enabled"]:
@@ -53,21 +53,32 @@ class STTHandler(BaseHandler):
 
     def unload(self):
         self.logger.debug("Unloading model")
-        self.model = None
-        self.processor = None
-        self.feature_extractor = None
-        clear_memory()
         self.is_on_gpu = False
+        self.unload_model()
+        self.unload_processor()
+        self.unload_feature_extractor()
+
+    def unload_model(self):
+        self.model = None
+        clear_memory()
         self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
             "model": ModelType.STT,
             "status": ModelStatus.UNLOADED,
             "path": ""
         })
+
+    def unload_processor(self):
+        self.processor = None
+        clear_memory()
         self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
             "model": ModelType.STT_PROCESSOR,
             "status": ModelStatus.UNLOADED,
             "path": ""
         })
+
+    def unload_feature_extractor(self):
+        self.feature_extractor = None
+        clear_memory()
         self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
             "model": ModelType.STT_FEATURE_EXTRACTOR,
             "status": ModelStatus.UNLOADED,
