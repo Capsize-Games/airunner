@@ -63,15 +63,18 @@ class LLMGenerateWorker(Worker):
                 self.logger.debug("Resumed")
             QThread.msleep(SLEEP_TIME_IN_MS)
 
+    def llm_load_signal(self, data: dict):
+        print("llm_load_signal called from nats with", data)
+
     def on_llm_request_worker_response_signal(self, message: dict):
         self.add_to_queue(message)
 
     def handle_message(self, message):
-        try:
-            self.llm.handle_request(message)
-        except Exception as e:
-            self.logger.error(f"Error in handle_message: {e}")
-            self.logger.error(f"Message: {message}")
+        # try:
+        self.llm.handle_request(message)
+        # except Exception as e:
+        #     self.logger.error(f"Error in handle_message: {e}")
+        #     self.logger.error(f"Message: {message}")
 
     def unload_llm(self):
         self.logger.debug("Unloading LLM")
