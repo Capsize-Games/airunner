@@ -13,31 +13,11 @@ class WhisperHandler(STTHandler):
     Handler for the Whisper model from OpenAI.
     """
     def stop_capture(self, data: dict):
-        self.model = None
-        self.processor = None
-        self.feature_extractor = None
+        self.unload()
         super().stop_capture(data)
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.STT,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.STT_PROCESSOR,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.STT_FEATURE_EXTRACTOR,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
+
+    def update_status(self, code: SignalCode, status: ModelStatus):
+        pass
 
     def load_model(self):
         self.logger.debug(f"Loading model")
