@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>722</width>
-    <height>917</height>
+    <height>1031</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,7 +25,7 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
        <item row="0" column="0">
-        <widget class="LLMSettingsWidget" name="widget" native="true"/>
+        <widget class="LLMSettingsWidget" name="llm_settings_widget" native="true"/>
        </item>
       </layout>
      </widget>
@@ -59,6 +59,18 @@
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
        <widget class="QPlainTextEdit" name="system_instructions">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>150</height>
+         </size>
+        </property>
         <property name="placeholderText">
          <string>Instructions for the LLM</string>
         </property>
@@ -78,6 +90,18 @@
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <widget class="QPlainTextEdit" name="guardrails_prompt">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>150</height>
+         </size>
+        </property>
         <property name="placeholderText">
          <string>The guardrails prompt is used to moderate results.</string>
         </property>
@@ -179,6 +203,18 @@
         <layout class="QGridLayout" name="gridLayout_5">
          <item row="1" column="0">
           <widget class="QPlainTextEdit" name="bot_personality">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>75</height>
+            </size>
+           </property>
            <property name="placeholderText">
             <string>EXAMPLE: {{ botname }} is very helpful and {{ gender }} loves {{ username }}.</string>
            </property>
@@ -205,6 +241,18 @@
         <layout class="QGridLayout" name="gridLayout_2">
          <item row="0" column="0">
           <widget class="QPlainTextEdit" name="bot_mood">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>75</height>
+            </size>
+           </property>
            <property name="placeholderText">
             <string>EXAMPLE: Excited</string>
            </property>
