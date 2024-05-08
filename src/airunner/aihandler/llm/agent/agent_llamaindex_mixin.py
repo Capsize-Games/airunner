@@ -5,7 +5,7 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.huggingface import HuggingFaceLLM
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core import Settings
-from airunner.aihandler.llm.html_file_reader import HtmlFileReader
+from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
 from airunner.enums import SignalCode
 
 
