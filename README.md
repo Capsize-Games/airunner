@@ -14,7 +14,7 @@
 
 # AI RUNNER 
 
-## v3.0.0.dev
+## v3.0.0.dev5
 
 AI Runner can be compiled with `pyinstaller` however the current version
 is not yet stable (check the releases for stable versions).
@@ -45,12 +45,13 @@ large language models and AI image generators on your own hardware.
 
 | Feature                                           | Description                                              |
 |---------------------------------------------------|----------------------------------------------------------|
-| 🗣️ **Communication**                             |
+| 🗣️ **LLMs and communication**                    |
 | ✅ Voice-based chatbot conversations               | Have conversations with a chatbot using your voice       |
 | ✅ Text-to-speech                                  | Convert text to spoken audio                             |
 | ✅ Speech-to-text                                  | Convert spoken audio to text                             |
 | ✅ Vision-to-text                                  | Extract text from images                                 |
 | ✅ Text generation with LLMs                       | Generate text using large language models                |
+| ✅ RAG on local documents and websites             | Interact with your local documents using an LLM          |
 | 🎨 **Image Generation**                           |
 | ✅ Stable Diffusion (all versions)                 | Generate images using Stable Diffusion                   |
 | 🔜 Kandinsky                                      | Generate images using Kandinsky                          |
