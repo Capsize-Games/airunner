@@ -3,6 +3,7 @@ from transformers import RagTokenizer
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
 from transformers.models.llama.tokenization_llama_fast import LlamaTokenizerFast
 from airunner.enums import SignalCode, ModelType, ModelStatus
+from airunner.settings import LLM_TOKENIZER_DEVICE_INDEX
 from airunner.utils.get_torch_device import get_torch_device
 
 
@@ -75,7 +76,7 @@ class TokenizerHandler(TransformerBaseHandler):
         kwargs = {
             "local_files_only": True,
             "token": self.request_data.get("hf_api_key_read_key"),
-            "device_map": get_torch_device(self.settings["memory_settings"]["default_gpu"][self.model_type]),
+            "device_map": get_torch_device(LLM_TOKENIZER_DEVICE_INDEX),
             "trust_remote_code": True,
             "torch_dtype": self.torch_dtype,
             "attn_implementation": "flash_attention_2",

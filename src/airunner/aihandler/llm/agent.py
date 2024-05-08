@@ -6,6 +6,8 @@ from typing import AnyStr
 import torch
 from PySide6.QtCore import QObject
 from transformers import StoppingCriteria
+
+from airunner.aihandler.llm.agent_llamaindex_mixin import AgentLlamaIndexMixin
 from airunner.aihandler.logger import Logger
 from airunner.json_extractor import JSONExtractor
 from airunner.mediator_mixin import MediatorMixin
@@ -20,6 +22,7 @@ from airunner.utils.clear_memory import clear_memory
 from airunner.utils.create_worker import create_worker
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.agent_worker import AgentWorker
+from airunner.workers.worker import Worker
 
 
 class ExternalConditionStoppingCriteria(StoppingCriteria):
@@ -31,17 +34,41 @@ class ExternalConditionStoppingCriteria(StoppingCriteria):
         return self.external_condition_callable()
 
 
+class RagSearchWorker(Worker):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.agent = None
+        self.register(SignalCode.LLM_RAG_SEARCH_SIGNAL, self.rag_search_request)
+
+    def initialize(self, agent, model, tokenizer):
+        self.agent = agent
+        self.agent.load_rag(model, tokenizer)
+
+    def rag_search_request(self, data: dict):
+        self.add_to_queue(data)
+
+    def handle_message(self, data: dict):
+        self.logger.debug("RAG Search Worker is handling a message.")
+        self.agent.perform_rag_search(
+            prompt=data["message"],
+            streaming=True
+        )
+
+
 
 class AIRunnerAgent(
     QObject,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    AgentLlamaIndexMixin,
 ):
     def __init__(self, *args, **kwargs):
+        self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        AgentLlamaIndexMixin.__init__(self)
+        self._bot_mood = None
         self.action = LLMActionType.CHAT
-
         self.rendered_template = None
         self.model = kwargs.pop("model", None)
         self.tokenizer = kwargs.pop("tokenizer", None)
@@ -49,7 +76,6 @@ class AIRunnerAgent(
         self.tools = kwargs.pop("tools", None)
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
-        self.logger = Logger(prefix=self.__class__.__name__)
         super().__init__(*args, **kwargs)
         self.register(SignalCode.LLM_RESPOND_TO_USER_SIGNAL, self.do_response)
         self.register(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history)
@@ -58,6 +84,8 @@ class AIRunnerAgent(
         self.thread = None
         self.do_interrupt = False
         self.response_worker = create_worker(AgentWorker)
+        self.__rag_search_worker = create_worker(RagSearchWorker)
+        self.__rag_search_worker.initialize(agent=self, model=self.model, tokenizer=self.tokenizer)
 
     @property
     def llm_generator_settings(self):
@@ -67,10 +95,8 @@ class AIRunnerAgent(
     def chatbot_name(self) -> str:
         if self.action == LLMActionType.APPLICATION_COMMAND:
             chatbot_name = "Agent"
-        elif self.action == LLMActionType.CHAT:
-            chatbot_name = "Chatbot"
         else:
-            chatbot_name = self.llm_generator_settings["current_chatbot"]
+            chatbot_name = "Chatbot"
         return chatbot_name
 
     @property
@@ -87,7 +113,11 @@ class AIRunnerAgent(
 
     @property
     def bot_mood(self) -> str:
-        return self.chatbot["bot_mood"]
+        return self.chatbot["bot_mood"] if self._bot_mood is None else self._bot_mood
+
+    @bot_mood.setter
+    def bot_mood(self, value: str):
+        self._bot_mood = value
 
     @property
     def bot_personality(self) -> str:
@@ -115,6 +145,50 @@ class AIRunnerAgent(
     def cuda_index(self):
         return 0
 
+    def mood(self, botname: str, bot_mood: str, use_mood: bool) -> str:
+        return (
+            f"{botname} is not a computer or a bot, you are a human with emotions. "
+            f"{botname}'s mood changes depending on the conversation and other factors.\n"
+            f"{botname}'s current mood: {bot_mood}."
+            #f"{botname}'s evaluation of {username}: {self.user_evaluation}"
+        ) if (use_mood and bot_mood != "") else ""
+
+    def history_prompt(self) -> str:
+        history = ""
+        for message in self.history:
+            if message["role"] == LLMChatRole.HUMAN.value:
+                history += f"{self.username}: {message['content']}\n"
+            elif message["role"] == LLMChatRole.ASSISTANT.value:
+                history += f"{self.botname}: {message['content']}\n"
+        return (
+            "Chat History:\n"
+            f"{history}"
+        )
+
+    def add_vision_prompt(self, vision_history: list, system_prompt: list) -> list:
+        if len(vision_history) > 0:
+            vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
+            system_prompt.append("\n======\n")
+            system_prompt.append((
+                "You have eyes, you can see. You see many things but they "
+                "are no always correct. You must try to determine what you "
+                "are seeing based on these images Try to summarize them to "
+                "determine what is happening. Here is a list of things that "
+                "you currently saw:"
+            ))
+            system_prompt.append(','.join(vision_history))
+        return system_prompt
+
+    def append_date_time_timezone(self, system_prompt: list) -> list:
+        current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
+        current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
+        current_timezone = time.tzname
+        system_prompt.append("\n======\n")
+        system_prompt.append(
+            f"Use the following information to help you with your response, but do not include it in your response or reference it directly unless asked.")
+        system_prompt.append(f"Date: {current_date}, Time: {current_time}, Timezone: {current_timezone}")
+        return system_prompt
+
     def build_system_prompt(
         self,
         action: LLMActionType,
@@ -127,7 +201,7 @@ class AIRunnerAgent(
         use_names = self.chatbot["assign_names"]
         use_system_instructions = self.chatbot["use_system_instructions"]
         use_guardrails = self.chatbot["use_guardrails"]
-        bot_mood = self.chatbot["bot_mood"]
+        bot_mood = self.bot_mood
         bot_personality = self.chatbot["bot_personality"]
         username = self.chatbot["username"]
         botname = self.chatbot["botname"]
@@ -142,64 +216,32 @@ class AIRunnerAgent(
             """
             Build the system prompt for chat template
             """
-            names = f"Your name is {botname}. \nThe user's name is {username}." if use_names else ""
-            mood = (
-                f"{botname} is not a computer or a bot, you are a human with emotions. "
-                f"{botname}'s mood changes depending on the conversation and other factors.\n"
-                f"{botname}'s current mood: {bot_mood}.\n"
-                #f"{botname}'s evaluation of {username}: {self.user_evaluation}"
-            ) if (use_mood and bot_mood != "") else ""
-            personality = (
-                f"Your personality: {bot_personality}."
-            ) if use_personality else ""
-
             system_prompt = [
                 guardrails_prompt,
                 system_instructions,
-                names,
-                mood,
-                personality,
+                self.names_prompt(use_names, botname, username),
+                self.mood(botname, bot_mood, use_mood),
+                self.personality_prompt(bot_personality, use_personality),
+                self.history_prompt(),
             ]
-
-            """
-            If we have a vision history, append it to the prompt
-            """
-            if len(vision_history) > 0:
-                vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
-                system_prompt.append("\n======\n")
-                system_prompt.append((
-                    "You have eyes, you can see. You see many things but they "
-                    "are no always correct. You must try to determine what you "
-                    "are seeing based on these images Try to summarize them to "
-                    "determine what is happening. Here is a list of things that "
-                    "you currently saw:"
-                ))
-                system_prompt.append(','.join(vision_history))
-
-            """
-            Append the date, time and timezone
-            """
-            if self.settings["prompt_templates"]["chatbot"]["use_system_datetime_in_system_prompt"]:
-                current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
-                current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
-                current_timezone = time.tzname
-                system_prompt.append("\n======\n")
-                system_prompt.append(f"Use the following information to help you with your response, but do not include it in your response or reference it directly unless asked.")
-                system_prompt.append(f"Date: {current_date}, Time: {current_time}, Timezone: {current_timezone}")
+            system_prompt = self.add_vision_prompt(vision_history, system_prompt)
+            system_prompt = self.append_date_time_timezone(system_prompt)
 
         elif action == LLMActionType.ANALYZE_VISION_HISTORY:
             vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
+            vision_history = ','.join(vision_history)
+            system_instructions = (
+                "You will be given a list of image captions. Your goal is to "
+                "analyze the captions and determine what is happening in the "
+                "images. The captions won't be entirely accurate, so you must "
+                "infer what you believe is happening in the images. "
+                "After analyzing the captions, you must summarize what you "
+                "believe is happening in the images. "
+                "Here is a list of captions:"
+            )
             system_prompt = [
-                (
-                    "You will be given a list of image captions. Your goal is to "
-                    "analyze the captions and determine what is happening in the "
-                    "images. The captions won't be entirely accurate, so you must "
-                    "infer what you believe is happening in the images. "
-                    "After analyzing the captions, you must summarize what you "
-                    "believe is happening in the images. "
-                    "Here is a list of captions:"
-                ),
-                ','.join(vision_history),
+                system_instructions,
+                vision_history,
             ]
 
         elif action == LLMActionType.GENERATE_IMAGE:
@@ -213,26 +255,91 @@ class AIRunnerAgent(
             ]
 
         elif action == LLMActionType.APPLICATION_COMMAND:
+            system_instructions = (
+                "You will be given some text. Your goal is to determine if the text has a request, goal, need "
+                "desire or command. If it does, you must determine the best course of action to "
+                "fulfill the request based on THE LIST of commands.\n\n"
+                "------\n"
+                "Rules:\n"
+                "* If the text does not have a request, goal, need, desire or command, you must select 'DO NOTHING'.\n"
+                "* If there is no good course of action, you must also select 'DO NOTHING'.\n"
+                "* When making your choice you MUST return only a number from THE LIST of commands. No other text is allowed.\n"
+                "------\n"
+                "THE LIST of commands you may choose from:\n"
+            )
+            for index, action in self.available_actions.items():
+                system_instructions += f"{index}: {action.value}\n"
             system_prompt = [
-                (
-                    "You will be given some text. Your goal is to determine if the text has a request, goal, need "
-                    "desire or command. If it does, you must determine the best course of action to "
-                    "fulfill the request based on the list of commands above.\n\n"
-                    "------\n"
-                    "Rules:\n"
-                    "* If the text does not have a request, goal, need, desire or command, you must select 'DO NOTHING'.\n"
-                    "* If there is no good course of action, you must also select 'DO NOTHING'.\n"
-                    "* When making your choice you MUST return only a number from THE LIST of commands. No other text is allowed.\n"
-                    "------\n"
-                    "THE LIST of commands you may choose from:\n"
-                    "1. QUIT: Quit or close the application.\n"
-                    "2. FULL SCREEN: Make the application full screen.\n"
-                    "0. DO NOTHING: None of the above commands will accurately fulfill the task at hand.\n"
-                )
+                self.names_prompt(use_names, botname, username),
+                self.mood(botname, bot_mood, use_mood),
+                self.history_prompt(),
+                system_instructions
             ]
 
+        elif action == LLMActionType.UPDATE_MOOD:
+            system_instructions = (
+                "Examine the following chat history and determine how it makes you feel. You will respond with an emotion and only an emotion.\n"
+                "Try to keep your response to one word. If you cannot, try to keep it as short as possible.\n"
+                "It is important to remember that you are a human and you have emotions. You must respond with an emotion that you feel.\n"
+                "You are not a computer or a bot, you are a human with emotions. You must respond with an emotion that you feel.\n"
+            )
+            system_prompt = [
+                guardrails_prompt,
+                system_instructions,
+                self.names_prompt(use_names, botname, username),
+                self.mood(botname, bot_mood, use_mood),
+                self.personality_prompt(bot_personality, use_personality),
+                self.history_prompt(),
+            ]
 
-        return "\n".join(system_prompt)
+        elif action == LLMActionType.PERFORM_RAG_SEARCH:
+            system_instructions = (
+                "You will be given a prompt. Your goal is to use the prompt to search for information in the ebooks. "
+                "You must use the prompt to determine what you are searching for and then search for that information. "
+                "After searching for the information, you must summarize the information you found. "
+                "Here is the prompt you will use to search for information:"
+            )
+            system_prompt = [
+                guardrails_prompt,
+                system_instructions,
+                self.names_prompt(use_names, botname, username),
+                self.mood(botname, bot_mood, use_mood),
+                self.personality_prompt(bot_personality, use_personality),
+                self.history_prompt(),
+            ]
+
+        elif action == LLMActionType.QUIT_APPLICATION:
+            self.emit_signal(SignalCode.QUIT_APPLICATION)
+
+        elif action == LLMActionType.TOGGLE_FULLSCREEN:
+            self.emit_signal(SignalCode.TOGGLE_FULLSCREEN_SIGNAL)
+
+        elif action == LLMActionType.TOGGLE_TTS:
+            self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL)
+
+        response = "\n".join(system_prompt)
+        return response
+
+    def names_prompt(self, use_names: bool, botname: str, username: str) -> str:
+        return f"Your name is {botname}. \nThe user's name is {username}." if use_names else ""
+
+    def personality_prompt(self, bot_personality: str, use_personality: bool) -> str:
+        return (
+            f"Your personality: {bot_personality}."
+        ) if use_personality else ""
+
+    @property
+    def available_actions(self):
+        return {
+            0: LLMActionType.DO_NOT_RESPOND,
+            1: LLMActionType.QUIT_APPLICATION,
+            2: LLMActionType.TOGGLE_FULLSCREEN,
+            3: LLMActionType.TOGGLE_TTS,
+            4: LLMActionType.UPDATE_MOOD,
+            5: LLMActionType.GENERATE_IMAGE,
+            6: LLMActionType.PERFORM_RAG_SEARCH,
+            7: LLMActionType.CHAT,
+        }
 
     def latest_human_message(
         self,
@@ -267,7 +374,7 @@ class AIRunnerAgent(
             }
         ]
 
-        if action == LLMActionType.CHAT:
+        if action in [LLMActionType.CHAT, LLMActionType.PERFORM_RAG_SEARCH]:
             messages += self.history
 
         messages.append(
@@ -283,7 +390,7 @@ class AIRunnerAgent(
             "{% if message['role'] == 'system' %}"
             "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
             "{% elif message['role'] == 'user' %}"
-            "{{ '[INST]' + message['content'] + ' [/INST]' }}"
+            "{{ '[INST]Consider the full chat history and then respond to this message from {{ username }}: ' + message['content'] + ' [/INST]' }}"
             "{% elif message['role'] == 'assistant' %}"
             "{{ message['content'] + eos_token + ' ' }}"
             "{% endif %}"
@@ -300,6 +407,14 @@ class AIRunnerAgent(
         conversation = self.prepare_messages(
             action,
             vision_history=vision_history
+        )
+
+        # get the first message
+        conversation = conversation[:1]
+
+        # add the last message
+        conversation.append(
+            self.latest_human_message(action)
         )
 
         rendered_template = self.tokenizer.apply_chat_template(
@@ -349,14 +464,9 @@ class AIRunnerAgent(
     ):
         self.chat_template = kwargs.get("chat_template", self.chat_template)
 
-        conversation = self.prepare_messages(
-            action,
-            vision_history=vision_history
-        )
-
         self.rendered_template = self.get_rendered_template(
-            conversation,
-            chat_template=self.chat_template
+            action,
+            vision_history
         )
 
         # Encode the rendered template
@@ -378,6 +488,7 @@ class AIRunnerAgent(
         vision_history: list = [],
         **kwargs
     ):
+        self.action = action
         self.logger.debug("Running...")
         self.prompt = prompt
         streamer = self.streamer
@@ -388,24 +499,27 @@ class AIRunnerAgent(
             vision_history,
             **kwargs,
             system_instructions=system_instructions,
-            do_add_response_to_history=False,
             use_names=True,
             streamer=streamer
         )
 
     def do_run(
         self,
-        prompt: str,
         action: LLMActionType = LLMActionType.CHAT,
         vision_history: list = [],
-        do_add_response_to_history: bool = True,
         streamer=None,
         do_emit_response: bool = True,
         use_names: bool = True,
         **kwargs
     ):
+        if action == LLMActionType.PERFORM_RAG_SEARCH:
+            self.emit_signal(SignalCode.LLM_RAG_SEARCH_SIGNAL, {
+                "message": self.prompt,
+            })
+            return
+
         model_inputs = self.get_model_inputs(
-            LLMActionType.CHAT,
+            action,
             vision_history,
             use_names=use_names,
             **kwargs
@@ -414,8 +528,7 @@ class AIRunnerAgent(
         if streamer:
             self.run_with_thread(
                 model_inputs,
-                action=LLMActionType.CHAT,
-                do_add_response_to_history=do_add_response_to_history,
+                action=action,
                 streamer=streamer,
                 do_emit_response=do_emit_response,
                 **kwargs
@@ -450,7 +563,6 @@ class AIRunnerAgent(
     def run_with_thread(
         self,
         model_inputs,
-        do_add_response_to_history: bool = True,
         action: LLMActionType = LLMActionType.CHAT,
         **kwargs,
     ):
@@ -464,6 +576,18 @@ class AIRunnerAgent(
         data = self.prepare_generate_data(model_inputs, stopping_criteria)
         streamer = kwargs.get("streamer", self.streamer)
         data["streamer"] = streamer
+
+        # Add the user's message to history
+        if action in [
+            LLMActionType.CHAT,
+            LLMActionType.UPDATE_MOOD,
+            LLMActionType.DO_NOT_RESPOND,
+            LLMActionType.PERFORM_RAG_SEARCH
+        ]:
+            self.add_message_to_history(
+                self.prompt,
+                LLMChatRole.HUMAN
+            )
 
         try:
             self.response_worker.add_to_queue({
@@ -520,33 +644,71 @@ class AIRunnerAgent(
                     # strip botname from new_text
                     new_text = new_text.replace(f"{self.botname}:", "")
                     new_text = new_text.replace(f"{self.botname}", "")
-                    self.emit_signal(
-                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                        dict(
-                            message=new_text,
-                            is_first_message=is_first_message,
-                            is_end_of_message=is_end_of_message,
-                            name=self.botname,
+                    if action == LLMActionType.CHAT:
+                        self.emit_signal(
+                            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                            dict(
+                                message=new_text,
+                                is_first_message=is_first_message,
+                                is_end_of_message=is_end_of_message,
+                                name=self.botname,
+                            )
                         )
-                    )
+                    else:
+                        self.emit_signal(
+                            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                            dict(
+                                message="",
+                                is_first_message=is_first_message,
+                                is_end_of_message=is_end_of_message,
+                                name=self.botname,
+                            )
+                        )
                     is_first_message = False
 
         if streamed_template is not None:
             if action == LLMActionType.CHAT:
-                if do_add_response_to_history:
-                    self.add_message_to_history(
-                        streamed_template,
-                        LLMChatRole.ASSISTANT
-                    )
+                self.add_message_to_history(
+                    streamed_template,
+                    LLMChatRole.ASSISTANT
+                )
+
             elif action == LLMActionType.GENERATE_IMAGE:
-                json_objects = self.extract_json_objects(streamed_template)
-                if len(json_objects) > 0:
-                    self.emit_signal(
-                        SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
-                        json_objects[0]
-                    )
-                else:
-                    self.logger.error("No JSON object found in the response.")
+                self.emit_signal(
+                    SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
+                    {
+                        "prompt": streamed_template,
+                        "type": "photo"
+                    }
+                )
+
+            elif action == LLMActionType.UPDATE_MOOD:
+                print("RESPONSE:", streamed_template)
+                self.bot_mood = streamed_template
+                return self.run(
+                    prompt=self.prompt,
+                    action=LLMActionType.UPDATE_MOOD,
+                )
+
+            elif action == LLMActionType.APPLICATION_COMMAND:
+                print("APPLICATION COMMAND:")
+                index = ''.join(c for c in streamed_template if c.isdigit())
+                print(f"index: {index}")
+                try:
+                    index = int(index)
+                except ValueError:
+                    index = 0
+                print("RESPONSE:", index)
+                action = self.available_actions[index]
+
+                if action is not None:
+                    if type(action) is LLMActionType:
+                        print("*"*100)
+                        print(action)
+                        return self.run(
+                            prompt=self.prompt,
+                            action=action,
+                        )
 
         return streamed_template
 

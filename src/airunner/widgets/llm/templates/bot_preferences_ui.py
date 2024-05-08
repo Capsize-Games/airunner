@@ -27,7 +27,7 @@ class Ui_bot_preferences(object):
     def setupUi(self, bot_preferences):
         if not bot_preferences.objectName():
             bot_preferences.setObjectName(u"bot_preferences")
-        bot_preferences.resize(722, 917)
+        bot_preferences.resize(722, 1031)
         self.gridLayout = QGridLayout(bot_preferences)
         self.gridLayout.setObjectName(u"gridLayout")
         self.tabWidget = QTabWidget(bot_preferences)
@@ -36,10 +36,10 @@ class Ui_bot_preferences(object):
         self.tab.setObjectName(u"tab")
         self.gridLayout_4 = QGridLayout(self.tab)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
-        self.widget = LLMSettingsWidget(self.tab)
-        self.widget.setObjectName(u"widget")
+        self.llm_settings_widget = LLMSettingsWidget(self.tab)
+        self.llm_settings_widget.setObjectName(u"llm_settings_widget")
 
-        self.gridLayout_4.addWidget(self.widget, 0, 0, 1, 1)
+        self.gridLayout_4.addWidget(self.llm_settings_widget, 0, 0, 1, 1)
 
         self.tabWidget.addTab(self.tab, "")
         self.tab_2 = QWidget()
@@ -67,6 +67,12 @@ class Ui_bot_preferences(object):
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.system_instructions = QPlainTextEdit(self.system_instructions_groupbox)
         self.system_instructions.setObjectName(u"system_instructions")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.system_instructions.sizePolicy().hasHeightForWidth())
+        self.system_instructions.setSizePolicy(sizePolicy)
+        self.system_instructions.setMinimumSize(QSize(0, 150))
 
         self.verticalLayout_3.addWidget(self.system_instructions)
 
@@ -80,6 +86,9 @@ class Ui_bot_preferences(object):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.guardrails_prompt = QPlainTextEdit(self.guardrails_groupbox)
         self.guardrails_prompt.setObjectName(u"guardrails_prompt")
+        sizePolicy.setHeightForWidth(self.guardrails_prompt.sizePolicy().hasHeightForWidth())
+        self.guardrails_prompt.setSizePolicy(sizePolicy)
+        self.guardrails_prompt.setMinimumSize(QSize(0, 150))
 
         self.verticalLayout_2.addWidget(self.guardrails_prompt)
 
@@ -141,6 +150,9 @@ class Ui_bot_preferences(object):
         self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.bot_personality = QPlainTextEdit(self.personality_groupbox)
         self.bot_personality.setObjectName(u"bot_personality")
+        sizePolicy.setHeightForWidth(self.bot_personality.sizePolicy().hasHeightForWidth())
+        self.bot_personality.setSizePolicy(sizePolicy)
+        self.bot_personality.setMinimumSize(QSize(0, 75))
 
         self.gridLayout_5.addWidget(self.bot_personality, 1, 0, 1, 1)
 
@@ -159,6 +171,9 @@ class Ui_bot_preferences(object):
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.bot_mood = QPlainTextEdit(self.mood_groupbox)
         self.bot_mood.setObjectName(u"bot_mood")
+        sizePolicy.setHeightForWidth(self.bot_mood.sizePolicy().hasHeightForWidth())
+        self.bot_mood.setSizePolicy(sizePolicy)
+        self.bot_mood.setMinimumSize(QSize(0, 75))
 
         self.gridLayout_2.addWidget(self.bot_mood, 0, 0, 1, 1)
 
