@@ -1,5 +1,5 @@
 import unittest
-from airunner.aihandler.llm.agent import AIRunnerAgent
+from airunner.aihandler.llm.agent.ai_runner_agent import AIRunnerAgent
 
 
 class TestJSONExtractor(unittest.TestCase):

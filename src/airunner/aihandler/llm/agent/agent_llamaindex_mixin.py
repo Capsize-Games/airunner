@@ -1,3 +1,5 @@
+import os.path
+
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, ServiceContext
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.huggingface import HuggingFaceLLM
@@ -20,7 +22,7 @@ class AgentLlamaIndexMixin:
         self.__target_files = [
             ""
         ]
-        self.__model_name = f"{self.settings['path_settings']['sentence_transformers_path']}/sentence-t5-base"
+        self.__model_name = os.path.expanduser(f"{self.settings['path_settings']['sentence_transformers_path']}/sentence-t5-base")
         self.__query_instruction = "Search through all available texts and provide a brief summary of the key points which are relevant to the query."
         self.__text_instruction = "Summarize and provide a brief explanation of the text. Stay concise and to the point."
 
