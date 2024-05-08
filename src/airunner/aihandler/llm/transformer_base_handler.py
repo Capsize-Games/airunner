@@ -4,6 +4,7 @@ import torch
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus
+from airunner.settings import LLM_CUDA_DEVICE_INDEX
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.get_torch_device import get_torch_device
 
@@ -30,7 +31,6 @@ class TransformerBaseHandler(BaseHandler):
         self.repetition_penalty = kwargs.get("repetition_penalty", 1.15)
         self.early_stopping = kwargs.get("early_stopping", True)
         self.length_penalty = kwargs.get("length_penalty", 1.0)
-        self.parameters = kwargs.get("parameters", None)
         self.model_path = kwargs.get("model_path", None)
         self.prompt = kwargs.get("prompt", None)
         self.current_model_path = kwargs.get("current_model_path", "")
@@ -165,10 +165,10 @@ class TransformerBaseHandler(BaseHandler):
             if config:
                 params["quantization_config"] = config
             params["torch_dtype"] = torch.bfloat16
-            params["device_map"] = get_torch_device(self.settings["memory_settings"]["default_gpu"][self.model_type])
+            params["device_map"] = get_torch_device(LLM_CUDA_DEVICE_INDEX)
         else:
             params["torch_dtype"] = torch.bfloat16
-            params["device_map"] = "auto"
+            params["device_map"] = get_torch_device(LLM_CUDA_DEVICE_INDEX)
 
         try:
             self.emit_signal(
@@ -284,14 +284,22 @@ class TransformerBaseHandler(BaseHandler):
     def do_generate(self) -> str:
         raise NotImplementedError
 
+    @property
+    def parameters(self):
+        current_chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
+        settings = self.settings["llm_generator_settings"]["saved_chatbots"][current_chatbot_name]["generator_settings"]
+        return settings
+
     def process_data(self, data: dict) -> None:
         self.logger.debug("Processing data")
         self.request_data = data.get("request_data", {})
-        self.parameters = self.request_data.get("parameters", {})
+
+        # current_chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
+        # settings = self.settings["llm_generator_settings"]["saved_chatbots"][current_chatbot_name]["generator_settings"]
+        # self.parameters = self.request_data.get("parameters", settings)
         self.callback = self.request_data.get("callback", None)
         self.use_gpu = self.request_data.get("use_gpu", self.use_gpu)
         self.image = self.request_data.get("image", None)
-        self.parameters = self.request_data.get("parameters", {})
         self.model_path = self.request_data.get("model_path", self.model_path)
         self.prompt = self.request_data.get("prompt", self.prompt)
         self.template = self.request_data.get("template", "")
@@ -314,43 +322,6 @@ class TransformerBaseHandler(BaseHandler):
         self.logger.debug("Moving model to device {device_name}")
         self.model.to(device_name)
 
-    def prepare_input_args(self) -> dict:
-        """
-        Prepare the input arguments for the transformer model.
-        :return: dict
-        """
-        self.logger.debug("Preparing input arguments")
-        parameters = self.parameters or {}
-
-        kwargs = {
-            "max_new_tokens": parameters.get("max_new_tokens", self.max_new_tokens),
-            "min_length": parameters.get("min_length", self.min_length),
-            #"max_length": parameters.get("max_length", self.max_length),
-            "do_sample": parameters.get("do_sample", self.do_sample),
-            "early_stopping": parameters.get("early_stopping", self.early_stopping),
-            "num_beams": parameters.get("num_beams", self.num_beams),
-            "temperature": parameters.get("temperature", self.temperature),
-            "top_k": parameters.get("top_k", self.top_k),
-            "eta_cutoff": parameters.get("eta_cutoff", self.eta_cutoff),
-            "top_p": parameters.get("top_p", self.top_p),
-            "repetition_penalty": parameters.get("repetition_penalty", self.repetition_penalty),
-            # "bad_words_ids": parameters.get("bad_words_ids", self.bad_words_ids),
-            # "bos_token_id": parameters.get("bos_token_id", self.bos_token_id),
-            # "pad_token_id": parameters.get("pad_token_id", self.pad_token_id),
-            # "eos_token_id": parameters.get("eos_token_id", self.eos_token_id),
-            "return_result": parameters.get("return_result", self.return_result),
-            "skip_special_tokens": parameters.get("skip_special_tokens", self.skip_special_tokens),
-            "no_repeat_ngram_size": parameters.get("no_repeat_ngram_size", self.no_repeat_ngram_size),
-            "num_return_sequences": parameters.get("sequences", self.sequences),  # if num_beams == 1 or num_beams < sequences else num_beams,
-            "decoder_start_token_id": parameters.get("decoder_start_token_id", self.decoder_start_token_id),
-            "use_cache": parameters.get("use_cache", self.use_cache),
-            "seed": parameters.get("seed", self.seed),
-        }
-        if "top_k" in kwargs and "do_sample" in kwargs and not kwargs["do_sample"]:
-            del kwargs["top_k"]
-
-        return kwargs
-
     def do_set_seed(self, seed=None):
         self.logger.debug("Setting seed")
         seed = self.seed if seed is None else seed
@@ -370,8 +341,7 @@ class TransformerBaseHandler(BaseHandler):
         self.logger.debug("Handling request")
         self._processing_request = True
         self.process_data(data)
-        self.override_parameters = self.prepare_input_args()
-        self.do_set_seed(self.override_parameters.get("seed"))
+        self.do_set_seed(self.parameters.get("seed", None))
         self.load()
         self._processing_request = True
         result = self.generate()

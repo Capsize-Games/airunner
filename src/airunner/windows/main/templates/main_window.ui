@@ -1289,7 +1289,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton">
+            <widget class="QPushButton" name="llm_button">
              <property name="minimumSize">
               <size>
                <width>50</width>
@@ -3525,7 +3525,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton</sender>
+   <sender>llm_button</sender>
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
    <slot>action_toggle_llm(bool)</slot>

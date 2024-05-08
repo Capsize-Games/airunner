@@ -17,7 +17,6 @@ class LLMSettingsWidget(
     AIModelMixin
 ):
     widget_class_ = Ui_llm_settings_widget
-    current_generator = None
     dtype_descriptions = {
         "2bit": "Fastest, least amount of VRAM, GPU only, least accurate results.",
         "4bit": "Faster, much less VRAM, GPU only, much less accurate results.",
@@ -33,7 +32,10 @@ class LLMSettingsWidget(
     @property
     def chatbot(self) -> dict:
         current_chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
-        chatbot = self.settings["llm_generator_settings"]["saved_chatbots"].get(current_chatbot_name, DEFAULT_CHATBOT)
+        chatbot = self.settings["llm_generator_settings"]["saved_chatbots"].get(
+            current_chatbot_name,
+            DEFAULT_CHATBOT
+        )
         return chatbot
 
     @property
@@ -161,7 +163,10 @@ class LLMSettingsWidget(
 
     def callback(self, attr_name, value, widget):
         settings = self.settings
-        settings = set_current_chatbot_property(settings, attr_name, value)
+        current_chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
+        generator_settings = settings["llm_generator_settings"]["saved_chatbots"][current_chatbot_name]["generator_settings"]
+        generator_settings[attr_name] = value
+        settings["llm_generator_settings"]["saved_chatbots"][current_chatbot_name]["generator_settings"] = generator_settings
         self.settings = settings
 
     def model_text_changed(self, val):
@@ -259,9 +264,36 @@ class LLMSettingsWidget(
         elif dtype == "32bit":
             self.ui.dtype_combobox.setCurrentText("32-bit")
         self.ui.dtype_combobox.blockSignals(False)
-    
+
+    @property
+    def llm_generator_settings(self):
+        return self.settings["llm_generator_settings"]
+
+    @property
+    def current_chatbot_name(self):
+        chatbot = self.llm_generator_settings["current_chatbot"]
+        if chatbot == "":
+            chatbot = "Default"
+        return chatbot
+
+    @current_chatbot_name.setter
+    def current_chatbot_name(self, val):
+        if val == "":
+            val = "Default"
+        settings = self.settings
+        settings["llm_generator_settings"]["current_chatbot"] = val
+        self.settings = settings
+
+    @property
+    def current_chatbot(self):
+        try:
+            return self.llm_generator_settings["saved_chatbots"][self.current_chatbot_name]
+        except KeyError:
+            self.current_chatbot_name = "Default"
+            return self.llm_generator_settings["saved_chatbots"][self.current_chatbot_name]
+
     def reset_settings_to_default_clicked(self):
-        llm_generator_settings = self.settings["llm_generator_settings"]
+        llm_generator_settings = self.current_chatbot["generator_settings"]
         self.initialize_form()
         self.ui.top_p.set_slider_and_spinbox_values(llm_generator_settings["top_p"])
         self.ui.repetition_penalty.set_slider_and_spinbox_values(llm_generator_settings["repetition_penalty"])
@@ -276,7 +308,7 @@ class LLMSettingsWidget(
 
     def set_dtype(self, dtype):
         settings = self.settings
-        settings["llm_generator_settings"]["dtype"] = dtype
+        settings["llm_generator_settings"]["saved_chatbots"][self.current_chatbot_name]["dtype"] = dtype
         self.settings = settings
         self.set_dtype_description(dtype)
     

@@ -34,7 +34,7 @@ class ChatPromptWidget(BaseWidget):
         # iterate over each LLMActionType enum and add its value to the llm_tool_name
         for action_type in LLMActionType:
             self.ui.action.addItem(action_type.value)
-        self.ui.action.setCurrentText(self.settings["llm_generator_settings"]["action"])
+        self.ui.action.setCurrentText(self.action)
         self.ui.action.blockSignals(False)
         self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
@@ -122,6 +122,24 @@ class ChatPromptWidget(BaseWidget):
     def current_active_scene(self) -> CustomScene:
         return
 
+    @property
+    def llm_generator_settings(self):
+        return self.settings["llm_generator_settings"]
+
+    @property
+    def action(self) -> str:
+        return self.llm_generator_settings["action"]
+
+    @property
+    def chatbot_name(self) -> str:
+        if self.action == LLMActionType.APPLICATION_COMMAND:
+            chatbot_name = "Agent"
+        elif self.action == LLMActionType.CHAT:
+            chatbot_name = "Chatbot"
+        else:
+            chatbot_name = self.llm_generator_settings["current_chatbot"]
+        return chatbot_name
+
     def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="causallm"):
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
 
@@ -169,7 +187,7 @@ class ChatPromptWidget(BaseWidget):
             {
                 "llm_request": True,
                 "request_data": {
-                    "action": self.settings["llm_generator_settings"]["action"],
+                    "action": self.action,
                     "unload_unused_model": self.settings["memory_settings"]["unload_unused_models"],
                     "move_unused_model_to_cpu": self.settings["memory_settings"]["move_unused_model_to_cpu"],
                     "generator_name": generator_name,
@@ -186,22 +204,6 @@ class ChatPromptWidget(BaseWidget):
                     "use_gpu": llm_generator_settings["use_gpu"],
                     "template": "",
                     "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
-                    "parameters": {
-                        "override_parameters": self.settings["llm_generator_settings"]["override_parameters"],
-                        "top_p": llm_generator_settings["top_p"] / 100.0,
-                        # "max_length": llm_generator_settings["max_length"],
-                        "repetition_penalty": llm_generator_settings["repetition_penalty"] / 100.0,
-                        "min_length": llm_generator_settings["min_length"],
-                        "length_penalty": llm_generator_settings["length_penalty"] / 100,
-                        "num_beams": llm_generator_settings["num_beams"],
-                        "ngram_size": llm_generator_settings["ngram_size"],
-                        "temperature": llm_generator_settings["temperature"] / 10000.0,
-                        "sequences": llm_generator_settings["sequences"],
-                        "top_k": llm_generator_settings["top_k"],
-                        "eta_cutoff": llm_generator_settings['eta_cutoff'] / 100.0,
-                        "seed": llm_generator_settings["do_sample"],
-                        "early_stopping": llm_generator_settings["early_stopping"]
-                    },
                     "image": image,
                     "callback": callback,
                     "tts_settings": self.settings["tts_settings"],
@@ -296,7 +298,21 @@ class ChatPromptWidget(BaseWidget):
             callback=callback,
             generator_name="visualqa"
         )
-    
+
+    def add_loading_widget(self):
+        self.ui.scrollAreaWidgetContents.layout().addWidget(
+            LoadingWidget()
+        )
+
+    def remove_loading_widget(self):
+        # remove the last LoadingWidget from scrollAreaWidgetContents.layout()
+        for i in range(self.ui.scrollAreaWidgetContents.layout().count()):
+            current_widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+            if isinstance(current_widget, LoadingWidget):
+                self.ui.scrollAreaWidgetContents.layout().removeWidget(current_widget)
+                current_widget.deleteLater()
+                break
+
     def add_message_to_conversation(
         self,
         name,
@@ -308,42 +324,36 @@ class ChatPromptWidget(BaseWidget):
             # get the last widget from the scrollAreaWidgetContents.layout()
             # and append the message to it. must be a MessageWidget object
             # must start at the end of the layout and work backwards
-            for i in range(self.ui.scrollAreaWidgetContents.layout().count()-1, -1, -1):
+            for i in range(self.ui.scrollAreaWidgetContents.layout().count() - 1, -1, -1):
                 current_widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
                 if isinstance(current_widget, MessageWidget):
-                    current_widget.update_message(message)
-                    return
-
-        widget = MessageWidget(name=name, message=message, is_bot=is_bot)
-        if is_bot:
-            # remove the last LoadingWidget from scrollAreaWidgetContents.layout()
-            for i in range(self.ui.scrollAreaWidgetContents.layout().count()):
-                current_widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
-                if isinstance(current_widget, LoadingWidget):
-                    self.ui.scrollAreaWidgetContents.layout().removeWidget(current_widget)
-                    current_widget.deleteLater()
+                    if current_widget.is_bot:
+                        current_widget.update_message(message)
+                        return
                     break
 
-        # if self.messages_spacer is not None:
-        #     self.ui.scrollAreaWidgetContents.layout().removeItem(self.messages_spacer)
+        self.remove_spacer()
 
-        self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
+        if is_bot:
+            self.remove_loading_widget()
 
-        # if self.messages_spacer is None:
-        #     self.messages_spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-        # self.ui.scrollAreaWidgetContents.layout().addItem(self.messages_spacer)
-        
+        if message != "":
+            widget = MessageWidget(name=name, message=message, is_bot=is_bot)
+            self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
+
+        if not is_bot:
+            self.add_loading_widget()
+
+        self.add_spacer()
+
+        # automatically scroll to the bottom of the scrollAreaWidgetContents
+        self.scroll_to_bottom()
+
+    def remove_spacer(self):
         if self.spacer is not None:
             self.ui.scrollAreaWidgetContents.layout().removeItem(self.spacer)
 
-        # if is not is_bot, then we want to add a widget that shows a
-        # text icon
-        if not is_bot:
-            self.ui.scrollAreaWidgetContents.layout().addWidget(
-                LoadingWidget()
-            )
-
-        # add a vertical spacer to self.ui.chat_container
+    def add_spacer(self):
         if self.spacer is None:
             self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
@@ -357,6 +367,6 @@ class ChatPromptWidget(BaseWidget):
         pass
 
     def scroll_to_bottom(self):
-        self.ui.scrollAreaWidgetContents.verticalScrollBar().setValue(
-            self.ui.scrollAreaWidgetContents.verticalScrollBar().maximum()
+        self.ui.chat_container.verticalScrollBar().setValue(
+            self.ui.chat_container.verticalScrollBar().maximum()
         )
