@@ -5,9 +5,10 @@ import traceback
 from typing import AnyStr
 import torch
 from PySide6.QtCore import QObject
-from transformers import StoppingCriteria
 
 from airunner.aihandler.llm.agent_llamaindex_mixin import AgentLlamaIndexMixin
+from airunner.aihandler.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
+from airunner.aihandler.llm.agent.rag_search_worker import RagSearchWorker
 from airunner.aihandler.logger import Logger
 from airunner.json_extractor import JSONExtractor
 from airunner.mediator_mixin import MediatorMixin
@@ -22,38 +23,6 @@ from airunner.utils.clear_memory import clear_memory
 from airunner.utils.create_worker import create_worker
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.agent_worker import AgentWorker
-from airunner.workers.worker import Worker
-
-
-class ExternalConditionStoppingCriteria(StoppingCriteria):
-    def __init__(self, external_condition_callable):
-        super().__init__()
-        self.external_condition_callable = external_condition_callable
-
-    def __call__(self, inputs_ids, scores):
-        return self.external_condition_callable()
-
-
-class RagSearchWorker(Worker):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.agent = None
-        self.register(SignalCode.LLM_RAG_SEARCH_SIGNAL, self.rag_search_request)
-
-    def initialize(self, agent, model, tokenizer):
-        self.agent = agent
-        self.agent.load_rag(model, tokenizer)
-
-    def rag_search_request(self, data: dict):
-        self.add_to_queue(data)
-
-    def handle_message(self, data: dict):
-        self.logger.debug("RAG Search Worker is handling a message.")
-        self.agent.perform_rag_search(
-            prompt=data["message"],
-            streaming=True
-        )
-
 
 
 class AIRunnerAgent(
