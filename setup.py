@@ -32,7 +32,7 @@ setup(
         "typing_extensions==4.11.0",
         "urllib3==2.2.1",
         "sympy==1.12.0",
-        "regex==2023.12.25",
+        "regex==2024.4.28",
         "matplotlib==3.8.4",
         "torch==2.2.2",
         "torchvision==0.17.2",
