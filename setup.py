@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='airunner',
-    version="3.0.0.dev4",
+    version="3.0.0.dev5",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -74,6 +74,11 @@ setup(
 
         # Security
         "facehuggershield==0.1.6"
+        
+        # Llama index
+        "llama-index==0.10.32",
+        "llama-index-readers-file==0.1.19",
+        "llama-index-readers-web==0.1.13",
     ],
     dependency_links=[],
 )
