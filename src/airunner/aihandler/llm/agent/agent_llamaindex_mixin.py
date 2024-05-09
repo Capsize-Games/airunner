@@ -66,11 +66,18 @@ class AgentLlamaIndexMixin:
             model=model,
             tokenizer=tokenizer,
             max_new_tokens=1000,
+            generate_kwargs=dict(
+                top_k=50,
+                top_p=0.95,
+                temperature=0.9,
+            )
         )
 
     def perform_rag_search(self, prompt, streaming: bool = False):
         query_engine = self.__index.as_query_engine(streaming=streaming)
-        response = query_engine.query(prompt)
+        response = query_engine.query(
+            prompt
+        )
         response_text = ""
         if streaming:
             self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
