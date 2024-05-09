@@ -1,5 +1,7 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QLabel, QPushButton, QHBoxLayout, QWidget
+
+from airunner.enums import SignalCode
 from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils.open_file_path import open_file_path
 from airunner.utils.toggle_signals import toggle_signals
@@ -182,7 +184,7 @@ class BotPreferencesWidget(BaseWidget):
         documents = self.current_chatbot.get("target_files", [])
         documents.append(file_path[0])
         self.update_chatbot("target_files", documents)
-
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
         self.load_documents()
 
     def load_documents(self):
@@ -218,3 +220,4 @@ class BotPreferencesWidget(BaseWidget):
             documents.remove(document)
             self.update_chatbot("target_files", documents)
             self.load_documents()  # Refresh the document list
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
