@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='airunner',
-    version="3.0.0.dev6",
+    version="3.0.0.dev7",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -73,7 +73,7 @@ setup(
         "tomesd==0.1.3",
 
         # Security
-        "facehuggershield==0.1.8",
+        "facehuggershield==0.1.9",
         
         # Llama index
         "llama-index==0.10.32",

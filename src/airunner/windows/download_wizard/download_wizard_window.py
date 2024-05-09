@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWizard
 from airunner.mediator_mixin import MediatorMixin
-from airunner.utils.os_utils.create_airunner_directory import create_airunner_paths
+from airunner.utils.os.create_airunner_directory import create_airunner_paths
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.installation_settings.install_failed_page import InstallFailedPage
 from airunner.windows.setup_wizard.installation_settings.install_page import InstallPage

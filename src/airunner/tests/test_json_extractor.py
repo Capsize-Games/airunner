@@ -1,10 +1,10 @@
 import unittest
-from airunner.aihandler.llm.agent.ai_runner_agent import AIRunnerAgent
+from airunner.aihandler.llm.agent.base_agent import BaseAgent
 
 
 class TestJSONExtractor(unittest.TestCase):
     def setUp(self):
-        self.agent = AIRunnerAgent()
+        self.agent = BaseAgent()
 
     def test_extract_json_objects(self):
         test_string = """{

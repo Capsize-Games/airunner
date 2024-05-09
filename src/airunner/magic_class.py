@@ -1,7 +1,7 @@
 import importlib
 import enum
 
-from airunner.aihandler.llm.agent.ai_runner_agent import AIRunnerAgent
+from airunner.aihandler.llm.agent.base_agent import BaseAgent
 
 
 class State(enum.Enum):
@@ -13,12 +13,12 @@ class State(enum.Enum):
 
 
 class MagicClass:
-    def __init__(self, agent: AIRunnerAgent):
+    def __init__(self, agent: BaseAgent):
         self.loaded_modules = {}
         self.function_cache = {}
         self.function_docs = {}
         self.dynamic_attributes = {}
-        self.agent: AIRunnerAgent = agent
+        self.agent: BaseAgent = agent
 
     def dynamic_import(self, module_name):
         """Dynamically imports a module if not already imported."""

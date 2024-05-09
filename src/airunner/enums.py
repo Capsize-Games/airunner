@@ -29,6 +29,7 @@ class FilterType(Enum):
 
 
 class SignalCode(Enum):
+    NAVIGATE_TO_URL = "navigate_to_url"
     LLM_RAG_SEARCH_SIGNAL = "llm_rag_search_signal"
     RAG_RELOAD_INDEX_SIGNAL = "rag_reload_index_signal"
     RESET_APPLIED_MEMORY_SETTINGS = "reset_applied_memory_settings"
