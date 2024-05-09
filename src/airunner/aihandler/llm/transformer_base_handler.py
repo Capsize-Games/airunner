@@ -4,7 +4,6 @@ import torch
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.settings import LLM_CUDA_DEVICE_INDEX
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.get_torch_device import get_torch_device
 
@@ -58,6 +57,7 @@ class TransformerBaseHandler(BaseHandler):
         self.template = None
         self.image = None
         self.override_parameters = {}
+        self.model_type = "llm"
 
         if self.model_path is None:
             self.model_path = self.settings["llm_generator_settings"]["model_version"]
@@ -164,10 +164,10 @@ class TransformerBaseHandler(BaseHandler):
             if config:
                 params["quantization_config"] = config
             params["torch_dtype"] = torch.bfloat16
-            params["device_map"] = get_torch_device(LLM_CUDA_DEVICE_INDEX)
+            params["device_map"] = self.device
         else:
             params["torch_dtype"] = torch.bfloat16
-            params["device_map"] = get_torch_device(LLM_CUDA_DEVICE_INDEX)
+            params["device_map"] = self.device
 
         try:
             self.emit_signal(
