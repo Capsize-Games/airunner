@@ -184,7 +184,9 @@ class BotPreferencesWidget(BaseWidget):
         documents = self.current_chatbot.get("target_files", [])
         documents.append(file_path[0])
         self.update_chatbot("target_files", documents)
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
+            "target_files": documents
+        })
         self.load_documents()
 
     def load_documents(self):
@@ -220,4 +222,6 @@ class BotPreferencesWidget(BaseWidget):
             documents.remove(document)
             self.update_chatbot("target_files", documents)
             self.load_documents()  # Refresh the document list
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
+            "target_files": documents
+        })

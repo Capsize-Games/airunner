@@ -148,7 +148,6 @@ class TransformerBaseHandler(BaseHandler):
                 return local_path
             else:
                 local_path = self.get_model_standard_path(path)
-                print("CHECKING", local_path)
                 if os.path.exists(local_path):
                     return local_path
         return path
