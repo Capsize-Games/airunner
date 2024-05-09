@@ -510,3 +510,8 @@ class TTSModel(Enum):
     ESPEAK = "espeak"
     SPEECHT5 = "speecht5"
     BARK = "bark"
+
+
+class AgentState(Enum):
+    SEARCH = "search"
+    CHAT = "chat"

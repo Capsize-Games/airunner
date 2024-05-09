@@ -7,176 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>722</width>
-    <height>1031</height>
+    <height>1182</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="12" column="0">
-    <widget class="QTabWidget" name="tabWidget">
-     <property name="currentIndex">
-      <number>0</number>
-     </property>
-     <widget class="QWidget" name="tab">
-      <attribute name="title">
-       <string>LLM Settings</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_4">
-       <item row="0" column="0">
-        <widget class="LLMSettingsWidget" name="llm_settings_widget" native="true"/>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tab_2">
-      <attribute name="title">
-       <string>Image Generator Settings</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_6">
-       <item row="1" column="0">
-        <widget class="StableDiffusionSettingsWidget" name="widget_2" native="true"/>
-       </item>
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="use_image_generator_checkbox">
-         <property name="text">
-          <string>Use Image Generator</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="QGroupBox" name="system_instructions_groupbox">
-     <property name="title">
-      <string>System Instructions</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3">
-      <item>
-       <widget class="QPlainTextEdit" name="system_instructions">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>150</height>
-         </size>
-        </property>
-        <property name="placeholderText">
-         <string>Instructions for the LLM</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="5" column="0">
-    <widget class="QGroupBox" name="guardrails_groupbox">
-     <property name="title">
-      <string>Guardrails</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <widget class="QPlainTextEdit" name="guardrails_prompt">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>150</height>
-         </size>
-        </property>
-        <property name="placeholderText">
-         <string>The guardrails prompt is used to moderate results.</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QGroupBox" name="names_groupbox">
-     <property name="title">
-      <string>Use names</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_6">
-        <item>
-         <widget class="QLabel" name="label">
-          <property name="font">
-           <font>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Assistant name</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="botname">
-          <property name="text">
-           <string>AI Runner</string>
-          </property>
-          <property name="cursorPosition">
-           <number>9</number>
-          </property>
-          <property name="placeholderText">
-           <string>Bot name</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_5">
-        <item>
-         <widget class="QLabel" name="label_3">
-          <property name="font">
-           <font>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>User name</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="username">
-          <property name="text">
-           <string>User</string>
-          </property>
-          <property name="placeholderText">
-           <string>User name</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-     </layout>
-    </widget>
-   </item>
    <item row="8" column="0">
     <widget class="QWidget" name="widget_3" native="true">
      <layout class="QGridLayout" name="gridLayout_7">
@@ -264,6 +101,37 @@
      </layout>
     </widget>
    </item>
+   <item row="4" column="0">
+    <widget class="QGroupBox" name="system_instructions_groupbox">
+     <property name="title">
+      <string>System Instructions</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QPlainTextEdit" name="system_instructions">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>150</height>
+         </size>
+        </property>
+        <property name="placeholderText">
+         <string>Instructions for the LLM</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item row="1" column="0">
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
@@ -314,6 +182,71 @@
      </layout>
     </widget>
    </item>
+   <item row="5" column="0">
+    <widget class="QGroupBox" name="guardrails_groupbox">
+     <property name="title">
+      <string>Guardrails</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QPlainTextEdit" name="guardrails_prompt">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>150</height>
+         </size>
+        </property>
+        <property name="placeholderText">
+         <string>The guardrails prompt is used to moderate results.</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="12" column="0">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>LLM Settings</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="0">
+        <widget class="LLMSettingsWidget" name="llm_settings_widget" native="true"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="title">
+       <string>Image Generator Settings</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_6">
+       <item row="1" column="0">
+        <widget class="StableDiffusionSettingsWidget" name="widget_2" native="true"/>
+       </item>
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="use_image_generator_checkbox">
+         <property name="text">
+          <string>Use Image Generator</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
    <item row="0" column="0">
     <widget class="QGroupBox" name="groupBox_2">
      <property name="title">
@@ -333,6 +266,119 @@
          </property>
         </item>
        </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="title">
+      <string>Documents</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_9">
+      <item row="1" column="0">
+       <widget class="QPushButton" name="browse_documents_button">
+        <property name="text">
+         <string>Browse</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QScrollArea" name="target_files">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>150</height>
+         </size>
+        </property>
+        <property name="widgetResizable">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="scrollAreaWidgetContents">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>678</width>
+           <height>148</height>
+          </rect>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_10"/>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QGroupBox" name="names_groupbox">
+     <property name="title">
+      <string>Use names</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_6">
+        <item>
+         <widget class="QLabel" name="label">
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Assistant name</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="botname">
+          <property name="text">
+           <string>AI Runner</string>
+          </property>
+          <property name="cursorPosition">
+           <number>9</number>
+          </property>
+          <property name="placeholderText">
+           <string>Bot name</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <item>
+         <widget class="QLabel" name="label_3">
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>User name</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="username">
+          <property name="text">
+           <string>User</string>
+          </property>
+          <property name="placeholderText">
+           <string>User name</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
@@ -362,8 +408,8 @@
    <slot>username_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>125</x>
-     <y>239</y>
+     <x>490</x>
+     <y>390</y>
     </hint>
     <hint type="destinationlabel">
      <x>55</x>
@@ -378,8 +424,8 @@
    <slot>botname_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>225</x>
-     <y>295</y>
+     <x>247</x>
+     <y>390</y>
     </hint>
     <hint type="destinationlabel">
      <x>127</x>
@@ -394,8 +440,8 @@
    <slot>bot_personality_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>359</x>
-     <y>647</y>
+     <x>380</x>
+     <y>886</y>
     </hint>
     <hint type="destinationlabel">
      <x>292</x>
@@ -410,8 +456,8 @@
    <slot>bot_mood_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>515</x>
-     <y>757</y>
+     <x>536</x>
+     <y>951</y>
     </hint>
     <hint type="destinationlabel">
      <x>451</x>
@@ -426,8 +472,8 @@
    <slot>toggle_use_names(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>42</x>
-     <y>213</y>
+     <x>51</x>
+     <y>403</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -442,8 +488,8 @@
    <slot>toggle_use_personality(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>99</x>
-     <y>659</y>
+     <x>108</x>
+     <y>838</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -458,8 +504,8 @@
    <slot>guardrails_prompt_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>181</x>
-     <y>536</y>
+     <x>202</x>
+     <y>765</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -474,8 +520,8 @@
    <slot>system_instructions_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>327</x>
-     <y>416</y>
+     <x>348</x>
+     <y>591</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -490,8 +536,8 @@
    <slot>toggle_use_mood(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>64</x>
-     <y>769</y>
+     <x>73</x>
+     <y>925</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -506,8 +552,8 @@
    <slot>toggle_use_guardrails(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>74</x>
-     <y>548</y>
+     <x>83</x>
+     <y>751</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -554,7 +600,7 @@
    <slot>create_new_chatbot_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>786</x>
+     <x>654</x>
      <y>139</y>
     </hint>
     <hint type="destinationlabel">
@@ -570,7 +616,7 @@
    <slot>delete_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>832</x>
+     <x>700</x>
      <y>139</y>
     </hint>
     <hint type="destinationlabel">
@@ -586,8 +632,8 @@
    <slot>toggle_use_image_generator(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>140</x>
-     <y>862</y>
+     <x>151</x>
+     <y>992</y>
     </hint>
     <hint type="destinationlabel">
      <x>648</x>
@@ -602,12 +648,28 @@
    <slot>agent_type_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>704</x>
-     <y>52</y>
+     <x>700</x>
+     <y>65</y>
     </hint>
     <hint type="destinationlabel">
      <x>813</x>
      <y>8</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>browse_documents_button</sender>
+   <signal>clicked()</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>browse_documents()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>443</x>
+     <y>272</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>690</x>
+     <y>6</y>
     </hint>
    </hints>
   </connection>
@@ -630,5 +692,6 @@
   <slot>delete_clicked()</slot>
   <slot>toggle_use_image_generator(bool)</slot>
   <slot>agent_type_changed(QString)</slot>
+  <slot>browse_documents()</slot>
  </slots>
 </ui>
