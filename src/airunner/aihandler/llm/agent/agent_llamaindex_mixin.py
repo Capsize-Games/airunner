@@ -6,7 +6,7 @@ from llama_index.llms.huggingface import HuggingFaceLLM
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core import Settings
 from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
-from airunner.enums import SignalCode, LLMChatRole
+from airunner.enums import SignalCode, LLMChatRole, AgentState
 
 
 class AgentLlamaIndexMixin:
@@ -23,6 +23,13 @@ class AgentLlamaIndexMixin:
         self.__query_instruction = "Search through all available texts and provide a brief summary of the key points which are relevant to the query."
         self.__text_instruction = "Summarize and provide a brief explanation of the text. Stay concise and to the point."
         self.__state = AgentState.SEARCH
+
+        self.register(SignalCode.RAG_RELOAD_INDEX_SIGNAL, self.on_reload_rag_index_signal)
+
+    def on_reload_rag_index_signal(self, data: dict = None):
+        print("RELOAD DOCUMENT INDEX")
+        self.__load_documents()
+        self.__load_document_index()
 
     @property
     def query_instruction(self):
