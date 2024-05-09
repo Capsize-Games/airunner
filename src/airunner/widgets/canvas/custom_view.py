@@ -2,7 +2,7 @@ from functools import partial
 
 from PySide6 import QtGui
 from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
-from PySide6.QtGui import QMouseEvent, QColor, QBrush
+from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsLineItem
 
 from airunner.aihandler.logger import Logger
@@ -63,6 +63,7 @@ class CustomGraphicsView(
 
     def on_main_window_loaded_signal(self, _message):
         self.initialized = True
+        self.do_draw()
 
     def on_canvas_do_draw_signal(self, data: dict):
         self.do_draw(
@@ -102,6 +103,7 @@ class CustomGraphicsView(
 
         if self.line_group is None:
             self.line_group = QGraphicsItemGroup()
+
         if self.line_group.scene() != self._scene:
             self._scene.addItem(self.line_group)
 
@@ -112,6 +114,12 @@ class CustomGraphicsView(
         num_vertical_lines = scene_width // cell_size + 1
         num_horizontal_lines = scene_height // cell_size + 1
 
+        color = QColor(self.settings["grid_settings"]["line_color"])
+        pen = QPen(
+            color,
+            self.settings["grid_settings"]["line_width"],
+        )
+
         # Create or reuse vertical lines
         for i in range(num_vertical_lines):
             x = i * cell_size
@@ -119,6 +127,7 @@ class CustomGraphicsView(
                 line = self.line_group.childItems()[i]
                 line.setLine(x, 0, x, scene_height)
                 line.setVisible(True)
+                line.setPen(pen)
             else:
                 line = QGraphicsLineItem(x, 0, x, scene_height)
                 self.line_group.addToGroup(line)
@@ -131,6 +140,7 @@ class CustomGraphicsView(
                 line = self.line_group.childItems()[index]
                 line.setLine(0, y, scene_width, y)
                 line.setVisible(True)
+                line.setPen(pen)
             else:
                 line = QGraphicsLineItem(0, y, scene_width, y)
                 self.line_group.addToGroup(line)
