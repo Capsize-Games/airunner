@@ -30,6 +30,7 @@ class FilterType(Enum):
 
 class SignalCode(Enum):
     LLM_RAG_SEARCH_SIGNAL = "llm_rag_search_signal"
+    RAG_RELOAD_INDEX_SIGNAL = "rag_reload_index_signal"
     RESET_APPLIED_MEMORY_SETTINGS = "reset_applied_memory_settings"
     ENABLE_BRUSH_TOOL_SIGNAL = "enable_brush_tool_signal"
     ENABLE_ERASER_TOOL_SIGNAL = "enable_eraser_tool_signal"
