@@ -328,11 +328,7 @@ class ModelMixin:
     def __unload_model(self):
         self.logger.debug("Unloading model")
         self.pipe = None
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.SD,
-            "status": ModelStatus.UNLOADED,
-            "path": ""
-        })
+        self.change_model_status(ModelType.SCHEDULER, ModelStatus.UNLOADED, "")
 
     def __handle_model_changed(self):
         self.reload_model = True
@@ -381,13 +377,7 @@ class ModelMixin:
         #     self.__reuse_pipeline()
 
         if self.pipe is None or self.reload_model:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.SD,
-                    "status": ModelStatus.LOADING,
-                    "path": self.model_path
-                }
-            )
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING, self.model_path)
 
             self.logger.debug(
                 f"Loading model from scratch {self.reload_model} for {self.sd_request.generator_settings.section}")
@@ -429,24 +419,11 @@ class ModelMixin:
                 )
 
             if self.pipe is None:
-                self.emit_signal(
-                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                        "model": ModelType.SD,
-                        "status": ModelStatus.FAILED,
-                        "path": self.model_path
-                    }
-                )
+                self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED, self.model_path)
                 return
 
             self.make_stable_diffusion_memory_efficient()
-
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.SD,
-                    "status": ModelStatus.LOADED,
-                    "path": self.model_path
-                }
-            )
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED, self.model_path)
 
             if self.settings["nsfw_filter"] is False:
                 self.pipe.safety_checker = None

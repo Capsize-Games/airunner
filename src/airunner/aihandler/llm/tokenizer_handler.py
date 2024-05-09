@@ -90,34 +90,16 @@ class TokenizerHandler(TransformerBaseHandler):
         if self.chat_template:
             kwargs["chat_template"] = self.chat_template
         try:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM_TOKENIZER,
-                    "status": ModelStatus.LOADING,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.LOADING, path)
             self.tokenizer = self.tokenizer_class_.from_pretrained(
                 path,
                 **kwargs,
             )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM_TOKENIZER,
-                    "status": ModelStatus.LOADED,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.LOADED, path)
             self.logger.debug("Tokenizer loaded")
         except Exception as e:
             self.logger.error(e)
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM_TOKENIZER,
-                    "status": ModelStatus.FAILED,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.FAILED, path)
 
         if self.tokenizer:
             self.tokenizer.use_default_system_prompt = False

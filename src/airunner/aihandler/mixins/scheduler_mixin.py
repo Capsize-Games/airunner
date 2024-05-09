@@ -35,13 +35,7 @@ class SchedulerMixin:
     def load_scheduler(self, force_scheduler_name=None, config=None):
         self.logger.info(f"load_scheduler called with {force_scheduler_name}")
         if self.is_sd_xl_turbo:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.SCHEDULER,
-                    "status": ModelStatus.UNLOADED,
-                    "path": "",
-                }
-            )
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.UNLOADED, "")
             return None
 
         if (
@@ -61,13 +55,7 @@ class SchedulerMixin:
         if not force_scheduler_name and scheduler_name not in AVAILABLE_SCHEDULERS_BY_ACTION[self.scheduler_section]:
             scheduler_name = AVAILABLE_SCHEDULERS_BY_ACTION[self.scheduler_section][0]
 
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.SCHEDULER,
-                "status": ModelStatus.LOADING,
-                "path": scheduler_name,
-            }
-        )
+        self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING, scheduler_name)
 
         scheduler_class_name = self.schedulers[scheduler_name]
         scheduler_class = getattr(diffusers, scheduler_class_name)
@@ -123,21 +111,9 @@ class SchedulerMixin:
                     ),
                     **kwargs
                 )
-                self.emit_signal(
-                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                        "model": ModelType.SCHEDULER,
-                        "status": ModelStatus.LOADED,
-                        "path": scheduler_name,
-                    }
-                )
+                self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED, scheduler_name)
             except Exception as e:
-                self.emit_signal(
-                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                        "model": ModelType.SCHEDULER,
-                        "status": ModelStatus.FAILED,
-                        "path": scheduler_name,
-                    }
-                )
+                self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED, scheduler_name)
                 self.logger.error(
                     f"Unable to load scheduler {scheduler_name} "
                     f"from {self.sd_request.generator_settings.model}"
@@ -152,13 +128,7 @@ class SchedulerMixin:
         self.current_scheduler_name = ""
         self.do_change_scheduler = True
         self.scheduler = None
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.SCHEDULER,
-                "status": ModelStatus.UNLOADED,
-                "path": "",
-            }
-        )
+        self.change_model_status(ModelType.SCHEDULER, ModelStatus.UNLOADED, "")
 
     def change_scheduler(self):
         if not self.do_change_scheduler or not self.pipe:
