@@ -28,7 +28,7 @@ class AgentLlamaIndexMixin:
 
     def on_reload_rag_index_signal(self, data: dict = None):
         print("RELOAD DOCUMENT INDEX")
-        self.__load_documents()
+        self.__load_documents(target_files=data["target_files"] or [])
         self.__load_document_index()
 
     @property
@@ -74,7 +74,21 @@ class AgentLlamaIndexMixin:
         )
 
     def perform_rag_search(self, prompt, streaming: bool = False):
-        query_engine = self.__index.as_query_engine(streaming=streaming)
+        try:
+            query_engine = self.__index.as_query_engine(streaming=streaming)
+        except AttributeError as e:
+            self.logger.error(f"Error performing RAG search: {str(e)}")
+            if streaming:
+                self.emit_signal(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    dict(
+                        message="",
+                        is_first_message=True,
+                        is_end_of_message=True,
+                        name=self.botname,
+                    )
+                )
+            return
         response = query_engine.query(
             prompt
         )
@@ -138,16 +152,17 @@ class AgentLlamaIndexMixin:
             ".md": self.__markdown_reader,
         }
 
-    def __load_documents(self):
+    def __load_documents(self, target_files=None):
         self.logger.debug("Loading documents...")
         try:
             self.__documents = SimpleDirectoryReader(
-                input_files=self.chatbot["target_files"],
+                input_files=target_files or self.chatbot["target_files"],
                 file_extractor=self.file_extractor,
                 exclude_hidden=False
             ).load_data()
         except ValueError as e:
             self.logger.error(f"Error loading documents: {str(e)}")
+            self.__documents = None
 
     def __load_service_context(self):
         self.logger.debug("Loading service context...")

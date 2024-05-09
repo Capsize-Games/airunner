@@ -287,7 +287,9 @@ class MainWindow(
             chatbot["target_files"] = [os.path.join(filepath, filename)]
             settings = update_chatbot(settings, chatbot)
             self.settings = settings
-            self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+            self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
+                "target_files": chatbot["target_files"]
+            })
             self.emit_signal(
                 SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
                 {
