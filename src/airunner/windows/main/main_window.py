@@ -246,27 +246,58 @@ class MainWindow(
             file.write(response.content)
         return filename
 
+    def download_pdf(self, url, save_path):
+        response = requests.get(url)
+        filename = url.split('/')[-1]  # Get the filename from the URL
+        save_path = os.path.join(save_path, filename)
+        with open(save_path, 'wb') as file:
+            file.write(response.content)
+        return filename
+
     def on_navigate_to_url(self, data: dict = None):
         url, ok = QInputDialog.getText(self, 'Browse Web', 'Enter your URL:')
         if ok:
-            filepath = os.path.expanduser(self.settings["path_settings"]["webpages_path"])
-            filename = self.download_url(url, filepath)
-        settings = self.settings
-        chatbot = current_chatbot(settings)
-        chatbot["target_files"] = [os.path.join(filepath, filename)]
-        settings = update_chatbot(settings, chatbot)
-        self.settings = settings
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
-        self.emit_signal(
-            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
-            {
-                "llm_request": True,
-                "request_data": {
-                    "action": LLMAction.RAG,
-                    "prompt": "summarize the article",
+            try:
+                result = urllib.parse.urlparse(url)
+                is_url = all([result.scheme, result.netloc])
+            except ValueError:
+                is_url = False
+
+            # If the input is a URL, download it
+            if is_url:
+                if url.lower().endswith('.pdf'):
+                    # Handle PDF file
+                    filepath = os.path.expanduser(self.settings["path_settings"]["pdf_path"])
+                    filename = self.download_pdf(url, filepath)
+                else:
+                    # Handle URL
+                    filepath = os.path.expanduser(self.settings["path_settings"]["webpages_path"])
+                    filename = self.download_url(url, filepath)
+            elif os.path.isfile(url):
+                filepath = os.path.dirname(url)
+                filename = os.path.basename(url)
+            else:
+                self.logger.error(f"Invalid URL or file path")
+                return
+
+            # Update target files to use only the file that was downloaded or navigated to
+            # and update the index.
+            settings = self.settings
+            chatbot = current_chatbot(settings)
+            chatbot["target_files"] = [os.path.join(filepath, filename)]
+            settings = update_chatbot(settings, chatbot)
+            self.settings = settings
+            self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+            self.emit_signal(
+                SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
+                {
+                    "llm_request": True,
+                    "request_data": {
+                        "action": LLMAction.RAG,
+                        "prompt": "Summarize the text and provide a synopsis of the content. Be concise and informative.",
+                    }
                 }
-            }
-        )
+            )
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
