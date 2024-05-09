@@ -1,7 +1,7 @@
 import importlib
 import enum
 
-from airunner.aihandler.llm.agent import AIRunnerAgent
+from airunner.aihandler.llm.agent.ai_runner_agent import AIRunnerAgent
 
 
 class State(enum.Enum):

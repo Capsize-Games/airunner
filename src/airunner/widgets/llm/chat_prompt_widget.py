@@ -329,6 +329,7 @@ class ChatPromptWidget(BaseWidget):
                 if isinstance(current_widget, MessageWidget):
                     if current_widget.is_bot:
                         current_widget.update_message(message)
+                        self.scroll_to_bottom()
                         return
                     break
 

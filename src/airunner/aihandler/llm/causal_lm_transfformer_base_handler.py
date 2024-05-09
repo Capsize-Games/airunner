@@ -1,7 +1,7 @@
 from transformers.generation.streamers import TextIteratorStreamer
 from transformers.models.mistral.modeling_mistral import MistralForCausalLM
 
-from airunner.aihandler.llm.agent import AIRunnerAgent
+from airunner.aihandler.llm.agent.ai_runner_agent import AIRunnerAgent
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode
 from airunner.enums import LLMActionType
