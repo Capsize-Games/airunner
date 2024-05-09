@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import MagicMock
-from airunner.aihandler.llm.agent import AIRunnerAgent
+from airunner.aihandler.llm.agent.ai_runner_agent import AIRunnerAgent
 from airunner.enums import LLMChatRole
 
 
