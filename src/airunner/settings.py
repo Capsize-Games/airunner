@@ -33,9 +33,9 @@ from airunner.enums import (
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
 
 # TODO: move the following into the settings dict
-LLM_CUDA_DEVICE_INDEX = 1  # 3060
+LLM_CUDA_DEVICE_INDEX = 0  # 3060
 LLM_TOKENIZER_DEVICE_INDEX = LLM_CUDA_DEVICE_INDEX
-RAG_AGENT_DEVICE_INDEX = 0  # 2080s
+RAG_AGENT_DEVICE_INDEX = 0  # 3060
 
 ####################################################################
 # NLTK_DOWNLOAD_DIR is the directory where the NLTK files will be
@@ -830,6 +830,13 @@ DEFAULT_SHORTCUTS = {
         "description": "Interrupt key. Responsible for interrupting the current process.",
         "signal": SignalCode.INTERRUPT_PROCESS_SIGNAL.value
     },
+    "Navigate": {
+        "text": "Shift+Ctrl+P",
+        "key": QtCore.Qt.Key.Key_P.value,
+        "modifiers": QtCore.Qt.KeyboardModifier.ShiftModifier.value | QtCore.Qt.KeyboardModifier.ControlModifier.value,
+        "description": "URL key. Responsible for navigating to a URL.",
+        "signal": SignalCode.NAVIGATE_TO_URL.value
+    },
     "Quit": {
         "text": "Ctrl+Q",
         "key": QtCore.Qt.Key.Key_Q.value,
@@ -955,7 +962,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     font_settings={
         "chat": {
             "font_family": "Arial",
-            "font_size": 12,
+            "font_size": 16,
         },
         "primary": {
             "font_family": "Arial",

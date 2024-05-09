@@ -25,7 +25,7 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.agent_worker import AgentWorker
 
 
-class AIRunnerAgent(
+class BaseAgent(
     QObject,
     MediatorMixin,
     SettingsMixin,
@@ -656,7 +656,7 @@ class AIRunnerAgent(
                 self.bot_mood = streamed_template
                 return self.run(
                     prompt=self.prompt,
-                    action=LLMActionType.UPDATE_MOOD,
+                    action=LLMActionType.CHAT,
                 )
 
             elif action == LLMActionType.APPLICATION_COMMAND:

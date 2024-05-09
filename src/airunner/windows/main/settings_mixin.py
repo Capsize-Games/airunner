@@ -49,6 +49,9 @@ class SettingsMixin:
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = DEFAULT_APPLICATION_SETTINGS
 
+        self.update_settings()
+        self.reset_paths()
+
     @property
     def settings(self):
         """
@@ -213,6 +216,8 @@ class SettingsMixin:
             "video_path": f"{base_path}/art/other/videos",
             "ebooks_path": f"{base_path}/text/other/ebooks",
             "documents_path": f"{base_path}/text/other/documents",
+            "webpages_path": f"{base_path}/text/other/webpages",
+            "pdf_path": f"{base_path}/text/other/pdfs",
             "tts_speaker_embeddings_path": f"{base_path}/text/models/speaker_embeddings",
             "tts_datasets_path": f"{base_path}/text/models/datasets",
             "tts_model_path": f"{base_path}/text/models/tts",
