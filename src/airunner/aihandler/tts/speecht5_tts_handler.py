@@ -60,29 +60,17 @@ class SpeechT5TTSHandler(TTSHandler):
     def load_vocoder(self):
         self.logger.debug(f"Loading Vocoder {self.vocoder_path}")
         try:
-            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.TTS_VOCODER,
-                "status": ModelStatus.LOADING,
-                "path": self.vocoder_path
-            })
+            self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.LOADING, self.vocoder_path)
             vocoder = self.vocoder = SpeechT5HifiGan.from_pretrained(
                 self.vocoder_path,
                 local_files_only=True,
                 torch_dtype=torch.float16,
                 device_map=self.device
             )
-            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.TTS_VOCODER,
-                "status": ModelStatus.LOADED,
-                "path": self.vocoder_path
-            })
+            self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.LOADED, self.vocoder_path)
             return vocoder
         except Exception as e:
-            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.TTS_VOCODER,
-                "status": ModelStatus.FAILED,
-                "path": self.vocoder_path
-            })
+            self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.FAILED, self.vocoder_path)
             return None
 
     def load_dataset(self):
@@ -92,13 +80,7 @@ class SpeechT5TTSHandler(TTSHandler):
         """
         self.logger.debug("Loading Dataset")
 
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
-                "status": ModelStatus.LOADING,
-                "path": self.dataset_path
-            }
-        )
+        self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.LOADING, self.dataset_path)
         try:
             self.speaker_embeddings = torch.load(
                 self.speaker_embeddings_path
@@ -106,24 +88,12 @@ class SpeechT5TTSHandler(TTSHandler):
             if self.use_cuda and self.speaker_embeddings is not None:
                 self.speaker_embeddings = self.speaker_embeddings.half().cuda()
 
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
-                    "status": ModelStatus.LOADED,
-                    "path": self.dataset_path
-                }
-            )
+            self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.LOADED, self.dataset_path)
 
         except Exception as e:
             self.logger.error("Failed to load speaker embeddings")
             self.logger.error(e)
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
-                    "status": ModelStatus.FAILED,
-                    "path": self.dataset_path
-                }
-            )
+            self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.FAILED, self.dataset_path)
 
 
     def do_generate(self, message):
