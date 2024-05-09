@@ -2,10 +2,6 @@
 # Do not remove the following import statement or change
 # the order of the imports.
 ####################################################################################################
-from airunner.utils.security import set_huggingface_environment_variables
-set_huggingface_environment_variables(
-    allow_downloads=True
-)
 import sys
 import signal
 from PySide6.QtCore import (

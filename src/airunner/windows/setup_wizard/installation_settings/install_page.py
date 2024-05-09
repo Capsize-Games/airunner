@@ -12,6 +12,35 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.windows.setup_wizard.installation_settings.templates.install_page_ui import Ui_install_page
 
+CONTROLNET_PATHS = [
+    "lllyasviel/control_v11p_sd15_canny",
+    "lllyasviel/control_v11f1p_sd15_depth",
+    "lllyasviel/control_v11f1p_sd15_depth",
+    "lllyasviel/control_v11f1p_sd15_depth",
+    "lllyasviel/control_v11f1p_sd15_depth",
+    "lllyasviel/control_v11p_sd15_mlsd",
+    "lllyasviel/control_v11p_sd15_normalbae",
+    "lllyasviel/control_v11p_sd15_normalbae",
+    "lllyasviel/control_v11p_sd15_scribble",
+    "lllyasviel/control_v11p_sd15_scribble",
+    "lllyasviel/control_v11p_sd15_seg",
+    "lllyasviel/control_v11p_sd15_lineart",
+    "lllyasviel/control_v11p_sd15_lineart",
+    "lllyasviel/control_v11p_sd15s2_lineart_anime",
+    "lllyasviel/control_v11p_sd15_openpose",
+    "lllyasviel/control_v11p_sd15_openpose",
+    "lllyasviel/control_v11p_sd15_openpose",
+    "lllyasviel/control_v11p_sd15_openpose",
+    "lllyasviel/control_v11p_sd15_openpose",
+    "lllyasviel/control_v11p_sd15_softedge",
+    "lllyasviel/control_v11p_sd15_softedge",
+    "lllyasviel/control_v11p_sd15_softedge",
+    "lllyasviel/control_v11p_sd15_softedge",
+    "lllyasviel/control_v11e_sd15_ip2p",
+    "lllyasviel/control_v11p_sd15_inpaint",
+    "lllyasviel/control_v11e_sd15_shuffle",
+]
+
 
 class InstallWorker(
     QObject,
@@ -98,37 +127,11 @@ class InstallWorker(
         self.parent.set_status("Downloading Controlnet models...")
         model_version = self.setup_settings["model_version"]
 
-        controlnet_paths = [
-            "lllyasviel/control_v11p_sd15_canny",
-            "lllyasviel/control_v11f1p_sd15_depth",
-            "lllyasviel/control_v11f1p_sd15_depth",
-            "lllyasviel/control_v11f1p_sd15_depth",
-            "lllyasviel/control_v11f1p_sd15_depth",
-            "lllyasviel/control_v11p_sd15_mlsd",
-            "lllyasviel/control_v11p_sd15_normalbae",
-            "lllyasviel/control_v11p_sd15_normalbae",
-            "lllyasviel/control_v11p_sd15_scribble",
-            "lllyasviel/control_v11p_sd15_scribble",
-            "lllyasviel/control_v11p_sd15_seg",
-            "lllyasviel/control_v11p_sd15_lineart",
-            "lllyasviel/control_v11p_sd15_lineart",
-            "lllyasviel/control_v11p_sd15s2_lineart_anime",
-            "lllyasviel/control_v11p_sd15_openpose",
-            "lllyasviel/control_v11p_sd15_openpose",
-            "lllyasviel/control_v11p_sd15_openpose",
-            "lllyasviel/control_v11p_sd15_openpose",
-            "lllyasviel/control_v11p_sd15_openpose",
-            "lllyasviel/control_v11p_sd15_softedge",
-            "lllyasviel/control_v11p_sd15_softedge",
-            "lllyasviel/control_v11p_sd15_softedge",
-            "lllyasviel/control_v11p_sd15_softedge",
-            "lllyasviel/control_v11e_sd15_ip2p",
-            "lllyasviel/control_v11p_sd15_inpaint",
-            "lllyasviel/control_v11e_sd15_shuffle",
-        ]
-        self.total_models_in_current_step = len(controlnet_paths)
-        for path in controlnet_paths:
-            for filename in SD_FILE_BOOTSTRAP_DATA[model_version]["controlnet"]:
+        controlnet_files = SD_FILE_BOOTSTRAP_DATA[model_version]["controlnet"]
+        self.total_models_in_current_step += len(CONTROLNET_PATHS * len(controlnet_files))
+
+        for path in CONTROLNET_PATHS:
+            for filename in controlnet_files:
                 try:
                     self.hf_downloader.download_model(
                         requested_path=path,
@@ -142,48 +145,55 @@ class InstallWorker(
     def download_llms(self):
         if self.setup_settings["enable_llm"]:
             self.parent.set_status("Downloading LLM models...")
-            files = LLM_FILE_BOOTSTRAP_DATA[DEFAULT_LLM_HF_PATH]
-            self.total_models_in_current_step += len(files)
-            for filename in files:
-                try:
-                    self.hf_downloader.download_model(
-                        requested_path=DEFAULT_LLM_HF_PATH,
-                        requested_file_name=filename,
-                        requested_file_path=self.settings["path_settings"]["llm_causallm_model_path"],
-                        requested_callback=self.progress_updated.emit
-                    )
-                except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
+            for k, v in LLM_FILE_BOOTSTRAP_DATA.items():
+                self.total_models_in_current_step += len(v["files"])
+
+            for k, v in LLM_FILE_BOOTSTRAP_DATA.items():
+                for filename in v["files"]:
+                    try:
+                        self.hf_downloader.download_model(
+                            requested_path=k,
+                            requested_file_name=filename,
+                            requested_file_path=self.settings["path_settings"][v["path_settings"]],
+                            requested_callback=self.progress_updated.emit
+                        )
+                    except Exception as e:
+                        print(f"Error downloading {filename}: {e}")
 
     def download_stt(self):
         if self.setup_settings["enable_stt"]:
             self.parent.set_status("Downloading STT models...")
-            self.total_models_in_current_step += len(WHISPER_FILES)
-            for filename in WHISPER_FILES:
-                try:
-                    self.hf_downloader.download_model(
-                        requested_path="openai/whisper-tiny",
-                        requested_file_name=filename,
-                        requested_file_path=self.settings["path_settings"]["stt_model_path"],
-                        requested_callback=self.progress_updated.emit
-                    )
-                except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
+            for k, v in WHISPER_FILES.items():
+                self.total_models_in_current_step += len(v)
+            for k, v in WHISPER_FILES.items():
+                for filename in v:
+                    try:
+                        self.hf_downloader.download_model(
+                            requested_path=k,
+                            requested_file_name=filename,
+                            requested_file_path=self.settings["path_settings"]["stt_model_path"],
+                            requested_callback=self.progress_updated.emit
+                        )
+                    except Exception as e:
+                        print(f"Error downloading {filename}: {e}")
 
     def download_tts(self):
         if self.setup_settings["enable_tts"]:
             self.parent.set_status("Downloading TTS models...")
-            self.total_models_in_current_step += len(SPEECH_T5_FILES)
-            for filename in SPEECH_T5_FILES:
-                try:
-                    self.hf_downloader.download_model(
-                        requested_path="microsoft/speecht5_tts",
-                        requested_file_name=filename,
-                        requested_file_path=self.settings["path_settings"]["tts_model_path"],
-                        requested_callback=self.progress_updated.emit
-                    )
-                except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
+            for k, v in SPEECH_T5_FILES.items():
+                self.total_models_in_current_step += len(v)
+
+            for k, v in SPEECH_T5_FILES.items():
+                for filename in v:
+                    try:
+                        self.hf_downloader.download_model(
+                            requested_path=k,
+                            requested_file_name=filename,
+                            requested_file_path=self.settings["path_settings"]["tts_model_path"],
+                            requested_callback=self.progress_updated.emit
+                        )
+                    except Exception as e:
+                        print(f"Error downloading {filename}: {e}")
 
     def finalize_installation(self):
         self.parent.set_status("Installation complete.")
@@ -266,13 +276,16 @@ class InstallPage(BaseWizard):
         if self.setup_settings["enable_sd"] and self.setup_settings["sd_license_completed"]:
             self.total_steps += 1
         if self.setup_settings["enable_controlnet"]:
-            self.total_steps += 23
+            self.total_steps += len(CONTROLNET_PATHS) * len(SD_FILE_BOOTSTRAP_DATA[self.setup_settings["model_version"]]["controlnet"])
         if self.setup_settings["enable_llm"]:
-            self.total_steps += 1
+            for k, v in LLM_FILE_BOOTSTRAP_DATA.items():
+                self.total_steps += len(v)
         if self.setup_settings["enable_tts"]:
-            self.total_steps += 1
+            for k, v in SPEECH_T5_FILES.items():
+                self.total_steps += len(v)
         if self.setup_settings["enable_stt"]:
-            self.total_steps += 1
+            for k, v in WHISPER_FILES.items():
+                self.total_steps += len(v)
 
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.update_progress_bar)
         self.register(SignalCode.DOWNLOAD_PROGRESS, self.download_progress)

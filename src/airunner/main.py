@@ -11,7 +11,10 @@ Do not change the order of the imports.
 # variables for the application.
 ################################################################
 import facehuggershield
-facehuggershield.huggingface.activate(show_stdout=True)
+facehuggershield.huggingface.activate(
+    show_stdout=True,
+    darklock_os_whitelisted_directories=["~/.airunner"]
+)
 
 ################################################################
 # Import the main application class for AI Runner.
