@@ -32,11 +32,6 @@ from airunner.enums import (
 )
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
 
-# TODO: move the following into the settings dict
-LLM_CUDA_DEVICE_INDEX = 0  # 3060
-LLM_TOKENIZER_DEVICE_INDEX = LLM_CUDA_DEVICE_INDEX
-RAG_AGENT_DEVICE_INDEX = 0  # 3060
-
 ####################################################################
 # NLTK_DOWNLOAD_DIR is the directory where the NLTK files will be
 # downloaded to. We need this for RAG
