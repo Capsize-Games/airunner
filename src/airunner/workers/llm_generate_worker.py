@@ -61,7 +61,6 @@ class LLMGenerateWorker(
             self.llm.move_to_cpu()
         elif do_unload_model:
             self.unload_llm()
-        print(callback)
         if callback:
             callback()
 
