@@ -196,6 +196,9 @@ DEFAULT_CHATBOT = {
     "ngram_size": 2,
     "return_result": True,
 
+    "target_files": [],
+    "target_directories": [],
+
     "guardrails_prompt": (
         "Always assist with care, respect, and truth. "
         "Respond with utmost utility yet securely. "
