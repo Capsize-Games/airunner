@@ -19,15 +19,13 @@ from PySide6.QtWidgets import (
 )
 from bs4 import BeautifulSoup
 
-from airunner.agents.actions.bash_execute import bash_execute
-from airunner.agents.actions.show_path import show_path
+from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
+from airunner.aihandler.llm.agent.actions.show_path import show_path
 from airunner.aihandler.logger import Logger
 from airunner.settings import (
     STATUS_ERROR_COLOR,
     STATUS_NORMAL_COLOR_LIGHT,
     STATUS_NORMAL_COLOR_DARK,
-    DARK_THEME_NAME,
-    LIGHT_THEME_NAME,
     NSFW_CONTENT_DETECTED_MESSAGE
 )
 from airunner.enums import (
