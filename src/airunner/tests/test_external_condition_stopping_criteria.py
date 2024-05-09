@@ -1,5 +1,5 @@
 import unittest
-from airunner.aihandler.llm.agent.ai_runner_agent import ExternalConditionStoppingCriteria
+from airunner.aihandler.llm.agent.base_agent import ExternalConditionStoppingCriteria
 
 
 class TestExternalConditionStoppingCriteria(unittest.TestCase):

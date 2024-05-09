@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import MagicMock
-from airunner.aihandler.llm.agent.ai_runner_agent import AIRunnerAgent
+from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.enums import LLMChatRole
 
 
 class TestAIRunnerAgent(unittest.TestCase):
     def setUp(self):
-        self.agent = AIRunnerAgent()
+        self.agent = BaseAgent()
 
     def test_interrupt_process(self):
         self.agent.interrupt_process()

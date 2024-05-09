@@ -1,7 +1,7 @@
 from transformers.generation.streamers import TextIteratorStreamer
 from transformers.models.mistral.modeling_mistral import MistralForCausalLM
 
-from airunner.aihandler.llm.agent.ai_runner_agent import AIRunnerAgent
+from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode
 from airunner.enums import LLMActionType
@@ -155,7 +155,7 @@ class CausalLMTransformerBaseHandler(
         #     )
         # )
         self.logger.debug("Loading local agent")
-        self.chat_agent = AIRunnerAgent(
+        self.chat_agent = BaseAgent(
             model=self.model,
             tokenizer=self.tokenizer,
             streamer=self.streamer,
