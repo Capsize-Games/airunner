@@ -444,7 +444,6 @@ class MainWindow(
         :param data: dict
         :return: None
         """
-        print(data)
         args = data["args"]
         if len(args) == 1:
             message = args[0]

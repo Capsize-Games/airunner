@@ -10,7 +10,6 @@ class DownloadThread(QThread):
     def __init__(self, models_to_download):
         super().__init__()
         self.models_to_download = models_to_download
-        print(self.models_to_download)
         self._stop_event = False
 
     def run(self):
