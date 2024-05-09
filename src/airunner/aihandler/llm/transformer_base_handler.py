@@ -170,32 +170,14 @@ class TransformerBaseHandler(BaseHandler):
             params["device_map"] = self.device
 
         try:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM,
-                    "status": ModelStatus.LOADING,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM, ModelStatus.LOADING, path)
             self.model = self.auto_class_.from_pretrained(
                 path,
                 **params
             )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM,
-                    "status": ModelStatus.LOADED,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM, ModelStatus.LOADED, path)
         except Exception as e:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM,
-                    "status": ModelStatus.FAILED,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM, ModelStatus.FAILED, path)
             self.logger.error(f"Error loading model: {e}")
             self.model = None
 
@@ -225,25 +207,13 @@ class TransformerBaseHandler(BaseHandler):
     def unload_tokenizer(self):
         self.logger.debug("Unloading tokenizer")
         self.tokenizer = None
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.LLM_TOKENIZER,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
+        self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.UNLOADED, "")
         return True
 
     def unload_model(self):
         self.logger.debug("Unloading model")
         self.model = None
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.LLM,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
+        self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED, "")
         return True
 
     def pre_load(self):

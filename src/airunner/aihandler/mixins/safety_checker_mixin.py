@@ -34,20 +34,12 @@ class SafetyCheckerMixin:
     def _unload_safety_checker_model(self):
         self.safety_checker = None
         clear_memory()
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.SAFETY_CHECKER,
-            "status": ModelStatus.UNLOADED,
-            "path": "",
-        })
+        self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED, "")
 
     def _unload_feature_extractor_model(self):
         self.feature_extractor = None
         clear_memory()
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.FEATURE_EXTRACTOR,
-            "status": ModelStatus.UNLOADED,
-            "path": "",
-        })
+        self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.UNLOADED, "")
 
     def load_safety_checker(self, data_: dict = None):
         if self.use_safety_checker and self.safety_checker is None and "path" in self.safety_checker_model:
@@ -59,11 +51,7 @@ class SafetyCheckerMixin:
     def unload_feature_extractor(self):
         self.feature_extractor = None
         clear_memory()
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.FEATURE_EXTRACTOR,
-            "status": ModelStatus.UNLOADED,
-            "path": "",
-        })
+        self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.UNLOADED, "")
 
     def is_ckpt_file(self, model_path) -> bool:
         if not model_path:
@@ -80,11 +68,7 @@ class SafetyCheckerMixin:
 
     def _load_feature_extractor_model(self):
         feature_extractor = None
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.FEATURE_EXTRACTOR,
-            "status": ModelStatus.LOADING,
-            "path": self.safety_checker_model["path"],
-        })
+        self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING, self.safety_checker_model["path"])
         try:
             feature_extractor = AutoFeatureExtractor.from_pretrained(
                 os.path.expanduser(
@@ -98,29 +82,17 @@ class SafetyCheckerMixin:
                 use_safetensors=True,
                 device_map=self.device
             )
-            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.FEATURE_EXTRACTOR,
-                "status": ModelStatus.LOADED,
-                "path": self.safety_checker_model["path"],
-            })
+            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED, self.safety_checker_model["path"])
         except Exception as e:
             self.logger.error("Unable to load feature extractor")
             print(e)
-            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.FEATURE_EXTRACTOR,
-                "status": ModelStatus.FAILED,
-                "path": self.safety_checker_model["path"],
-            })
+            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED, self.safety_checker_model["path"])
         return feature_extractor
 
     def _load_safety_checker_model(self):
         self.logger.debug(f"Initializing safety checker with {self.safety_checker_model}")
         safety_checker = None
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.SAFETY_CHECKER,
-            "status": ModelStatus.LOADING,
-            "path": self.safety_checker_model["path"],
-        })
+        self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING, self.safety_checker_model["path"])
         try:
             safety_checker = StableDiffusionSafetyChecker.from_pretrained(
                 os.path.expanduser(
@@ -134,17 +106,9 @@ class SafetyCheckerMixin:
                 use_safetensors=True,
                 device_map=self.device
             )
-            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.SAFETY_CHECKER,
-                "status": ModelStatus.LOADED,
-                "path": self.safety_checker_model["path"],
-            })
+            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED, self.safety_checker_model["path"])
         except Exception as e:
             print(e)
             self.send_error("Unable to load safety checker")
-            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.SAFETY_CHECKER,
-                "status": ModelStatus.FAILED,
-                "path": "",
-            })
+            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED, self.safety_checker_model["path"])
         return safety_checker

@@ -62,29 +62,17 @@ class STTHandler(BaseHandler):
     def unload_model(self):
         self.model = None
         clear_memory()
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.STT,
-            "status": ModelStatus.UNLOADED,
-            "path": ""
-        })
+        self.change_model_status(ModelType.STT, ModelStatus.UNLOADED, "")
 
     def unload_processor(self):
         self.processor = None
         clear_memory()
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.STT_PROCESSOR,
-            "status": ModelStatus.UNLOADED,
-            "path": ""
-        })
+        self.change_model_status(ModelType.STT_PROCESSOR, ModelStatus.UNLOADED, "")
 
     def unload_feature_extractor(self):
         self.feature_extractor = None
         clear_memory()
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.STT_FEATURE_EXTRACTOR,
-            "status": ModelStatus.UNLOADED,
-            "path": ""
-        })
+        self.change_model_status(ModelType.STT_FEATURE_EXTRACTOR, ModelStatus.UNLOADED, "")
 
 
     @property
