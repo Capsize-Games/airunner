@@ -1,7 +1,9 @@
 import os
+import re
 import webbrowser
 from functools import partial
 
+import requests
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
@@ -12,8 +14,10 @@ from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QMessageBox,
-    QCheckBox
+    QCheckBox, QInputDialog
 )
+from bs4 import BeautifulSoup
+
 from airunner.agents.actions.bash_execute import bash_execute
 from airunner.agents.actions.show_path import show_path
 from airunner.aihandler.logger import Logger
@@ -30,7 +34,7 @@ from airunner.enums import (
     SignalCode,
     CanvasToolName,
     WindowSection,
-    GeneratorSection, StatusColors, ModelStatus, ModelType
+    GeneratorSection, StatusColors, ModelStatus, ModelType, LLMAction
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
@@ -39,6 +43,7 @@ from airunner.settings import (
     BUG_REPORT_LINK,
     VULNERABILITY_REPORT_LINK
 )
+from airunner.utils.agents.current_chatbot import current_chatbot, update_chatbot
 from airunner.utils.file_system.operations import FileSystemOperations
 
 from airunner.utils.get_version import get_version
@@ -214,17 +219,53 @@ class MainWindow(
         self.is_started = True
         self.image_window = None
 
-        self.emit_signal(
-            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL,
-            {
-                "main_window": self
-            }
-        )
+        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, {
+            "main_window": self
+        })
         self.register(
             SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL,
             self.on_ai_models_save_or_update_signal
         )
+        self.register(
+            SignalCode.NAVIGATE_TO_URL,
+            self.on_navigate_to_url
+        )
 
+    def download_url(self, url, save_path):
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        title = soup.title.string if soup.title else url
+        # Truncate title to 10 words
+        title_words = title.split()[:10]
+        filename = "_".join(title_words) + '.html'
+        # Replace any characters in filename that are not alphanumerics, underscores, or hyphens
+        filename = re.sub(r'[^\w\-_]', '_', filename)
+        save_path = os.path.join(save_path, filename)
+        with open(save_path, 'wb') as file:
+            file.write(response.content)
+        return filename
+
+    def on_navigate_to_url(self, data: dict = None):
+        url, ok = QInputDialog.getText(self, 'Browse Web', 'Enter your URL:')
+        if ok:
+            filepath = os.path.expanduser(self.settings["path_settings"]["webpages_path"])
+            filename = self.download_url(url, filepath)
+        settings = self.settings
+        chatbot = current_chatbot(settings)
+        chatbot["target_files"] = [os.path.join(filepath, filename)]
+        settings = update_chatbot(settings, chatbot)
+        self.settings = settings
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+        self.emit_signal(
+            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
+            {
+                "llm_request": True,
+                "request_data": {
+                    "action": LLMAction.RAG,
+                    "prompt": "summarize the article",
+                }
+            }
+        )
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
