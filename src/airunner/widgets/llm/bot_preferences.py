@@ -1,6 +1,7 @@
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QInputDialog, QMessageBox
+from PySide6.QtWidgets import QInputDialog, QMessageBox, QLabel, QPushButton, QHBoxLayout, QWidget
 from airunner.settings import DEFAULT_CHATBOT
+from airunner.utils.open_file_path import open_file_path
 from airunner.utils.toggle_signals import toggle_signals
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.bot_preferences_ui import Ui_bot_preferences
@@ -53,6 +54,7 @@ class BotPreferencesWidget(BaseWidget):
             "system_instructions_groupbox",
             "guardrails_prompt",
             "guardrails_groupbox",
+            "target_files",
         ]
         toggle_signals(self.ui, elements)
         self.ui.username.setText(self.current_chatbot.get("username", "User"))
@@ -66,6 +68,7 @@ class BotPreferencesWidget(BaseWidget):
         self.ui.system_instructions_groupbox.setChecked(self.current_chatbot.get("use_system_instructions", True))
         self.ui.guardrails_prompt.setPlainText(self.current_chatbot.get("guardrails_prompt", ""))
         self.ui.guardrails_groupbox.setChecked(self.current_chatbot.get("use_guardrails", True))
+        self.load_documents()
         toggle_signals(self.ui, elements, False)
 
     def update_chatbot(self, key, val):
@@ -167,3 +170,51 @@ class BotPreferencesWidget(BaseWidget):
     @Slot(bool)
     def agent_type_changed(self, val: str):
         print("agent type changed", val)
+
+    @Slot()
+    def browse_documents(self):
+        file_path = open_file_path(file_type="Text Files (*.md *.html *html *.epub *.pdf)")
+
+        # validate file path
+        if not file_path or not file_path[0] or not file_path[0].strip() or not file_path[0].endswith((".md", ".html", ".epub", ".pdf")):
+            return
+
+        documents = self.current_chatbot.get("target_files", [])
+        documents.append(file_path[0])
+        self.update_chatbot("target_files", documents)
+
+        self.load_documents()
+
+    def load_documents(self):
+        # Get the layout of the scroll area's widget
+        layout = self.ui.target_files.widget().layout()
+
+        # Clear the existing widgets in the layout
+        for i in reversed(range(layout.count())):
+            layout.itemAt(i).widget().setParent(None)
+
+        documents = self.current_chatbot.get("target_files", [])
+        for doc in documents:
+            # Create a label with the document name
+            label = QLabel(doc)
+
+            # Create a delete button
+            delete_button = QPushButton("Delete")
+            delete_button.clicked.connect(lambda checked, d=doc: self.delete_document(d))
+
+            # Create a horizontal layout and add the label and button to it
+            h_layout = QHBoxLayout()
+            h_layout.addWidget(label)
+            h_layout.addWidget(delete_button)
+
+            # Create a widget to hold the layout and add it to the scroll area
+            widget = QWidget()
+            widget.setLayout(h_layout)
+            layout.addWidget(widget)
+
+    def delete_document(self, document):
+        documents = self.current_chatbot.get("target_files", [])
+        if document in documents:
+            documents.remove(document)
+            self.update_chatbot("target_files", documents)
+            self.load_documents()  # Refresh the document list
