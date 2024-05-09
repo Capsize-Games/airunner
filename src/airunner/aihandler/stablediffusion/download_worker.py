@@ -63,6 +63,9 @@ class DownloadWorker(
             file_name = os.path.join(file_path, path, file_name)
             file_name = os.path.expanduser(file_name)
 
+            if not os.path.exists(os.path.dirname(file_name)):
+                os.makedirs(os.path.dirname(file_name), exist_ok=True)
+
             self.emit_signal(
                 SignalCode.UPDATE_DOWNLOAD_LOG,
                 {
@@ -117,3 +120,4 @@ class DownloadWorker(
                 print(f"Failed to download {url}")
                 print(e)
                 self.failed.emit(e)
+                self.emit_signal(SignalCode.DOWNLOAD_COMPLETE)
