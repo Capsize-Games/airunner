@@ -19,7 +19,7 @@ class AgentLlamaIndexMixin:
         self.__epub_reader = None
         self.__html_reader = None
         self.__markdown_reader = None
-        self.__model_name = os.path.expanduser(f"{self.settings['path_settings']['sentence_transformers_path']}/sentence-t5-base")
+        self.__model_name = os.path.expanduser(f"{self.settings['path_settings']['sentence_transformers_path']}/sentence-transformers/sentence-t5-large")
         self.__query_instruction = "Search through all available texts and provide a brief summary of the key points which are relevant to the query."
         self.__text_instruction = "Summarize and provide a brief explanation of the text. Stay concise and to the point."
         self.__state = AgentState.SEARCH
