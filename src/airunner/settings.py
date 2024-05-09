@@ -830,6 +830,13 @@ DEFAULT_SHORTCUTS = {
         "description": "Interrupt key. Responsible for interrupting the current process.",
         "signal": SignalCode.INTERRUPT_PROCESS_SIGNAL.value
     },
+    "Navigate": {
+        "text": "Shift+Ctrl+P",
+        "key": QtCore.Qt.Key.Key_P.value,
+        "modifiers": QtCore.Qt.KeyboardModifier.ShiftModifier.value | QtCore.Qt.KeyboardModifier.ControlModifier.value,
+        "description": "URL key. Responsible for navigating to a URL.",
+        "signal": SignalCode.NAVIGATE_TO_URL.value
+    },
     "Quit": {
         "text": "Ctrl+Q",
         "key": QtCore.Qt.Key.Key_Q.value,
@@ -955,7 +962,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     font_settings={
         "chat": {
             "font_family": "Arial",
-            "font_size": 12,
+            "font_size": 16,
         },
         "primary": {
             "font_family": "Arial",
