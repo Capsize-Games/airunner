@@ -19,15 +19,14 @@ from PySide6.QtWidgets import (
 )
 from bs4 import BeautifulSoup
 
-from airunner.agents.actions.bash_execute import bash_execute
-from airunner.agents.actions.show_path import show_path
+from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
+from airunner.aihandler.llm.agent.actions.show_path import show_path
+from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.logger import Logger
 from airunner.settings import (
     STATUS_ERROR_COLOR,
     STATUS_NORMAL_COLOR_LIGHT,
     STATUS_NORMAL_COLOR_DARK,
-    DARK_THEME_NAME,
-    LIGHT_THEME_NAME,
     NSFW_CONTENT_DETECTED_MESSAGE
 )
 from airunner.enums import (
@@ -287,7 +286,9 @@ class MainWindow(
             chatbot["target_files"] = [os.path.join(filepath, filename)]
             settings = update_chatbot(settings, chatbot)
             self.settings = settings
-            self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+            self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
+                "target_files": chatbot["target_files"]
+            })
             self.emit_signal(
                 SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
                 {
@@ -444,7 +445,6 @@ class MainWindow(
         :param data: dict
         :return: None
         """
-        print(data)
         args = data["args"]
         if len(args) == 1:
             message = args[0]
@@ -1060,7 +1060,8 @@ class MainWindow(
             disable_stt=self.disable_stt,
             disable_vision_capture=self.disable_vision_capture,
             do_load_llm_on_init=self.do_load_llm_on_init,
-            tts_handler_class=self.tts_handler_class
+            tts_handler_class=self.tts_handler_class,
+            agent_class=BaseAgent
         )
 
     def initialize_filter_actions(self):

@@ -1,6 +1,6 @@
 import torch
 from PySide6.QtCore import QObject
-from airunner.enums import HandlerType
+from airunner.enums import HandlerType, SignalCode, ModelType, ModelStatus
 from airunner.mediator_mixin import MediatorMixin
 from airunner.aihandler.logger import Logger
 from airunner.utils.get_torch_device import get_torch_device
@@ -25,10 +25,12 @@ class BaseHandler(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
-        self.model_type = "llm"
+        self.model_type = None
 
     @property
     def device(self):
+        if not self.model_type:
+            raise ValueError("model_type not set")
         return get_torch_device(self.settings["memory_settings"]["default_gpu"][self.model_type])
 
     @property
@@ -50,3 +52,12 @@ class BaseHandler(
     @property
     def torch_dtype(self):
         return torch.float16 if self.use_cuda else torch.float32
+
+    def change_model_status(self, model: ModelType, status: ModelStatus, path: str):
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": model,
+                "status": status,
+                "path": path
+            }
+        )

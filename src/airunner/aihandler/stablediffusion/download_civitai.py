@@ -3,6 +3,7 @@ import requests
 from json.decoder import JSONDecodeError
 from PySide6.QtCore import QThread
 from airunner.aihandler.logger import Logger
+from airunner.aihandler.stablediffusion.civit_ai_download_worker import CivitAIDownloadWorker
 from airunner.aihandler.stablediffusion.download_worker import DownloadWorker
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
@@ -38,7 +39,10 @@ class DownloadCivitAI(
 
     def download_model(self, url, file_name, size_kb, callback):
         self.file_name = file_name
-        self.worker = DownloadWorker(url, file_name, size_kb)
+        self.worker = CivitAIDownloadWorker()
+        self.worker.add_to_queue((
+            url, file_name, size_kb
+        ))
         self.thread = QThread()
         self.worker.moveToThread(self.thread)
 
