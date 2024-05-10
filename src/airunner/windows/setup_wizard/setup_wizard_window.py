@@ -272,7 +272,6 @@ class SetupWizard(
                     """
                     path: str = self.pages["path_settings"].ui.base_path.text()
                     is_valid_path = validate_path(path)
-                    print(path, is_valid_path)
                     if is_valid_path:
                         return page_order[current_index + 1]
                     else:

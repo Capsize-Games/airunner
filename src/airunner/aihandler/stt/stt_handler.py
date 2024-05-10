@@ -24,15 +24,49 @@ class STTHandler(BaseHandler):
         self.feature_extractor = None
         self.model = None
         self.is_on_gpu = False
+        self.model_type = "stt"
 
         self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
         # self.register(SignalCode.PROCESS_SPEECH_SIGNAL, self.process_given_speech)
-        # self.register(SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal)
-        # self.register(SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal)
         self.fs = 16000
 
+        self.register(SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stop_listenening)
+        self.register(SignalCode.STT_START_CAPTURE_SIGNAL, self.on_start_listening)
+
+        self.register(SignalCode.STT_UNLOAD_SIGNAL, self.on_stt_unload_signal)
+        self.register(SignalCode.STT_PROCESSOR_UNLOAD_SIGNAL, self.on_stt_processor_unload_signal)
+        self.register(SignalCode.STT_FEATURE_EXTRACTOR_UNLOAD_SIGNAL, self.on_stt_feature_extractor_unload_signal)
+
+        self.register(SignalCode.STT_LOAD_SIGNAL, self.on_stt_load_signal)
+        self.register(SignalCode.STT_PROCESSOR_LOAD_SIGNAL, self.on_stt_processor_load_signal)
+        self.register(SignalCode.STT_FEATURE_EXTRACTOR_LOAD_SIGNAL, self.on_stt_feature_extractor_load_signal)
+
         if self.settings["stt_enabled"]:
-            self.load()
+            self.load_model()
+
+    def on_stop_listenening(self, _message: dict):
+        self.unload()
+
+    def on_start_listening(self, _message: dict):
+        self.load()
+
+    def on_stt_load_signal(self, _message: dict):
+        self.load_model()
+
+    def on_stt_processor_load_signal(self, _message):
+        self.load_processor()
+
+    def on_stt_feature_extractor_load_signal(self, _message):
+        self.load_feature_extractor()
+
+    def on_stt_unload_signal(self, _message):
+        self.unload_model()
+
+    def on_stt_processor_unload_signal(self, _message):
+        self.unload_processor()
+
+    def on_stt_feature_extractor_unload_signal(self, _message):
+        self.unload_feature_extractor()
 
     def on_stt_start_capture_signal(self, data: dict):
         self.load()
@@ -61,29 +95,17 @@ class STTHandler(BaseHandler):
     def unload_model(self):
         self.model = None
         clear_memory()
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.STT,
-            "status": ModelStatus.UNLOADED,
-            "path": ""
-        })
+        self.change_model_status(ModelType.STT, ModelStatus.UNLOADED, "")
 
     def unload_processor(self):
         self.processor = None
         clear_memory()
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.STT_PROCESSOR,
-            "status": ModelStatus.UNLOADED,
-            "path": ""
-        })
+        self.change_model_status(ModelType.STT_PROCESSOR, ModelStatus.UNLOADED, "")
 
     def unload_feature_extractor(self):
         self.feature_extractor = None
         clear_memory()
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.STT_FEATURE_EXTRACTOR,
-            "status": ModelStatus.UNLOADED,
-            "path": ""
-        })
+        self.change_model_status(ModelType.STT_FEATURE_EXTRACTOR, ModelStatus.UNLOADED, "")
 
 
     @property

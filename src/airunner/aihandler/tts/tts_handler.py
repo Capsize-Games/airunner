@@ -113,6 +113,7 @@ class TTSHandler(BaseHandler):
         self.processor = None
         self.corpus = []
         self.speaker_embeddings = None
+        self.dataset = None
         self.sentences = []
         self.tts_enabled = self.settings["tts_enabled"]
         self.engine = None
@@ -122,7 +123,9 @@ class TTSHandler(BaseHandler):
         self.model_type = "tts"
 
         self.logger.debug("Loading")
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        #self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        self.register(SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal)
+        self.register(SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal)
         self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
         self.register(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal)
         self.register(SignalCode.TTS_LOAD_SIGNAL, self.on_tts_load_signal)
@@ -145,6 +148,14 @@ class TTSHandler(BaseHandler):
 
         self.register(SignalCode.TTS_FEATURE_EXTRACTOR_LOAD_SIGNAL, self.on_tts_feature_extractor_load_signal)
         self.register(SignalCode.TTS_FEATURE_EXTRACTOR_UNLOAD_SIGNAL, self.on_tts_feature_extractor_unload_signal)
+
+    def on_enable_tts_signal(self, _data: dict = None):
+        self.tts_enabled = True
+        self.initialize()
+
+    def on_disable_tts_signal(self, _data: dict = None):
+        self.tts_enabled = False
+        self.unload()
 
     def on_tts_load_signal(self, message: dict):
         self.load_model()
@@ -203,6 +214,7 @@ class TTSHandler(BaseHandler):
         self.logger.debug("Unblocking TTS generation...")
         self.do_interrupt = False
         self.paused = False
+
 
     def on_application_settings_changed_signal(self, _message: dict):
         tts_enabled = self.settings["tts_enabled"]
@@ -264,7 +276,11 @@ class TTSHandler(BaseHandler):
             if self.processor is None:
                 self.processor = self.load_processor()
             if self.speaker_embeddings is None:
-                self.dataset = self.load_dataset()
+                self.load_speaker_embeddings()
+            if self.dataset is None:
+                self.load_dataset()
+            if self.tokenizer is None:
+                self.load_tokenizer()
             if self.corpus is None:
                 self.corpus = self.load_corpus()
             self.current_model = target_model
@@ -277,6 +293,8 @@ class TTSHandler(BaseHandler):
         self.unload_processor()
         self.unload_vocoder()
         self.unload_speaker_embeddings()
+        self.unload_tokenizer()
+        self.unload_dataset()
 
     def run(self):
         self.initialize()
@@ -289,36 +307,18 @@ class TTSHandler(BaseHandler):
             return
 
         try:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.TTS,
-                    "status": ModelStatus.LOADING,
-                    "path": self.model_path
-                }
-            )
+            self.change_model_status(ModelType.TTS, ModelStatus.LOADING, self.model_path)
             model = model_class_.from_pretrained(
                 self.model_path,
                 local_files_only=True,
                 torch_dtype=self.torch_dtype,
                 device_map=self.device
             )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.TTS,
-                    "status": ModelStatus.LOADED,
-                    "path": self.model_path
-                }
-            )
+            self.change_model_status(ModelType.TTS, ModelStatus.LOADED, self.model_path)
             return model
         except EnvironmentError as _e:
             self.logger.error("Failed to load model")
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.TTS,
-                    "status": ModelStatus.FAILED,
-                    "path": self.model_path
-                }
-            )
+            self.change_model_status(ModelType.TTS, ModelStatus.FAILED, self.model_path)
 
     def load_tokenizer(self):
         self.logger.debug("Loading tokenizer")
@@ -331,24 +331,12 @@ class TTSHandler(BaseHandler):
                 local_files_only=True,
                 trust_remote_code=False
             )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.TTS_TOKENIZER,
-                    "status": ModelStatus.LOADED,
-                    "path": self.model_path
-                }
-            )
+            self.change_model_status(ModelType.TTS_TOKENIZER, ModelStatus.LOADED, self.model_path)
             return tokenizer
         except Exception as e:
             self.logger.error("Failed to load tokenizer")
             self.logger.error(e)
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.TTS_TOKENIZER,
-                    "status": ModelStatus.FAILED,
-                    "path": self.model_path
-                }
-            )
+            self.change_model_status(ModelType.TTS_TOKENIZER, ModelStatus.FAILED, self.model_path)
     
     def load_vocoder(self):
         pass
@@ -358,35 +346,17 @@ class TTSHandler(BaseHandler):
         processor_class_ = self.processor_class_
         if processor_class_:
             try:
-                self.emit_signal(
-                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                        "model": ModelType.TTS_PROCESSOR,
-                        "status": ModelStatus.LOADING,
-                        "path": self.processor_path
-                    }
-                )
+                self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.LOADING, self.processor_path)
                 processor = processor_class_.from_pretrained(
                     self.processor_path,
                     local_files_only=True
                 )
-                self.emit_signal(
-                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                        "model": ModelType.TTS_PROCESSOR,
-                        "status": ModelStatus.LOADED,
-                        "path": self.processor_path
-                    }
-                )
+                self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.LOADED, self.processor_path)
                 return processor
             except Exception as e:
                 self.logger.error("Failed to load processor")
                 self.logger.error(e)
-                self.emit_signal(
-                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                        "model": ModelType.TTS_PROCESSOR,
-                        "status": ModelStatus.FAILED,
-                        "path": self.processor_path
-                    }
-                )
+                self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.FAILED, self.processor_path)
 
     def load_dataset(self):
         """
@@ -573,60 +543,28 @@ class TTSHandler(BaseHandler):
         self.model = None
         self.current_model = None
         clear_memory()
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.TTS,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
+        self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED, "")
 
     def unload_processor(self):
         self.processor = None
         clear_memory()
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.TTS_PROCESSOR,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
+        self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.UNLOADED, "")
 
     def unload_vocoder(self):
         self.vocoder = None
         clear_memory()
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.TTS_VOCODER,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
+        self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.UNLOADED, "")
 
     def load_speaker_embeddings(self):
         pass
 
     def unload_speaker_embeddings(self):
-        self.speaker_embeddings = None
-        do_clear_memory = True
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.TTS_SPEAKER_EMBEDDINGS,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
+        pass
 
     def unload_tokenizer(self):
         self.tokenizer = None
         clear_memory()
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.TTS_TOKENIZER,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
+        self.change_model_status(ModelType.TTS_TOKENIZER, ModelStatus.UNLOADED, "")
 
     def unload_dataset(self):
         pass

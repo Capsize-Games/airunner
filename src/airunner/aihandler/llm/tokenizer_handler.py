@@ -3,7 +3,6 @@ from transformers import RagTokenizer
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
 from transformers.models.llama.tokenization_llama_fast import LlamaTokenizerFast
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.settings import LLM_TOKENIZER_DEVICE_INDEX
 from airunner.utils.get_torch_device import get_torch_device
 
 
@@ -14,6 +13,7 @@ class TokenizerHandler(TransformerBaseHandler):
         super().__init__(*args, **kwargs)
         self.register(SignalCode.LLM_TOKENIZER_LOAD_SIGNAL, self.on_load_tokenizer_signal)
         self.register(SignalCode.LLM_TOKENIZER_UNLOAD_SIGNAL, self.on_unload_tokenizer_signal)
+        self.model_type = "llm"
 
     def on_load_tokenizer_signal(self, _message: dict):
         self.load_tokenizer()
@@ -76,7 +76,7 @@ class TokenizerHandler(TransformerBaseHandler):
         kwargs = {
             "local_files_only": True,
             "token": self.request_data.get("hf_api_key_read_key"),
-            "device_map": get_torch_device(LLM_TOKENIZER_DEVICE_INDEX),
+            "device_map": self.device,
             "trust_remote_code": True,
             "torch_dtype": self.torch_dtype,
             "attn_implementation": "flash_attention_2",
@@ -90,34 +90,16 @@ class TokenizerHandler(TransformerBaseHandler):
         if self.chat_template:
             kwargs["chat_template"] = self.chat_template
         try:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM_TOKENIZER,
-                    "status": ModelStatus.LOADING,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.LOADING, path)
             self.tokenizer = self.tokenizer_class_.from_pretrained(
                 path,
                 **kwargs,
             )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM_TOKENIZER,
-                    "status": ModelStatus.LOADED,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.LOADED, path)
             self.logger.debug("Tokenizer loaded")
         except Exception as e:
             self.logger.error(e)
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM_TOKENIZER,
-                    "status": ModelStatus.FAILED,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.FAILED, path)
 
         if self.tokenizer:
             self.tokenizer.use_default_system_prompt = False

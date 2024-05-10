@@ -42,6 +42,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         disable_stt: bool = False,
         disable_vision_capture: bool = False,
         do_load_llm_on_init: bool = False,
+        agent_class=None,
         **kwargs
     ):
         MediatorMixin.__init__(self)
@@ -64,7 +65,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.register(SignalCode.LOG_WARNING_SIGNAL, self.on_warning_signal)
         self.register(SignalCode.LOG_STATUS_SIGNAL, self.on_status_signal)
         self.register(SignalCode.VISION_CAPTION_GENERATED_SIGNAL, self.on_caption_generated_signal)
-        self.register(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, self.on_text_generate_request_signal)
         self.register(SignalCode.LLM_RESPONSE_SIGNAL, self.on_llm_response_signal)
         self.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal)
         self.register(SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal)
@@ -83,9 +83,12 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
         if not disable_llm:
             self.llm_request_worker = create_worker(LLMRequestWorker)
-            self.llm_generate_worker = create_worker(LLMGenerateWorker, do_load_on_init=do_load_llm_on_init)
+            self.llm_generate_worker = create_worker(
+                LLMGenerateWorker,
+                do_load_on_init=do_load_llm_on_init,
+                agent_class=agent_class
+            )
             self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.llm_generate_worker.on_llm_request_worker_response_signal)
-            self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.llm_generate_worker.on_unload_llm_signal)
 
         if not disable_stt:
             self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
@@ -182,23 +185,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_sd_image_generated_signal(self, message):
         self.emit_signal(SignalCode.SD_IMAGE_GENERATED_SIGNAL, message)
-
-    def on_text_generate_request_signal(self, data: dict):
-        move_unused_model_to_cpu = self.settings["memory_settings"]["move_unused_model_to_cpu"]
-        unload_unused_models = self.settings["memory_settings"]["unload_unused_models"]
-        # if self.sd_state == "loaded":
-        #     message = {
-        #         'callback': lambda _message=data: self.emit_signal(
-        #             SignalCode.LLM_REQUEST_SIGNAL,
-        #             _message
-        #         )
-        #     }
-        #     if move_unused_model_to_cpu:
-        #         self.emit_signal(SignalCode.SD_MOVE_TO_CPU_SIGNAL, message)
-        #     elif unload_unused_models:
-        #         self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL, message)
-        # else:
-        self.emit_signal(SignalCode.LLM_REQUEST_SIGNAL, data)
 
     def unload_stablediffusion(self):
         """
