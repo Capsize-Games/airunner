@@ -9,8 +9,4 @@ def convert_base64_to_image(base_64_image) -> Image:
         return base_64_image
     decoded = base64.b64decode(base_64_image)
     bytes_ = io.BytesIO(decoded)
-    try:
-        return Image.open(bytes_)
-    except PIL.UnidentifiedImageError:
-        print("Unidentified Image Error")
-        return base_64_image
+    return Image.open(bytes_)
