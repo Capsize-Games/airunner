@@ -245,6 +245,8 @@ class SignalCode(Enum):
     STT_FEATURE_EXTRACTOR_UNLOAD_SIGNAL = "stt_feature_extractor_unload_signal"
     LLM_LOAD_SIGNAL = "llm_load_signal"
     LLM_UNLOAD_SIGNAL = "llm_unload_signal"
+    LLM_LOAD_MODEL_SIGNAL = "llm_load_model_signal"
+    LLM_UNLOAD_MODEL_SIGNAL = "llm_unload_model_signal"
     LLM_TOKENIZER_LOAD_SIGNAL = "llm_tokenizer_load_signal"
     LLM_TOKENIZER_UNLOAD_SIGNAL = "llm_tokenizer_unload_signal"
     SD_LOAD_SIGNAL = "load_stablediffusion_signal"

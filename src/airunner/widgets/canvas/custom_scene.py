@@ -246,7 +246,10 @@ class CustomScene(
 
     def current_active_image(self) -> Image:
         base_64_image = self.settings[self.settings_key]["image"]
-        return convert_base64_to_image(base_64_image)
+        try:
+            return convert_base64_to_image(base_64_image)
+        except PIL.UnidentifiedImageError:
+            return None
 
     def handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None) -> [Image, QPoint, QPoint]:
         if self.current_active_image() is None:
@@ -411,11 +414,15 @@ class CustomScene(
                 pil_image = convert_base64_to_image(base64image).convert("RGBA")
             except AttributeError:
                 self.logger.warning("Failed to convert base64 to image")
+            except PIL.UnidentifiedImageError:
+                pil_image = None
 
         if pil_image is not None:
             try:
                 img = ImageQt.ImageQt(pil_image)
             except AttributeError as _e:
+                img = None
+            except IsADirectoryError:
                 img = None
             # img_scene = self.item.scene() if self.item is not NoneType else None
             # if img_scene is not None:
