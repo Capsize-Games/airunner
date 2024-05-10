@@ -233,6 +233,7 @@ class SettingsMixin:
             "llm_misc_model_cache_path": f"{base_path}/text/models/misc/cache",
             "rag_documents_path": f"{base_path}/text/other/rag_temp",
             "sentence_transformers_path": f"{base_path}/text/models/sentence_transformers",
+            "storage_path": f"{base_path}/storage",
         }
         return paths
 
