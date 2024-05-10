@@ -138,13 +138,7 @@ class BaseAgent(
         if len(vision_history) > 0:
             vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
             system_prompt.append("\n======\n")
-            system_prompt.append((
-                "You have eyes, you can see. You see many things but they "
-                "are no always correct. You must try to determine what you "
-                "are seeing based on these images Try to summarize them to "
-                "determine what is happening. Here is a list of things that "
-                "you currently saw:"
-            ))
+            system_prompt.append(self.settings["prompt_templates"]["ocr"]["system"])
             system_prompt.append(','.join(vision_history))
         return system_prompt
 
@@ -199,15 +193,7 @@ class BaseAgent(
         elif action == LLMActionType.ANALYZE_VISION_HISTORY:
             vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
             vision_history = ','.join(vision_history)
-            system_instructions = (
-                "You will be given a list of image captions. Your goal is to "
-                "analyze the captions and determine what is happening in the "
-                "images. The captions won't be entirely accurate, so you must "
-                "infer what you believe is happening in the images. "
-                "After analyzing the captions, you must summarize what you "
-                "believe is happening in the images. "
-                "Here is a list of captions:"
-            )
+            system_instructions = self.settings["prompt_templates"]["image"]["system"]
             system_prompt = [
                 system_instructions,
                 vision_history,
@@ -224,20 +210,12 @@ class BaseAgent(
             ]
 
         elif action == LLMActionType.APPLICATION_COMMAND:
-            system_instructions = (
-                "You will be given some text. Your goal is to determine if the text has a request, goal, need "
-                "desire or command. If it does, you must determine the best course of action to "
-                "fulfill the request based on THE LIST of commands.\n\n"
-                "------\n"
-                "Rules:\n"
-                "* If the text does not have a request, goal, need, desire or command, you must select 'DO NOTHING'.\n"
-                "* If there is no good course of action, you must also select 'DO NOTHING'.\n"
-                "* When making your choice you MUST return only a number from THE LIST of commands. No other text is allowed.\n"
-                "------\n"
-                "THE LIST of commands you may choose from:\n"
-            )
+            system_instructions = self.settings["prompt_templates"]["application_command"]["system"]
+
+            # Create a list of commands that the bot can choose from
             for index, action in self.available_actions.items():
                 system_instructions += f"{index}: {action.value}\n"
+
             system_prompt = [
                 self.names_prompt(use_names, botname, username),
                 self.mood(botname, bot_mood, use_mood),
@@ -246,12 +224,7 @@ class BaseAgent(
             ]
 
         elif action == LLMActionType.UPDATE_MOOD:
-            system_instructions = (
-                "Examine the following chat history and determine how it makes you feel. You will respond with an emotion and only an emotion.\n"
-                "Try to keep your response to one word. If you cannot, try to keep it as short as possible.\n"
-                "It is important to remember that you are a human and you have emotions. You must respond with an emotion that you feel.\n"
-                "You are not a computer or a bot, you are a human with emotions. You must respond with an emotion that you feel.\n"
-            )
+            system_instructions = self.settings["prompt_templates"]["update_mood"]["system"]
             system_prompt = [
                 guardrails_prompt,
                 system_instructions,
@@ -262,12 +235,7 @@ class BaseAgent(
             ]
 
         elif action == LLMActionType.PERFORM_RAG_SEARCH:
-            system_instructions = (
-                "You will be given a prompt. Your goal is to use the prompt to search for information in the ebooks. "
-                "You must use the prompt to determine what you are searching for and then search for that information. "
-                "After searching for the information, you must summarize the information you found. "
-                "Here is the prompt you will use to search for information:"
-            )
+            system_instructions = self.settings["prompt_templates"]["rag_search"]["system"]
             system_prompt = [
                 guardrails_prompt,
                 system_instructions,
@@ -672,8 +640,6 @@ class BaseAgent(
 
                 if action is not None:
                     if type(action) is LLMActionType:
-                        print("*"*100)
-                        print(action)
                         return self.run(
                             prompt=self.prompt,
                             action=action,
