@@ -127,5 +127,34 @@ SD_FILE_BOOTSTRAP_DATA = {
         #     "vae/diffusion_pytorch_model.safetensors",
         #     "model_index.json",
         # ]
+    },
+    "SDXL 1.0": {
+        "txt2img": [
+            "scheduler/scheduler_config.json",
+            "text_encoder/config.json",
+            "text_encoder/model.safetensors",
+            "text_encoder_2/model.safetensors",
+            "tokenizer/merges.txt",
+            "tokenizer/special_tokens_map.json",
+            "tokenizer/tokenizer_config.json",
+            "tokenizer/vocab.json",
+            "tokenizer_2/merges.txt",
+            "tokenizer_2/special_tokens_map.json",
+            "tokenizer_2/tokenizer_config.json",
+            "tokenizer_2/vocab.json",
+            "unet/config.json",
+            "unet/diffusion_pytorch_model.fp16.safetensors",
+            "vae/config.json",
+            "vae/diffusion_pytorch_model.fp16.safetensors",
+            "vae_1_0/config.json",
+            "vae_1_0/diffusion_pytorch_model.fp16.safetensors",
+            "vae_decoder/config.json",
+            "vae_encoder/config.json",
+            "LICENSE.md",
+            "model_index.json",
+            "sd_xl_base_1.0.safetensors",
+            "sd_xl_base_1.0_0.9vae.safetensors",
+        ],
+        "controlnet": []
     }
 }
