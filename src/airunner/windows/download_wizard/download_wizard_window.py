@@ -6,12 +6,7 @@ from airunner.windows.setup_wizard.installation_settings.install_failed_page imp
 from airunner.windows.setup_wizard.installation_settings.install_page import InstallPage
 from airunner.windows.setup_wizard.installation_settings.install_success_page import InstallSuccessPage
 
-
-class DownloadWizardWindow(
-    QWizard,
-    MediatorMixin,
-    SettingsMixin
-):
+class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
     """
     The download wizard window class for AI Runner.
     This class is used to download models and other resources required for AI Runner.
@@ -24,32 +19,47 @@ class DownloadWizardWindow(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super(DownloadWizardWindow, self).__init__()
+
+        self.setup_settings = setup_settings
+
+        self.setWindowTitle("AI Runner Download Wizard")
+        self.setWizardStyle(QWizard.ModernStyle)
+        self.setOption(QWizard.IndependentPages, True)
+
+        self.init_pages()
+
+    def init_pages(self):
+        """
+        Initialize the wizard pages based on setup settings.
+        """
         failed = True
 
-        if (
-            setup_settings["user_agreement_completed"] and
-            setup_settings["airunner_license_completed"]
-        ):
+        if self.setup_settings["user_agreement_completed"] and self.setup_settings["airunner_license_completed"]:
             self.construct_paths(self.settings["path_settings"]["base_path"])
             create_airunner_paths(self.settings["path_settings"])
 
-            self.enable_sd = setup_settings["enable_sd"]
-            self.enable_controlnet = setup_settings["enable_controlnet"]
+            self.enable_sd = self.setup_settings["enable_sd"]
+            self.enable_controlnet = self.setup_settings["enable_controlnet"]
 
-            if not self.enable_sd or (self.enable_sd and setup_settings["sd_license_completed"]):
-                self.enable_llm = setup_settings["enable_llm"]
-                self.enable_tts = setup_settings["enable_tts"]
-                self.enable_stt = setup_settings["enable_stt"]
+            if not self.enable_sd or (self.enable_sd and self.setup_settings["sd_license_completed"]):
+                self.enable_llm = self.setup_settings["enable_llm"]
+                self.enable_tts = self.setup_settings["enable_tts"]
+                self.enable_stt = self.setup_settings["enable_stt"]
 
-                self.setWindowTitle("AI Runner Download Wizard")
-                self.setWizardStyle(QWizard.ModernStyle)
-                self.setOption(QWizard.IndependentPages, True)
-                self.addPage(InstallPage(self, setup_settings))
-                self.addPage(InstallSuccessPage(self))
+                self.setPage(1, InstallSuccessPage(self))
+                self.setPage(0, InstallPage(self, self.setup_settings))
                 failed = False
-                self.show()
 
         if failed:
-            self.addPage(
-                InstallFailedPage(self)
-            )
+            self.setPage(2, InstallFailedPage(self))
+
+    def show_final_page(self):
+        """
+        Show the final page.
+        """
+        # Find the ID of the InstallSuccessPage
+        for page_id in self.pageIds():
+            page = self.page(page_id)
+            if isinstance(page, InstallSuccessPage):
+                self.setCurrentId(page_id)
+                return

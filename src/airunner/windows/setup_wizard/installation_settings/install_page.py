@@ -1,3 +1,4 @@
+import nltk
 from PySide6.QtCore import QObject, QThread, Slot, Signal
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
@@ -6,11 +7,13 @@ from airunner.data.bootstrap.whisper import WHISPER_FILES
 from airunner.data.bootstrap.speech_t5 import SPEECH_T5_FILES
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import DEFAULT_LLM_HF_PATH
+from airunner.settings import DEFAULT_LLM_HF_PATH, NLTK_DOWNLOAD_DIR
 from airunner.utils.network.huggingface_downloader import HuggingfaceDownloader
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.windows.setup_wizard.installation_settings.templates.install_page_ui import Ui_install_page
+
+nltk.data.path.append(NLTK_DOWNLOAD_DIR)
 
 CONTROLNET_PATHS = [
     "lllyasviel/control_v11p_sd15_canny",
@@ -128,7 +131,12 @@ class InstallWorker(
         model_version = self.setup_settings["model_version"]
 
         controlnet_files = SD_FILE_BOOTSTRAP_DATA[model_version]["controlnet"]
-        self.total_models_in_current_step += len(CONTROLNET_PATHS * len(controlnet_files))
+        total_controlnet_files = len(CONTROLNET_PATHS * len(controlnet_files))
+        self.total_models_in_current_step += total_controlnet_files
+
+        if total_controlnet_files == 0:
+            self.download_finished()
+            return
 
         for path in CONTROLNET_PATHS:
             for filename in controlnet_files:
@@ -195,9 +203,28 @@ class InstallWorker(
                     except Exception as e:
                         print(f"Error downloading {filename}: {e}")
 
+    def download_nltk_files(self):
+        self.parent.set_status("Downloading NLTK files...")
+        nltk.download(
+            "stopwords",
+            download_dir=NLTK_DOWNLOAD_DIR,
+            quiet=True,
+            halt_on_error=False,
+            raise_on_error=False
+        )
+        nltk.download(
+            "punkt",
+            download_dir=NLTK_DOWNLOAD_DIR,
+            quiet=True,
+            halt_on_error=False,
+            raise_on_error=False
+        )
+        self.download_finished()
+
     def finalize_installation(self):
         self.parent.set_status("Installation complete.")
         self.parent.update_progress_bar()
+        self.parent.parent.show_final_page()
 
     def update_progress(self, current, total):
         print("update progress", current, total)
@@ -254,8 +281,11 @@ class InstallWorker(
         elif self.setup_settings["enable_stt"] and self.current_step < 4:
             self.current_step = 4
             self.download_stt()
-        else:
+        elif self.current_step < 5:
             self.current_step = 5
+            self.download_nltk_files()
+        else:
+            self.current_step = 6
             self.finalize_installation()
 
 
