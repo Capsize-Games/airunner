@@ -37,9 +37,9 @@ class StatsWidget(
             ModelType.LLM_TOKENIZER,
 
             ModelType.TTS,
-            ModelType.TTS_DATASET,
+            # ModelType.TTS_DATASET,
             ModelType.TTS_PROCESSOR,
-            ModelType.TTS_FEATURE_EXTRACTOR,
+            # ModelType.TTS_FEATURE_EXTRACTOR,
             ModelType.TTS_VOCODER,
             ModelType.TTS_SPEAKER_EMBEDDINGS,
             ModelType.TTS_TOKENIZER,
@@ -190,16 +190,16 @@ class StatsWidget(
             self.emit_signal(SignalCode.TTS_LOAD_SIGNAL)
         if model == ModelType.TTS_PROCESSOR.value:
             self.emit_signal(SignalCode.TTS_PROCESSOR_LOAD_SIGNAL)
-        if model == ModelType.TTS_FEATURE_EXTRACTOR.value:
-            self.emit_signal(SignalCode.TTS_FEATURE_EXTRACTOR_LOAD_SIGNAL)
+        # if model == ModelType.TTS_FEATURE_EXTRACTOR.value:
+        #     self.emit_signal(SignalCode.TTS_FEATURE_EXTRACTOR_LOAD_SIGNAL)
         if model == ModelType.TTS_VOCODER.value:
             self.emit_signal(SignalCode.TTS_VOCODER_LOAD_SIGNAL)
         if model == ModelType.TTS_SPEAKER_EMBEDDINGS.value:
             self.emit_signal(SignalCode.TTS_SPEAKER_EMBEDDINGS_LOAD_SIGNAL)
         if model == ModelType.TTS_TOKENIZER.value:
             self.emit_signal(SignalCode.TTS_TOKENIZER_LOAD_SIGNAL)
-        if model == ModelType.TTS_DATASET.value:
-            self.emit_signal(SignalCode.TTS_DATASET_LOAD_SIGNAL)
+        # if model == ModelType.TTS_DATASET.value:
+        #     self.emit_signal(SignalCode.TTS_DATASET_LOAD_SIGNAL)
         if model == ModelType.STT.value:
             self.emit_signal(SignalCode.STT_LOAD_SIGNAL)
         if model == ModelType.STT_PROCESSOR.value:
@@ -217,7 +217,7 @@ class StatsWidget(
         if model == ModelType.SCHEDULER.value:
             self.emit_signal(SignalCode.SCHEDULER_LOAD_SIGNAL)
         if model == ModelType.LLM.value:
-            self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
+            self.emit_signal(SignalCode.LLM_LOAD_MODEL_SIGNAL)
         if model == ModelType.LLM_TOKENIZER.value:
             self.emit_signal(SignalCode.LLM_TOKENIZER_LOAD_SIGNAL)
 
@@ -233,16 +233,16 @@ class StatsWidget(
             self.emit_signal(SignalCode.TTS_UNLOAD_SIGNAL)
         if model == ModelType.TTS_PROCESSOR.value:
             self.emit_signal(SignalCode.TTS_PROCESSOR_UNLOAD_SIGNAL)
-        if model == ModelType.TTS_FEATURE_EXTRACTOR.value:
-            self.emit_signal(SignalCode.TTS_FEATURE_EXTRACTOR_UNLOAD_SIGNAL)
+        # if model == ModelType.TTS_FEATURE_EXTRACTOR.value:
+        #     self.emit_signal(SignalCode.TTS_FEATURE_EXTRACTOR_UNLOAD_SIGNAL)
         if model == ModelType.TTS_VOCODER.value:
             self.emit_signal(SignalCode.TTS_VOCODER_UNLOAD_SIGNAL)
         if model == ModelType.TTS_SPEAKER_EMBEDDINGS.value:
             self.emit_signal(SignalCode.TTS_SPEAKER_EMBEDDINGS_UNLOAD_SIGNAL)
         if model == ModelType.TTS_TOKENIZER.value:
             self.emit_signal(SignalCode.TTS_TOKENIZER_UNLOAD_SIGNAL)
-        if model == ModelType.TTS_DATASET.value:
-            self.emit_signal(SignalCode.TTS_DATASET_UNLOAD_SIGNAL)
+        # if model == ModelType.TTS_DATASET.value:
+        #     self.emit_signal(SignalCode.TTS_DATASET_UNLOAD_SIGNAL)
         if model == ModelType.STT.value:
             self.emit_signal(SignalCode.STT_UNLOAD_SIGNAL)
         if model == ModelType.STT_PROCESSOR.value:
@@ -260,7 +260,7 @@ class StatsWidget(
         if model == ModelType.SCHEDULER.value:
             self.emit_signal(SignalCode.SCHEDULER_UNLOAD_SIGNAL)
         if model == ModelType.LLM.value:
-            self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
+            self.emit_signal(SignalCode.LLM_UNLOAD_MODEL_SIGNAL)
         if model == ModelType.LLM_TOKENIZER.value:
             self.emit_signal(SignalCode.LLM_TOKENIZER_UNLOAD_SIGNAL)
 
