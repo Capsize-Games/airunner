@@ -16,9 +16,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
-    QLabel, QPlainTextEdit, QProgressBar, QPushButton,
-    QScrollArea, QSizePolicy, QSplitter, QTextEdit,
-    QVBoxLayout, QWidget)
+    QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
+    QSizePolicy, QSplitter, QTextEdit, QVBoxLayout,
+    QWidget)
 
 class Ui_chat_prompt(object):
     def setupUi(self, chat_prompt):
@@ -27,9 +27,32 @@ class Ui_chat_prompt(object):
         chat_prompt.resize(474, 1030)
         self.gridLayout = QGridLayout(chat_prompt)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.progressBar = QProgressBar(chat_prompt)
+        self.progressBar.setObjectName(u"progressBar")
+        self.progressBar.setValue(0)
+
+        self.gridLayout.addWidget(self.progressBar, 5, 0, 1, 1)
+
+        self.clear_conversatiion_button = QPushButton(chat_prompt)
+        self.clear_conversatiion_button.setObjectName(u"clear_conversatiion_button")
+        icon = QIcon(QIcon.fromTheme(u"user-trash"))
+        self.clear_conversatiion_button.setIcon(icon)
+
+        self.gridLayout.addWidget(self.clear_conversatiion_button, 4, 0, 1, 1)
+
+        self.pushButton = QPushButton(chat_prompt)
+        self.pushButton.setObjectName(u"pushButton")
+
+        self.gridLayout.addWidget(self.pushButton, 3, 0, 1, 1)
+
+        self.send_button = QPushButton(chat_prompt)
+        self.send_button.setObjectName(u"send_button")
+
+        self.gridLayout.addWidget(self.send_button, 2, 0, 1, 1)
+
         self.chat_prompt_splitter = QSplitter(chat_prompt)
         self.chat_prompt_splitter.setObjectName(u"chat_prompt_splitter")
-        self.chat_prompt_splitter.setOrientation(Qt.Vertical)
+        self.chat_prompt_splitter.setOrientation(Qt.Orientation.Vertical)
         self.chat_prompt_splitter.setChildrenCollapsible(False)
         self.verticalLayoutWidget = QWidget(self.chat_prompt_splitter)
         self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
@@ -38,11 +61,11 @@ class Ui_chat_prompt(object):
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.chat_container = QScrollArea(self.verticalLayoutWidget)
         self.chat_container.setObjectName(u"chat_container")
-        self.chat_container.setFrameShape(QFrame.NoFrame)
+        self.chat_container.setFrameShape(QFrame.Shape.NoFrame)
         self.chat_container.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 454, 416))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 454, 427))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
@@ -71,41 +94,13 @@ class Ui_chat_prompt(object):
         self.prompt.setMaximumSize(QSize(16777215, 16777215))
         self.chat_prompt_splitter.addWidget(self.prompt)
 
-        self.gridLayout.addWidget(self.chat_prompt_splitter, 1, 0, 1, 1)
-
-        self.send_button = QPushButton(chat_prompt)
-        self.send_button.setObjectName(u"send_button")
-
-        self.gridLayout.addWidget(self.send_button, 3, 0, 1, 1)
-
-        self.progressBar = QProgressBar(chat_prompt)
-        self.progressBar.setObjectName(u"progressBar")
-        self.progressBar.setValue(0)
-
-        self.gridLayout.addWidget(self.progressBar, 6, 0, 1, 1)
-
-        self.pushButton = QPushButton(chat_prompt)
-        self.pushButton.setObjectName(u"pushButton")
-
-        self.gridLayout.addWidget(self.pushButton, 4, 0, 1, 1)
+        self.gridLayout.addWidget(self.chat_prompt_splitter, 0, 0, 1, 1)
 
         self.action = QComboBox(chat_prompt)
         self.action.setObjectName(u"action")
-        self.action.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.action.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
 
-        self.gridLayout.addWidget(self.action, 2, 0, 1, 1)
-
-        self.clear_conversatiion_button = QPushButton(chat_prompt)
-        self.clear_conversatiion_button.setObjectName(u"clear_conversatiion_button")
-        icon = QIcon(QIcon.fromTheme(u"user-trash"))
-        self.clear_conversatiion_button.setIcon(icon)
-
-        self.gridLayout.addWidget(self.clear_conversatiion_button, 5, 0, 1, 1)
-
-        self.label = QLabel(chat_prompt)
-        self.label.setObjectName(u"label")
-
-        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.action, 1, 0, 1, 1)
 
 
         self.retranslateUi(chat_prompt)
@@ -121,14 +116,13 @@ class Ui_chat_prompt(object):
     def retranslateUi(self, chat_prompt):
         chat_prompt.setWindowTitle(QCoreApplication.translate("chat_prompt", u"Form", None))
 #if QT_CONFIG(tooltip)
-        self.send_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Send message", None))
-#endif // QT_CONFIG(tooltip)
-        self.send_button.setText(QCoreApplication.translate("chat_prompt", u"Send", None))
-        self.pushButton.setText(QCoreApplication.translate("chat_prompt", u"Interrupt", None))
-#if QT_CONFIG(tooltip)
         self.clear_conversatiion_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Clear conversation", None))
 #endif // QT_CONFIG(tooltip)
         self.clear_conversatiion_button.setText("")
-        self.label.setText(QCoreApplication.translate("chat_prompt", u"TextLabel", None))
+        self.pushButton.setText(QCoreApplication.translate("chat_prompt", u"Interrupt", None))
+#if QT_CONFIG(tooltip)
+        self.send_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Send message", None))
+#endif // QT_CONFIG(tooltip)
+        self.send_button.setText(QCoreApplication.translate("chat_prompt", u"Send", None))
     # retranslateUi
 
