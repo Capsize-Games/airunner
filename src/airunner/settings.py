@@ -971,6 +971,57 @@ DEFAULT_APPLICATION_SETTINGS = dict(
             "guardrails": DEFAULT_IMAGE_LLM_GUARDRAILS,
             "system": DEFAULT_IMAGE_SYSTEM_PROMPT,
         },
+        "ocr": {
+            "use_guardrails": False,
+            "template_name": "ocr",
+            "guardrails": "",
+            "system": (
+                "You have eyes, you can see. You see many things but they "
+                "are no always correct. You must try to determine what you "
+                "are seeing based on these images Try to summarize them to "
+                "determine what is happening. Here is a list of things that "
+                "you currently saw:"
+            ),
+        },
+        "application_command": {
+            "use_guardrails": False,
+            "template_name": "application_command",
+            "guardrails": "",
+            "system": (
+                "You will be given some text. Your goal is to determine if the text has a request, goal, need "
+                "desire or command. If it does, you must determine the best course of action to "
+                "fulfill the request based on THE LIST of commands.\n\n"
+                "------\n"
+                "Rules:\n"
+                "* If the text does not have a request, goal, need, desire or command, you must select 'DO NOTHING'.\n"
+                "* If there is no good course of action, you must also select 'DO NOTHING'.\n"
+                "* When making your choice you MUST return only a number from THE LIST of commands. No other text is allowed.\n"
+                "------\n"
+                "THE LIST of commands you may choose from:\n"
+            ),
+        },
+        "update_mood": {
+            "use_guardrails": False,
+            "template_name": "update_mood",
+            "guardrails": "",
+            "system": (
+                "Examine the following chat history and determine how it makes you feel. You will respond with an emotion and only an emotion.\n"
+                "Try to keep your response to one word. If you cannot, try to keep it as short as possible.\n"
+                "It is important to remember that you are a human and you have emotions. You must respond with an emotion that you feel.\n"
+                "You are not a computer or a bot, you are a human with emotions. You must respond with an emotion that you feel.\n"
+            ),
+        },
+        "rag_search": {
+            "use_guardrails": False,
+            "template_name": "rag_search",
+            "guardrails": "",
+            "system": (
+                "You will be given a prompt. Your goal is to use the prompt to search for information in the ebooks. "
+                "You must use the prompt to determine what you are searching for and then search for that information. "
+                "After searching for the information, you must summarize the information you found. "
+                "Here is the prompt you will use to search for information:"
+            ),
+        },
         "chatbot": {
             "use_system_datetime_in_system_prompt": False
         }
