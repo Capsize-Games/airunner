@@ -65,6 +65,11 @@ class TransformerBaseHandler(BaseHandler):
         if do_load_on_init:
             self.load()
 
+        self.register(SignalCode.LLM_UNLOAD_MODEL_SIGNAL, self.on_unload_model_signal)
+
+    def on_unload_model_signal(self, message: dict):
+        self.unload_model()
+
     @property
     def do_load_model(self):
         if self.model is None or self.current_model_path != self.model_path:
