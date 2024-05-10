@@ -193,7 +193,7 @@ As this application evolves we will migrate away from the Huggingface libraries.
 
 ### Internet access
 
-The core application is incapable of access the internet. However there are two features which require
+The core application is incapable of accessing the internet. However there are two features which require
 internet access. These two features are the `setup wizard` and the `model manager`.
 
 Each of these tools are isolated in their own application windows
@@ -202,7 +202,10 @@ civitai.com (depending on the given URL). Any other URL will be blocked.
 
 The Huggingface Hub library is not used to access these downloads.
 
-For more information see `src/security/no_internet_socket.py`
+For more information see the [Darklock](https://github.com/capsize-games/darklock)  and
+[Facehuggershield](https://github.com/capsize-games/facehuggershield) libraries.
+
+---
 
 ### Disc access
 
@@ -216,6 +219,8 @@ All other attempts to access the disc are blocked and logged for your review.
 
 For more information see `src/security/restrict_os_access.py`.
 
+---
+
 ### Huggingface Hub
 
 The Huggingface Hub is installed so that Transformers, Diffusers and other Huggingface libraries
@@ -228,6 +233,10 @@ The security measures taken for this library are as follows
 - Prevented from accessing the disc
 - All environment variables set for maximum security
 - All telemetry disabled
+
+See [Facehuggershield](https://github.com/capsize-games/facehuggershield) for more information.
+
+---
 
 #### Planned security measures for Huggingface Libraries
 
