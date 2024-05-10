@@ -4,7 +4,6 @@ import torch
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.settings import LLM_CUDA_DEVICE_INDEX
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.get_torch_device import get_torch_device
 
@@ -32,7 +31,6 @@ class TransformerBaseHandler(BaseHandler):
         self.early_stopping = kwargs.get("early_stopping", True)
         self.length_penalty = kwargs.get("length_penalty", 1.0)
         self.model_path = kwargs.get("model_path", None)
-        self.prompt = kwargs.get("prompt", None)
         self.current_model_path = kwargs.get("current_model_path", "")
         self.use_cache = kwargs.get("use_cache", True)
         self.history = []
@@ -58,12 +56,18 @@ class TransformerBaseHandler(BaseHandler):
         self.template = None
         self.image = None
         self.override_parameters = {}
+        self.model_type = "llm"
 
         if self.model_path is None:
             self.model_path = self.settings["llm_generator_settings"]["model_version"]
 
         if do_load_on_init:
             self.load()
+
+        self.register(SignalCode.LLM_UNLOAD_MODEL_SIGNAL, self.on_unload_model_signal)
+
+    def on_unload_model_signal(self, message: dict):
+        self.unload_model()
 
     @property
     def do_load_model(self):
@@ -148,7 +152,6 @@ class TransformerBaseHandler(BaseHandler):
                 return local_path
             else:
                 local_path = self.get_model_standard_path(path)
-                print("CHECKING", local_path)
                 if os.path.exists(local_path):
                     return local_path
         return path
@@ -165,38 +168,20 @@ class TransformerBaseHandler(BaseHandler):
             if config:
                 params["quantization_config"] = config
             params["torch_dtype"] = torch.bfloat16
-            params["device_map"] = get_torch_device(LLM_CUDA_DEVICE_INDEX)
+            params["device_map"] = self.device
         else:
             params["torch_dtype"] = torch.bfloat16
-            params["device_map"] = get_torch_device(LLM_CUDA_DEVICE_INDEX)
+            params["device_map"] = self.device
 
         try:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM,
-                    "status": ModelStatus.LOADING,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM, ModelStatus.LOADING, path)
             self.model = self.auto_class_.from_pretrained(
                 path,
                 **params
             )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM,
-                    "status": ModelStatus.LOADED,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM, ModelStatus.LOADED, path)
         except Exception as e:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.LLM,
-                    "status": ModelStatus.FAILED,
-                    "path": path
-                }
-            )
+            self.change_model_status(ModelType.LLM, ModelStatus.FAILED, path)
             self.logger.error(f"Error loading model: {e}")
             self.model = None
 
@@ -226,25 +211,13 @@ class TransformerBaseHandler(BaseHandler):
     def unload_tokenizer(self):
         self.logger.debug("Unloading tokenizer")
         self.tokenizer = None
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.LLM_TOKENIZER,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
+        self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.UNLOADED, "")
         return True
 
     def unload_model(self):
         self.logger.debug("Unloading model")
         self.model = None
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.LLM,
-                "status": ModelStatus.UNLOADED,
-                "path": ""
-            }
-        )
+        self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED, "")
         return True
 
     def pre_load(self):
@@ -278,10 +251,10 @@ class TransformerBaseHandler(BaseHandler):
         """
         self.logger.error("Define post_load here")
 
-    def generate(self) -> str:
-        return self.do_generate()
+    def generate(self, prompt, action) -> str:
+        return self.do_generate(prompt, action)
 
-    def do_generate(self) -> str:
+    def do_generate(self, prompt, action) -> str:
         raise NotImplementedError
 
     @property
@@ -301,7 +274,6 @@ class TransformerBaseHandler(BaseHandler):
         self.use_gpu = self.request_data.get("use_gpu", self.use_gpu)
         self.image = self.request_data.get("image", None)
         self.model_path = self.request_data.get("model_path", self.model_path)
-        self.prompt = self.request_data.get("prompt", self.prompt)
         self.template = self.request_data.get("template", "")
 
     def move_to_cpu(self):
@@ -344,5 +316,8 @@ class TransformerBaseHandler(BaseHandler):
         self.do_set_seed(self.parameters.get("seed", None))
         self.load()
         self._processing_request = True
-        result = self.generate()
+        result = self.generate(
+            data["request_data"]["prompt"],
+            data["request_data"]["action"]
+        )
         return result

@@ -1,5 +1,6 @@
 from transformers.generation.streamers import TextIteratorStreamer
 from transformers.models.mistral.modeling_mistral import MistralForCausalLM
+from transformers.models.llama.modeling_llama import LlamaForCausalLM
 
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
@@ -12,6 +13,7 @@ class CausalLMTransformerBaseHandler(
     TokenizerHandler
 ):
     auto_class_ = MistralForCausalLM
+    #auto_class_ = LlamaForCausalLM
 
     def __init__(self, *args, **kwargs):
         self.streamer = None
@@ -42,15 +44,20 @@ class CausalLMTransformerBaseHandler(
         self.return_agent_code: bool = False
         self.batch_size: int = 1
         self.vision_history: list = []
+        self.agent_class_ = kwargs.pop("agent_class", BaseAgent)
 
         super().__init__(*args, **kwargs)
 
         self.register(SignalCode.LLM_LOAD_SIGNAL, self.on_load_llm_signal)
+        self.register(SignalCode.LLM_LOAD_MODEL_SIGNAL, self.on_load_model_signal)
         self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal)
         self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
 
     def on_load_llm_signal(self, _message: dict):
         self.load()
+
+    def on_load_model_signal(self, _message: dict):
+        self.load_model()
 
     def on_interrupt_process_signal(self, _message: dict):
         if self.chat_agent is not None:
@@ -155,7 +162,7 @@ class CausalLMTransformerBaseHandler(
         #     )
         # )
         self.logger.debug("Loading local agent")
-        self.chat_agent = BaseAgent(
+        self.chat_agent = self.agent_class_(
             model=self.model,
             tokenizer=self.tokenizer,
             streamer=self.streamer,
@@ -182,51 +189,38 @@ class CausalLMTransformerBaseHandler(
 
     def unload(self, do_clear_memory = False):
         self.logger.debug("Unloading LLM")
-        if self.streamer is not None:
-            self.logger.debug("Unloading streamer")
-            self.streamer = None
-            do_clear_memory = True
-        if self.llm_with_tools is not None:
-            self.logger.debug("Unloading LLM with tools")
-            self.llm_with_tools = None
-            do_clear_memory = True
-        if self.agent_executor is not None:
-            self.logger.debug("Unloading agent executor")
-            self.agent_executor = None
-            do_clear_memory = True
-        if self.embed_model is not None:
-            self.logger.debug("Unloading embed model")
-            self.embed_model = None
-            do_clear_memory = True
-        if self.unload_agent():
-            do_clear_memory = True
+        self.unload_streamer()
+        self.unload_llm_with_tools()
+        self.unload_agent_executor()
+        self.unload_embed_model()
+        self.unload_agent()
+        super().unload(do_clear_memory=True)
 
-        super().unload(do_clear_memory=do_clear_memory)
+    def unload_streamer(self):
+        self.logger.debug("Unloading streamer")
+        self.streamer = None
 
-    def do_generate(self):
+    def unload_llm_with_tools(self):
+        self.logger.debug("Unloading LLM with tools")
+        self.llm_with_tools = None
+
+    def unload_agent_executor(self):
+        self.logger.debug("Unloading agent executor")
+        self.agent_executor = None
+
+    def unload_embed_model(self):
+        self.logger.debug("Unloading embed model")
+        self.embed_model = None
+
+    def do_generate(self, prompt, action):
         self.logger.debug("Generating response")
-        # self.bot_mood = self.update_bot_mood()
-        # self.user_evaluation = self.do_user_evaluation()
-        #full_message = self.rag_stream()
         self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
-
-        if self.chat_agent is not None:
-            if self.action != LLMActionType.GENERATE_IMAGE:
-                use_tool_filter = get_current_chatbot_property(self.settings, "use_tool_filter")
-                if use_tool_filter:
-                    print("USE TOOL FILTER HERE")
-                self.chat_agent.run(
-                    self.prompt,
-                    self.action,
-                    vision_history=self.vision_history,
-                    **self.override_parameters
-                )
-            else:
-                self.chat_agent.run(
-                    self.prompt,
-                    LLMActionType.GENERATE_IMAGE
-                )
-
+        self.chat_agent.run(
+            prompt,
+            action,
+            vision_history=self.vision_history,
+            **self.override_parameters
+        )
         self.send_final_message()
         self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
 

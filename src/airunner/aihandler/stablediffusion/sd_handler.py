@@ -129,6 +129,8 @@ class SDHandler(
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
             SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_stablediffusion_signal,
             SignalCode.SD_LOAD_SIGNAL: self.on_load_stablediffusion_signal,
+            SignalCode.SCHEDULER_LOAD_SIGNAL: self.on_load_scheduler_signal,
+            SignalCode.SCHEDULER_UNLOAD_SIGNAL: self.on_unload_scheduler_signal,
             SignalCode.SD_MOVE_TO_CPU_SIGNAL: self.on_move_to_cpu,
             SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
             SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
@@ -176,6 +178,12 @@ class SDHandler(
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
 
         self.load_stable_diffusion()
+
+    def on_load_scheduler_signal(self, _message: dict):
+        self.load_scheduler()
+
+    def on_unload_scheduler_signal(self, _message: dict):
+        self.unload_scheduler()
 
     def on_reset_applied_memory_settings(self, _data: dict):
         self.reset_applied_memory_settings()
@@ -298,7 +306,6 @@ class SDHandler(
 
     def on_unload_stablediffusion_signal(self, _message: dict = None):
         self.unload_image_generator_model()
-        self.unload_scheduler()
 
     def on_load_stablediffusion_signal(self, _message: dict = None):
         self.load_stable_diffusion_model()
@@ -312,20 +319,19 @@ class SDHandler(
         if self.settings["controlnet_enabled"]:
             self.load_controlnet()
 
-        self.load_stable_diffusion_model()
-
-    def load_stable_diffusion_model(self):
         if self.settings["sd_enabled"]:
             if not self.scheduler:
                 self.load_scheduler()
+            self.load_stable_diffusion_model()
 
-            self.load_image_generator_model()
+    def load_stable_diffusion_model(self):
+        self.load_image_generator_model()
 
-            try:
-                self.add_lora_to_pipe()
-            except Exception as e:
-                self.error_handler("Selected LoRA are not supported with this model")
-                self.reload_model = True
+        try:
+            self.add_lora_to_pipe()
+        except Exception as e:
+            self.error_handler("Selected LoRA are not supported with this model")
+            self.reload_model = True
 
         safety_checker_initialized = False
         controlnet_initialized = False
@@ -357,7 +363,6 @@ class SDHandler(
             self.current_state = HandlerState.READY
         else:
             self.current_state = HandlerState.ERROR
-
 
     def on_start_auto_image_generation_signal(self, _message: dict):
         # self.sd_mode = SDMode.DRAWING

@@ -175,16 +175,25 @@ class BotPreferencesWidget(BaseWidget):
 
     @Slot()
     def browse_documents(self):
-        file_path = open_file_path(file_type="Text Files (*.md *.html *html *.epub *.pdf)")
+        file_path = open_file_path(file_type="Text Files (*.md *.html *.htm *.epub *.pdf)")
 
         # validate file path
-        if not file_path or not file_path[0] or not file_path[0].strip() or not file_path[0].endswith((".md", ".html", ".epub", ".pdf")):
+        if not file_path or not file_path[0] or not file_path[0].strip() or not file_path[0].endswith((
+            ".md",
+            ".html",
+            ".htm",
+            ".epub",
+            ".pdf",
+        )):
+            self.logger.error(f"Invalid file path: {file_path}")
             return
 
         documents = self.current_chatbot.get("target_files", [])
         documents.append(file_path[0])
         self.update_chatbot("target_files", documents)
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
+            "target_files": documents
+        })
         self.load_documents()
 
     def load_documents(self):
@@ -220,4 +229,6 @@ class BotPreferencesWidget(BaseWidget):
             documents.remove(document)
             self.update_chatbot("target_files", documents)
             self.load_documents()  # Refresh the document list
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
+            "target_files": documents
+        })
