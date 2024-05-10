@@ -21,6 +21,7 @@ from bs4 import BeautifulSoup
 
 from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
+from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.logger import Logger
 from airunner.settings import (
     STATUS_ERROR_COLOR,
@@ -1059,7 +1060,8 @@ class MainWindow(
             disable_stt=self.disable_stt,
             disable_vision_capture=self.disable_vision_capture,
             do_load_llm_on_init=self.do_load_llm_on_init,
-            tts_handler_class=self.tts_handler_class
+            tts_handler_class=self.tts_handler_class,
+            agent_class=BaseAgent
         )
 
     def initialize_filter_actions(self):

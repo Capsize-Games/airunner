@@ -6,7 +6,7 @@ from PySide6.QtCore import QThread
 #from datasynth.messager.consumer import ConsumerMixin
 
 from airunner.aihandler.llm.causal_lm_transfformer_base_handler import CausalLMTransformerBaseHandler
-from airunner.enums import QueueType
+from airunner.enums import QueueType, SignalCode
 from airunner.settings import AVAILABLE_DTYPES, SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
@@ -17,15 +17,18 @@ class LLMGenerateWorker(
 ):
     llm = None
 
-    def __init__(self, *args, do_load_on_init: bool = False, **kwargs):
-        self.do_load_on_init = do_load_on_init
+    def __init__(self, prefix=None, do_load_on_init=False, agent_class=None):
         # ConsumerMixin.__init__(
         #     self,
         #     subject="llm_queue",
         #     actions=None
         # )
-        super().__init__(*args, **kwargs)
-        self.llm = CausalLMTransformerBaseHandler(do_load_on_init=self.do_load_on_init)
+        super().__init__(prefix=prefix)
+        self.llm = CausalLMTransformerBaseHandler(
+            do_load_on_init=do_load_on_init,
+            agent_class=agent_class,
+        )
+        self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal)
 
     # def start(self):
     #     try:
