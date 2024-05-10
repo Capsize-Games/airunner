@@ -3,7 +3,7 @@ import random
 import torch
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.enums import SignalCode, ModelType, ModelStatus
+from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.get_torch_device import get_torch_device
 
@@ -316,8 +316,11 @@ class TransformerBaseHandler(BaseHandler):
         self.do_set_seed(self.parameters.get("seed", None))
         self.load()
         self._processing_request = True
+        action = data["request_data"]["action"]
+        if type(action) is str:
+            action = LLMActionType(action)
         result = self.generate(
             data["request_data"]["prompt"],
-            data["request_data"]["action"]
+            action
         )
         return result
