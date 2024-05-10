@@ -71,8 +71,6 @@ class AIModelMixin:
         settings["ai_models"] = merged_models
         self.settings = settings
 
-        print("ai_models", merged_models)
-
         self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL, {
             "models": merged_models
         })
