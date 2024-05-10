@@ -113,6 +113,7 @@ class TTSHandler(BaseHandler):
         self.processor = None
         self.corpus = []
         self.speaker_embeddings = None
+        self.dataset = None
         self.sentences = []
         self.tts_enabled = self.settings["tts_enabled"]
         self.engine = None
@@ -122,7 +123,9 @@ class TTSHandler(BaseHandler):
         self.model_type = "tts"
 
         self.logger.debug("Loading")
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        #self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        self.register(SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal)
+        self.register(SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal)
         self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
         self.register(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal)
         self.register(SignalCode.TTS_LOAD_SIGNAL, self.on_tts_load_signal)
@@ -145,6 +148,14 @@ class TTSHandler(BaseHandler):
 
         self.register(SignalCode.TTS_FEATURE_EXTRACTOR_LOAD_SIGNAL, self.on_tts_feature_extractor_load_signal)
         self.register(SignalCode.TTS_FEATURE_EXTRACTOR_UNLOAD_SIGNAL, self.on_tts_feature_extractor_unload_signal)
+
+    def on_enable_tts_signal(self, _data: dict = None):
+        self.tts_enabled = True
+        self.initialize()
+
+    def on_disable_tts_signal(self, _data: dict = None):
+        self.tts_enabled = False
+        self.unload()
 
     def on_tts_load_signal(self, message: dict):
         self.load_model()
@@ -203,6 +214,7 @@ class TTSHandler(BaseHandler):
         self.logger.debug("Unblocking TTS generation...")
         self.do_interrupt = False
         self.paused = False
+
 
     def on_application_settings_changed_signal(self, _message: dict):
         tts_enabled = self.settings["tts_enabled"]
@@ -264,7 +276,11 @@ class TTSHandler(BaseHandler):
             if self.processor is None:
                 self.processor = self.load_processor()
             if self.speaker_embeddings is None:
-                self.dataset = self.load_dataset()
+                self.load_speaker_embeddings()
+            if self.dataset is None:
+                self.load_dataset()
+            if self.tokenizer is None:
+                self.load_tokenizer()
             if self.corpus is None:
                 self.corpus = self.load_corpus()
             self.current_model = target_model
@@ -277,6 +293,8 @@ class TTSHandler(BaseHandler):
         self.unload_processor()
         self.unload_vocoder()
         self.unload_speaker_embeddings()
+        self.unload_tokenizer()
+        self.unload_dataset()
 
     def run(self):
         self.initialize()
@@ -541,9 +559,7 @@ class TTSHandler(BaseHandler):
         pass
 
     def unload_speaker_embeddings(self):
-        self.speaker_embeddings = None
-        do_clear_memory = True
-        self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.UNLOADED, "")
+        pass
 
     def unload_tokenizer(self):
         self.tokenizer = None
