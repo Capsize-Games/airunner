@@ -4,6 +4,7 @@ import torch
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 from airunner.aihandler.tts.tts_handler import TTSHandler
 from airunner.enums import SignalCode, LLMChatRole, ModelType, ModelStatus
+from airunner.utils.clear_memory import clear_memory
 
 
 class SpeechT5TTSHandler(TTSHandler):
@@ -81,6 +82,10 @@ class SpeechT5TTSHandler(TTSHandler):
             self.logger.error(e)
             self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.FAILED, self.speaker_embeddings_path)
 
+    def unload_speaker_embeddings(self):
+        self.speaker_embeddings = None
+        self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.UNLOADED, "")
+        clear_memory()
 
     def do_generate(self, message):
         self.logger.debug("Generating TTS with T5")
