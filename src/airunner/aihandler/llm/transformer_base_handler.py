@@ -31,7 +31,6 @@ class TransformerBaseHandler(BaseHandler):
         self.early_stopping = kwargs.get("early_stopping", True)
         self.length_penalty = kwargs.get("length_penalty", 1.0)
         self.model_path = kwargs.get("model_path", None)
-        self.prompt = kwargs.get("prompt", None)
         self.current_model_path = kwargs.get("current_model_path", "")
         self.use_cache = kwargs.get("use_cache", True)
         self.history = []
@@ -252,10 +251,10 @@ class TransformerBaseHandler(BaseHandler):
         """
         self.logger.error("Define post_load here")
 
-    def generate(self) -> str:
-        return self.do_generate()
+    def generate(self, prompt, action) -> str:
+        return self.do_generate(prompt, action)
 
-    def do_generate(self) -> str:
+    def do_generate(self, prompt, action) -> str:
         raise NotImplementedError
 
     @property
@@ -275,7 +274,6 @@ class TransformerBaseHandler(BaseHandler):
         self.use_gpu = self.request_data.get("use_gpu", self.use_gpu)
         self.image = self.request_data.get("image", None)
         self.model_path = self.request_data.get("model_path", self.model_path)
-        self.prompt = self.request_data.get("prompt", self.prompt)
         self.template = self.request_data.get("template", "")
 
     def move_to_cpu(self):
@@ -318,5 +316,8 @@ class TransformerBaseHandler(BaseHandler):
         self.do_set_seed(self.parameters.get("seed", None))
         self.load()
         self._processing_request = True
-        result = self.generate()
+        result = self.generate(
+            data["request_data"]["prompt"],
+            data["request_data"]["action"]
+        )
         return result
