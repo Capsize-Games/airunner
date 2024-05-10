@@ -888,13 +888,13 @@ from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
 
 DEFAULT_USE_CUDA = True
-DEFAULT_SD_ENABLED = True
-DEFAULT_CONTROLNET_ENABLED = True
-DEFAULT_LLM_ENABLED = True
-DEFAULT_OCR_ENABLED = True
-DEFAULT_TTS_ENABLED = True
-DEFAULT_STT_ENABLED = True
-DEFAULT_AI_MODE = False
+DEFAULT_SD_ENABLED = False
+DEFAULT_CONTROLNET_ENABLED = False
+DEFAULT_LLM_ENABLED = False
+DEFAULT_OCR_ENABLED = False
+DEFAULT_TTS_ENABLED = False
+DEFAULT_STT_ENABLED = False
+DEFAULT_AI_MODE = True
 
 DEFAULT_APPLICATION_SETTINGS = dict(
     ####################################################################
