@@ -73,7 +73,7 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.ERROR
 
 ####################################################################
 # Default models for the core application
@@ -220,7 +220,7 @@ DEFAULT_CHATBOT = {
         "do_sample": True,
         "early_stopping": True,
         "num_beams": 1,
-        "temperature": 900,
+        "temperature": 10000,
         "top_p": 900,
         "no_repeat_ngram_size": 2,
         "top_k": 50,
@@ -239,7 +239,7 @@ AGENT_CHATBOT["generator_settings"] = {
     "do_sample": True,
     "early_stopping": True,
     "num_beams": 1,
-    "temperature": 900,
+    "temperature": 9000,
     "top_p": 900,
     "no_repeat_ngram_size": 2,
     "top_k": 50,

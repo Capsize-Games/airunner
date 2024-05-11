@@ -250,6 +250,8 @@ class SignalCode(Enum):
     LLM_TOKENIZER_LOAD_SIGNAL = "llm_tokenizer_load_signal"
     LLM_TOKENIZER_UNLOAD_SIGNAL = "llm_tokenizer_unload_signal"
     SD_LOAD_SIGNAL = "load_stablediffusion_signal"
+    SD_VAE_LOAD_SIGNAL = "load_stablediffusion_vae_signal"
+    SD_VAE_UNLOAD_SIGNAL = "unload_stablediffusion_vae_signal"
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
     CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
     CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
@@ -484,6 +486,8 @@ class StatusColors(Enum):
 
 class ModelType(Enum):
     SD = "SD Model"
+    SD_VAE = "SD VAE"
+    SD_TOKENIZER = "SD Tokenizer"
     TTS = "TTS Model"
     TTS_PROCESSOR = "TTS Processor"
     TTS_FEATURE_EXTRACTOR = "TTS Feature Extractor"

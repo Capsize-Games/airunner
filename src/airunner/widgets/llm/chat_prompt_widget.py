@@ -188,29 +188,39 @@ class ChatPromptWidget(BaseWidget):
                 "llm_request": True,
                 "request_data": {
                     "action": self.action,
-                    "unload_unused_model": self.settings["memory_settings"]["unload_unused_models"],
-                    "move_unused_model_to_cpu": self.settings["memory_settings"]["move_unused_model_to_cpu"],
-                    "generator_name": generator_name,
-                    "model_path": llm_generator_settings["model_version"],
-                    "stream": True,
                     "prompt": prompt,
-                    "do_summary": False,
-                    "is_bot_alive": True,
-                    "conversation_history": self.conversation_history,
-                    "generator": self.settings["llm_generator_settings"],
-                    "prefix": self.prefix,
-                    "suffix": self.suffix,
-                    "dtype": llm_generator_settings["dtype"],
-                    "use_gpu": llm_generator_settings["use_gpu"],
-                    "template": "",
-                    "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
-                    "image": image,
-                    "callback": callback,
-                    "tts_settings": self.settings["tts_settings"],
-                    "vision_history": self.vision_history,
                 }
             }
         )
+        # self.emit_signal(
+        #     SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
+        #     {
+        #         "llm_request": True,
+        #         "request_data": {
+        #             "action": self.action,
+        #             "unload_unused_model": self.settings["memory_settings"]["unload_unused_models"],
+        #             "move_unused_model_to_cpu": self.settings["memory_settings"]["move_unused_model_to_cpu"],
+        #             "generator_name": generator_name,
+        #             "model_path": llm_generator_settings["model_version"],
+        #             "stream": True,
+        #             "prompt": prompt,
+        #             "do_summary": False,
+        #             "is_bot_alive": True,
+        #             "conversation_history": self.conversation_history,
+        #             "generator": self.settings["llm_generator_settings"],
+        #             "prefix": self.prefix,
+        #             "suffix": self.suffix,
+        #             "dtype": llm_generator_settings["dtype"],
+        #             "use_gpu": llm_generator_settings["use_gpu"],
+        #             "template": "",
+        #             "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
+        #             "image": image,
+        #             "callback": callback,
+        #             "tts_settings": self.settings["tts_settings"],
+        #             "vision_history": self.vision_history,
+        #         }
+        #     }
+        # )
 
     def on_token_signal(self, val):
         self.handle_token_signal(val)
