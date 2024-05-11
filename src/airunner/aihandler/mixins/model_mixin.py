@@ -10,13 +10,16 @@ from PIL import (
     ImageDraw,
     ImageFont
 )
-from diffusers.pipelines.stable_diffusion.convert_from_ckpt import download_from_original_stable_diffusion_ckpt
+
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_depth2img import StableDiffusionDepth2ImgPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_instruct_pix2pix import StableDiffusionInstructPix2PixPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
+from transformers import CLIPTokenizer
+
+from airunner.aihandler.mixins.stable_diffusion_single_file_mixin import download_from_original_stable_diffusion_ckpt
 from airunner.aihandler.stablediffusion.sd_request import SDRequest
 from airunner.enums import (
     GeneratorSection,
@@ -385,13 +388,9 @@ class ModelMixin:
             self.reset_applied_memory_settings()
 
             if self.is_single_file:
-                try:
-                    self.logger.debug(f"Loading ckpt file {self.model_path}")
-                    self.pipe = self.__download_from_original_stable_diffusion_ckpt()
-                    if self.pipe is not None:
-                        self.pipe.scheduler = self.load_scheduler(config=self.pipe.scheduler.config)
-                except Exception as e:
-                    self.logger.error(f"Failed to load model from ckpt: {e}")
+                self.pipe = self.__download_from_original_stable_diffusion_ckpt()
+                if self.pipe is not None:
+                    self.pipe.scheduler = self.load_scheduler(config=self.pipe.scheduler.config)
             elif self.model is not None:
                 self.logger.debug(
                     f"Loading model `{self.model['name']}` `{self.model_path}` for {self.sd_request.generator_settings.section}")
@@ -446,6 +445,16 @@ class ModelMixin:
 
             self.controlnet_loaded = self.settings["controlnet_enabled"]
 
+    def _load_tokenizer(self):
+        path = "/home/joe/.airunner/art/models/txt2img/runwayml/stable-diffusion-v1-5/tokenizer/"
+        try:
+            self.__tokenizer = CLIPTokenizer.from_pretrained(path, local_files_only=True)
+            self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.LOADED, path)
+        except Exception as e:
+            self.logger.error(f"Failed to load tokenizer")
+            self.logger.error(e)
+            self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.FAILED, path)
+
     def __get_pipeline_action(self, action=None):
         action = self.sd_request.generator_settings.section if not action else action
         if action == "txt2img" and self.sd_request.is_img2img:
@@ -453,6 +462,8 @@ class ModelMixin:
         return action
 
     def __download_from_original_stable_diffusion_ckpt(self):
+        self.logger.debug(f"Loading ckpt file {self.model_path}")
+        self._load_tokenizer()
         pipe = None
         data = {
             "checkpoint_path_or_dict": self.model_path,
@@ -464,11 +475,12 @@ class ModelMixin:
             "config_files": CONFIG_FILES,
             "pipeline_class": self.__pipeline_class(),
             "load_safety_checker": False,
+            "tokenizer": self.__tokenizer
         }
         if self.settings["controlnet_enabled"]:
             data["controlnet"] = self.controlnet
         try:
-            pipe = download_from_original_stable_diffusion_ckpt(**data)
+            pipe = download_from_original_stable_diffusion_ckpt(settings=self.settings, **data)
         except Exception as e:
             self.logger.error(f"Failed to load model from ckpt: {e}")
 
