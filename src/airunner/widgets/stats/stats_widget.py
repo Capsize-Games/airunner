@@ -31,6 +31,8 @@ class StatsWidget(
             ModelType.CONTROLNET,
             ModelType.CONTROLNET_PROCESSOR,
             ModelType.SCHEDULER,
+            ModelType.SD_VAE,
+            ModelType.SD_TOKENIZER,
             ModelType.SD,
 
             ModelType.LLM,
@@ -186,39 +188,41 @@ class StatsWidget(
     def load_model(self, model: str):
         if model == ModelType.SD.value:
             self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
-        if model == ModelType.TTS.value:
+        elif model == ModelType.SD_VAE.value:
+            self.emit_signal(SignalCode.SD_VAE_LOAD_SIGNAL)
+        elif model == ModelType.TTS.value:
             self.emit_signal(SignalCode.TTS_LOAD_SIGNAL)
-        if model == ModelType.TTS_PROCESSOR.value:
+        elif model == ModelType.TTS_PROCESSOR.value:
             self.emit_signal(SignalCode.TTS_PROCESSOR_LOAD_SIGNAL)
         # if model == ModelType.TTS_FEATURE_EXTRACTOR.value:
         #     self.emit_signal(SignalCode.TTS_FEATURE_EXTRACTOR_LOAD_SIGNAL)
-        if model == ModelType.TTS_VOCODER.value:
+        elif model == ModelType.TTS_VOCODER.value:
             self.emit_signal(SignalCode.TTS_VOCODER_LOAD_SIGNAL)
-        if model == ModelType.TTS_SPEAKER_EMBEDDINGS.value:
+        elif model == ModelType.TTS_SPEAKER_EMBEDDINGS.value:
             self.emit_signal(SignalCode.TTS_SPEAKER_EMBEDDINGS_LOAD_SIGNAL)
-        if model == ModelType.TTS_TOKENIZER.value:
+        elif model == ModelType.TTS_TOKENIZER.value:
             self.emit_signal(SignalCode.TTS_TOKENIZER_LOAD_SIGNAL)
         # if model == ModelType.TTS_DATASET.value:
         #     self.emit_signal(SignalCode.TTS_DATASET_LOAD_SIGNAL)
-        if model == ModelType.STT.value:
+        elif model == ModelType.STT.value:
             self.emit_signal(SignalCode.STT_LOAD_SIGNAL)
-        if model == ModelType.STT_PROCESSOR.value:
+        elif model == ModelType.STT_PROCESSOR.value:
             self.emit_signal(SignalCode.STT_PROCESSOR_LOAD_SIGNAL)
-        if model == ModelType.STT_FEATURE_EXTRACTOR.value:
+        elif model == ModelType.STT_FEATURE_EXTRACTOR.value:
             self.emit_signal(SignalCode.STT_FEATURE_EXTRACTOR_LOAD_SIGNAL)
-        if model == ModelType.CONTROLNET.value:
+        elif model == ModelType.CONTROLNET.value:
             self.emit_signal(SignalCode.CONTROLNET_LOAD_MODEL_SIGNAL)
-        if model == ModelType.CONTROLNET_PROCESSOR.value:
+        elif model == ModelType.CONTROLNET_PROCESSOR.value:
             self.emit_signal(SignalCode.CONTROLNET_PROCESSOR_LOAD_SIGNAL)
-        if model == ModelType.SAFETY_CHECKER.value:
+        elif model == ModelType.SAFETY_CHECKER.value:
             self.emit_signal(SignalCode.SAFETY_CHECKER_MODEL_LOAD_SIGNAL)
-        if model == ModelType.FEATURE_EXTRACTOR.value:
+        elif model == ModelType.FEATURE_EXTRACTOR.value:
             self.emit_signal(SignalCode.FEATURE_EXTRACTOR_LOAD_SIGNAL)
-        if model == ModelType.SCHEDULER.value:
+        elif model == ModelType.SCHEDULER.value:
             self.emit_signal(SignalCode.SCHEDULER_LOAD_SIGNAL)
-        if model == ModelType.LLM.value:
+        elif model == ModelType.LLM.value:
             self.emit_signal(SignalCode.LLM_LOAD_MODEL_SIGNAL)
-        if model == ModelType.LLM_TOKENIZER.value:
+        elif model == ModelType.LLM_TOKENIZER.value:
             self.emit_signal(SignalCode.LLM_TOKENIZER_LOAD_SIGNAL)
 
     @Slot()
@@ -229,39 +233,41 @@ class StatsWidget(
     def unload_model(self, model: str):
         if model == ModelType.SD.value:
             self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
-        if model == ModelType.TTS.value:
+        elif model == ModelType.SD_VAE.value:
+            self.emit_signal(SignalCode.SD_VAE_LOAD_SIGNAL)
+        elif model == ModelType.TTS.value:
             self.emit_signal(SignalCode.TTS_UNLOAD_SIGNAL)
-        if model == ModelType.TTS_PROCESSOR.value:
+        elif model == ModelType.TTS_PROCESSOR.value:
             self.emit_signal(SignalCode.TTS_PROCESSOR_UNLOAD_SIGNAL)
         # if model == ModelType.TTS_FEATURE_EXTRACTOR.value:
         #     self.emit_signal(SignalCode.TTS_FEATURE_EXTRACTOR_UNLOAD_SIGNAL)
-        if model == ModelType.TTS_VOCODER.value:
+        elif model == ModelType.TTS_VOCODER.value:
             self.emit_signal(SignalCode.TTS_VOCODER_UNLOAD_SIGNAL)
-        if model == ModelType.TTS_SPEAKER_EMBEDDINGS.value:
+        elif model == ModelType.TTS_SPEAKER_EMBEDDINGS.value:
             self.emit_signal(SignalCode.TTS_SPEAKER_EMBEDDINGS_UNLOAD_SIGNAL)
-        if model == ModelType.TTS_TOKENIZER.value:
+        elif model == ModelType.TTS_TOKENIZER.value:
             self.emit_signal(SignalCode.TTS_TOKENIZER_UNLOAD_SIGNAL)
         # if model == ModelType.TTS_DATASET.value:
         #     self.emit_signal(SignalCode.TTS_DATASET_UNLOAD_SIGNAL)
-        if model == ModelType.STT.value:
+        elif model == ModelType.STT.value:
             self.emit_signal(SignalCode.STT_UNLOAD_SIGNAL)
-        if model == ModelType.STT_PROCESSOR.value:
+        elif model == ModelType.STT_PROCESSOR.value:
             self.emit_signal(SignalCode.STT_PROCESSOR_UNLOAD_SIGNAL)
-        if model == ModelType.STT_FEATURE_EXTRACTOR.value:
+        elif model == ModelType.STT_FEATURE_EXTRACTOR.value:
             self.emit_signal(SignalCode.STT_FEATURE_EXTRACTOR_UNLOAD_SIGNAL)
-        if model == ModelType.CONTROLNET.value:
+        elif model == ModelType.CONTROLNET.value:
             self.emit_signal(SignalCode.CONTROLNET_UNLOAD_MODEL_SIGNAL)
-        if model == ModelType.CONTROLNET_PROCESSOR.value:
+        elif model == ModelType.CONTROLNET_PROCESSOR.value:
             self.emit_signal(SignalCode.CONTROLNET_PROCESSOR_UNLOAD_SIGNAL)
-        if model == ModelType.SAFETY_CHECKER.value:
+        elif model == ModelType.SAFETY_CHECKER.value:
             self.emit_signal(SignalCode.SAFETY_CHECKER_MODEL_UNLOAD_SIGNAL)
-        if model == ModelType.FEATURE_EXTRACTOR.value:
+        elif model == ModelType.FEATURE_EXTRACTOR.value:
             self.emit_signal(SignalCode.FEATURE_EXTRACTOR_UNLOAD_SIGNAL)
-        if model == ModelType.SCHEDULER.value:
+        elif model == ModelType.SCHEDULER.value:
             self.emit_signal(SignalCode.SCHEDULER_UNLOAD_SIGNAL)
-        if model == ModelType.LLM.value:
+        elif model == ModelType.LLM.value:
             self.emit_signal(SignalCode.LLM_UNLOAD_MODEL_SIGNAL)
-        if model == ModelType.LLM_TOKENIZER.value:
+        elif model == ModelType.LLM_TOKENIZER.value:
             self.emit_signal(SignalCode.LLM_TOKENIZER_UNLOAD_SIGNAL)
 
     def on_model_status_changed_signal(self, data: dict = None):
