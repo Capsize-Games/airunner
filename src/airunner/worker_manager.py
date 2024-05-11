@@ -43,6 +43,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         disable_vision_capture: bool = False,
         do_load_llm_on_init: bool = False,
         agent_class=None,
+        agent_options: dict = None,
         **kwargs
     ):
         MediatorMixin.__init__(self)
@@ -86,7 +87,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             self.llm_generate_worker = create_worker(
                 LLMGenerateWorker,
                 do_load_on_init=do_load_llm_on_init,
-                agent_class=agent_class
+                agent_class=agent_class,
+                agent_options=agent_options
             )
             self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.llm_generate_worker.on_llm_request_worker_response_signal)
 

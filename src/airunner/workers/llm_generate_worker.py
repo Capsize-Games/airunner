@@ -17,7 +17,7 @@ class LLMGenerateWorker(
 ):
     llm = None
 
-    def __init__(self, prefix=None, do_load_on_init=False, agent_class=None):
+    def __init__(self, prefix=None, do_load_on_init=False, agent_class=None, agent_options=None):
         # ConsumerMixin.__init__(
         #     self,
         #     subject="llm_queue",
@@ -27,6 +27,7 @@ class LLMGenerateWorker(
         self.llm = CausalLMTransformerBaseHandler(
             do_load_on_init=do_load_on_init,
             agent_class=agent_class,
+            agent_options=agent_options
         )
         self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal)
 

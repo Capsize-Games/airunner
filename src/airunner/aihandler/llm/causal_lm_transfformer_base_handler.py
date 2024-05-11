@@ -45,6 +45,7 @@ class CausalLMTransformerBaseHandler(
         self.batch_size: int = 1
         self.vision_history: list = []
         self.agent_class_ = kwargs.pop("agent_class", BaseAgent)
+        self.agent_options = kwargs.pop("agent_options", {})
 
         super().__init__(*args, **kwargs)
 
@@ -167,7 +168,7 @@ class CausalLMTransformerBaseHandler(
             tokenizer=self.tokenizer,
             streamer=self.streamer,
             tools=self.tools,
-            chat_template=self.chat_template,
+            chat_template=self.chat_template
         )
 
     def unload_agent(self):

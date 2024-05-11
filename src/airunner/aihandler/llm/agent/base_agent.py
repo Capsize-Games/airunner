@@ -36,6 +36,7 @@ class BaseAgent(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         AgentLlamaIndexMixin.__init__(self)
+        self._chatbot = None
         self._bot_mood = None
         self.action = LLMActionType.CHAT
         self.rendered_template = None
@@ -57,6 +58,19 @@ class BaseAgent(
         self.__rag_search_worker.initialize(agent=self, model=self.model, tokenizer=self.tokenizer)
 
     @property
+    def available_actions(self):
+        return {
+            0: LLMActionType.DO_NOT_RESPOND,
+            1: LLMActionType.QUIT_APPLICATION,
+            2: LLMActionType.TOGGLE_FULLSCREEN,
+            3: LLMActionType.TOGGLE_TTS,
+            4: LLMActionType.UPDATE_MOOD,
+            5: LLMActionType.GENERATE_IMAGE,
+            6: LLMActionType.PERFORM_RAG_SEARCH,
+            7: LLMActionType.CHAT,
+        }
+
+    @property
     def llm_generator_settings(self):
         return self.settings["llm_generator_settings"]
 
@@ -70,6 +84,8 @@ class BaseAgent(
 
     @property
     def chatbot(self) -> dict:
+        if self._chatbot and self.action != LLMActionType.APPLICATION_COMMAND:
+            return self._chatbot
         return self.llm_generator_settings["saved_chatbots"][self.chatbot_name]
 
     @property
@@ -154,7 +170,7 @@ class BaseAgent(
 
     def build_system_prompt(
         self,
-        action: LLMActionType,
+        action,
         vision_history: list = []
     ):
         system_instructions = ""
@@ -254,8 +270,7 @@ class BaseAgent(
         elif action == LLMActionType.TOGGLE_TTS:
             self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL)
 
-        response = "\n".join(system_prompt)
-        return response
+        return "\n".join(system_prompt)
 
     def names_prompt(self, use_names: bool, botname: str, username: str) -> str:
         return f"Your name is {botname}. \nThe user's name is {username}." if use_names else ""
@@ -265,22 +280,9 @@ class BaseAgent(
             f"Your personality: {bot_personality}."
         ) if use_personality else ""
 
-    @property
-    def available_actions(self):
-        return {
-            0: LLMActionType.DO_NOT_RESPOND,
-            1: LLMActionType.QUIT_APPLICATION,
-            2: LLMActionType.TOGGLE_FULLSCREEN,
-            3: LLMActionType.TOGGLE_TTS,
-            4: LLMActionType.UPDATE_MOOD,
-            5: LLMActionType.GENERATE_IMAGE,
-            6: LLMActionType.PERFORM_RAG_SEARCH,
-            7: LLMActionType.CHAT,
-        }
-
     def latest_human_message(
         self,
-        action: LLMActionType
+        action
     ) -> dict:
         if self.prompt:
             prompt = self.prompt
@@ -298,15 +300,16 @@ class BaseAgent(
 
     def prepare_messages(
         self,
-        action: LLMActionType,
+        action,
         vision_history: list = []
     ) -> list:
+        system_prompt = self.build_system_prompt(
+            action,
+            vision_history=vision_history
+        )
         messages = [
             {
-                "content": self.build_system_prompt(
-                    action,
-                    vision_history=vision_history
-                ),
+                "content": system_prompt,
                 "role": LLMChatRole.SYSTEM.value
             }
         ]
@@ -421,7 +424,7 @@ class BaseAgent(
     def run(
         self,
         prompt: str,
-        action: LLMActionType = LLMActionType.CHAT,
+        action,
         vision_history: list = [],
         **kwargs
     ):
@@ -442,7 +445,7 @@ class BaseAgent(
 
     def do_run(
         self,
-        action: LLMActionType = LLMActionType.CHAT,
+        action,
         vision_history: list = [],
         streamer=None,
         do_emit_response: bool = True,
@@ -500,7 +503,7 @@ class BaseAgent(
     def run_with_thread(
         self,
         model_inputs,
-        action: LLMActionType = LLMActionType.CHAT,
+        action,
         **kwargs,
     ):
         # Generate the response
@@ -639,11 +642,10 @@ class BaseAgent(
                 action = self.available_actions[index]
 
                 if action is not None:
-                    if type(action) is LLMActionType:
-                        return self.run(
-                            prompt=self.prompt,
-                            action=action,
-                        )
+                    return self.run(
+                        prompt=self.prompt,
+                        action=action,
+                    )
 
         return streamed_template
 
