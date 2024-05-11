@@ -141,7 +141,10 @@ class SDHandler(
             SignalCode.SAFETY_CHECKER_MODEL_UNLOAD_SIGNAL: self.on_safety_checker_model_unload_signal,
             SignalCode.FEATURE_EXTRACTOR_LOAD_SIGNAL: self.on_feature_extractor_load_signal,
             SignalCode.FEATURE_EXTRACTOR_UNLOAD_SIGNAL: self.on_feature_extractor_unload_signal,
+            SignalCode.SD_VAE_LOAD_SIGNAL: self.on_sd_vae_load_signal,
+            SignalCode.SD_VAE_UNLOAD_SIGNAL: self.on_sd_vae_unload_signal,
         }
+
         for code, handler in signals.items():
             self.register(code, handler)
 
@@ -178,6 +181,12 @@ class SDHandler(
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
 
         self.load_stable_diffusion()
+
+    def on_sd_vae_load_signal(self, _data: dict):
+        self._load_vae()
+
+    def on_sd_vae_unload_signal(self, _data: dict):
+        self._unload_vae()
 
     def on_load_scheduler_signal(self, _message: dict):
         self.load_scheduler()
@@ -309,6 +318,9 @@ class SDHandler(
 
     def on_load_stablediffusion_signal(self, _message: dict = None):
         self.load_stable_diffusion_model()
+
+    def on_load_stablediffusion_vae_signal(self, _message: dict = None):
+        self._load_vae()
 
     def load_stable_diffusion(self):
         self.logger.info("Loading stable diffusion")
