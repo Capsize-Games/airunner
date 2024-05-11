@@ -40,6 +40,7 @@ class ModelScannerWorker(
             "causallm": llm_causallm_model_path,
             "seq2seq": llm_seq2seq_model_path,
         }.items():
+            model_path = os.path.expanduser(model_path)
             if not model_path or not os.path.exists(model_path):
                 continue
             # find all folders inside of model_path, each of those folders is a model version
