@@ -19,7 +19,7 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img impo
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
 from transformers import CLIPTokenizer
 
-from airunner.aihandler.mixins.stable_diffusion_single_file_mixin import download_from_original_stable_diffusion_ckpt
+from airunner.aihandler.stablediffusion.convert_from_ckpt import download_from_original_stable_diffusion_ckpt
 from airunner.aihandler.stablediffusion.sd_request import SDRequest
 from airunner.enums import (
     GeneratorSection,
@@ -477,10 +477,13 @@ class ModelMixin:
             "load_safety_checker": False,
             "tokenizer": self.__tokenizer
         }
-        if self.settings["controlnet_enabled"]:
+        if self.controlnet_loaded and self.controlnet is not None:
             data["controlnet"] = self.controlnet
         try:
-            pipe = download_from_original_stable_diffusion_ckpt(settings=self.settings, **data)
+            pipe = download_from_original_stable_diffusion_ckpt(
+                settings=self.settings,
+                **data
+            )
         except Exception as e:
             self.logger.error(f"Failed to load model from ckpt: {e}")
 
