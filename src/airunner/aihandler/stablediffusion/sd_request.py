@@ -319,6 +319,7 @@ class SDRequest(
         if self.is_img2img or self.is_depth2img:
             extra_args = {**extra_args, **{
                 "strength": self.generator_settings.strength,
+                "guidance_scale": self.generator_settings.image_guidance_scale,
             }}
         elif self.is_pix2pix:
             extra_args = {**extra_args, **{

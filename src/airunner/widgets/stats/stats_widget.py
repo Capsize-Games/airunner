@@ -135,26 +135,33 @@ class StatsWidget(
 
         for i in range(device_count):
             device = torch.device(f'cuda:{i}')
-            torch.cuda.set_device(device)
+            try:
+                torch.cuda.set_device(device)
+                total_mem = torch.cuda.get_device_properties(device).total_memory / (1024 ** 3)  # Convert bytes to GB
+                allocated_mem = torch.cuda.memory_allocated() / (1024 ** 3)  # Convert bytes to GB
+                free_mem = total_mem - allocated_mem
+                device_name = torch.cuda.get_device_name(device)
+            except RuntimeError:
+                free_mem = 0
+                allocated_mem = 0
+                total_mem = 0
+                device_name = "N/A"
 
-            total_mem = torch.cuda.get_device_properties(device).total_memory / (1024 ** 3)  # Convert bytes to GB
-            allocated_mem = torch.cuda.memory_allocated() / (1024 ** 3)  # Convert bytes to GB
-            free_mem = total_mem - allocated_mem
 
             # truncate to 2 decimal places
             total_mem = round(total_mem, 2)
             allocated_mem = round(allocated_mem, 2)
             free_mem = round(free_mem, 2)
 
-            self.ui.memory_stats.setItem(i, 0, QTableWidgetItem(torch.cuda.get_device_name(device)))
+            self.ui.memory_stats.setItem(i, 0, QTableWidgetItem(device_name))
             self.ui.memory_stats.setItem(i, 1, QTableWidgetItem(f"{allocated_mem}GB"))
             self.ui.memory_stats.setItem(i, 2, QTableWidgetItem(f"{total_mem}GB"))
             self.ui.memory_stats.setItem(i, 3, QTableWidgetItem(f"{free_mem}GB"))
 
             # Set colors
-            self.ui.memory_stats.item(i, 1).setForeground(Qt.red)
-            self.ui.memory_stats.item(i, 2).setForeground(Qt.yellow)
-            self.ui.memory_stats.item(i, 3).setForeground(Qt.green)
+            self.ui.memory_stats.item(i, 1).setForeground(Qt.GlobalColor.red)
+            self.ui.memory_stats.item(i, 2).setForeground(Qt.GlobalColor.yellow)
+            self.ui.memory_stats.item(i, 3).setForeground(Qt.GlobalColor.green)
 
         # Get CPU details
         cpu_memory = psutil.virtual_memory()
