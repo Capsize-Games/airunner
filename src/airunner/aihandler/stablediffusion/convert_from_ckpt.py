@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ Conversion script for the Stable Diffusion checkpoints."""
+import os.path
 import re
 from contextlib import nullcontext
 from io import BytesIO
@@ -21,7 +22,6 @@ from typing import Dict, Optional, Union
 import requests
 import torch
 import yaml
-from datasets.utils import logging
 from diffusers import DDIMScheduler, DDPMScheduler, ControlNetModel, DiffusionPipeline, EulerDiscreteScheduler, \
     PNDMScheduler, LMSDiscreteScheduler, HeunDiscreteScheduler, EulerAncestralDiscreteScheduler, \
     DPMSolverMultistepScheduler, UNet2DConditionModel, AutoencoderKL, PriorTransformer, UnCLIPScheduler
@@ -41,14 +41,16 @@ from transformers import (
     CLIPVisionModelWithProjection,
 )
 
-global CLIP_TEXT_CONFIG_NAME
+CLIP_VIT_LARGE_PATH = ""
 
 
 if is_accelerate_available():
     from accelerate import init_empty_weights
     from accelerate.utils import set_module_tensor_to_device
 
-logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
+from airunner.aihandler.logger import logging
+
+logger = logging.getLogger(__name__)
 
 
 def shave_segments(path, n_shave_prefix_segments=1):
@@ -777,12 +779,12 @@ def convert_ldm_bert_checkpoint(checkpoint, config):
 
 def convert_ldm_clip_checkpoint(checkpoint, local_files_only=False, text_encoder=None):
     if text_encoder is None:
-        config_name = CLIP_TEXT_CONFIG_NAME
+        config_name = CLIP_VIT_LARGE_PATH
         try:
             config = CLIPTextConfig.from_pretrained(config_name, local_files_only=local_files_only)
         except Exception:
             raise ValueError(
-                f"With1 local_files_only set to {local_files_only}, you must first locally save the configuration in the following path: 'openai/clip-vit-large-patch14'."
+                f"With local_files_only set to {local_files_only}, you must first locally save the configuration in the following path: 'openai/clip-vit-large-patch14'."
             )
 
         ctx = init_empty_weights if is_accelerate_available() else nullcontext
@@ -840,7 +842,7 @@ textenc_pattern = re.compile("|".join(protected.keys()))
 
 
 def convert_paint_by_example_checkpoint(checkpoint, local_files_only=False):
-    config = CLIPVisionConfig.from_pretrained(CLIP_TEXT_CONFIG_NAME, local_files_only=local_files_only)
+    config = CLIPVisionConfig.from_pretrained(CLIP_VIT_LARGE_PATH, local_files_only=local_files_only)
     model = PaintByExampleImageEncoder(config)
 
     keys = list(checkpoint.keys())
@@ -922,7 +924,7 @@ def convert_open_clip_checkpoint(
         config = CLIPTextConfig.from_pretrained(config_name, **config_kwargs, local_files_only=local_files_only)
     except Exception:
         raise ValueError(
-            f"With2 local_files_only set to {local_files_only}, you must first locally save the configuration in the following path: '{config_name}'."
+            f"With local_files_only set to {local_files_only}, you must first locally save the configuration in the following path: '{config_name}'."
         )
 
     ctx = init_empty_weights if is_accelerate_available() else nullcontext
@@ -1007,7 +1009,7 @@ def stable_unclip_image_encoder(original_config, local_files_only=False):
         if clip_model_name == "ViT-L/14":
             feature_extractor = CLIPImageProcessor()
             image_encoder = CLIPVisionModelWithProjection.from_pretrained(
-                CLIP_TEXT_CONFIG_NAME, local_files_only=local_files_only
+                CLIP_VIT_LARGE_PATH, local_files_only=local_files_only
             )
         else:
             raise NotImplementedError(f"Unknown CLIP checkpoint name in stable diffusion checkpoint {clip_model_name}")
@@ -1121,7 +1123,7 @@ def convert_controlnet_checkpoint(
 
 
 def download_from_original_stable_diffusion_ckpt(
-    settings:dict,
+    settings: dict,
     checkpoint_path_or_dict: Union[str, Dict[str, torch.Tensor]],
     original_config_file: str = None,
     image_size: Optional[int] = None,
@@ -1216,8 +1218,11 @@ def download_from_original_stable_diffusion_ckpt(
                 - `xl_refiner`: Config file for Stable Diffusion XL Refiner
         return: A StableDiffusionPipeline object representing the passed-in `.ckpt`/`.safetensors` file.
     """
-
-    CLIP_TEXT_CONFIG_NAME = settings["path_settings"]["feature_extractor"]
+    global CLIP_VIT_LARGE_PATH
+    CLIP_VIT_LARGE_PATH = os.path.join(
+        os.path.expanduser(settings["path_settings"]["feature_extractor_model_path"]),
+        "openai/clip-vit-large-patch14",
+    )
 
     # import pipelines here to avoid circular import error when using from_single_file method
     from diffusers import (
@@ -1506,7 +1511,7 @@ def download_from_original_stable_diffusion_ckpt(
             )
         except Exception:
             raise ValueError(
-                f"With 3 local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'stabilityai/stable-diffusion-2'."
+                f"With local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'stabilityai/stable-diffusion-2'."
             )
 
         if stable_unclip is None:
@@ -1588,14 +1593,14 @@ def download_from_original_stable_diffusion_ckpt(
 
                     try:
                         prior_tokenizer = CLIPTokenizer.from_pretrained(
-                            CLIP_TEXT_CONFIG_NAME, local_files_only=local_files_only
+                            CLIP_VIT_LARGE_PATH, local_files_only=local_files_only
                         )
                     except Exception:
                         raise ValueError(
-                            f"Withs local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'openai/clip-vit-large-patch14'."
+                            f"With local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'openai/clip-vit-large-patch14'."
                         )
                     prior_text_model = CLIPTextModelWithProjection.from_pretrained(
-                        CLIP_TEXT_CONFIG_NAME, local_files_only=local_files_only
+                        CLIP_VIT_LARGE_PATH, local_files_only=local_files_only
                     )
 
                     prior_scheduler = UnCLIPScheduler.from_pretrained(
@@ -1628,11 +1633,11 @@ def download_from_original_stable_diffusion_ckpt(
         vision_model = convert_paint_by_example_checkpoint(checkpoint)
         try:
             tokenizer = CLIPTokenizer.from_pretrained(
-                CLIP_TEXT_CONFIG_NAME, local_files_only=local_files_only
+                CLIP_VIT_LARGE_PATH, local_files_only=local_files_only
             )
         except Exception:
             raise ValueError(
-                f"Withz local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'openai/clip-vit-large-patch14'."
+                f"With local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'openai/clip-vit-large-patch14'."
             )
         try:
             feature_extractor = AutoFeatureExtractor.from_pretrained(
@@ -1640,7 +1645,7 @@ def download_from_original_stable_diffusion_ckpt(
             )
         except Exception:
             raise ValueError(
-                f"With3 local_files_only set to {local_files_only}, you must first locally save the feature_extractor in the following path: 'CompVis/stable-diffusion-safety-checker'."
+                f"With local_files_only set to {local_files_only}, you must first locally save the feature_extractor in the following path: 'CompVis/stable-diffusion-safety-checker'."
             )
         pipe = PaintByExamplePipeline(
             vae=vae,
@@ -1656,13 +1661,13 @@ def download_from_original_stable_diffusion_ckpt(
         )
         try:
             tokenizer = (
-                CLIPTokenizer.from_pretrained(CLIP_TEXT_CONFIG_NAME, local_files_only=local_files_only)
+                CLIPTokenizer.from_pretrained(CLIP_VIT_LARGE_PATH, local_files_only=local_files_only)
                 if tokenizer is None
                 else tokenizer
             )
         except Exception:
             raise ValueError(
-                f"With 4 local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'openai/clip-vit-large-patch14'."
+                f"With local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'openai/clip-vit-large-patch14'."
             )
 
         if load_safety_checker:
@@ -1703,11 +1708,11 @@ def download_from_original_stable_diffusion_ckpt(
         if (is_refiner is False) and (tokenizer is None):
             try:
                 tokenizer = CLIPTokenizer.from_pretrained(
-                    CLIP_TEXT_CONFIG_NAME, local_files_only=local_files_only
+                    CLIP_VIT_LARGE_PATH, local_files_only=local_files_only
                 )
             except Exception:
                 raise ValueError(
-                    f"With 5 local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'openai/clip-vit-large-patch14'."
+                    f"With local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'openai/clip-vit-large-patch14'."
                 )
 
         if (is_refiner is False) and (text_encoder is None):
@@ -1720,7 +1725,7 @@ def download_from_original_stable_diffusion_ckpt(
                 )
             except Exception:
                 raise ValueError(
-                    f"With 6 local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'laion/CLIP-ViT-bigG-14-laion2B-39B-b160k' with `pad_token` set to '!'."
+                    f"With local_files_only set to {local_files_only}, you must first locally save the tokenizer in the following path: 'laion/CLIP-ViT-bigG-14-laion2B-39B-b160k' with `pad_token` set to '!'."
                 )
 
         if text_encoder_2 is None:
