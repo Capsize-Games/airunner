@@ -11,22 +11,17 @@ from PIL import (
     ImageFont
 )
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
-    StableDiffusionControlNetInpaintPipeline, AutoencoderKL
+    StableDiffusionControlNetInpaintPipeline
 from diffusers.models.modeling_utils import load_state_dict
 
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_depth2img import StableDiffusionDepth2ImgPipeline
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_instruct_pix2pix import StableDiffusionInstructPix2PixPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
-from safetensors.torch import load_file
 from transformers import CLIPTokenizer
 
 from airunner.enums import (
-    GeneratorSection,
     SignalCode,
-    Scheduler,
     SDMode,
     StableDiffusionVersion,
     ModelStatus,
@@ -34,7 +29,6 @@ from airunner.enums import (
 )
 from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException
 from airunner.settings import (
-    CONFIG_FILES,
     AVAILABLE_ACTIONS
 )
 from airunner.utils.clear_memory import clear_memory
