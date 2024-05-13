@@ -53,19 +53,6 @@ class SafetyCheckerMixin:
         clear_memory()
         self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.UNLOADED, "")
 
-    def is_ckpt_file(self, model_path) -> bool:
-        if not model_path:
-            self.logger.error("ckpt path is empty")
-            return False
-        return model_path.endswith(".ckpt")
-
-    def is_safetensor_file(self, model_path) -> bool:
-        if not model_path:
-            self.logger.error("safetensors path is empty")
-            return False
-        return model_path.endswith(".safetensors")
-
-
     def _load_feature_extractor_model(self):
         feature_extractor = None
         self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING, self.safety_checker_model["path"])
@@ -109,6 +96,6 @@ class SafetyCheckerMixin:
             self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED, self.safety_checker_model["path"])
         except Exception as e:
             print(e)
-            self.send_error("Unable to load safety checker")
+            self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Unable to load safety checker")
             self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED, self.safety_checker_model["path"])
         return safety_checker

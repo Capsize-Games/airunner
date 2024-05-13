@@ -31,7 +31,7 @@ class ControlnetImageSettings:
         self.mask_use_imported_image = data.get("mask_use_imported_image", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["mask_use_imported_image"])
         self.controlnet = data.get("controlnet", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["controlnet"])
         self.conditioning_scale = data.get("conditioning_scale", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["conditioning_scale"]) / 100.0
-        self.guidance_scale = data.get("guidance_scale", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["guidance_scale"]) / 100.0
+        self.guidance_scale = data.get("guidance_scale", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["guidance_scale"]) / 1000.0
         self.controlnet_image_base64 = data.get("controlnet_image_base64", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["controlnet_image_base64"])
 
 
@@ -54,7 +54,7 @@ class GeneratorSettings:
         self.strength = generator_settings.get("strength", STABLEDIFFUSION_GENERATOR_SETTINGS["strength"]) / 100.0
         self.image_guidance_scale = generator_settings.get("image_guidance_scale", STABLEDIFFUSION_GENERATOR_SETTINGS["image_guidance_scale"]) / 100.0
         self.n_samples = generator_settings.get("n_samples", STABLEDIFFUSION_GENERATOR_SETTINGS["n_samples"])
-        self.enable_controlnet = generator_settings.get("enable_controlnet", STABLEDIFFUSION_GENERATOR_SETTINGS["enable_controlnet"])
+        self.enable_controlnet = settings["controlnet_enabled"]
         self.clip_skip = generator_settings.get("clip_skip", STABLEDIFFUSION_GENERATOR_SETTINGS["clip_skip"])
         self.variation = generator_settings.get("variation", STABLEDIFFUSION_GENERATOR_SETTINGS["variation"])
         self.use_prompt_builder = generator_settings.get("use_prompt_builder", STABLEDIFFUSION_GENERATOR_SETTINGS["use_prompt_builder"])
@@ -112,7 +112,6 @@ class SDRequest(
         QObject.__init__(self)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
-        self.model_data = kwargs.get("model_data", None)
         self.memory_settings = MemorySettings(**self.settings["memory_settings"])
         self.generator_settings = None
         self.action_has_safety_checker = False
@@ -191,7 +190,6 @@ class SDRequest(
         controlnet_image=None,
         generator_request_data: dict = None,
     ) -> dict:
-        self.model_data = model_data
         self.memory_settings = MemorySettings(**self.settings["memory_settings"])
         self.load_generator_settings()
         self.latents = latents
@@ -214,7 +212,7 @@ class SDRequest(
             generator_request_data=generator_request_data
         )
 
-        self.input_image = kwargs["image"] if "image" in kwargs else None
+        self.input_image = None #kwargs["image"] if "image" in kwargs else None
 
         args = {
             "num_inference_steps": self.generator_settings.steps,
@@ -249,11 +247,6 @@ class SDRequest(
         negative_prompt_embeds=None,
         generator_request_data=None
     ) -> dict:
-        extra_options = {} if not extra_options else extra_options
-
-        if self.generator_settings.enable_controlnet and controlnet_image:
-            extra_options["controlnet_image"] = controlnet_image
-
         self.active_rect = active_rect
 
         if self.active_rect is None:
@@ -288,6 +281,12 @@ class SDRequest(
 
         extra_args = self.prepare_extra_args(generator_request_data)
 
+        if self.settings["controlnet_enabled"] and controlnet_image:
+            if self.is_txt2img:
+                extra_args["image"] = controlnet_image
+            else:
+                extra_args["control_image"] = controlnet_image
+
         return {**args, **extra_args}
 
     def prepare_extra_args(self, generator_request_data):
@@ -316,16 +315,17 @@ class SDRequest(
                 "width": width,
                 "height": height,
             }}
-        if self.is_img2img or self.is_depth2img:
-            extra_args = {**extra_args, **{
-                "strength": self.generator_settings.strength,
-                "guidance_scale": self.generator_settings.image_guidance_scale,
-            }}
-        elif self.is_pix2pix:
-            extra_args = {**extra_args, **{
-                "image_guidance_scale": self.generator_settings.strength,
-            }}
-        elif self.is_upscale:
+        if not self.settings["controlnet_enabled"]:
+            if self.is_img2img or self.is_depth2img:
+                extra_args = {**extra_args, **{
+                    "strength": self.generator_settings.strength,
+                    "guidance_scale": self.generator_settings.image_guidance_scale,
+                }}
+            elif self.is_pix2pix:
+                extra_args = {**extra_args, **{
+                    "image_guidance_scale": self.generator_settings.strength,
+                }}
+        if self.is_upscale:
             extra_args = {**extra_args, **{
                 "image": image,
             }}
@@ -358,18 +358,25 @@ class SDRequest(
             extra_args["mask_image"] = mask
 
         controlnet_image = self.controlnet_image
-        if self.generator_settings.enable_controlnet and controlnet_image:
-            extra_args = {**extra_args, **{
-                #"control_image": controlnet_image,
+        if self.settings["controlnet_enabled"] and controlnet_image:
+            controlnet_args = {
                 "guess_mode": None,
                 "control_guidance_start": 0.0,
                 "control_guidance_end": 1.0,
-                "guidance_scale": self.generator_settings.controlnet_image_settings.guidance_scale,
-                "controlnet_conditioning_scale": self.generator_settings.controlnet_image_settings.conditioning_scale,
+                "strength": self.settings["brush_settings"]["strength"] / 100, #self.generator_settings.controlnet_image_settings.strength,
+                "guidance_scale": self.settings["brush_settings"]["guidance_scale"] / 10, #self.generator_settings.controlnet_image_settings.guidance_scale,
+                "controlnet_conditioning_scale": self.settings["brush_settings"]["conditioning_scale"] / 100, #self.generator_settings.controlnet_image_settings.conditioning_scale,
                 "controlnet": [
                     self.generator_settings.controlnet_image_settings.controlnet
                 ],
-            }}
+            }
+
+            if self.is_txt2img:
+                controlnet_args["image"] = controlnet_image
+            else:
+                controlnet_args["control_image"] = controlnet_image
+
+            extra_args = {**extra_args, **controlnet_args}
         return extra_args
 
     def load_prompt_embed_args(
@@ -425,26 +432,3 @@ class SDRequest(
             if key in data:
                 del data[key]
         return data
-
-
-class UpscaleRequest(SDRequest):
-    def prepare_args(self, **kwargs) -> dict:
-        args = super().prepare_args(**kwargs)
-        args.update({
-            "image": kwargs.get("image"),
-            "generator": self.generator,
-        })
-        return args
-
-    def load_prompt_embed_args(
-        self,
-        prompt_embeds,
-        negative_prompt_embeds,
-        args
-    ):
-        """
-        Load prompt embeds
-        """
-        args["prompt"] = self.generator_settings.prompt
-        args["negative_prompt"] = self.generator_settings.negative_prompt
-        return args
