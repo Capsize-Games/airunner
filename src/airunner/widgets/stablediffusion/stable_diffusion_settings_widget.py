@@ -49,9 +49,9 @@ class StableDiffusionSettingsWidget(
 
     def handle_model_changed(self, name):
         settings = self.settings
-        settings["generator_settings"]["model_name"] = name
-        settings["generator_settings"]["model"] = ""
+        settings["generator_settings"]["model"] = name
         self.settings = settings
+        self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
 
     def handle_scheduler_changed(self, name):
         settings = self.settings
@@ -137,11 +137,23 @@ class StableDiffusionSettingsWidget(
         model_names = [model["name"] for model in models]
         self.ui.model.addItems(model_names)
         settings = self.settings
-        current_model = settings["generator_settings"]["model"]
-        if current_model != "":
-            self.ui.model.setCurrentText(current_model)
-        settings["generator_settings"]["model_name"] = self.ui.model.currentText()
-        settings["generator_settings"]["model"] = ""
+        model_name = settings["generator_settings"]["model"]
+        if model_name != "":
+            self.ui.model.setCurrentText(model_name)
+        settings["generator_settings"]["model"] = self.ui.model.currentText()
+
+        model = None
+        try:
+            path = self.settings["generator_settings"]["model"]
+            model = [model for model in self.settings["ai_models"] if model["path"] == path][0]
+        except Exception as e:
+            name = self.settings["generator_settings"]["model"]
+            try:
+                model = [model for model in self.settings["ai_models"] if model["name"] == name][0]
+            except Exception as e:
+                self.logger.error(f"Error finding model by name: {name}")
+
+        settings["generator_settings"]["model"] = model["name"]
         self.ui.model.blockSignals(False)
         self.settings = settings
 

@@ -10,6 +10,9 @@ from PIL import (
     ImageDraw,
     ImageFont
 )
+from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
+    StableDiffusionControlNetInpaintPipeline, AutoencoderKL
+from diffusers.models.modeling_utils import load_state_dict
 
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
@@ -17,10 +20,9 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_depth2img im
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_instruct_pix2pix import StableDiffusionInstructPix2PixPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
+from safetensors.torch import load_file
 from transformers import CLIPTokenizer
 
-from airunner.aihandler.stablediffusion.convert_from_ckpt import download_from_original_stable_diffusion_ckpt
-from airunner.aihandler.stablediffusion.sd_request import SDRequest
 from airunner.enums import (
     GeneratorSection,
     SignalCode,
@@ -36,6 +38,7 @@ from airunner.settings import (
     AVAILABLE_ACTIONS
 )
 from airunner.utils.clear_memory import clear_memory
+from diffusers.loaders.single_file_utils import create_text_encoder_from_ldm_clip_checkpoint
 
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -53,6 +56,20 @@ class ModelMixin:
         self.reload_model = False
         self.batch_size = 1
         self.moved_to_cpu = False
+        self.__generator = None
+        self.__text_encoder = None
+
+    def is_ckpt_file(self, model_path) -> bool:
+        if not model_path:
+            self.logger.error("ckpt path is empty")
+            return False
+        return model_path.endswith(".ckpt")
+
+    def is_safetensor_file(self, model_path) -> bool:
+        if not model_path:
+            self.logger.error("safetensors path is empty")
+            return False
+        return model_path.endswith(".safetensors")
 
     @property
     def is_ckpt_model(self) -> bool:
@@ -77,6 +94,12 @@ class ModelMixin:
             )
         )
 
+    @property
+    def enable_controlnet(self):
+        return (
+            self.sd_request.generator_settings.enable_controlnet
+        )
+
     @staticmethod
     def __is_pytorch_error(e) -> bool:
         return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
@@ -94,6 +117,10 @@ class ModelMixin:
             self.unload_image_generator_model()
 
         # Continue with loading the model
+        self.__load_generator(
+            torch.device(self.device),
+            self.settings["generator_settings"]["seed"]
+        )
         self.__prepare_model()
         self.__load_model()
         self.__move_model_to_device()
@@ -101,20 +128,22 @@ class ModelMixin:
     def generate(
         self,
         settings: dict,
-        sd_request: SDRequest,
         generator_request_data: dict
     ):
         if not self.pipe:
             raise PipeNotLoadedException()
-        self.__load_generator_arguments(settings, sd_request, generator_request_data)
+        self.__load_generator_arguments(settings, generator_request_data)
         self.do_generate = False
-        self.__swap_pipeline(sd_request)
+        self.__swap_pipeline()
         return self.__generate(generator_request_data)
 
-    def __swap_pipeline(self, sd_request: SDRequest):
-        is_txt2img = sd_request.is_txt2img
-        is_outpaint = sd_request.is_outpaint
-        is_img2img = sd_request.is_img2img
+    def __swap_pipeline(self):
+        if not self.pipe:
+            return
+
+        is_txt2img = self.sd_request.is_txt2img
+        is_outpaint = self.sd_request.is_outpaint
+        is_img2img = self.sd_request.is_img2img
 
         if not is_img2img and not is_outpaint:
             is_txt2img = True
@@ -122,7 +151,7 @@ class ModelMixin:
         if is_img2img and (
             "image" not in self.data or ("image" in self.data and self.data["image"] is None)
         ):
-            self.data = sd_request.disable_img2img(self.data)
+            self.data = self.sd_request.disable_img2img(self.data)
             is_txt2img = True
 
         kwargs = dict(
@@ -135,24 +164,11 @@ class ModelMixin:
             feature_extractor=self.feature_extractor
         )
 
-        enable_controlnet = (
-            sd_request.generator_settings.enable_controlnet and
-            "control_image" in self.data and
-            self.data["control_image"] is not None
-        )
-
-        pipeline_map = {
-            "txt2img": StableDiffusionPipeline,
-            "img2img": StableDiffusionImg2ImgPipeline,
-            "outpaint": StableDiffusionInpaintPipeline,
-        }
-
         operation_type = "txt2img" if is_txt2img else "img2img" if is_img2img else "outpaint"
-
-        if enable_controlnet:
+        if self.enable_controlnet:
             kwargs["controlnet"] = self.pipe.controlnet
-
-        pipeline_class_ = pipeline_map.get(operation_type)
+            operation_type = f"{operation_type}_controlnet"
+        pipeline_class_ = self.__pipeline_class(operation_type)
 
         if pipeline_class_ is not None:
             self.logger.debug("Swapping pipeline")
@@ -199,7 +215,7 @@ class ModelMixin:
             ),
             device=torch.device(self.device),
             dtype=self.data_type,
-            generator=self.__generator(torch.device(self.device)),
+            generator=self.__generator,
         )
 
     def __model_is_loaded(self, model: ModelType) -> bool:
@@ -228,11 +244,9 @@ class ModelMixin:
         if not self.__safety_checker_ready():
             raise SafetyCheckerNotLoadedException()
 
-        data = self.__prepare_request_data(generator_request_data)
+        self.data["callback_on_step_end"] = self.__interrupt_callback
 
-        data["callback_on_step_end"] = self.__interrupt_callback
-
-        results = self.pipe(**data)
+        results = self.pipe(**self.data)
         images = results.get("images", [])
         nsfw_content_detected = results.get("nsfw_content_detected", None)
         if nsfw_content_detected is None:
@@ -304,29 +318,29 @@ class ModelMixin:
         if images is None:
             return
 
-        if self.requested_data is not None:
-            self.requested_data["original_model_data"] = self.original_model_data or {}
+        if self.data is not None:
+            self.data["original_model_data"] = self.original_model_data or {}
 
         has_nsfw = True in nsfw_content_detected if nsfw_content_detected is not None else False
 
         if images:
-            do_base64 = self.requested_data.get("do_base64", False)
+            do_base64 = self.data.get("do_base64", False)
             has_filters = self.filters is not None and len(self.filters) > 0
             images = self.__process_images(images, do_base64, has_filters, nsfw_content_detected)
 
         return dict(
             images=images,
-            data=self.requested_data,
+            data=self.data,
             nsfw_content_detected=has_nsfw,
         )
 
-    def __generator(self, device=None, seed=None):
-        if self._generator is None:
+    def __load_generator(self, device=None, seed=None):
+        if self.__generator is None:
             device = self.device if not device else device
             if seed is None:
                 seed = int(self.settings["generator_settings"]["seed"])
-            self._generator = torch.Generator(device=device).manual_seed(seed)
-        return self._generator
+            self.__generator = torch.Generator(device=device).manual_seed(seed)
+        return self.__generator
 
     def __unload_model(self):
         self.logger.debug("Unloading model")
@@ -342,26 +356,34 @@ class ModelMixin:
     def __unload_unused_models(self):
         self.logger.debug("Unloading unused models")
         for action in AVAILABLE_ACTIONS:
+            if action in ["controlnet", "safety_checker"]:
+                continue
             val = getattr(self, action)
             if val:
+                self.logger.debug(f"Unloading model {action}")
                 val.to("cpu")
                 setattr(self, action, None)
                 del val
         clear_memory()
         self.reset_applied_memory_settings()
 
-    def __pipeline_class(self):
-        if self.sd_request.generator_settings.section == GeneratorSection.DEPTH2IMG.value:
-            pipeline_classname_ = StableDiffusionDepth2ImgPipeline
-        elif self.sd_request.generator_settings.section == GeneratorSection.OUTPAINT.value:
-            pipeline_classname_ = StableDiffusionInpaintPipeline
-        elif self.sd_request.generator_settings.section == GeneratorSection.PIX2PIX.value:
-            pipeline_classname_ = StableDiffusionInstructPix2PixPipeline
-        elif self.sd_request.is_img2img:
-            pipeline_classname_ = StableDiffusionImg2ImgPipeline
-        else:
-            pipeline_classname_ = StableDiffusionPipeline
-        return pipeline_classname_
+    def __pipeline_class(self, operation_type=None):
+        if operation_type is None:
+            operation_type = self.sd_request.generator_settings.section
+
+        if self.enable_controlnet:
+            operation_type = f"{operation_type}_controlnet"
+
+        pipeline_map = {
+            "txt2img": StableDiffusionPipeline,
+            "img2img": StableDiffusionImg2ImgPipeline,
+            "outpaint": StableDiffusionInpaintPipeline,
+            "txt2img_controlnet": StableDiffusionControlNetPipeline,
+            "img2img_controlnet": StableDiffusionControlNetImg2ImgPipeline,
+            "outpaint_controlnet": StableDiffusionControlNetInpaintPipeline
+        }
+
+        return pipeline_map.get(operation_type)
 
     def __load_model(self):
         self.logger.debug("Loading model")
@@ -376,8 +398,6 @@ class ModelMixin:
         # move all models except for our current action to the CPU
         if not already_loaded or self.reload_model:
             self.__unload_unused_models()
-        # elif self.pipe is None and self.__do_reuse_pipeline or self.pipe:
-        #     self.__reuse_pipeline()
 
         if self.pipe is None or self.reload_model:
             self.change_model_status(ModelType.SD, ModelStatus.LOADING, self.model_path)
@@ -388,14 +408,33 @@ class ModelMixin:
             self.reset_applied_memory_settings()
 
             if self.is_single_file:
-                self.pipe = self.__download_from_original_stable_diffusion_ckpt()
+                self._load_tokenizer()
+                self.__load_text_encoder()
+
+                data = dict(
+                    from_safetensors=True,
+                    local_files_only=True,
+                    tokenizer=self.__tokenizer,
+                    text_encoder=self.__text_encoder,
+                    torch_dtype=self.data_type
+                )
+
+                if self.enable_controlnet:
+                    data["controlnet"] = self.controlnet
+                    self.pipe = StableDiffusionControlNetPipeline.from_single_file(
+                        self.model_path,
+                        **data
+                    )
+                else:
+                    self.pipe = StableDiffusionPipeline.from_single_file(
+                        self.model_path,
+                        **data
+                    )
                 if self.pipe is not None:
                     self.pipe.scheduler = self.load_scheduler(config=self.pipe.scheduler.config)
-            elif self.model is not None:
+            elif self.model_path is not None:
                 self.logger.debug(
-                    f"Loading model `{self.model['name']}` `{self.model_path}` for {self.sd_request.generator_settings.section}")
-
-                pipeline_classname_ = self.__pipeline_class()
+                    f"Loading model `{self.model_path}` for {self.sd_request.generator_settings.section}")
 
                 kwargs.update(dict(
                     torch_dtype=self.data_type,
@@ -405,15 +444,16 @@ class ModelMixin:
                     controlnet=self.controlnet,
                     scheduler=self.scheduler,
                 ))
-                path = os.path.expanduser(
-                    os.path.join(
-                        self.settings["path_settings"][
-                            f"{self.sd_request.generator_settings.section}_model_path"],
-                        self.model_path
-                    )
-                )
-                self.pipe = self.__pipeline_class().from_pretrained(
-                    path,
+                # path = os.path.expanduser(
+                #     os.path.join(
+                #         self.settings["path_settings"][
+                #             f"{self.sd_request.generator_settings.section}_model_path"],
+                #         self.model_path
+                #     )
+                # )
+                pipeline_class_ = self.__pipeline_class()
+                self.pipe = pipeline_class_.from_pretrained(
+                    self.model_path,
                     **kwargs
                 )
 
@@ -433,20 +473,15 @@ class ModelMixin:
                 return
 
             old_model_path = self.current_model
+
             self.current_model = self.model_path
             self.current_model = old_model_path
-
-            # if self.is_outpaint:
-            #     self.logger.debug("Initializing vae for inpaint / outpaint")
-            #     self.pipe.vae = AsymmetricAutoencoderKL.from_pretrained(
-            #         self.inpaint_vae_model["path"],
-            #         torch_dtype=self.data_type
-            #     )
-
             self.controlnet_loaded = self.settings["controlnet_enabled"]
 
     def _load_tokenizer(self):
-        path = "/home/joe/.airunner/art/models/txt2img/runwayml/stable-diffusion-v1-5/tokenizer/"
+        path = os.path.dirname(self.model_path)
+        path = f"/home/joe/.airunner/art/models/txt2img/SD 1.5/runwayml/stable-diffusion-v1-5/tokenizer"
+        self.logger.debug(f"Loading tokenizer from {path}")
         try:
             self.__tokenizer = CLIPTokenizer.from_pretrained(path, local_files_only=True)
             self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.LOADED, path)
@@ -461,107 +496,33 @@ class ModelMixin:
             action = "img2img"
         return action
 
-    def __download_from_original_stable_diffusion_ckpt(self):
-        self.logger.debug(f"Loading ckpt file {self.model_path}")
-        self._load_tokenizer()
-        pipe = None
-        data = {
-            "checkpoint_path_or_dict": self.model_path,
-            "device": self.device,
-            "scheduler_type": Scheduler.DDIM.value.lower(),
-            "from_safetensors": self.is_safetensors,
-            "local_files_only": True,
-            "extract_ema": False,
-            "config_files": CONFIG_FILES,
-            "pipeline_class": self.__pipeline_class(),
-            "load_safety_checker": False,
-            "tokenizer": self.__tokenizer
-        }
-        if self.controlnet_loaded and self.controlnet is not None:
-            data["controlnet"] = self.controlnet
-        try:
-            pipe = download_from_original_stable_diffusion_ckpt(
-                settings=self.settings,
-                **data
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to load model from ckpt: {e}")
+    def __load_text_encoder(self):
+        checkpoint = load_state_dict(self.model_path)
 
-        if pipe is not None:
-            pipe.safety_checker = self.safety_checker
-            pipe.feature_extractor = self.feature_extractor
-        return pipe
+        text_encoder_path = os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["feature_extractor_model_path"],
+                "openai/clip-vit-large-patch14"
+            )
+        )
+        self.__text_encoder = create_text_encoder_from_ldm_clip_checkpoint(
+            text_encoder_path,
+            checkpoint,
+            local_files_only=True,
+            torch_dtype=self.data_type
+        )
+
 
     def __prepare_model(self):
         self.logger.info("Prepare model")
-        if not self.model:
+        if not self.model_path:
             return
         self._previous_model = self.current_model
-        if self.is_single_file:
-            self.current_model = self.model
-        else:
-            self.current_model = self.model_path
-            self.current_model_branch = self.model["branch"]
-
-    # def __reuse_pipeline(self):
-    #     self.logger.debug("Reusing pipeline")
-    #     pipe = None
-    #     if self.sd_request.is_txt2img:
-    #         pipe = self.img2img if self.txt2img is None else self.txt2img
-    #     elif self.sd_request.is_img2img:
-    #         pipe = self.txt2img if self.img2img is None else self.img2img
-    #     if pipe is None:
-    #         self.logger.warning("Failed to reuse pipeline")
-    #         self.clear_controlnet()
-    #         return
-    #     kwargs = pipe.components
-    #
-    #     # either load from a pretrained model or from a pipe
-    #     if self.settings["controlnet_enabled"]:
-    #         pipe = self.load_controlnet_from_ckpt(pipe)
-    #         kwargs["controlnet"] = self.controlnet
-    #     else:
-    #         if "controlnet" in kwargs:
-    #             del kwargs["controlnet"]
-    #
-    #         if self.is_single_file:
-    #             if self.model_version == "SDXL 1.0":
-    #                 pipeline_class_ = StableDiffusionXLPipeline
-    #             else:
-    #                 pipeline_class_ = StableDiffusionPipeline
-    #
-    #             pipe = pipeline_class_.from_single_file(
-    #                 self.model_path,
-    #                 local_files_only=True
-    #             )
-    #             return pipe
-    #         else:
-    #             components = pipe.components
-    #             if "controlnet" in components:
-    #                 del components["controlnet"]
-    #             components["controlnet"] = self.controlnet
-    #
-    #             pipe = AutoPipelineForText2Image.from_pretrained(
-    #                 os.path.expanduser(
-    #                     os.path.join(
-    #                         self.settings["path_settings"]["txt2img_model_path"],
-    #                         self.model_path
-    #                     )
-    #                 ),
-    #                 **components
-    #             )
-    #
-    #     if self.sd_request.is_txt2img:
-    #         self.txt2img = pipe
-    #         self.img2img = None
-    #     elif self.sd_request.is_img2img:
-    #         self.img2img = pipe
-    #         self.txt2img = None
+        self.current_model = self.model_path
 
     def __load_generator_arguments(
         self,
         settings: dict,
-        sd_request: SDRequest,
         generator_request_data: dict
     ):
         """
@@ -569,7 +530,7 @@ class ModelMixin:
         :return:
         """
         requested_model = settings["generator_settings"]["model"]
-        model = sd_request.generator_settings.model
+        model = self.sd_request.generator_settings.model
         self.logger.debug(f"Model changed clearing")
 
         model_changed = (
@@ -583,25 +544,25 @@ class ModelMixin:
             self.clear_controlnet()
 
         # Set a reference to pipe
-        is_txt2img = sd_request.is_txt2img
-        is_img2img = sd_request.is_img2img
-        is_outpaint = sd_request.is_outpaint
+        is_txt2img = self.sd_request.is_txt2img
+        is_img2img = self.sd_request.is_img2img
+        is_outpaint = self.sd_request.is_outpaint
         controlnet_image = self.get_controlnet_image()
-        self.data = sd_request(
+        self.data = self.sd_request(
             model_data=model,
             extra_options={},
             callback=self.__callback,
             cross_attention_kwargs_scale=(
-                    not sd_request.is_pix2pix and
+                    not self.sd_request.is_pix2pix and
                     len(self.available_lora) > 0 and
                     len(self.loaded_lora) > 0
             ),
             latents=self.latents,
             device=self.device,
-            generator=self.__generator(),
+            generator=self.__generator,
             model_changed=model_changed,
-            prompt_embeds=sd_request.prompt_embeds,
-            negative_prompt_embeds=sd_request.negative_prompt_embeds,
+            prompt_embeds=self.sd_request.prompt_embeds,
+            negative_prompt_embeds=self.sd_request.negative_prompt_embeds,
             controlnet_image=controlnet_image,
             generator_request_data=generator_request_data
         )
@@ -609,43 +570,52 @@ class ModelMixin:
         pipe = None
         pipeline_class_ = None
 
-        if sd_request.is_txt2img and not is_txt2img:
+        if self.sd_request.is_txt2img and not is_txt2img:
             if is_img2img:
                 pipe = self.img2img
             elif is_outpaint:
                 pipe = self.outpaint
             if pipe is not None:
-                pipeline_class_ = StableDiffusionPipeline
+                if self.enable_controlnet:
+                    pipeline_class_ = StableDiffusionControlNetPipeline
+                else:
+                    pipeline_class_ = StableDiffusionPipeline
                 self.pipe = pipeline_class_(**pipe.components)
-        elif sd_request.is_img2img and not is_img2img:
+        elif self.sd_request.is_img2img and not is_img2img:
             if is_txt2img:
                 pipe = self.txt2img
             elif is_outpaint:
                 pipe = self.outpaint
             if pipe is not None:
-                pipeline_class_ = StableDiffusionImg2ImgPipeline
+                if self.enable_controlnet:
+                    pipeline_class_ = StableDiffusionControlNetImg2ImgPipeline
+                else:
+                    pipeline_class_ = StableDiffusionImg2ImgPipeline
                 self.pipe = pipeline_class_(**pipe.components)
-        elif sd_request.is_outpaint and not is_outpaint:
+        elif self.sd_request.is_outpaint and not is_outpaint:
             if is_txt2img:
                 pipe = self.txt2img
             elif is_img2img:
                 pipe = self.img2img
-            pipeline_class_ = StableDiffusionInpaintPipeline
+            if pipe is not None:
+                if self.enable_controlnet:
+                    pipeline_class_ = StableDiffusionControlNetInpaintPipeline
+                else:
+                    pipeline_class_ = StableDiffusionInpaintPipeline
 
         if pipe is not None and pipeline_class_ is not None:
             self.pipe = pipeline_class_(**pipe.components)
 
-        self.requested_data = self.data
-        self.model_version = sd_request.generator_settings.version
+        self.model_version = self.sd_request.generator_settings.version
         self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
         self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
         self.is_turbo = self.model_version == StableDiffusionVersion.SD_TURBO.value
         self.use_compel = (
-                not sd_request.memory_settings.use_enable_sequential_cpu_offload and
+                not self.sd_request.memory_settings.use_enable_sequential_cpu_offload and
                 not self.is_sd_xl and
                 not self.is_sd_xl_turbo and
                 not self.is_turbo
         )
-        self.__generator().manual_seed(sd_request.generator_settings.seed)
+        self.__generator.manual_seed(self.sd_request.generator_settings.seed)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)

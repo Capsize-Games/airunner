@@ -1,3 +1,4 @@
+import os
 import traceback
 import torch
 from PIL import Image
@@ -22,10 +23,10 @@ from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixi
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.exceptions import InterruptedException, PipeNotLoadedException
+from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
-from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.utils.create_worker import create_worker
 from airunner.utils.get_torch_device import get_torch_device
@@ -153,7 +154,7 @@ class SDHandler(
         self.loaded = False
         self.loading = False
         self.sd_request = None
-        self.sd_request = SDRequest(model_data=self.model)
+        self.sd_request = SDRequest()
         self.sd_request.parent = self
         self.do_generate = False
         self._generator = None
@@ -183,10 +184,12 @@ class SDHandler(
         self.load_stable_diffusion()
 
     def on_sd_vae_load_signal(self, _data: dict):
-        self._load_vae()
+        #self._load_vae()
+        pass
 
     def on_sd_vae_unload_signal(self, _data: dict):
-        self._unload_vae()
+        #self._unload_vae()
+        pass
 
     def on_load_scheduler_signal(self, _message: dict):
         self.load_scheduler()
@@ -204,6 +207,8 @@ class SDHandler(
 
     def on_change_scheduler_signal(self, data: dict):
         self.load_scheduler(force_scheduler_name=data["scheduler"])
+        if self.pipe:
+            self.pipe.scheduler = self.scheduler
 
     def on_safety_checker_model_load_signal(self, data_: dict):
         self._load_safety_checker_model()
@@ -219,8 +224,24 @@ class SDHandler(
 
     @property
     def model_path(self):
-        if self.model is not None:
-            return self.model["path"]
+        model_name = self.settings["generator_settings"]["model"]
+        version = self.settings["generator_settings"]["version"]
+        section = self.settings["generator_settings"]["section"]
+        for model in self.settings["ai_models"]:
+            if (
+                model["name"] == model_name and
+                model["version"] == version and
+                model["pipeline_action"] == section
+            ):
+                return os.path.expanduser(
+                    os.path.join(
+                        self.settings["path_settings"][f"{section}_model_path"],
+                        section,
+                        version,
+                        model["path"]
+                    )
+                )
+        
 
     @property
     def is_pipe_loaded(self) -> bool:
@@ -297,16 +318,6 @@ class SDHandler(
         return self.settings["nsfw_filter"]
 
     @property
-    def model(self):
-        path = self.settings["generator_settings"]["model"]
-        if path == "":
-            name = self.settings["generator_settings"]["model_name"]
-            model = self.ai_model_by_name(name)
-        else:
-            model = self.ai_model_by_path(path)
-        return model
-
-    @property
     def inpaint_vae_model(self):
         try:
             return self.models_by_pipeline_action("inpaint_vae")[0]
@@ -342,7 +353,7 @@ class SDHandler(
         try:
             self.add_lora_to_pipe()
         except Exception as e:
-            self.error_handler("Selected LoRA are not supported with this model")
+            self.logger.error(f"Error adding lora to pipe: {e}")
             self.reload_model = True
 
         safety_checker_initialized = False
@@ -366,7 +377,6 @@ class SDHandler(
             )
         except AttributeError:
             pass
-
         if (
             self.pipe is not None and
             safety_checker_initialized is True and
@@ -412,18 +422,6 @@ class SDHandler(
             return False
         return torch.cuda.is_available()
 
-    def ai_model_by_name(self, name):
-        try:
-            return [model for model in self.settings["ai_models"] if model["name"] == name][0]
-        except Exception as e:
-            self.logger.error(f"Error finding model by name: {name}")
-
-    def ai_model_by_path(self, path):
-        try:
-            return [model for model in self.settings["ai_models"] if model["path"] == path][0]
-        except Exception as e:
-            self.logger.error(f"Error finding model by path: {path}")
-
     @property
     def do_load_compel(self) -> bool:
         return self.pipe and (
@@ -462,7 +460,7 @@ class SDHandler(
             self.generator_request_data = message
 
             try:
-                self.__run()
+                self.__run(message)
             except InterruptedException:
                 pass
             except Exception as e:
@@ -509,13 +507,12 @@ class SDHandler(
         if "negative_prompt" in self.data and "negative_prompt_embeds" in self.data:
             del self.data["negative_prompt"]
 
-    def __run(self):
+    def __run(self, message: dict):
         self.__reload_prompts()
         try:
             response = self.generate(
                 self.settings,
-                self.sd_request,
-                self.generator_request_data
+                message
             )
         except PipeNotLoadedException as e:
             self.logger.warning(e)
@@ -539,9 +536,6 @@ class SDHandler(
 
     def on_move_to_cpu(self, message: dict = None):
         self.move_pipe_to_cpu()
-
-    def send_error(self, message):
-        self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, message)
 
     def log_error(self, error, message=None):
         if message:
