@@ -40,7 +40,7 @@ setup(
         "optimum==1.19.1",
         "inflect==7.2.0",
         "tiktoken==0.6.0",
-        "mediapipe==0.10.11",
+        "mediapipe==0.10.14",
         "cryptography==42.0.5",
         "coverage==7.4.4",  # Required for testing
         # "watchdog==4.0.0",  # Required for file watching
