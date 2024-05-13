@@ -65,7 +65,7 @@ setup(
         "omegaconf==2.3.0",
         "diffusers==0.27.2",
         "controlnet_aux==0.0.8",
-        "einops==0.7.0",  # Required for controlnet_aux
+        "einops==0.8.0",  # Required for controlnet_aux
         "Pillow==10.3.0",
         "pyre-extensions==0.0.30",
         "safetensors==0.4.3",
