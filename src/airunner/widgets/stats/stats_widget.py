@@ -32,6 +32,8 @@ class StatsWidget(
             ModelType.CONTROLNET_PROCESSOR,
             ModelType.SCHEDULER,
             ModelType.SD_VAE,
+            ModelType.SD_UNET,
+            ModelType.SD_TEXT_ENCODER,
             ModelType.SD_TOKENIZER,
             ModelType.SD,
 
@@ -197,6 +199,14 @@ class StatsWidget(
             self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
         elif model == ModelType.SD_VAE.value:
             self.emit_signal(SignalCode.SD_VAE_LOAD_SIGNAL)
+        elif model == ModelType.SD_UNET.value:
+            self.emit_signal(SignalCode.SD_UNET_LOAD_SIGNAL)
+        elif model == ModelType.SD_TOKENIZER.value:
+            self.emit_signal(SignalCode.SD_TOKENIZER_LOAD_SIGNAL)
+        elif model == ModelType.SD_TEXT_ENCODER.value:
+            self.emit_signal(SignalCode.SD_TEXT_ENCODER_LOAD_SIGNAL)
+        elif model == ModelType.SCHEDULER.value:
+            self.emit_signal(SignalCode.SCHEDULER_LOAD_SIGNAL)
         elif model == ModelType.TTS.value:
             self.emit_signal(SignalCode.TTS_LOAD_SIGNAL)
         elif model == ModelType.TTS_PROCESSOR.value:
@@ -241,7 +251,15 @@ class StatsWidget(
         if model == ModelType.SD.value:
             self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
         elif model == ModelType.SD_VAE.value:
-            self.emit_signal(SignalCode.SD_VAE_LOAD_SIGNAL)
+            self.emit_signal(SignalCode.SD_VAE_UNLOAD_SIGNAL)
+        elif model == ModelType.SD_UNET.value:
+            self.emit_signal(SignalCode.SD_UNET_UNLOAD_SIGNAL)
+        elif model == ModelType.SD_TOKENIZER.value:
+            self.emit_signal(SignalCode.SD_TOKENIZER_UNLOAD_SIGNAL)
+        elif model == ModelType.SD_TEXT_ENCODER.value:
+            self.emit_signal(SignalCode.SD_TEXT_ENCODER_UNLOAD_SIGNAL)
+        elif model == ModelType.SCHEDULER.value:
+            self.emit_signal(SignalCode.SCHEDULER_UNLOAD_SIGNAL)
         elif model == ModelType.TTS.value:
             self.emit_signal(SignalCode.TTS_UNLOAD_SIGNAL)
         elif model == ModelType.TTS_PROCESSOR.value:
@@ -317,8 +335,10 @@ class StatsWidget(
         # Set the color of the text according to the status
         if status == ModelStatus.LOADED:
             color = Qt.GlobalColor.green
-        elif status == ModelStatus.LOADING:
+        elif status == ModelStatus.READY:
             color = Qt.GlobalColor.yellow
+        elif status == ModelStatus.LOADING:
+            color = Qt.GlobalColor.darkYellow
         elif status == ModelStatus.FAILED:
             color = Qt.GlobalColor.red
         else:

@@ -364,7 +364,7 @@ class SDRequest(
                 "control_guidance_start": 0.0,
                 "control_guidance_end": 1.0,
                 "strength": self.settings["brush_settings"]["strength"] / 100, #self.generator_settings.controlnet_image_settings.strength,
-                "guidance_scale": self.settings["brush_settings"]["guidance_scale"] / 10, #self.generator_settings.controlnet_image_settings.guidance_scale,
+                #"guidance_scale": self.settings["brush_settings"]["guidance_scale"] / 100, #self.generator_settings.controlnet_image_settings.guidance_scale,
                 "controlnet_conditioning_scale": self.settings["brush_settings"]["conditioning_scale"] / 100, #self.generator_settings.controlnet_image_settings.conditioning_scale,
                 "controlnet": [
                     self.generator_settings.controlnet_image_settings.controlnet
