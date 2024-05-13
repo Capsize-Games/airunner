@@ -8,6 +8,7 @@ from airunner.enums import SignalCode, GeneratorSection, ImageCategory
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.utils.create_worker import create_worker
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
+from airunner.utils.random_seed import random_seed
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
 from airunner.workers.model_scanner_worker import ModelScannerWorker
@@ -126,7 +127,6 @@ class GeneratorForm(BaseWidget):
         })
 
     def call_generate(self):
-        print("GENERATE CALLED")
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
     def on_application_settings_changed_signal(self, _message: dict):
@@ -170,6 +170,8 @@ class GeneratorForm(BaseWidget):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
     def generate(self):
+        if self.settings["generator_settings"]["random_seed"]:
+            self.seed = random_seed()
         if self.settings["generator_settings"]["n_samples"] > 1:
             self.emit_signal(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL)
         self.do_generate()

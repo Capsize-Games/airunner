@@ -717,11 +717,10 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     strength=50,
     image_guidance_scale=750,  # pix2pix
     n_samples=1,
-    enable_controlnet=False,
     clip_skip=0,
     variation=False,
     use_prompt_builder=False,
-    version="",
+    version="SD 1.5",
     is_preset=False,
     input_image=None,
 )
