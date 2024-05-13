@@ -11,14 +11,16 @@ from PIL import (
     ImageFont
 )
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
-    StableDiffusionControlNetInpaintPipeline
+    StableDiffusionControlNetInpaintPipeline, AutoencoderKL, UNet2DConditionModel
+from diffusers.loaders.single_file import set_additional_components
 from diffusers.models.modeling_utils import load_state_dict
+from diffusers.pipelines.pipeline_loading_utils import _get_pipeline_class
 
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
-from transformers import CLIPTokenizer
+from transformers import CLIPTokenizer, AutoTokenizer
 
 from airunner.enums import (
     SignalCode,
@@ -29,10 +31,12 @@ from airunner.enums import (
 )
 from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException
 from airunner.settings import (
-    AVAILABLE_ACTIONS
+    AVAILABLE_ACTIONS, SD_FEATURE_EXTRACTOR_PATH, SD_DEFAULT_MODEL_PATH
 )
 from airunner.utils.clear_memory import clear_memory
-from diffusers.loaders.single_file_utils import create_text_encoder_from_ldm_clip_checkpoint
+from diffusers.loaders.single_file_utils import create_text_encoder_from_ldm_clip_checkpoint, \
+    fetch_ldm_config_and_checkpoint, create_diffusers_unet_model_from_ldm, create_diffusers_vae_model_from_ldm, \
+    create_scheduler_from_ldm, create_text_encoders_and_tokenizers_from_ldm
 
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -52,30 +56,79 @@ class ModelMixin:
         self.moved_to_cpu = False
         self.__generator = None
         self.__text_encoder = None
+        self.__tokenizer = None
+        self.__vae = None
+        self.__unet = None
 
-    def is_ckpt_file(self, model_path) -> bool:
-        if not model_path:
-            self.logger.error("ckpt path is empty")
-            return False
-        return model_path.endswith(".ckpt")
+        self.__current_tokenizer_path = ""
+        self.__current_vae_path = ""
+        self.__current_unet_path = ""
+        self.__current_text_encoder_path = ""
 
-    def is_safetensor_file(self, model_path) -> bool:
-        if not model_path:
-            self.logger.error("safetensors path is empty")
-            return False
-        return model_path.endswith(".safetensors")
+        self.register(SignalCode.SD_TOKENIZER_LOAD_SIGNAL, self.on_tokenizer_load_signal)
+        self.register(SignalCode.SD_TOKENIZER_UNLOAD_SIGNAL, self.on_tokenizer_unload_signal)
+        self.register(SignalCode.SD_VAE_LOAD_SIGNAL, self.on_vae_load_signal)
+        self.register(SignalCode.SD_VAE_UNLOAD_SIGNAL, self.on_vae_unload_signal)
+        self.register(SignalCode.SD_UNET_LOAD_SIGNAL, self.on_unet_load_signal)
+        self.register(SignalCode.SD_UNET_UNLOAD_SIGNAL, self.on_unet_unload_signal)
+        self.register(SignalCode.SD_TEXT_ENCODER_LOAD_SIGNAL, self.on_text_encoder_load_signal)
+        self.register(SignalCode.SD_TEXT_ENCODER_UNLOAD_SIGNAL, self.on_text_encoder_unload_signal)
+        self.register(SignalCode.SD_LOAD_SIGNAL, self.on_load_stablediffusion_signal)
+        self.register(SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal)
+
+    def on_load_stablediffusion_signal(self, _message: dict = None):
+        self.load_stable_diffusion_model()
+
+    def on_unload_stablediffusion_signal(self, _message: dict = None):
+        self.unload_image_generator_model()
+
+    def on_tokenizer_load_signal(self, _data: dict = None):
+        self.__load_tokenizer()
+
+    def on_tokenizer_unload_signal(self, _data: dict = None):
+        self.__unload_tokenizer()
+
+    def on_vae_load_signal(self, _data: dict = None):
+        pass
+
+    def on_vae_unload_signal(self, _data: dict = None):
+        self.__unload_vae()
+
+    def on_unet_load_signal(self, _data: dict = None):
+        self.__load_unet()
+
+    def on_unet_unload_signal(self, _data: dict = None):
+        self.__unload_unet()
+
+    def on_text_encoder_load_signal(self, _data: dict = None):
+        self.__load_text_encoder()
+
+    def on_text_encoder_unload_signal(self, _data: dict = None):
+        self.__unload_text_encoder()
 
     @property
-    def is_ckpt_model(self) -> bool:
-        return self.is_ckpt_file(self.model_path)
-
-    @property
-    def is_safetensors(self) -> bool:
-        return self.is_safetensor_file(self.model_path)
+    def enable_controlnet(self):
+        return (
+            self.sd_request.generator_settings.enable_controlnet
+        )
 
     @property
     def is_single_file(self) -> bool:
-        return self.is_ckpt_model or self.is_safetensors
+        return self.__is_ckpt_file or self.__is_safetensors
+
+    @property
+    def __is_ckpt_file(self) -> bool:
+        if not self.model_path:
+            self.logger.error("ckpt path is empty")
+            return False
+        return self.model_path.endswith(".ckpt")
+
+    @property
+    def __is_safetensors(self) -> bool:
+        if not self.model_path:
+            self.logger.error("safetensors path is empty")
+            return False
+        return self.model_path.endswith(".safetensors")
 
     @property
     def __do_reuse_pipeline(self) -> bool:
@@ -88,15 +141,33 @@ class ModelMixin:
             )
         )
 
-    @property
-    def enable_controlnet(self):
-        return (
-            self.sd_request.generator_settings.enable_controlnet
-        )
-
     @staticmethod
     def __is_pytorch_error(e) -> bool:
         return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
+
+    @property
+    def __has_pipe(self) -> bool:
+        return self.pipe is not None
+
+    @property
+    def model_path(self):
+        model_name = self.settings["generator_settings"]["model"]
+        version = self.settings["generator_settings"]["version"]
+        section = self.settings["generator_settings"]["section"]
+        for model in self.settings["ai_models"]:
+            if (
+                model["name"] == model_name and
+                model["version"] == version and
+                model["pipeline_action"] == section
+            ):
+                return os.path.expanduser(
+                    os.path.join(
+                        self.settings["path_settings"][f"{section}_model_path"],
+                        section,
+                        version,
+                        model["path"]
+                    )
+                )
 
     def unload_image_generator_model(self):
         self.__unload_model()
@@ -108,13 +179,16 @@ class ModelMixin:
 
         # Unload the pipeline if it is already loaded
         if self.pipe:
+            self.__unload_tokenizer()
+            self.__unload_text_encoder()
             self.unload_image_generator_model()
 
-        # Continue with loading the model
-        self.__load_generator(
-            torch.device(self.device),
-            self.settings["generator_settings"]["seed"]
-        )
+        self.__load_generator(torch.device(self.device), self.settings["generator_settings"]["seed"])
+        if not self.is_single_file:
+            self.__load_vae()
+            self.__load_unet()
+        self.__load_text_encoder()
+        self.__load_tokenizer()
         self.__prepare_model()
         self.__load_model()
         self.__move_model_to_device()
@@ -128,10 +202,14 @@ class ModelMixin:
             raise PipeNotLoadedException()
         self.__load_generator_arguments(settings, generator_request_data)
         self.do_generate = False
-        self.__swap_pipeline()
+        self.swap_pipeline()
+        self.apply_safety_checker_to_pipe()
         return self.__generate(generator_request_data)
 
-    def __swap_pipeline(self):
+    def model_is_loaded(self, model: ModelType) -> bool:
+        return self.model_status[model] == ModelStatus.LOADED
+
+    def swap_pipeline(self):
         if not self.pipe:
             return
 
@@ -150,8 +228,8 @@ class ModelMixin:
 
         kwargs = dict(
             vae=self.pipe.vae,
-            text_encoder=self.pipe.text_encoder,
-            tokenizer=self.pipe.tokenizer,
+            text_encoder=self.__text_encoder,
+            tokenizer=self.__tokenizer,
             unet=self.pipe.unet,
             scheduler=self.pipe.scheduler,
             safety_checker=self.safety_checker,
@@ -159,27 +237,36 @@ class ModelMixin:
         )
 
         operation_type = "txt2img" if is_txt2img else "img2img" if is_img2img else "outpaint"
-        if self.enable_controlnet:
-            kwargs["controlnet"] = self.pipe.controlnet
-            operation_type = f"{operation_type}_controlnet"
+
         pipeline_class_ = self.__pipeline_class(operation_type)
 
         if pipeline_class_ is not None:
             self.logger.debug("Swapping pipeline")
-            self.pipe = pipeline_class_(**kwargs)
+            components = self.pipe.components
+            if "controlnet" in components:
+                del components["controlnet"]
+            if "tokenizer" not in components:
+                self.__load_tokenizer()
+            if "text_encoder" not in components:
+                self.__load_text_encoder()
+            if pipeline_class_ in [
+                StableDiffusionControlNetPipeline,
+                StableDiffusionControlNetImg2ImgPipeline,
+                StableDiffusionControlNetInpaintPipeline
+            ]:
+                components["controlnet"] = self.controlnet
+            device = self.pipe.device
+            self.pipe = pipeline_class_(**components)
+            self.pipe.tokenizer = self.__tokenizer
+            self.pipe.text_encoder = self.__text_encoder
+            self.pipe.to(device)
 
     def __move_model_to_device(self):
         if self.pipe:
             self.pipe.to(self.data_type)
-            self.pipe.vae.to(self.data_type)
-            self.pipe.text_encoder.to(self.data_type)
-            self.pipe.unet.to(self.data_type)
-
-    def __has_pipe(self) -> bool:
-        return self.pipe is not None
 
     def __is_pipe_on_cpu(self) -> bool:
-        return self.__has_pipe() and self.pipe.device.type == "cpu"
+        return self.__has_pipe and self.pipe.device.type == "cpu"
 
     def __callback(self, step: int, _time_step, latents):
         self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
@@ -212,18 +299,6 @@ class ModelMixin:
             generator=self.__generator,
         )
 
-    def __model_is_loaded(self, model: ModelType) -> bool:
-        return self.model_status[model] == ModelStatus.LOADED
-
-    def __safety_checker_ready(self) -> bool:
-        return (self.pipe and ((
-           self.use_safety_checker and
-           self.__model_is_loaded(ModelType.SAFETY_CHECKER) and
-           self.__model_is_loaded(ModelType.FEATURE_EXTRACTOR)
-        ) or (
-            not self.use_safety_checker
-        )))
-
     def __prepare_request_data(self, generator_request_data: dict) -> dict:
         data = self.data
         for k, v in generator_request_data.items():
@@ -235,7 +310,7 @@ class ModelMixin:
         Generate an image using the pipe
         :return:
         """
-        if not self.__safety_checker_ready():
+        if not self.safety_checker_ready:
             raise SafetyCheckerNotLoadedException()
 
         self.data["callback_on_step_end"] = self.__interrupt_callback
@@ -338,6 +413,8 @@ class ModelMixin:
 
     def __unload_model(self):
         self.logger.debug("Unloading model")
+        self.remove_safety_checker_from_pipe()
+        self.remove_controlnet_from_pipe()
         self.pipe = None
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED, "")
 
@@ -365,7 +442,10 @@ class ModelMixin:
         if operation_type is None:
             operation_type = self.sd_request.generator_settings.section
 
-        if self.enable_controlnet:
+        if (
+            self.enable_controlnet and
+            self.controlnet is not None
+        ):
             operation_type = f"{operation_type}_controlnet"
 
         pipeline_map = {
@@ -401,55 +481,63 @@ class ModelMixin:
 
             self.reset_applied_memory_settings()
 
+            self.logger.debug(f"Loading model `{self.model_path}` for {self.sd_request.generator_settings.section}")
+
+            pipeline_class_ = self.__pipeline_class()
+
+            tokenizer = self.__tokenizer if self.model_is_loaded(ModelType.SD_TOKENIZER) else None
+            text_encoder = self.__text_encoder if self.model_is_loaded(ModelType.SD_TEXT_ENCODER) else None
+            safety_checker = self.safety_checker if self.safety_checker_ready else None
+            feature_extractor = self.feature_extractor if self.feature_extractor_ready else None
+            scheduler = self.scheduler if self.model_is_loaded(ModelType.SCHEDULER) else None
+            data = dict(
+                torch_dtype=self.data_type,
+                requires_safety_checker=self.settings["nsfw_filter"],
+                use_safetensors=True,
+                local_files_only=True,
+                text_encoder=text_encoder,
+                tokenizer=tokenizer,
+                safety_checker=safety_checker,
+                feature_extractor=feature_extractor,
+            )
+
+            if self.enable_controlnet:
+                data["controlnet"] = self.controlnet
+
             if self.is_single_file:
-                self._load_tokenizer()
-                self.__load_text_encoder()
-
-                data = dict(
-                    from_safetensors=True,
-                    local_files_only=True,
-                    tokenizer=self.__tokenizer,
-                    text_encoder=self.__text_encoder,
-                    torch_dtype=self.data_type
+                self.change_model_status(ModelType.SD_VAE, ModelStatus.LOADING, self.model_path)
+                self.change_model_status(ModelType.SD_UNET, ModelStatus.LOADING, self.model_path)
+                self.pipe = pipeline_class_.from_single_file(
+                    self.model_path,
+                    **data
                 )
+                self.change_model_status(ModelType.SD_VAE, ModelStatus.LOADED, self.model_path)
+                self.change_model_status(ModelType.SD_UNET, ModelStatus.LOADED, self.model_path)
+                self.change_model_status(ModelType.SD_TEXT_ENCODER, ModelStatus.LOADED, self.model_path)
+            else:
+                vae = self.__vae if self.model_is_loaded(ModelType.SD_VAE) else None
+                unet = self.__unet if self.model_is_loaded(ModelType.SD_UNET) else None
 
+                data = data.update(
+                    dict(
+                        vae=vae,
+                        unet=unet,
+                    )
+                )
                 if self.enable_controlnet:
                     data["controlnet"] = self.controlnet
-                    self.pipe = StableDiffusionControlNetPipeline.from_single_file(
-                        self.model_path,
-                        **data
-                    )
-                else:
-                    self.pipe = StableDiffusionPipeline.from_single_file(
-                        self.model_path,
-                        **data
-                    )
-                if self.pipe is not None:
-                    self.pipe.scheduler = self.load_scheduler(config=self.pipe.scheduler.config)
-            elif self.model_path is not None:
-                self.logger.debug(
-                    f"Loading model `{self.model_path}` for {self.sd_request.generator_settings.section}")
-
-                kwargs.update(dict(
-                    torch_dtype=self.data_type,
-                    safety_checker=self.safety_checker,
-                    feature_extractor=self.feature_extractor,
-                    use_safetensors=True,
-                    controlnet=self.controlnet,
-                    scheduler=self.scheduler,
-                ))
-                # path = os.path.expanduser(
-                #     os.path.join(
-                #         self.settings["path_settings"][
-                #             f"{self.sd_request.generator_settings.section}_model_path"],
-                #         self.model_path
-                #     )
-                # )
-                pipeline_class_ = self.__pipeline_class()
                 self.pipe = pipeline_class_.from_pretrained(
                     self.model_path,
-                    **kwargs
+                    **data
                 )
+
+            self.apply_safety_checker_to_pipe()
+            self.apply_controlnet_to_pipe()
+            self.apply_tokenizer_to_pipe()
+
+            #self.pipe.scheduler = self.scheduler
+
+            print(self.pipe.scheduler)
 
             if self.pipe is None:
                 self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
@@ -459,12 +547,8 @@ class ModelMixin:
             self.change_model_status(ModelType.SD, ModelStatus.LOADED, self.model_path)
 
             if self.settings["nsfw_filter"] is False:
-                self.pipe.safety_checker = None
-                self.pipe.feature_extractor = None
-
-            if self.pipe is None:
-                self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Failed to load model")
-                return
+                self.remove_safety_checker_from_pipe()
+                self.remove_controlnet_from_pipe()
 
             old_model_path = self.current_model
 
@@ -472,40 +556,11 @@ class ModelMixin:
             self.current_model = old_model_path
             self.controlnet_loaded = self.settings["controlnet_enabled"]
 
-    def _load_tokenizer(self):
-        path = os.path.dirname(self.model_path)
-        path = f"/home/joe/.airunner/art/models/txt2img/SD 1.5/runwayml/stable-diffusion-v1-5/tokenizer"
-        self.logger.debug(f"Loading tokenizer from {path}")
-        try:
-            self.__tokenizer = CLIPTokenizer.from_pretrained(path, local_files_only=True)
-            self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.LOADED, path)
-        except Exception as e:
-            self.logger.error(f"Failed to load tokenizer")
-            self.logger.error(e)
-            self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.FAILED, path)
-
     def __get_pipeline_action(self, action=None):
         action = self.sd_request.generator_settings.section if not action else action
         if action == "txt2img" and self.sd_request.is_img2img:
             action = "img2img"
         return action
-
-    def __load_text_encoder(self):
-        checkpoint = load_state_dict(self.model_path)
-
-        text_encoder_path = os.path.expanduser(
-            os.path.join(
-                self.settings["path_settings"]["feature_extractor_model_path"],
-                "openai/clip-vit-large-patch14"
-            )
-        )
-        self.__text_encoder = create_text_encoder_from_ldm_clip_checkpoint(
-            text_encoder_path,
-            checkpoint,
-            local_files_only=True,
-            torch_dtype=self.data_type
-        )
-
 
     def __prepare_model(self):
         self.logger.info("Prepare model")
@@ -613,3 +668,177 @@ class ModelMixin:
         self.__generator.manual_seed(self.sd_request.generator_settings.seed)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
+
+    @property
+    def __text_encoder_path(self):
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["feature_extractor_model_path"],
+                SD_FEATURE_EXTRACTOR_PATH
+            )
+        )
+
+    def __load_text_encoder(self):
+        if self.__text_encoder and self.__current_text_encoder_path == self.__text_encoder_path:
+            return
+        self.logger.debug(f"Loading text encoder from {self.__text_encoder_path}")
+
+        try:
+            checkpoint = load_state_dict(self.model_path)
+            self.__text_encoder = create_text_encoder_from_ldm_clip_checkpoint(
+                self.__text_encoder_path,
+                checkpoint,
+                local_files_only=True,
+                torch_dtype=self.data_type
+            )
+            self.__current_text_encoder_path = self.__text_encoder_path
+            self.change_model_status(ModelType.SD_TEXT_ENCODER, ModelStatus.READY, self.__text_encoder_path)
+        except Exception as e:
+            self.logger.error(f"Failed to load text encoder")
+            self.logger.error(e)
+            self.change_model_status(ModelType.SD_TEXT_ENCODER, ModelStatus.FAILED, self.__text_encoder_path)
+
+    def __unload_text_encoder(self):
+        self.__text_encoder = None
+        clear_memory()
+        self.change_model_status(ModelType.SD_TEXT_ENCODER, ModelStatus.UNLOADED, "")
+
+    def __remove_text_encoder_from_pipe(self):
+        if self.pipe:
+            self.pipe.text_encoder = None
+        self.change_model_status(ModelType.SD_TEXT_ENCODER, ModelStatus.READY, self.__text_encoder_path)
+
+    def __apply_text_encoder_to_pipe(self):
+        if self.pipe:
+            self.pipe.text_encoder = self.__text_encoder
+            self.change_model_status(ModelType.SD_TEXT_ENCODER, ModelStatus.READY, self.__text_encoder_path)
+
+    @property
+    def __base_path(self):
+        action = self.sd_request.generator_settings.section
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"][f"{action}_model_path"],
+                self.settings["generator_settings"]["version"]
+            )
+        )
+
+    @property
+    def __tokenizer_path(self) -> str:
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["feature_extractor_model_path"],
+                SD_FEATURE_EXTRACTOR_PATH
+            )
+        )
+
+    @property
+    def __merges_path(self) -> str:
+        return os.path.join(
+            self.__base_path,
+            SD_DEFAULT_MODEL_PATH,
+            "tokenizer",
+            "merges.txt"
+        )
+
+    @property
+    def __unet_path(self):
+        return os.path.join(self.__base_path, "unet", )
+
+    @property
+    def __vae_path(self):
+        return os.path.join(self.__base_path, "vae", )
+
+    def __unload_tokenizer(self):
+        self.__tokenizer = None
+        self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.UNLOADED, "")
+        clear_memory()
+
+    def apply_tokenizer_to_pipe(self):
+        self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.LOADED, self.__tokenizer_path)
+
+    def __apply_unet_to_pipe(self):
+        if self.pipe:
+            self.pipe.unet = self.__unet
+            self.change_model_status(ModelType.SD_UNET, ModelStatus.READY, self.__current_unet_path)
+
+    def __apply_vae_to_pipe(self):
+        if self.pipe:
+            self.pipe.vae = self.__vae
+            self.change_model_status(ModelType.SD_VAE, ModelStatus.READY, self.__vae_path)
+
+    def __remove_vae_from_pipe(self):
+        if self.pipe:
+            self.pipe.vae = None
+
+    def __remove_unet_from_pipe(self):
+        if self.pipe:
+            self.pipe.unet = None
+
+    def __unload_vae(self):
+        self.__remove_vae_from_pipe()
+        self.__vae = None
+        clear_memory()
+        self.change_model_status(ModelType.SD_VAE, ModelStatus.UNLOADED, "")
+
+    def __unload_unet(self):
+        self.__remove_unet_from_pipe()
+        self.__unet = None
+        clear_memory()
+        self.change_model_status(ModelType.SD_UNET, ModelStatus.UNLOADED, "")
+
+    def __load_tokenizer(self):
+        if self.__tokenizer and self.__current_tokenizer_path == self.__tokenizer_path:
+            return
+        self.logger.error(f"Loading tokenizer from {self.__tokenizer_path}")
+        try:
+            self.__tokenizer = AutoTokenizer.from_pretrained(
+                self.__tokenizer_path,
+                local_files_only=True,
+                torch_dtype=self.data_type
+            )
+            self.__current_tokenizer_path = self.__tokenizer_path
+            self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.READY, self.__tokenizer_path)
+        except Exception as e:
+            self.logger.error(f"Failed to load tokenizer")
+            self.logger.error(e)
+            self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.FAILED, self.__tokenizer_path)
+
+    def __load_vae(self):
+        if self.__vae and self.__current_vae_path == self.__vae_path:
+            return
+        self.logger.debug(f"Loading vae from {self.__vae_path}")
+        print(f"Loading vae from {self.__vae_path}")
+        try:
+            self.__vae = AutoencoderKL.from_pretrained(
+                self.__vae_path,
+                use_safetensors=True,
+                local_files_only=True,
+                torch_dtype=self.data_type,
+            )
+            self.__current_vae_path = self.__vae_path
+            self.change_model_status(ModelType.SD_VAE, ModelStatus.READY, self.__vae_path)
+        except Exception as e:
+            self.logger.error(f"Failed to load vae")
+            self.logger.error(e)
+            self.change_model_status(ModelType.SD_VAE, ModelStatus.FAILED, self.__vae_path)
+
+    def __load_unet(self):
+        if self.__unet and self.__current_unet_path == self.__unet_path:
+            return
+        self.__unload_unet()
+        self.logger.debug(f"Loading unet from {self.__unet_path}")
+        self.change_model_status(ModelType.SD_UNET, ModelStatus.LOADING, self.__unet_path)
+        try:
+            self.__unet = UNet2DConditionModel.from_pretrained(
+                self.__unet_path,
+                local_files_only=True,
+                use_safetensors=True,
+                torch_dtype=self.data_type,
+            )
+            self.__current_unet_path = self.__unet_path
+            self.change_model_status(ModelType.SD_UNET, ModelStatus.READY, self.__unet_path)
+        except Exception as e:
+            self.logger.error(f"Failed to load unet")
+            self.logger.error(e)
+            self.change_model_status(ModelType.SD_UNET, ModelStatus.FAILED, self.__unet_path)
