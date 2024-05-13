@@ -73,7 +73,7 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.ERROR
 
 ####################################################################
 # Default models for the core application
@@ -626,23 +626,23 @@ AVAILABLE_ACTIONS = [
     "safety_checker",
 ]
 SCHEDULER_CLASSES = {
-    Scheduler.EULER_ANCESTRAL.value: "EulerAncestralDiscreteScheduler",
-    Scheduler.EULER.value: "EulerDiscreteScheduler",
-    Scheduler.LMS.value: "LMSDiscreteScheduler",
-    Scheduler.HEUN.value: "HeunDiscreteScheduler",
-    Scheduler.DPM2.value: "DPMSolverSinglestepScheduler",
-    Scheduler.DPM_PP_2M.value: "DPMSolverMultistepScheduler",
-    Scheduler.DPM2_K.value: "KDPM2DiscreteScheduler",
-    Scheduler.DPM2_A_K.value: "KDPM2AncestralDiscreteScheduler",
-    Scheduler.DPM_PP_2M_K.value: "DPMSolverMultistepScheduler",
-    Scheduler.DPM_PP_2M_SDE_K.value: "DPMSolverMultistepScheduler",
-    Scheduler.DDIM.value: "DDIMScheduler",
-    Scheduler.UNIPC.value: "UniPCMultistepScheduler",
-    Scheduler.DDPM.value: "DDPMScheduler",
-    Scheduler.DEIS.value: "DEISMultistepScheduler",
-    Scheduler.DPM_2M_SDE_K.value: "DPMSolverMultistepScheduler",
-    Scheduler.PLMS.value: "PNDMScheduler",
-    Scheduler.DPM.value: "DPMSolverMultistepScheduler",
+    Scheduler.EULER_ANCESTRAL: "EulerAncestralDiscreteScheduler",
+    Scheduler.EULER: "EulerDiscreteScheduler",
+    Scheduler.LMS: "LMSDiscreteScheduler",
+    Scheduler.HEUN: "HeunDiscreteScheduler",
+    Scheduler.DPM2: "DPMSolverSinglestepScheduler",
+    Scheduler.DPM_PP_2M: "DPMSolverMultistepScheduler",
+    Scheduler.DPM2_K: "KDPM2DiscreteScheduler",
+    Scheduler.DPM2_A_K: "KDPM2AncestralDiscreteScheduler",
+    Scheduler.DPM_PP_2M_K: "DPMSolverMultistepScheduler",
+    Scheduler.DPM_PP_2M_SDE_K: "DPMSolverMultistepScheduler",
+    Scheduler.DDIM: "DDIMScheduler",
+    Scheduler.UNIPC: "UniPCMultistepScheduler",
+    Scheduler.DDPM: "DDPMScheduler",
+    Scheduler.DEIS: "DEISMultistepScheduler",
+    Scheduler.DPM_2M_SDE_K: "DPMSolverMultistepScheduler",
+    Scheduler.PLMS: "PNDMScheduler",
+    Scheduler.DPM: "DPMSolverMultistepScheduler",
 }
 MIN_SEED = 0
 MAX_SEED = 4294967295
