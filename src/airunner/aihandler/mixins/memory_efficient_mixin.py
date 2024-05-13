@@ -168,7 +168,7 @@ class MemoryEfficientMixin:
     def __load_unet(self, file_path, file_name):
         self.logger.debug(f"Loading compiled torch model {file_name}")
         unet_file = os.path.join(file_path, file_name)
-        self.pipe.unet.state_dict = torch.load(unet_file, map_location="cuda")
+        self.pipe.unet.state_dict = torch.load(unet_file, map_location=self.device)
 
     def __apply_torch_compile(self):
         """
@@ -253,14 +253,14 @@ class MemoryEfficientMixin:
                 self.logger.debug(f"Moving pipe to cuda (currently {self.pipe.device})")
                 clear_memory()
                 try:
-                    self.pipe.to("cuda", self.data_type)
+                    self.pipe.to(self.device, self.data_type)
                 except Exception as e:
                     self.logger.error(f"Error moving to cuda: {e}")
             if hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
                 try:
                     if str(self.pipe.controlnet.device).startswith("cuda"):
                         self.logger.debug(f"Moving controlnet to cuda (currently {self.pipe.controlnet.device})")
-                        self.pipe.controlnet.half().to("cuda")
+                        self.pipe.controlnet.half().to(self.device)
                 except Exception as e:
                     self.logger.error(f"Error moving controlnet to cuda: {e}")
 
@@ -273,7 +273,7 @@ class MemoryEfficientMixin:
 
     def __move_controlnet_to_cuda(self):
         try:
-            self.controlnet.to("cuda", self.data_type)
+            self.controlnet.to(self.device, self.data_type)
         except Exception as e:
             self.logger.error(f"Error moving controlnet to cuda: {e}")
             self.logger.error(e)
