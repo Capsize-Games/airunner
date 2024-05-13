@@ -21,7 +21,7 @@ RELOAD_CONTROLNET_IMAGE_CONSTS = (
 
 
 class ControlnetHandlerMixin:
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         self.controlnet = None
         self.processor = None
         self._controlnet_image = None
@@ -128,7 +128,7 @@ class ControlnetHandlerMixin:
         self.make_controlnet_memory_efficient()
 
     def load_controlnet_model(self):
-        self.logger.debug(f"Loading controlnet {self.controlnet_type}")
+        self.logger.debug(f"Loading controlnet {self.controlnet_type} to {self.device}")
 
         path = self.controlnet_path
         short_path = self.controlnet_model["path"]
@@ -138,7 +138,8 @@ class ControlnetHandlerMixin:
                 path,
                 torch_dtype=self.data_type,
                 local_files_only=True,
-                device_map="auto"
+                device=self.device,
+                #device_map="auto"
             )
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED, short_path)
         except Exception as e:
@@ -187,21 +188,25 @@ class ControlnetHandlerMixin:
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED, short_path)
 
     def preprocess_for_controlnet(self, image):
-        if self.processor is not None and image is not None:
-            self.logger.debug("Controlnet: Processing image")
-            try:
-                image = self.processor(image)
-            except ValueError as e:
-                self.logger.error(f"Error processing image: {e}")
-                image = None
+        if self.processor is not None:
+            if image is not None:
+                self.logger.debug("Controlnet: Processing image")
+                try:
+                    image = self.processor(image)
+                except ValueError as e:
+                    self.logger.error(f"Error processing image: {e}")
+                    image = None
 
-            if image is None:
-                image = image.resize((
-                    self.settings["working_width"],
-                    self.settings["working_height"]
-                ))
-            return image
-        self.logger.error("No controlnet processor found")
+                if image is None:
+                    image = image.resize((
+                        self.settings["working_width"],
+                        self.settings["working_height"]
+                    ))
+                return image
+            else:
+                self.logger.error("No image to process")
+        else:
+            self.logger.error("No controlnet processor found")
 
     def unload_controlnet(self):
         self.logger.debug("Unloading controlnet")
