@@ -126,22 +126,13 @@ class SDHandler(
         signals = {
             SignalCode.RESET_APPLIED_MEMORY_SETTINGS: self.on_reset_applied_memory_settings,
             SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.unload_safety_checker,
-            SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_safety_checker_load_signal,
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
-            SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_stablediffusion_signal,
-            SignalCode.SD_LOAD_SIGNAL: self.on_load_stablediffusion_signal,
-            SignalCode.SCHEDULER_LOAD_SIGNAL: self.on_load_scheduler_signal,
-            SignalCode.SCHEDULER_UNLOAD_SIGNAL: self.on_unload_scheduler_signal,
             SignalCode.SD_MOVE_TO_CPU_SIGNAL: self.on_move_to_cpu,
             SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
             SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
             SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
             SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
             SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
-            SignalCode.SAFETY_CHECKER_MODEL_LOAD_SIGNAL: self.on_safety_checker_model_load_signal,
-            SignalCode.SAFETY_CHECKER_MODEL_UNLOAD_SIGNAL: self.on_safety_checker_model_unload_signal,
-            SignalCode.FEATURE_EXTRACTOR_LOAD_SIGNAL: self.on_feature_extractor_load_signal,
-            SignalCode.FEATURE_EXTRACTOR_UNLOAD_SIGNAL: self.on_feature_extractor_unload_signal,
             SignalCode.SD_VAE_LOAD_SIGNAL: self.on_sd_vae_load_signal,
             SignalCode.SD_VAE_UNLOAD_SIGNAL: self.on_sd_vae_unload_signal,
         }
@@ -164,21 +155,8 @@ class SDHandler(
         self.current_state = HandlerState.INITIALIZED
 
         self.model_status = {}
-        self.model_status[ModelType.SD] = ModelStatus.UNLOADED
-        self.model_status[ModelType.TTS] = ModelStatus.UNLOADED
-        self.model_status[ModelType.TTS_PROCESSOR] = ModelStatus.UNLOADED
-        self.model_status[ModelType.TTS_FEATURE_EXTRACTOR] = ModelStatus.UNLOADED
-        self.model_status[ModelType.TTS_VOCODER] = ModelStatus.UNLOADED
-        self.model_status[ModelType.TTS_SPEAKER_EMBEDDINGS] = ModelStatus.UNLOADED
-        self.model_status[ModelType.TTS_TOKENIZER] = ModelStatus.UNLOADED
-        self.model_status[ModelType.STT] = ModelStatus.UNLOADED
-        self.model_status[ModelType.STT_PROCESSOR] = ModelStatus.UNLOADED
-        self.model_status[ModelType.STT_FEATURE_EXTRACTOR] = ModelStatus.UNLOADED
-        self.model_status[ModelType.CONTROLNET] = ModelStatus.UNLOADED
-        self.model_status[ModelType.CONTROLNET_PROCESSOR] = ModelStatus.UNLOADED
-        self.model_status[ModelType.SAFETY_CHECKER] = ModelStatus.UNLOADED
-        self.model_status[ModelType.FEATURE_EXTRACTOR] = ModelStatus.UNLOADED
-        self.model_status[ModelType.SCHEDULER] = ModelStatus.UNLOADED
+        for model_type in ModelType:
+            self.model_status[model_type] = ModelStatus.UNLOADED
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
 
         self.load_stable_diffusion()
@@ -209,39 +187,6 @@ class SDHandler(
         self.load_scheduler(force_scheduler_name=data["scheduler"])
         if self.pipe:
             self.pipe.scheduler = self.scheduler
-
-    def on_safety_checker_model_load_signal(self, data_: dict):
-        self._load_safety_checker_model()
-
-    def on_safety_checker_model_unload_signal(self, data_: dict):
-        self._unload_safety_checker_model()
-
-    def on_feature_extractor_load_signal(self, data_: dict):
-        self._load_feature_extractor_model()
-
-    def on_feature_extractor_unload_signal(self, data_: dict):
-        self._unload_feature_extractor_model()
-
-    @property
-    def model_path(self):
-        model_name = self.settings["generator_settings"]["model"]
-        version = self.settings["generator_settings"]["version"]
-        section = self.settings["generator_settings"]["section"]
-        for model in self.settings["ai_models"]:
-            if (
-                model["name"] == model_name and
-                model["version"] == version and
-                model["pipeline_action"] == section
-            ):
-                return os.path.expanduser(
-                    os.path.join(
-                        self.settings["path_settings"][f"{section}_model_path"],
-                        section,
-                        version,
-                        model["path"]
-                    )
-                )
-        
 
     @property
     def is_pipe_loaded(self) -> bool:
@@ -314,30 +259,17 @@ class SDHandler(
         return data_type
 
     @property
-    def use_safety_checker(self):
-        return self.settings["nsfw_filter"]
-
-    @property
     def inpaint_vae_model(self):
         try:
             return self.models_by_pipeline_action("inpaint_vae")[0]
         except IndexError:
             return None
 
-    def on_unload_stablediffusion_signal(self, _message: dict = None):
-        self.unload_image_generator_model()
-
-    def on_load_stablediffusion_signal(self, _message: dict = None):
-        self.load_stable_diffusion_model()
-
-    def on_load_stablediffusion_vae_signal(self, _message: dict = None):
-        self._load_vae()
-
     def load_stable_diffusion(self):
         self.logger.info("Loading stable diffusion")
 
         if self.settings["nsfw_filter"]:
-            self.load_safety_checker()
+            self.load_nsfw_filter()
 
         if self.settings["controlnet_enabled"]:
             self.load_controlnet()
@@ -347,45 +279,6 @@ class SDHandler(
                 self.load_scheduler()
             self.load_stable_diffusion_model()
 
-    def load_stable_diffusion_model(self):
-        self.load_image_generator_model()
-
-        try:
-            self.add_lora_to_pipe()
-        except Exception as e:
-            self.logger.error(f"Error adding lora to pipe: {e}")
-            self.reload_model = True
-
-        safety_checker_initialized = False
-        controlnet_initialized = False
-
-        try:
-            safety_checker_initialized = not self.use_safety_checker or (
-                self.safety_checker is not None and
-                self.feature_extractor is not None and
-                self.pipe.safety_checker is not None and
-                self.pipe.feature_extractor is not None
-            )
-        except AttributeError:
-            pass
-
-        try:
-            controlnet_initialized = not self.settings["controlnet_enabled"] or (
-                self.controlnet is not None and
-                self.pipe.controlnet is not None and
-                self.processor is not None
-            )
-        except AttributeError:
-            pass
-        if (
-            self.pipe is not None and
-            safety_checker_initialized is True and
-            controlnet_initialized is True
-        ):
-            self.current_state = HandlerState.READY
-        else:
-            self.current_state = HandlerState.ERROR
-
     def on_start_auto_image_generation_signal(self, _message: dict):
         # self.sd_mode = SDMode.DRAWING
         # self.generate()
@@ -393,9 +286,6 @@ class SDHandler(
 
     def on_sd_cancel_signal(self, _message: dict = None):
         print("on_sd_cancel_signal")
-
-    def on_safety_checker_load_signal(self, _message: dict = None):
-        self.load_safety_checker()
 
     def on_stop_auto_image_generation_signal(self, _message: dict = None):
         #self.sd_mode = SDMode.STANDARD
@@ -466,6 +356,35 @@ class SDHandler(
             except Exception as e:
                 self.log_error(e, "Failed to generate")
             self.current_state = HandlerState.READY
+
+    def load_stable_diffusion_model(self):
+        self.load_image_generator_model()
+
+        try:
+            self.add_lora_to_pipe()
+        except Exception as e:
+            self.logger.error(f"Error adding lora to pipe: {e}")
+            self.reload_model = True
+
+        #controlnet_initialized = False
+
+        # try:
+        #     controlnet_initialized = not self.settings["controlnet_enabled"] or (
+        #         self.controlnet is not None and
+        #         self.pipe.controlnet is not None and
+        #         self.processor is not None
+        #     )
+        # except AttributeError:
+        #     pass
+
+        if (
+            self.pipe is not None and
+            self.safety_checker_initialized is True# and
+            #controlnet_initialized is True
+        ):
+            self.current_state = HandlerState.READY
+        else:
+            self.current_state = HandlerState.ERROR
 
     def __reload_prompts(self):
         if (
