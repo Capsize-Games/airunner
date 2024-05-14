@@ -110,24 +110,33 @@ class InstallWorker(
                         continue
 
                     # add pipeline_files to models_to_download
+                    if action in ["datasets", "safety_checker", "feature_extractor"]:
+                        requested_file_path = os.path.expanduser(
+                            os.path.join(
+                                self.settings["path_settings"][f"{model['pipeline_action']}_model_path"],
+                                model["path"]
+                            )
+                        )
+                    else:
+                        requested_file_path = os.path.expanduser(
+                            os.path.join(
+                                self.settings["path_settings"][f"{model['pipeline_action']}_model_path"],
+                                model["version"],
+                            )
+                        )
                     model["files"] = SD_FILE_BOOTSTRAP_DATA[model_version][action]
+                    model["requested_file_path"] = requested_file_path
                     models_to_download.append(model)
                     self.total_models_in_current_step += len(model["files"])
                     self.parent.total_steps += len(model["files"])
 
             for model in models_to_download:
-                path = os.path.expanduser(
-                    os.path.join(
-                        self.settings["path_settings"][f"{model['pipeline_action']}_model_path"],
-                        model["version"],
-                    )
-                )
                 for filename in model["files"]:
                     try:
                         self.hf_downloader.download_model(
                             requested_path=model["path"],
                             requested_file_name=filename,
-                            requested_file_path=path,
+                            requested_file_path=model["requested_file_path"],
                             requested_callback=self.progress_updated.emit
                         )
                     except Exception as e:
@@ -148,10 +157,16 @@ class InstallWorker(
         for path in CONTROLNET_PATHS:
             for filename in controlnet_files:
                 try:
+                    requested_file_path = os.path.expanduser(
+                        os.path.join(
+                            self.settings["path_settings"][f"controlnet_model_path"],
+                            path
+                        )
+                    )
                     self.hf_downloader.download_model(
                         requested_path=path,
                         requested_file_name=filename,
-                        requested_file_path=self.settings["path_settings"][f"controlnet_model_path"],
+                        requested_file_path=requested_file_path,
                         requested_callback=self.progress_updated.emit
                     )
                 except Exception as e:
@@ -166,10 +181,16 @@ class InstallWorker(
             for k, v in LLM_FILE_BOOTSTRAP_DATA.items():
                 for filename in v["files"]:
                     try:
+                        requested_file_path = os.path.expanduser(
+                            os.path.join(
+                                self.settings["path_settings"][v["path_settings"]],
+                                k
+                            )
+                        )
                         self.hf_downloader.download_model(
                             requested_path=k,
                             requested_file_name=filename,
-                            requested_file_path=self.settings["path_settings"][v["path_settings"]],
+                            requested_file_path=requested_file_path,
                             requested_callback=self.progress_updated.emit
                         )
                     except Exception as e:
@@ -182,11 +203,17 @@ class InstallWorker(
                 self.total_models_in_current_step += len(v)
             for k, v in WHISPER_FILES.items():
                 for filename in v:
+                    requested_file_path = os.path.expanduser(
+                        os.path.join(
+                            self.settings["path_settings"]["stt_model_path"],
+                            k
+                        )
+                    )
                     try:
                         self.hf_downloader.download_model(
                             requested_path=k,
                             requested_file_name=filename,
-                            requested_file_path=self.settings["path_settings"]["stt_model_path"],
+                            requested_file_path=requested_file_path,
                             requested_callback=self.progress_updated.emit
                         )
                     except Exception as e:
@@ -200,11 +227,17 @@ class InstallWorker(
 
             for k, v in SPEECH_T5_FILES.items():
                 for filename in v:
+                    requested_file_path = os.path.expanduser(
+                        os.path.join(
+                            self.settings["path_settings"]["tts_model_path"],
+                            k
+                        )
+                    )
                     try:
                         self.hf_downloader.download_model(
                             requested_path=k,
                             requested_file_name=filename,
-                            requested_file_path=self.settings["path_settings"]["tts_model_path"],
+                            requested_file_path=requested_file_path,
                             requested_callback=self.progress_updated.emit
                         )
                     except Exception as e:
