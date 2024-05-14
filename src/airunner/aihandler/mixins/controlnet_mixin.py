@@ -139,7 +139,6 @@ class ControlnetHandlerMixin:
 
     def remove_controlnet_from_pipe(self):
         self.__remove_controlnet_from_pipe()
-        self.__remove_controlnet_processor_from_pipe()
 
     def __load_controlnet_model(self):
         self.logger.debug(f"Loading controlnet {self.controlnet_type} to {self.device}")
@@ -169,7 +168,7 @@ class ControlnetHandlerMixin:
             self.processor = Processor(
                 self.controlnet_type
             )
-            self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.READY, self.controlnet_type)
+            self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.LOADED, self.controlnet_type)
         except Exception as e:
             self.logger.error(e)
             self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.FAILED, self.controlnet_type)
@@ -257,12 +256,3 @@ class ControlnetHandlerMixin:
             path = ""
         self.swap_pipeline()
         self.change_model_status(ModelType.CONTROLNET, status, path)
-
-    def __remove_controlnet_processor_from_pipe(self):
-        if self.pipe and hasattr(self.pipe, "processor") and self.pipe.processor is not None:
-            status = ModelStatus.READY
-            path = self.controlnet_model["path"]
-        else:
-            status = ModelStatus.UNLOADED
-            path = ""
-        self.change_model_status(ModelType.CONTROLNET_PROCESSOR, status, path)
