@@ -158,8 +158,7 @@ class TransformerBaseHandler(BaseHandler):
 
     def load_model(self):
         params = self.model_params()
-
-        path = self.get_model_path(self.current_model_path)
+        path = self.get_model_path(self.current_bot["model_version"])
 
         self.logger.debug(f"Loading model from {path}")
 
@@ -175,6 +174,7 @@ class TransformerBaseHandler(BaseHandler):
 
         try:
             self.change_model_status(ModelType.LLM, ModelStatus.LOADING, path)
+            print("loading path", path)
             self.model = self.auto_class_.from_pretrained(
                 path,
                 **params
