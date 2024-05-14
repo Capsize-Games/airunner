@@ -1,19 +1,16 @@
+from transformers import AutoModelForCausalLM
 from transformers.generation.streamers import TextIteratorStreamer
-from transformers.models.mistral.modeling_mistral import MistralForCausalLM
-from transformers.models.llama.modeling_llama import LlamaForCausalLM
 
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode
 from airunner.enums import LLMActionType
-from airunner.utils.get_current_chatbot import get_current_chatbot_property
 
 
 class CausalLMTransformerBaseHandler(
     TokenizerHandler
 ):
-    auto_class_ = MistralForCausalLM
-    #auto_class_ = LlamaForCausalLM
+    auto_class_ = AutoModelForCausalLM
 
     def __init__(self, *args, **kwargs):
         self.streamer = None
