@@ -227,6 +227,8 @@ class MainWindow(
             self.on_navigate_to_url
         )
 
+        self.initialize_worker_manager()
+
     def download_url(self, url, save_path):
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -1045,7 +1047,7 @@ class MainWindow(
             )
 
         # call initialize_worker_manager after 100ms
-        QTimer.singleShot(100, self.initialize_worker_manager)
+        #QTimer.singleShot(500, self.initialize_worker_manager)
 
     def initialize_worker_manager(self):
         from airunner.worker_manager import WorkerManager
