@@ -410,8 +410,8 @@ class ModelMixin:
     def __unload_model(self):
         self.logger.debug("Unloading model")
         self.remove_safety_checker_from_pipe()
-        self.remove_controlnet_from_pipe()
         self.pipe = None
+        self.remove_controlnet_from_pipe()
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED, "")
 
     def __handle_model_changed(self):
@@ -527,10 +527,6 @@ class ModelMixin:
             self.apply_safety_checker_to_pipe()
             self.apply_controlnet_to_pipe()
             self.apply_tokenizer_to_pipe()
-
-            #self.pipe.scheduler = self.scheduler
-
-            print(self.pipe.scheduler)
 
             if self.pipe is None:
                 self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
