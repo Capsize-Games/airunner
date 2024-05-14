@@ -46,8 +46,10 @@ class SchedulerMixin:
     def __scheduler_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["feature_extractor_model_path"],
-                f"openai/clip-vit-large-patch14/preprocessor_config.json"
+                self.settings["path_settings"][f"{self.sd_request.generator_settings.section}_model_path"],
+                self.sd_request.generator_settings.version,
+                "scheduler",
+                "scheduler_config.json"
             )
         )
 
