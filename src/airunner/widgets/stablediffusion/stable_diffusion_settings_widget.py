@@ -153,7 +153,8 @@ class StableDiffusionSettingsWidget(
             except Exception as e:
                 self.logger.error(f"Error finding model by name: {name}")
 
-        settings["generator_settings"]["model"] = model["name"]
+        if model:
+            settings["generator_settings"]["model"] = model["name"]
         self.ui.model.blockSignals(False)
         self.settings = settings
 
