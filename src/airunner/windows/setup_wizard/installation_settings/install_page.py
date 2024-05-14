@@ -69,7 +69,9 @@ class InstallWorker(
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.download_finished)
 
     def download_stable_diffusion(self):
-        self.parent.set_status("Downloading Stable Diffusion models...")
+        self.parent.on_set_downloading_status_label({
+            "label": "Downloading Stable Diffusion models..."
+        })
 
         model_path = None
         model_name = None
@@ -98,37 +100,37 @@ class InstallWorker(
                 }
             })
         else:
-            for action in SD_FILE_BOOTSTRAP_DATA[model_version]:
-                for model in model_bootstrap_data:
-                    if model["pipeline_action"] != action:
-                        continue
-                    if model["category"] != "stablediffusion":
-                        continue
-                    if model["version"] != model_version:
-                        continue
-                    if model["enabled"] is False:
-                        continue
+            for model_version, data in SD_FILE_BOOTSTRAP_DATA.items():
+                for action in data:
+                    for model in model_bootstrap_data:
+                        if (
+                            model["pipeline_action"] != action or
+                            model["category"] != "stablediffusion" or
+                            model["version"] != model_version or
+                            model["enabled"] is False
+                        ):
+                            continue
 
-                    # add pipeline_files to models_to_download
-                    if action in ["datasets", "safety_checker", "feature_extractor"]:
-                        requested_file_path = os.path.expanduser(
-                            os.path.join(
-                                self.settings["path_settings"][f"{model['pipeline_action']}_model_path"],
-                                model["path"]
+                        # add pipeline_files to models_to_download
+                        if action in ["datasets", "safety_checker", "feature_extractor"]:
+                            requested_file_path = os.path.expanduser(
+                                os.path.join(
+                                    self.settings["path_settings"][f"{model['pipeline_action']}_model_path"],
+                                    model["path"]
+                                )
                             )
-                        )
-                    else:
-                        requested_file_path = os.path.expanduser(
-                            os.path.join(
-                                self.settings["path_settings"][f"{model['pipeline_action']}_model_path"],
-                                model["version"],
+                        else:
+                            requested_file_path = os.path.expanduser(
+                                os.path.join(
+                                    self.settings["path_settings"][f"{model['pipeline_action']}_model_path"],
+                                    model["version"],
+                                )
                             )
-                        )
-                    model["files"] = SD_FILE_BOOTSTRAP_DATA[model_version][action]
-                    model["requested_file_path"] = requested_file_path
-                    models_to_download.append(model)
-                    self.total_models_in_current_step += len(model["files"])
-                    self.parent.total_steps += len(model["files"])
+                        model["files"] = data[action]
+                        model["requested_file_path"] = requested_file_path
+                        models_to_download.append(model)
+                        self.total_models_in_current_step += len(model["files"])
+                        self.parent.total_steps += len(model["files"])
 
             for model in models_to_download:
                 for filename in model["files"]:
@@ -143,9 +145,14 @@ class InstallWorker(
                         print(f"Error downloading {filename}: {e}")
 
     def download_controlnet(self):
-        self.parent.set_status("Downloading Controlnet models...")
+        self.parent.on_set_downloading_status_label({
+            "label": "Downloading Controlnet models..."
+        })
         model_version = self.setup_settings["model_version"]
 
+        if "controlnet" not in SD_FILE_BOOTSTRAP_DATA[model_version]:
+            self.download_finished()
+            return
         controlnet_files = SD_FILE_BOOTSTRAP_DATA[model_version]["controlnet"]
         total_controlnet_files = len(CONTROLNET_PATHS * len(controlnet_files))
         self.total_models_in_current_step += total_controlnet_files
@@ -174,7 +181,9 @@ class InstallWorker(
 
     def download_llms(self):
         if self.setup_settings["enable_llm"]:
-            self.parent.set_status("Downloading LLM models...")
+            self.parent.on_set_downloading_status_label({
+                "label": "Downloading LLM models..."
+            })
             for k, v in LLM_FILE_BOOTSTRAP_DATA.items():
                 self.total_models_in_current_step += len(v["files"])
 
@@ -198,7 +207,9 @@ class InstallWorker(
 
     def download_stt(self):
         if self.setup_settings["enable_stt"]:
-            self.parent.set_status("Downloading STT models...")
+            self.parent.on_set_downloading_status_label({
+                "label": "Downloading STT models..."
+            })
             for k, v in WHISPER_FILES.items():
                 self.total_models_in_current_step += len(v)
             for k, v in WHISPER_FILES.items():
@@ -221,7 +232,9 @@ class InstallWorker(
 
     def download_tts(self):
         if self.setup_settings["enable_tts"]:
-            self.parent.set_status("Downloading TTS models...")
+            self.parent.on_set_downloading_status_label({
+                "label": "Downloading TTS models..."
+            })
             for k, v in SPEECH_T5_FILES.items():
                 self.total_models_in_current_step += len(v)
 
@@ -244,7 +257,9 @@ class InstallWorker(
                         print(f"Error downloading {filename}: {e}")
 
     def download_nltk_files(self):
-        self.parent.set_status("Downloading NLTK files...")
+        self.parent.on_set_downloading_status_label({
+            "label": "Downloading NLTK models..."
+        })
         nltk.download(
             "stopwords",
             download_dir=NLTK_DOWNLOAD_DIR,
@@ -262,7 +277,9 @@ class InstallWorker(
         self.download_finished()
 
     def finalize_installation(self):
-        self.parent.set_status("Installation complete.")
+        self.parent.on_set_downloading_status_label({
+            "label": "Installation complete."
+        })
         self.parent.update_progress_bar()
         self.parent.parent.show_final_page()
 
@@ -278,7 +295,8 @@ class InstallWorker(
     def run(self):
         if (
             self.setup_settings["user_agreement_completed"] and
-            self.setup_settings["airunner_license_completed"]
+            self.setup_settings["airunner_license_completed"] and
+            self.setup_settings["llama_license_completed"]
         ):
             self.current_step = -1
             self.set_page()
@@ -300,7 +318,9 @@ class InstallWorker(
             has_model and
             self.current_step is -1
         ):
-            self.parent.set_status(f"Downloading {model_path}...")
+            self.parent.on_set_downloading_status_label({
+                "label": f"Downloading {model_path}"
+            })
             print(f"Dowloading {model_path}...")
             self.current_step = 0
             self.download_stable_diffusion()
@@ -346,7 +366,8 @@ class InstallPage(BaseWizard):
         if self.setup_settings["enable_sd"] and self.setup_settings["sd_license_completed"]:
             self.total_steps += 1
         if self.setup_settings["enable_controlnet"]:
-            self.total_steps += len(CONTROLNET_PATHS) * len(SD_FILE_BOOTSTRAP_DATA[self.setup_settings["model_version"]]["controlnet"])
+            if "controlnet" in SD_FILE_BOOTSTRAP_DATA[self.setup_settings["model_version"]]:
+                self.total_steps += len(CONTROLNET_PATHS) * len(SD_FILE_BOOTSTRAP_DATA[self.setup_settings["model_version"]]["controlnet"])
         if self.setup_settings["enable_llm"]:
             for k, v in LLM_FILE_BOOTSTRAP_DATA.items():
                 self.total_steps += len(v)
@@ -361,13 +382,20 @@ class InstallPage(BaseWizard):
         self.register(SignalCode.DOWNLOAD_PROGRESS, self.download_progress)
         self.register(SignalCode.UPDATE_DOWNLOAD_LOG, self.update_download_log)
         self.register(SignalCode.CLEAR_DOWNLOAD_STATUS_BAR, self.clear_status_bar)
-        self.register(SignalCode.SET_DOWNLOAD_STATUS_LABEL, self.on_set_download_status_label)
+        self.register(SignalCode.SET_DOWNLOAD_STATUS_LABEL, self.on_set_downloading_status_label)
 
         self.thread = QThread()
         self.worker = InstallWorker(self, setup_settings)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.thread.start()
+
+    def on_set_downloading_status_label(self, data: dict = None):
+        if "message" in data:
+            self.set_status(data["message"])
+
+        if "label" in data:
+            self.ui.status_bar.setFormat(data["label"])
 
     def download_progress(self, data: dict):
         if data["current"] == 0:
@@ -393,6 +421,3 @@ class InstallPage(BaseWizard):
     def clear_status_bar(self, _data: dict):
         self.ui.status.setText("")
         self.ui.status_bar.setValue(0)
-
-    def on_set_download_status_label(self, data):
-        self.ui.status.setText(data["message"])

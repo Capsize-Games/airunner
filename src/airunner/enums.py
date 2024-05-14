@@ -218,6 +218,7 @@ class SignalCode(Enum):
     UPDATE_DOWNLOAD_LOG = "update_download_log"
     CLEAR_DOWNLOAD_STATUS_BAR = "clear_download_status_bar"
     SET_DOWNLOAD_STATUS_LABEL = "set_download_status_label"
+    SET_DOWNLOADING_STATUS_LABEL = "set_downloading_status_label"
     CHANGE_SCHEDULER_SIGNAL = "change_scheduler_signal"
     LOG_LOGGED_SIGNAL = "log_logged_signal"
     MODEL_STATUS_CHANGED_SIGNAL = "model_status_changed_signal"
