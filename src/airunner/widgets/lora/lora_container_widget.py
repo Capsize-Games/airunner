@@ -1,4 +1,5 @@
 import os
+import threading
 
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget, QSizePolicy
@@ -25,9 +26,14 @@ class LoraContainerWidget(BaseWidget):
         super().__init__(*args, **kwargs)
 
         self.loars = None
-        self.register(SignalCode.LORA_DELETE_SIGNAL, self.delete_lora)
-        self.scan_for_lora()
-        self.load_lora()
+        self.initialized = False
+
+    def showEvent(self, event):
+        if not self.initialized:
+            self.register(SignalCode.LORA_DELETE_SIGNAL, self.delete_lora)
+            self.scan_for_lora()
+            self.load_lora()
+            self.initialized = True
 
     def load_lora(self):
         for lora in self.settings["lora"]:
@@ -265,7 +271,7 @@ class LoraContainerWidget(BaseWidget):
             if settings["lora"][n]["name"] == lora["name"]:
                 settings["lora"][n]["scale"] = value
         lora_widget.scaleSlider.setValue(int(value * 100))
-        self.loars = settings["lora"]
+        self.loaras = settings["lora"]
         self.settings = settings
 
     def search_text_changed(self, val):

@@ -1,4 +1,8 @@
+import threading
+
 from PySide6 import QtCore
+from PySide6.QtCore import QTimer
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
 from airunner.widgets.model_manager.templates.default_ui import Ui_default_model_widget
@@ -16,21 +20,35 @@ class DefaultModelWidget(
     model_widgets = []
 
     def __init__(self, *args, **kwargs):
+        self.initialized = False
         PipelineMixin.__init__(self, *args, **kwargs)
         AIModelMixin.__init__(self)
         super().__init__(*args, **kwargs)
         self.spacer = None
-        self.show_items_in_scrollarea()
-        # find how many models are set to enabled = False
-        self.ui.toggle_all.blockSignals(True)
-        disabled_models = self.ai_model_get_disabled_default()
-        if len(disabled_models) == 0:
-            self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Checked)
-        elif len(disabled_models) < len(self.ai_models_find(default=True)):
-            self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.PartiallyChecked)
-        else:
-            self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Unchecked)
-        self.ui.toggle_all.blockSignals(False)
+        self.initialized = False
+        self.__thread = threading.Thread(target=self.__do_show)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        QTimer.singleShot(
+            50,
+            self.__do_show
+        )
+
+    def __do_show(self):
+        if not self.initialized:
+            self.show_items_in_scrollarea()
+            # find how many models are set to enabled = False
+            self.ui.toggle_all.blockSignals(True)
+            disabled_models = self.ai_model_get_disabled_default()
+            if len(disabled_models) == 0:
+                self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Checked)
+            elif len(disabled_models) < len(self.ai_models_find(default=True)):
+                self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.PartiallyChecked)
+            else:
+                self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Unchecked)
+            self.ui.toggle_all.blockSignals(False)
+            self.initialized = True
 
     def show_items_in_scrollarea(self, search=None):
         if self.spacer:
