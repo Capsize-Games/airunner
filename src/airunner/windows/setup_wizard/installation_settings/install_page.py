@@ -1,3 +1,5 @@
+import os.path
+
 import nltk
 from PySide6.QtCore import QObject, QThread, Slot, Signal
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
@@ -114,13 +116,18 @@ class InstallWorker(
                     self.parent.total_steps += len(model["files"])
 
             for model in models_to_download:
+                path = os.path.expanduser(
+                    os.path.join(
+                        self.settings["path_settings"][f"{model['pipeline_action']}_model_path"],
+                        model["version"],
+                    )
+                )
                 for filename in model["files"]:
                     try:
                         self.hf_downloader.download_model(
                             requested_path=model["path"],
                             requested_file_name=filename,
-                            requested_file_path=self.settings["path_settings"][
-                                f"{model['pipeline_action']}_model_path"],
+                            requested_file_path=path,
                             requested_callback=self.progress_updated.emit
                         )
                     except Exception as e:
