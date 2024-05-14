@@ -145,7 +145,7 @@ class ImportWidget(
             # todo save poses here
             pass
         
-        self.logger.debug("starting download")
+        self.logger.debug("Starting download")
         self.ui.downloading_label.setText(f"Downloading {name}")
         self.download_model_thread(download_url, file_path, size_kb)
         # self.thread = threading.Thread(target=self.download_model_thread, args=(download_url, file_path, size_kb))
