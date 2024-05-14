@@ -254,5 +254,8 @@ class ControlnetHandlerMixin:
         else:
             status = ModelStatus.UNLOADED
             path = ""
-        self.swap_pipeline()
+
+        if self.pipe:
+            self.swap_pipeline()
+
         self.change_model_status(ModelType.CONTROLNET, status, path)
