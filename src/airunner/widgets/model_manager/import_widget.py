@@ -268,11 +268,9 @@ class ImportWidget(
         elif model_type == "TextualInversion":
             path = self.settings["path_settings"]["embeddings_model_path"]
         elif model_type == "VAE":
-            # todo save vae here
-            pass
+            path = self.settings["path_settings"]["vae_model_path"]
         elif model_type == "Controlnet":
-            # todo save controlnet here
-            pass
+            path = self.settings["path_settings"]["controlnet_model_path"]
         elif model_type == "Poses":
             # todo save poses here
             pass
