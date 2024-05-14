@@ -53,6 +53,12 @@ class SettingsMixin:
         self.reset_paths()
 
     @property
+    def current_bot(self):
+        current_bot_name = self.settings["llm_generator_settings"]["current_chatbot"]
+        current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][current_bot_name]
+        return current_bot
+
+    @property
     def settings(self):
         """
         Gets the settings dictionary.
@@ -205,6 +211,7 @@ class SettingsMixin:
             "pix2pix_model_path": f"{base_path}/art/models/pix2pix",
             "inpaint_model_path": f"{base_path}/art/models/inpaint",
             "upscale_model_path": f"{base_path}/art/models/upscale",
+            "superresolution_model_path": f"{base_path}/art/models/superresolution",
             "txt2vid_model_path": f"{base_path}/art/models/txt2vid",
             "vae_model_path": f"{base_path}/art/models/vae",
             "safety_checker_model_path": f"{base_path}/art/models/safety_checker",

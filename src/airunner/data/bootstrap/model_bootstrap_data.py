@@ -1,27 +1,5 @@
 model_bootstrap_data = [
     {
-        "name": "Stable Diffusion 2.1 512",
-        "path": "stabilityai/stable-diffusion-2",
-        "branch": "fp16",
-        "version": "SD 2.1",
-        "category": "stablediffusion",
-        "pipeline_action": "txt2img",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
-        "name": "Stable Diffusion 2.1 768",
-        "path": "stabilityai/stable-diffusion-2-1",
-        "branch": "fp16",
-        "version": "SD 2.1",
-        "category": "stablediffusion",
-        "pipeline_action": "txt2img",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
         "name": "Stable Diffusion 1.5",
         "path": "runwayml/stable-diffusion-v1-5",
         "branch": "fp16",
@@ -66,23 +44,12 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
-        "name": "Stable Diffusion Inpaint 2",
-        "path": "stabilityai/stable-diffusion-2-inpainting",
-        "branch": "fp16",
-        "version": "SD 2.1",
-        "category": "stablediffusion",
-        "pipeline_action": "outpaint",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
         "name": "Stable Diffusion Inpaint 1.5",
         "path": "runwayml/stable-diffusion-inpainting",
         "branch": "fp16",
         "version": "SD 1.5",
         "category": "stablediffusion",
-        "pipeline_action": "outpaint",
+        "pipeline_action": "inpaint",
         "enabled": True,
         "model_type": "art",
         "is_default": True
@@ -143,56 +110,12 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
-        "name": "CompVis Safety Checker",
-        "path": "CompVis/stable-diffusion-safety-checker",
-        "branch": "fp16",
-        "version": "SD 2.1",
-        "category": "stablediffusion",
-        "pipeline_action": "safety_checker",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
-        "name": "CompVis Safety Checker",
-        "path": "CompVis/stable-diffusion-safety-checker",
-        "branch": "fp16",
-        "version": "SDXL 1.0",
-        "category": "stablediffusion",
-        "pipeline_action": "safety_checker",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
-        "name": "CompVis Safety Checker",
-        "path": "CompVis/stable-diffusion-safety-checker",
-        "branch": "fp16",
-        "version": "SDXL Turbo",
-        "category": "stablediffusion",
-        "pipeline_action": "safety_checker",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
         "name": "CompVis Feature Extractor",
         "path": "openai/clip-vit-large-patch14",
         "branch": "main",
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "feature_extractor",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
-        "name": "OpenAI Text Encoder",
-        "path": "openai/clip-vit-large-patch14",
-        "branch": "fp16",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "pipeline_action": "text_encoder",
         "enabled": True,
         "model_type": "art",
         "is_default": True
@@ -220,10 +143,10 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
-        "name": "Llama 2 7b",
-        "path": "meta-llama/Llama-2-7b-hf",
+        "name": "Llama 3 8b",
+        "path": "meta-llama/Meta-Llama-3-8B-Instruct",
         "branch": "main",
-        "version": "2",
+        "version": "1",
         "category": "llm",
         "pipeline_action": "causallm",
         "enabled": True,
@@ -232,31 +155,9 @@ model_bootstrap_data = [
     },
     {
         "name": "Llama 2 7b Chat",
-        "path": "meta-llama/Llama-2-7b-chat-hf",
+        "path": "meta-llama/Llama-3-7b-chat-hf",
         "branch": "main",
         "version": "2",
-        "category": "llm",
-        "pipeline_action": "causallm",
-        "enabled": True,
-        "model_type": "llm",
-        "is_default": True
-    },
-    {
-        "name": "Mistral 7B",
-        "path": "mistralai/Mistral-7B-v0.1",
-        "branch": "main",
-        "version": "0.1",
-        "category": "llm",
-        "pipeline_action": "causallm",
-        "enabled": True,
-        "model_type": "llm",
-        "is_default": True
-    },
-    {
-        "name": "Mistral 7B",
-        "path": "mistralai/Mistral-7B-v0.2",
-        "branch": "main",
-        "version": "0.2",
         "category": "llm",
         "pipeline_action": "causallm",
         "enabled": True,
@@ -268,61 +169,6 @@ model_bootstrap_data = [
         "path": "mistralai/Mistral-7B-Instruct-v0.2",
         "branch": "main",
         "version": "0.2",
-        "category": "llm",
-        "pipeline_action": "causallm",
-        "enabled": True,
-        "model_type": "llm",
-        "is_default": True
-    },
-{
-        "name": "Mistral 7B Instruct v1",
-        "path": "mistralai/Mistral-7B-Instruct-v0.1",
-        "branch": "main",
-        "version": "0.1",
-        "category": "llm",
-        "pipeline_action": "causallm",
-        "enabled": True,
-        "model_type": "llm",
-        "is_default": True
-    },
-    {
-        "name": "StableLM 2 Zephyr 1 6b",
-        "path": "stabilityai/stablelm-2-zephyr-1_6b",
-        "branch": "main",
-        "version": "1",
-        "category": "llm",
-        "pipeline_action": "causallm",
-        "enabled": True,
-        "model_type": "llm",
-        "is_default": True
-    },
-{
-        "name": "StableLM 2 Zephyr 1 7b",
-        "path": "HuggingFaceH4/zephyr-7b-alpha",
-        "branch": "main",
-        "version": "1",
-        "category": "llm",
-        "pipeline_action": "causallm",
-        "enabled": True,
-        "model_type": "llm",
-        "is_default": True
-    },
-    {
-        "name": "GPT 2 XL",
-        "path": "gpt2-xl",
-        "branch": "main",
-        "version": "1",
-        "category": "llm",
-        "pipeline_action": "causallm",
-        "enabled": True,
-        "model_type": "llm",
-        "is_default": True
-    },
-    {
-        "name": "GPT 2 Large",
-        "path": "gpt2-large",
-        "branch": "main",
-        "version": "1",
         "category": "llm",
         "pipeline_action": "causallm",
         "enabled": True,

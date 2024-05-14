@@ -34,7 +34,11 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
         """
         failed = True
 
-        if self.setup_settings["user_agreement_completed"] and self.setup_settings["airunner_license_completed"]:
+        if (
+            self.setup_settings["user_agreement_completed"] and
+            self.setup_settings["airunner_license_completed"] and
+            self.setup_settings["llama_license_completed"]
+        ):
             self.construct_paths(self.settings["path_settings"]["base_path"])
             create_airunner_paths(self.settings["path_settings"])
 
