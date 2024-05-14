@@ -937,6 +937,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     generator_section=GeneratorSection.TXT2IMG.value,
     hf_api_key_read_key="",
     hf_api_key_write_key="",
+    civit_ai_api_key="",
     pipeline="txt2img",
     pipeline_version="",
     is_maximized=False,
