@@ -32,7 +32,7 @@ class AudioCaptureWorker(Worker):
         self.stream = None
 
     def start(self):
-        self.logger.debug("Starting")
+        self.logger.debug("Starting audio capture worker")
         running = True
         if self.settings["stt_enabled"]:
             self.start_listening()
