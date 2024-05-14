@@ -28,8 +28,8 @@ class StatsWidget(
         model_order = [
             ModelType.SAFETY_CHECKER,
             ModelType.FEATURE_EXTRACTOR,
-            ModelType.CONTROLNET,
             ModelType.CONTROLNET_PROCESSOR,
+            ModelType.CONTROLNET,
             ModelType.SCHEDULER,
             ModelType.SD_VAE,
             ModelType.SD_UNET,
