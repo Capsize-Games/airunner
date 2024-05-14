@@ -53,7 +53,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
     def run(self):
         if self.queue_type == QueueType.NONE:
             return
-        self.logger.debug("Starting")
+        self.logger.debug("Starting worker")
         self.running = True
         while self.running:
             self.preprocess()
