@@ -60,7 +60,7 @@
       <string notr="true"/>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>4</number>
      </property>
      <property name="tabsClosable">
       <bool>false</bool>
@@ -84,7 +84,7 @@
             <x>0</x>
             <y>0</y>
             <width>448</width>
-            <height>329</height>
+            <height>333</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_5">
@@ -113,7 +113,7 @@
             <x>0</x>
             <y>0</y>
             <width>448</width>
-            <height>329</height>
+            <height>333</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_6">
@@ -142,7 +142,7 @@
             <x>0</x>
             <y>0</y>
             <width>448</width>
-            <height>329</height>
+            <height>333</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_8">
@@ -171,7 +171,7 @@
             <x>0</x>
             <y>0</y>
             <width>448</width>
-            <height>329</height>
+            <height>333</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_10">
@@ -200,7 +200,7 @@
             <x>0</x>
             <y>0</y>
             <width>448</width>
-            <height>329</height>
+            <height>333</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_7">
