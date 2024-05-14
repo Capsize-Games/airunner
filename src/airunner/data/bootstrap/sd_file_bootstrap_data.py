@@ -1,16 +1,7 @@
 SD_FILE_BOOTSTRAP_DATA = {
     "SD 1.5": {
         "txt2img": [
-            "feature_extractor/preprocessor_config.json",
-            "safety_checker/config.json",
-            "safety_checker/model.safetensors",
             "scheduler/scheduler_config.json",
-            "text_encoder/config.json",
-            "text_encoder/model.safetensors",
-            "tokenizer/merges.txt",
-            "tokenizer/special_tokens_map.json",
-            "tokenizer/tokenizer_config.json",
-            "tokenizer/vocab.json",
             "unet/config.json",
             "unet/diffusion_pytorch_model.safetensors",
             "v1-inference.yaml",
@@ -18,7 +9,6 @@ SD_FILE_BOOTSTRAP_DATA = {
             "vae/diffusion_pytorch_model.safetensors",
             "model_index.json",
             "v1-5-pruned-emaonly.safetensors",
-            "v1-inference.yaml",
         ],
         "datasets": [
             "Matthijs/cmu-arctic-xvectors"
