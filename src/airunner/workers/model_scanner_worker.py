@@ -1,4 +1,6 @@
 import os
+
+from airunner.aihandler.logger import Logger
 from airunner.enums import SignalCode
 from airunner.models.modeldata import ModelData
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -12,6 +14,7 @@ class ModelScannerWorker(
     def __init__(self, *args, **kwargs):
         Worker.__init__(self)
         PipelineMixin.__init__(self)
+        self.logger = Logger(prefix=self.__class__.__name__)
 
     def handle_message(self, _message):
         self.scan_for_models()

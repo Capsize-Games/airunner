@@ -192,7 +192,6 @@ class SliderWidget(BaseWidget):
 
     def set_settings_value(self, settings_property: str, val: Any):
         if settings_property is None:
-            self.logger.debug("settings_property is None")
             return
         keys = settings_property.split(".")
         self.settings = self._update_dict_recursively(self.settings, keys, val)
