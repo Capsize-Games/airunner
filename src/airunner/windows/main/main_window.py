@@ -23,6 +23,7 @@ from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.logger import Logger
+from airunner.history import History
 from airunner.settings import (
     STATUS_ERROR_COLOR,
     STATUS_NORMAL_COLOR_LIGHT,
@@ -66,11 +67,6 @@ from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
-
-
-class History:
-    def add_event(self, *args, **kwargs):
-        print("TODO")
 
 
 class MainWindow(
