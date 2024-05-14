@@ -144,7 +144,7 @@ class SafetyCheckerMixin:
             self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED, self.safety_checker_model["path"])
 
     def __load_safety_checker_model(self):
-        self.logger.debug(f"Initializing safety checker with {self.safety_checker_model}")
+        self.logger.debug(f"Initializing safety checker")
         safety_checker = None
         self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING, self.safety_checker_model["path"])
         try:

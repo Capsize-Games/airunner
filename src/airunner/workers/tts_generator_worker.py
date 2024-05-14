@@ -42,7 +42,7 @@ class TTSGeneratorWorker(Worker):
     def run(self):
         if self.queue_type == QueueType.NONE:
             return
-        self.logger.debug("Starting")
+        self.logger.debug("Starting TTS generator worker")
         self.running = True
         while self.running:
             self.preprocess()

@@ -42,7 +42,7 @@ class VisionCaptureWorker(Worker):
         self.state = WorkerState.HALTED
 
     def start(self):
-        self.logger.debug("Starting")
+        self.logger.debug("Starting vision capture worker")
 
         if self.settings["ocr_enabled"]:
             self.enable_cam()
