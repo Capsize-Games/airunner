@@ -182,20 +182,33 @@ class ImportWidget(
 
     def parse_url(self) -> str:
         url = self.ui.import_url.text()
+        model_id = None
+
         try:
-            model_id = url.split("models/")[1]
-        except IndexError:
-            model_id = None
+            model_id = int(url.split("models/")[1])
+        except Exception as e:
+            print(f"Failed to parse model id from url: {url}")
+            print(e)
+
+        if model_id is None:
+            try:
+                print("setting model id")
+                model_id = int(url.split("models/")[1].split("/")[0])
+                print("model id set to ", model_id)
+            except Exception as e:
+                print(f"2 Failed to parse model id from url: {url}")
+                print(e)
+
         parsed_url = urlparse(url)
         self.is_civitai = "civitai.com" in parsed_url.netloc
-        return model_id
+        return str(model_id)
 
     def import_models(self):
         data = None
         model_id = self.parse_url()
 
         if model_id:
-            data = DownloadCivitAI.get_json(model_id)
+            data = DownloadCivitAI().get_json(model_id=model_id)
 
         self.current_model_data = data
 

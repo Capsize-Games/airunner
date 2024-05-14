@@ -23,8 +23,7 @@ class DownloadCivitAI(
         self.worker = None
         self.file_name = None
 
-    @staticmethod
-    def get_json(model_id):
+    def get_json(self, model_id: str):
         # if model_id == id/name split and get the id
         if "/" in model_id:
             model_id = model_id.split("/")[0]
