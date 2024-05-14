@@ -217,9 +217,9 @@ class ControlnetHandlerMixin:
 
     def __unload_controlnet(self):
         self.logger.debug("Unloading controlnet")
-        self.__clear_controlnet()
+        self.clear_controlnet()
 
-    def __clear_controlnet(self):
+    def clear_controlnet(self):
         self.logger.debug("Clearing controlnet")
         self.__unload_controlnet_model()
         self.__unload_controlnet_processor()
