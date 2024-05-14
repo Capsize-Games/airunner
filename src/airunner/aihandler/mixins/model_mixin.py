@@ -12,15 +12,13 @@ from PIL import (
 )
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
     StableDiffusionControlNetInpaintPipeline, AutoencoderKL, UNet2DConditionModel
-from diffusers.loaders.single_file import set_additional_components
 from diffusers.models.modeling_utils import load_state_dict
-from diffusers.pipelines.pipeline_loading_utils import _get_pipeline_class
 
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
-from transformers import CLIPTokenizer, AutoTokenizer
+from transformers import AutoTokenizer
 
 from airunner.enums import (
     SignalCode,
@@ -34,9 +32,7 @@ from airunner.settings import (
     AVAILABLE_ACTIONS, SD_FEATURE_EXTRACTOR_PATH, SD_DEFAULT_MODEL_PATH
 )
 from airunner.utils.clear_memory import clear_memory
-from diffusers.loaders.single_file_utils import create_text_encoder_from_ldm_clip_checkpoint, \
-    fetch_ldm_config_and_checkpoint, create_diffusers_unet_model_from_ldm, create_diffusers_vae_model_from_ldm, \
-    create_scheduler_from_ldm, create_text_encoders_and_tokenizers_from_ldm
+from diffusers.loaders.single_file_utils import create_text_encoder_from_ldm_clip_checkpoint
 
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -465,8 +461,6 @@ class ModelMixin:
         self.lora_loaded = False
         self.embeds_loaded = False
 
-        kwargs = {}
-
         already_loaded = self.__do_reuse_pipeline and not self.reload_model
 
         # move all models except for our current action to the CPU
@@ -509,11 +503,10 @@ class ModelMixin:
                 self.change_model_status(ModelType.SD_UNET, ModelStatus.LOADING, self.model_path)
                 self.pipe = pipeline_class_.from_single_file(
                     self.model_path,
-                    **data
-                )
+                    **data)
                 self.change_model_status(ModelType.SD_VAE, ModelStatus.LOADED, self.model_path)
                 self.change_model_status(ModelType.SD_UNET, ModelStatus.LOADED, self.model_path)
-                self.change_model_status(ModelType.SD_TEXT_ENCODER, ModelStatus.LOADED, self.model_path)
+                self.change_model_status(ModelType.SD_TEXT_ENCODER, ModelStatus.LOADED, self.__text_encoder_path)
             else:
                 vae = self.__vae if self.model_is_loaded(ModelType.SD_VAE) else None
                 unet = self.__unet if self.model_is_loaded(ModelType.SD_UNET) else None
