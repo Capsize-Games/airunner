@@ -60,7 +60,7 @@ class AIModelMixin:
         model_dict = {model['name']: model for model in default_models}
 
         # Update the dictionary with existing models
-        model_dict.update({model['name']: model for model in existing_models})
+        # model_dict.update({model['name']: model for model in existing_models})
 
         # Update the dictionary with new models
         model_dict.update({model['name']: model for model in new_models})
