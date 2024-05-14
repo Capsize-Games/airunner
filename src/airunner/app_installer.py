@@ -4,15 +4,18 @@
 ####################################################################################################
 import sys
 import signal
+from functools import partial
+
+from PySide6 import QtCore
 from PySide6.QtCore import (
-    QObject,
+    QObject, QTimer,
 )
 from PySide6.QtGui import (
     Qt,
-    QWindow
+    QWindow, QPixmap, QGuiApplication
 )
 from PySide6.QtWidgets import (
-    QApplication,
+    QApplication, QSplashScreen,
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.download_wizard.download_wizard_window import DownloadWizardWindow
@@ -166,7 +169,7 @@ class AppInstaller(
         splash.show()
         # make message white
         splash.showMessage(
-            f"Loading AI Runner v{get_version()}",
+            f"Loading AI Runner",
             QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignCenter,
             QtCore.Qt.GlobalColor.white
         )

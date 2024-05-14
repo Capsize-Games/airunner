@@ -60,7 +60,7 @@ class DownloadWorker(
                 "message": f"Downloading {file_name}"
             })
 
-            file_name = os.path.join(file_path, path, file_name)
+            file_name = os.path.join(file_path, file_name)
             file_name = os.path.expanduser(file_name)
 
             if not os.path.exists(os.path.dirname(file_name)):
