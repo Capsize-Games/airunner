@@ -15,6 +15,9 @@ All current and future security documentation will be contained
 within this file.
 """
 import logging
+import os
+import sys
+
 from PySide6 import QtCore
 from airunner.enums import (
     GeneratorSection,
@@ -36,7 +39,12 @@ from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DAT
 # NLTK_DOWNLOAD_DIR is the directory where the NLTK files will be
 # downloaded to. We need this for RAG
 ####################################################################
-NLTK_DOWNLOAD_DIR = "/home/joe/Projects/airunner/venv/lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/"
+python_venv_dir = os.path.dirname(sys.executable)
+NLTK_DOWNLOAD_DIR = os.path.join(
+    python_venv_dir,
+    "..",
+    "lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/"
+)
 
 ####################################################################
 # USE_MODEL_MANAGER is used to enable the model manager.
