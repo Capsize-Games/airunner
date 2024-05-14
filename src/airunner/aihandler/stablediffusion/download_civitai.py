@@ -7,15 +7,17 @@ from airunner.aihandler.stablediffusion.civit_ai_download_worker import CivitAID
 from airunner.aihandler.stablediffusion.download_worker import DownloadWorker
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 logger = Logger(prefix="DownloadCivitAI")
 
 class DownloadCivitAI(
-    MediatorMixin
+    MediatorMixin,
+    SettingsMixin
 ):
     def __init__(self):
         MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         super().__init__()
         self.thread = None
         self.worker = None
@@ -26,9 +28,13 @@ class DownloadCivitAI(
         # if model_id == id/name split and get the id
         if "/" in model_id:
             model_id = model_id.split("/")[0]
-        url = f"https://civitai.com/api/v1/models/{model_id}"
+        url = f"https://civitai.com/api/v1/models/{model_id}?token={self.settings['civit_ai_api_key']}"
+        headers = {
+            "Content-Type": "application/json",
+            #"Authorization": f"Bearer {api_token}"
+        }
         logger.debug(f"Getting model data from CivitAI {url}")
-        response = requests.get(url)
+        response = requests.get(url, headers=headers, allow_redirects=True)
         json = None
         try:
             json = response.json()
