@@ -30,7 +30,6 @@ from airunner.enums import (
     Mode,
     LLMActionType,
     ImageCategory,
-    StableDiffusionVersion,
     TTSModel
 )
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
@@ -81,7 +80,7 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.ERROR
+LOG_LEVEL = logging.DEBUG
 
 ####################################################################
 # Default models for the core application
