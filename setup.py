@@ -24,7 +24,7 @@ setup(
         "PySide6==6.7.0",
         "PySide6_Addons==6.7.0",
         "PySide6_Essentials==6.7.0",
-        "requests==2.31.0",
+        "requests==2.32.0",
         "requests-oauthlib==2.0.0",
         "scipy==1.13.0",
         "tokenizers==0.19.1",
