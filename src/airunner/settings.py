@@ -85,7 +85,7 @@ LOG_LEVEL = logging.DEBUG
 ####################################################################
 # Default models for the core application
 ####################################################################
-DEFAULT_LLM_HF_PATH = "w4ffl35/Mistral-7B-Instruct-v0.2-safetensors"
+DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.2-safetensors"
 # WAS ORIGINALLY USING "openai/whisper-base" for feature extractor
 DEFAULT_STT_HF_PATH = "openai/whisper-tiny"
 
@@ -180,6 +180,7 @@ DEFAULT_CHATBOT = {
     "use_mood": True,
     "use_guardrails": True,
     "use_system_instructions": True,
+    "use_datetime": True,
     "assign_names": True,
     "bot_personality": "happy. He loves {{ username }}",
     "bot_mood": "",
