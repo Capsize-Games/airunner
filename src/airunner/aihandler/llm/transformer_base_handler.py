@@ -59,7 +59,7 @@ class TransformerBaseHandler(BaseHandler):
         self.model_type = "llm"
 
         if self.model_path is None:
-            self.model_path = self.settings["llm_generator_settings"]["model_version"]
+            self.model_path = self.get_model_path(self.current_bot["model_version"])
 
         if do_load_on_init:
             self.load()

@@ -1,7 +1,7 @@
 model_bootstrap_data = [
     {
         "name": "Stable Diffusion 1.5",
-        "path": "runwayml/stable-diffusion-v1-5",
+        "path": "",  # runwayml/stable-diffusion-v1-5
         "branch": "fp16",
         "version": "SD 1.5",
         "category": "stablediffusion",
