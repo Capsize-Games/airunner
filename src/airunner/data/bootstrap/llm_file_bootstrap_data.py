@@ -1,5 +1,5 @@
 LLM_FILE_BOOTSTRAP_DATA = {
-    "w4ffl35/Mistral-7B-Instruct-v0.2-safetensors": {
+    "mistralai/Mistral-7B-Instruct-v0.2-safetensors": {
         "path_settings": "llm_causallm_model_path",
         "files": [
             "config.json",

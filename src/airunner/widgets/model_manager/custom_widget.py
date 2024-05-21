@@ -29,7 +29,7 @@ class CustomModelWidget(
         PipelineMixin.__init__(self)
         AIModelMixin.__init__(self)
         self.initialized = False
-        self.model_scanner_worker = None
+        self.model_scanner_worker = create_worker(ModelScannerWorker)
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.scan_for_models)
 
     def showEvent(self, event):
@@ -41,7 +41,6 @@ class CustomModelWidget(
 
     def __do_show(self):
         if not self.initialized:
-            self.model_scanner_worker = create_worker(ModelScannerWorker)
             self.show_items_in_scrollarea()
             self.initialized = True
 
