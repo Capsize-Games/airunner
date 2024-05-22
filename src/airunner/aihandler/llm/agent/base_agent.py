@@ -204,7 +204,9 @@ class BaseAgent(
                 self.history_prompt(),
             ]
             system_prompt = self.add_vision_prompt(vision_history, system_prompt)
-            system_prompt = self.append_date_time_timezone(system_prompt)
+
+            if self.chatbot["use_datetime"]:
+                system_prompt = self.append_date_time_timezone(system_prompt)
 
         elif action == LLMActionType.ANALYZE_VISION_HISTORY:
             vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
@@ -323,27 +325,11 @@ class BaseAgent(
 
         return messages
 
-    @property
-    def _chat_template(self):
-        return (
-            "{% for message in messages %}"
-            "{% if message['role'] == 'system' %}"
-            "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
-            "{% elif message['role'] == 'user' %}"
-            "{{ '[INST]Consider the full chat history and then respond to this message from {{ username }}: ' + message['content'] + ' [/INST]' }}"
-            "{% elif message['role'] == 'assistant' %}"
-            "{{ message['content'] + eos_token + ' ' }}"
-            "{% endif %}"
-            "{% endfor %}"
-        ) if self.is_mistral else None
-
     def get_rendered_template(
         self,
-        action,
-        vision_history
-    ):
-        conversation = []
-
+        action: LLMActionType,
+        vision_history: list
+    ) -> str:
         conversation = self.prepare_messages(
             action,
             vision_history=vision_history
@@ -358,7 +344,7 @@ class BaseAgent(
         )
 
         rendered_template = self.tokenizer.apply_chat_template(
-            chat_template=self._chat_template,
+            chat_template=self.chat_template,
             conversation=conversation,
             tokenize=False
         )
@@ -398,12 +384,10 @@ class BaseAgent(
 
     def get_model_inputs(
         self,
-        action,
-        vision_history,
+        action: LLMActionType,
+        vision_history: list,
         **kwargs
     ):
-        self.chat_template = kwargs.get("chat_template", self.chat_template)
-
         self.rendered_template = self.get_rendered_template(
             action,
             vision_history
@@ -424,7 +408,7 @@ class BaseAgent(
     def run(
         self,
         prompt: str,
-        action,
+        action: str,
         vision_history: list = [],
         **kwargs
     ):
@@ -445,7 +429,7 @@ class BaseAgent(
 
     def do_run(
         self,
-        action,
+        action: LLMActionType,
         vision_history: list = [],
         streamer=None,
         do_emit_response: bool = True,

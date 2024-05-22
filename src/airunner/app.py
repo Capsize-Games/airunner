@@ -21,6 +21,8 @@ from PySide6.QtWidgets import (
     QApplication,
     QSplashScreen
 )
+
+from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.main_window import MainWindow
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -52,6 +54,7 @@ class App(
         self.logger = Logger(prefix=self.__class__.__name__)
         self.restrict_os_access = restrict_os_access
         self.defendatron = defendatron
+        self.splash = None
 
         """
         Mediator and Settings mixins are initialized here, enabling the application
@@ -66,8 +69,14 @@ class App(
         ):
             self.reset_paths()
 
+        self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
+
         self.start()
         self.run()
+
+    def on_log_logged_signal(self, data: dict):
+        message = data["message"].split(" - ")
+        self.update_splash_message(self.splash, message[4])
 
     def start(self):
         """
@@ -88,7 +97,7 @@ class App(
         """
 
         # Continue with application execution
-        splash = self.display_splash_screen(self.app)
+        self.splash = self.display_splash_screen(self.app)
 
         # Show the main application window
         QTimer.singleShot(
@@ -96,7 +105,7 @@ class App(
             partial(
                 self.show_main_application,
                 self.app,
-                splash
+                self.splash
             )
         )
         sys.exit(self.app.exec())
@@ -140,13 +149,17 @@ class App(
             QtCore.Qt.WindowType.WindowStaysOnTopHint
         )
         splash.show()
+        App.update_splash_message(splash, f"Loading AI Runner")
+        app.processEvents()
+        return splash
+
+    @staticmethod
+    def update_splash_message(splash, message: str):
         splash.showMessage(
-            f"Loading AI Runner",
+            message,
             QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignCenter,
             QtCore.Qt.GlobalColor.white
         )
-        app.processEvents()
-        return splash
 
     def show_main_application(
         self,

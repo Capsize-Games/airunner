@@ -1,7 +1,10 @@
+import threading
+
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.enums import SignalCode
+from airunner.utils.create_worker import create_worker
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
@@ -19,7 +22,12 @@ class EmbeddingsContainerWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.register(SignalCode.EMBEDDING_LOAD_FAILED_SIGNAL, self.on_embedding_load_failed_signal)
         self.register(SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL, self.on_get_all_embeddings_signal)
-        self.scan_for_embeddings()
+        self.initialized = False
+
+    def showEvent(self, event):
+        if not self.initialized:
+            self.scan_for_embeddings()
+            self.initialized = True
 
     def disable_embedding(self, name, model_name):
         if name not in self.embedding_widgets:

@@ -175,7 +175,7 @@ class BotPreferencesWidget(BaseWidget):
 
     @Slot()
     def browse_documents(self):
-        file_path = open_file_path(file_type="Text Files (*.md *.html *.htm *.epub *.pdf)")
+        file_path = open_file_path(file_type="Text Files (*.md *.html *.htm *.epub *.pdf *.txt)")
 
         # validate file path
         if not file_path or not file_path[0] or not file_path[0].strip() or not file_path[0].endswith((
@@ -184,6 +184,7 @@ class BotPreferencesWidget(BaseWidget):
             ".htm",
             ".epub",
             ".pdf",
+            ".txt",
         )):
             self.logger.error(f"Invalid file path: {file_path}")
             return

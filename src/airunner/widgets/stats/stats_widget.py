@@ -28,10 +28,12 @@ class StatsWidget(
         model_order = [
             ModelType.SAFETY_CHECKER,
             ModelType.FEATURE_EXTRACTOR,
-            ModelType.CONTROLNET,
             ModelType.CONTROLNET_PROCESSOR,
+            ModelType.CONTROLNET,
             ModelType.SCHEDULER,
             ModelType.SD_VAE,
+            ModelType.SD_UNET,
+            ModelType.SD_TEXT_ENCODER,
             ModelType.SD_TOKENIZER,
             ModelType.SD,
 
@@ -135,26 +137,33 @@ class StatsWidget(
 
         for i in range(device_count):
             device = torch.device(f'cuda:{i}')
-            torch.cuda.set_device(device)
+            try:
+                torch.cuda.set_device(device)
+                total_mem = torch.cuda.get_device_properties(device).total_memory / (1024 ** 3)  # Convert bytes to GB
+                allocated_mem = torch.cuda.memory_allocated() / (1024 ** 3)  # Convert bytes to GB
+                free_mem = total_mem - allocated_mem
+                device_name = torch.cuda.get_device_name(device)
+            except RuntimeError:
+                free_mem = 0
+                allocated_mem = 0
+                total_mem = 0
+                device_name = "N/A"
 
-            total_mem = torch.cuda.get_device_properties(device).total_memory / (1024 ** 3)  # Convert bytes to GB
-            allocated_mem = torch.cuda.memory_allocated() / (1024 ** 3)  # Convert bytes to GB
-            free_mem = total_mem - allocated_mem
 
             # truncate to 2 decimal places
             total_mem = round(total_mem, 2)
             allocated_mem = round(allocated_mem, 2)
             free_mem = round(free_mem, 2)
 
-            self.ui.memory_stats.setItem(i, 0, QTableWidgetItem(torch.cuda.get_device_name(device)))
+            self.ui.memory_stats.setItem(i, 0, QTableWidgetItem(device_name))
             self.ui.memory_stats.setItem(i, 1, QTableWidgetItem(f"{allocated_mem}GB"))
             self.ui.memory_stats.setItem(i, 2, QTableWidgetItem(f"{total_mem}GB"))
             self.ui.memory_stats.setItem(i, 3, QTableWidgetItem(f"{free_mem}GB"))
 
             # Set colors
-            self.ui.memory_stats.item(i, 1).setForeground(Qt.red)
-            self.ui.memory_stats.item(i, 2).setForeground(Qt.yellow)
-            self.ui.memory_stats.item(i, 3).setForeground(Qt.green)
+            self.ui.memory_stats.item(i, 1).setForeground(Qt.GlobalColor.red)
+            self.ui.memory_stats.item(i, 2).setForeground(Qt.GlobalColor.yellow)
+            self.ui.memory_stats.item(i, 3).setForeground(Qt.GlobalColor.green)
 
         # Get CPU details
         cpu_memory = psutil.virtual_memory()
@@ -190,6 +199,14 @@ class StatsWidget(
             self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
         elif model == ModelType.SD_VAE.value:
             self.emit_signal(SignalCode.SD_VAE_LOAD_SIGNAL)
+        elif model == ModelType.SD_UNET.value:
+            self.emit_signal(SignalCode.SD_UNET_LOAD_SIGNAL)
+        elif model == ModelType.SD_TOKENIZER.value:
+            self.emit_signal(SignalCode.SD_TOKENIZER_LOAD_SIGNAL)
+        elif model == ModelType.SD_TEXT_ENCODER.value:
+            self.emit_signal(SignalCode.SD_TEXT_ENCODER_LOAD_SIGNAL)
+        elif model == ModelType.SCHEDULER.value:
+            self.emit_signal(SignalCode.SCHEDULER_LOAD_SIGNAL)
         elif model == ModelType.TTS.value:
             self.emit_signal(SignalCode.TTS_LOAD_SIGNAL)
         elif model == ModelType.TTS_PROCESSOR.value:
@@ -234,7 +251,15 @@ class StatsWidget(
         if model == ModelType.SD.value:
             self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
         elif model == ModelType.SD_VAE.value:
-            self.emit_signal(SignalCode.SD_VAE_LOAD_SIGNAL)
+            self.emit_signal(SignalCode.SD_VAE_UNLOAD_SIGNAL)
+        elif model == ModelType.SD_UNET.value:
+            self.emit_signal(SignalCode.SD_UNET_UNLOAD_SIGNAL)
+        elif model == ModelType.SD_TOKENIZER.value:
+            self.emit_signal(SignalCode.SD_TOKENIZER_UNLOAD_SIGNAL)
+        elif model == ModelType.SD_TEXT_ENCODER.value:
+            self.emit_signal(SignalCode.SD_TEXT_ENCODER_UNLOAD_SIGNAL)
+        elif model == ModelType.SCHEDULER.value:
+            self.emit_signal(SignalCode.SCHEDULER_UNLOAD_SIGNAL)
         elif model == ModelType.TTS.value:
             self.emit_signal(SignalCode.TTS_UNLOAD_SIGNAL)
         elif model == ModelType.TTS_PROCESSOR.value:
@@ -310,8 +335,10 @@ class StatsWidget(
         # Set the color of the text according to the status
         if status == ModelStatus.LOADED:
             color = Qt.GlobalColor.green
-        elif status == ModelStatus.LOADING:
+        elif status == ModelStatus.READY:
             color = Qt.GlobalColor.yellow
+        elif status == ModelStatus.LOADING:
+            color = Qt.GlobalColor.darkYellow
         elif status == ModelStatus.FAILED:
             color = Qt.GlobalColor.red
         else:

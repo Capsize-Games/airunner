@@ -1,13 +1,10 @@
-import os
-from transformers import RagTokenizer
+from transformers import RagTokenizer, AutoTokenizer
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
-from transformers.models.llama.tokenization_llama_fast import LlamaTokenizerFast
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.utils.get_torch_device import get_torch_device
 
 
 class TokenizerHandler(TransformerBaseHandler):
-    tokenizer_class_ = LlamaTokenizerFast
+    tokenizer_class_ = AutoTokenizer
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -25,53 +22,13 @@ class TokenizerHandler(TransformerBaseHandler):
     def chat_template(self):
         return None
 
-    def get_tokenizer_standard_path(self, path) -> str:
-        current_llm_generator = self.settings.get("current_llm_generator", "")
-        if current_llm_generator == "causallm":
-            local_path = self.settings["path_settings"]["llm_causallm_model_path"]
-        elif current_llm_generator == "seq2seq":
-            local_path = self.settings["path_settings"]["llm_seq2seq_model_path"]
-        elif current_llm_generator == "visualqa":
-            local_path = self.settings["path_settings"]["llm_visualqa_model_path"]
-        else:
-            local_path = self.settings["path_settings"]["llm_misc_model_path"]
-        local_path = os.path.join(local_path, path)
-        return os.path.expanduser(local_path)
-
-    def get_tokenizer_cache_path(self, path):
-        model_name = path.split("/")[-1]
-        current_llm_generator = self.settings.get("current_llm_generator", "")
-        if current_llm_generator == "causallm":
-            local_path = self.settings["path_settings"]["llm_causallm_model_cache_path"]
-        elif current_llm_generator == "seq2seq":
-            local_path = self.settings["path_settings"]["llm_seq2seq_model_cache_path"]
-        elif current_llm_generator == "visualqa":
-            local_path = self.settings["path_settings"]["llm_visualqa_model_cache_path"]
-        else:
-            local_path = self.settings["path_settings"]["llm_misc_model_cache_path"]
-        local_path = os.path.join(local_path, "tokenizer", model_name)
-        return local_path
-
-    def get_tokenizer_path(self, path):
-        if self.do_quantize_model:
-            local_path = self.get_tokenizer_cache_path(path)
-            if self.cache_llm_to_disk and os.path.exists(local_path):
-                return local_path
-            else:
-                local_path = self.get_tokenizer_standard_path(path)
-                print("CHECKING", local_path)
-                if os.path.exists(local_path):
-                    return local_path
-        return path
-
     def post_load(self):
         self.load_tokenizer()
 
     def load_tokenizer(self):
-        #path = self.get_tokenizer_path(self.current_model_path)
         if self.tokenizer is not None:
             return
-        path = self.get_tokenizer_path(self.current_model_path)
+        path = self.get_model_path(self.current_bot["model_version"])
         self.logger.debug(f"Loading tokenizer from {path}")
         kwargs = {
             "local_files_only": True,
@@ -86,7 +43,6 @@ class TokenizerHandler(TransformerBaseHandler):
         #     if config:
         #         kwargs["quantization_config"] = config
 
-        # </s>  [INST]
         if self.chat_template:
             kwargs["chat_template"] = self.chat_template
         try:

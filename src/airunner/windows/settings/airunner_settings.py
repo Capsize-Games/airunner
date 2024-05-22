@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel,
 
 from airunner.enums import SignalCode
 from airunner.widgets.api_token.api_token_widget import APITokenWidget
+from airunner.widgets.civitai_preferences.civitai_preferences_widget import CivitAIPreferencesWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
 from airunner.widgets.font_settings.font_settings_widget import FontSettingsWidget
@@ -254,6 +255,16 @@ class SettingsWindow(BaseWindow):
                         "checkable": False
                     },
                 ]
+            },
+            {
+                "section": "Civitai.com settings",
+                "files": [
+                    {
+                        "name": "civitai",
+                        "display_name": "CivitAI Settings",
+                        "checkable": False,
+                    },
+                ]
             }
         ]
         for index, section in enumerate(directory):
@@ -376,6 +387,7 @@ class SettingsWindow(BaseWindow):
             "tts_preferences": TTSPreferencesWidget,
             "bot_preferences": BotPreferencesWidget,
             "font_settings": FontSettingsWidget,
+            "civitai": CivitAIPreferencesWidget
         }
         if name in widgets:
             widget_object = widgets[name]()
