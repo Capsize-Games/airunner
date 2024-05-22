@@ -168,10 +168,11 @@ class AgentLlamaIndexMixin:
                 )
             return
 
-        inputs = self.get_rendered_template(LLMActionType.PERFORM_RAG_SEARCH, [])
+        inputs:str = self.get_rendered_template(LLMActionType.PERFORM_RAG_SEARCH, [])
 
         response = engine.stream_chat(
-            inputs
+            message=inputs,
+            chat_history=self.history
         )
         response_text = ""
         if streaming:
