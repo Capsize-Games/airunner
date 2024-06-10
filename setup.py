@@ -34,7 +34,7 @@ setup(
         "sympy==1.12.0",
         "regex==2024.4.28",
         "matplotlib==3.8.4",
-        "torch==2.2.2",
+        "torch==2.3.1",
         "torchvision==0.17.2",
         "torchaudio==2.2.2",
         "optimum==1.19.1",
