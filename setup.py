@@ -49,7 +49,7 @@ setup(
         "transformers==4.40.1",  
         "auto-gptq==0.7.1",
         "bitsandbytes==0.43.1",
-        "datasets==2.18.0",
+        "datasets==2.19.2",
         "sentence_transformers==2.6.1",
         "pycountry==23.12.11",
         "sounddevice==0.4.6",  # Required for tts and stt
