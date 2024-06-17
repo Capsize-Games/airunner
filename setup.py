@@ -30,7 +30,7 @@ setup(
         "tokenizers==0.19.1",
         "charset-normalizer==3.3.2",
         "typing_extensions==4.11.0",
-        "urllib3==2.2.1",
+        "urllib3==2.2.2",
         "sympy==1.12.0",
         "regex==2024.4.28",
         "matplotlib==3.8.4",
