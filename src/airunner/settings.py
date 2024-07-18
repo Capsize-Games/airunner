@@ -85,7 +85,7 @@ LOG_LEVEL = logging.DEBUG
 ####################################################################
 # Default models for the core application
 ####################################################################
-DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.2-safetensors"
+DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.2"
 # WAS ORIGINALLY USING "openai/whisper-base" for feature extractor
 DEFAULT_STT_HF_PATH = "openai/whisper-tiny"
 
@@ -540,10 +540,11 @@ VULNERABILITY_REPORT_LINK = (
 ####################################################################
 SD_DEFAULT_VERSION = "SD 1.5"
 SD_DEFAULT_MODEL_PATH = "runwayml/stable-diffusion-v1-5"
+SD_DEFAULT_VAE_PATH = ""
 SD_FEATURE_EXTRACTOR_PATH = "openai/clip-vit-large-patch14"
 SD_DEFAULT_MODEL = dict(
     version=SD_DEFAULT_VERSION,
-    model=SD_DEFAULT_MODEL_PATH,
+    model="",
 )
 DEFAULT_MODELS = dict(
     stablediffusion=dict(
@@ -719,7 +720,8 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     seed=42,
     random_seed=True,
     model_name="",
-    model=SD_DEFAULT_MODEL_PATH,
+    model="",
+    vae=SD_DEFAULT_VAE_PATH,
     scheduler=DEFAULT_SCHEDULER,
     prompt_triggers="",
     strength=50,
