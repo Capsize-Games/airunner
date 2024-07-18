@@ -17,16 +17,16 @@ class LoraContainerWidget(BaseWidget):
     search_filter = ""
     spacer = None
 
-    def toggle_all(self, val):
-        for widget in self.ui.scrollAreaWidgetContents.children():
-            if isinstance(widget, LoraWidget):
-                widget.set_enabled(val)
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.loars = None
         self.initialized = False
+
+    def toggle_all(self, val):
+        for widget in self.ui.scrollAreaWidgetContents.children():
+            if isinstance(widget, LoraWidget):
+                widget.set_enabled(val)
 
     def showEvent(self, event):
         if not self.initialized:
