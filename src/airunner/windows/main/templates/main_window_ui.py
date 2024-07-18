@@ -25,8 +25,10 @@ from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.canvas.canvas_widget import CanvasWidget
+from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.facehugger.nullscream.nullscream_widget import NullscreamWidget
 from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
+from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
 from airunner.widgets.stats.stats_widget import StatsWidget
 from airunner.widgets.upscale.upscale_widget import UpscaleWidget
@@ -667,6 +669,37 @@ class Ui_MainWindow(object):
         self.gridLayout_8.addWidget(self.brush_container_widget, 0, 0, 1, 1)
 
         self.tool_tab_widget.addTab(self.tab_pen, "")
+        self.tab_3 = QWidget()
+        self.tab_3.setObjectName(u"tab_3")
+        self.gridLayout_11 = QGridLayout(self.tab_3)
+        self.gridLayout_11.setObjectName(u"gridLayout_11")
+        self.gridLayout_11.setContentsMargins(0, 0, 0, 0)
+        self.widget = StableDiffusionSettingsWidget(self.tab_3)
+        self.widget.setObjectName(u"widget")
+
+        self.gridLayout_11.addWidget(self.widget, 0, 0, 1, 1)
+
+        self.tool_tab_widget.addTab(self.tab_3, "")
+        self.tab_5 = QWidget()
+        self.tab_5.setObjectName(u"tab_5")
+        self.gridLayout_9 = QGridLayout(self.tab_5)
+        self.gridLayout_9.setObjectName(u"gridLayout_9")
+        self.widget_2 = LoraContainerWidget(self.tab_5)
+        self.widget_2.setObjectName(u"widget_2")
+
+        self.gridLayout_9.addWidget(self.widget_2, 0, 0, 1, 1)
+
+        self.tool_tab_widget.addTab(self.tab_5, "")
+        self.tab_6 = QWidget()
+        self.tab_6.setObjectName(u"tab_6")
+        self.gridLayout_13 = QGridLayout(self.tab_6)
+        self.gridLayout_13.setObjectName(u"gridLayout_13")
+        self.widget_3 = EmbeddingsContainerWidget(self.tab_6)
+        self.widget_3.setObjectName(u"widget_3")
+
+        self.gridLayout_13.addWidget(self.widget_3, 0, 0, 1, 1)
+
+        self.tool_tab_widget.addTab(self.tab_6, "")
         self.tab_active_grid = QWidget()
         self.tab_active_grid.setObjectName(u"tab_active_grid")
         self.gridLayout_12 = QGridLayout(self.tab_active_grid)
@@ -689,17 +722,6 @@ class Ui_MainWindow(object):
         self.gridLayout_10.addWidget(self.upscale_widget, 0, 0, 1, 1)
 
         self.tool_tab_widget.addTab(self.tab_2, "")
-        self.tab_3 = QWidget()
-        self.tab_3.setObjectName(u"tab_3")
-        self.gridLayout_11 = QGridLayout(self.tab_3)
-        self.gridLayout_11.setObjectName(u"gridLayout_11")
-        self.gridLayout_11.setContentsMargins(0, 0, 0, 0)
-        self.widget = StableDiffusionSettingsWidget(self.tab_3)
-        self.widget.setObjectName(u"widget")
-
-        self.gridLayout_11.addWidget(self.widget, 0, 0, 1, 1)
-
-        self.tool_tab_widget.addTab(self.tab_3, "")
         self.tab = QWidget()
         self.tab.setObjectName(u"tab")
         self.gridLayout_2 = QGridLayout(self.tab)
@@ -1386,9 +1408,11 @@ class Ui_MainWindow(object):
         self.settings_button.setText("")
         self.center_tab.setTabText(self.center_tab.indexOf(self.canvas_tab), QCoreApplication.translate("MainWindow", u"Canvas", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_pen), QCoreApplication.translate("MainWindow", u"Pen", None))
+        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_3), QCoreApplication.translate("MainWindow", u"StableDiffusion", None))
+        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_5), QCoreApplication.translate("MainWindow", u"LoRA", None))
+        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_6), QCoreApplication.translate("MainWindow", u"Embeddings", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_active_grid), QCoreApplication.translate("MainWindow", u"Active Grid", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u"Upscale", None))
-        self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_3), QCoreApplication.translate("MainWindow", u"StableDiffusion", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab), QCoreApplication.translate("MainWindow", u"Stats", None))
         self.tool_tab_widget.setTabText(self.tool_tab_widget.indexOf(self.tab_4), QCoreApplication.translate("MainWindow", u"Facehugger", None))
 #if QT_CONFIG(tooltip)
