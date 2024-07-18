@@ -18,7 +18,7 @@ from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, CLIPModel
 
 from airunner.enums import (
     SignalCode,

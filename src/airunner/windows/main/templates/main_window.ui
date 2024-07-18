@@ -831,6 +831,48 @@
                   </item>
                  </layout>
                 </widget>
+                <widget class="QWidget" name="tab_3">
+                 <attribute name="title">
+                  <string>StableDiffusion</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_11">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item row="0" column="0">
+                   <widget class="StableDiffusionSettingsWidget" name="widget" native="true"/>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="tab_5">
+                 <attribute name="title">
+                  <string>LoRA</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_9">
+                  <item row="0" column="0">
+                   <widget class="LoraContainerWidget" name="widget_2" native="true"/>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="tab_6">
+                 <attribute name="title">
+                  <string>Embeddings</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_13">
+                  <item row="0" column="0">
+                   <widget class="EmbeddingsContainerWidget" name="widget_3" native="true"/>
+                  </item>
+                 </layout>
+                </widget>
                 <widget class="QWidget" name="tab_active_grid">
                  <attribute name="title">
                   <string>Active Grid</string>
@@ -872,28 +914,6 @@
                   </property>
                   <item row="0" column="0">
                    <widget class="UpscaleWidget" name="upscale_widget" native="true"/>
-                  </item>
-                 </layout>
-                </widget>
-                <widget class="QWidget" name="tab_3">
-                 <attribute name="title">
-                  <string>StableDiffusion</string>
-                 </attribute>
-                 <layout class="QGridLayout" name="gridLayout_11">
-                  <property name="leftMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="topMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="bottomMargin">
-                   <number>0</number>
-                  </property>
-                  <item row="0" column="0">
-                   <widget class="StableDiffusionSettingsWidget" name="widget" native="true"/>
                   </item>
                  </layout>
                 </widget>
@@ -2460,6 +2480,18 @@
    <class>NullscreamWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/facehugger/nullscream/nullscream_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LoraContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/lora/lora_container_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>EmbeddingsContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/embeddings/embeddings_container_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
