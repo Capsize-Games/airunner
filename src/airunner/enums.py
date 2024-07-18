@@ -41,8 +41,10 @@ class SignalCode(Enum):
     INTERRUPT_IMAGE_GENERATION_SIGNAL = "interrupt_image_generation_signal"
     AI_MODELS_REFRESH_SIGNAL = "refresh_ai_models_signal"
     AI_MODELS_SAVE_OR_UPDATE_SIGNAL = "ai_models_save_or_update_signal"
+    VAE_MODELS_SAVE_OR_UPDATE_SIGNAL = "vae_models_save_or_update_signal"
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"
     AI_MODELS_CREATE_SIGNAL = "ai_models_create_signal"
+    VAE_MODELS_CREATE_SIGNAL = "vae_models_create_signal"
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
     WINDOW_LOADED_SIGNAL = "window_loaded_signal"
     APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"
@@ -485,6 +487,7 @@ class ModelStatus(Enum):
     READY = "Ready"
     LOADING = "Loading"
     FAILED = "Failed"
+    ERROR = "Error"
 
 
 class StatusColors(Enum):
