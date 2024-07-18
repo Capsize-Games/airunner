@@ -171,8 +171,7 @@ class AgentLlamaIndexMixin:
         inputs:str = self.get_rendered_template(LLMActionType.PERFORM_RAG_SEARCH, [])
 
         response = engine.stream_chat(
-            message=inputs,
-            chat_history=self.history
+            message=inputs
         )
         response_text = ""
         if streaming:
