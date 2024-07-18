@@ -1,7 +1,5 @@
 class PipelineMixin:
-    def __init__(self, *args, **kwargs):
-        self.settings = None
-        self.settings = None
+    def __init__(self):
         self.settings = None
 
     def pipeline_get_by_filter(self, filter_dict):
