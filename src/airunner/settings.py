@@ -1259,6 +1259,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     pipelines=pipeline_bootstrap_data,
     controlnet=controlnet_bootstrap_data,
     ai_models=model_bootstrap_data,
+    vae_models=[],
     image_filters=imagefilter_bootstrap_data,
     trusted_huggingface_repos=[],
     run_setup_wizard=True,
