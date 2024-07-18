@@ -459,6 +459,9 @@ class ModelMixin:
 
     def __load_model(self):
         self.logger.debug("Loading model")
+        if not self.model_path:
+            self.logger.error("Model path is empty")
+            return
         self.torch_compile_applied = False
         self.lora_loaded = False
         self.embeds_loaded = False
@@ -505,20 +508,25 @@ class ModelMixin:
                 self.change_model_status(ModelType.SD_UNET, ModelStatus.LOADING, self.model_path)
                 self.pipe = pipeline_class_.from_single_file(
                     self.model_path,
-                    **data)
-                self.change_model_status(ModelType.SD_VAE, ModelStatus.LOADED, self.model_path)
-                self.change_model_status(ModelType.SD_UNET, ModelStatus.LOADED, self.model_path)
-                self.change_model_status(ModelType.SD_TEXT_ENCODER, ModelStatus.LOADED, self.__text_encoder_path)
+                    **data
+                )
+                if self.model_is_loaded(ModelType.SD_VAE):
+                    self.change_model_status(ModelType.SD_VAE, ModelStatus.LOADED, self.model_path)
+                if self.model_is_loaded(ModelType.SD_UNET):
+                    self.change_model_status(ModelType.SD_UNET, ModelStatus.LOADED, self.model_path)
+                if self.model_is_loaded(ModelType.SD_TEXT_ENCODER):
+                    self.change_model_status(ModelType.SD_TEXT_ENCODER, ModelStatus.LOADED, self.__text_encoder_path)
+                # self.pipe.vae = self.__vae
             else:
                 vae = self.__vae if self.model_is_loaded(ModelType.SD_VAE) else None
                 unet = self.__unet if self.model_is_loaded(ModelType.SD_UNET) else None
 
-                data = data.update(
-                    dict(
-                        vae=vae,
-                        unet=unet,
-                    )
-                )
+                # data.update(
+                #     dict(
+                #         vae=vae,
+                #         unet=unet,
+                #     )
+                # )
                 if self.enable_controlnet:
                     data["controlnet"] = self.controlnet
                 self.pipe = pipeline_class_.from_pretrained(
