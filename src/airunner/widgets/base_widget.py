@@ -5,10 +5,10 @@ from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget
 
 from airunner.aihandler.logger import Logger
+from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import DARK_THEME_NAME, LIGHT_THEME_NAME
 from airunner.utils.create_worker import create_worker
-from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class BaseWidget(
