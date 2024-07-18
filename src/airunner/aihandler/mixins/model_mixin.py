@@ -159,7 +159,6 @@ class ModelMixin:
                 return os.path.expanduser(
                     os.path.join(
                         self.settings["path_settings"][f"{section}_model_path"],
-                        section,
                         version,
                         model["path"]
                     )
