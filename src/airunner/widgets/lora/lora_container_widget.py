@@ -88,7 +88,13 @@ class LoraContainerWidget(BaseWidget):
 
     @Slot()
     def scan_for_lora(self):
-        lora_path = self.settings["path_settings"]["lora_model_path"]
+        lora_path = os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["lora_model_path"],
+                self.settings["generator_settings"]["version"]
+            )
+        )
+        print("LOAD LORA PATH", lora_path)
         for dirpath, dirnames, filenames in os.walk(lora_path):
             # get version from dirpath
             version = dirpath.split("/")[-1]
