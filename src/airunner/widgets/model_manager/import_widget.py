@@ -212,12 +212,12 @@ class ImportWidget(
 
         self.current_model_data = data
 
-        if data is not None:
-            model_name = data["name"]
-            model_versions = data["modelVersions"]
-        else:
-            model_name = ""
-            model_versions = []
+        model_name = ""
+        model_versions = []
+        if data:
+            if "name" in data:
+                model_name = data["name"]
+                model_versions = data["modelVersions"]
 
         self.ui.model_choices.clear()
         for model_version in model_versions:
