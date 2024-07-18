@@ -223,6 +223,10 @@ class MainWindow(
             self.on_ai_models_save_or_update_signal
         )
         self.register(
+            SignalCode.VAE_MODELS_SAVE_OR_UPDATE_SIGNAL,
+            self.on_vae_models_save_or_update_signal
+        )
+        self.register(
             SignalCode.NAVIGATE_TO_URL,
             self.on_navigate_to_url
         )
