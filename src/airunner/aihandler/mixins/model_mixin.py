@@ -180,9 +180,8 @@ class ModelMixin:
             self.unload_image_generator_model()
 
         self.__load_generator(torch.device(self.device), self.settings["generator_settings"]["seed"])
-        if not self.is_single_file:
-            self.__load_vae()
-            self.__load_unet()
+        self.__load_vae()
+        self.__load_unet()
         self.__load_text_encoder()
         self.__load_tokenizer()
         self.__prepare_model()
