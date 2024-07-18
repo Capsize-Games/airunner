@@ -253,7 +253,11 @@ class ModelMixin:
             self.pipe = pipeline_class_(**components)
             self.pipe.tokenizer = self.__tokenizer
             self.pipe.text_encoder = self.__text_encoder
-            self.pipe.to(device)
+
+            try:
+                self.pipe.to(device)
+            except Exception as e:
+                self.logger.error(e)
 
     def __move_model_to_device(self):
         if self.pipe:
