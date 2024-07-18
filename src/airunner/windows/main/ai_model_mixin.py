@@ -5,9 +5,6 @@ from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 class AIModelMixin:
     def __init__(self):
         self.settings = None
-        self.settings = None
-        self.settings = None
-        self.settings = None
 
     def ai_model_get_by_filter(self, filter_dict):
         return [item for item in self.settings["ai_models"] if all(item.get(k) == v for k, v in filter_dict.items())]
@@ -73,6 +70,16 @@ class AIModelMixin:
 
         self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL, {
             "models": merged_models
+        })
+
+    def on_vae_models_save_or_update_signal(self, data: dict):
+        new_models = data.get("models", [])
+        settings = self.settings
+        existing_models = settings["vae_models"]
+        settings["vae_models"] = existing_models + new_models
+        self.settings = settings
+        self.emit_signal(SignalCode.VAE_MODELS_CREATE_SIGNAL, {
+            "models": settings["vae_models"]
         })
         
     def ai_model_paths(self, model_type=None, pipeline_action=None):
