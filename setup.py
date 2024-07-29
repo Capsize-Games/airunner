@@ -59,7 +59,7 @@ setup(
         "ninja==1.11.1.1",
         "JIT==0.2.7",
         # "opencv-python-headless==4.9.0.80",
-        "setuptools==69.5.1",
+        "setuptools==72.0.0",
 
         # Stable Diffusion Dependencies
         "omegaconf==2.3.0",
