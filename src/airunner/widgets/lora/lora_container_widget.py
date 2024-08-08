@@ -1,5 +1,6 @@
 import os
 import threading
+import time
 
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget, QSizePolicy
@@ -22,6 +23,8 @@ class LoraContainerWidget(BaseWidget):
 
         self.loars = None
         self.initialized = False
+        self.lora_cache = {}
+        self.cache_timestamp = 0
 
     def toggle_all(self, val):
         for widget in self.ui.scrollAreaWidgetContents.children():
@@ -36,12 +39,13 @@ class LoraContainerWidget(BaseWidget):
             self.initialized = True
 
     def load_lora(self):
-        for lora in self.settings["lora"]:
-            if self.search_filter != "":
-                if self.search_filter.lower() not in lora["name"].lower():
-                    continue
+        self.remove_spacer()
+        filtered_loras = [
+            lora for lora in self.settings["lora"]
+            if self.search_filter.lower() in lora["name"].lower()
+        ]
+        for lora in filtered_loras:
             self.add_lora(lora)
-        
         self.add_spacer()
 
     def remove_spacer(self):
@@ -63,7 +67,6 @@ class LoraContainerWidget(BaseWidget):
             return
         lora_widget = LoraWidget(lora=lora)
         self.ui.scrollAreaWidgetContents.layout().addWidget(lora_widget)
-        self.add_spacer()
 
     def delete_lora(self, data: dict):
         lora_widget = data["lora_widget"]
@@ -94,32 +97,36 @@ class LoraContainerWidget(BaseWidget):
                 self.settings["generator_settings"]["version"]
             )
         )
-        print("LOAD LORA PATH", lora_path)
-        for dirpath, dirnames, filenames in os.walk(lora_path):
-            # get version from dirpath
-            version = dirpath.split("/")[-1]
-            do_skip = False
-            for file in filenames:
-                if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
-                    name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-                    for lora in self.settings["lora"]:
-                        if lora["name"] == name:
-                            do_skip = True
-                            break
+        current_time = time.time()
+        cache_duration = 60  # Cache results for 60 seconds
 
-                    if not do_skip:
-                        lora_data = dict(
-                            name=name,
-                            path=os.path.join(dirpath, file),
-                            scale=1,
-                            enabled=True,
-                            loaded=False,
-                            trigger_word="",
-                            version=version
-                        )
-                        self.add_lora(lora_data)
-                        self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
-                    do_skip = False
+        if current_time - self.cache_timestamp < cache_duration:
+            lora_files = self.lora_cache.get(lora_path, [])
+        else:
+            lora_files = []
+            for dirpath, dirnames, filenames in os.walk(lora_path):
+                version = dirpath.split("/")[-1]
+                for file in filenames:
+                    if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
+                        lora_files.append((dirpath, file, version))
+            self.lora_cache[lora_path] = lora_files
+            self.cache_timestamp = current_time
+
+        for dirpath, file, version in lora_files:
+            name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
+            if any(lora["name"] == name for lora in self.settings["lora"]):
+                continue
+            lora_data = dict(
+                name=name,
+                path=os.path.join(dirpath, file),
+                scale=1,
+                enabled=True,
+                loaded=False,
+                trigger_word="",
+                version=version
+            )
+            self.add_lora(lora_data)
+            self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
 
     def toggle_all_lora(self, checked):
         for i in range(self.ui.lora_scroll_area.widget().layout().count()):
