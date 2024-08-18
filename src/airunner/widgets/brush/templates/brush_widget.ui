@@ -20,7 +20,7 @@
       <number>0</number>
      </property>
      <property name="slider_maximum" stdset="0">
-      <number>1000</number>
+      <number>100</number>
      </property>
      <property name="spinbox_minimum" stdset="0">
       <number>0</number>
@@ -150,16 +150,16 @@
    <item row="2" column="0">
     <widget class="SliderWidget" name="strength_slider" native="true">
      <property name="slider_minimum" stdset="0">
-      <number>1</number>
+      <number>0</number>
      </property>
      <property name="slider_maximum" stdset="0">
-      <number>1000</number>
+      <number>100</number>
      </property>
      <property name="spinbox_minimum" stdset="0">
-      <number>1</number>
+      <number>0</number>
      </property>
      <property name="spinbox_maximum" stdset="0">
-      <double>100.000000000000000</double>
+      <double>1.000000000000000</double>
      </property>
      <property name="slider_tick_interval" stdset="0">
       <number>1</number>

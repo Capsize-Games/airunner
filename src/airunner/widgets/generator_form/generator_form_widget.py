@@ -4,13 +4,12 @@ from PIL import Image
 from PySide6.QtCore import Signal, QRect
 from PySide6.QtWidgets import QApplication
 
-from airunner.enums import SignalCode, GeneratorSection, ImageCategory
+from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
-from airunner.utils.create_worker import create_worker
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
+from airunner.utils.random_seed import random_seed
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
-from airunner.workers.model_scanner_worker import ModelScannerWorker
 
 
 class GeneratorForm(BaseWidget):
@@ -36,11 +35,12 @@ class GeneratorForm(BaseWidget):
             SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL: self.on_llm_image_prompt_generated_signal,
             SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.handle_generate_image_from_image,
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
-            SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal
+            SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
         }
 
-        self.model_scanner_worker = create_worker(ModelScannerWorker)
-        self.model_scanner_worker.add_to_queue("scan_for_models")
+        # iterate over ImagePreset enum and add them to the combobox
+        image_presets = [""] + [preset.value for preset in ImagePreset]
+        self.ui.image_presets.addItems(image_presets)
 
     @property
     def is_txt2img(self):
@@ -114,6 +114,11 @@ class GeneratorForm(BaseWidget):
             self.settings = settings
             self.set_form_values()
 
+    def handle_image_presets_changed(self, val):
+        settings = self.settings
+        settings["generator_settings"]["image_preset"] = val
+        self.settings = settings
+
     def handle_generate_image_from_image(self, image):
         pass
 
@@ -126,7 +131,6 @@ class GeneratorForm(BaseWidget):
         })
 
     def call_generate(self):
-        print("GENERATE CALLED")
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
     def on_application_settings_changed_signal(self, _message: dict):
@@ -170,6 +174,8 @@ class GeneratorForm(BaseWidget):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
     def generate(self):
+        if self.settings["generator_settings"]["random_seed"]:
+            self.seed = random_seed()
         if self.settings["generator_settings"]["n_samples"] > 1:
             self.emit_signal(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL)
         self.do_generate()

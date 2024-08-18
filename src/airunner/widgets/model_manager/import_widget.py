@@ -145,7 +145,7 @@ class ImportWidget(
             # todo save poses here
             pass
         
-        self.logger.debug("starting download")
+        self.logger.debug("Starting download")
         self.ui.downloading_label.setText(f"Downloading {name}")
         self.download_model_thread(download_url, file_path, size_kb)
         # self.thread = threading.Thread(target=self.download_model_thread, args=(download_url, file_path, size_kb))
@@ -182,29 +182,42 @@ class ImportWidget(
 
     def parse_url(self) -> str:
         url = self.ui.import_url.text()
+        model_id = None
+
         try:
-            model_id = url.split("models/")[1]
-        except IndexError:
-            model_id = None
+            model_id = int(url.split("models/")[1])
+        except Exception as e:
+            print(f"Failed to parse model id from url: {url}")
+            print(e)
+
+        if model_id is None:
+            try:
+                print("setting model id")
+                model_id = int(url.split("models/")[1].split("/")[0])
+                print("model id set to ", model_id)
+            except Exception as e:
+                print(f"2 Failed to parse model id from url: {url}")
+                print(e)
+
         parsed_url = urlparse(url)
         self.is_civitai = "civitai.com" in parsed_url.netloc
-        return model_id
+        return str(model_id)
 
     def import_models(self):
         data = None
         model_id = self.parse_url()
 
         if model_id:
-            data = DownloadCivitAI.get_json(model_id)
+            data = DownloadCivitAI().get_json(model_id=model_id)
 
         self.current_model_data = data
 
-        if data is not None:
-            model_name = data["name"]
-            model_versions = data["modelVersions"]
-        else:
-            model_name = ""
-            model_versions = []
+        model_name = ""
+        model_versions = []
+        if data:
+            if "name" in data:
+                model_name = data["name"]
+                model_versions = data["modelVersions"]
 
         self.ui.model_choices.clear()
         for model_version in model_versions:
@@ -268,11 +281,9 @@ class ImportWidget(
         elif model_type == "TextualInversion":
             path = self.settings["path_settings"]["embeddings_model_path"]
         elif model_type == "VAE":
-            # todo save vae here
-            pass
+            path = self.settings["path_settings"]["vae_model_path"]
         elif model_type == "Controlnet":
-            # todo save controlnet here
-            pass
+            path = self.settings["path_settings"]["controlnet_model_path"]
         elif model_type == "Poses":
             # todo save poses here
             pass
