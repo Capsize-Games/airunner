@@ -26,11 +26,6 @@ class LoraContainerWidget(BaseWidget):
         self.lora_cache = {}
         self.cache_timestamp = 0
 
-    # def toggle_all(self, val):
-    #     for widget in self.ui.scrollAreaWidgetContents.children():
-    #         if isinstance(widget, LoraWidget):
-    #             widget.set_enabled(val)
-
     def toggle_all(self, val):
         lora_widgets = [
             self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
