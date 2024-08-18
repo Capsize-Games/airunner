@@ -538,3 +538,9 @@ class TTSModel(Enum):
 class AgentState(Enum):
     SEARCH = "search"
     CHAT = "chat"
+
+
+class ImagePreset(Enum):
+    ILLUSTRATION = "Illustration"
+    PHOTOGRAPH = "Photograph"
+    PAINTING = "Painting"
