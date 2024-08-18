@@ -710,6 +710,7 @@ DEFAULT_MEMORY_SETTINGS = dict(
 # Each generator category.
 ####################################################################
 STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
+    image_preset="",
     prompt="",
     negative_prompt="",
     steps=20,

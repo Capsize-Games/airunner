@@ -21,7 +21,7 @@ class DefaultModelWidget(
 
     def __init__(self, *args, **kwargs):
         self.initialized = False
-        PipelineMixin.__init__(self, *args, **kwargs)
+        PipelineMixin.__init__(self)
         AIModelMixin.__init__(self)
         super().__init__(*args, **kwargs)
         self.spacer = None
