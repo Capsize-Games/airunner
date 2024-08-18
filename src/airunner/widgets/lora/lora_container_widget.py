@@ -3,7 +3,7 @@ import threading
 import time
 
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QWidget, QSizePolicy
+from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
@@ -26,10 +26,26 @@ class LoraContainerWidget(BaseWidget):
         self.lora_cache = {}
         self.cache_timestamp = 0
 
+    # def toggle_all(self, val):
+    #     for widget in self.ui.scrollAreaWidgetContents.children():
+    #         if isinstance(widget, LoraWidget):
+    #             widget.set_enabled(val)
+
     def toggle_all(self, val):
-        for widget in self.ui.scrollAreaWidgetContents.children():
-            if isinstance(widget, LoraWidget):
-                widget.set_enabled(val)
+        lora_widgets = [
+            self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
+            for i in range(self.ui.lora_scroll_area.widget().layout().count())
+            if isinstance(self.ui.lora_scroll_area.widget().layout().itemAt(i).widget(), LoraWidget)
+        ]
+        settings = self.settings
+        for lora_widget in lora_widgets:
+            lora_widget.ui.enabledCheckbox.blockSignals(True)
+            lora_widget.action_toggled_lora_enabled(val, emit=False)
+            lora_widget.ui.enabledCheckbox.blockSignals(False)
+        QApplication.processEvents()
+        for index, _lora in enumerate(self.settings["lora"]):
+            settings["lora"][index]["enabled"] = val == 2
+        self.settings = settings
 
     def showEvent(self, event):
         if not self.initialized:
@@ -128,11 +144,24 @@ class LoraContainerWidget(BaseWidget):
             self.add_lora(lora_data)
             self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
 
-    def toggle_all_lora(self, checked):
-        for i in range(self.ui.lora_scroll_area.widget().layout().count()):
-            lora_widget = self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
-            if lora_widget:
-                lora_widget.enabledCheckbox.setChecked(checked)
+    # def toggle_all_lora(self, checked):
+    #     lora_widgets = [
+    #         self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
+    #         for i in range(self.ui.lora_scroll_area.widget().layout().count())
+    #         if isinstance(self.ui.lora_scroll_area.widget().layout().itemAt(i).widget(), LoraWidget)
+    #     ]
+    #
+    #     # Block signals for batch updates
+    #     for lora_widget in lora_widgets:
+    #         lora_widget.ui.enabledCheckbox.blockSignals(True)
+    #
+    #     # Perform the toggle operation
+    #     for lora_widget in lora_widgets:
+    #         lora_widget.set_enabled(checked)
+    #
+    #     # Unblock signals after batch updates
+    #     for lora_widget in lora_widgets:
+    #         lora_widget.ui.enabledCheckbox.blockSignals(False)
 
     def tab_has_lora(self, tab):
         return tab not in ["upscale", "superresolution", "txt2vid"]
