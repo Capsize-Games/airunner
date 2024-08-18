@@ -23,8 +23,6 @@ class LoraContainerWidget(BaseWidget):
 
         self.loars = None
         self.initialized = False
-        self.lora_cache = {}
-        self.cache_timestamp = 0
 
     def toggle_all(self, val):
         lora_widgets = [
@@ -46,7 +44,6 @@ class LoraContainerWidget(BaseWidget):
         if not self.initialized:
             self.register(SignalCode.LORA_DELETE_SIGNAL, self.delete_lora)
             self.scan_for_lora()
-            self.load_lora()
             self.initialized = True
 
     def load_lora(self):
@@ -102,42 +99,36 @@ class LoraContainerWidget(BaseWidget):
 
     @Slot()
     def scan_for_lora(self):
+        # clear all lora widgets
+        self.clear_lora_widgets()
         lora_path = os.path.expanduser(
             os.path.join(
                 self.settings["path_settings"]["lora_model_path"],
                 self.settings["generator_settings"]["version"]
             )
         )
-        current_time = time.time()
-        cache_duration = 60  # Cache results for 60 seconds
+        lora_files = []
+        for dirpath, dirnames, filenames in os.walk(lora_path):
+            version = dirpath.split("/")[-1]
+            for file in filenames:
+                if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
+                    lora_files.append((dirpath, file, version))
 
-        if current_time - self.cache_timestamp < cache_duration:
-            lora_files = self.lora_cache.get(lora_path, [])
-        else:
-            lora_files = []
-            for dirpath, dirnames, filenames in os.walk(lora_path):
-                version = dirpath.split("/")[-1]
-                for file in filenames:
-                    if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
-                        lora_files.append((dirpath, file, version))
-            self.lora_cache[lora_path] = lora_files
-            self.cache_timestamp = current_time
-
-        for dirpath, file, version in lora_files:
-            name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-            if any(lora["name"] == name for lora in self.settings["lora"]):
-                continue
-            lora_data = dict(
-                name=name,
-                path=os.path.join(dirpath, file),
-                scale=1,
-                enabled=True,
-                loaded=False,
-                trigger_word="",
-                version=version
-            )
-            self.add_lora(lora_data)
-            self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
+            # for dirpath, file, version in lora_files:
+                name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
+                if any(lora["name"] == name for lora in self.settings["lora"]):
+                    continue
+                lora_data = dict(
+                    name=name,
+                    path=os.path.join(dirpath, file),
+                    scale=1,
+                    enabled=True,
+                    loaded=False,
+                    trigger_word="",
+                    version=version
+                )
+                self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
+        self.load_lora()
 
     # def toggle_all_lora(self, checked):
     #     lora_widgets = [
