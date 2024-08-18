@@ -1,7 +1,7 @@
 import threading
 
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QWidget, QSizePolicy
+from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode
 from airunner.utils.create_worker import create_worker
@@ -41,11 +41,6 @@ class EmbeddingsContainerWidget(BaseWidget):
     def register_embedding_widget(self, name, widget):
         self.embedding_widgets[name] = widget
 
-    def enable_embeddings(self):
-        for name in self.embedding_widgets.keys():
-            enable = True
-            self.embedding_widgets[name].setEnabled(enable)
-
     def handle_embedding_load_failed(self, message):
         # TODO:
         #  on model change, re-enable the buttons
@@ -61,12 +56,10 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.handle_embedding_load_failed(response["message"])
 
     def load_embeddings(self):
-        self.emit_signal(
-            SignalCode.EMBEDDING_GET_ALL_SIGNAL,
-            {
-                "name_filter": self.search_filter
-            }
-        )
+        threading.Thread(target=self._load_embeddings).start()
+
+    def _load_embeddings(self):
+        self.emit_signal(SignalCode.EMBEDDING_GET_ALL_SIGNAL, {"name_filter": self.search_filter})
 
     def on_get_all_embeddings_signal(self, message: dict):
         embeddings = message["embeddings"]
@@ -74,7 +67,7 @@ class EmbeddingsContainerWidget(BaseWidget):
 
         for embedding in embeddings:
             self.add_embedding(embedding)
-        
+
         if not self.spacer:
             self.spacer = QWidget()
             self.spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -87,28 +80,38 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def action_clicked_button_scan_for_embeddings(self):
         self.scan_for_embeddings()
-    
+
     def check_saved_embeddings(self):
         self.emit_signal(SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL)
 
     def scan_for_embeddings(self):
+        threading.Thread(target=self._scan_for_embeddings).start()
+
+    def _scan_for_embeddings(self):
         self.emit_signal(SignalCode.EMBEDDING_SCAN_SIGNAL)
         self.load_embeddings()
 
-    def toggle_all_toggled(self, checked):
-        for i in range(self.ui.embeddings.widget().layout().count()):
-            widget = self.ui.embeddings.widget().layout().itemAt(i).widget()
-            if widget:
-                try:
-                    widget.ui.enabledCheckbox.setChecked(checked)
-                except AttributeError:
-                    continue
+    def toggle_all_toggled(self, val):
+        embedding_widgets = [
+            self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+            for i in range(self.ui.scrollAreaWidgetContents.layout().count())
+            if isinstance(self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget(), EmbeddingWidget)
+        ]
+        settings = self.settings
+        for embedding_widget in embedding_widgets:
+            embedding_widget.ui.enabledCheckbox.blockSignals(True)
+            embedding_widget.action_toggled_embedding(val, False)
+            embedding_widget.ui.enabledCheckbox.blockSignals(False)
+        QApplication.processEvents()
+        for index, _embedding in enumerate(self.settings["embeddings"]):
+            settings["embeddings"][index]["enabled"] = val
+        self.settings = settings
 
     def search_text_changed(self, val):
         self.search_filter = val
         self.clear_embedding_widgets()
         self.load_embeddings()
-    
+
     def clear_embedding_widgets(self):
         if self.spacer:
             self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
