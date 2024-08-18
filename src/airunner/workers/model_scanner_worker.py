@@ -1,4 +1,6 @@
 import os
+
+from airunner.aihandler.logger import Logger
 from airunner.enums import SignalCode
 from airunner.models.modeldata import ModelData
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -10,8 +12,9 @@ class ModelScannerWorker(
     PipelineMixin
 ):
     def __init__(self, *args, **kwargs):
-        Worker.__init__(self)
+        super().__init__(*args, **kwargs)
         PipelineMixin.__init__(self)
+        self.logger = Logger(prefix=self.__class__.__name__)
 
     def handle_message(self, _message):
         self.scan_for_models()
@@ -28,6 +31,7 @@ class ModelScannerWorker(
         txt2vid_model_path = self.settings["path_settings"]["txt2vid_model_path"]
         llm_causallm_model_path = self.settings["path_settings"]["llm_causallm_model_path"]
         llm_seq2seq_model_path = self.settings["path_settings"]["llm_seq2seq_model_path"]
+        embeddings_model_path = self.settings["path_settings"]["embeddings_model_path"]
         diffusers_folders = ["scheduler", "text_encoder", "tokenizer", "unet", "vae"]
         models = []
         for key, model_path in {
@@ -39,6 +43,7 @@ class ModelScannerWorker(
             "txt2vid": txt2vid_model_path,
             "causallm": llm_causallm_model_path,
             "seq2seq": llm_seq2seq_model_path,
+            "embeddings": embeddings_model_path
         }.items():
             model_path = os.path.expanduser(model_path)
             if not model_path or not os.path.exists(model_path):
@@ -49,7 +54,9 @@ class ModelScannerWorker(
                 self.logger.debug(f"Scan for models {key} {model_path}")
                 for entry in dir_object:
                     version = entry.name
-                    with os.scandir(os.path.join(model_path, version)) as dir_object:
+                    path = os.path.join(model_path, version)
+                    self.logger.debug(f"Scan directory {path}")
+                    with os.scandir(path) as dir_object:
                         for entry in dir_object:
                             model = ModelData()
                             model.path = entry.path

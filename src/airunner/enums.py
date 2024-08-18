@@ -41,8 +41,10 @@ class SignalCode(Enum):
     INTERRUPT_IMAGE_GENERATION_SIGNAL = "interrupt_image_generation_signal"
     AI_MODELS_REFRESH_SIGNAL = "refresh_ai_models_signal"
     AI_MODELS_SAVE_OR_UPDATE_SIGNAL = "ai_models_save_or_update_signal"
+    VAE_MODELS_SAVE_OR_UPDATE_SIGNAL = "vae_models_save_or_update_signal"
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"
     AI_MODELS_CREATE_SIGNAL = "ai_models_create_signal"
+    VAE_MODELS_CREATE_SIGNAL = "vae_models_create_signal"
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
     WINDOW_LOADED_SIGNAL = "window_loaded_signal"
     APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"
@@ -218,6 +220,7 @@ class SignalCode(Enum):
     UPDATE_DOWNLOAD_LOG = "update_download_log"
     CLEAR_DOWNLOAD_STATUS_BAR = "clear_download_status_bar"
     SET_DOWNLOAD_STATUS_LABEL = "set_download_status_label"
+    SET_DOWNLOADING_STATUS_LABEL = "set_downloading_status_label"
     CHANGE_SCHEDULER_SIGNAL = "change_scheduler_signal"
     LOG_LOGGED_SIGNAL = "log_logged_signal"
     MODEL_STATUS_CHANGED_SIGNAL = "model_status_changed_signal"
@@ -252,6 +255,14 @@ class SignalCode(Enum):
     SD_LOAD_SIGNAL = "load_stablediffusion_signal"
     SD_VAE_LOAD_SIGNAL = "load_stablediffusion_vae_signal"
     SD_VAE_UNLOAD_SIGNAL = "unload_stablediffusion_vae_signal"
+    SD_UNET_LOAD_SIGNAL = "load_stablediffusion_unet_signal"
+    SD_UNET_UNLOAD_SIGNAL = "unload_stablediffusion_unet_signal"
+    SD_TOKENIZER_LOAD_SIGNAL = "load_stablediffusion_tokenizer_signal"
+    SD_TOKENIZER_UNLOAD_SIGNAL = "unload_stablediffusion_tokenizer_signal"
+    SD_TEXT_ENCODER_LOAD_SIGNAL = "load_stablediffusion_text_encoder_signal"
+    SD_TEXT_ENCODER_UNLOAD_SIGNAL = "unload_stablediffusion_text_encoder_signal"
+    SD_SCHEDULER_LOAD_SIGNAL = "load_stablediffusion_scheduler_signal"
+    SD_SCHEDULER_UNLOAD_SIGNAL = "unload_stablediffusion_scheduler_signal"
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
     CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
     CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
@@ -473,8 +484,10 @@ class Gender(Enum):
 class ModelStatus(Enum):
     UNLOADED = "Unloaded"
     LOADED = "Loaded"
+    READY = "Ready"
     LOADING = "Loading"
     FAILED = "Failed"
+    ERROR = "Error"
 
 
 class StatusColors(Enum):
@@ -487,7 +500,9 @@ class StatusColors(Enum):
 class ModelType(Enum):
     SD = "SD Model"
     SD_VAE = "SD VAE"
+    SD_UNET = "SD UNet"
     SD_TOKENIZER = "SD Tokenizer"
+    SD_TEXT_ENCODER = "SD Text Encoder"
     TTS = "TTS Model"
     TTS_PROCESSOR = "TTS Processor"
     TTS_FEATURE_EXTRACTOR = "TTS Feature Extractor"
@@ -523,3 +538,9 @@ class TTSModel(Enum):
 class AgentState(Enum):
     SEARCH = "search"
     CHAT = "chat"
+
+
+class ImagePreset(Enum):
+    ILLUSTRATION = "Illustration"
+    PHOTOGRAPH = "Photograph"
+    PAINTING = "Painting"

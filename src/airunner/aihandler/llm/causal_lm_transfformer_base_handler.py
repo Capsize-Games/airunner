@@ -1,19 +1,16 @@
+from transformers import AutoModelForCausalLM
 from transformers.generation.streamers import TextIteratorStreamer
-from transformers.models.mistral.modeling_mistral import MistralForCausalLM
-from transformers.models.llama.modeling_llama import LlamaForCausalLM
 
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
 from airunner.enums import SignalCode
 from airunner.enums import LLMActionType
-from airunner.utils.get_current_chatbot import get_current_chatbot_property
 
 
 class CausalLMTransformerBaseHandler(
     TokenizerHandler
 ):
-    auto_class_ = MistralForCausalLM
-    #auto_class_ = LlamaForCausalLM
+    auto_class_ = AutoModelForCausalLM
 
     def __init__(self, *args, **kwargs):
         self.streamer = None
@@ -71,21 +68,39 @@ class CausalLMTransformerBaseHandler(
 
     @property
     def is_mistral(self) -> bool:
-        return "mistral" in self.model_path
+        path = self.model_path.lower()
+        return "mistral" in path
+
+    @property
+    def is_llama_instruct(self):
+        path = self.model_path.lower()
+        if "instruct" in path and "llama" in path:
+            return True
+        return False
 
     @property
     def chat_template(self):
-        return (
-            "{% for message in messages %}"
-            "{% if message['role'] == 'system' %}"
-            "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
-            "{% elif message['role'] == 'user' %}"
-            "{{ '[INST]' + message['content'] + ' [/INST]' }}"
-            "{% elif message['role'] == 'assistant' %}"
-            "{{ message['content'] + eos_token + ' ' }}"
-            "{% endif %}"
-            "{% endfor %}"
-        ) if self.is_mistral else None
+        if self.is_mistral:
+            return (
+                "{% for message in messages %}"
+                "{% if message['role'] == 'system' %}"
+                "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
+                "{% elif message['role'] == 'user' %}"
+                "{{ '[INST]' + message['content'] + ' [/INST]' }}"
+                "{% elif message['role'] == 'assistant' %}"
+                "{{ message['content'] + eos_token + ' ' }}"
+                "{% endif %}"
+                "{% endfor %}"
+            )
+        elif self.is_llama_instruct:
+            return (
+                "{{ '<|begin_of_text|>' }}"
+                "{% for message in messages %}"
+                "{{ '<|start_header_id|>' + "
+                "message['role'] + '<|end_header_id|>' + '\n\n' + message['content'] + "
+                "'<|end_header_id|>\n\n' + message['content'] + '<|eot_id|>' }}"
+                "{% endfor %}"
+            )
 
     @property
     def username(self):
@@ -168,7 +183,8 @@ class CausalLMTransformerBaseHandler(
             tokenizer=self.tokenizer,
             streamer=self.streamer,
             tools=self.tools,
-            chat_template=self.chat_template
+            chat_template=self.chat_template,
+            is_mistral=self.is_mistral,
         )
 
     def unload_agent(self):
