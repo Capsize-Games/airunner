@@ -15,10 +15,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
-    QLabel, QPlainTextEdit, QProgressBar, QPushButton,
-    QScrollArea, QSizePolicy, QSpacerItem, QSplitter,
-    QTabWidget, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
+    QHBoxLayout, QLabel, QPlainTextEdit, QProgressBar,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QSplitter, QTabWidget, QVBoxLayout, QWidget)
 
 from airunner.widgets.llm.chat_prompt_widget import ChatPromptWidget
 import airunner.resources_light_rc
@@ -46,28 +46,22 @@ class Ui_generator_form(object):
         self.generate_button = QPushButton(self.tab)
         self.generate_button.setObjectName(u"generate_button")
 
-        self.gridLayout_3.addWidget(self.generate_button, 1, 0, 1, 1)
-
-        self.progress_bar = QProgressBar(self.tab)
-        self.progress_bar.setObjectName(u"progress_bar")
-        self.progress_bar.setValue(0)
-
-        self.gridLayout_3.addWidget(self.progress_bar, 3, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.generate_button, 3, 0, 1, 1)
 
         self.scrollArea = QScrollArea(self.tab)
         self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setFrameShape(QFrame.NoFrame)
-        self.scrollArea.setFrameShadow(QFrame.Plain)
+        self.scrollArea.setFrameShape(QFrame.Shape.NoFrame)
+        self.scrollArea.setFrameShadow(QFrame.Shadow.Plain)
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 341, 824))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 341, 796))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.splitter = QSplitter(self.scrollAreaWidgetContents)
         self.splitter.setObjectName(u"splitter")
-        self.splitter.setOrientation(Qt.Vertical)
+        self.splitter.setOrientation(Qt.Orientation.Vertical)
         self.layoutWidget = QWidget(self.splitter)
         self.layoutWidget.setObjectName(u"layoutWidget")
         self.gridLayout_2 = QGridLayout(self.layoutWidget)
@@ -124,13 +118,24 @@ class Ui_generator_form(object):
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
-        self.gridLayout_3.addWidget(self.scrollArea, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.scrollArea, 1, 0, 1, 1)
+
+        self.progress_bar = QProgressBar(self.tab)
+        self.progress_bar.setObjectName(u"progress_bar")
+        self.progress_bar.setValue(0)
+
+        self.gridLayout_3.addWidget(self.progress_bar, 5, 0, 1, 1)
 
         self.interrupt_button = QPushButton(self.tab)
         self.interrupt_button.setObjectName(u"interrupt_button")
         self.interrupt_button.setCursor(QCursor(Qt.PointingHandCursor))
 
-        self.gridLayout_3.addWidget(self.interrupt_button, 2, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.interrupt_button, 4, 0, 1, 1)
+
+        self.image_presets = QComboBox(self.tab)
+        self.image_presets.setObjectName(u"image_presets")
+
+        self.gridLayout_3.addWidget(self.image_presets, 0, 0, 1, 1)
 
         self.generator_form_tabs.addTab(self.tab, "")
         self.tab_2 = QWidget()
@@ -154,6 +159,7 @@ class Ui_generator_form(object):
         self.generate_button.clicked.connect(generator_form.handle_generate_button_clicked)
         self.prompt.textChanged.connect(generator_form.handle_prompt_changed)
         self.negative_prompt.textChanged.connect(generator_form.handle_negative_prompt_changed)
+        self.image_presets.currentTextChanged.connect(generator_form.handle_image_presets_changed)
 
         self.generator_form_tabs.setCurrentIndex(0)
 

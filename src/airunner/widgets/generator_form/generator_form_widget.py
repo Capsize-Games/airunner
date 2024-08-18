@@ -4,7 +4,7 @@ from PIL import Image
 from PySide6.QtCore import Signal, QRect
 from PySide6.QtWidgets import QApplication
 
-from airunner.enums import SignalCode, GeneratorSection, ImageCategory
+from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.random_seed import random_seed
@@ -37,6 +37,10 @@ class GeneratorForm(BaseWidget):
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
         }
+
+        # iterate over ImagePreset enum and add them to the combobox
+        image_presets = [""] + [preset.value for preset in ImagePreset]
+        self.ui.image_presets.addItems(image_presets)
 
     @property
     def is_txt2img(self):
@@ -109,6 +113,11 @@ class GeneratorForm(BaseWidget):
             settings["generator_settings"]["negative_prompt"] = saved_prompt["negative_prompt"]
             self.settings = settings
             self.set_form_values()
+
+    def handle_image_presets_changed(self, val):
+        settings = self.settings
+        settings["generator_settings"]["image_preset"] = val
+        self.settings = settings
 
     def handle_generate_image_from_image(self, image):
         pass
