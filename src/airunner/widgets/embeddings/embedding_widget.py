@@ -27,9 +27,11 @@ class EmbeddingWidget(BaseWidget):
         self.ui.trigger_word_edit.blockSignals(False)
         self.create_trigger_word_widgets(self.embedding)
 
-    def action_toggled_embedding(self, val):
+    def action_toggled_embedding(self, val, emit_signal=True):
+        self.ui.enabledCheckbox.setChecked(val)
         self.embedding['active'] = val
-        self.emit_signal(SignalCode.EMBEDDING_UPDATE_SIGNAL, self.embedding)
+        if emit_signal:
+            self.emit_signal(SignalCode.EMBEDDING_UPDATE_SIGNAL, self.embedding)
 
     def create_trigger_word_widgets(self, embedding):
         for i in reversed(range(self.ui.enabledCheckbox.layout().count())):
@@ -46,3 +48,4 @@ class EmbeddingWidget(BaseWidget):
         self.embedding["trigger_word"] = val
         self.create_trigger_word_widgets(self.embedding)
         self.emit_signal(SignalCode.EMBEDDING_UPDATE_SIGNAL, self.embedding)
+
