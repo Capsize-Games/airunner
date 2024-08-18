@@ -91,6 +91,6 @@ class EmbeddingMixin:
                                 "active": True,
                                 "trigger_word": ""
                             }
-                            self.add_embedding(embedding)
-        self.delete_missing_embeddings({})
-        self.get_embeddings()
+                            self.emit_signal(SignalCode.EMBEDDING_ADD_SIGNAL, embedding)
+        # self.delete_missing_embeddings({})
+        # self.get_embeddings()
