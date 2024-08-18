@@ -26,7 +26,7 @@ class LoraMixin:
         self.logger.debug("Adding LoRA to pipe")
         model_base_path = self.settings["path_settings"]["base_path"]
         lora_path = self.settings["path_settings"]["lora_model_path"]
-        model_version = self.model["version"]
+        model_version = self.settings["generator_settings"]["version"]
         path = os.path.join(model_base_path, lora_path) if lora_path == "lora" else lora_path
         if model_version not in self.available_lora:
             return
