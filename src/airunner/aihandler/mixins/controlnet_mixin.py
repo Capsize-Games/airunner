@@ -21,7 +21,7 @@ RELOAD_CONTROLNET_IMAGE_CONSTS = (
 
 
 class ControlnetHandlerMixin:
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         self.controlnet = None
         self.processor = None
         self._controlnet_image = None
@@ -39,18 +39,6 @@ class ControlnetHandlerMixin:
         }
         for code, handler in signals.items():
             self.register(code, handler)
-
-    def on_controlnet_load_model_signal(self, message: dict):
-        self.load_controlnet_model()
-
-    def on_controlnet_unload_model_signal(self, message: dict):
-        self.unload_controlnet_model()
-
-    def on_controlnet_load_processor_signal(self, message: dict):
-        self.load_controlnet_processor()
-
-    def on_controlnet_unload_processor_signal(self, message: dict):
-        self.unload_controlnet_processor()
 
     @property
     def controlnet_type(self):
@@ -82,11 +70,11 @@ class ControlnetHandlerMixin:
     @property
     def controlnet_image(self):
         if (
-            self._controlnet_image is None or
-            self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
+                self._controlnet_image is None or
+                self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
         ):
             self.logger.debug("Getting controlnet image")
-            self._controlnet_image = self.preprocess_for_controlnet(self.sd_request.drawing_pad_image)
+            self._controlnet_image = self.__preprocess_for_controlnet(self.sd_request.drawing_pad_image)
         return self._controlnet_image
 
     @property
@@ -106,6 +94,27 @@ class ControlnetHandlerMixin:
         )
         return path
 
+    def on_controlnet_load_model_signal(self, message: dict):
+        self.__load_controlnet_model()
+
+    def on_controlnet_unload_model_signal(self, message: dict):
+        self.__unload_controlnet_model()
+
+    def on_controlnet_load_processor_signal(self, message: dict):
+        self.__load_controlnet_processor()
+
+    def on_controlnet_unload_processor_signal(self, message: dict):
+        self.__unload_controlnet_processor()
+
+    def on_load_controlnet_signal(self, _message: dict):
+        self.load_controlnet()
+
+    def on_unload_controlnet_signal(self, _message: dict):
+        self.__unload_controlnet()
+
+    def on_unload_controlnet_model_signal(self, _message: dict):
+        self.__unload_controlnet_model()
+
     def get_controlnet_image(self) -> Image.Image:
         controlnet_image = self.controlnet_image
         if controlnet_image:
@@ -119,16 +128,20 @@ class ControlnetHandlerMixin:
             self.logger.info("Controlnet image not generated")
         return controlnet_image
 
-    def on_load_controlnet_signal(self, _message: dict):
-        self.load_controlnet()
-
     def load_controlnet(self):
-        self.load_controlnet_model()
-        self.load_controlnet_processor()
+        self.__load_controlnet_model()
+        self.__load_controlnet_processor()
         self.make_controlnet_memory_efficient()
 
-    def load_controlnet_model(self):
-        self.logger.debug(f"Loading controlnet {self.controlnet_type}")
+    def apply_controlnet_to_pipe(self):
+        self.__apply_controlnet_to_pipe()
+        self.__apply_controlnet_processor_to_pipe()
+
+    def remove_controlnet_from_pipe(self):
+        self.__remove_controlnet_from_pipe()
+
+    def __load_controlnet_model(self):
+        self.logger.debug(f"Loading controlnet {self.controlnet_type} to {self.device}")
 
         path = self.controlnet_path
         short_path = self.controlnet_model["path"]
@@ -138,15 +151,16 @@ class ControlnetHandlerMixin:
                 path,
                 torch_dtype=self.data_type,
                 local_files_only=True,
-                device_map="auto"
+                device=self.device,
             )
-            self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED, short_path)
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.READY if not self.pipe else ModelStatus.LOADED, short_path)
+            self.swap_pipeline()
         except Exception as e:
             self.logger.error(f"Error loading controlnet {e}")
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED, short_path)
             return None
 
-    def load_controlnet_processor(self):
+    def __load_controlnet_processor(self):
         self.logger.debug("Loading controlnet processor")
 
         self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.LOADING, self.controlnet_type)
@@ -160,13 +174,7 @@ class ControlnetHandlerMixin:
             self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.FAILED, self.controlnet_type)
         self.logger.debug("Processor loaded")
 
-    def on_unload_controlnet_signal(self, _message: dict):
-        self.unload_controlnet()
-
-    def on_unload_controlnet_model_signal(self, _message: dict):
-        self.unload_controlnet_model()
-
-    def load_controlnet_from_ckpt(self, pipeline):
+    def __load_controlnet_from_ckpt(self, pipeline):
         self.logger.debug("Loading controlnet from ckpt")
         short_path = self.controlnet_model["path"]
         try:
@@ -186,43 +194,68 @@ class ControlnetHandlerMixin:
         except Exception as e:
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED, short_path)
 
-    def preprocess_for_controlnet(self, image):
-        if self.processor is not None and image is not None:
-            self.logger.debug("Controlnet: Processing image")
-            try:
-                image = self.processor(image)
-            except ValueError as e:
-                self.logger.error(f"Error processing image: {e}")
-                image = None
+    def __preprocess_for_controlnet(self, image):
+        if self.processor is not None:
+            if image is not None:
+                self.logger.debug("Controlnet: Processing image")
+                try:
+                    image = self.processor(image)
+                except ValueError as e:
+                    self.logger.error(f"Error processing image: {e}")
+                    image = None
 
-            if image is None:
-                image = image.resize((
-                    self.settings["working_width"],
-                    self.settings["working_height"]
-                ))
-            return image
-        self.logger.error("No controlnet processor found")
+                if image is None:
+                    image = image.resize((
+                        self.settings["working_width"],
+                        self.settings["working_height"]
+                    ))
+                return image
+            else:
+                self.logger.error("No image to process")
+        else:
+            self.logger.error("No controlnet processor found")
 
-    def unload_controlnet(self):
+    def __unload_controlnet(self):
         self.logger.debug("Unloading controlnet")
         self.clear_controlnet()
 
     def clear_controlnet(self):
         self.logger.debug("Clearing controlnet")
-        self.unload_controlnet_model()
-        self.unload_controlnet_processor()
+        self.__unload_controlnet_model()
+        self.__unload_controlnet_processor()
         self.controlnet_loaded = False
 
-    def unload_controlnet_model(self):
+    def __unload_controlnet_model(self):
         self.controlnet = None
         if self.pipe:
             self.pipe.controlnet = None
         clear_memory()
         self.reset_applied_memory_settings()
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.UNLOADED, "")
+        self.swap_pipeline()
 
-    def unload_controlnet_processor(self):
+    def __unload_controlnet_processor(self):
         self.processor = None
         clear_memory()
         self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.UNLOADED, "")
 
+    def __apply_controlnet_to_pipe(self):
+        if self.pipe and hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED, self.controlnet_model["path"])
+
+    def __apply_controlnet_processor_to_pipe(self):
+        if self.pipe and hasattr(self.pipe, "processor") and self.pipe.processor is not None:
+            self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.LOADED, self.controlnet_type)
+
+    def __remove_controlnet_from_pipe(self):
+        if self.pipe and hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
+            status = ModelStatus.READY
+            path = self.controlnet_model["path"]
+        else:
+            status = ModelStatus.UNLOADED
+            path = ""
+
+        if self.pipe:
+            self.swap_pipeline()
+
+        self.change_model_status(ModelType.CONTROLNET, status, path)

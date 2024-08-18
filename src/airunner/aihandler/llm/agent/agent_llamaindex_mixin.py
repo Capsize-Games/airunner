@@ -1,9 +1,12 @@
 import os.path
-import string
 from typing import Optional, List
 
-from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, ServiceContext, StorageContext
+from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, ServiceContext, StorageContext, PromptHelper, \
+    SimpleKeywordTableIndex
+from llama_index.core.chat_engine import ContextChatEngine
 from llama_index.core.data_structs import IndexDict
+from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
+from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.response_synthesizers import ResponseMode
 from llama_index.core.schema import TransformComponent
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
@@ -11,13 +14,15 @@ from llama_index.llms.huggingface import HuggingFaceLLM
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core import Settings
 from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
-from airunner.enums import SignalCode, LLMChatRole, AgentState
+from airunner.enums import SignalCode, LLMChatRole, AgentState, LLMActionType
 
 
 class AgentLlamaIndexMixin:
     def __init__(self):
         self.__documents = None
         self.__index = None
+        self.__chat_engine = None
+        self.__retriever = None
         self.__service_context: Optional[ServiceContext] = None
         self.__storage_context: StorageContext = None
         self.__transformations: Optional[List[TransformComponent]] = None
@@ -89,49 +94,66 @@ class AgentLlamaIndexMixin:
         self.__load_readers()
         self.__load_file_extractor()
         self.__load_documents()
+        self.__load_text_splitter()
+        self.__load_prompt_helper()
         self.__load_service_context()
+        self.__load_document_index()
+        self.__load_retriever()
+        self.__load_context_chat_engine()
+
         # self.__load_storage_context()
         # self.__load_transformations()
         # self.__load_index_struct()
-        self.__load_document_index()
 
     def __load_llm(self, model, tokenizer):
-        self.__llm = HuggingFaceLLM(
-            model=model,
-            tokenizer=tokenizer,
-            max_new_tokens=1000,
-            generate_kwargs=dict(
-                top_k=50,
-                top_p=0.95,
-                temperature=0.9,
-                num_return_sequences=1,
-                num_beams=1,
-                no_repeat_ngram_size=3,
-                early_stopping=True,
-                do_sample=True,
-                # pad_token_id=tokenizer.eos_token_id,
-                # eos_token_id=tokenizer.eos_token_id,
-                # bos_token_id=tokenizer.bos_token_id,
+        try:
+            self.__llm = HuggingFaceLLM(
+                model=model,
+                tokenizer=tokenizer,
+                max_new_tokens=4096,
+                generate_kwargs=dict(
+                    top_k=40,
+                    top_p=0.90,
+                    temperature=0.5,
+                    num_return_sequences=1,
+                    num_beams=1,
+                    no_repeat_ngram_size=4,
+                    early_stopping=True,
+                    do_sample=True,
+                )
             )
-        )
+        except Exception as e:
+            self.logger.error(f"Error loading LLM: {str(e)}")
+
+    @property
+    def is_llama_instruct(self):
+        return True
 
     def perform_rag_search(
-        self,
-        prompt,
-        streaming: bool = False,
-        response_mode: ResponseMode = ResponseMode.COMPACT
+            self,
+            prompt,
+            streaming: bool = False,
+            response_mode: ResponseMode = ResponseMode.COMPACT
     ):
+        if self.__chat_engine is None:
+            raise RuntimeError(
+                "Chat engine is not initialized. "
+                "Please ensure __load_service_context "
+                "is called before perform_rag_search."
+            )
+
+        self.add_message_to_history(
+            prompt,
+            LLMChatRole.HUMAN
+        )
+
         if response_mode in (
             ResponseMode.ACCUMULATE
         ):
             streaming = False
 
         try:
-            query_engine = self.__index.as_query_engine(
-                streaming=streaming,
-                response_mode=response_mode,
-            )
-            print(f"Querying with prompt: {prompt}")  # Debug: Show the prompt
+            engine = self.__chat_engine
         except AttributeError as e:
             self.logger.error(f"Error performing RAG search: {str(e)}")
             if streaming:
@@ -145,14 +167,21 @@ class AgentLlamaIndexMixin:
                     )
                 )
             return
-        response = query_engine.query(prompt)
+
+        inputs:str = self.get_rendered_template(LLMActionType.PERFORM_RAG_SEARCH, [])
+
+        response = engine.stream_chat(
+            message=inputs
+        )
         response_text = ""
         if streaming:
             self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
             is_first_message = True
             is_end_of_message = False
             for res in response.response_gen:
-                response_text += res
+                if response_text:  # Only add a space if response_text is not empty
+                    response_text += " "
+                response_text += res.strip()
                 self.emit_signal(
                     SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                     dict(
@@ -163,10 +192,18 @@ class AgentLlamaIndexMixin:
                     )
                 )
                 is_first_message = False
+            self.add_message_to_history(
+                response_text,
+                LLMChatRole.ASSISTANT
+            )
             response_text = ""
         else:
             response_text = response.response
             is_first_message = True
+            self.add_message_to_history(
+                response_text,
+                LLMChatRole.ASSISTANT
+            )
 
         self.emit_signal(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL,
@@ -176,11 +213,6 @@ class AgentLlamaIndexMixin:
                 is_end_of_message=True,
                 name=self.botname,
             )
-        )
-
-        self.add_message_to_history(
-            response_text,
-            LLMChatRole.ASSISTANT
         )
 
         return response
@@ -221,15 +253,49 @@ class AgentLlamaIndexMixin:
             self.logger.error(f"Error loading documents: {str(e)}")
             self.__documents = None
 
-    def __load_service_context(self):
-        self.logger.debug("Loading service context...")
-        self.__service_context = ServiceContext.from_defaults(
-            llm=self.__llm,
-            embed_model=Settings.embed_model,
-            chunk_size=self.__chunk_size,
-            chunk_overlap=self.__chunk_overlap,
-            system_prompt="Search the full text and find all relevant information related to the query.",
+    def __load_text_splitter(self):
+        self.__text_splitter = SentenceSplitter(
+            chunk_size=256,
+            chunk_overlap=20
         )
+
+    def __load_prompt_helper(self):
+        self.__prompt_helper = PromptHelper(
+            context_window=4096,
+            num_output=1024,
+            chunk_overlap_ratio=0.1,
+            chunk_size_limit=None,
+        )
+
+    def __load_context_chat_engine(self):
+        context_retriever = self.__retriever  # Your method to retrieve context
+
+        try:
+            self.__chat_engine = ContextChatEngine.from_defaults(
+                retriever=context_retriever,
+                service_context=self.__service_context,
+                chat_history=self.history,
+                memory=None,  # Define or use an existing memory buffer if needed
+                system_prompt="Search the full text and find all relevant information related to the query.",
+                node_postprocessors=[],  # Add postprocessors if utilized in your setup
+                llm=self.__llm,  # Use the existing LLM setup
+            )
+        except Exception as e:
+            self.logger.error(f"Error loading chat engine: {str(e)}")
+
+    def __load_service_context(self):
+        self.logger.debug("Loading service context with ContextChatEngine...")
+        try:
+            # Update service context to use the newly created chat engine
+            self.__service_context = ServiceContext.from_defaults(
+                llm=self.__llm,
+                embed_model=Settings.embed_model,
+                #chat_engine=self.__chat_engine,  # Include the chat engine in the service context
+                text_splitter=self.__text_splitter,
+                prompt_helper=self.__prompt_helper,
+            )
+        except Exception as e:
+            self.logger.error(f"Error loading service context with chat engine: {str(e)}")
 
     # def __load_storage_context(self):
     #     self.logger.debug("Loading storage context...")
@@ -284,25 +350,23 @@ class AgentLlamaIndexMixin:
             for chunk in chunks:
                 print(chunk)
 
-    def print_indexed_chunks(self):
-        # Assuming get_indexed_nodes is a method that returns the indexed nodes
-        if self.__index is not None:
-            node_doc_ids = list(self.__index.index_struct.nodes_dict.values())
-            indexed_nodes = self.__index.docstore.get_nodes(node_doc_ids)
-            for i, node in enumerate(indexed_nodes):
-                print(f"Chunk {i + 1}: {node.text}")  # Print first 200 characters of each chunk
-
     def __load_document_index(self):
         self.logger.debug("Loading index...")
         try:
-            self.__index = VectorStoreIndex.from_documents(
+            self.__index = SimpleKeywordTableIndex.from_documents(
                 self.__documents,
                 service_context=self.__service_context,
-                # storage_context=self.__storage_context,
-                # transformations=self.__transformations,
-                # index_struct=self.__index_struct
             )
+            self.logger.debug("Index loaded successfully.")
         except TypeError as e:
             self.logger.error(f"Error loading index: {str(e)}")
 
-        self.print_indexed_chunks()
+    def __load_retriever(self):
+        try:
+            self.__retriever = KeywordTableSimpleRetriever(
+                index=self.__index,
+            )
+            self.logger.debug("Retriever loaded successfully with index.")
+        except Exception as e:
+            self.logger.error(f"Error setting up the retriever: {str(e)}")
+

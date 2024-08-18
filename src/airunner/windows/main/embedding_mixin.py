@@ -44,6 +44,7 @@ class EmbeddingMixin:
     def get_embeddings(self, message: dict = None):
         name_filter = message.get("name_filter") if message is not None else ""
         embeddings = []
+
         for embedding in self.settings["embeddings"]:
             if name_filter == "":
                 embeddings.append(embedding)
@@ -73,7 +74,7 @@ class EmbeddingMixin:
                 return
 
     def scan_for_embeddings(self, _message: dict):
-        embeddings_path = self.settings["path_settings"]["embeddings_model_path"]
+        embeddings_path = os.path.expanduser(self.settings["path_settings"]["embeddings_model_path"])
         if os.path.exists(embeddings_path):
             for root, dirs, _ in os.walk(embeddings_path):
                 for directory in dirs:
@@ -90,6 +91,6 @@ class EmbeddingMixin:
                                 "active": True,
                                 "trigger_word": ""
                             }
-                            self.add_embedding(embedding)
-        self.delete_missing_embeddings({})
-        self.get_embeddings()
+                            self.emit_signal(SignalCode.EMBEDDING_ADD_SIGNAL, embedding)
+        # self.delete_missing_embeddings({})
+        # self.get_embeddings()

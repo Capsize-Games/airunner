@@ -226,7 +226,7 @@ class CustomScene(
         :param border_color: tuple indicating the color of the border
         :return:
         """
-        image = ImageOps.expand(image, border=border_size, fill=border_color)
+        # image = ImageOps.expand(image, border=border_size, fill=border_color)
 
         if is_outpaint:
             image, root_point, pivot_point = self.handle_outpaint(

@@ -23,6 +23,7 @@ from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.logger import Logger
+from airunner.history import History
 from airunner.settings import (
     STATUS_ERROR_COLOR,
     STATUS_NORMAL_COLOR_LIGHT,
@@ -66,11 +67,6 @@ from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
-
-
-class History:
-    def add_event(self, *args, **kwargs):
-        print("TODO")
 
 
 class MainWindow(
@@ -227,9 +223,15 @@ class MainWindow(
             self.on_ai_models_save_or_update_signal
         )
         self.register(
+            SignalCode.VAE_MODELS_SAVE_OR_UPDATE_SIGNAL,
+            self.on_vae_models_save_or_update_signal
+        )
+        self.register(
             SignalCode.NAVIGATE_TO_URL,
             self.on_navigate_to_url
         )
+
+        self.initialize_worker_manager()
 
     def download_url(self, url, save_path):
         response = requests.get(url)
@@ -779,8 +781,8 @@ class MainWindow(
         settings["window_settings"]["chat_prompt_splitter"] = self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.saveState()
         settings["window_settings"]["canvas_splitter"] = self.ui.canvas_widget_2.ui.canvas_splitter.saveState()
         settings["window_settings"]["canvas_side_splitter"] = self.ui.canvas_widget_2.ui.canvas_side_splitter.saveState()
-        settings["window_settings"][
-            "canvas_side_splitter_2"] = self.ui.canvas_widget_2.ui.canvas_side_splitter_2.saveState()
+        settings["window_settings"]["canvas_side_splitter_2"] = self.ui.canvas_widget_2.ui.canvas_side_splitter_2.saveState()
+        settings["window_settings"]["stats_splitter"] = self.ui.stats_widget.ui.splitter.saveState()
 
         self.settings = settings
         self.save_settings()
@@ -824,6 +826,9 @@ class MainWindow(
 
         if window_settings["canvas_side_splitter_2"] is not None:
             self.ui.canvas_widget_2.ui.canvas_side_splitter_2.restoreState(window_settings["canvas_side_splitter"])
+
+        if "stats_splitter" in window_settings and window_settings["stats_splitter"] is not None:
+            self.ui.stats_widget.ui.splitter.restoreState(window_settings["stats_splitter"])
 
     ##### End window properties #####
     #################################
@@ -1046,7 +1051,7 @@ class MainWindow(
             )
 
         # call initialize_worker_manager after 100ms
-        QTimer.singleShot(100, self.initialize_worker_manager)
+        #QTimer.singleShot(500, self.initialize_worker_manager)
 
     def initialize_worker_manager(self):
         from airunner.worker_manager import WorkerManager

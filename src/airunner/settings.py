@@ -15,6 +15,9 @@ All current and future security documentation will be contained
 within this file.
 """
 import logging
+import os
+import sys
+
 from PySide6 import QtCore
 from airunner.enums import (
     GeneratorSection,
@@ -27,7 +30,6 @@ from airunner.enums import (
     Mode,
     LLMActionType,
     ImageCategory,
-    StableDiffusionVersion,
     TTSModel
 )
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
@@ -36,7 +38,12 @@ from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DAT
 # NLTK_DOWNLOAD_DIR is the directory where the NLTK files will be
 # downloaded to. We need this for RAG
 ####################################################################
-NLTK_DOWNLOAD_DIR = "/home/joe/Projects/airunner/venv/lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/"
+python_venv_dir = os.path.dirname(sys.executable)
+NLTK_DOWNLOAD_DIR = os.path.join(
+    python_venv_dir,
+    "..",
+    "lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/"
+)
 
 ####################################################################
 # USE_MODEL_MANAGER is used to enable the model manager.
@@ -73,12 +80,12 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.ERROR
+LOG_LEVEL = logging.DEBUG
 
 ####################################################################
 # Default models for the core application
 ####################################################################
-DEFAULT_LLM_HF_PATH = "w4ffl35/Mistral-7B-Instruct-v0.2-safetensors"
+DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.2"
 # WAS ORIGINALLY USING "openai/whisper-base" for feature extractor
 DEFAULT_STT_HF_PATH = "openai/whisper-tiny"
 
@@ -173,6 +180,7 @@ DEFAULT_CHATBOT = {
     "use_mood": True,
     "use_guardrails": True,
     "use_system_instructions": True,
+    "use_datetime": True,
     "assign_names": True,
     "bot_personality": "happy. He loves {{ username }}",
     "bot_mood": "",
@@ -532,10 +540,11 @@ VULNERABILITY_REPORT_LINK = (
 ####################################################################
 SD_DEFAULT_VERSION = "SD 1.5"
 SD_DEFAULT_MODEL_PATH = "runwayml/stable-diffusion-v1-5"
+SD_DEFAULT_VAE_PATH = ""
 SD_FEATURE_EXTRACTOR_PATH = "openai/clip-vit-large-patch14"
 SD_DEFAULT_MODEL = dict(
     version=SD_DEFAULT_VERSION,
-    model=SD_DEFAULT_MODEL_PATH,
+    model="",
 )
 DEFAULT_MODELS = dict(
     stablediffusion=dict(
@@ -626,23 +635,23 @@ AVAILABLE_ACTIONS = [
     "safety_checker",
 ]
 SCHEDULER_CLASSES = {
-    Scheduler.EULER_ANCESTRAL.value: "EulerAncestralDiscreteScheduler",
-    Scheduler.EULER.value: "EulerDiscreteScheduler",
-    Scheduler.LMS.value: "LMSDiscreteScheduler",
-    Scheduler.HEUN.value: "HeunDiscreteScheduler",
-    Scheduler.DPM2.value: "DPMSolverSinglestepScheduler",
-    Scheduler.DPM_PP_2M.value: "DPMSolverMultistepScheduler",
-    Scheduler.DPM2_K.value: "KDPM2DiscreteScheduler",
-    Scheduler.DPM2_A_K.value: "KDPM2AncestralDiscreteScheduler",
-    Scheduler.DPM_PP_2M_K.value: "DPMSolverMultistepScheduler",
-    Scheduler.DPM_PP_2M_SDE_K.value: "DPMSolverMultistepScheduler",
-    Scheduler.DDIM.value: "DDIMScheduler",
-    Scheduler.UNIPC.value: "UniPCMultistepScheduler",
-    Scheduler.DDPM.value: "DDPMScheduler",
-    Scheduler.DEIS.value: "DEISMultistepScheduler",
-    Scheduler.DPM_2M_SDE_K.value: "DPMSolverMultistepScheduler",
-    Scheduler.PLMS.value: "PNDMScheduler",
-    Scheduler.DPM.value: "DPMSolverMultistepScheduler",
+    Scheduler.EULER_ANCESTRAL: "EulerAncestralDiscreteScheduler",
+    Scheduler.EULER: "EulerDiscreteScheduler",
+    Scheduler.LMS: "LMSDiscreteScheduler",
+    Scheduler.HEUN: "HeunDiscreteScheduler",
+    Scheduler.DPM2: "DPMSolverSinglestepScheduler",
+    Scheduler.DPM_PP_2M: "DPMSolverMultistepScheduler",
+    Scheduler.DPM2_K: "KDPM2DiscreteScheduler",
+    Scheduler.DPM2_A_K: "KDPM2AncestralDiscreteScheduler",
+    Scheduler.DPM_PP_2M_K: "DPMSolverMultistepScheduler",
+    Scheduler.DPM_PP_2M_SDE_K: "DPMSolverMultistepScheduler",
+    Scheduler.DDIM: "DDIMScheduler",
+    Scheduler.UNIPC: "UniPCMultistepScheduler",
+    Scheduler.DDPM: "DDPMScheduler",
+    Scheduler.DEIS: "DEISMultistepScheduler",
+    Scheduler.DPM_2M_SDE_K: "DPMSolverMultistepScheduler",
+    Scheduler.PLMS: "PNDMScheduler",
+    Scheduler.DPM: "DPMSolverMultistepScheduler",
 }
 MIN_SEED = 0
 MAX_SEED = 4294967295
@@ -701,6 +710,7 @@ DEFAULT_MEMORY_SETTINGS = dict(
 # Each generator category.
 ####################################################################
 STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
+    image_preset="",
     prompt="",
     negative_prompt="",
     steps=20,
@@ -711,17 +721,17 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     seed=42,
     random_seed=True,
     model_name="",
-    model=SD_DEFAULT_MODEL_PATH,
+    model="",
+    vae=SD_DEFAULT_VAE_PATH,
     scheduler=DEFAULT_SCHEDULER,
     prompt_triggers="",
     strength=50,
     image_guidance_scale=750,  # pix2pix
     n_samples=1,
-    enable_controlnet=False,
     clip_skip=0,
     variation=False,
     use_prompt_builder=False,
-    version="",
+    version="SD 1.5",
     is_preset=False,
     input_image=None,
 )
@@ -938,6 +948,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     generator_section=GeneratorSection.TXT2IMG.value,
     hf_api_key_read_key="",
     hf_api_key_write_key="",
+    civit_ai_api_key="",
     pipeline="txt2img",
     pipeline_version="",
     is_maximized=False,
@@ -1249,6 +1260,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     pipelines=pipeline_bootstrap_data,
     controlnet=controlnet_bootstrap_data,
     ai_models=model_bootstrap_data,
+    vae_models=[],
     image_filters=imagefilter_bootstrap_data,
     trusted_huggingface_repos=[],
     run_setup_wizard=True,
