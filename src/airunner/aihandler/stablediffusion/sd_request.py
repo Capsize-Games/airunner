@@ -7,7 +7,7 @@ from cryptography.fernet import Fernet
 from airunner.enums import (
     SDMode,
     GeneratorSection,
-    Controlnet
+    Controlnet, ImageCategory, ImagePreset
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import (
@@ -36,9 +36,48 @@ class ControlnetImageSettings:
 
 
 class GeneratorSettings:
+    @property
+    def prompt(self):
+        prompt = ""
+        if self.image_preset != "":
+            preset_enum = ImagePreset(self.image_preset)
+            if preset_enum is ImagePreset.ILLUSTRATION:
+                prompt = "A beautiful illustration of a"
+            elif preset_enum is ImagePreset.PHOTOGRAPH:
+                prompt = "A beautiful photograph of a"
+            elif preset_enum is ImagePreset.PAINTING:
+                prompt = "A beautiful painting of a"
+        return f"{prompt} {self._prompt}"
+
+    @prompt.setter
+    def prompt(self, value):
+        self._prompt = value
+
+    @property
+    def negative_prompt(self):
+        negative_prompt = ""
+        if self.image_preset != "":
+            preset_enum = ImagePreset(self.image_preset)
+            if preset_enum is ImagePreset.ILLUSTRATION:
+                negative_prompt = "photograph, realistic, photo realistic, ultra realistic, cgi"
+            elif preset_enum is ImagePreset.PHOTOGRAPH:
+                negative_prompt = "illustration, drawing, painting, digital art"
+            elif preset_enum is ImagePreset.PAINTING:
+                negative_prompt = "illustration, drawing, photograph, photo, realistic, photo realistic, ultra realistic, cgi"
+        return f"{negative_prompt} {self._negative_prompt}"
+
+    @negative_prompt.setter
+    def negative_prompt(self, value):
+        self._negative_prompt = value
+
     def __init__(self, settings: dict):
         generator_settings = settings["generator_settings"]
+        self.generator_settings = generator_settings
 
+        self._prompt = ""
+        self._negative_prompt = ""
+
+        self.image_preset = generator_settings.get("image_preset", STABLEDIFFUSION_GENERATOR_SETTINGS["image_preset"])
         self.prompt = generator_settings.get("prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt"])
         self.negative_prompt = generator_settings.get("negative_prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["negative_prompt"])
         self.steps = generator_settings.get("steps", STABLEDIFFUSION_GENERATOR_SETTINGS["steps"])
@@ -66,9 +105,11 @@ class GeneratorSettings:
         self.controlnet_image_settings = ControlnetImageSettings()
         self.parse_prompt(settings["nsfw_filter"])
 
-    def parse_prompt(self, nsfw_filter_active: bool, prompt=None, negative_prompt=None):
+    def parse_prompt(self, nsfw_filter_active: bool, image_preset: str = "", prompt=None, negative_prompt=None):
+        self.image_preset = image_preset
         prompt = prompt or self.prompt
         negative_prompt = negative_prompt or self.negative_prompt
+
         cipher_suite = Fernet(SD_GUARDRAILS_KEY)
         plain_text = cipher_suite.decrypt(SD_GUARDRAILS)
         bad_words_list = plain_text.decode().split(",")
