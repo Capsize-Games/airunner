@@ -14,7 +14,7 @@
 
 # AI RUNNER 
 
-## v3.0.0.dev5
+## v3.0.0.devX
 
 AI Runner can be compiled with `pyinstaller` however the current version
 is not yet stable (check the releases for stable versions).
