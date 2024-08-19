@@ -286,7 +286,7 @@ class SDRequest(
         strength=None,
         prompt_embeds=None,
         negative_prompt_embeds=None,
-        generator_request_data=None
+        generator_request_data=None,
     ) -> dict:
         self.active_rect = active_rect
 
