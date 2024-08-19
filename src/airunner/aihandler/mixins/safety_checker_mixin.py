@@ -155,17 +155,25 @@ class SafetyCheckerMixin:
             if has_nsfw_concepts[i]:
                 img = img.convert("RGBA")
                 img.paste((0, 0, 0), (0, 0, img.size[0], img.size[1]))
+
                 draw = ImageDraw.Draw(img)
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
-                draw.text(
-                    (
-                        self.settings["working_width"] / 2 - 30,
-                        self.settings["working_height"] / 2
-                    ),
-                    "NSFW",
-                    (255, 255, 255),
-                    font=font
-                )
+                font = ImageFont.load_default(50)  # load_default() does not support size argument
+
+                # Text you want to center
+                text = "NSFW"
+
+                # Calculate the bounding box of the text
+                text_bbox = draw.textbbox((0, 0), text, font=font)
+                text_width = text_bbox[2] - text_bbox[0]
+                text_height = text_bbox[3] - text_bbox[1]
+
+                # Calculate the position to center the text line
+                text_x = (img.width - text_width) // 2
+                text_y = (img.height - text_height) // 2
+
+                # Draw the text at the calculated position, ensuring the text line is centered
+                draw.text((text_x, text_y), text, font=font, fill=(255, 255, 255))
+
                 images[i] = img
 
         return images, has_nsfw_concepts
