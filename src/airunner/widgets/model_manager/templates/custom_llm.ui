@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>custom_llm_model_widget</class>
+ <widget class="QWidget" name="custom_llm_model_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>503</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="4" column="0">
+    <widget class="QPushButton" name="scan_for_models_button">
+     <property name="font">
+      <font>
+       <pointsize>8</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Scan for models</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QComboBox" name="comboBox"/>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="toggle_all">
+       <property name="font">
+        <font>
+         <pointsize>8</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Toggle all</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="0">
+    <widget class="QScrollArea" name="custom_scroll_area">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>483</width>
+        <height>189</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2"/>
+     </widget>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLineEdit" name="lineEdit">
+     <property name="placeholderText">
+      <string>Search models</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>scan_for_models_button</sender>
+   <signal>clicked()</signal>
+   <receiver>custom_llm_model_widget</receiver>
+   <slot>action_button_clicked_scan_for_models()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>199</x>
+     <y>282</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>270</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>comboBox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>custom_llm_model_widget</receiver>
+   <slot>mode_type_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>96</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>67</x>
+     <y>-8</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggle_all</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>custom_llm_model_widget</receiver>
+   <slot>toggle_all_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>350</x>
+     <y>18</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>215</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEdit</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>custom_llm_model_widget</receiver>
+   <slot>search_text_edited(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>265</x>
+     <y>55</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>245</x>
+     <y>-7</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>action_button_clicked_scan_for_models()</slot>
+  <slot>mode_type_changed(QString)</slot>
+  <slot>toggle_all_toggled(bool)</slot>
+  <slot>search_text_edited(QString)</slot>
+ </slots>
+</ui>
