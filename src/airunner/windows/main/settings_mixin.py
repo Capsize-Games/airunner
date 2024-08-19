@@ -54,7 +54,6 @@ class SettingsMixin:
         DEFAULT_APPLICATION_SETTINGS["ai_mode"] = ai_mode
 
         self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
-        self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
         self.default_settings = DEFAULT_APPLICATION_SETTINGS
 
         self.update_settings()
@@ -148,12 +147,6 @@ class SettingsMixin:
                 current[k] = v
             elif isinstance(v, dict):
                 self.recursive_update(current[k], v)
-
-    def on_reset_settings_signal(self, _message: dict):
-        print("Resetting settings")
-        self.application_settings.clear()
-        self.application_settings.sync()
-        self.settings = self.settings
 
     # def get_settings(self):
     #     try:

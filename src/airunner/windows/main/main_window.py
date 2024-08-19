@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import urllib
 import webbrowser
 from functools import partial
@@ -8,7 +9,7 @@ import requests
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
-    Signal, QTimer
+    Signal, QTimer, QProcess
 )
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
@@ -401,6 +402,21 @@ class MainWindow(
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal)
         self.register(SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts)
+        self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
+
+    def on_reset_settings_signal(self, _message: dict):
+        self.settings = self.default_settings
+        self.restart()
+
+    def restart(self):
+        # Save the current state
+        self.save_state()
+
+        # Close the main window
+        self.close()
+
+        # Start a new instance of the application
+        QProcess.startDetached(sys.executable, sys.argv)
 
     def on_model_status_changed_signal(self, data: dict):
         if data["status"] == ModelStatus.LOADING:
