@@ -5,11 +5,7 @@ import numpy as np
 from PySide6.QtWidgets import QApplication
 from typing import List
 import torch
-from PIL import (
-    Image,
-    ImageDraw,
-    ImageFont
-)
+from PIL import Image
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
     StableDiffusionControlNetInpaintPipeline, AutoencoderKL, UNet2DConditionModel, StableDiffusionXLPipeline, \
     StableDiffusionXLImg2ImgPipeline, StableDiffusionXLInpaintPipeline, StableDiffusionXLControlNetPipeline, \
