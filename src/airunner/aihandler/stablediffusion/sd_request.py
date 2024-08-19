@@ -12,8 +12,6 @@ from airunner.enums import (
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import (
     MIN_NUM_INFERENCE_STEPS_IMG2IMG,
-    SD_GUARDRAILS_KEY,
-    SD_GUARDRAILS,
     STABLEDIFFUSION_GENERATOR_SETTINGS, DEFAULT_GENERATOR_SETTINGS, DEFAULT_MEMORY_SETTINGS
 )
 from airunner.utils.convert_base64_to_image import convert_base64_to_image

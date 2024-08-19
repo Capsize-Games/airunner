@@ -396,14 +396,6 @@ class SDHandler(
             self.cur_prompt = self.settings["generator_settings"]["prompt"]
             self.cur_neg_prompt = self.settings["generator_settings"]["negative_prompt"]
             self.image_preset = self.settings["generator_settings"]["image_preset"]
-
-            self.sd_request.generator_settings.parse_prompt(
-                self.settings["nsfw_filter"],
-                self.image_preset,
-                self.cur_prompt,
-                self.cur_neg_prompt
-            )
-
             self.latents = None
             self.latents_set = False
             self.reload_prompts = True

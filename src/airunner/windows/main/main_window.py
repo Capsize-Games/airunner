@@ -23,6 +23,7 @@ from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.logger import Logger
+from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 from airunner.history import History
 from airunner.settings import (
     STATUS_ERROR_COLOR,
@@ -67,6 +68,7 @@ from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
+from airunner.worker_manager import WorkerManager
 
 
 class MainWindow(
@@ -230,8 +232,6 @@ class MainWindow(
             SignalCode.NAVIGATE_TO_URL,
             self.on_navigate_to_url
         )
-
-        self.initialize_worker_manager()
 
     def download_url(self, url, save_path):
         response = requests.get(url)
@@ -1051,12 +1051,10 @@ class MainWindow(
             )
 
         # call initialize_worker_manager after 100ms
-        #QTimer.singleShot(500, self.initialize_worker_manager)
+        QTimer.singleShot(500, self.initialize_worker_manager)
 
     def initialize_worker_manager(self):
-        from airunner.worker_manager import WorkerManager
         if self.tts_handler_class is None:
-            from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
             self.tts_handler_class = EspeakTTSHandler
         self.worker_manager = WorkerManager(
             disable_sd=self.disable_sd,
