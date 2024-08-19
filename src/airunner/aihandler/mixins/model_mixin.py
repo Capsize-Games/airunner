@@ -322,31 +322,12 @@ class ModelMixin:
             except Exception as e:
                 self.logger.error(e)
 
-    def check_nsfw_images(self, images) -> bool:
-        if not self.feature_extractor or not self.safety_checker:
-            return images, [False] * len(images)
-        safety_checker_input = self.feature_extractor(images, return_tensors="pt").to(self.device)
-        _, has_nsfw_concepts = self.safety_checker(
-            images=[np.array(img) for img in images],
-            clip_input=safety_checker_input.pixel_values.to(self.device)
-        )
-
-        # replace images with black images if nsfw content is detected
-        if any(has_nsfw_concepts):
-            for img in images:
-                img.paste((0, 0, 0), (0, 0, img.size[0], img.size[1]))
-        return images, has_nsfw_concepts
-
     def apply_tokenizer_to_pipe(self):
         self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.LOADED, self.__tokenizer_path)
-
 
     def __move_model_to_device(self):
         if self.pipe:
             self.pipe.to(self.data_type)
-
-    def __is_pipe_on_cpu(self) -> bool:
-        return self.__has_pipe and self.pipe.device.type == "cpu"
 
     def __callback(self, step: int, _time_step, latents):
         self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
@@ -429,9 +410,7 @@ class ModelMixin:
         data = self.__prepare_data()
         results = self.pipe(**data)
         images = results.get("images", [])
-        images, nsfw_content_detected = self.check_nsfw_images(images)
-
-        return images, nsfw_content_detected
+        return self.check_and_mark_nsfw_images(images)
 
     def __interrupt_callback(self, pipe, i, t, callback_kwargs):
         if self.do_interrupt_image_generation:
@@ -467,29 +446,12 @@ class ModelMixin:
     def __apply_filters_to_image(self, image):
         return self.apply_filters(image, self.filters)
 
-    def __mark_image_as_nsfw(self, image):
-        image = image.convert("RGBA")
-        draw = ImageDraw.Draw(image)
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
-        draw.text(
-            (
-                self.settings["working_width"] / 2 - 30,
-                self.settings["working_height"] / 2
-            ),
-            "NSFW",
-            (255, 255, 255),
-            font=font
-        )
-        return image
-
-    def __process_images(self, images: List[Image.Image], do_base64: bool, has_filters: bool, nsfw_content_detected: List[bool]):
+    def __process_images(self, images: List[Image.Image], do_base64: bool, has_filters: bool):
         for i, image in enumerate(images):
             if has_filters:
                 image = self.__apply_filters_to_image(image)
             if do_base64:
                 image = self.__convert_image_to_base64(image)
-            if nsfw_content_detected[i]:
-                image = self.__mark_image_as_nsfw(image)
             images[i] = image
         return images
 
@@ -501,17 +463,19 @@ class ModelMixin:
         if self.data is not None:
             self.data["original_model_data"] = self.original_model_data or {}
 
-        has_nsfw = True in nsfw_content_detected if nsfw_content_detected is not None else False
-
         if images:
             do_base64 = self.data.get("do_base64", False)
             has_filters = self.filters is not None and len(self.filters) > 0
-            images = self.__process_images(images, do_base64, has_filters, nsfw_content_detected)
+            images = self.__process_images(
+                images,
+                do_base64,
+                has_filters
+            )
 
         return dict(
             images=images,
             data=self.data,
-            nsfw_content_detected=has_nsfw,
+            nsfw_content_detected=any(nsfw_content_detected),
         )
 
     def __load_generator(self, device=None, seed=None):
@@ -831,16 +795,6 @@ class ModelMixin:
         self.__tokenizer = None
         self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.UNLOADED, "")
         clear_memory()
-
-    def __apply_unet_to_pipe(self):
-        if self.pipe:
-            self.pipe.unet = self.__unet
-            self.change_model_status(ModelType.SD_UNET, ModelStatus.READY, self.__current_unet_path)
-
-    def __apply_vae_to_pipe(self):
-        if self.pipe:
-            self.pipe.vae = self.__vae
-            self.change_model_status(ModelType.SD_VAE, ModelStatus.READY, self.__vae_path)
 
     def __remove_vae_from_pipe(self):
         if self.pipe:

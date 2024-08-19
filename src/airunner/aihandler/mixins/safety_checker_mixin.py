@@ -1,5 +1,10 @@
 import os
 
+import numpy as np
+from PIL import (
+    ImageDraw,
+    ImageFont
+)
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 from airunner.enums import SignalCode, ModelStatus, ModelType
@@ -134,6 +139,36 @@ class SafetyCheckerMixin:
             print(e)
             self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Unable to load feature extractor")
             self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED, self.safety_checker_model["path"])
+
+    def check_and_mark_nsfw_images(self, images) -> bool:
+        if not self.feature_extractor or not self.safety_checker:
+            return images, [False] * len(images)
+
+        safety_checker_input = self.feature_extractor(images, return_tensors="pt").to(self.device)
+        _, has_nsfw_concepts = self.safety_checker(
+            images=[np.array(img) for img in images],
+            clip_input=safety_checker_input.pixel_values.to(self.device)
+        )
+
+        # Mark images as NSFW if NSFW content is detected
+        for i, img in enumerate(images):
+            if has_nsfw_concepts[i]:
+                img = img.convert("RGBA")
+                img.paste((0, 0, 0), (0, 0, img.size[0], img.size[1]))
+                draw = ImageDraw.Draw(img)
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+                draw.text(
+                    (
+                        self.settings["working_width"] / 2 - 30,
+                        self.settings["working_height"] / 2
+                    ),
+                    "NSFW",
+                    (255, 255, 255),
+                    font=font
+                )
+                images[i] = img
+
+        return images, has_nsfw_concepts
 
     def __load_safety_checker_model(self):
         self.logger.debug(f"Initializing safety checker")
