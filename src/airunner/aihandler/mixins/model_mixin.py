@@ -143,10 +143,6 @@ class ModelMixin:
             )
         )
 
-    @staticmethod
-    def __is_pytorch_error(e) -> bool:
-        return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
-
     @property
     def __has_pipe(self) -> bool:
         return self.pipe is not None
@@ -169,6 +165,55 @@ class ModelMixin:
                         model["path"]
                     )
                 )
+
+    @property
+    def __base_path(self):
+        action = self.sd_request.generator_settings.section
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"][f"{action}_model_path"],
+                self.settings["generator_settings"]["version"]
+            )
+        )
+
+    @property
+    def __tokenizer_path(self) -> str:
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["feature_extractor_model_path"],
+                SD_FEATURE_EXTRACTOR_PATH
+            )
+        )
+
+    @property
+    def __merges_path(self) -> str:
+        return os.path.join(
+            self.__base_path,
+            SD_DEFAULT_MODEL_PATH,
+            "tokenizer",
+            "merges.txt"
+        )
+
+    @property
+    def __unet_path(self):
+        return os.path.join(self.__base_path, "unet", )
+
+    @property
+    def __vae_path(self):
+        return os.path.join(self.__base_path, "vae", )
+
+    @property
+    def __text_encoder_path(self):
+        return os.path.expanduser(
+            os.path.join(
+                self.settings["path_settings"]["feature_extractor_model_path"],
+                SD_FEATURE_EXTRACTOR_PATH
+            )
+        )
+
+    @staticmethod
+    def __is_pytorch_error(e) -> bool:
+        return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
 
     def unload_image_generator_model(self):
         self.__unload_model()
@@ -276,6 +321,25 @@ class ModelMixin:
                 self.pipe.to(device)
             except Exception as e:
                 self.logger.error(e)
+
+    def check_nsfw_images(self, images) -> bool:
+        if not self.feature_extractor or not self.safety_checker:
+            return images, [False] * len(images)
+        safety_checker_input = self.feature_extractor(images, return_tensors="pt").to(self.device)
+        _, has_nsfw_concepts = self.safety_checker(
+            images=[np.array(img) for img in images],
+            clip_input=safety_checker_input.pixel_values.to(self.device)
+        )
+
+        # replace images with black images if nsfw content is detected
+        if any(has_nsfw_concepts):
+            for img in images:
+                img.paste((0, 0, 0), (0, 0, img.size[0], img.size[1]))
+        return images, has_nsfw_concepts
+
+    def apply_tokenizer_to_pipe(self):
+        self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.LOADED, self.__tokenizer_path)
+
 
     def __move_model_to_device(self):
         if self.pipe:
@@ -393,21 +457,6 @@ class ModelMixin:
             images,
             nsfw_content_detected
         )
-
-    def check_nsfw_images(self, images) -> bool:
-        if not self.feature_extractor or not self.safety_checker:
-            return images, [False] * len(images)
-        safety_checker_input = self.feature_extractor(images, return_tensors="pt").to(self.device)
-        _, has_nsfw_concepts = self.safety_checker(
-            images=[np.array(img) for img in images],
-            clip_input=safety_checker_input.pixel_values.to(self.device)
-        )
-
-        # replace images with black images if nsfw content is detected
-        if any(has_nsfw_concepts):
-            for img in images:
-                img.paste((0, 0, 0), (0, 0, img.size[0], img.size[1]))
-        return images, has_nsfw_concepts
 
     def __convert_image_to_base64(self, image):
         img_byte_arr = io.BytesIO()
@@ -753,15 +802,6 @@ class ModelMixin:
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
 
-    @property
-    def __text_encoder_path(self):
-        return os.path.expanduser(
-            os.path.join(
-                self.settings["path_settings"]["feature_extractor_model_path"],
-                SD_FEATURE_EXTRACTOR_PATH
-            )
-        )
-
     def __load_text_encoder(self):
         if self.__text_encoder and self.__current_text_encoder_path == self.__text_encoder_path:
             return
@@ -787,49 +827,10 @@ class ModelMixin:
         clear_memory()
         self.change_model_status(ModelType.SD_TEXT_ENCODER, ModelStatus.UNLOADED, "")
 
-    @property
-    def __base_path(self):
-        action = self.sd_request.generator_settings.section
-        return os.path.expanduser(
-            os.path.join(
-                self.settings["path_settings"][f"{action}_model_path"],
-                self.settings["generator_settings"]["version"]
-            )
-        )
-
-    @property
-    def __tokenizer_path(self) -> str:
-        return os.path.expanduser(
-            os.path.join(
-                self.settings["path_settings"]["feature_extractor_model_path"],
-                SD_FEATURE_EXTRACTOR_PATH
-            )
-        )
-
-    @property
-    def __merges_path(self) -> str:
-        return os.path.join(
-            self.__base_path,
-            SD_DEFAULT_MODEL_PATH,
-            "tokenizer",
-            "merges.txt"
-        )
-
-    @property
-    def __unet_path(self):
-        return os.path.join(self.__base_path, "unet", )
-
-    @property
-    def __vae_path(self):
-        return os.path.join(self.__base_path, "vae", )
-
     def __unload_tokenizer(self):
         self.__tokenizer = None
         self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.UNLOADED, "")
         clear_memory()
-
-    def apply_tokenizer_to_pipe(self):
-        self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.LOADED, self.__tokenizer_path)
 
     def __apply_unet_to_pipe(self):
         if self.pipe:
