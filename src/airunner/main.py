@@ -13,17 +13,17 @@ Do not change the order of the imports.
 import facehuggershield
 facehuggershield.huggingface.activate(
     show_stdout=True,
-    darklock_os_whitelisted_directories=["~/.airunner"]
+    darklock_os_whitelisted_directories=["~/.airunner", "/tmp"]
 )
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 ################################################################
 # Import the main application class for AI Runner.
 ################################################################
 from airunner.app import App
 
-
 if __name__ == "__main__":
-
     App(
         restrict_os_access=None,
         defendatron=facehuggershield.huggingface.defendatron

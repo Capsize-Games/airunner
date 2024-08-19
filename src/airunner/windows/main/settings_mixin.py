@@ -1,4 +1,5 @@
-import traceback
+import logging
+import threading
 from PySide6.QtCore import (
     QSettings,
     QByteArray,
@@ -16,6 +17,18 @@ from airunner.enums import (
 from airunner.utils.os.validate_path import validate_path
 
 class SettingsMixin:
+    _instance = None
+    _lock = threading.Lock()
+    _cached_settings = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            with cls._lock:
+                if not cls._instance:
+                    logging.debug("Creating new instance of SettingsMixin")
+                    cls._instance = super(SettingsMixin, cls).__new__(cls)
+        return cls._instance
+
     def __init__(
         self,
         use_cuda: bool = DEFAULT_APPLICATION_SETTINGS["use_cuda"],
@@ -26,16 +39,11 @@ class SettingsMixin:
         stt_enabled: bool = DEFAULT_APPLICATION_SETTINGS["stt_enabled"],
         ai_mode: bool = DEFAULT_APPLICATION_SETTINGS["ai_mode"],
     ):
-        """
-        Constructor for the SettingsMixin class.
-        Changes the default settings to the given parameters.
-        :param use_cuda:
-        :param sd_enabled:
-        :param ocr_enabled:
-        :param tts_enabled:
-        :param stt_enabled:
-        :param ai_mode:
-        """
+        if hasattr(self, '_initialized') and self._initialized:
+            logging.debug("SettingsMixin instance already initialized")
+            return
+        self._initialized = True
+        logging.debug("Initializing SettingsMixin instance")
 
         DEFAULT_APPLICATION_SETTINGS["use_cuda"] = use_cuda
         DEFAULT_APPLICATION_SETTINGS["sd_enabled"] = sd_enabled
@@ -64,16 +72,22 @@ class SettingsMixin:
         Gets the settings dictionary.
         :return:
         """
+        if SettingsMixin._cached_settings is not None:
+            return SettingsMixin._cached_settings
+
         try:
-            settings = self.get_settings()
-            if settings == {} or settings == "" or settings is None:
-                print("SETTINGS IS BLANK")
-                traceback.print_stack()
-            return settings
-        except Exception as e:
+            settings_byte_array = self.application_settings.value("settings", QByteArray())
+            if settings_byte_array:
+                data_stream = QDataStream(settings_byte_array, QIODevice.ReadOnly)
+                settings = data_stream.readQVariant()
+                SettingsMixin._cached_settings = settings
+                return settings
+            else:
+                return self.default_settings
+        except (TypeError, RuntimeError) as e:
             print("Failed to get settings")
             print(e)
-        return {}
+            return self.default_settings
 
     @settings.setter
     def settings(self, val):
@@ -82,10 +96,9 @@ class SettingsMixin:
         :param val:
         :return:
         """
-        val = self.construct_paths_if_base_path_changed(val)
-
         try:
             self.set_settings(val)
+            SettingsMixin._cached_settings = val
         except Exception as e:
             print("Failed to set settings")
             print(e)
@@ -96,7 +109,8 @@ class SettingsMixin:
         :param updated_settings:
         :return:
         """
-        settings = self.get_settings()
+        #settings = self.get_settings()
+        settings = self.settings
         if (
             settings is not None and
             updated_settings is not None and
@@ -121,7 +135,7 @@ class SettingsMixin:
             current_settings = default_settings
         else:
             self.recursive_update(current_settings, default_settings)
-
+        current_settings = self.construct_paths_if_base_path_changed(current_settings)
         self.settings = current_settings
 
     def recursive_update(self, current, default):
@@ -141,42 +155,36 @@ class SettingsMixin:
         self.application_settings.sync()
         self.settings = self.settings
 
-    def get_settings(self):
-        application_settings = QSettings(
-            ORGANIZATION,
-            APPLICATION_NAME
-        )
-        try:
-            settings_byte_array = application_settings.value(
-                "settings",
-                QByteArray()
-            )
-            if settings_byte_array:
-                data_stream = QDataStream(
-                    settings_byte_array,
-                    QIODevice.ReadOnly
-                )
-                settings = data_stream.readQVariant()
-                return settings
-            else:
-                return self.default_settings
-        except (TypeError, RuntimeError) as e:
-            print("Failed to get settings")
-            print(e)
-            return self.default_settings
+    # def get_settings(self):
+    #     try:
+    #         settings_byte_array = self.application_settings.value(
+    #             "settings",
+    #             QByteArray()
+    #         )
+    #         if settings_byte_array:
+    #             data_stream = QDataStream(
+    #                 settings_byte_array,
+    #                 QIODevice.ReadOnly
+    #             )
+    #             settings = data_stream.readQVariant()
+    #             return settings
+    #         else:
+    #             return self.default_settings
+    #     except (TypeError, RuntimeError) as e:
+    #         print("Failed to get settings")
+    #         print(e)
+    #         return self.default_settings
 
     def set_settings(self, val):
-        application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         if val:
             settings_byte_array = QByteArray()
             data_stream = QDataStream(settings_byte_array, QIODevice.WriteOnly)
             data_stream.writeQVariant(val)
-            application_settings.setValue("settings", settings_byte_array)
+            self.application_settings.setValue("settings", settings_byte_array)
             self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
 
     def save_settings(self):
-        application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
-        application_settings.sync()
+        self.application_settings.sync()
 
     def is_valid_path(self, path: str) -> bool:
         try:
