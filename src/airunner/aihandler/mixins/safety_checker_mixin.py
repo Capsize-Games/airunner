@@ -58,8 +58,8 @@ class SafetyCheckerMixin:
     def safety_checker_ready(self) -> bool:
         return (self.pipe and ((
            self.use_safety_checker and
-           self.model_is_loaded(ModelType.SAFETY_CHECKER) and
-           self.model_is_loaded(ModelType.FEATURE_EXTRACTOR)
+           self.feature_extractor and
+           self.safety_checker
         ) or (
             not self.use_safety_checker
         )))
@@ -69,14 +69,12 @@ class SafetyCheckerMixin:
 
     def on_safety_checker_model_load_signal(self, data_: dict):
         self.__load_safety_checker_model()
-        self.__apply_safety_checker_to_pipe()
 
     def on_safety_checker_model_unload_signal(self, data_: dict):
         self.__unload_safety_checker_model()
 
     def on_feature_extractor_load_signal(self, data_: dict):
         self.__load_feature_extractor_model()
-        self.__apply_feature_extractor_to_pipe()
 
     def on_feature_extractor_unload_signal(self, data_: dict):
         self.__unload_feature_extractor_model()
@@ -84,19 +82,13 @@ class SafetyCheckerMixin:
     def load_nsfw_filter(self):
         if self.use_safety_checker and self.safety_checker is None and "path" in self.safety_checker_model:
             self.__load_safety_checker_model()
-            self.__apply_safety_checker_to_pipe()
 
         if self.use_safety_checker and self.feature_extractor is None and "path" in self.safety_checker_model:
             self.__load_feature_extractor_model()
-            self.__apply_feature_extractor_to_pipe()
 
     def remove_safety_checker_from_pipe(self):
         self.__remove_feature_extractor_from_pipe()
         self.__remove_safety_checker_from_pipe()
-
-    def apply_safety_checker_to_pipe(self):
-        self.__apply_feature_extractor_to_pipe()
-        self.__apply_safety_checker_to_pipe()
 
     def unload_safety_checker(self, data_: dict = None):
         self.__unload_safety_checker_model()
@@ -137,7 +129,7 @@ class SafetyCheckerMixin:
                 use_safetensors=True,
                 device_map=self.device
             )
-            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.READY, self.feature_extractor_path)
+            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED, self.feature_extractor_path)
         except Exception as e:
             print(e)
             self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Unable to load feature extractor")
@@ -160,27 +152,11 @@ class SafetyCheckerMixin:
                 use_safetensors=True,
                 device_map=self.device
             )
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.READY, self.safety_checker_model["path"])
+            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED, self.safety_checker_model["path"])
         except Exception as e:
             print(e)
             self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Unable to load safety checker")
             self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED, self.safety_checker_model["path"])
-
-    def __apply_feature_extractor_to_pipe(self):
-        if not self.pipe:
-            return
-        self.logger.debug("Applying feature extractor to pipe")
-        if self.feature_extractor is not None:
-            self.pipe.feature_extractor = self.feature_extractor
-            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED, self.feature_extractor_path)
-
-    def __apply_safety_checker_to_pipe(self):
-        if not self.pipe:
-            return
-        self.logger.debug("Applying safety checker to pipe")
-        if self.safety_checker is not None:
-            self.pipe.safety_checker = self.safety_checker
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED, self.safety_checker_model["path"])
 
     def __remove_feature_extractor_from_pipe(self):
         self.logger.debug("Removing feature extractor from pipe")
