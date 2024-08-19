@@ -15,9 +15,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout,
-    QLabel, QPushButton, QSizePolicy, QSpacerItem,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QGridLayout,
+    QHBoxLayout, QLabel, QPushButton, QSizePolicy,
+    QSpacerItem, QVBoxLayout, QWidget)
 
 from airunner.widgets.seed.seed_widget import SeedWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
@@ -31,57 +31,14 @@ class Ui_stable_diffusion_settings_widget(object):
         stable_diffusion_settings_widget.setMaximumSize(QSize(16777215, 16777215))
         self.gridLayout = QGridLayout(stable_diffusion_settings_widget)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.label = QLabel(stable_diffusion_settings_widget)
-        self.label.setObjectName(u"label")
-        font = QFont()
-        font.setBold(True)
-        self.label.setFont(font)
-
-        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
-
-        self.presets = QComboBox(stable_diffusion_settings_widget)
-        self.presets.setObjectName(u"presets")
-
-        self.gridLayout.addWidget(self.presets, 1, 0, 1, 1)
-
-        self.reload_selected_preset = QPushButton(stable_diffusion_settings_widget)
-        self.reload_selected_preset.setObjectName(u"reload_selected_preset")
-        self.reload_selected_preset.setMaximumSize(QSize(32, 16777215))
-        self.reload_selected_preset.setCursor(QCursor(Qt.PointingHandCursor))
-        icon = QIcon()
-        icon.addFile(u":/icons/light/exchange-refresh-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.reload_selected_preset.setIcon(icon)
-
-        self.gridLayout.addWidget(self.reload_selected_preset, 1, 1, 1, 1)
-
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.gridLayout.addItem(self.verticalSpacer, 11, 0, 1, 1)
-
-        self.verticalLayout_4 = QVBoxLayout()
-        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.label_5 = QLabel(stable_diffusion_settings_widget)
-        self.label_5.setObjectName(u"label_5")
-        font1 = QFont()
-        font1.setPointSize(8)
-        font1.setBold(True)
-        self.label_5.setFont(font1)
-
-        self.verticalLayout_4.addWidget(self.label_5)
-
-        self.pipeline = QComboBox(stable_diffusion_settings_widget)
-        self.pipeline.setObjectName(u"pipeline")
-
-        self.verticalLayout_4.addWidget(self.pipeline)
-
-
-        self.gridLayout.addLayout(self.verticalLayout_4, 2, 0, 1, 2)
-
         self.model_layout = QVBoxLayout()
         self.model_layout.setObjectName(u"model_layout")
         self.label_3 = QLabel(stable_diffusion_settings_widget)
         self.label_3.setObjectName(u"label_3")
-        self.label_3.setFont(font1)
+        font = QFont()
+        font.setPointSize(8)
+        font.setBold(True)
+        self.label_3.setFont(font)
 
         self.model_layout.addWidget(self.label_3)
 
@@ -97,7 +54,7 @@ class Ui_stable_diffusion_settings_widget(object):
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.label_6 = QLabel(stable_diffusion_settings_widget)
         self.label_6.setObjectName(u"label_6")
-        self.label_6.setFont(font1)
+        self.label_6.setFont(font)
 
         self.verticalLayout_7.addWidget(self.label_6)
 
@@ -109,83 +66,15 @@ class Ui_stable_diffusion_settings_widget(object):
 
         self.gridLayout.addLayout(self.verticalLayout_7, 3, 0, 1, 2)
 
-        self.vae_layout = QVBoxLayout()
-        self.vae_layout.setObjectName(u"vae_layout")
-        self.label_2 = QLabel(stable_diffusion_settings_widget)
-        self.label_2.setObjectName(u"label_2")
-        self.label_2.setFont(font1)
+        self.reload_selected_preset = QPushButton(stable_diffusion_settings_widget)
+        self.reload_selected_preset.setObjectName(u"reload_selected_preset")
+        self.reload_selected_preset.setMaximumSize(QSize(32, 16777215))
+        self.reload_selected_preset.setCursor(QCursor(Qt.PointingHandCursor))
+        icon = QIcon()
+        icon.addFile(u":/icons/light/exchange-refresh-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.reload_selected_preset.setIcon(icon)
 
-        self.vae_layout.addWidget(self.label_2)
-
-        self.vae_combobox = QComboBox(stable_diffusion_settings_widget)
-        self.vae_combobox.setObjectName(u"vae_combobox")
-
-        self.vae_layout.addWidget(self.vae_combobox)
-
-
-        self.gridLayout.addLayout(self.vae_layout, 5, 0, 1, 2)
-
-        self.verticalLayout_2 = QVBoxLayout()
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.label_4 = QLabel(stable_diffusion_settings_widget)
-        self.label_4.setObjectName(u"label_4")
-        self.label_4.setFont(font1)
-
-        self.verticalLayout_2.addWidget(self.label_4)
-
-        self.scheduler = QComboBox(stable_diffusion_settings_widget)
-        self.scheduler.setObjectName(u"scheduler")
-        self.scheduler.setCursor(QCursor(Qt.ArrowCursor))
-
-        self.verticalLayout_2.addWidget(self.scheduler)
-
-
-        self.gridLayout.addLayout(self.verticalLayout_2, 6, 0, 1, 2)
-
-        self.horizontalLayout_3 = QHBoxLayout()
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.seed_widget = SeedWidget(stable_diffusion_settings_widget)
-        self.seed_widget.setObjectName(u"seed_widget")
-        self.seed_widget.setMinimumSize(QSize(0, 10))
-
-        self.horizontalLayout_3.addWidget(self.seed_widget)
-
-
-        self.gridLayout.addLayout(self.horizontalLayout_3, 7, 0, 1, 2)
-
-        self.horizontalLayout_6 = QHBoxLayout()
-        self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
-        self.samples = SliderWidget(stable_diffusion_settings_widget)
-        self.samples.setObjectName(u"samples")
-        self.samples.setMinimumSize(QSize(0, 10))
-        self.samples.setProperty("current_value", 0)
-        self.samples.setProperty("slider_maximum", 500)
-        self.samples.setProperty("spinbox_maximum", 500.000000000000000)
-        self.samples.setProperty("display_as_float", False)
-        self.samples.setProperty("spinbox_single_step", 1)
-        self.samples.setProperty("spinbox_page_step", 1)
-        self.samples.setProperty("spinbox_minimum", 1)
-        self.samples.setProperty("slider_minimum", 1)
-
-        self.horizontalLayout_6.addWidget(self.samples)
-
-        self.clip_skip_slider_widget = SliderWidget(stable_diffusion_settings_widget)
-        self.clip_skip_slider_widget.setObjectName(u"clip_skip_slider_widget")
-        self.clip_skip_slider_widget.setMinimumSize(QSize(0, 10))
-        self.clip_skip_slider_widget.setProperty("current_value", 0)
-        self.clip_skip_slider_widget.setProperty("slider_maximum", 11)
-        self.clip_skip_slider_widget.setProperty("spinbox_maximum", 12.000000000000000)
-        self.clip_skip_slider_widget.setProperty("display_as_float", False)
-        self.clip_skip_slider_widget.setProperty("spinbox_single_step", 1)
-        self.clip_skip_slider_widget.setProperty("spinbox_page_step", 1)
-        self.clip_skip_slider_widget.setProperty("spinbox_minimum", 0)
-        self.clip_skip_slider_widget.setProperty("slider_minimum", 0)
-        self.clip_skip_slider_widget.setProperty("settings_property", u"generator_settings.clip_skip")
-
-        self.horizontalLayout_6.addWidget(self.clip_skip_slider_widget)
-
-
-        self.gridLayout.addLayout(self.horizontalLayout_6, 8, 0, 1, 2)
+        self.gridLayout.addWidget(self.reload_selected_preset, 1, 1, 1, 1)
 
         self.ddim_frames = QHBoxLayout()
         self.ddim_frames.setObjectName(u"ddim_frames")
@@ -222,6 +111,86 @@ class Ui_stable_diffusion_settings_widget(object):
 
         self.gridLayout.addLayout(self.ddim_frames, 9, 0, 1, 2)
 
+        self.verticalLayout_2 = QVBoxLayout()
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.label_4 = QLabel(stable_diffusion_settings_widget)
+        self.label_4.setObjectName(u"label_4")
+        self.label_4.setFont(font)
+
+        self.verticalLayout_2.addWidget(self.label_4)
+
+        self.scheduler = QComboBox(stable_diffusion_settings_widget)
+        self.scheduler.setObjectName(u"scheduler")
+        self.scheduler.setCursor(QCursor(Qt.ArrowCursor))
+
+        self.verticalLayout_2.addWidget(self.scheduler)
+
+
+        self.gridLayout.addLayout(self.verticalLayout_2, 6, 0, 1, 2)
+
+        self.presets = QComboBox(stable_diffusion_settings_widget)
+        self.presets.setObjectName(u"presets")
+
+        self.gridLayout.addWidget(self.presets, 1, 0, 1, 1)
+
+        self.label = QLabel(stable_diffusion_settings_widget)
+        self.label.setObjectName(u"label")
+        font1 = QFont()
+        font1.setBold(True)
+        self.label.setFont(font1)
+
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+
+        self.vae_layout = QVBoxLayout()
+        self.vae_layout.setObjectName(u"vae_layout")
+        self.label_2 = QLabel(stable_diffusion_settings_widget)
+        self.label_2.setObjectName(u"label_2")
+        self.label_2.setFont(font)
+
+        self.vae_layout.addWidget(self.label_2)
+
+        self.vae_combobox = QComboBox(stable_diffusion_settings_widget)
+        self.vae_combobox.setObjectName(u"vae_combobox")
+
+        self.vae_layout.addWidget(self.vae_combobox)
+
+
+        self.gridLayout.addLayout(self.vae_layout, 5, 0, 1, 2)
+
+        self.horizontalLayout_6 = QHBoxLayout()
+        self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
+        self.samples = SliderWidget(stable_diffusion_settings_widget)
+        self.samples.setObjectName(u"samples")
+        self.samples.setMinimumSize(QSize(0, 10))
+        self.samples.setProperty("current_value", 0)
+        self.samples.setProperty("slider_maximum", 500)
+        self.samples.setProperty("spinbox_maximum", 500.000000000000000)
+        self.samples.setProperty("display_as_float", False)
+        self.samples.setProperty("spinbox_single_step", 1)
+        self.samples.setProperty("spinbox_page_step", 1)
+        self.samples.setProperty("spinbox_minimum", 1)
+        self.samples.setProperty("slider_minimum", 1)
+
+        self.horizontalLayout_6.addWidget(self.samples)
+
+        self.clip_skip_slider_widget = SliderWidget(stable_diffusion_settings_widget)
+        self.clip_skip_slider_widget.setObjectName(u"clip_skip_slider_widget")
+        self.clip_skip_slider_widget.setMinimumSize(QSize(0, 10))
+        self.clip_skip_slider_widget.setProperty("current_value", 0)
+        self.clip_skip_slider_widget.setProperty("slider_maximum", 11)
+        self.clip_skip_slider_widget.setProperty("spinbox_maximum", 12.000000000000000)
+        self.clip_skip_slider_widget.setProperty("display_as_float", False)
+        self.clip_skip_slider_widget.setProperty("spinbox_single_step", 1)
+        self.clip_skip_slider_widget.setProperty("spinbox_page_step", 1)
+        self.clip_skip_slider_widget.setProperty("spinbox_minimum", 0)
+        self.clip_skip_slider_widget.setProperty("slider_minimum", 0)
+        self.clip_skip_slider_widget.setProperty("settings_property", u"generator_settings.clip_skip")
+
+        self.horizontalLayout_6.addWidget(self.clip_skip_slider_widget)
+
+
+        self.gridLayout.addLayout(self.horizontalLayout_6, 8, 0, 1, 2)
+
         self.horizontalLayout_5 = QHBoxLayout()
         self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
         self.steps_widget = SliderWidget(stable_diffusion_settings_widget)
@@ -255,6 +224,42 @@ class Ui_stable_diffusion_settings_widget(object):
 
         self.gridLayout.addLayout(self.horizontalLayout_5, 10, 0, 1, 2)
 
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.seed_widget = SeedWidget(stable_diffusion_settings_widget)
+        self.seed_widget.setObjectName(u"seed_widget")
+        self.seed_widget.setMinimumSize(QSize(0, 10))
+
+        self.horizontalLayout_3.addWidget(self.seed_widget)
+
+
+        self.gridLayout.addLayout(self.horizontalLayout_3, 7, 0, 1, 2)
+
+        self.verticalLayout_4 = QVBoxLayout()
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.label_5 = QLabel(stable_diffusion_settings_widget)
+        self.label_5.setObjectName(u"label_5")
+        self.label_5.setFont(font)
+
+        self.verticalLayout_4.addWidget(self.label_5)
+
+        self.pipeline = QComboBox(stable_diffusion_settings_widget)
+        self.pipeline.setObjectName(u"pipeline")
+
+        self.verticalLayout_4.addWidget(self.pipeline)
+
+
+        self.gridLayout.addLayout(self.verticalLayout_4, 2, 0, 1, 2)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout.addItem(self.verticalSpacer, 12, 0, 1, 1)
+
+        self.use_compel = QCheckBox(stable_diffusion_settings_widget)
+        self.use_compel.setObjectName(u"use_compel")
+
+        self.gridLayout.addWidget(self.use_compel, 11, 0, 1, 1)
+
 
         self.retranslateUi(stable_diffusion_settings_widget)
         self.pipeline.currentTextChanged.connect(stable_diffusion_settings_widget.handle_pipeline_changed)
@@ -264,28 +269,30 @@ class Ui_stable_diffusion_settings_widget(object):
         self.reload_selected_preset.clicked.connect(stable_diffusion_settings_widget.reload_selected_preset)
         self.presets.currentTextChanged.connect(stable_diffusion_settings_widget.selected_preset_changed)
         self.vae_combobox.currentTextChanged.connect(stable_diffusion_settings_widget.handle_vae_changed)
+        self.use_compel.toggled.connect(stable_diffusion_settings_widget.toggled_use_compel)
 
         QMetaObject.connectSlotsByName(stable_diffusion_settings_widget)
     # setupUi
 
     def retranslateUi(self, stable_diffusion_settings_widget):
         stable_diffusion_settings_widget.setWindowTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Form", None))
-        self.label.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Presets", None))
-        self.reload_selected_preset.setText("")
-        self.label_5.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Pipeline", None))
         self.label_3.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Model", None))
         self.label_6.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Version", None))
-        self.label_2.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"VAE", None))
+        self.reload_selected_preset.setText("")
+        self.ddim_eta_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"DDIM ETA", None))
+        self.frames_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Frames", None))
         self.label_4.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Scheduler", None))
-        self.seed_widget.setProperty("generator_section", "")
-        self.seed_widget.setProperty("generator_name", "")
-        self.seed_widget.setProperty("property_name", QCoreApplication.translate("stable_diffusion_settings_widget", u"generator_settings.random_seed", None))
+        self.label.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Presets", None))
+        self.label_2.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"VAE", None))
         self.samples.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Samples", None))
         self.samples.setProperty("settings_property", QCoreApplication.translate("stable_diffusion_settings_widget", u"generator_settings.n_samples", None))
         self.clip_skip_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Clip Skip", None))
-        self.ddim_eta_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"DDIM ETA", None))
-        self.frames_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Frames", None))
         self.steps_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Steps", None))
         self.scale_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Scale", None))
+        self.seed_widget.setProperty("generator_section", "")
+        self.seed_widget.setProperty("generator_name", "")
+        self.seed_widget.setProperty("property_name", QCoreApplication.translate("stable_diffusion_settings_widget", u"generator_settings.random_seed", None))
+        self.label_5.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Pipeline", None))
+        self.use_compel.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Use Compel", None))
     # retranslateUi
 
