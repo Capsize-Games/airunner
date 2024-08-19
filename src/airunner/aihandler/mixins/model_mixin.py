@@ -315,6 +315,46 @@ class ModelMixin:
             generator=self.__generator,
         )
 
+    def __prepare_data(self):
+        data = self.data.copy()
+
+        if type(self.pipe) in [StableDiffusionXLPipeline, StableDiffusionPipeline] and "image" in data:
+            del data["image"]
+
+        if self.is_sd_xl:
+            (
+                prompt_embeds,
+                negative_prompt_embeds,
+                pooled_prompt_embeds,
+                negative_pooled_prompt_embeds,
+            ) = self.pipe.encode_prompt(
+                prompt=self.sd_request.generator_settings.prompt,
+                negative_prompt=self.sd_request.generator_settings.negative_prompt,
+                device=self.device,
+                num_images_per_prompt=1,
+                clip_skip=self.settings["generator_settings"]["clip_skip"],
+            )
+
+            for key in ["prompt", "negative_prompt"]:
+                if key in data:
+                    del data[key]
+
+            data.update(dict(
+                prompt_embeds=prompt_embeds,
+                negative_prompt_embeds=negative_prompt_embeds,
+                pooled_prompt_embeds=pooled_prompt_embeds,
+                negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
+                crops_coords_top_left=(256, 0),
+            ))
+
+        for key in ["outpaint_box_rect", "action"]:
+            if key in data:
+                del data[key]
+
+        data["callback_on_step_end"] = self.__interrupt_callback
+
+        return data
+
     def __call_pipe(self, generator_request_data: dict):
         """
         Generate an image using the pipe
@@ -322,44 +362,8 @@ class ModelMixin:
         """
         if not self.safety_checker_ready:
             raise SafetyCheckerNotLoadedException()
-
-        self.data["callback_on_step_end"] = self.__interrupt_callback
-        data = self.data.copy()
-        if "outpaint_box_rect" in data:
-            del data["outpaint_box_rect"]
-
-        if "action" in data:
-            del data["action"]
-
-        if self.is_sd_xl:
-            data.update(dict(
-                crops_coords_top_left=(256, 0)
-            ))
-
-        if type(self.pipe) in [StableDiffusionXLPipeline, StableDiffusionPipeline] and "image" in data:
-            del data["image"]
-
-        (
-            prompt_embeds,
-            negative_prompt_embeds,
-            pooled_prompt_embeds,
-            negative_pooled_prompt_embeds,
-        ) = self.pipe.encode_prompt(
-            prompt=data["prompt"],
-            negative_prompt=data["negative_prompt"],
-            device=self.device,
-            num_images_per_prompt=1,
-            clip_skip=self.settings["generator_settings"]["clip_skip"],
-        )
-        del data["prompt"]
-        del data["negative_prompt"]
-        data.update(dict(
-            prompt_embeds=prompt_embeds,
-            negative_prompt_embeds=negative_prompt_embeds,
-            pooled_prompt_embeds=pooled_prompt_embeds,
-            negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
-        ))
-        results = self.pipe(**self.data)
+        data = self.__prepare_data()
+        results = self.pipe(**data)
         images = results.get("images", [])
         images, nsfw_content_detected = self.check_nsfw_images(images)
 
