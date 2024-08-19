@@ -22,6 +22,8 @@ class GeneratorForm(BaseWidget):
         self.parent = None
         self.current_prompt_value = None
         self.current_negative_prompt_value = None
+        self.current_secondary_prompt_value = None
+        self.current_secondary_negative_prompt_value = None
         self.initialized = False
         self.ui.generator_form_tabs.tabBar().hide()
         self.activate_ai_mode()
@@ -41,6 +43,16 @@ class GeneratorForm(BaseWidget):
         # iterate over ImagePreset enum and add them to the combobox
         image_presets = [""] + [preset.value for preset in ImagePreset]
         self.ui.image_presets.addItems(image_presets)
+        self.toggle_secondary_prompts()
+
+    def toggle_secondary_prompts(self):
+        if self.settings["generator_settings"]["version"] != "SDXL 1.0":
+            self.ui.secondary_prompt.hide()
+            self.ui.secondary_negative_prompt.hide()
+        else:
+            self.ui.secondary_prompt.show()
+            self.ui.secondary_negative_prompt.show()
+
 
     @property
     def is_txt2img(self):
@@ -135,6 +147,7 @@ class GeneratorForm(BaseWidget):
 
     def on_application_settings_changed_signal(self, _message: dict):
         self.activate_ai_mode()
+        self.toggle_secondary_prompts()
     
     def on_progress_signal(self, message):
         self.handle_progress_bar(message)
@@ -152,6 +165,20 @@ class GeneratorForm(BaseWidget):
     def handle_negative_prompt_changed(self):
         pass
 
+    def handle_second_prompt_changed(self):
+        pass
+
+    def handle_second_negative_prompt_changed(self):
+        pass
+
+    def on_generate_image_signal(self, _message):
+        self.handle_generate_button_clicked()
+
+    def handle_generate_button_clicked(self):
+        self.save_prompt_to_settings()
+        self.start_progress_bar()
+        self.generate()
+
     def save_prompt_to_settings(self):
         settings = self.settings
 
@@ -163,12 +190,35 @@ class GeneratorForm(BaseWidget):
         self.current_negative_prompt_value = value
         settings["generator_settings"]["negative_prompt"] = value
 
-        self.settings = settings
+        value = self.ui.secondary_prompt.toPlainText()
+        self.current_secondary_prompt_value = value
+        settings["generator_settings"]["second_prompt"] = value
 
-    def handle_generate_button_clicked(self):
-        self.save_prompt_to_settings()
-        self.start_progress_bar()
-        self.generate()
+        value = self.ui.secondary_negative_prompt.toPlainText()
+        self.current_secondary_negative_prompt_value = value
+        settings["generator_settings"]["second_negative_prompt"] = value
+
+        x = int(self.ui.crops_coord_top_left_x.text())
+        y = int(self.ui.crops_coord_top_left_y.text())
+        settings["generator_settings"]["crops_coord_top_left"] = (x, y)
+
+        x = int(self.ui.original_size_x.text())
+        y = int(self.ui.original_size_y.text())
+        settings["generator_settings"]["original_size"] = (x, y)
+
+        x = int(self.ui.target_size_x.text())
+        y = int(self.ui.target_size_y.text())
+        settings["generator_settings"]["target_size"] = (x, y)
+
+        x = int(self.ui.negative_original_size_x.text())
+        y = int(self.ui.negative_original_size_y.text())
+        settings["generator_settings"]["negative_original_size"] = (x, y)
+
+        x = int(self.ui.negative_target_size_x.text())
+        y = int(self.ui.negative_target_size_y.text())
+        settings["generator_settings"]["negative_target_size"] = (x, y)
+
+        self.settings = settings
 
     def handle_interrupt_button_clicked(self):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
@@ -181,10 +231,6 @@ class GeneratorForm(BaseWidget):
         self.do_generate()
         self.seed_override = None
         self.emit_signal(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
-
-    def on_generate_image_signal(self, _message):
-        self.start_progress_bar()
-        self.generate()
 
     def do_generate_image(self):
         time.sleep(0.1)
@@ -288,6 +334,18 @@ class GeneratorForm(BaseWidget):
         self.ui.negative_prompt.blockSignals(True)
         self.ui.prompt.setPlainText(self.settings["generator_settings"]["prompt"])
         self.ui.negative_prompt.setPlainText(self.settings["generator_settings"]["negative_prompt"])
+        self.ui.secondary_prompt.setPlainText(self.settings["generator_settings"]["second_prompt"])
+        self.ui.secondary_negative_prompt.setPlainText(self.settings["generator_settings"]["second_negative_prompt"])
+        self.ui.crops_coord_top_left_x.setText(str(self.settings["generator_settings"]["crops_coord_top_left"][0]))
+        self.ui.crops_coord_top_left_y.setText(str(self.settings["generator_settings"]["crops_coord_top_left"][1]))
+        self.ui.original_size_x.setText(str(self.settings["generator_settings"]["original_size"][0]))
+        self.ui.original_size_y.setText(str(self.settings["generator_settings"]["original_size"][1]))
+        self.ui.target_size_x.setText(str(self.settings["generator_settings"]["target_size"][0]))
+        self.ui.target_size_y.setText(str(self.settings["generator_settings"]["target_size"][1]))
+        self.ui.negative_original_size_x.setText(str(self.settings["generator_settings"]["negative_original_size"][0]))
+        self.ui.negative_original_size_y.setText(str(self.settings["generator_settings"]["negative_original_size"][1]))
+        self.ui.negative_target_size_x.setText(str(self.settings["generator_settings"]["negative_target_size"][0]))
+        self.ui.negative_target_size_y.setText(str(self.settings["generator_settings"]["negative_target_size"][1]))
         self.ui.prompt.blockSignals(False)
         self.ui.negative_prompt.blockSignals(False)
 

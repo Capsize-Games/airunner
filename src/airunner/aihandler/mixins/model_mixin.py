@@ -43,7 +43,6 @@ class ModelMixin:
         self.is_sd_xl_turbo = False
         self.is_sd_xl = False
         self.is_turbo = False
-        self.use_compel = False
 
         self.txt2img = None
         self.img2img = None
@@ -229,12 +228,6 @@ class ModelMixin:
         self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
         self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
         self.is_turbo = self.model_version == StableDiffusionVersion.SD_TURBO.value
-        self.use_compel = (
-            not self.sd_request.memory_settings.use_enable_sequential_cpu_offload and
-            not self.is_sd_xl and
-            not self.is_sd_xl_turbo and
-            not self.is_turbo
-        )
 
         self.__load_generator(torch.device(self.device), self.settings["generator_settings"]["seed"])
         self.__load_vae()
@@ -244,6 +237,14 @@ class ModelMixin:
         self.__prepare_model()
         self.__load_model()
         self.__move_model_to_device()
+
+    @property
+    def use_compel(self):
+        return (
+            not self.sd_request.memory_settings.use_enable_sequential_cpu_offload and
+            not self.is_turbo
+            and self.settings["generator_settings"]['use_compel']
+        )
 
     def generate(
         self,
@@ -363,29 +364,37 @@ class ModelMixin:
             del data["image"]
 
         if self.is_sd_xl:
-            (
-                prompt_embeds,
-                negative_prompt_embeds,
-                pooled_prompt_embeds,
-                negative_pooled_prompt_embeds,
-            ) = self.pipe.encode_prompt(
-                prompt=self.sd_request.generator_settings.prompt,
-                negative_prompt=self.sd_request.generator_settings.negative_prompt,
-                device=self.device,
-                num_images_per_prompt=1,
-                clip_skip=self.settings["generator_settings"]["clip_skip"],
-            )
-
             for key in ["prompt", "negative_prompt"]:
                 if key in data:
                     del data[key]
 
+            if not self.use_compel:
+                (
+                    prompt_embeds,
+                    negative_prompt_embeds,
+                    pooled_prompt_embeds,
+                    negative_pooled_prompt_embeds,
+                ) = self.pipe.encode_prompt(
+                    prompt=self.sd_request.generator_settings.prompt,
+                    negative_prompt=self.sd_request.generator_settings.negative_prompt,
+                    prompt_2=self.settings["generator_settings"]["second_prompt"],
+                    negative_prompt_2=self.settings["generator_settings"]["second_negative_prompt"],
+                    device=self.device,
+                    num_images_per_prompt=1,
+                    clip_skip=self.settings["generator_settings"]["clip_skip"],
+                )
+
+            else:
+                prompt_embeds = self.prompt_embeds
+                negative_prompt_embeds = self.negative_prompt_embeds
+                pooled_prompt_embeds = self.pooled_prompt_embeds
+                negative_pooled_prompt_embeds = self.pooled_negative_prompt_embeds
             data.update(dict(
                 prompt_embeds=prompt_embeds,
                 negative_prompt_embeds=negative_prompt_embeds,
                 pooled_prompt_embeds=pooled_prompt_embeds,
                 negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
-                crops_coords_top_left=(256, 0),
+                crops_coords_top_left=self.settings["generator_settings"]["crops_coord_top_left"],
             ))
 
         for key in ["outpaint_box_rect", "action"]:
