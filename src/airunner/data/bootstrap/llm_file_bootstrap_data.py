@@ -1,5 +1,5 @@
 LLM_FILE_BOOTSTRAP_DATA = {
-    "mistralai/Mistral-7B-Instruct-v0.2": {
+    "mistralai/Mistral-7B-Instruct-v0.3": {
         "path_settings": "llm_causallm_model_path",
         "files": [
             "config.json",
