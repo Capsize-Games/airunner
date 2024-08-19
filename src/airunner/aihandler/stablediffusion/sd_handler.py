@@ -410,8 +410,7 @@ class SDHandler(
 
         if self.do_load_compel:
             self.reload_prompts = False
-            self.prompt_embeds = None
-            self.negative_prompt_embeds = None
+            self.clear_prompt_embeds()
             self.load_prompt_embeds(
                 self.pipe,
                 prompt=self.sd_request.generator_settings.prompt,
