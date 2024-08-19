@@ -76,6 +76,9 @@ class SchedulerMixin:
                 except Exception as e:
                     self.logger.error(f"Failed to load scheduler {scheduler_name}: {e}")
                     self.change_model_status(ModelType.SCHEDULER, ModelStatus.ERROR, self.__scheduler_path)
+
+                if self.pipe:
+                    self.pipe.scheduler = self.scheduler
                 return scheduler
 
     def unload_scheduler(self):

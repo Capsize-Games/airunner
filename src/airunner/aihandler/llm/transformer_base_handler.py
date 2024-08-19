@@ -75,10 +75,6 @@ class TransformerBaseHandler(BaseHandler):
             return True
         return False
 
-    @property
-    def cache_llm_to_disk(self):
-        return self.settings["llm_generator_settings"]["cache_llm_to_disk"]
-
     def quantization_config(self):
         config = None
         if self.llm_dtype == "8bit":
@@ -118,7 +114,7 @@ class TransformerBaseHandler(BaseHandler):
             'trust_remote_code': self.settings["trust_remote_code"]
         }
 
-    def get_model_standard_path(self, path) -> str:
+    def get_model_path(self, path) -> str:
         current_llm_generator = self.settings.get("current_llm_generator", "")
         if current_llm_generator == "causallm":
             local_path = self.settings["path_settings"]["llm_causallm_model_path"]
@@ -131,34 +127,12 @@ class TransformerBaseHandler(BaseHandler):
         local_path = os.path.join(local_path, path)
         return os.path.expanduser(local_path)
 
-    def get_model_cache_path(self, path) -> str:
-        model_name = path.split("/")[-1]
-        current_llm_generator = self.settings.get("current_llm_generator", "")
-        if current_llm_generator == "causallm":
-            local_path = self.settings["path_settings"]["llm_causallm_model_cache_path"]
-        elif current_llm_generator == "seq2seq":
-            local_path = self.settings["path_settings"]["llm_seq2seq_model_cache_path"]
-        elif current_llm_generator == "visualqa":
-            local_path = self.settings["path_settings"]["llm_visualqa_model_cache_path"]
-        else:
-            local_path = self.settings["path_settings"]["llm_misc_model_cache_path"]
-        local_path = os.path.join(local_path, self.llm_dtype, model_name)
-        return os.path.expanduser(local_path)
-
-    def get_model_path(self, path):
-        if self.do_quantize_model:
-            local_path = self.get_model_cache_path(path)
-            if self.cache_llm_to_disk and os.path.exists(local_path):
-                return local_path
-            else:
-                local_path = self.get_model_standard_path(path)
-                if os.path.exists(local_path):
-                    return local_path
-        return path
-
     def load_model(self):
         params = self.model_params()
         path = self.get_model_path(self.current_bot["model_version"])
+        is_quantized = os.path.exists(path)
+        if not is_quantized:
+            path = self.get_model_path(self.current_bot["model_version"])
 
         self.logger.debug(f"Loading model from {path}")
 
@@ -186,11 +160,9 @@ class TransformerBaseHandler(BaseHandler):
             self.model = None
 
     def save_quantized_model(self):
-        if self.do_quantize_model and self.cache_llm_to_disk:
-            self.logger.debug("Saving quantized model to cache")
-            cache_path = self.get_model_cache_path(self.current_model_path)
-            if self.model and self.cache_llm_to_disk and not os.path.exists(cache_path):
-                self.model.save_pretrained(cache_path)
+        self.logger.debug("Saving quantized model to cache")
+        model_path = self.get_model_path(self.current_bot["model_version"])
+        self.model.save_pretrained(model_path)
 
     def load_tokenizer(self):
         pass

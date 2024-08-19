@@ -1,3 +1,5 @@
+import os
+
 from transformers import RagTokenizer, AutoTokenizer
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus
@@ -28,7 +30,9 @@ class TokenizerHandler(TransformerBaseHandler):
     def load_tokenizer(self):
         if self.tokenizer is not None:
             return
+
         path = self.get_model_path(self.current_bot["model_version"])
+
         self.logger.debug(f"Loading tokenizer from {path}")
         kwargs = {
             "local_files_only": True,
@@ -38,10 +42,6 @@ class TokenizerHandler(TransformerBaseHandler):
             "torch_dtype": self.torch_dtype,
             "attn_implementation": "flash_attention_2",
         }
-        # if self.do_quantize_model:
-        #     config = self.quantization_config()
-        #     if config:
-        #         kwargs["quantization_config"] = config
 
         if self.chat_template:
             kwargs["chat_template"] = self.chat_template
