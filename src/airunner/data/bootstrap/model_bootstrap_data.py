@@ -23,7 +23,7 @@ model_bootstrap_data = [
     },
     {
         "name": "Stable Diffusion XL Base 1.0",
-        "path": "stabilityai/stable-diffusion-xl-base-1.0",
+        "path": "sd_xl_base_1.0.safetensors",
         "branch": "fp16",
         "version": "SDXL 1.0",
         "category": "stablediffusion",
@@ -165,8 +165,8 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
-        "name": "Mistral 7B Instruct v2",
-        "path": "mistralai/Mistral-7B-Instruct-v0.2",
+        "name": "Mistral 7B Instruct v3",
+        "path": "mistralai/Mistral-7B-Instruct-v0.3",
         "branch": "main",
         "version": "0.2",
         "category": "llm",
