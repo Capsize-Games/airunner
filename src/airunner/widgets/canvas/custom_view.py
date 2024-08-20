@@ -283,7 +283,7 @@ class CustomGraphicsView(
                 SignalCode.CANVAS_DO_DRAW_SIGNAL,
                 True
             )
-
+        self._scene.showEvent(event)
         self.toggle_drag_mode()
 
     def create_scene(self):

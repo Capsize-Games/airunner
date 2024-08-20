@@ -35,17 +35,12 @@ class CustomScene(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         self.painter = None
+        self.image: ImageQt = Optional[None]
+        self.item: QGraphicsPixmapItem = Optional[None]
         super().__init__()
 
         self._target_size = None
         self._do_resize = False
-
-        # Create the QImage with the size of the parent widget
-        self.image: ImageQt = Optional[None]
-        self.item: QGraphicsPixmapItem = Optional[None]
-
-        self.set_image()
-        self.set_item()
 
         # Add a variable to store the last mouse position
         self.last_pos = None
@@ -62,6 +57,10 @@ class CustomScene(
         self.clipboard_handler = ClipboardHandler()
         self.image_handler = ImageHandler()
         self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
+
+    def showEvent(self, event):
+        self.set_image()
+        self.set_item()
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
@@ -323,7 +322,10 @@ class CustomScene(
             self.settings = settings
 
         # Update the pixmap item, image+painter and scene
-        item_scene = self.item.scene() if self.item is not None else None
+        try:
+            item_scene = self.item.scene()
+        except AttributeError:
+            item_scene = None
         if item_scene is not None:
             item_scene.removeItem(self.item)
         if self.painter and self.painter.isActive():
@@ -438,15 +440,18 @@ class CustomScene(
             self.image.fill(Qt.GlobalColor.transparent)
 
     def set_item(self):
+        self.setSceneRect(0, 0, 512, 512)
         if self.image is not None:
+            image = self.image
             if self.item is NoneType:
-                self.item = DraggablePixmap(QPixmap.fromImage(self.image))
+                self.item = DraggablePixmap(QPixmap.fromImage(image))
+                self.item.setZValue(1)
                 self.addItem(self.item)
             else:
-                self.item.setPixmap(QPixmap.fromImage(self.image))
+                self.item.setPixmap(QPixmap.fromImage(image))
+                self.item.setZValue(1)
                 if self.item.scene() is None:
                     self.addItem(self.item)
-            self.item.setZValue(1)
 
     def clear_selection(self):
         self.selection_start_pos = None
