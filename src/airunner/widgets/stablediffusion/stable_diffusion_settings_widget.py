@@ -23,6 +23,7 @@ class StableDiffusionSettingsWidget(
         self.vae_scanner_worker = create_worker(VAEScannerWorker)
         self.register(SignalCode.AI_MODELS_CREATE_SIGNAL, self.on_models_changed_signal)
         self.register(SignalCode.VAE_MODELS_CREATE_SIGNAL, self.on_vae_changed_signal)
+        self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.update_form)
         self.load_presets()
 
     def load_presets(self):
@@ -30,6 +31,9 @@ class StableDiffusionSettingsWidget(
 
     def showEvent(self, event):
         super().showEvent(event)
+        self.update_form()
+
+    def update_form(self, _data: dict = None):
         steps = self.settings["generator_settings"]["steps"]
         scale = self.settings["generator_settings"]["scale"]
 
@@ -47,8 +51,6 @@ class StableDiffusionSettingsWidget(
 
         self.ui.ddim_eta_slider_widget.hide()
         self.ui.frames_slider_widget.hide()
-
-        self.load_pipelines()
 
         self.model_scanner_worker.add_to_queue("scan_for_models")
         self.vae_scanner_worker.add_to_queue("scan_for_vae")
