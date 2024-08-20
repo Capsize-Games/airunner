@@ -95,7 +95,7 @@ class SchedulerMixin:
 
         if self.sd_request.generator_settings.model and self.sd_request.generator_settings.model != "":
             config = self.scheduler.config if self.scheduler else None
-            self.pipe.scheduler = self.load_scheduler(config=config)
+            self.load_scheduler(config=config)
             self.do_change_scheduler = False
         else:
             self.logger.warning("Unable to change scheduler, model_path is not set")

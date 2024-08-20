@@ -97,21 +97,6 @@ class ModelMixin:
         return self.model_path.endswith(".safetensors")
 
     @property
-    def __do_reuse_pipeline(self) -> bool:
-        return (
-            (self.sd_request.is_txt2img and self.txt2img is None and self.img2img) or
-            (self.sd_request.is_img2img and self.img2img is None and self.txt2img) or
-            (
-                (self.sd_request.is_txt2img and self.txt2img) or
-                (self.sd_request.is_img2img and self.img2img)
-            )
-        )
-
-    @property
-    def __has_pipe(self) -> bool:
-        return self.pipe is not None
-
-    @property
     def model_path(self):
         model_name = self.settings["generator_settings"]["model"]
         version = self.settings["generator_settings"]["version"]
@@ -184,6 +169,7 @@ class ModelMixin:
         self.__prepare_model()
         self.__load_model()
         self.__move_model_to_device()
+        self.load_scheduler()
 
     @property
     def use_compel(self):
@@ -448,20 +434,6 @@ class ModelMixin:
     def __do_reset_applied_memory_settings(self):
         self.emit_signal(SignalCode.RESET_APPLIED_MEMORY_SETTINGS)
 
-    def __unload_unused_models(self):
-        self.logger.debug("Unloading unused models")
-        for action in AVAILABLE_ACTIONS:
-            if action in ["controlnet", "safety_checker"]:
-                continue
-            val = getattr(self, action)
-            if val:
-                self.logger.debug(f"Unloading model {action}")
-                val.to("cpu")
-                setattr(self, action, None)
-                del val
-        clear_memory()
-        self.reset_applied_memory_settings()
-
     def __pipeline_class(self, operation_type=None):
         if operation_type is None:
             operation_type = self.sd_request.generator_settings.section
@@ -503,13 +475,13 @@ class ModelMixin:
         self.torch_compile_applied = False
         self.lora_loaded = False
         self.embeds_loaded = False
-        already_loaded = self.__do_reuse_pipeline and not self.reload_model
 
-        # move all models except for our current action to the CPU
-        if not already_loaded or self.reload_model:
-            self.__unload_unused_models()
+        if self.pipe is not None and not self.reload_model:
+            sd_class = self.__pipeline_class(self.sd_request.generator_settings.section)
+            if type(sd_class) is not type(self.pipe):
+                self.pipe = sd_class.from_pipe(self.pipe)
 
-        if self.pipe is None or self.reload_model:
+        elif self.pipe is None or self.reload_model:
             self.change_model_status(ModelType.SD, ModelStatus.LOADING, self.model_path)
 
             self.logger.debug(
