@@ -15,65 +15,36 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QHeaderView, QPushButton,
-    QSizePolicy, QSplitter, QTableWidget, QTableWidgetItem,
-    QTextEdit, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QHeaderView, QSizePolicy,
+    QSplitter, QTableWidget, QTableWidgetItem, QTextEdit,
+    QWidget)
 
 class Ui_stats_widget(object):
     def setupUi(self, stats_widget):
         if not stats_widget.objectName():
             stats_widget.setObjectName(u"stats_widget")
         stats_widget.resize(527, 664)
-        self.gridLayout_2 = QGridLayout(stats_widget)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.splitter_2 = QSplitter(stats_widget)
-        self.splitter_2.setObjectName(u"splitter_2")
-        self.splitter_2.setOrientation(Qt.Orientation.Vertical)
-        self.splitter = QSplitter(self.splitter_2)
-        self.splitter.setObjectName(u"splitter")
-        self.splitter.setOrientation(Qt.Orientation.Horizontal)
-        self.widget = QWidget(self.splitter)
-        self.widget.setObjectName(u"widget")
-        self.gridLayout = QGridLayout(self.widget)
+        self.gridLayout = QGridLayout(stats_widget)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.model_stats = QTableWidget(self.widget)
-        self.model_stats.setObjectName(u"model_stats")
-
-        self.gridLayout.addWidget(self.model_stats, 0, 0, 1, 2)
-
-        self.pushButton = QPushButton(self.widget)
-        self.pushButton.setObjectName(u"pushButton")
-
-        self.gridLayout.addWidget(self.pushButton, 1, 0, 1, 1)
-
-        self.pushButton_2 = QPushButton(self.widget)
-        self.pushButton_2.setObjectName(u"pushButton_2")
-
-        self.gridLayout.addWidget(self.pushButton_2, 1, 1, 1, 1)
-
-        self.splitter.addWidget(self.widget)
+        self.splitter = QSplitter(stats_widget)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setOrientation(Qt.Orientation.Vertical)
         self.memory_stats = QTableWidget(self.splitter)
         self.memory_stats.setObjectName(u"memory_stats")
         self.splitter.addWidget(self.memory_stats)
-        self.splitter_2.addWidget(self.splitter)
-        self.console = QTextEdit(self.splitter_2)
+        self.console = QTextEdit(self.splitter)
         self.console.setObjectName(u"console")
-        self.splitter_2.addWidget(self.console)
+        self.splitter.addWidget(self.console)
 
-        self.gridLayout_2.addWidget(self.splitter_2, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.splitter, 0, 0, 1, 1)
 
 
         self.retranslateUi(stats_widget)
-        self.pushButton.clicked.connect(stats_widget.load_all)
-        self.pushButton_2.clicked.connect(stats_widget.unload_all)
 
         QMetaObject.connectSlotsByName(stats_widget)
     # setupUi
 
     def retranslateUi(self, stats_widget):
         stats_widget.setWindowTitle(QCoreApplication.translate("stats_widget", u"Form", None))
-        self.pushButton.setText(QCoreApplication.translate("stats_widget", u"Load all", None))
-        self.pushButton_2.setText(QCoreApplication.translate("stats_widget", u"Unload all", None))
     # retranslateUi
 
