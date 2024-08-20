@@ -18,6 +18,7 @@ class TTSGeneratorWorker(Worker):
     tokens = []
 
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         tts_model = self.settings["tts_settings"]["tts_model"]
         if tts_model == TTSModel.ESPEAK:
             tts_handler_class_ = EspeakTTSHandler
@@ -25,7 +26,6 @@ class TTSGeneratorWorker(Worker):
             tts_handler_class_ = SpeechT5TTSHandler
         elif tts_model == TTSModel.BARK:
             tts_handler_class_ = BarkTTSHandler
-        super().__init__(*args, **kwargs)
         self.tts = tts_handler_class_()
         self.tts.run()
         self.play_queue = []
@@ -142,3 +142,4 @@ class TTSGeneratorWorker(Worker):
                     "message": response
                 }
             )
+

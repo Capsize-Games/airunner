@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import urllib
 import webbrowser
 from functools import partial
@@ -8,7 +9,7 @@ import requests
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
-    Signal, QTimer
+    Signal, QTimer, QProcess
 )
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
@@ -23,6 +24,7 @@ from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.logger import Logger
+from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 from airunner.history import History
 from airunner.settings import (
     STATUS_ERROR_COLOR,
@@ -67,6 +69,7 @@ from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.windows.video import VideoPopup
+from airunner.worker_manager import WorkerManager
 
 
 class MainWindow(
@@ -230,8 +233,6 @@ class MainWindow(
             SignalCode.NAVIGATE_TO_URL,
             self.on_navigate_to_url
         )
-
-        self.initialize_worker_manager()
 
     def download_url(self, url, save_path):
         response = requests.get(url)
@@ -401,6 +402,21 @@ class MainWindow(
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal)
         self.register(SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts)
+        self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
+
+    def on_reset_settings_signal(self, _message: dict):
+        self.settings = self.default_settings
+        self.restart()
+
+    def restart(self):
+        # Save the current state
+        self.save_state()
+
+        # Close the main window
+        self.close()
+
+        # Start a new instance of the application
+        QProcess.startDetached(sys.executable, sys.argv)
 
     def on_model_status_changed_signal(self, data: dict):
         if data["status"] == ModelStatus.LOADING:
@@ -782,7 +798,6 @@ class MainWindow(
         settings["window_settings"]["canvas_splitter"] = self.ui.canvas_widget_2.ui.canvas_splitter.saveState()
         settings["window_settings"]["canvas_side_splitter"] = self.ui.canvas_widget_2.ui.canvas_side_splitter.saveState()
         settings["window_settings"]["canvas_side_splitter_2"] = self.ui.canvas_widget_2.ui.canvas_side_splitter_2.saveState()
-        settings["window_settings"]["stats_splitter"] = self.ui.stats_widget.ui.splitter.saveState()
 
         self.settings = settings
         self.save_settings()
@@ -826,10 +841,6 @@ class MainWindow(
 
         if window_settings["canvas_side_splitter_2"] is not None:
             self.ui.canvas_widget_2.ui.canvas_side_splitter_2.restoreState(window_settings["canvas_side_splitter"])
-
-        if "stats_splitter" in window_settings and window_settings["stats_splitter"] is not None:
-            self.ui.stats_widget.ui.splitter.restoreState(window_settings["stats_splitter"])
-
     ##### End window properties #####
     #################################
         
@@ -1051,12 +1062,10 @@ class MainWindow(
             )
 
         # call initialize_worker_manager after 100ms
-        #QTimer.singleShot(500, self.initialize_worker_manager)
+        QTimer.singleShot(500, self.initialize_worker_manager)
 
     def initialize_worker_manager(self):
-        from airunner.worker_manager import WorkerManager
         if self.tts_handler_class is None:
-            from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
             self.tts_handler_class = EspeakTTSHandler
         self.worker_manager = WorkerManager(
             disable_sd=self.disable_sd,
