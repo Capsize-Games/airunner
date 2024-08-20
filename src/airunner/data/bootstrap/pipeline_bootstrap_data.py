@@ -7,13 +7,6 @@ pipeline_bootstrap_data = [
         "default": True
     },
     {
-        "pipeline_action": "safety_checker",
-        "version": "SD 2.1",
-        "category": "stablediffusion",
-        "classname": "diffusers.pipelines.stable_diffusion.StableDiffusionSafetyChecker",
-        "default": True
-    },
-    {
         "pipeline_action": "controlnet",
         "version": "SD 1.5",
         "category": "stablediffusion",
@@ -42,19 +35,7 @@ pipeline_bootstrap_data = [
     },
     {
         "pipeline_action": "txt2img",
-        "version": "SD Turbo",
-        "category": "stablediffusion",
-        "classname": "diffusers.AutoPipelineForText2Image"
-    },
-    {
-        "pipeline_action": "txt2img",
         "version": "SDXL Turbo",
-        "category": "stablediffusion",
-        "classname": "diffusers.AutoPipelineForText2Image"
-    },
-    {
-        "pipeline_action": "txt2img",
-        "version": "SD 2.1",
         "category": "stablediffusion",
         "classname": "diffusers.AutoPipelineForText2Image"
     },
@@ -70,12 +51,6 @@ pipeline_bootstrap_data = [
         "version": "SD 1.5",
         "category": "controlnet",
         "classname": "diffusers.StableDiffusionControlNetImg2ImgPipeline",
-    },
-    {
-        "pipeline_action": "img2img",
-        "version": "SD 2.1",
-        "category": "stablediffusion",
-        "classname": "diffusers.AutoPipelineForImage2Image",
     },
     {
         "pipeline_action": "img2img",
@@ -103,32 +78,14 @@ pipeline_bootstrap_data = [
         "classname": "diffusers.StableDiffusionControlNetInpaintPipeline",
     },
     {
-        "pipeline_action": "outpaint",
-        "version": "SD 2.1",
-        "category": "stablediffusion",
-        "classname": "diffusers.AutoPipelineForInpainting",
-    },
-    {
         "pipeline_action": "inpaint_vae",
         "version": "SD 1.5",
         "category": "stablediffusion",
         "classname": "diffusers.AsymmetricAutoencoderKL",
     },
     {
-        "pipeline_action": "inpaint_vae",
-        "version": "SD 2.1",
-        "category": "stablediffusion",
-        "classname": "diffusers.AsymmetricAutoencoderKL",
-    },
-    {
         "pipeline_action": "depth2img",
         "version": "SD 1.5",
-        "category": "stablediffusion",
-        "classname": "diffusers.StableDiffusionDepth2ImgPipeline",
-    },
-    {
-        "pipeline_action": "depth2img",
-        "version": "SD 2.1",
         "category": "stablediffusion",
         "classname": "diffusers.StableDiffusionDepth2ImgPipeline",
     },
@@ -170,12 +127,6 @@ pipeline_bootstrap_data = [
     },
     {
         "pipeline_action": "text_encoder",
-        "version": "SD 2.1",
-        "category": "stablediffusion",
-        "classname": "transformers.CLIPTextModel",
-    },
-    {
-        "pipeline_action": "text_encoder",
         "version": "SDXL 1.0",
         "category": "stablediffusion",
         "classname": "transformers.CLIPTextModel",
@@ -183,12 +134,6 @@ pipeline_bootstrap_data = [
     {
         "pipeline_action": "feature_extractor",
         "version": "SD 1.5",
-        "category": "stablediffusion",
-        "classname": "transformers.AutoFeatureExtractor",
-    },
-    {
-        "pipeline_action": "feature_extractor",
-        "version": "SD 2.1",
         "category": "stablediffusion",
         "classname": "transformers.AutoFeatureExtractor",
     },
