@@ -4,7 +4,7 @@ from PIL import Image
 from PySide6.QtCore import Signal, QRect
 from PySide6.QtWidgets import QApplication
 
-from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset
+from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.random_seed import random_seed
@@ -46,10 +46,27 @@ class GeneratorForm(BaseWidget):
         self.toggle_secondary_prompts()
 
     def toggle_secondary_prompts(self):
-        if self.settings["generator_settings"]["version"] != "SDXL 1.0":
+        if self.settings["generator_settings"]["version"] not in [
+            StableDiffusionVersion.SDXL1_0.value,
+            StableDiffusionVersion.SDXL_TURBO.value
+        ]:
+            self.ui.negative_prompt_label.hide()
+            self.ui.negative_prompt.hide()
             self.ui.secondary_prompt.hide()
             self.ui.secondary_negative_prompt.hide()
+            self.ui.croops_coord_top_left_groupbox.hide()
+            self.ui.original_size_groupbox.hide()
+            self.ui.target_size_groupbox.hide()
+            self.ui.negative_original_size_groupbox.hide()
+            self.ui.negative_target_size_groupbox.hide()
         else:
+            self.ui.croops_coord_top_left_groupbox.show()
+            self.ui.original_size_groupbox.show()
+            self.ui.target_size_groupbox.show()
+            self.ui.negative_original_size_groupbox.show()
+            self.ui.negative_target_size_groupbox.show()
+            self.ui.negative_prompt_label.show()
+            self.ui.negative_prompt.show()
             self.ui.secondary_prompt.show()
             self.ui.secondary_negative_prompt.show()
 
