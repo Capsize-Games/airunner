@@ -1,4 +1,3 @@
-import os
 import traceback
 import torch
 from PIL import Image
@@ -116,11 +115,6 @@ class SDHandler(
         self.extra_args = None
         self.latents = None
         self.sd_mode = None
-        self.reload_prompts = False
-        self.cur_prompt = ""
-        self.cur_neg_prompt = ""
-        self.cur_second_prompt = ""
-        self.cur_second_neg_prompt = ""
         self.image_preset = ""
         self.data = {
             "action": "txt2img",
@@ -187,6 +181,8 @@ class SDHandler(
 
     def on_change_scheduler_signal(self, data: dict):
         self.load_scheduler(force_scheduler_name=data["scheduler"])
+        if self.pipe:
+            self.pipe.scheduler = self.scheduler
 
     @property
     def is_pipe_loaded(self) -> bool:
@@ -312,6 +308,14 @@ class SDHandler(
             return False
         return torch.cuda.is_available()
 
+    @property
+    def do_load_compel(self) -> bool:
+        return self.pipe and (
+            (
+                self.use_compel and (self.prompt_embeds is None or self.negative_prompt_embeds is None)
+            )
+        )
+
     @staticmethod
     def apply_filters(image, filters):
         for image_filter in filters:
@@ -378,31 +382,27 @@ class SDHandler(
             self.current_state = HandlerState.ERROR
 
     def __reload_prompts(self):
-        self.cur_prompt = self.settings["generator_settings"]["prompt"]
-        self.cur_neg_prompt = self.settings["generator_settings"]["negative_prompt"]
-        self.cur_second_prompt = self.settings["generator_settings"]["second_prompt"]
-        self.cur_second_neg_prompt = self.settings["generator_settings"]["second_negative_prompt"]
-        self.image_preset = self.settings["generator_settings"]["image_preset"]
+        if (
+            self.settings["generator_settings"]["image_preset"] != self.image_preset
+        ):
+            self.image_preset = self.settings["generator_settings"]["image_preset"]
+
         self.latents = None
         self.latents_set = False
-        self.reload_prompts = True
 
-        self.reload_prompts = False
-        self.clear_prompt_embeds()
-        self.load_prompt_embeds(
-            self.pipe,
-            prompt=self.settings["generator_settings"]["prompt"],
-            negative_prompt=self.settings["generator_settings"]["negative_prompt"],
-            prompt_2=self.settings["generator_settings"]["second_prompt"],
-            negative_prompt_2=self.settings["generator_settings"]["second_negative_prompt"]
-        )
-        self.data = self.sd_request.initialize_prompt_embeds(
-            prompt_embeds=self.prompt_embeds,
-            negative_prompt_embeds=self.negative_prompt_embeds,
-            args=self.data
-        )
+        if self.do_load_compel:
+            self.clear_prompt_embeds()
+            self.load_prompt_embeds(
+                self.pipe,
+                prompt=self.sd_request.generator_settings.prompt,
+                negative_prompt=self.sd_request.generator_settings.negative_prompt
+            )
+            self.data = self.sd_request.initialize_prompt_embeds(
+                prompt_embeds=self.prompt_embeds,
+                negative_prompt_embeds=self.negative_prompt_embeds,
+                args=self.data
+            )
 
-        # ensure only prompt OR prompt_embeds are used
         if "prompt" in self.data and "prompt_embeds" in self.data:
             del self.data["prompt"]
 
