@@ -426,9 +426,9 @@ class GeneratorSection(Enum):
 
 class StableDiffusionVersion(Enum):
     SDXL1_0 = "SDXL 1.0"
-    SD_TURBO = "SD Turbo"
     SDXL_TURBO = "SDXL Turbo"
-    SD2_1 = "SD 2.1"
+    SDXL_LIGHTNING = "SDXL Lightning"
+    SDXL_HYPER = "SDXL Hyper"
     SD1_5 = "SD 1.5"
 
 

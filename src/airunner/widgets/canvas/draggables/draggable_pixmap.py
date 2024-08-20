@@ -21,6 +21,10 @@ class DraggablePixmap(
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.last_pos = QPoint(0, 0)
         self.save = False
+        self.setFlag(
+            QGraphicsItem.GraphicsItemFlag.ItemIsMovable,
+            True
+        )
 
     @property
     def current_tool(self):
