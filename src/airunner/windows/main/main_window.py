@@ -798,7 +798,6 @@ class MainWindow(
         settings["window_settings"]["canvas_splitter"] = self.ui.canvas_widget_2.ui.canvas_splitter.saveState()
         settings["window_settings"]["canvas_side_splitter"] = self.ui.canvas_widget_2.ui.canvas_side_splitter.saveState()
         settings["window_settings"]["canvas_side_splitter_2"] = self.ui.canvas_widget_2.ui.canvas_side_splitter_2.saveState()
-        settings["window_settings"]["stats_splitter"] = self.ui.stats_widget.ui.splitter.saveState()
 
         self.settings = settings
         self.save_settings()
@@ -842,10 +841,6 @@ class MainWindow(
 
         if window_settings["canvas_side_splitter_2"] is not None:
             self.ui.canvas_widget_2.ui.canvas_side_splitter_2.restoreState(window_settings["canvas_side_splitter"])
-
-        if "stats_splitter" in window_settings and window_settings["stats_splitter"] is not None:
-            self.ui.stats_widget.ui.splitter.restoreState(window_settings["stats_splitter"])
-
     ##### End window properties #####
     #################################
         
