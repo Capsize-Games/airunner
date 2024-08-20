@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='airunner',
-    version="3.0.0.dev12",
+    version="3.0.0.dev14",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -17,8 +17,8 @@ setup(
     install_requires=[
         # Core application dependencies
         "tqdm==4.66.4",
-        "accelerate==0.29.2",
-        "huggingface-hub==0.22.2",
+        "accelerate==0.31.0",
+        "huggingface-hub==0.23.5",
         "numpy==1.26.4",
         "pip==24.0",
         "PySide6==6.7.0",
@@ -37,7 +37,7 @@ setup(
         "torch==2.2.2",
         "torchvision==0.17.2",
         "torchaudio==2.2.2",
-        "optimum==1.19.1",
+        "optimum==1.21.4",
         "inflect==7.2.0",
         "tiktoken==0.6.0",
         "mediapipe==0.10.11",
@@ -46,7 +46,7 @@ setup(
         # "watchdog==4.0.0",  # Required for file watching
         
         # LLM Dependencies
-        "transformers==4.40.1",  
+        "transformers==4.41.2",
         "auto-gptq==0.7.1",
         "bitsandbytes==0.43.1",
         "datasets==2.18.0",
@@ -63,7 +63,7 @@ setup(
 
         # Stable Diffusion Dependencies
         "omegaconf==2.3.0",
-        "diffusers==0.27.2",
+        "diffusers==0.29.2",
         "controlnet_aux==0.0.8",
         "einops==0.7.0",  # Required for controlnet_aux
         "Pillow==10.3.0",
@@ -79,6 +79,7 @@ setup(
         "llama-index==0.10.32",
         "llama-index-readers-file==0.1.19",
         "llama-index-readers-web==0.1.13",
+        "llama-index-llms-huggingface==0.2.8"
     ],
     dependency_links=[],
 )

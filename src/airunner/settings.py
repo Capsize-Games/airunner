@@ -85,7 +85,7 @@ LOG_LEVEL = logging.DEBUG
 ####################################################################
 # Default models for the core application
 ####################################################################
-DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.2"
+DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.3"
 # WAS ORIGINALLY USING "openai/whisper-base" for feature extractor
 DEFAULT_STT_HF_PATH = "openai/whisper-tiny"
 
@@ -195,7 +195,7 @@ DEFAULT_CHATBOT = {
     "model_version": DEFAULT_LLM_HF_PATH,
     "model_type": "llm",
     "dtype": "4bit",
-    "cache_llm_to_disk": True,
+    "use_cache": True,
     "ngram_size": 2,
     "return_result": True,
 
@@ -209,18 +209,31 @@ DEFAULT_CHATBOT = {
         "Ensure replies promote fairness and positivity."
     ),
     "system_instructions": (
-        "You are a knowledgeable and helpful assistant. "
-        "You will always do your best to answer the User "
-        "with the most accurate and helpful information. "
-        "You will always stay in character and respond as "
-        "the assistant. ALWAYS respond in a conversational "
-        "and expressive way. "
-        "Use CAPITALIZATION for emphasis. "
-        "NEVER generate text for the User ONLY for "
-        "the assistant.\n"
-        "Do not return tags, code, or any other form of "
-        "non-human language. You are a human. "
-        "You must communicate like a human."
+        # "You are a knowledgeable and helpful assistant. "
+        # "You will always do your best to answer the User "
+        # "with the most accurate and helpful information. "
+        # "You will always stay in character and respond as "
+        # "the assistant. ALWAYS respond in a conversational "
+        # "and expressive way. "
+        # "Use CAPITALIZATION for emphasis. "
+        # "NEVER generate text for the User ONLY for "
+        # "the assistant.\n"
+        # "Do not return tags, code, or any other form of "
+        # "non-human language. You are a human. "
+        # "You must communicate like a human."
+        "You are a dialogue generator. "
+        "You will follow all of the rules in order to generate compelling and intriguing dialogue for a given character.\n"
+        "The Rules:\n"
+        "You will ONLY return dialogue, nothing more.\n"
+        "Limit responses to a single sentence.\n"
+        "Only generate responses in pure dialogue form without including any actions, descriptions or stage directions in parentheses. Only return spoken words.\n"
+        "Do not generate redundant dialogue. Examine the conversation and context close and keep responses interesting and creative.\n"
+        "Do not format the response with the character's name or any other text. Only return the dialogue.\n"
+        "Respond with dialogue that is appropriate for a character named {{ speaker_name }}.\n"
+        "{{ speaker_name }} and {{ listener_name }} are having a conversation. \n"
+        "Avoid repeating {{ speaker_name }}'s previous dialogue or {{ listener_name }}'s previous dialogue.\n"
+        "You will generate responses which are appropriate for your personality and given character.\n"
+        "------\n"
     ),
     "generator_settings": {
         "max_new_tokens": 200,
@@ -247,7 +260,7 @@ AGENT_CHATBOT["generator_settings"] = {
     "do_sample": True,
     "early_stopping": True,
     "num_beams": 1,
-    "temperature": 9000,
+    "temperature": 0.1,
     "top_p": 900,
     "no_repeat_ngram_size": 2,
     "top_k": 50,
@@ -713,6 +726,8 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     image_preset="",
     prompt="",
     negative_prompt="",
+    second_prompt="",
+    second_negative_prompt="",
     steps=20,
     ddim_eta=0.5,
     height=512,
@@ -734,6 +749,12 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     version="SD 1.5",
     is_preset=False,
     input_image=None,
+    crops_coord_top_left=(0, 0),
+    original_size=(1024, 1024),
+    target_size=(1024, 1024),
+    negative_original_size=(512, 512),
+    negative_target_size=(512, 512),
+    use_compel=True,
 )
 DEFAULT_GENERATOR_SETTINGS = dict(
     controlnet_image_settings=dict(
@@ -1163,7 +1184,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         ),
         prompt_template="Mistral 7B Instruct: Default Chatbot",
         batch_size=1,
-        cache_llm_to_disk=True,
         max_new_tokens=100
     ),
     tts_settings=TTS_SETTINGS_DEFAULT,
@@ -1271,45 +1291,3 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         user=False,
     ),
 )
-
-"""
-#################################
-## Stable Diffusion guardrails ##
-#################################
- ---------- WARNING ----------
- DO NOT CHANGE THESE VALUES!!!
- These values are used to help
- prevent the generation of
- potentially harmful content
- and should only be modified
- by a researcher or
- qualified expert.
- -----------------------------
- When the safety checker is
- disabled the encrypted
- guardrail words will be
- removed from the prompt and
- added to the negative prompt
- in an effort to prevent the
- generation of harmful content.
- If researchers or experts
- have a better method, please
- contact us.
- -----------------------------
- Although our best attempt has
- been made to prevent harmful
- content, certain prompts and
- models may still be capable of
- generating harmful content. 
- It is advised that you leave 
- the safety checker enabled at 
- all times And only use image 
- models that are incapable of
- generating unwanted content.
- 
- See the Stable Diffusion license
- for more information.
-#################################
-"""
-SD_GUARDRAILS_KEY = b"hRn5d-cm2ow_lbGJjYoQgXsmzbWa0XGfHDAv-qu91F4="
-SD_GUARDRAILS = b"gAAAAABmACEW3HIFcd-f_dqgImUzesVq4aNDdLc0rkiLw_X0gX_hv_eoDUhaPU8g03NtDVnXWY7nPNhtAWNhhhgTxux2Ws2ZQXYXFf2MUFWIwTzr88-kpMY="

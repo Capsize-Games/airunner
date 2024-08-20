@@ -53,6 +53,13 @@ class StableDiffusionSettingsWidget(
         self.model_scanner_worker.add_to_queue("scan_for_models")
         self.vae_scanner_worker.add_to_queue("scan_for_vae")
 
+        self.ui.use_compel.setChecked(self.settings["generator_settings"]["use_compel"])
+
+    def toggled_use_compel(self, val):
+        settings = self.settings
+        settings["generator_settings"]["use_compel"] = val
+        self.settings = settings
+
     def handle_model_changed(self, name):
         settings = self.settings
         settings["generator_settings"]["model"] = name

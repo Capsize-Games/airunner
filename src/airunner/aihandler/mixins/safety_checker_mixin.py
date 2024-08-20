@@ -1,5 +1,10 @@
 import os
 
+import numpy as np
+from PIL import (
+    ImageDraw,
+    ImageFont
+)
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 from airunner.enums import SignalCode, ModelStatus, ModelType
@@ -58,8 +63,8 @@ class SafetyCheckerMixin:
     def safety_checker_ready(self) -> bool:
         return (self.pipe and ((
            self.use_safety_checker and
-           self.model_is_loaded(ModelType.SAFETY_CHECKER) and
-           self.model_is_loaded(ModelType.FEATURE_EXTRACTOR)
+           self.feature_extractor and
+           self.safety_checker
         ) or (
             not self.use_safety_checker
         )))
@@ -69,14 +74,12 @@ class SafetyCheckerMixin:
 
     def on_safety_checker_model_load_signal(self, data_: dict):
         self.__load_safety_checker_model()
-        self.__apply_safety_checker_to_pipe()
 
     def on_safety_checker_model_unload_signal(self, data_: dict):
         self.__unload_safety_checker_model()
 
     def on_feature_extractor_load_signal(self, data_: dict):
         self.__load_feature_extractor_model()
-        self.__apply_feature_extractor_to_pipe()
 
     def on_feature_extractor_unload_signal(self, data_: dict):
         self.__unload_feature_extractor_model()
@@ -84,19 +87,13 @@ class SafetyCheckerMixin:
     def load_nsfw_filter(self):
         if self.use_safety_checker and self.safety_checker is None and "path" in self.safety_checker_model:
             self.__load_safety_checker_model()
-            self.__apply_safety_checker_to_pipe()
 
         if self.use_safety_checker and self.feature_extractor is None and "path" in self.safety_checker_model:
             self.__load_feature_extractor_model()
-            self.__apply_feature_extractor_to_pipe()
 
     def remove_safety_checker_from_pipe(self):
         self.__remove_feature_extractor_from_pipe()
         self.__remove_safety_checker_from_pipe()
-
-    def apply_safety_checker_to_pipe(self):
-        self.__apply_feature_extractor_to_pipe()
-        self.__apply_safety_checker_to_pipe()
 
     def unload_safety_checker(self, data_: dict = None):
         self.__unload_safety_checker_model()
@@ -137,11 +134,49 @@ class SafetyCheckerMixin:
                 use_safetensors=True,
                 device_map=self.device
             )
-            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.READY, self.feature_extractor_path)
+            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED, self.feature_extractor_path)
         except Exception as e:
             print(e)
             self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Unable to load feature extractor")
             self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED, self.safety_checker_model["path"])
+
+    def check_and_mark_nsfw_images(self, images) -> bool:
+        if not self.feature_extractor or not self.safety_checker:
+            return images, [False] * len(images)
+
+        safety_checker_input = self.feature_extractor(images, return_tensors="pt").to(self.device)
+        _, has_nsfw_concepts = self.safety_checker(
+            images=[np.array(img) for img in images],
+            clip_input=safety_checker_input.pixel_values.to(self.device)
+        )
+
+        # Mark images as NSFW if NSFW content is detected
+        for i, img in enumerate(images):
+            if has_nsfw_concepts[i]:
+                img = img.convert("RGBA")
+                img.paste((0, 0, 0), (0, 0, img.size[0], img.size[1]))
+
+                draw = ImageDraw.Draw(img)
+                font = ImageFont.load_default(50)  # load_default() does not support size argument
+
+                # Text you want to center
+                text = "NSFW"
+
+                # Calculate the bounding box of the text
+                text_bbox = draw.textbbox((0, 0), text, font=font)
+                text_width = text_bbox[2] - text_bbox[0]
+                text_height = text_bbox[3] - text_bbox[1]
+
+                # Calculate the position to center the text line
+                text_x = (img.width - text_width) // 2
+                text_y = (img.height - text_height) // 2
+
+                # Draw the text at the calculated position, ensuring the text line is centered
+                draw.text((text_x, text_y), text, font=font, fill=(255, 255, 255))
+
+                images[i] = img
+
+        return images, has_nsfw_concepts
 
     def __load_safety_checker_model(self):
         self.logger.debug(f"Initializing safety checker")
@@ -160,27 +195,11 @@ class SafetyCheckerMixin:
                 use_safetensors=True,
                 device_map=self.device
             )
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.READY, self.safety_checker_model["path"])
+            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED, self.safety_checker_model["path"])
         except Exception as e:
             print(e)
             self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Unable to load safety checker")
             self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED, self.safety_checker_model["path"])
-
-    def __apply_feature_extractor_to_pipe(self):
-        if not self.pipe:
-            return
-        self.logger.debug("Applying feature extractor to pipe")
-        if self.feature_extractor is not None:
-            self.pipe.feature_extractor = self.feature_extractor
-            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED, self.feature_extractor_path)
-
-    def __apply_safety_checker_to_pipe(self):
-        if not self.pipe:
-            return
-        self.logger.debug("Applying safety checker to pipe")
-        if self.safety_checker is not None:
-            self.pipe.safety_checker = self.safety_checker
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED, self.safety_checker_model["path"])
 
     def __remove_feature_extractor_from_pipe(self):
         self.logger.debug("Removing feature extractor from pipe")
