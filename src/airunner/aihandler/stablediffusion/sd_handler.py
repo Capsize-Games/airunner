@@ -56,6 +56,8 @@ class SDHandler(
     ModelMixin,
 ):
     def  __init__(self, *args, **kwargs):
+        self._sd_request = None
+
         super().__init__(*args, **kwargs)
         LoraDataMixin.__init__(self)
         EmbeddingDataMixin.__init__(self)
@@ -140,8 +142,6 @@ class SDHandler(
         self.sd_mode = SDMode.DRAWING
         self.loaded = False
         self.loading = False
-        self.sd_request = None
-        self.sd_request = SDRequest()
         self.sd_request.parent = self
         self.do_generate = False
         self._generator = None
@@ -156,6 +156,16 @@ class SDHandler(
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
 
         self.load_stable_diffusion()
+
+    @property
+    def sd_request(self):
+        if self._sd_request is None:
+            self.sd_request = SDRequest()
+        return self._sd_request
+
+    @sd_request.setter
+    def sd_request(self, value):
+        self._sd_request = value
 
     def on_sd_vae_load_signal(self, _data: dict):
         #self._load_vae()
