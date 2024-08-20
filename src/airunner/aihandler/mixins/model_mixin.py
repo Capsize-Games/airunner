@@ -413,6 +413,7 @@ class ModelMixin:
         if not self.safety_checker_ready:
             raise SafetyCheckerNotLoadedException()
         data = self.__prepare_data()
+        clear_memory()
         results = self.pipe(**data)
         images = results.get("images", [])
         return self.check_and_mark_nsfw_images(images)
