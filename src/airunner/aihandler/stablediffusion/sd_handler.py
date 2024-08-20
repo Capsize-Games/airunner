@@ -181,8 +181,6 @@ class SDHandler(
 
     def on_change_scheduler_signal(self, data: dict):
         self.load_scheduler(force_scheduler_name=data["scheduler"])
-        if self.pipe:
-            self.pipe.scheduler = self.scheduler
 
     @property
     def is_pipe_loaded(self) -> bool:
