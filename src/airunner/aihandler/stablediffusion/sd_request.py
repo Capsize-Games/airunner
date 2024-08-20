@@ -342,6 +342,10 @@ class SDRequest(
                 extra_args = {**extra_args, **{
                     "image_guidance_scale": self.generator_settings.strength,
                 }}
+            elif self.is_txt2img:
+                extra_args = {**extra_args, **{
+                    "guidance_scale": self.generator_settings.scale,
+                }}
         if self.is_upscale:
             extra_args = {**extra_args, **{
                 "image": image,
