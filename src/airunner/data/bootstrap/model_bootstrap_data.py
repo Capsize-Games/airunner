@@ -11,17 +11,6 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
-        "name": "Stable Diffusion Turbo",
-        "path": "stabilityai/sd-turbo",
-        "branch": "fp16",
-        "version": "SD Turbo",
-        "category": "stablediffusion",
-        "pipeline_action": "txt2img",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
         "name": "Stable Diffusion XL Base 1.0",
         "path": "sd_xl_base_1.0.safetensors",
         "branch": "fp16",
@@ -34,7 +23,7 @@ model_bootstrap_data = [
     },
     {
         "name": "Stable Diffusion XL Turbo",
-        "path": "stabilityai/sdxl-turbo",
+        "path": "sd_xl_turbo_1.0_fp16.safetensors",
         "branch": "fp16",
         "version": "SDXL Turbo",
         "category": "stablediffusion",
@@ -50,17 +39,6 @@ model_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "pipeline_action": "inpaint",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
-        "name": "Stable Diffusion Depth2Img",
-        "path": "stabilityai/stable-diffusion-2-depth",
-        "branch": "fp16",
-        "version": "SD 2.1",
-        "category": "stablediffusion",
-        "pipeline_action": "depth2img",
         "enabled": True,
         "model_type": "art",
         "is_default": True

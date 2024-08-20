@@ -179,7 +179,6 @@ class ModelMixin:
         self.model_version = self.settings["generator_settings"]["version"]
         self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
         self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
-        self.is_turbo = self.model_version == StableDiffusionVersion.SD_TURBO.value
 
         self.__load_generator(torch.device(self.device), self.settings["generator_settings"]["seed"])
         self.__load_tokenizer()

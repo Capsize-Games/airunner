@@ -98,26 +98,6 @@ SD_FILE_BOOTSTRAP_DATA = {
             "model_index.json",
         ]
     },
-    "SD 2.1": {
-        "depth2img": [
-            "depth_estimator/config.json",
-            "depth_estimator/model.safetensors",
-            "feature_extractor/preprocessor_config.json",
-            "scheduler/scheduler_config.json",
-            "text_encoder/config.json",
-            "text_encoder/model.safetensors",
-            "tokenizer/merges.txt",
-            "tokenizer/special_tokens_map.json",
-            "tokenizer/tokenizer_config.json",
-            "tokenizer/vocab.json",
-            "unet/config.json",
-            "unet/diffusion_pytorch_model.safetensors",
-            "vae/config.json",
-            "vae/diffusion_pytorch_model.safetensors",
-            "512-depth-ema.safetensors",
-            "model_index.json",
-        ],
-    },
     "SDXL 1.0": {
         "txt2img": [
             "scheduler/scheduler_config.json",
@@ -139,24 +119,6 @@ SD_FILE_BOOTSTRAP_DATA = {
             "model_index.json",
         ],
         "controlnet": []
-    },
-    "SD Turbo": {
-        "txt2img": [
-            "scheduler/scheduler_config.json",
-            "text_encoder/config.json",
-            "text_encoder/model.fp16.safetensors",
-            "tokenizer/merges.txt",
-            "tokenizer/special_tokens_map.json",
-            "tokenizer/tokenizer_config.json",
-            "tokenizer/vocab.json",
-            "unet/config.json",
-            "unet/diffusion_pytorch_model.fp16.safetensors",
-            "vae/config.json",
-            "vae/diffusion_pytorch_model.fp16.safetensors",
-            "LICENSE.md",
-            "model_index.json",
-            "sd_turbo.safetensors",
-        ]
     },
     "SDXL Turbo": {
         "txt2img": [
