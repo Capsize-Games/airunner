@@ -7,16 +7,15 @@ from typing import List
 import torch
 from PIL import Image
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
-    StableDiffusionControlNetInpaintPipeline, AutoencoderKL, UNet2DConditionModel, StableDiffusionXLPipeline, \
+    StableDiffusionControlNetInpaintPipeline, StableDiffusionXLPipeline, \
     StableDiffusionXLImg2ImgPipeline, StableDiffusionXLInpaintPipeline, StableDiffusionXLControlNetPipeline, \
     StableDiffusionXLControlNetImg2ImgPipeline, StableDiffusionXLControlNetInpaintPipeline
-from diffusers.models.modeling_utils import load_state_dict
 
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
-from transformers import AutoTokenizer, CLIPModel
+from transformers import AutoTokenizer
 
 from airunner.enums import (
     SignalCode,
