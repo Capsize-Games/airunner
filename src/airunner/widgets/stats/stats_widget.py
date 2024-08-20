@@ -5,6 +5,7 @@ import torch
 from PySide6.QtCore import Qt, Slot, QTimer
 from PySide6.QtWidgets import QTableWidgetItem, QHeaderView, QApplication, QPushButton
 from airunner.enums import SignalCode, ModelStatus, ModelType
+from airunner.utils.clear_memory import clear_memory
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stats.templates.stats_ui import Ui_stats_widget
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -246,6 +247,7 @@ class StatsWidget(
     def unload_all(self):
         for model in self.models.keys():
             self.unload_model(model)
+        clear_memory()
 
     def unload_model(self, model: str):
         if model == ModelType.SD.value:
