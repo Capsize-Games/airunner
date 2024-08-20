@@ -11,7 +11,6 @@ from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlN
     StableDiffusionXLImg2ImgPipeline, StableDiffusionXLInpaintPipeline, StableDiffusionXLControlNetPipeline, \
     StableDiffusionXLControlNetImg2ImgPipeline, StableDiffusionXLControlNetInpaintPipeline
 
-from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
@@ -26,7 +25,7 @@ from airunner.enums import (
 )
 from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException
 from airunner.settings import (
-    AVAILABLE_ACTIONS, SD_FEATURE_EXTRACTOR_PATH, SD_DEFAULT_MODEL_PATH
+    SD_FEATURE_EXTRACTOR_PATH, SD_DEFAULT_MODEL_PATH
 )
 from airunner.utils.clear_memory import clear_memory
 
@@ -42,7 +41,10 @@ class ModelMixin:
         self.is_sd_xl_turbo = False
         self.is_sd_xl = False
         self.is_turbo = False
+        self.do_generate = False
 
+        self.data = None
+        self.pipe = None
         self.txt2img = None
         self.img2img = None
         self.pix2pix = None
@@ -191,7 +193,7 @@ class ModelMixin:
 
         self.swap_pipeline()
 
-        return self.__generate(generator_request_data)
+        return self.__generate()
 
     def model_is_loaded(self, model: ModelType) -> bool:
         return self.model_status[model] == ModelStatus.LOADED
@@ -265,27 +267,6 @@ class ModelMixin:
         QApplication.processEvents()
         return {}
 
-    def __generate_latents(self):
-        self.logger.debug("Generating latents")
-
-        width_scale = self.settings["working_width"] / self.settings["working_width"]
-        height_scale = self.settings["working_height"] / self.settings["working_height"]
-        latent_width = int(self.pipe.unet.config.sample_size * width_scale)
-        latent_height = int(self.pipe.unet.config.sample_size * height_scale)
-
-        batch_size = self.batch_size
-        return randn_tensor(
-            (
-                batch_size,
-                self.pipe.unet.config.in_channels,
-                latent_height,
-                latent_width,
-            ),
-            device=torch.device(self.device),
-            dtype=self.data_type,
-            generator=self.__generator,
-        )
-
     def __prepare_data(self):
         data = self.data.copy()
 
@@ -334,7 +315,7 @@ class ModelMixin:
 
         return data
 
-    def __call_pipe(self, generator_request_data: dict):
+    def __call_pipe(self):
         """
         Generate an image using the pipe
         :return:
@@ -347,13 +328,13 @@ class ModelMixin:
         images = results.get("images", [])
         return self.check_and_mark_nsfw_images(images)
 
-    def __interrupt_callback(self, pipe, i, t, callback_kwargs):
+    def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
         if self.do_interrupt_image_generation:
             self.do_interrupt_image_generation = False
             raise InterruptedException()
         return callback_kwargs
 
-    def __generate(self, generator_request_data: dict):
+    def __generate(self):
         if not self.pipe:
             raise PipeNotLoadedException()
 
@@ -363,7 +344,7 @@ class ModelMixin:
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
         self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
 
-        images, nsfw_content_detected = self.__call_pipe(generator_request_data)
+        images, nsfw_content_detected = self.__call_pipe()
 
         self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
 
@@ -372,7 +353,8 @@ class ModelMixin:
             nsfw_content_detected
         )
 
-    def __convert_image_to_base64(self, image):
+    @staticmethod
+    def __convert_image_to_base64(image):
         img_byte_arr = io.BytesIO()
         image.save(img_byte_arr, format='PNG')
         img_byte_arr = img_byte_arr.getvalue()
