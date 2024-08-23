@@ -104,7 +104,7 @@ class EmbeddingsContainerWidget(BaseWidget):
             embedding_widget.ui.enabledCheckbox.blockSignals(False)
         QApplication.processEvents()
         for index, _embedding in enumerate(self.settings["embeddings"]):
-            settings["embeddings"][index]["enabled"] = val
+            settings["embeddings"][index]["active"] = val
         self.settings = settings
 
     def search_text_changed(self, val):
