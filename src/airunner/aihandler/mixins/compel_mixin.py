@@ -114,17 +114,17 @@ class CompelMixin:
                 self.logger.error("Error building negative prompt embeds")
                 self.logger.error(e)
 
-        # if prompt_embeds is None or negative_prompt_embeds is None:
-        #     if do_reload:
-        #         return self.load_prompt_embeds(
-        #             pipe,
-        #             do_reload=False,
-        #             prompt=prompt,
-        #             negative_prompt=negative_prompt
-        #         )
-        #     else:
-        #         self.logger.error("Prompt embeds are None")
-        #         return
+        if prompt_embeds is None or negative_prompt_embeds is None:
+            if do_reload:
+                return self.load_prompt_embeds(
+                    pipe,
+                    do_reload=False,
+                    prompt=prompt,
+                    negative_prompt=negative_prompt
+                )
+            else:
+                self.logger.error("Prompt embeds are None")
+                return
 
         [
             prompt_embeds,
