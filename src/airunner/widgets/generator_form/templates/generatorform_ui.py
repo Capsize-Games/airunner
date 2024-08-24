@@ -44,11 +44,129 @@ class Ui_generator_form(object):
         self.gridLayout_3 = QGridLayout(self.tab)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setContentsMargins(8, 8, 8, 8)
+        self.negative_original_size_groupbox = QGroupBox(self.tab)
+        self.negative_original_size_groupbox.setObjectName(u"negative_original_size_groupbox")
+        self.horizontalLayout_5 = QHBoxLayout(self.negative_original_size_groupbox)
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.horizontalLayout_5.setContentsMargins(2, 2, 2, 2)
+        self.negative_original_size_x = QLineEdit(self.negative_original_size_groupbox)
+        self.negative_original_size_x.setObjectName(u"negative_original_size_x")
+
+        self.horizontalLayout_5.addWidget(self.negative_original_size_x)
+
+        self.negative_original_size_y = QLineEdit(self.negative_original_size_groupbox)
+        self.negative_original_size_y.setObjectName(u"negative_original_size_y")
+
+        self.horizontalLayout_5.addWidget(self.negative_original_size_y)
+
+
+        self.gridLayout_3.addWidget(self.negative_original_size_groupbox, 9, 0, 1, 1)
+
+        self.image_presets = QComboBox(self.tab)
+        self.image_presets.setObjectName(u"image_presets")
+
+        self.gridLayout_3.addWidget(self.image_presets, 4, 0, 1, 1)
+
+        self.generate_button = QPushButton(self.tab)
+        self.generate_button.setObjectName(u"generate_button")
+
+        self.gridLayout_3.addWidget(self.generate_button, 14, 0, 1, 1)
+
         self.interrupt_button = QPushButton(self.tab)
         self.interrupt_button.setObjectName(u"interrupt_button")
         self.interrupt_button.setCursor(QCursor(Qt.PointingHandCursor))
 
-        self.gridLayout_3.addWidget(self.interrupt_button, 11, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.interrupt_button, 15, 0, 1, 1)
+
+        self.label_2 = QLabel(self.tab)
+        self.label_2.setObjectName(u"label_2")
+
+        self.gridLayout_3.addWidget(self.label_2, 3, 0, 1, 1)
+
+        self.original_size_groupbox = QGroupBox(self.tab)
+        self.original_size_groupbox.setObjectName(u"original_size_groupbox")
+        self.horizontalLayout_4 = QHBoxLayout(self.original_size_groupbox)
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.horizontalLayout_4.setContentsMargins(2, 2, 2, 2)
+        self.original_size_x = QLineEdit(self.original_size_groupbox)
+        self.original_size_x.setObjectName(u"original_size_x")
+
+        self.horizontalLayout_4.addWidget(self.original_size_x)
+
+        self.original_size_y = QLineEdit(self.original_size_groupbox)
+        self.original_size_y.setObjectName(u"original_size_y")
+
+        self.horizontalLayout_4.addWidget(self.original_size_y)
+
+
+        self.gridLayout_3.addWidget(self.original_size_groupbox, 7, 0, 1, 1)
+
+        self.line = QFrame(self.tab)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.gridLayout_3.addWidget(self.line, 5, 0, 1, 1)
+
+        self.target_size_groupbox = QGroupBox(self.tab)
+        self.target_size_groupbox.setObjectName(u"target_size_groupbox")
+        self.horizontalLayout_3 = QHBoxLayout(self.target_size_groupbox)
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.horizontalLayout_3.setContentsMargins(2, 2, 2, 2)
+        self.target_size_x = QLineEdit(self.target_size_groupbox)
+        self.target_size_x.setObjectName(u"target_size_x")
+
+        self.horizontalLayout_3.addWidget(self.target_size_x)
+
+        self.target_size_y = QLineEdit(self.target_size_groupbox)
+        self.target_size_y.setObjectName(u"target_size_y")
+
+        self.horizontalLayout_3.addWidget(self.target_size_y)
+
+
+        self.gridLayout_3.addWidget(self.target_size_groupbox, 8, 0, 1, 1)
+
+        self.negative_target_size_groupbox = QGroupBox(self.tab)
+        self.negative_target_size_groupbox.setObjectName(u"negative_target_size_groupbox")
+        self.horizontalLayout = QHBoxLayout(self.negative_target_size_groupbox)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(2, 2, 2, 2)
+        self.negative_target_size_x = QLineEdit(self.negative_target_size_groupbox)
+        self.negative_target_size_x.setObjectName(u"negative_target_size_x")
+
+        self.horizontalLayout.addWidget(self.negative_target_size_x)
+
+        self.negative_target_size_y = QLineEdit(self.negative_target_size_groupbox)
+        self.negative_target_size_y.setObjectName(u"negative_target_size_y")
+
+        self.horizontalLayout.addWidget(self.negative_target_size_y)
+
+
+        self.gridLayout_3.addWidget(self.negative_target_size_groupbox, 10, 0, 1, 1)
+
+        self.progress_bar = QProgressBar(self.tab)
+        self.progress_bar.setObjectName(u"progress_bar")
+        self.progress_bar.setValue(0)
+
+        self.gridLayout_3.addWidget(self.progress_bar, 16, 0, 1, 1)
+
+        self.croops_coord_top_left_groupbox = QGroupBox(self.tab)
+        self.croops_coord_top_left_groupbox.setObjectName(u"croops_coord_top_left_groupbox")
+        self.horizontalLayout_2 = QHBoxLayout(self.croops_coord_top_left_groupbox)
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.horizontalLayout_2.setContentsMargins(2, 2, 2, 2)
+        self.crops_coord_top_left_x = QLineEdit(self.croops_coord_top_left_groupbox)
+        self.crops_coord_top_left_x.setObjectName(u"crops_coord_top_left_x")
+
+        self.horizontalLayout_2.addWidget(self.crops_coord_top_left_x)
+
+        self.crops_coord_top_left_y = QLineEdit(self.croops_coord_top_left_groupbox)
+        self.crops_coord_top_left_y.setObjectName(u"crops_coord_top_left_y")
+
+        self.horizontalLayout_2.addWidget(self.crops_coord_top_left_y)
+
+
+        self.gridLayout_3.addWidget(self.croops_coord_top_left_groupbox, 6, 0, 1, 1)
 
         self.scrollArea = QScrollArea(self.tab)
         self.scrollArea.setObjectName(u"scrollArea")
@@ -57,7 +175,7 @@ class Ui_generator_form(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 645, 531))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 645, 494))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -132,111 +250,12 @@ class Ui_generator_form(object):
 
         self.gridLayout_3.addWidget(self.scrollArea, 1, 0, 1, 1)
 
-        self.image_presets = QComboBox(self.tab)
-        self.image_presets.setObjectName(u"image_presets")
+        self.line_2 = QFrame(self.tab)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setFrameShape(QFrame.Shape.HLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
 
-        self.gridLayout_3.addWidget(self.image_presets, 0, 0, 1, 1)
-
-        self.original_size_groupbox = QGroupBox(self.tab)
-        self.original_size_groupbox.setObjectName(u"original_size_groupbox")
-        self.horizontalLayout_4 = QHBoxLayout(self.original_size_groupbox)
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.horizontalLayout_4.setContentsMargins(2, 2, 2, 2)
-        self.original_size_x = QLineEdit(self.original_size_groupbox)
-        self.original_size_x.setObjectName(u"original_size_x")
-
-        self.horizontalLayout_4.addWidget(self.original_size_x)
-
-        self.original_size_y = QLineEdit(self.original_size_groupbox)
-        self.original_size_y.setObjectName(u"original_size_y")
-
-        self.horizontalLayout_4.addWidget(self.original_size_y)
-
-
-        self.gridLayout_3.addWidget(self.original_size_groupbox, 3, 0, 1, 1)
-
-        self.negative_original_size_groupbox = QGroupBox(self.tab)
-        self.negative_original_size_groupbox.setObjectName(u"negative_original_size_groupbox")
-        self.horizontalLayout_5 = QHBoxLayout(self.negative_original_size_groupbox)
-        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.horizontalLayout_5.setContentsMargins(2, 2, 2, 2)
-        self.negative_original_size_x = QLineEdit(self.negative_original_size_groupbox)
-        self.negative_original_size_x.setObjectName(u"negative_original_size_x")
-
-        self.horizontalLayout_5.addWidget(self.negative_original_size_x)
-
-        self.negative_original_size_y = QLineEdit(self.negative_original_size_groupbox)
-        self.negative_original_size_y.setObjectName(u"negative_original_size_y")
-
-        self.horizontalLayout_5.addWidget(self.negative_original_size_y)
-
-
-        self.gridLayout_3.addWidget(self.negative_original_size_groupbox, 5, 0, 1, 1)
-
-        self.negative_target_size_groupbox = QGroupBox(self.tab)
-        self.negative_target_size_groupbox.setObjectName(u"negative_target_size_groupbox")
-        self.horizontalLayout = QHBoxLayout(self.negative_target_size_groupbox)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(2, 2, 2, 2)
-        self.negative_target_size_x = QLineEdit(self.negative_target_size_groupbox)
-        self.negative_target_size_x.setObjectName(u"negative_target_size_x")
-
-        self.horizontalLayout.addWidget(self.negative_target_size_x)
-
-        self.negative_target_size_y = QLineEdit(self.negative_target_size_groupbox)
-        self.negative_target_size_y.setObjectName(u"negative_target_size_y")
-
-        self.horizontalLayout.addWidget(self.negative_target_size_y)
-
-
-        self.gridLayout_3.addWidget(self.negative_target_size_groupbox, 6, 0, 1, 1)
-
-        self.progress_bar = QProgressBar(self.tab)
-        self.progress_bar.setObjectName(u"progress_bar")
-        self.progress_bar.setValue(0)
-
-        self.gridLayout_3.addWidget(self.progress_bar, 12, 0, 1, 1)
-
-        self.generate_button = QPushButton(self.tab)
-        self.generate_button.setObjectName(u"generate_button")
-
-        self.gridLayout_3.addWidget(self.generate_button, 10, 0, 1, 1)
-
-        self.croops_coord_top_left_groupbox = QGroupBox(self.tab)
-        self.croops_coord_top_left_groupbox.setObjectName(u"croops_coord_top_left_groupbox")
-        self.horizontalLayout_2 = QHBoxLayout(self.croops_coord_top_left_groupbox)
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(2, 2, 2, 2)
-        self.crops_coord_top_left_x = QLineEdit(self.croops_coord_top_left_groupbox)
-        self.crops_coord_top_left_x.setObjectName(u"crops_coord_top_left_x")
-
-        self.horizontalLayout_2.addWidget(self.crops_coord_top_left_x)
-
-        self.crops_coord_top_left_y = QLineEdit(self.croops_coord_top_left_groupbox)
-        self.crops_coord_top_left_y.setObjectName(u"crops_coord_top_left_y")
-
-        self.horizontalLayout_2.addWidget(self.crops_coord_top_left_y)
-
-
-        self.gridLayout_3.addWidget(self.croops_coord_top_left_groupbox, 2, 0, 1, 1)
-
-        self.target_size_groupbox = QGroupBox(self.tab)
-        self.target_size_groupbox.setObjectName(u"target_size_groupbox")
-        self.horizontalLayout_3 = QHBoxLayout(self.target_size_groupbox)
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.horizontalLayout_3.setContentsMargins(2, 2, 2, 2)
-        self.target_size_x = QLineEdit(self.target_size_groupbox)
-        self.target_size_x.setObjectName(u"target_size_x")
-
-        self.horizontalLayout_3.addWidget(self.target_size_x)
-
-        self.target_size_y = QLineEdit(self.target_size_groupbox)
-        self.target_size_y.setObjectName(u"target_size_y")
-
-        self.horizontalLayout_3.addWidget(self.target_size_y)
-
-
-        self.gridLayout_3.addWidget(self.target_size_groupbox, 4, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.line_2, 2, 0, 1, 1)
 
         self.generator_form_tabs.addTab(self.tab, "")
         self.tab_2 = QWidget()
@@ -272,7 +291,24 @@ class Ui_generator_form(object):
 
     def retranslateUi(self, generator_form):
         generator_form.setWindowTitle(QCoreApplication.translate("generator_form", u"Form", None))
+        self.negative_original_size_groupbox.setTitle(QCoreApplication.translate("generator_form", u"Negative Original Size", None))
+        self.negative_original_size_x.setPlaceholderText(QCoreApplication.translate("generator_form", u"width", None))
+        self.negative_original_size_y.setPlaceholderText(QCoreApplication.translate("generator_form", u"height", None))
+        self.generate_button.setText(QCoreApplication.translate("generator_form", u"Generate", None))
         self.interrupt_button.setText(QCoreApplication.translate("generator_form", u"Interrupt", None))
+        self.label_2.setText(QCoreApplication.translate("generator_form", u"Presets", None))
+        self.original_size_groupbox.setTitle(QCoreApplication.translate("generator_form", u"Original Size", None))
+        self.original_size_x.setPlaceholderText(QCoreApplication.translate("generator_form", u"width", None))
+        self.original_size_y.setPlaceholderText(QCoreApplication.translate("generator_form", u"height", None))
+        self.target_size_groupbox.setTitle(QCoreApplication.translate("generator_form", u"Target Size", None))
+        self.target_size_x.setPlaceholderText(QCoreApplication.translate("generator_form", u"width", None))
+        self.target_size_y.setPlaceholderText(QCoreApplication.translate("generator_form", u"height", None))
+        self.negative_target_size_groupbox.setTitle(QCoreApplication.translate("generator_form", u"Negative Target Size", None))
+        self.negative_target_size_x.setPlaceholderText(QCoreApplication.translate("generator_form", u"width", None))
+        self.negative_target_size_y.setPlaceholderText(QCoreApplication.translate("generator_form", u"height", None))
+        self.croops_coord_top_left_groupbox.setTitle(QCoreApplication.translate("generator_form", u"Crops Coord (top left)", None))
+        self.crops_coord_top_left_x.setPlaceholderText(QCoreApplication.translate("generator_form", u"x position", None))
+        self.crops_coord_top_left_y.setPlaceholderText(QCoreApplication.translate("generator_form", u"y position", None))
         self.label.setText(QCoreApplication.translate("generator_form", u"Prompt", None))
         self.prompt.setPlaceholderText(QCoreApplication.translate("generator_form", u"Enter a prompt...", None))
         self.pushButton.setText(QCoreApplication.translate("generator_form", u"Save Prompts", None))
@@ -280,22 +316,6 @@ class Ui_generator_form(object):
         self.negative_prompt_label.setText(QCoreApplication.translate("generator_form", u"Negative Prompt", None))
         self.negative_prompt.setPlaceholderText(QCoreApplication.translate("generator_form", u"Enter a negative prompt...", None))
         self.secondary_negative_prompt.setPlaceholderText(QCoreApplication.translate("generator_form", u"Enter a second negative prompt...", None))
-        self.original_size_groupbox.setTitle(QCoreApplication.translate("generator_form", u"Original Size", None))
-        self.original_size_x.setPlaceholderText(QCoreApplication.translate("generator_form", u"width", None))
-        self.original_size_y.setPlaceholderText(QCoreApplication.translate("generator_form", u"height", None))
-        self.negative_original_size_groupbox.setTitle(QCoreApplication.translate("generator_form", u"Negative Original Size", None))
-        self.negative_original_size_x.setPlaceholderText(QCoreApplication.translate("generator_form", u"width", None))
-        self.negative_original_size_y.setPlaceholderText(QCoreApplication.translate("generator_form", u"height", None))
-        self.negative_target_size_groupbox.setTitle(QCoreApplication.translate("generator_form", u"Negative Target Size", None))
-        self.negative_target_size_x.setPlaceholderText(QCoreApplication.translate("generator_form", u"width", None))
-        self.negative_target_size_y.setPlaceholderText(QCoreApplication.translate("generator_form", u"height", None))
-        self.generate_button.setText(QCoreApplication.translate("generator_form", u"Generate", None))
-        self.croops_coord_top_left_groupbox.setTitle(QCoreApplication.translate("generator_form", u"Crops Coord (top left)", None))
-        self.crops_coord_top_left_x.setPlaceholderText(QCoreApplication.translate("generator_form", u"x position", None))
-        self.crops_coord_top_left_y.setPlaceholderText(QCoreApplication.translate("generator_form", u"y position", None))
-        self.target_size_groupbox.setTitle(QCoreApplication.translate("generator_form", u"Target Size", None))
-        self.target_size_x.setPlaceholderText(QCoreApplication.translate("generator_form", u"width", None))
-        self.target_size_y.setPlaceholderText(QCoreApplication.translate("generator_form", u"height", None))
         self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.tab), QCoreApplication.translate("generator_form", u"Tab 1", None))
         self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.tab_2), QCoreApplication.translate("generator_form", u"Tab 2", None))
     # retranslateUi
