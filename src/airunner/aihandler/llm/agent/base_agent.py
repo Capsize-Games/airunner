@@ -1,5 +1,6 @@
 import datetime
 import json
+import random
 import time
 import traceback
 from typing import AnyStr
@@ -47,7 +48,6 @@ class BaseAgent(
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.LLM_RESPOND_TO_USER_SIGNAL, self.do_response)
         self.register(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history)
         self.prompt = ""
         self.history = []
