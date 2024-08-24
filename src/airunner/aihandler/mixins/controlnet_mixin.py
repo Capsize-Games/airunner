@@ -248,14 +248,5 @@ class ControlnetHandlerMixin:
             self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.LOADED, self.controlnet_type)
 
     def __remove_controlnet_from_pipe(self):
-        if self.pipe and hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
-            status = ModelStatus.READY
-            path = self.controlnet_model["path"]
-        else:
-            status = ModelStatus.UNLOADED
-            path = ""
-
         if self.pipe:
             self.swap_pipeline()
-
-        self.change_model_status(ModelType.CONTROLNET, status, path)
