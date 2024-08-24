@@ -153,7 +153,6 @@ class TransformerBaseHandler(BaseHandler):
                 path,
                 **params
             )
-            self.change_model_status(ModelType.LLM, ModelStatus.LOADED, path)
         except Exception as e:
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED, path)
             self.logger.error(f"Error loading model: {e}")
@@ -198,6 +197,7 @@ class TransformerBaseHandler(BaseHandler):
         Override this function to add custom pre load functionality.
         :return:
         """
+        self.change_model_status(ModelType.LLM, ModelStatus.LOADING, "")
         self.current_model_path = self.model_path
 
     def load(self):
@@ -205,15 +205,16 @@ class TransformerBaseHandler(BaseHandler):
         do_load_model = self.do_load_model
         do_load_tokenizer = self.tokenizer is None
 
-        self.pre_load()
+        if any((do_load_model, do_load_tokenizer)):
+            self.pre_load()
 
-        if do_load_tokenizer:
-            self.load_tokenizer()
+            if do_load_tokenizer:
+                self.load_tokenizer()
 
-        if do_load_model:
-            self.load_model()
+            if do_load_model:
+                self.load_model()
 
-        self.post_load()
+            self.post_load()
 
     def post_load(self):
         """
@@ -222,6 +223,7 @@ class TransformerBaseHandler(BaseHandler):
         :return:
         """
         self.logger.error("Define post_load here")
+        self.change_model_status(ModelType.LLM, ModelStatus.LOADED, "")
 
     def generate(self, prompt, action) -> str:
         return self.do_generate(prompt, action)
