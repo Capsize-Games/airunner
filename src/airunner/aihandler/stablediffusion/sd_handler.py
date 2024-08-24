@@ -364,6 +364,9 @@ class SDHandler(
             self.current_state = HandlerState.READY
 
     def load_stable_diffusion_model(self):
+        if not self.settings["sd_enabled"]:
+            return
+
         self.load_image_generator_model()
 
         try:
