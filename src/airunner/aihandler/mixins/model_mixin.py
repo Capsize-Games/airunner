@@ -515,10 +515,16 @@ class ModelMixin:
             else:
                 if self.enable_controlnet:
                     data["controlnet"] = self.controlnet
-                self.pipe = pipeline_class_.from_pretrained(
-                    self.model_path,
-                    **data
-                )
+
+                try:
+                    self.pipe = pipeline_class_.from_pretrained(
+                        self.model_path,
+                        **data
+                    )
+                except (FileNotFoundError, OSError) as e:
+                    self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+                    self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
+                    return
 
             self.apply_controlnet_to_pipe()
 
