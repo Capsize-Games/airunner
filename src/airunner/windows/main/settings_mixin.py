@@ -9,7 +9,7 @@ from PySide6.QtCore import (
 from airunner.settings import (
     ORGANIZATION,
     APPLICATION_NAME,
-    DEFAULT_APPLICATION_SETTINGS
+    DEFAULT_APPLICATION_SETTINGS, BASE_PATH
 )
 from airunner.enums import (
     SignalCode,
@@ -29,29 +29,12 @@ class SettingsMixin:
                     cls._instance = super(SettingsMixin, cls).__new__(cls)
         return cls._instance
 
-    def __init__(
-        self,
-        use_cuda: bool = DEFAULT_APPLICATION_SETTINGS["use_cuda"],
-        sd_enabled: bool = DEFAULT_APPLICATION_SETTINGS["sd_enabled"],
-        controlnet_enabled: bool = DEFAULT_APPLICATION_SETTINGS["controlnet_enabled"],
-        ocr_enabled: bool = DEFAULT_APPLICATION_SETTINGS["ocr_enabled"],
-        tts_enabled: bool = DEFAULT_APPLICATION_SETTINGS["tts_enabled"],
-        stt_enabled: bool = DEFAULT_APPLICATION_SETTINGS["stt_enabled"],
-        ai_mode: bool = DEFAULT_APPLICATION_SETTINGS["ai_mode"],
-    ):
+    def __init__(self):
         if hasattr(self, '_initialized') and self._initialized:
             logging.debug("SettingsMixin instance already initialized")
             return
         self._initialized = True
         logging.debug("Initializing SettingsMixin instance")
-
-        DEFAULT_APPLICATION_SETTINGS["use_cuda"] = use_cuda
-        DEFAULT_APPLICATION_SETTINGS["sd_enabled"] = sd_enabled
-        DEFAULT_APPLICATION_SETTINGS["controlnet_enabled"] = controlnet_enabled
-        DEFAULT_APPLICATION_SETTINGS["ocr_enabled"] = ocr_enabled
-        DEFAULT_APPLICATION_SETTINGS["tts_enabled"] = tts_enabled
-        DEFAULT_APPLICATION_SETTINGS["stt_enabled"] = stt_enabled
-        DEFAULT_APPLICATION_SETTINGS["ai_mode"] = ai_mode
 
         self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         self.default_settings = DEFAULT_APPLICATION_SETTINGS
@@ -134,16 +117,19 @@ class SettingsMixin:
             current_settings = default_settings
         else:
             self.recursive_update(current_settings, default_settings)
-        current_settings = self.construct_paths_if_base_path_changed(current_settings)
+        path_settings = self.construct_paths(BASE_PATH)
+        current_settings["path_settings"].update(path_settings)
         self.settings = current_settings
 
     def recursive_update(self, current, default):
+        # Remove keys that are in current but not in default
+        keys_to_remove = [k for k in current if k not in default]
+        for k in keys_to_remove:
+            del current[k]
+
+        # Update or add keys from default to current
         for k, v in default.items():
-            if k not in current or k not in current or (
-                not isinstance(
-                    current[k], type(v)
-                ) and v is not None
-            ):
+            if k not in current or not isinstance(current[k], type(v)):
                 current[k] = v
             elif isinstance(v, dict):
                 self.recursive_update(current[k], v)
@@ -222,7 +208,7 @@ class SettingsMixin:
             "lora_model_path": f"{base_path}/art/models/lora",
             "image_path": f"{base_path}/art/other/images",
             "video_path": f"{base_path}/art/other/videos",
-            "ebooks_path": f"{base_path}/text/other/ebooks",
+            "ebook_path": f"{base_path}/text/other/ebooks",
             "documents_path": f"{base_path}/text/other/documents",
             "webpages_path": f"{base_path}/text/other/webpages",
             "pdf_path": f"{base_path}/text/other/pdfs",
@@ -238,6 +224,7 @@ class SettingsMixin:
             "rag_documents_path": f"{base_path}/text/other/rag_temp",
             "sentence_transformers_path": f"{base_path}/text/models/sentence_transformers",
             "storage_path": f"{base_path}/storage",
+            "llama_index_path": f"{base_path}/other/llama_index",
         }
         return paths
 
