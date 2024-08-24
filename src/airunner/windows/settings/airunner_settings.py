@@ -6,7 +6,6 @@ from airunner.enums import SignalCode
 from airunner.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.widgets.civitai_preferences.civitai_preferences_widget import CivitAIPreferencesWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
-from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
 from airunner.widgets.font_settings.font_settings_widget import FontSettingsWidget
 from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 from airunner.widgets.image_generator_preferences.image_generator_preferences_widget import ImageGeneratorPreferencesWidget
@@ -379,7 +378,6 @@ class SettingsWindow(BaseWindow):
             "embeddings_settings": EmbeddingsContainerWidget,
             "paths": PathsWidget,
             "keyboard_shortcuts": KeyboardShortcutsWidget,
-            "export_preferences": ExportPreferencesWidget,
             "grid": GridPreferencesWidget,
             "memory": MemoryPreferencesWidget,
             "hf_api_key": APITokenWidget,
