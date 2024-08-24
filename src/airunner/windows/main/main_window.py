@@ -127,7 +127,6 @@ class MainWindow(
         **kwargs
     ):
         self.ui = self.ui_class_()
-
         self.disable_sd = disable_sd
         self.disable_llm = disable_llm
         self.disable_tts = disable_tts
@@ -137,6 +136,7 @@ class MainWindow(
 
         self.restrict_os_access = restrict_os_access
         self.defendatron = defendatron
+        self.quitting = False
         self._override_system_theme = None
         self._dark_mode_enabled = None
         self.update_popup = None
@@ -183,14 +183,7 @@ class MainWindow(
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(
-            self,
-            use_cuda=use_cuda,
-            ocr_enabled=ocr_enabled,
-            tts_enabled=tts_enabled,
-            stt_enabled=stt_enabled,
-            ai_mode=ai_mode,
-        )
+        SettingsMixin.__init__(self)
         self.do_load_llm_on_init = self.settings["llm_enabled"]
 
         self.update_settings()
@@ -511,8 +504,6 @@ class MainWindow(
         self.initialize_widget_elements()
 
     def initialize_widget_elements(self):
-        self.ui.mode_tab_widget.tabBar().hide()
-        self.ui.center_tab.tabBar().hide()
         self.ui.ocr_button.blockSignals(True)
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)
@@ -536,13 +527,7 @@ class MainWindow(
         self.ui.enable_controlnet.blockSignals(False)
         self.ui.sd_toggle_button.blockSignals(False)
         self.ui.controlnet_toggle_button.blockSignals(False)
-        self.initialize_tool_section_buttons()
         self.intialized = True
-
-    def mode_tab_index_changed(self, index):
-        settings = self.settings
-        settings["mode"] = self.ui.mode_tab_widget.tabText(index)
-        self.settings = settings
 
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
         self.emit_signal(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
@@ -614,27 +599,6 @@ class MainWindow(
     @Slot()
     def action_show_model_manager(self):
         ModelManagerWidget()
-
-    @Slot()
-    def action_show_controlnet(self):
-        self.show_section(WindowSection.CONTROLNET)
-
-    @Slot()
-    def action_show_embeddings(self):
-        self.show_section(WindowSection.EMBEDDINGS)
-
-    @Slot()
-    def action_show_lora(self):
-        self.show_section(WindowSection.LORA)
-
-    @Slot()
-    def action_show_pen(self):
-        self.show_section(WindowSection.PEN)
-
-    @Slot()
-    def action_show_active_grid(self):
-        self.show_section(WindowSection.ACTIVE_GRID)
-
     @Slot()
     def action_show_stablediffusion(self):
         self.activate_image_generation_section()
@@ -774,8 +738,6 @@ class MainWindow(
         else:
             self.emit_signal(SignalCode.STT_START_CAPTURE_SIGNAL)
 
-    quitting = False
-
     def save_state(self):
         if self.quitting:
             return
@@ -783,16 +745,19 @@ class MainWindow(
         self.logger.debug("Saving window state")
         settings = self.settings
         settings["window_settings"] = {
-            'mode_tab_widget_index': self.ui.mode_tab_widget.currentIndex(),
-            'tool_tab_widget_index': self.ui.tool_tab_widget.currentIndex(),
-            'center_tab_index': self.ui.center_tab.currentIndex(),
             'is_maximized': self.isMaximized(),
             'is_fullscreen': self.isFullScreen(),
         }
 
         # Store splitter settings in application settings
         for splitter in self.splitter_names:
-            settings["window_settings"][splitter] = getattr(self.ui, splitter).saveState()
+            ui_obj = self.ui
+            if splitter in ["stable_diffusion_splitter", "llm_splitter"]:
+                ui_obj = self.ui.tool_tab_widget.ui
+            try:
+                settings["window_settings"][splitter] = getattr(ui_obj, splitter).saveState()
+            except AttributeError as e:
+                self.logger.error(f"Error saving splitter state: {e}")
 
         settings["window_settings"]["chat_prompt_splitter"] = self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.saveState()
         settings["window_settings"]["canvas_splitter"] = self.ui.canvas_widget_2.ui.canvas_splitter.saveState()
@@ -813,20 +778,22 @@ class MainWindow(
         else:
             self.showNormal()
 
-        self.ui.mode_tab_widget.setCurrentIndex(window_settings["mode_tab_widget_index"])
-        self.ui.tool_tab_widget.setCurrentIndex(window_settings["tool_tab_widget_index"])
-        self.ui.center_tab.setCurrentIndex(window_settings["center_tab_index"])
         self.ui.ai_button.setChecked(self.settings["ai_mode"])
         self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
 
         # Restore splitters
         for splitter in self.splitter_names:
+            ui_obj = self.ui
+            if splitter in ["stable_diffusion_splitter", "llm_splitter"]:
+                ui_obj = self.ui.tool_tab_widget.ui
             try:
-                getattr(self.ui, splitter).restoreState(window_settings[splitter])
+                getattr(ui_obj, splitter).restoreState(window_settings[splitter])
             except TypeError:
                 self.logger.warning(f"failed to restore {splitter} splitter")
             except KeyError:
                 self.logger.warning(f"{splitter} missing in window_settings")
+            except AttributeError:
+                self.logger.warning(f"AttributeError: {splitter}")
 
         if "chat_prompt_splitter" in window_settings:
             self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.restoreState(
@@ -986,18 +953,6 @@ class MainWindow(
 
     def action_toggle_darkmode(self):
         self.set_stylesheet()
-    
-    def image_generation_toggled(self):
-        settings = self.settings
-        settings["mode"] = Mode.IMAGE.value
-        self.settings = settings
-        self.activate_image_generation_section()
-
-    def language_processing_toggled(self):
-        settings = self.settings
-        settings["mode"] = Mode.LANGUAGE_PROCESSOR.value
-        self.settings = settings
-        self.activate_language_processing_section()
     ###### End window handlers ######
 
     def show_update_message(self):
@@ -1113,17 +1068,6 @@ class MainWindow(
             "tool": tool
         })
 
-    def show_section(self, section: WindowSection):
-        section_lists = {
-            "right": [
-                self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())
-            ]
-        }
-        for k, v in section_lists.items():
-            if section.value in v:
-                self.ui.tool_tab_widget.setCurrentIndex(v.index(section.value))
-                break
-
     def plain_text_widget_value(self, widget):
         try:
             return widget.toPlainText()
@@ -1199,15 +1143,6 @@ class MainWindow(
         widget.setChecked(val)
         if block_signals:
             widget.blockSignals(False)
-    
-    def activate_image_generation_section(self):
-        self.ui.mode_tab_widget.setCurrentIndex(0)
-
-    def activate_language_processing_section(self):
-        self.ui.mode_tab_widget.setCurrentIndex(1)
-
-    def initialize_tool_section_buttons(self):
-        pass
     
     def redraw(self):
         self.set_stylesheet()

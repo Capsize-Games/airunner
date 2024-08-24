@@ -4,7 +4,6 @@ from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui imp
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.utils.create_worker import create_worker
 from airunner.workers.model_scanner_worker import ModelScannerWorker
-from airunner.workers.vae_scanner_worker import VAEScannerWorker
 
 
 class StableDiffusionSettingsWidget(
@@ -14,20 +13,11 @@ class StableDiffusionSettingsWidget(
     widget_class_ = Ui_stable_diffusion_settings_widget
 
     def __init__(self, *args, **kwargs):
-        self.icons = [
-            ("exchange-refresh-icon", "reload_selected_preset")
-        ]
         super().__init__(*args, **kwargs)
         PipelineMixin.__init__(self)
         self.model_scanner_worker = create_worker(ModelScannerWorker)
-        self.vae_scanner_worker = create_worker(VAEScannerWorker)
         self.register(SignalCode.AI_MODELS_CREATE_SIGNAL, self.on_models_changed_signal)
-        self.register(SignalCode.VAE_MODELS_CREATE_SIGNAL, self.on_vae_changed_signal)
         self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.update_form)
-        self.load_presets()
-
-    def load_presets(self):
-        self.presets = self.settings["generator_settings"]["presets"]
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -53,7 +43,6 @@ class StableDiffusionSettingsWidget(
         self.ui.frames_slider_widget.hide()
 
         self.model_scanner_worker.add_to_queue("scan_for_models")
-        self.vae_scanner_worker.add_to_queue("scan_for_vae")
 
         self.ui.use_compel.setChecked(self.settings["generator_settings"]["use_compel"])
 
@@ -67,12 +56,6 @@ class StableDiffusionSettingsWidget(
         settings["generator_settings"]["model"] = name
         self.settings = settings
         self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
-
-    def handle_vae_changed(self, name):
-        settings = self.settings
-        settings["generator_settings"]["vae"] = name
-        self.settings = settings
-        self.emit_signal(SignalCode.SD_VAE_LOAD_SIGNAL)
 
     def handle_scheduler_changed(self, name):
         settings = self.settings
@@ -133,14 +116,13 @@ class StableDiffusionSettingsWidget(
         self.ui.version.blockSignals(False)
 
     def on_models_changed_signal(self, data: dict):
-        self.load_pipelines()
-        self.load_versions()
-        self.load_models(data["models"])
-        self.load_vae()
-        self.load_schedulers()
-
-    def on_vae_changed_signal(self, data: dict):
-        self.load_vae()
+        try:
+            self.load_pipelines()
+            self.load_versions()
+            self.load_models(data["models"])
+            self.load_schedulers()
+        except RuntimeError as e:
+            self.logger.error(f"Error loading models: {e}")
 
     def clear_models(self):
         self.ui.model.clear()
@@ -183,14 +165,6 @@ class StableDiffusionSettingsWidget(
         self.ui.model.blockSignals(False)
         self.settings = settings
 
-    def load_vae(self):
-        self.ui.vae_combobox.blockSignals(True)
-        self.ui.vae_combobox.clear()
-        vae_models = self.settings["vae_models"]
-        vae_names = [model["name"] for model in vae_models]
-        self.ui.vae_combobox.addItems(vae_names)
-        self.ui.vae_combobox.blockSignals(False)
-
     def ai_model_get_by_filter(self, models, filter_dict):
         return [item for item in models if all(item.get(k) == v for k, v in filter_dict.items())]
 
@@ -209,9 +183,3 @@ class StableDiffusionSettingsWidget(
             settings["generator_settings"]["scheduler"] = self.ui.scheduler.currentText() 
         self.settings = settings
         self.ui.scheduler.blockSignals(False)
-
-    def reload_selected_preset(self):
-        print("TODO RELOAD SELECTED PRESET")
-
-    def selected_preset_changed(self, val):
-        print("TODO SELECTED PRESET CHANGED")

@@ -27,8 +27,6 @@ class MessageWidget(BaseWidget):
         self.ui.content.setReadOnly(True)
         self.ui.content.insertPlainText(self.message)
         self.ui.content.document().contentsChanged.connect(self.sizeChange)
-        # self.ui.content.sizeHint = self.sizeHint
-        # self.ui.content.minimumSizeHint = self.minimumSizeHint
         name = self.name
         if self.is_bot:
             self.ui.bot_name.show()
@@ -88,6 +86,6 @@ class MessageWidget(BaseWidget):
         return self.sizeHint()
 
     def update_message(self, text):
-        self.message += text
+        self.message = text
         self.ui.content.setPlainText(self.message)
 
