@@ -69,9 +69,9 @@ class ControlnetHandlerMixin:
 
     @property
     def controlnet_image(self):
-        if (
-                self._controlnet_image is None or
-                self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
+        if self.settings["controlnet_enabled"] and (
+            self._controlnet_image is None or
+            self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
         ):
             self.logger.debug("Getting controlnet image")
             self._controlnet_image = self.__preprocess_for_controlnet(self.sd_request.drawing_pad_image)
