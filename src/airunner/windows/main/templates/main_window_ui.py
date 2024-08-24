@@ -1011,12 +1011,12 @@ class Ui_MainWindow(object):
         self.toggle_eraser_button.toggled.connect(MainWindow.action_toggle_eraser)
         self.toggle_grid_button.toggled.connect(MainWindow.action_toggle_grid)
         self.focus_button.clicked.connect(MainWindow.action_center_clicked)
-        self.llm_button.toggled.connect(MainWindow.action_ai_toggled)
         self.sd_toggle_button.toggled.connect(MainWindow.action_image_generator_toggled)
         self.controlnet_toggle_button.toggled.connect(MainWindow.action_controlnet_toggled)
         self.tts_button.toggled.connect(MainWindow.tts_button_toggled)
         self.v2t_button.toggled.connect(MainWindow.v2t_button_toggled)
         self.ocr_button.toggled.connect(MainWindow.ocr_button_toggled)
+        self.llm_button.toggled.connect(MainWindow.action_toggle_llm)
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
