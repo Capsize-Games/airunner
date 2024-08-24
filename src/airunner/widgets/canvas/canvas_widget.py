@@ -248,9 +248,6 @@ class CanvasWidget(BaseWidget):
             "do_draw_layers": do_draw_layers
         })
         self.ui.canvas_container_size = self.ui.canvas_container.viewport().size()
-        self.ui.canvas_position.setText(
-            f"X {-self.settings['canvas_settings']['pos_x']: 05d} Y {self.settings['canvas_settings']['pos_y']: 05d}"
-        )
 
     def save_image(self, image_path, image=None):
         self.image_handler.save_image(image_path, image, self.scene.items())
