@@ -320,7 +320,10 @@ class SDHandler(
     def do_load_compel(self) -> bool:
         return self.pipe and (
             (
-                self.use_compel and (self.prompt_embeds is None or self.negative_prompt_embeds is None)
+                self.use_compel and (
+                    self.prompt_embeds is None or
+                    self.negative_prompt_embeds is None
+                )
             )
         )
 
