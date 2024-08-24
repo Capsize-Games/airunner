@@ -3080,22 +3080,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>llm_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_ai_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>21</x>
-     <y>596</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>711</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>sd_toggle_button</sender>
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
@@ -3172,6 +3156,22 @@
     <hint type="destinationlabel">
      <x>0</x>
      <y>830</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>llm_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_llm(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>17</x>
+     <y>575</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>554</y>
     </hint>
    </hints>
   </connection>
