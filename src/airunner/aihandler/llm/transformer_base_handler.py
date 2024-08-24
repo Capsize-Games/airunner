@@ -153,6 +153,7 @@ class TransformerBaseHandler(BaseHandler):
                 path,
                 **params
             )
+            self.change_model_status(ModelType.LLM, ModelStatus.LOADED, path)
         except Exception as e:
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED, path)
             self.logger.error(f"Error loading model: {e}")
