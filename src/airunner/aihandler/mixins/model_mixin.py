@@ -176,8 +176,7 @@ class ModelMixin:
     @property
     def use_compel(self):
         return (
-            not self.sd_request.memory_settings.use_enable_sequential_cpu_offload and
-            not self.is_turbo
+            not self.sd_request.memory_settings.use_enable_sequential_cpu_offload
             and self.settings["generator_settings"]['use_compel']
         )
 
