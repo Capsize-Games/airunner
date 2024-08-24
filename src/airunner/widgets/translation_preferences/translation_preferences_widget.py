@@ -33,10 +33,10 @@ class TranslationPreferencesWidget(BaseWidget):
         self.ui.female_radio_button.blockSignals(True)
         self.ui.voice_combobox.clear()
         available_voices = BARK_VOICES[current_language]
-        voices = available_voices[gender] if gender in available_voices else available_voices[MALE]
+        voices = available_voices[gender] if gender in available_voices else available_voices[MALE.value]
         self.ui.voice_combobox.addItems(voices)
-        self.ui.male_radio_button.setChecked(gender == MALE)
-        self.ui.female_radio_button.setChecked(gender == FEMALE)
+        self.ui.male_radio_button.setChecked(gender == MALE.value)
+        self.ui.female_radio_button.setChecked(gender == FEMALE.value)
         self.ui.voice_combobox.setCurrentText(self.settings["translation_settings"]["voice"])
         self.ui.voice_combobox.blockSignals(False)
         self.ui.male_radio_button.blockSignals(False)

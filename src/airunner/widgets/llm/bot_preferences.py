@@ -14,7 +14,6 @@ class BotPreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.load_saved_chatbots()
 
     @property
     def llm_generator_settings(self):
@@ -42,6 +41,9 @@ class BotPreferencesWidget(BaseWidget):
         except KeyError:
             self.current_chatbot_name = "Default"
             return self.llm_generator_settings["saved_chatbots"][self.current_chatbot_name]
+
+    def showEvent(self, event):
+        self.load_saved_chatbots()
 
     def load_form_elements(self):
         elements = [

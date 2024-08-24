@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QLabel,
-    QSizePolicy, QSplitter, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QSizePolicy,
+    QSplitter, QWidget)
 
 from airunner.widgets.canvas.custom_view import CustomGraphicsView
 
@@ -44,21 +44,23 @@ class Ui_canvas(object):
         self.central_widget.setStyleSheet(u"")
         self.gridLayout_6 = QGridLayout(self.central_widget)
         self.gridLayout_6.setObjectName(u"gridLayout_6")
+        self.gridLayout_6.setContentsMargins(0, 0, 0, 0)
         self.canvas_splitter = QSplitter(self.central_widget)
         self.canvas_splitter.setObjectName(u"canvas_splitter")
-        self.canvas_splitter.setOrientation(Qt.Horizontal)
+        self.canvas_splitter.setOrientation(Qt.Orientation.Horizontal)
         self.canvas_side_splitter = QSplitter(self.canvas_splitter)
         self.canvas_side_splitter.setObjectName(u"canvas_side_splitter")
-        self.canvas_side_splitter.setOrientation(Qt.Vertical)
+        self.canvas_side_splitter.setOrientation(Qt.Orientation.Vertical)
         self.drawing_pad_groupbox = QGroupBox(self.canvas_side_splitter)
         self.drawing_pad_groupbox.setObjectName(u"drawing_pad_groupbox")
         self.drawing_pad_groupbox.setCheckable(True)
         self.gridLayout_3 = QGridLayout(self.drawing_pad_groupbox)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
         self.drawing_pad = CustomGraphicsView(self.drawing_pad_groupbox)
         self.drawing_pad.setObjectName(u"drawing_pad")
-        self.drawing_pad.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.drawing_pad.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.drawing_pad.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.drawing_pad.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         self.gridLayout_3.addWidget(self.drawing_pad, 4, 0, 1, 1)
 
@@ -68,10 +70,11 @@ class Ui_canvas(object):
         self.controlnet_groupbox.setCheckable(True)
         self.gridLayout_2 = QGridLayout(self.controlnet_groupbox)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.controlnet = CustomGraphicsView(self.controlnet_groupbox)
         self.controlnet.setObjectName(u"controlnet")
-        self.controlnet.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.controlnet.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.controlnet.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.controlnet.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         self.gridLayout_2.addWidget(self.controlnet, 0, 0, 1, 1)
 
@@ -79,15 +82,16 @@ class Ui_canvas(object):
         self.canvas_splitter.addWidget(self.canvas_side_splitter)
         self.canvas_side_splitter_2 = QSplitter(self.canvas_splitter)
         self.canvas_side_splitter_2.setObjectName(u"canvas_side_splitter_2")
-        self.canvas_side_splitter_2.setOrientation(Qt.Vertical)
+        self.canvas_side_splitter_2.setOrientation(Qt.Orientation.Vertical)
         self.groupBox = QGroupBox(self.canvas_side_splitter_2)
         self.groupBox.setObjectName(u"groupBox")
         self.gridLayout_4 = QGridLayout(self.groupBox)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
         self.canvas_container = CustomGraphicsView(self.groupBox)
         self.canvas_container.setObjectName(u"canvas_container")
-        self.canvas_container.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.canvas_container.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.canvas_container.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.canvas_container.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         self.gridLayout_4.addWidget(self.canvas_container, 0, 0, 1, 1)
 
@@ -97,10 +101,11 @@ class Ui_canvas(object):
         self.groupBox_2.setCheckable(True)
         self.gridLayout_5 = QGridLayout(self.groupBox_2)
         self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
         self.controlnet_2 = CustomGraphicsView(self.groupBox_2)
         self.controlnet_2.setObjectName(u"controlnet_2")
-        self.controlnet_2.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.controlnet_2.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.controlnet_2.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.controlnet_2.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         self.gridLayout_5.addWidget(self.controlnet_2, 0, 0, 1, 1)
 
@@ -108,21 +113,6 @@ class Ui_canvas(object):
         self.canvas_splitter.addWidget(self.canvas_side_splitter_2)
 
         self.gridLayout_6.addWidget(self.canvas_splitter, 0, 0, 1, 1)
-
-        self.canvas_position = QLabel(self.central_widget)
-        self.canvas_position.setObjectName(u"canvas_position")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.canvas_position.sizePolicy().hasHeightForWidth())
-        self.canvas_position.setSizePolicy(sizePolicy1)
-        font = QFont()
-        font.setPointSize(8)
-        self.canvas_position.setFont(font)
-        self.canvas_position.setStyleSheet(u"")
-        self.canvas_position.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
-
-        self.gridLayout_6.addWidget(self.canvas_position, 1, 0, 1, 1)
 
 
         self.gridLayout.addWidget(self.central_widget, 0, 0, 1, 1)
@@ -146,6 +136,5 @@ class Ui_canvas(object):
         self.canvas_container.setProperty("canvas_type", QCoreApplication.translate("canvas", u"image", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("canvas", u"Outpaint", None))
         self.controlnet_2.setProperty("canvas_type", QCoreApplication.translate("canvas", u"outpaint", None))
-        self.canvas_position.setText(QCoreApplication.translate("canvas", u"TextLabel", None))
     # retranslateUi
 

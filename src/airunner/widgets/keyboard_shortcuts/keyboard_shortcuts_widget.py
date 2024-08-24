@@ -17,12 +17,14 @@ class KeyboardShortcutsWidget(BaseWidget):
         super().__init__(**kwargs)
         self.shortcuts = DEFAULT_SHORTCUTS
         self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+    def showEvent(self, event):
+        super().showEvent(event)
         self.initialize_ui()
 
     def initialize_ui(self):
         for key, value in self.shortcuts.items():
-            widget = self.add_widget(key, value)
-            self.shortcuts[key]["widget"] = widget
+            self.add_widget(key, value)
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
     def add_widget(self, key, value):
@@ -82,3 +84,5 @@ class KeyboardShortcutsWidget(BaseWidget):
         for k, v in self.shortcuts.items():
             if k != key:
                 v["widget"].line_edit.setText(v["text"])
+
+

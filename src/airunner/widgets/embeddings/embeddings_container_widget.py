@@ -109,8 +109,15 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def search_text_changed(self, val):
         self.search_filter = val
-        self.clear_embedding_widgets()
-        self.load_embeddings()
+        try:
+            self.clear_embedding_widgets()
+        except RuntimeError as e:
+            self.logger.error(f"Error clearing embedding widgets: {e}")
+
+        try:
+            self.load_embeddings()
+        except RuntimeError as e:
+            self.logger.error(f"Error loading embeddings: {e}")
 
     def clear_embedding_widgets(self):
         if self.spacer:
