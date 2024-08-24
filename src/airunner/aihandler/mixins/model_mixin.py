@@ -594,9 +594,9 @@ class ModelMixin:
             extra_options={},
             callback=self.__callback,
             cross_attention_kwargs_scale=(
-                    not self.sd_request.is_pix2pix and
-                    len(self.available_lora) > 0 and
-                    len(self.loaded_lora) > 0
+                not self.sd_request.is_pix2pix and
+                len(self.available_lora) > 0 and
+                len(self.loaded_lora) > 0
             ),
             latents=self.latents,
             device=self.device,
