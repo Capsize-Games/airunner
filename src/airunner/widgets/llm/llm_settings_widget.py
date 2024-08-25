@@ -26,8 +26,8 @@ class LLMSettingsWidget(
     }
 
     def __init__(self, *args, **kwargs):
-        AIModelMixin.__init__(self)
         super().__init__(*args, **kwargs)
+        AIModelMixin.__init__(self)
 
     @property
     def chatbot(self) -> dict:
@@ -83,7 +83,7 @@ class LLMSettingsWidget(
             self.ui.unload_model,
             self.ui.automatic_tools,
             self.ui.manual_tools,
-            self.ui.cache_quantized_model_toggle,
+            self.ui.use_cache,
         ]
 
         for element in elements:
@@ -112,10 +112,10 @@ class LLMSettingsWidget(
         self.set_dtype(dtype)
 
         use_toll_filter = get_current_chatbot_property(self.settings, "use_tool_filter")
-        cache_llm_to_disk = get_current_chatbot_property(self.settings, "cache_llm_to_disk")
+        use_cache = get_current_chatbot_property(self.settings, "use_cache")
         self.ui.automatic_tools.setChecked(use_toll_filter)
         self.ui.manual_tools.setChecked(not use_toll_filter)
-        self.ui.cache_quantized_model_toggle.setChecked(cache_llm_to_disk)
+        self.ui.use_cache.setChecked(use_cache)
 
         # get unique model names
         self.ui.model.clear()
@@ -337,7 +337,7 @@ class LLMSettingsWidget(
         self.settings = settings
 
     @Slot(bool)
-    def toggle_cache_quantized_model(self, val: bool):
+    def toggle_use_cache(self, val: bool):
         settings = self.settings
-        settings = set_current_chatbot_property(settings, "cache_llm_to_disk", val)
+        settings = set_current_chatbot_property(settings, "use_cache", val)
         self.settings = settings

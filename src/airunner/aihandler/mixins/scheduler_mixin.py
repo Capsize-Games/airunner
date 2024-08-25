@@ -20,10 +20,6 @@ class SchedulerMixin:
         self.current_scheduler_name: str = ""
         self.do_change_scheduler: bool = False
         self.scheduler = None
-        self.register(SignalCode.SCHEDULER_LOAD_SIGNAL, self.on_scheduler_load_signal)
-        self.register(SignalCode.SCHEDULER_UNLOAD_SIGNAL, self.on_scheduler_unload_signal)
-        self.register(SignalCode.SCHEDULER_LOAD_SIGNAL, self.on_scheduler_load_signal)
-        self.register(SignalCode.SCHEDULER_UNLOAD_SIGNAL, self.on_scheduler_unload_signal)
 
     @property
     def scheduler_section(self):
@@ -95,7 +91,7 @@ class SchedulerMixin:
 
         if self.sd_request.generator_settings.model and self.sd_request.generator_settings.model != "":
             config = self.scheduler.config if self.scheduler else None
-            self.pipe.scheduler = self.load_scheduler(config=config)
+            self.load_scheduler(config=config)
             self.do_change_scheduler = False
         else:
             self.logger.warning("Unable to change scheduler, model_path is not set")

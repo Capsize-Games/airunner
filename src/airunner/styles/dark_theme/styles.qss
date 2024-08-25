@@ -6,14 +6,6 @@ QWidget {
     padding: 0px;
 }
 
-QDoubleSpinBox:disabled {
-    background-color: #222;
-}
-
-QDoubleSpinBox {
-    background-color: rgba(0, 132, 185, 50);
-}
-
 #generator_container,
 #generator_form_tab_widget #scrollAreaWidgetContents,
 #basic_widget_contents {
@@ -169,41 +161,8 @@ QPushButton#image_thumbnail {
     border: 1px solid #222;
 }
 
-QGroupBox {
-    padding: 10px;
-}
-
 QGroupBox QTabWidget QWidget {
-    padding: 5px;
     border: 1px solid rgba(0, 132, 185, 50);
-}
-
-QSlider {
-    border: 1px solid rgba(0, 132, 185, 255);
-    padding-right: 0px;
-    background-color: rgba(0, 132, 185, 50);
-}
-
-QSlider::handle:horizontal {
-    height: 20px;
-    width: 25px;
-    border: 1px solid rgba(0, 132, 185, 50);
-    border-radius: 0px;
-    background-color: rgba(0, 132, 185, 50);
-}
-QSlider::handle:horizontal:hover {
-    background-color: rgba(0, 132, 185, 255);
-}
-QSlider::groove:horizontal {
-    height: 25px;
-    background-color: transparent;
-    border: transparent;
-    border-radius: 0px;
-}
-QLabel#slider_label {
-    font-size: 8pt;
-    color: #C8C8C8;
-    font-weight: bold;
 }
 
 GeneratorTabWidget#generator_widget QTabWidget::pane {
@@ -248,6 +207,18 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabBar::tab {
 }
 GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabBar::tab::first {
     margin-left: 0;
+}
+
+#generator_widget {
+    border-top: 1px solid rgba(0, 132, 185, 255);
+}
+
+#generator_form_tabs {
+    border: 0;
+}
+
+#tool_tab_widget_container {
+    border: 0;
 }
 
 QWidget#scrollAreaWidgetContents {
@@ -337,6 +308,7 @@ QFrame#line_4 {
 
 #button_menu {
     border-left: 1px solid rgba(0, 132, 185, 100);
+    border-right: 1px solid rgba(0, 132, 185, 100);
 }
 
 #button_menu QPushButton {
@@ -460,8 +432,12 @@ QRadioButton::indicator:checked {
 
 QGroupBox {
     margin-top: 14px;
-    margin-left: 1px;
     border: 1px solid rgba(0, 132, 185, 50);
+}
+
+QGroupBox::title {
+    margin-top: -14px;
+    width: 100%;
 }
 
 QGroupBox QWidget:disabled {
@@ -492,15 +468,6 @@ QWidget:disabled {
 
 QWidget:disabled {
     border-color: #222;
-}
-
-QSlider:disabled {
-    background-color: #000;
-}
-
-QSlider::handle:disabled {
-    border-color: #666666;
-    background-color: #666666;
 }
 
 QTabWidget {
@@ -648,4 +615,25 @@ QWidget#message QPlainTextEdit {
     border: 5px solid #1f1f1f;
     background-color: #1f1f1f;
     color: #ffffff;
+}
+
+QSplitter::handle::vertical {
+    border-top: 4px solid rgba(0, 132, 185, 50);
+}
+
+QSplitter::handle::horizontal {
+    border-left: 4px solid rgba(0, 132, 185, 50);
+}
+
+QSplitter::handle::vertical:hover {
+    border-top: 4px solid rgba(0, 132, 185, 255);
+}
+
+QSplitter::handle::horizontal:hover {
+    border-left: 4px solid rgba(0, 132, 185, 255);
+}
+
+#border_choose_color_button,
+#fill_choose_color_button {
+    border: 2px solid rgba(255, 255, 255, 255);
 }

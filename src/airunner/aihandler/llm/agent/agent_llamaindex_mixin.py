@@ -1,19 +1,8 @@
 import os.path
-from typing import Optional, List
 
-from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, ServiceContext, StorageContext, PromptHelper, \
-    SimpleKeywordTableIndex
-from llama_index.core.chat_engine import ContextChatEngine
-from llama_index.core.data_structs import IndexDict
-from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
-from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.response_synthesizers import ResponseMode
-from llama_index.core.schema import TransformComponent
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.llms.huggingface import HuggingFaceLLM
-from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core import Settings
-from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
+
 from airunner.enums import SignalCode, LLMChatRole, AgentState, LLMActionType
 
 
@@ -23,10 +12,10 @@ class AgentLlamaIndexMixin:
         self.__index = None
         self.__chat_engine = None
         self.__retriever = None
-        self.__service_context: Optional[ServiceContext] = None
-        self.__storage_context: StorageContext = None
-        self.__transformations: Optional[List[TransformComponent]] = None
-        self.__index_struct: Optional[IndexDict] = None
+        self.__service_context = None
+        self.__storage_context = None
+        self.__transformations = None
+        self.__index_struct = None
         self.__callback_manager = None
         self.__pdf_reader = None
         self.__epub_reader = None
@@ -107,21 +96,25 @@ class AgentLlamaIndexMixin:
 
     def __load_llm(self, model, tokenizer):
         try:
-            self.__llm = HuggingFaceLLM(
-                model=model,
-                tokenizer=tokenizer,
-                max_new_tokens=4096,
-                generate_kwargs=dict(
-                    top_k=40,
-                    top_p=0.90,
-                    temperature=0.5,
-                    num_return_sequences=1,
-                    num_beams=1,
-                    no_repeat_ngram_size=4,
-                    early_stopping=True,
-                    do_sample=True,
+            if self.settings["llm_generator_settings"]["use_api"]:
+                self.__llm = model
+            else:
+                from llama_index.llms.huggingface import HuggingFaceLLM
+                self.__llm = HuggingFaceLLM(
+                    model=model,
+                    tokenizer=tokenizer,
+                    max_new_tokens=4096,
+                    generate_kwargs=dict(
+                        top_k=40,
+                        top_p=0.90,
+                        temperature=0.5,
+                        num_return_sequences=1,
+                        num_beams=1,
+                        no_repeat_ngram_size=4,
+                        early_stopping=True,
+                        do_sample=True,
+                    )
                 )
-            )
         except Exception as e:
             self.logger.error(f"Error loading LLM: {str(e)}")
 
@@ -130,10 +123,10 @@ class AgentLlamaIndexMixin:
         return True
 
     def perform_rag_search(
-            self,
-            prompt,
-            streaming: bool = False,
-            response_mode: ResponseMode = ResponseMode.COMPACT
+        self,
+        prompt,
+        streaming: bool = False,
+        response_mode: ResponseMode = ResponseMode.COMPACT
     ):
         if self.__chat_engine is None:
             raise RuntimeError(
@@ -219,14 +212,13 @@ class AgentLlamaIndexMixin:
 
     def __load_rag_model(self):
         self.logger.debug("Loading RAG model...")
-        Settings.embed_model = HuggingFaceEmbedding(
-            model_name=self.__model_name,
-            query_instruction=self.query_instruction,
-            text_instruction=self.text_instruction,
-            trust_remote_code=False,
-        )
+        from airunner.aihandler.llm.custom_embedding import CustomEmbedding
+        Settings.embed_model = CustomEmbedding(self.__llm)
+
 
     def __load_readers(self):
+        from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
+        from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
         self.__pdf_reader = PDFReader()
         self.__epub_reader = EpubReader()
         self.__html_reader = HtmlFileReader()
@@ -243,6 +235,7 @@ class AgentLlamaIndexMixin:
 
     def __load_documents(self):
         self.logger.debug("Loading documents...")
+        from llama_index.core import SimpleDirectoryReader
         try:
             self.__documents = SimpleDirectoryReader(
                 input_files=self.target_files,
@@ -254,12 +247,14 @@ class AgentLlamaIndexMixin:
             self.__documents = None
 
     def __load_text_splitter(self):
+        from llama_index.core.node_parser import SentenceSplitter
         self.__text_splitter = SentenceSplitter(
             chunk_size=256,
             chunk_overlap=20
         )
 
     def __load_prompt_helper(self):
+        from llama_index.core import PromptHelper
         self.__prompt_helper = PromptHelper(
             context_window=4096,
             num_output=1024,
@@ -268,8 +263,8 @@ class AgentLlamaIndexMixin:
         )
 
     def __load_context_chat_engine(self):
+        from llama_index.core.chat_engine import ContextChatEngine
         context_retriever = self.__retriever  # Your method to retrieve context
-
         try:
             self.__chat_engine = ContextChatEngine.from_defaults(
                 retriever=context_retriever,
@@ -285,6 +280,7 @@ class AgentLlamaIndexMixin:
 
     def __load_service_context(self):
         self.logger.debug("Loading service context with ContextChatEngine...")
+        from llama_index.core import ServiceContext
         try:
             # Update service context to use the newly created chat engine
             self.__service_context = ServiceContext.from_defaults(
@@ -298,6 +294,7 @@ class AgentLlamaIndexMixin:
             self.logger.error(f"Error loading service context with chat engine: {str(e)}")
 
     # def __load_storage_context(self):
+    #     from llama_index.core import ServiceContext, StorageContext
     #     self.logger.debug("Loading storage context...")
     #     path = os.path.expanduser(self.settings["path_settings"]["storage_path"])
     #     if not os.path.exists(path):
@@ -313,6 +310,7 @@ class AgentLlamaIndexMixin:
     #     )
 
     # def __load_transformations(self):
+    #     from llama_index.core.schema import TransformComponent
     #     self.logger.debug("Loading transformations...")
     #     self.__transformations = [
     #         TransformComponent(
@@ -333,6 +331,7 @@ class AgentLlamaIndexMixin:
     #     ]
 
     # def __load_index_struct(self):
+    #     from llama_index.core.data_structs import IndexDict
     #     self.logger.debug("Loading index struct...")
     #     self.__index_struct = IndexDict(
     #         nodes_dict=self.__index.index_struct.nodes_dict,
@@ -352,16 +351,19 @@ class AgentLlamaIndexMixin:
 
     def __load_document_index(self):
         self.logger.debug("Loading index...")
+        from llama_index.core import SimpleKeywordTableIndex
         try:
             self.__index = SimpleKeywordTableIndex.from_documents(
                 self.__documents,
-                service_context=self.__service_context,
+                #service_context=self.__service_context,
+                llm=self.__llm
             )
             self.logger.debug("Index loaded successfully.")
         except TypeError as e:
             self.logger.error(f"Error loading index: {str(e)}")
 
     def __load_retriever(self):
+        from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
         try:
             self.__retriever = KeywordTableSimpleRetriever(
                 index=self.__index,

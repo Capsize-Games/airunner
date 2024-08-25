@@ -34,6 +34,14 @@ class ActiveGridSettingsWidget(BaseWidget):
         self.ui.active_grid_border_groupbox.blockSignals(False)
         self.ui.active_grid_fill_groupbox.blockSignals(False)
 
+        # set background color of buttons
+        self.ui.border_choose_color_button.setStyleSheet(
+            f"background-color: {settings['active_grid_settings']['border_color']}"
+        )
+        self.ui.fill_choose_color_button.setStyleSheet(
+            f"background-color: {settings['active_grid_settings']['fill_color']}"
+        )
+
         self.signal_handlers = {
             SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED: self.update_size
         }

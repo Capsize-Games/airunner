@@ -80,7 +80,7 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.ERROR
 
 ####################################################################
 # Default models for the core application
@@ -1068,7 +1068,8 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     shortcut_key_settings=DEFAULT_SHORTCUTS,
     window_settings=dict(
         content_splitter=None,
-        splitter=None,
+        stable_diffusion_splitter=None,
+        llm_splitter=None,
         mode_tab_widget_index=0,
         tool_tab_widget_index=0,
         center_tab_index=0,
@@ -1184,7 +1185,10 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         ),
         prompt_template="Mistral 7B Instruct: Default Chatbot",
         batch_size=1,
-        max_new_tokens=100
+        max_new_tokens=100,
+        use_api=False,
+        api_key="",
+        api_model="",
     ),
     tts_settings=TTS_SETTINGS_DEFAULT,
     stt_settings=dict(

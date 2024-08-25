@@ -22,9 +22,7 @@ from bs4 import BeautifulSoup
 
 from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
-from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.logger import Logger
-from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 from airunner.history import History
 from airunner.settings import (
     STATUS_ERROR_COLOR,
@@ -33,10 +31,8 @@ from airunner.settings import (
     NSFW_CONTENT_DETECTED_MESSAGE
 )
 from airunner.enums import (
-    Mode,
     SignalCode,
     CanvasToolName,
-    WindowSection,
     GeneratorSection, StatusColors, ModelStatus, ModelType, LLMAction
 )
 from airunner.mediator_mixin import MediatorMixin
@@ -51,11 +47,6 @@ from airunner.utils.file_system.operations import FileSystemOperations
 
 from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
-from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
-from airunner.widgets.status.status_widget import StatusWidget
-from airunner.windows.about.about import AboutWindow
-from airunner.windows.filter_window import FilterWindow
-from airunner.windows.image_window import ImageWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin
@@ -63,13 +54,6 @@ from airunner.windows.main.lora_mixin import LoraMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
-from airunner.windows.model_merger import ModelMerger
-from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
-from airunner.windows.settings.airunner_settings import SettingsWindow
-from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
-from airunner.windows.update.update_window import UpdateWindow
-from airunner.windows.video import VideoPopup
-from airunner.worker_manager import WorkerManager
 
 
 class MainWindow(
@@ -127,7 +111,6 @@ class MainWindow(
         **kwargs
     ):
         self.ui = self.ui_class_()
-
         self.disable_sd = disable_sd
         self.disable_llm = disable_llm
         self.disable_tts = disable_tts
@@ -137,6 +120,7 @@ class MainWindow(
 
         self.restrict_os_access = restrict_os_access
         self.defendatron = defendatron
+        self.quitting = False
         self._override_system_theme = None
         self._dark_mode_enabled = None
         self.update_popup = None
@@ -183,14 +167,8 @@ class MainWindow(
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(
-            self,
-            use_cuda=use_cuda,
-            ocr_enabled=ocr_enabled,
-            tts_enabled=tts_enabled,
-            stt_enabled=stt_enabled,
-            ai_mode=ai_mode,
-        )
+        SettingsMixin.__init__(self)
+
         self.do_load_llm_on_init = self.settings["llm_enabled"]
 
         self.update_settings()
@@ -434,6 +412,9 @@ class MainWindow(
         if data["model"] == ModelType.SD:
             element_name = "sd_status"
             tool_tip = "Stable Diffusion"
+
+            self.set_sd_status_text()
+
         elif data["model"] == ModelType.CONTROLNET:
             element_name = "controlnet_status"
             tool_tip = "Controlnet"
@@ -455,7 +436,8 @@ class MainWindow(
             getattr(self.ui, element_name).setStyleSheet(styles)
             getattr(self.ui, element_name).setToolTip(tool_tip)
 
-
+    def set_sd_status_text(self):
+        self.ui.sd_status.setText(self.settings["generator_settings"]["version"])
 
     def on_write_file_signal(self, data: dict):
         """
@@ -488,6 +470,7 @@ class MainWindow(
     def on_vision_captured_signal(self, data: dict):
         # Create the window if it doesn't exist
         if self.image_window is None:
+            from airunner.windows.image_window import ImageWindow
             self.image_window = ImageWindow()
 
         image = data.get("image", None)
@@ -500,8 +483,46 @@ class MainWindow(
 
     def initialize_ui(self):
         self.logger.debug("Loading ui")
+        from airunner.widgets.status.status_widget import StatusWidget
         self.ui.setupUi(self)
         self.restore_state()
+
+        if self.settings["sd_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.SD,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if self.settings["controlnet_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.CONTROLNET,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if self.settings["llm_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.LLM,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if self.settings["tts_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.TTS,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if self.settings["stt_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.STT,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if self.settings["ocr_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.OCR,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
@@ -511,8 +532,6 @@ class MainWindow(
         self.initialize_widget_elements()
 
     def initialize_widget_elements(self):
-        self.ui.mode_tab_widget.tabBar().hide()
-        self.ui.center_tab.tabBar().hide()
         self.ui.ocr_button.blockSignals(True)
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)
@@ -536,13 +555,7 @@ class MainWindow(
         self.ui.enable_controlnet.blockSignals(False)
         self.ui.sd_toggle_button.blockSignals(False)
         self.ui.controlnet_toggle_button.blockSignals(False)
-        self.initialize_tool_section_buttons()
         self.intialized = True
-
-    def mode_tab_index_changed(self, index):
-        settings = self.settings
-        settings["mode"] = self.ui.mode_tab_widget.tabText(index)
-        self.settings = settings
 
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
         self.emit_signal(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
@@ -613,27 +626,8 @@ class MainWindow(
 
     @Slot()
     def action_show_model_manager(self):
+        from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
         ModelManagerWidget()
-
-    @Slot()
-    def action_show_controlnet(self):
-        self.show_section(WindowSection.CONTROLNET)
-
-    @Slot()
-    def action_show_embeddings(self):
-        self.show_section(WindowSection.EMBEDDINGS)
-
-    @Slot()
-    def action_show_lora(self):
-        self.show_section(WindowSection.LORA)
-
-    @Slot()
-    def action_show_pen(self):
-        self.show_section(WindowSection.PEN)
-
-    @Slot()
-    def action_show_active_grid(self):
-        self.show_section(WindowSection.ACTIVE_GRID)
 
     @Slot()
     def action_show_stablediffusion(self):
@@ -649,10 +643,6 @@ class MainWindow(
     @Slot()
     def action_show_images_path(self):
         self.show_settings_path("image_path")
-
-    @Slot()
-    def action_show_videos_path(self):
-        self.show_settings_path("video_path")
 
     @Slot()
     def action_show_model_path_txt2img(self):
@@ -708,14 +698,17 @@ class MainWindow(
 
     @Slot()
     def action_show_about_window(self):
+        from airunner.windows.about.about import AboutWindow
         AboutWindow()
 
     @Slot()
     def action_show_model_merger_window(self):
+        from airunner.windows.model_merger import ModelMerger
         ModelMerger()
 
     @Slot()
     def action_show_settings(self):
+        from airunner.windows.settings.airunner_settings import SettingsWindow
         SettingsWindow()
 
     @Slot()
@@ -757,6 +750,12 @@ class MainWindow(
         new_settings["tts_enabled"] = val
         self.settings = new_settings
         self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL if val else SignalCode.TTS_DISABLE_SIGNAL)
+        if val:
+            self.on_model_status_changed_signal({
+                "model": ModelType.TTS,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
 
     @Slot(bool)
     def ocr_button_toggled(self, val):
@@ -774,8 +773,6 @@ class MainWindow(
         else:
             self.emit_signal(SignalCode.STT_START_CAPTURE_SIGNAL)
 
-    quitting = False
-
     def save_state(self):
         if self.quitting:
             return
@@ -783,16 +780,19 @@ class MainWindow(
         self.logger.debug("Saving window state")
         settings = self.settings
         settings["window_settings"] = {
-            'mode_tab_widget_index': self.ui.mode_tab_widget.currentIndex(),
-            'tool_tab_widget_index': self.ui.tool_tab_widget.currentIndex(),
-            'center_tab_index': self.ui.center_tab.currentIndex(),
             'is_maximized': self.isMaximized(),
             'is_fullscreen': self.isFullScreen(),
         }
 
         # Store splitter settings in application settings
         for splitter in self.splitter_names:
-            settings["window_settings"][splitter] = getattr(self.ui, splitter).saveState()
+            ui_obj = self.ui
+            if splitter in ["stable_diffusion_splitter", "llm_splitter"]:
+                ui_obj = self.ui.tool_tab_widget.ui
+            try:
+                settings["window_settings"][splitter] = getattr(ui_obj, splitter).saveState()
+            except AttributeError as e:
+                self.logger.error(f"Error saving splitter state: {e}")
 
         settings["window_settings"]["chat_prompt_splitter"] = self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.saveState()
         settings["window_settings"]["canvas_splitter"] = self.ui.canvas_widget_2.ui.canvas_splitter.saveState()
@@ -813,20 +813,22 @@ class MainWindow(
         else:
             self.showNormal()
 
-        self.ui.mode_tab_widget.setCurrentIndex(window_settings["mode_tab_widget_index"])
-        self.ui.tool_tab_widget.setCurrentIndex(window_settings["tool_tab_widget_index"])
-        self.ui.center_tab.setCurrentIndex(window_settings["center_tab_index"])
         self.ui.ai_button.setChecked(self.settings["ai_mode"])
         self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
 
         # Restore splitters
         for splitter in self.splitter_names:
+            ui_obj = self.ui
+            if splitter in ["stable_diffusion_splitter", "llm_splitter"]:
+                ui_obj = self.ui.tool_tab_widget.ui
             try:
-                getattr(self.ui, splitter).restoreState(window_settings[splitter])
+                getattr(ui_obj, splitter).restoreState(window_settings[splitter])
             except TypeError:
                 self.logger.warning(f"failed to restore {splitter} splitter")
             except KeyError:
                 self.logger.warning(f"{splitter} missing in window_settings")
+            except AttributeError:
+                self.logger.warning(f"AttributeError: {splitter}")
 
         if "chat_prompt_splitter" in window_settings:
             self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.restoreState(
@@ -986,18 +988,6 @@ class MainWindow(
 
     def action_toggle_darkmode(self):
         self.set_stylesheet()
-    
-    def image_generation_toggled(self):
-        settings = self.settings
-        settings["mode"] = Mode.IMAGE.value
-        self.settings = settings
-        self.activate_image_generation_section()
-
-    def language_processing_toggled(self):
-        settings = self.settings
-        settings["mode"] = Mode.LANGUAGE_PROCESSOR.value
-        self.settings = settings
-        self.activate_language_processing_section()
     ###### End window handlers ######
 
     def show_update_message(self):
@@ -1007,6 +997,7 @@ class MainWindow(
         )
 
     def show_update_popup(self):
+        from airunner.windows.update.update_window import UpdateWindow
         self.update_popup = UpdateWindow()
 
     def refresh_styles(self):
@@ -1034,11 +1025,13 @@ class MainWindow(
                 ui.setStyleSheet("")
 
     def show_setup_wizard(self):
+        from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
         wizard = SetupWizard()
         wizard.exec()
 
     def showEvent(self, event):
         super().showEvent(event)
+        self.set_sd_status_text()
         # self.automatic_filter_manager = AutomaticFilterManager()
         # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
 
@@ -1066,7 +1059,10 @@ class MainWindow(
 
     def initialize_worker_manager(self):
         if self.tts_handler_class is None:
+            from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
             self.tts_handler_class = EspeakTTSHandler
+        from airunner.worker_manager import WorkerManager
+        from airunner.aihandler.llm.agent.base_agent import BaseAgent
         self.worker_manager = WorkerManager(
             disable_sd=self.disable_sd,
             disable_llm=self.disable_llm,
@@ -1086,6 +1082,7 @@ class MainWindow(
             action.triggered.connect(partial(self.display_filter_window, filter_data["name"]))
 
     def display_filter_window(self, filter_name):
+        from airunner.windows.filter_window import FilterWindow
         FilterWindow(filter_name)
 
     def initialize_default_buttons(self):
@@ -1112,17 +1109,6 @@ class MainWindow(
         self.emit_signal(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, {
             "tool": tool
         })
-
-    def show_section(self, section: WindowSection):
-        section_lists = {
-            "right": [
-                self.ui.tool_tab_widget.tabText(i) for i in range(self.ui.tool_tab_widget.count())
-            ]
-        }
-        for k, v in section_lists.items():
-            if section.value in v:
-                self.ui.tool_tab_widget.setCurrentIndex(v.index(section.value))
-                break
 
     def plain_text_widget_value(self, widget):
         try:
@@ -1170,10 +1156,6 @@ class MainWindow(
         self.set_window_title()
         self.current_filter = None
 
-    def video_handler(self, data):
-        filename = data["video_filename"]
-        VideoPopup(file_path=filename)
-
     def post_process_images(self, images):
         #return self.automatic_filter_manager.apply_filters(images)
         return images
@@ -1187,6 +1169,7 @@ class MainWindow(
         self.generator_tab_widget.clear_prompts()
 
     def show_prompt_browser(self):
+        from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
         PromptBrowser()
 
     def new_batch(self, index, image, data):
@@ -1199,15 +1182,6 @@ class MainWindow(
         widget.setChecked(val)
         if block_signals:
             widget.blockSignals(False)
-    
-    def activate_image_generation_section(self):
-        self.ui.mode_tab_widget.setCurrentIndex(0)
-
-    def activate_language_processing_section(self):
-        self.ui.mode_tab_widget.setCurrentIndex(1)
-
-    def initialize_tool_section_buttons(self):
-        pass
     
     def redraw(self):
         self.set_stylesheet()
