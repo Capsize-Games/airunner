@@ -9,7 +9,7 @@ import requests
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
-    Signal, QTimer, QProcess
+    Signal, QProcess
 )
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
@@ -105,7 +105,6 @@ class MainWindow(
         tts_enabled: bool = False,
         stt_enabled: bool = False,
         ai_mode: bool = True,
-        tts_handler_class=None,
         restrict_os_access=None,
         defendatron=None,
         **kwargs
@@ -116,7 +115,6 @@ class MainWindow(
         self.disable_tts = disable_tts
         self.disable_stt = disable_stt
         self.disable_vision_capture = disable_vision_capture
-        self.tts_handler_class = tts_handler_class
 
         self.restrict_os_access = restrict_os_access
         self.defendatron = defendatron
@@ -1055,23 +1053,17 @@ class MainWindow(
             )
 
         # call initialize_worker_manager after 100ms
-        QTimer.singleShot(500, self.initialize_worker_manager)
+        self.initialize_worker_manager()
 
     def initialize_worker_manager(self):
-        if self.tts_handler_class is None:
-            from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
-            self.tts_handler_class = EspeakTTSHandler
         from airunner.worker_manager import WorkerManager
-        from airunner.aihandler.llm.agent.base_agent import BaseAgent
         self.worker_manager = WorkerManager(
             disable_sd=self.disable_sd,
             disable_llm=self.disable_llm,
             disable_tts=self.disable_tts,
             disable_stt=self.disable_stt,
             disable_vision_capture=self.disable_vision_capture,
-            do_load_llm_on_init=self.do_load_llm_on_init,
-            tts_handler_class=self.tts_handler_class,
-            agent_class=BaseAgent
+            do_load_llm_on_init=self.do_load_llm_on_init
         )
 
     def initialize_filter_actions(self):
