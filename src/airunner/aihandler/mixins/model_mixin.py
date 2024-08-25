@@ -57,11 +57,6 @@ class ModelMixin:
         self.__tokenizer = None
         self.__current_tokenizer_path = ""
 
-        self.register(SignalCode.SD_TOKENIZER_LOAD_SIGNAL, self.on_tokenizer_load_signal)
-        self.register(SignalCode.SD_TOKENIZER_UNLOAD_SIGNAL, self.on_tokenizer_unload_signal)
-        self.register(SignalCode.SD_LOAD_SIGNAL, self.on_load_stablediffusion_signal)
-        self.register(SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal)
-
     def on_load_stablediffusion_signal(self, _message: dict = None):
         self.load_stable_diffusion_model()
 
@@ -323,6 +318,23 @@ class ModelMixin:
             raise SafetyCheckerNotLoadedException()
         data = self.__prepare_data()
         clear_memory()
+        if "image" in data and data["image"] is None:
+            del data["image"]
+
+        if "image" not in data:
+            if type(self.pipe) in [
+                StableDiffusionControlNetPipeline,
+                StableDiffusionControlNetImg2ImgPipeline,
+                StableDiffusionControlNetInpaintPipeline
+            ]:
+                self.pipe = StableDiffusionPipeline.from_pipe(self.pipe)
+            elif type(self.pipe) in [
+                StableDiffusionXLControlNetPipeline,
+                StableDiffusionXLControlNetImg2ImgPipeline,
+                StableDiffusionXLControlNetInpaintPipeline
+            ]:
+                self.pipe = StableDiffusionXLPipeline.from_pipe(self.pipe)
+
         results = self.pipe(**data)
         images = results.get("images", [])
         return self.check_and_mark_nsfw_images(images)
@@ -537,6 +549,8 @@ class ModelMixin:
 
             self.make_stable_diffusion_memory_efficient()
             self.change_model_status(ModelType.SD, ModelStatus.LOADED, self.model_path)
+            if hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
+                self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED, "")
 
             if self.settings["nsfw_filter"] is False:
                 self.remove_safety_checker_from_pipe()
