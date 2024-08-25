@@ -24,7 +24,12 @@ class StatusWidget(BaseWidget):
         self.safety_checker_status = ModelStatus.UNLOADED
         self.feature_extractor_status = ModelStatus.UNLOADED
 
+        if self.settings["nsfw_filter"] and self.settings["sd_enabled"]:
+            self.safety_checker_status = ModelStatus.LOADING
+            self.feature_extractor_status = ModelStatus.LOADING
+
         self.update_safety_checker_status()
+        self.update_system_stats()
 
     def on_model_status_changed_signal(self, data):
         model = data["model"]
@@ -46,9 +51,7 @@ class StatusWidget(BaseWidget):
 
     def update_system_stats(self, queue_size=0):
         queue_stats = f"Queued items: {queue_size}"
-        cuda_status = f"Using {'GPU' if torch.cuda.is_available() else 'CPU'}"
-        vram_stats = f"VRAM allocated {torch.cuda.memory_allocated() / 1024 ** 3:.1f}GB cached {torch.cuda.memory_cached() / 1024 ** 3:.1f}GB"
-        ram_stats = f"RAM used {psutil.virtual_memory().percent:.1f}%"
+        cuda_status = f"{'NVIDIA' if torch.cuda.is_available() else 'CPU'}"
 
         # Color by has_cuda red for disabled, green for enabled
         color = StatusColors.LOADED if torch.cuda.is_available() else StatusColors.FAILED
@@ -58,8 +61,6 @@ class StatusWidget(BaseWidget):
 
         self.ui.cuda_status.setText(cuda_status)
         self.ui.queue_stats.setText(queue_stats)
-        self.ui.vram_stats.setText(vram_stats)
-        self.ui.ram_stats.setText(ram_stats)
 
     def update_safety_checker_status(self):
         # Color by safety checker status red, yellow, green for failed, loading, loaded

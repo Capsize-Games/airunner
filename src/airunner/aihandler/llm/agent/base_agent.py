@@ -1,5 +1,6 @@
 import datetime
 import json
+import random
 import time
 import traceback
 from typing import AnyStr
@@ -10,7 +11,6 @@ from airunner.aihandler.llm.agent.agent_llamaindex_mixin import AgentLlamaIndexM
 from airunner.aihandler.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
 from airunner.aihandler.llm.agent.rag_search_worker import RagSearchWorker
 from airunner.aihandler.logger import Logger
-from airunner.json_extractor import JSONExtractor
 from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import (
     SignalCode,
@@ -35,19 +35,18 @@ class BaseAgent(
         self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        self.model = kwargs.pop("model", None)
         AgentLlamaIndexMixin.__init__(self)
         self._chatbot = None
         self._bot_mood = None
         self.action = LLMActionType.CHAT
         self.rendered_template = None
-        self.model = kwargs.pop("model", None)
         self.tokenizer = kwargs.pop("tokenizer", None)
         self.streamer = kwargs.pop("streamer", None)
         self.tools = kwargs.pop("tools", None)
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.LLM_RESPOND_TO_USER_SIGNAL, self.do_response)
         self.register(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history)
         self.prompt = ""
         self.history = []
@@ -293,8 +292,26 @@ class BaseAgent(
                     f"`{prompt}`\n\n"
                     "Choose an action from THE LIST of commands for the text above. Only return the number of the command."
                 )
+            ran = random.randint(0, 6)
+            random.seed(ran)
+            print("RANDOM", ran)
+            listener_name = self.username
+            if ran == 0:
+                prompt = f"start a converation."
+            elif ran == 1:
+                prompt = f"flatter {listener_name}."
+            elif ran == 2:
+                prompt = f"lie to {listener_name}."
+            elif ran == 3:
+                prompt = f"insult {listener_name}."
+            elif ran == 4:
+                prompt = f"mock {listener_name}."
+            elif ran == 5:
+                prompt = f"ask {listener_name} a question."
+            elif ran == 6:
+                prompt = f"change the subject."
             return {
-                "content": prompt,
+                "content": f"respond to {listener_name}",
                 "role": LLMChatRole.HUMAN.value
             }
 
@@ -352,6 +369,8 @@ class BaseAgent(
         # HACK: current version of transformers does not allow us to pass
         # variables to the chat template function, so we apply those here
         variables = {
+            "speaker_name": self.botname,
+            "listener_name": self.username,
             "username": self.username,
             "botname": self.botname,
             "bot_mood": self.bot_mood,
@@ -361,13 +380,6 @@ class BaseAgent(
             value = value or ""
             rendered_template = rendered_template.replace("{{ " + key + " }}", value)
         return rendered_template
-
-    def do_response(self, message):
-        self.run(
-            prompt=self.prompt,
-            action=LLMActionType.CHAT,
-            max_new_tokens=message["args"][0]
-        )
 
     @property
     def system_instructions(self):
@@ -442,6 +454,18 @@ class BaseAgent(
             })
             return
 
+        # Add the user's message to history
+        if action in [
+            LLMActionType.CHAT,
+            LLMActionType.UPDATE_MOOD,
+            LLMActionType.DO_NOT_RESPOND,
+            LLMActionType.PERFORM_RAG_SEARCH
+        ]:
+            self.add_message_to_history(
+                self.prompt,
+                LLMChatRole.HUMAN
+            )
+
         model_inputs = self.get_model_inputs(
             action,
             vision_history,
@@ -475,6 +499,7 @@ class BaseAgent(
                         name=self.botname,
                     )
                 )
+
             return response
 
     def prepare_generate_data(self, model_inputs, stopping_criteria):
@@ -501,22 +526,12 @@ class BaseAgent(
         streamer = kwargs.get("streamer", self.streamer)
         data["streamer"] = streamer
 
-        # Add the user's message to history
-        if action in [
-            LLMActionType.CHAT,
-            LLMActionType.UPDATE_MOOD,
-            LLMActionType.DO_NOT_RESPOND,
-            LLMActionType.PERFORM_RAG_SEARCH
-        ]:
-            self.add_message_to_history(
-                self.prompt,
-                LLMChatRole.HUMAN
-            )
-
         try:
             self.response_worker.add_to_queue({
                 "model": self.model,
-                "kwargs": data
+                "kwargs": data,
+                "prompt": self.prompt,
+                "botname": self.botname
             })
             self.do_interrupt = False
         except Exception as e:
@@ -524,7 +539,7 @@ class BaseAgent(
             print(str(e))
             print(traceback.format_exc())
         # strip all new lines from rendered_template:
-        self.rendered_template = self.rendered_template.replace("\n", " ")
+        #self.rendered_template = self.rendered_template.replace("\n", " ")
         eos_token = self.tokenizer.eos_token
         bos_token = self.tokenizer.bos_token
         if self.is_mistral:
@@ -534,11 +549,12 @@ class BaseAgent(
         replaced = False
         is_end_of_message = False
         is_first_message = True
+        response = ""
         if streamer:
             for new_text in streamer:
                 # strip all newlines from new_text
-                parsed_new_text = new_text.replace("\n", " ")
-                streamed_template += parsed_new_text
+                #parsed_new_text = new_text.replace("\n", " ")
+                streamed_template += new_text
                 if self.is_mistral:
                     streamed_template = streamed_template.replace(f"{bos_token} [INST]", f"{bos_token}[INST]")
                     streamed_template = streamed_template.replace("  [INST]", " [INST]")
@@ -597,6 +613,12 @@ class BaseAgent(
                     LLMChatRole.ASSISTANT
                 )
 
+                return self.run_with_thread(
+                    model_inputs,
+                    LLMActionType.UPDATE_MOOD,
+                    **kwargs,
+                )
+
             elif action == LLMActionType.GENERATE_IMAGE:
                 self.emit_signal(
                     SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
@@ -609,10 +631,6 @@ class BaseAgent(
             elif action == LLMActionType.UPDATE_MOOD:
                 print("RESPONSE:", streamed_template)
                 self.bot_mood = streamed_template
-                return self.run(
-                    prompt=self.prompt,
-                    action=LLMActionType.CHAT,
-                )
 
             elif action == LLMActionType.APPLICATION_COMMAND:
                 print("APPLICATION COMMAND:")
@@ -642,6 +660,7 @@ class BaseAgent(
         )
 
     def extract_json_objects(self, s):
+        from airunner.json_extractor import JSONExtractor
         extractor = JSONExtractor()
         try:
             extractor.decode(s)

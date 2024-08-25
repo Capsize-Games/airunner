@@ -10,6 +10,7 @@ class SliderWidget(BaseWidget):
     widget_class_ = Ui_slider_widget
     display_as_float = False
     divide_by = 1.0
+    is_loading = False
 
     @property
     def slider_single_step(self):
@@ -101,9 +102,13 @@ class SliderWidget(BaseWidget):
         self._callback = None
 
     def on_main_window_loaded_signal(self, _message):
-        self.init()
+        try:
+            self.init()
+        except RuntimeError as e:
+            self.logger.error(f"Error initializing SliderWidget: {e}")
 
     def init(self, **kwargs):
+        self.is_loading = True
         self._callback = kwargs.get("callback", None)
         slider_minimum = kwargs.get("slider_minimum", self.property("slider_minimum") or 0)
         slider_maximum = kwargs.get("slider_maximum", self.property("slider_maximum") or 100)
@@ -162,6 +167,8 @@ class SliderWidget(BaseWidget):
         else:
             decimals = len(str(spinbox_single_step).split(".")[1])
             self.ui.slider_spinbox.setDecimals(2 if decimals < 2 else decimals)
+
+        self.is_loading = False
 
     def slider_callback(self, attr_name, value=None, widget=None):
         """
@@ -243,6 +250,8 @@ class SliderWidget(BaseWidget):
 
     @Slot(int)
     def handle_slider_change(self, val):
+        if self.is_loading:
+            return
         position = val
         single_step = self.ui.slider.singleStep()
         adjusted_value = round(position / single_step) * single_step
@@ -266,6 +275,8 @@ class SliderWidget(BaseWidget):
 
     @Slot()
     def handle_slider_release(self):
+        if self.is_loading:
+            return
         if self.slider_callback:
             self.slider_callback(self.settings_property, self.current_value)
 
@@ -282,3 +293,9 @@ class SliderWidget(BaseWidget):
         self.spinbox_single_step = val
         self.spinbox_page_step = val
         self.spinbox_minimum = val
+
+    def closeEvent(self, event):
+        self.ui.slider.sliderReleased.disconnect(self.handle_slider_release)
+        self.ui.slider.valueChanged.disconnect(self.handle_slider_change)
+        self.ui.slider_spinbox.valueChanged.disconnect(self.handle_spinbox_change)
+        super().closeEvent(event)

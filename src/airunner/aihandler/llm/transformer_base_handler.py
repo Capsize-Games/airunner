@@ -1,11 +1,12 @@
 import os
 import random
+
 import torch
+from llama_index.llms.groq import Groq
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.utils.clear_memory import clear_memory
-from airunner.utils.get_torch_device import get_torch_device
 
 
 class TransformerBaseHandler(BaseHandler):
@@ -128,6 +129,17 @@ class TransformerBaseHandler(BaseHandler):
         return os.path.expanduser(local_path)
 
     def load_model(self):
+        self.logger.debug("Loading model")
+        if self.settings["llm_generator_settings"]["use_api"]:
+            self.model = Groq(
+                model=self.settings["llm_generator_settings"]["api_model"],
+                api_key=self.settings["llm_generator_settings"]["api_key"],
+            )
+            self.change_model_status(ModelType.LLM, ModelStatus.LOADED, "")
+        else:
+            self.load_model_local()
+
+    def load_model_local(self):
         params = self.model_params()
         path = self.get_model_path(self.current_bot["model_version"])
         is_quantized = os.path.exists(path)
@@ -198,6 +210,7 @@ class TransformerBaseHandler(BaseHandler):
         Override this function to add custom pre load functionality.
         :return:
         """
+        self.change_model_status(ModelType.LLM, ModelStatus.LOADING, "")
         self.current_model_path = self.model_path
 
     def load(self):
@@ -205,15 +218,16 @@ class TransformerBaseHandler(BaseHandler):
         do_load_model = self.do_load_model
         do_load_tokenizer = self.tokenizer is None
 
-        self.pre_load()
+        if any((do_load_model, do_load_tokenizer)):
+            self.pre_load()
 
-        if do_load_tokenizer:
-            self.load_tokenizer()
+            if do_load_tokenizer:
+                self.load_tokenizer()
 
-        if do_load_model:
-            self.load_model()
+            if do_load_model:
+                self.load_model()
 
-        self.post_load()
+            self.post_load()
 
     def post_load(self):
         """
@@ -222,6 +236,7 @@ class TransformerBaseHandler(BaseHandler):
         :return:
         """
         self.logger.error("Define post_load here")
+        self.change_model_status(ModelType.LLM, ModelStatus.LOADED, "")
 
     def generate(self, prompt, action) -> str:
         return self.do_generate(prompt, action)
