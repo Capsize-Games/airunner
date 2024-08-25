@@ -518,6 +518,7 @@ class ModelMixin:
                     self.pipe = pipeline_class_.from_single_file(
                         self.model_path,
                         config=os.path.dirname(self.model_path),
+                        add_watermarker=False,
                         **data
                     )
                 except FileNotFoundError as e:

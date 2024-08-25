@@ -1185,7 +1185,10 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         ),
         prompt_template="Mistral 7B Instruct: Default Chatbot",
         batch_size=1,
-        max_new_tokens=100
+        max_new_tokens=100,
+        use_api=False,
+        api_key="",
+        api_model="",
     ),
     tts_settings=TTS_SETTINGS_DEFAULT,
     stt_settings=dict(
