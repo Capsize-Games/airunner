@@ -24,7 +24,6 @@ from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.logger import Logger
-from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 from airunner.history import History
 from airunner.settings import (
     STATUS_ERROR_COLOR,
@@ -33,10 +32,8 @@ from airunner.settings import (
     NSFW_CONTENT_DETECTED_MESSAGE
 )
 from airunner.enums import (
-    Mode,
     SignalCode,
     CanvasToolName,
-    WindowSection,
     GeneratorSection, StatusColors, ModelStatus, ModelType, LLMAction
 )
 from airunner.mediator_mixin import MediatorMixin
@@ -51,11 +48,7 @@ from airunner.utils.file_system.operations import FileSystemOperations
 
 from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
-from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.status.status_widget import StatusWidget
-from airunner.windows.about.about import AboutWindow
-from airunner.windows.filter_window import FilterWindow
-from airunner.windows.image_window import ImageWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin
@@ -63,12 +56,6 @@ from airunner.windows.main.lora_mixin import LoraMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
-from airunner.windows.model_merger import ModelMerger
-from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
-from airunner.windows.settings.airunner_settings import SettingsWindow
-from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
-from airunner.windows.update.update_window import UpdateWindow
-from airunner.windows.video import VideoPopup
 from airunner.worker_manager import WorkerManager
 
 
@@ -481,6 +468,7 @@ class MainWindow(
     def on_vision_captured_signal(self, data: dict):
         # Create the window if it doesn't exist
         if self.image_window is None:
+            from airunner.windows.image_window import ImageWindow
             self.image_window = ImageWindow()
 
         image = data.get("image", None)
@@ -598,7 +586,9 @@ class MainWindow(
 
     @Slot()
     def action_show_model_manager(self):
+        from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
         ModelManagerWidget()
+
     @Slot()
     def action_show_stablediffusion(self):
         self.activate_image_generation_section()
@@ -613,10 +603,6 @@ class MainWindow(
     @Slot()
     def action_show_images_path(self):
         self.show_settings_path("image_path")
-
-    @Slot()
-    def action_show_videos_path(self):
-        self.show_settings_path("video_path")
 
     @Slot()
     def action_show_model_path_txt2img(self):
@@ -672,14 +658,17 @@ class MainWindow(
 
     @Slot()
     def action_show_about_window(self):
+        from airunner.windows.about.about import AboutWindow
         AboutWindow()
 
     @Slot()
     def action_show_model_merger_window(self):
+        from airunner.windows.model_merger import ModelMerger
         ModelMerger()
 
     @Slot()
     def action_show_settings(self):
+        from airunner.windows.settings.airunner_settings import SettingsWindow
         SettingsWindow()
 
     @Slot()
@@ -962,6 +951,7 @@ class MainWindow(
         )
 
     def show_update_popup(self):
+        from airunner.windows.update.update_window import UpdateWindow
         self.update_popup = UpdateWindow()
 
     def refresh_styles(self):
@@ -989,6 +979,7 @@ class MainWindow(
                 ui.setStyleSheet("")
 
     def show_setup_wizard(self):
+        from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
         wizard = SetupWizard()
         wizard.exec()
 
@@ -1021,6 +1012,7 @@ class MainWindow(
 
     def initialize_worker_manager(self):
         if self.tts_handler_class is None:
+            from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
             self.tts_handler_class = EspeakTTSHandler
         self.worker_manager = WorkerManager(
             disable_sd=self.disable_sd,
@@ -1041,6 +1033,7 @@ class MainWindow(
             action.triggered.connect(partial(self.display_filter_window, filter_data["name"]))
 
     def display_filter_window(self, filter_name):
+        from airunner.windows.filter_window import FilterWindow
         FilterWindow(filter_name)
 
     def initialize_default_buttons(self):
@@ -1114,10 +1107,6 @@ class MainWindow(
         self.set_window_title()
         self.current_filter = None
 
-    def video_handler(self, data):
-        filename = data["video_filename"]
-        VideoPopup(file_path=filename)
-
     def post_process_images(self, images):
         #return self.automatic_filter_manager.apply_filters(images)
         return images
@@ -1131,6 +1120,7 @@ class MainWindow(
         self.generator_tab_widget.clear_prompts()
 
     def show_prompt_browser(self):
+        from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
         PromptBrowser()
 
     def new_batch(self, index, image, data):
