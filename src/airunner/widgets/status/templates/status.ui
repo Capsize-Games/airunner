@@ -46,7 +46,7 @@
    <item>
     <widget class="QLabel" name="queue_stats">
      <property name="text">
-      <string>queue</string>
+      <string>Queued items: 0</string>
      </property>
     </widget>
    </item>
@@ -60,7 +60,7 @@
    <item>
     <widget class="QLabel" name="nsfw_status">
      <property name="text">
-      <string>nsfw</string>
+      <string>Safety Checker</string>
      </property>
     </widget>
    </item>
@@ -74,7 +74,7 @@
    <item>
     <widget class="QLabel" name="cuda_status">
      <property name="text">
-      <string>gpu</string>
+      <string>NVIDIA</string>
      </property>
     </widget>
    </item>
