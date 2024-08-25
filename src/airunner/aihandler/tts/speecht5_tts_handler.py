@@ -13,11 +13,19 @@ class SpeechT5TTSHandler(TTSHandler):
     processor_class_ = SpeechT5Processor
 
     @property
+    def base_path(self):
+        return self.settings["path_settings"]["tts_model_path"]
+
+    @property
+    def tts_settings(self):
+        return self.settings["tts_settings"]["speecht5"]
+
+    @property
     def processor_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["tts_model_path"],
-                self.settings["tts_settings"]["speecht5"]["processor_path"]
+                self.base_path,
+                self.tts_settings["processor_path"]
             )
         )
 
@@ -25,8 +33,8 @@ class SpeechT5TTSHandler(TTSHandler):
     def model_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["tts_model_path"],
-                self.settings["tts_settings"]["speecht5"]["model_path"]
+                self.base_path,
+                self.tts_settings["model_path"]
             )
         )
 
@@ -34,8 +42,8 @@ class SpeechT5TTSHandler(TTSHandler):
     def vocoder_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["tts_model_path"],
-                self.settings["tts_settings"]["speecht5"]["vocoder_path"]
+                self.base_path,
+                self.tts_settings["vocoder_path"]
             )
         )
 

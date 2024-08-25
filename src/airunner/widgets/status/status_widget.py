@@ -24,7 +24,12 @@ class StatusWidget(BaseWidget):
         self.safety_checker_status = ModelStatus.UNLOADED
         self.feature_extractor_status = ModelStatus.UNLOADED
 
+        if self.settings["nsfw_filter"] and self.settings["sd_enabled"]:
+            self.safety_checker_status = ModelStatus.LOADING
+            self.feature_extractor_status = ModelStatus.LOADING
+
         self.update_safety_checker_status()
+        self.update_system_stats()
 
     def on_model_status_changed_signal(self, data):
         model = data["model"]

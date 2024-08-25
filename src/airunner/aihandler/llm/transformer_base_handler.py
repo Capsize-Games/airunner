@@ -1,11 +1,11 @@
 import os
 import random
+
 import torch
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.utils.clear_memory import clear_memory
-from airunner.utils.get_torch_device import get_torch_device
 
 
 class TransformerBaseHandler(BaseHandler):
