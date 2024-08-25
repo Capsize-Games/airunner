@@ -139,12 +139,14 @@ class LLMGenerateWorker(
         self.add_to_queue(message)
 
     def handle_message(self, message):
-        # try:
-        self.llm.handle_request(message)
-        # except Exception as e:
-        #     self.logger.error(f"Error in handle_message: {e}")
-        #     self.logger.error(f"Message: {message}")
+        if self.llm:
+            # try:
+            self.llm.handle_request(message)
+            # except Exception as e:
+            #     self.logger.error(f"Error in handle_message: {e}")
+            #     self.logger.error(f"Message: {message}")
 
     def unload_llm(self):
         self.logger.debug("Unloading LLM")
-        self.llm.unload()
+        if self.llm:
+            self.llm.unload()
