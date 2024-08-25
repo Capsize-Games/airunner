@@ -77,8 +77,8 @@ class Ui_status_widget(object):
     def retranslateUi(self, status_widget):
         status_widget.setWindowTitle(QCoreApplication.translate("status_widget", u"Form", None))
         self.system_message.setText(QCoreApplication.translate("status_widget", u"system message", None))
-        self.queue_stats.setText(QCoreApplication.translate("status_widget", u"queue", None))
-        self.nsfw_status.setText(QCoreApplication.translate("status_widget", u"nsfw", None))
-        self.cuda_status.setText(QCoreApplication.translate("status_widget", u"gpu", None))
+        self.queue_stats.setText(QCoreApplication.translate("status_widget", u"Queued items: 0", None))
+        self.nsfw_status.setText(QCoreApplication.translate("status_widget", u"Safety Checker", None))
+        self.cuda_status.setText(QCoreApplication.translate("status_widget", u"NVIDIA", None))
     # retranslateUi
 
