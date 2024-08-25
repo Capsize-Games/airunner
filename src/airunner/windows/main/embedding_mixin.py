@@ -3,13 +3,6 @@ from airunner.enums import SignalCode
 
 
 class EmbeddingMixin:
-    def __init__(self):
-        self.register(SignalCode.EMBEDDING_UPDATE_SIGNAL, self.update_embedding)
-        self.register(SignalCode.EMBEDDING_ADD_SIGNAL, self.add_embedding)
-        self.register(SignalCode.EMBEDDING_SCAN_SIGNAL, self.scan_for_embeddings)
-        self.register(SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings)
-        self.register(SignalCode.EMBEDDING_GET_ALL_SIGNAL, self.get_embeddings)
-
     def add_embedding(self, params: dict):
         settings = self.settings
         name = params["name"]

@@ -359,39 +359,19 @@ class Ui_MainWindow(object):
         self.horizontalLayout_3.setSpacing(6)
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.horizontalLayout_3.setContentsMargins(6, 0, 6, 0)
-        self.ai_button = QPushButton(self.image_generator_header_tool_buttons)
-        self.ai_button.setObjectName(u"ai_button")
-        self.ai_button.setMinimumSize(QSize(50, 45))
-        self.ai_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon3 = QIcon()
-        icon3.addFile(u":/icons/light/artificial-intelligence-ai-chip-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.ai_button.setIcon(icon3)
-        self.ai_button.setIconSize(QSize(24, 24))
-        self.ai_button.setCheckable(True)
-        self.ai_button.setFlat(True)
-
-        self.horizontalLayout_3.addWidget(self.ai_button)
-
-        self.line_3 = QFrame(self.image_generator_header_tool_buttons)
-        self.line_3.setObjectName(u"line_3")
-        self.line_3.setFrameShape(QFrame.Shape.VLine)
-        self.line_3.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.horizontalLayout_3.addWidget(self.line_3)
-
         self.file_new_button = QPushButton(self.image_generator_header_tool_buttons)
         self.file_new_button.setObjectName(u"file_new_button")
         self.file_new_button.setMinimumSize(QSize(36, 36))
         self.file_new_button.setMaximumSize(QSize(36, 36))
         self.file_new_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon4 = QIcon()
+        icon3 = QIcon()
         iconThemeName = u"document-new"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon4 = QIcon.fromTheme(iconThemeName)
+            icon3 = QIcon.fromTheme(iconThemeName)
         else:
-            icon4.addFile(u"../../../../../../../../../../../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon3.addFile(u"../../../../../../../../../../../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.file_new_button.setIcon(icon4)
+        self.file_new_button.setIcon(icon3)
         self.file_new_button.setIconSize(QSize(24, 24))
         self.file_new_button.setFlat(True)
 
@@ -402,14 +382,14 @@ class Ui_MainWindow(object):
         self.open_button.setMinimumSize(QSize(36, 36))
         self.open_button.setMaximumSize(QSize(36, 36))
         self.open_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon5 = QIcon()
+        icon4 = QIcon()
         iconThemeName = u"document-open"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon5 = QIcon.fromTheme(iconThemeName)
+            icon4 = QIcon.fromTheme(iconThemeName)
         else:
-            icon5.addFile(u"../../../../../../../../../../../../../../src/icons/034-folder.png", QSize(), QIcon.Normal, QIcon.Off)
+            icon4.addFile(u"../../../../../../../../../../../../../../src/icons/034-folder.png", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.open_button.setIcon(icon5)
+        self.open_button.setIcon(icon4)
         self.open_button.setIconSize(QSize(24, 24))
         self.open_button.setFlat(True)
 
@@ -420,14 +400,14 @@ class Ui_MainWindow(object):
         self.save_button.setMinimumSize(QSize(36, 36))
         self.save_button.setMaximumSize(QSize(36, 36))
         self.save_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon6 = QIcon()
+        icon5 = QIcon()
         iconThemeName = u"document-save"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon6 = QIcon.fromTheme(iconThemeName)
+            icon5 = QIcon.fromTheme(iconThemeName)
         else:
-            icon6.addFile(u"../../../../../../../../../../../../../../src/icons/033-diskette.png", QSize(), QIcon.Normal, QIcon.Off)
+            icon5.addFile(u"../../../../../../../../../../../../../../src/icons/033-diskette.png", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.save_button.setIcon(icon6)
+        self.save_button.setIcon(icon5)
         self.save_button.setIconSize(QSize(24, 24))
         self.save_button.setFlat(True)
 
@@ -438,14 +418,14 @@ class Ui_MainWindow(object):
         self.export_button.setMinimumSize(QSize(36, 36))
         self.export_button.setMaximumSize(QSize(36, 36))
         self.export_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon7 = QIcon()
+        icon6 = QIcon()
         iconThemeName = u"document-send"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon7 = QIcon.fromTheme(iconThemeName)
+            icon6 = QIcon.fromTheme(iconThemeName)
         else:
-            icon7.addFile(u"../../../../../../../../../../../../../../src/icons/export.png", QSize(), QIcon.Normal, QIcon.Off)
+            icon6.addFile(u"../../../../../../../../../../../../../../src/icons/export.png", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.export_button.setIcon(icon7)
+        self.export_button.setIcon(icon6)
         self.export_button.setIconSize(QSize(24, 24))
         self.export_button.setFlat(True)
 
@@ -469,14 +449,14 @@ class Ui_MainWindow(object):
         self.undo_button.setMaximumSize(QSize(36, 36))
         self.undo_button.setCursor(QCursor(Qt.PointingHandCursor))
         self.undo_button.setStyleSheet(u"border-color: rgb(61, 56, 70);")
-        icon8 = QIcon()
+        icon7 = QIcon()
         iconThemeName = u"edit-undo"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon8 = QIcon.fromTheme(iconThemeName)
+            icon7 = QIcon.fromTheme(iconThemeName)
         else:
-            icon8.addFile(u"../../../../../../../../../../../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon7.addFile(u"../../../../../../../../../../../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.undo_button.setIcon(icon8)
+        self.undo_button.setIcon(icon7)
         self.undo_button.setIconSize(QSize(24, 24))
         self.undo_button.setFlat(True)
 
@@ -490,14 +470,14 @@ class Ui_MainWindow(object):
         self.redo_button.setMaximumSize(QSize(36, 36))
         self.redo_button.setCursor(QCursor(Qt.PointingHandCursor))
         self.redo_button.setStyleSheet(u"border-color: rgb(61, 56, 70);")
-        icon9 = QIcon()
+        icon8 = QIcon()
         iconThemeName = u"edit-redo"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon9 = QIcon.fromTheme(iconThemeName)
+            icon8 = QIcon.fromTheme(iconThemeName)
         else:
-            icon9.addFile(u"../../../../../../../../../../../../../../src/icons/008-redo.png", QSize(), QIcon.Normal, QIcon.Off)
+            icon8.addFile(u"../../../../../../../../../../../../../../src/icons/008-redo.png", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.redo_button.setIcon(icon9)
+        self.redo_button.setIcon(icon8)
         self.redo_button.setIconSize(QSize(24, 24))
         self.redo_button.setFlat(True)
 
@@ -520,9 +500,9 @@ class Ui_MainWindow(object):
         self.toggle_active_grid_area_button.setMinimumSize(QSize(36, 36))
         self.toggle_active_grid_area_button.setMaximumSize(QSize(36, 36))
         self.toggle_active_grid_area_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon10 = QIcon()
-        icon10.addFile(u":/icons/light/object-selected-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.toggle_active_grid_area_button.setIcon(icon10)
+        icon9 = QIcon()
+        icon9.addFile(u":/icons/light/object-selected-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toggle_active_grid_area_button.setIcon(icon9)
         self.toggle_active_grid_area_button.setIconSize(QSize(18, 18))
         self.toggle_active_grid_area_button.setCheckable(True)
         self.toggle_active_grid_area_button.setFlat(True)
@@ -535,9 +515,9 @@ class Ui_MainWindow(object):
         self.toggle_select_button.setSizePolicy(sizePolicy3)
         self.toggle_select_button.setMinimumSize(QSize(36, 36))
         self.toggle_select_button.setMaximumSize(QSize(36, 36))
-        icon11 = QIcon()
-        icon11.addFile(u":/icons/light/select-svgrepo-com.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.toggle_select_button.setIcon(icon11)
+        icon10 = QIcon()
+        icon10.addFile(u":/icons/light/select-svgrepo-com.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toggle_select_button.setIcon(icon10)
         self.toggle_select_button.setIconSize(QSize(20, 20))
         self.toggle_select_button.setCheckable(True)
         self.toggle_select_button.setFlat(True)
@@ -558,9 +538,9 @@ class Ui_MainWindow(object):
         self.toggle_brush_button.setMinimumSize(QSize(36, 36))
         self.toggle_brush_button.setMaximumSize(QSize(36, 36))
         self.toggle_brush_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon12 = QIcon()
-        icon12.addFile(u":/icons/light/pencil-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.toggle_brush_button.setIcon(icon12)
+        icon11 = QIcon()
+        icon11.addFile(u":/icons/light/pencil-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toggle_brush_button.setIcon(icon11)
         self.toggle_brush_button.setIconSize(QSize(18, 18))
         self.toggle_brush_button.setCheckable(True)
         self.toggle_brush_button.setFlat(True)
@@ -574,9 +554,9 @@ class Ui_MainWindow(object):
         self.toggle_eraser_button.setMinimumSize(QSize(36, 36))
         self.toggle_eraser_button.setMaximumSize(QSize(36, 36))
         self.toggle_eraser_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon13 = QIcon()
-        icon13.addFile(u":/icons/light/eraser-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.toggle_eraser_button.setIcon(icon13)
+        icon12 = QIcon()
+        icon12.addFile(u":/icons/light/eraser-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toggle_eraser_button.setIcon(icon12)
         self.toggle_eraser_button.setIconSize(QSize(18, 18))
         self.toggle_eraser_button.setCheckable(True)
         self.toggle_eraser_button.setFlat(True)
@@ -597,9 +577,9 @@ class Ui_MainWindow(object):
         self.toggle_grid_button.setMinimumSize(QSize(36, 36))
         self.toggle_grid_button.setMaximumSize(QSize(36, 36))
         self.toggle_grid_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon14 = QIcon()
-        icon14.addFile(u":/icons/light/frame-grid-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.toggle_grid_button.setIcon(icon14)
+        icon13 = QIcon()
+        icon13.addFile(u":/icons/light/frame-grid-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toggle_grid_button.setIcon(icon13)
         self.toggle_grid_button.setIconSize(QSize(18, 18))
         self.toggle_grid_button.setCheckable(True)
         self.toggle_grid_button.setFlat(True)
@@ -613,9 +593,9 @@ class Ui_MainWindow(object):
         self.focus_button.setMinimumSize(QSize(36, 36))
         self.focus_button.setMaximumSize(QSize(36, 36))
         self.focus_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon15 = QIcon()
-        icon15.addFile(u":/icons/light/circle-center-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.focus_button.setIcon(icon15)
+        icon14 = QIcon()
+        icon14.addFile(u":/icons/light/circle-center-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.focus_button.setIcon(icon14)
         self.focus_button.setIconSize(QSize(18, 18))
         self.focus_button.setFlat(True)
 
@@ -678,9 +658,9 @@ class Ui_MainWindow(object):
         self.settings_button.setMinimumSize(QSize(50, 45))
         self.settings_button.setMaximumSize(QSize(50, 45))
         self.settings_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon16 = QIcon()
-        icon16.addFile(u":/icons/light/setting-line-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.settings_button.setIcon(icon16)
+        icon15 = QIcon()
+        icon15.addFile(u":/icons/light/setting-line-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.settings_button.setIcon(icon15)
         self.settings_button.setIconSize(QSize(18, 18))
         self.settings_button.setFlat(True)
 
@@ -721,7 +701,20 @@ class Ui_MainWindow(object):
         self.button_menu.setFrameShadow(QFrame.Shadow.Raised)
         self.verticalLayout = QVBoxLayout(self.button_menu)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(6, 1, 6, 6)
+        self.verticalLayout.setContentsMargins(6, 6, 6, 6)
+        self.ai_button = QPushButton(self.button_menu)
+        self.ai_button.setObjectName(u"ai_button")
+        self.ai_button.setMinimumSize(QSize(36, 36))
+        self.ai_button.setCursor(QCursor(Qt.PointingHandCursor))
+        icon16 = QIcon()
+        icon16.addFile(u":/icons/light/artificial-intelligence-ai-chip-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.ai_button.setIcon(icon16)
+        self.ai_button.setIconSize(QSize(18, 18))
+        self.ai_button.setCheckable(True)
+        self.ai_button.setFlat(True)
+
+        self.verticalLayout.addWidget(self.ai_button)
+
         self.verticalSpacer = QSpacerItem(20, 10, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout.addItem(self.verticalSpacer)
@@ -1222,10 +1215,6 @@ class Ui_MainWindow(object):
         self.actionModel_Manager_4.setText(QCoreApplication.translate("MainWindow", u"Model Manager", None))
         self.actionRun_setup_wizard_2.setText(QCoreApplication.translate("MainWindow", u"Run Setup Wizard", None))
 #if QT_CONFIG(tooltip)
-        self.ai_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle AI Mode", None))
-#endif // QT_CONFIG(tooltip)
-        self.ai_button.setText("")
-#if QT_CONFIG(tooltip)
         self.file_new_button.setToolTip(QCoreApplication.translate("MainWindow", u"New", None))
 #endif // QT_CONFIG(tooltip)
         self.file_new_button.setText("")
@@ -1280,6 +1269,10 @@ class Ui_MainWindow(object):
         self.settings_button.setToolTip(QCoreApplication.translate("MainWindow", u"AI Runner Settings", None))
 #endif // QT_CONFIG(tooltip)
         self.settings_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.ai_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle AI Mode", None))
+#endif // QT_CONFIG(tooltip)
+        self.ai_button.setText("")
         self.llm_button.setText("")
 #if QT_CONFIG(tooltip)
         self.sd_toggle_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Image Generator", None))

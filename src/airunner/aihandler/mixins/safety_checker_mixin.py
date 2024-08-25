@@ -18,12 +18,6 @@ class SafetyCheckerMixin:
         self.feature_extractor = None
         self.feature_extractor_path = SD_FEATURE_EXTRACTOR_PATH
 
-        self.register(SignalCode.SAFETY_CHECKER_MODEL_LOAD_SIGNAL, self.on_safety_checker_model_load_signal)
-        self.register(SignalCode.SAFETY_CHECKER_MODEL_UNLOAD_SIGNAL, self.on_safety_checker_model_unload_signal)
-        self.register(SignalCode.FEATURE_EXTRACTOR_LOAD_SIGNAL, self.on_feature_extractor_load_signal)
-        self.register(SignalCode.FEATURE_EXTRACTOR_UNLOAD_SIGNAL, self.on_feature_extractor_unload_signal)
-        self.register(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_safety_checker_load_signal)
-
     @property
     def safety_checker_initialized(self) -> bool:
         try:
