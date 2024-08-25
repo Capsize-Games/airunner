@@ -76,10 +76,12 @@ setup(
         "facehuggershield==0.1.10",
         
         # Llama index
-        "llama-index==0.10.32",
-        "llama-index-readers-file==0.1.25",
-        "llama-index-readers-web==0.1.13",
-        "llama-index-llms-huggingface==0.2.8"
+        "llama-index",
+        "llama-index-readers-file",
+        "llama-index-readers-web",
+        "llama-index-llms-huggingface",
+        "llama-index-llms-groq",
+        "llama-index-embeddings-mistralai",
     ],
     dependency_links=[],
 )
