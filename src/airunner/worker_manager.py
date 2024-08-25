@@ -72,16 +72,10 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             self.sd_worker = create_worker(SDWorker)
             self.sd_state = "loaded"
 
+        self.llm_request_worker = None
+        self.llm_generate_worker = None
         if not disable_llm:
-            from airunner.workers.llm_request_worker import LLMRequestWorker
-            from airunner.workers.llm_generate_worker import LLMGenerateWorker
-            self.llm_request_worker = create_worker(LLMRequestWorker)
-            self.llm_generate_worker = create_worker(
-                LLMGenerateWorker,
-                do_load_on_init=do_load_llm_on_init,
-                agent_class=agent_class,
-                agent_options=agent_options
-            )
+            self.register_llm_workers(agent_class, do_load_llm_on_init, agent_options)
 
         if not disable_tts:
             from airunner.workers.tts_generator_worker import TTSGeneratorWorker
@@ -102,6 +96,20 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         #     self.vision_processor_worker = create_worker(VisionProcessorWorker)
         #
         # self.toggle_vision_capture()
+
+    def register_llm_workers(self, agent_class, do_load_llm_on_init, agent_options):
+        from airunner.workers.llm_request_worker import LLMRequestWorker
+        from airunner.workers.llm_generate_worker import LLMGenerateWorker
+        if agent_class is None:
+            from airunner.aihandler.llm.agent.base_agent import BaseAgent
+            agent_class = BaseAgent
+        self.llm_request_worker = create_worker(LLMRequestWorker)
+        self.llm_generate_worker = create_worker(
+            LLMGenerateWorker,
+            do_load_on_init=do_load_llm_on_init,
+            agent_class=agent_class,
+            agent_options=agent_options
+        )
 
     def on_llm_request_worker_response_signal(self, message: dict):
         if self.llm_generate_worker:
