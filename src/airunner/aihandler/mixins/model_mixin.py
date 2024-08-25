@@ -602,8 +602,6 @@ class ModelMixin:
             device=self.device,
             generator=self.__generator,
             model_changed=model_changed,
-            prompt_embeds=self.sd_request.prompt_embeds,
-            negative_prompt_embeds=self.sd_request.negative_prompt_embeds,
             controlnet_image=controlnet_image,
             generator_request_data=generator_request_data
         )
