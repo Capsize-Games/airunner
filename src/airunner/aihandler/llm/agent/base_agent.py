@@ -352,6 +352,8 @@ class BaseAgent(
         # HACK: current version of transformers does not allow us to pass
         # variables to the chat template function, so we apply those here
         variables = {
+            "speaker_name": self.botname,
+            "listener_name": self.username,
             "username": self.username,
             "botname": self.botname,
             "bot_mood": self.bot_mood,
@@ -361,13 +363,6 @@ class BaseAgent(
             value = value or ""
             rendered_template = rendered_template.replace("{{ " + key + " }}", value)
         return rendered_template
-
-    def do_response(self, message):
-        self.run(
-            prompt=self.prompt,
-            action=LLMActionType.CHAT,
-            max_new_tokens=message["args"][0]
-        )
 
     @property
     def system_instructions(self):
@@ -442,6 +437,18 @@ class BaseAgent(
             })
             return
 
+        # Add the user's message to history
+        if action in [
+            LLMActionType.CHAT,
+            LLMActionType.UPDATE_MOOD,
+            LLMActionType.DO_NOT_RESPOND,
+            LLMActionType.PERFORM_RAG_SEARCH
+        ]:
+            self.add_message_to_history(
+                self.prompt,
+                LLMChatRole.HUMAN
+            )
+
         model_inputs = self.get_model_inputs(
             action,
             vision_history,
@@ -475,6 +482,7 @@ class BaseAgent(
                         name=self.botname,
                     )
                 )
+
             return response
 
     def prepare_generate_data(self, model_inputs, stopping_criteria):
@@ -501,18 +509,6 @@ class BaseAgent(
         streamer = kwargs.get("streamer", self.streamer)
         data["streamer"] = streamer
 
-        # Add the user's message to history
-        if action in [
-            LLMActionType.CHAT,
-            LLMActionType.UPDATE_MOOD,
-            LLMActionType.DO_NOT_RESPOND,
-            LLMActionType.PERFORM_RAG_SEARCH
-        ]:
-            self.add_message_to_history(
-                self.prompt,
-                LLMChatRole.HUMAN
-            )
-
         try:
             self.response_worker.add_to_queue({
                 "model": self.model,
@@ -524,7 +520,7 @@ class BaseAgent(
             print(str(e))
             print(traceback.format_exc())
         # strip all new lines from rendered_template:
-        self.rendered_template = self.rendered_template.replace("\n", " ")
+        #self.rendered_template = self.rendered_template.replace("\n", " ")
         eos_token = self.tokenizer.eos_token
         bos_token = self.tokenizer.bos_token
         if self.is_mistral:
@@ -534,11 +530,12 @@ class BaseAgent(
         replaced = False
         is_end_of_message = False
         is_first_message = True
+        response = ""
         if streamer:
             for new_text in streamer:
                 # strip all newlines from new_text
-                parsed_new_text = new_text.replace("\n", " ")
-                streamed_template += parsed_new_text
+                #parsed_new_text = new_text.replace("\n", " ")
+                streamed_template += new_text
                 if self.is_mistral:
                     streamed_template = streamed_template.replace(f"{bos_token} [INST]", f"{bos_token}[INST]")
                     streamed_template = streamed_template.replace("  [INST]", " [INST]")
@@ -597,6 +594,12 @@ class BaseAgent(
                     LLMChatRole.ASSISTANT
                 )
 
+                return self.run_with_thread(
+                    model_inputs,
+                    LLMActionType.UPDATE_MOOD,
+                    **kwargs,
+                )
+
             elif action == LLMActionType.GENERATE_IMAGE:
                 self.emit_signal(
                     SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
@@ -609,10 +612,6 @@ class BaseAgent(
             elif action == LLMActionType.UPDATE_MOOD:
                 print("RESPONSE:", streamed_template)
                 self.bot_mood = streamed_template
-                return self.run(
-                    prompt=self.prompt,
-                    action=LLMActionType.CHAT,
-                )
 
             elif action == LLMActionType.APPLICATION_COMMAND:
                 print("APPLICATION COMMAND:")
