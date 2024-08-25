@@ -2,6 +2,7 @@ import os
 import random
 
 import torch
+from llama_index.llms.groq import Groq
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
@@ -128,6 +129,17 @@ class TransformerBaseHandler(BaseHandler):
         return os.path.expanduser(local_path)
 
     def load_model(self):
+        self.logger.debug("Loading model")
+        if self.settings["llm_generator_settings"]["use_api"]:
+            self.model = Groq(
+                model=self.settings["llm_generator_settings"]["api_model"],
+                api_key=self.settings["llm_generator_settings"]["api_key"],
+            )
+            self.change_model_status(ModelType.LLM, ModelStatus.LOADED, "")
+        else:
+            self.load_model_local()
+
+    def load_model_local(self):
         params = self.model_params()
         path = self.get_model_path(self.current_bot["model_version"])
         is_quantized = os.path.exists(path)
