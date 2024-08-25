@@ -24,9 +24,7 @@ from PySide6.QtWidgets import (
 
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.main_window import MainWindow
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.aihandler.logger import Logger
 
 
 class App(
@@ -48,6 +46,8 @@ class App(
         Initialize the application and run as a GUI application or a socket server.
         :param main_window_class: The main window class to use for the application.
         """
+        from airunner.windows.main.main_window import MainWindow
+        from airunner.aihandler.logger import Logger
 
         self.main_window_class_ = main_window_class or MainWindow
         self.app = None
@@ -182,7 +182,7 @@ class App(
             print(e)
             splash.finish(None)
             sys.exit("""
-                An error occurred while initializing the application. 
+                An error occurred while initializing the application.
                 Please report this issue on GitHub or Discord."
             """)
         app.main_window = window
