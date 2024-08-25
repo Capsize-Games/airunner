@@ -95,23 +95,26 @@ class AgentLlamaIndexMixin:
         # self.__load_index_struct()
 
     def __load_llm(self, model, tokenizer):
-        # from llama_index.llms.huggingface import HuggingFaceLLM
         try:
-            self.__llm = HuggingFaceLLM(
-                model=model,
-                tokenizer=tokenizer,
-                max_new_tokens=4096,
-                generate_kwargs=dict(
-                    top_k=40,
-                    top_p=0.90,
-                    temperature=0.5,
-                    num_return_sequences=1,
-                    num_beams=1,
-                    no_repeat_ngram_size=4,
-                    early_stopping=True,
-                    do_sample=True,
+            if self.settings["llm_generator_settings"]["use_api"]:
+                self.__llm = model
+            else:
+                from llama_index.llms.huggingface import HuggingFaceLLM
+                self.__llm = HuggingFaceLLM(
+                    model=model,
+                    tokenizer=tokenizer,
+                    max_new_tokens=4096,
+                    generate_kwargs=dict(
+                        top_k=40,
+                        top_p=0.90,
+                        temperature=0.5,
+                        num_return_sequences=1,
+                        num_beams=1,
+                        no_repeat_ngram_size=4,
+                        early_stopping=True,
+                        do_sample=True,
+                    )
                 )
-            )
         except Exception as e:
             self.logger.error(f"Error loading LLM: {str(e)}")
 
@@ -120,10 +123,10 @@ class AgentLlamaIndexMixin:
         return True
 
     def perform_rag_search(
-            self,
-            prompt,
-            streaming: bool = False,
-            response_mode: ResponseMode = ResponseMode.COMPACT
+        self,
+        prompt,
+        streaming: bool = False,
+        response_mode: ResponseMode = ResponseMode.COMPACT
     ):
         if self.__chat_engine is None:
             raise RuntimeError(
@@ -211,6 +214,7 @@ class AgentLlamaIndexMixin:
         self.logger.debug("Loading RAG model...")
         from airunner.aihandler.llm.custom_embedding import CustomEmbedding
         Settings.embed_model = CustomEmbedding(self.__llm)
+
 
     def __load_readers(self):
         from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
@@ -351,7 +355,8 @@ class AgentLlamaIndexMixin:
         try:
             self.__index = SimpleKeywordTableIndex.from_documents(
                 self.__documents,
-                service_context=self.__service_context,
+                #service_context=self.__service_context,
+                llm=self.__llm
             )
             self.logger.debug("Index loaded successfully.")
         except TypeError as e:
