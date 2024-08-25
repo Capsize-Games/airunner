@@ -73,7 +73,7 @@ setup(
         "tomesd==0.1.3",
 
         # Security
-        "facehuggershield==0.1.10",
+        "facehuggershield==0.1.11",
         
         # Llama index
         "llama-index",
