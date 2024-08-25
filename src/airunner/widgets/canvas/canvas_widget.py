@@ -53,6 +53,8 @@ class CanvasWidget(BaseWidget):
             SignalCode.SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL: self.on_image_data_worker_response_signal,
             SignalCode.CANVAS_UPDATE_SIGNAL: self.on_update_canvas_signal,
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
+            SignalCode.CONTROLNET_LOAD_SIGNAL: lambda _message=None: self.set_controlnet_checkbox(True),
+            SignalCode.CONTROLNET_UNLOAD_SIGNAL: lambda _message=None: self.set_controlnet_checkbox(False),
         }
 
         # Map class properties to worker classes
@@ -64,15 +66,19 @@ class CanvasWidget(BaseWidget):
         self.grid_handler = GridHandler()
         self.clipboard_handler = ClipboardHandler()
 
-        self.ui.controlnet_groupbox.blockSignals(True)
         self.ui.drawing_pad_groupbox.blockSignals(True)
-        self.ui.controlnet_groupbox.checked = self.settings["controlnet_enabled"]
         self.ui.drawing_pad_groupbox.checked = self.settings["drawing_pad_settings"]["enabled"]
-        self.ui.controlnet_groupbox.blockSignals(False)
         self.ui.drawing_pad_groupbox.blockSignals(False)
+
+        self.set_controlnet_checkbox(self.settings["controlnet_enabled"])
 
         self.ui.canvas_side_splitter.splitterMoved.connect(self.sync_splitter_1)
         self.ui.canvas_side_splitter_2.splitterMoved.connect(self.sync_splitter_2)
+
+    def set_controlnet_checkbox(self, val):
+        self.ui.controlnet_groupbox.blockSignals(True)
+        self.ui.controlnet_groupbox.setChecked(val)
+        self.ui.controlnet_groupbox.blockSignals(False)
 
     def sync_splitter_1(self, pos, index):
         self.ui.canvas_side_splitter_2.setSizes(self.ui.canvas_side_splitter.sizes())

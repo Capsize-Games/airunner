@@ -20,10 +20,6 @@ class SchedulerMixin:
         self.current_scheduler_name: str = ""
         self.do_change_scheduler: bool = False
         self.scheduler = None
-        self.register(SignalCode.SCHEDULER_LOAD_SIGNAL, self.on_scheduler_load_signal)
-        self.register(SignalCode.SCHEDULER_UNLOAD_SIGNAL, self.on_scheduler_unload_signal)
-        self.register(SignalCode.SCHEDULER_LOAD_SIGNAL, self.on_scheduler_load_signal)
-        self.register(SignalCode.SCHEDULER_UNLOAD_SIGNAL, self.on_scheduler_unload_signal)
 
     @property
     def scheduler_section(self):

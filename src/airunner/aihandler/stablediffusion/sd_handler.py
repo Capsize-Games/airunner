@@ -1,3 +1,4 @@
+import threading
 import traceback
 import torch
 from PIL import Image
@@ -121,23 +122,6 @@ class SDHandler(
         self.data = {
             "action": "txt2img",
         }
-        signals = {
-            SignalCode.RESET_APPLIED_MEMORY_SETTINGS: self.on_reset_applied_memory_settings,
-            SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.unload_safety_checker,
-            SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
-            SignalCode.SD_MOVE_TO_CPU_SIGNAL: self.on_move_to_cpu,
-            SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
-            SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
-            SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
-            SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
-            SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
-            SignalCode.SD_VAE_LOAD_SIGNAL: self.on_sd_vae_load_signal,
-            SignalCode.SD_VAE_UNLOAD_SIGNAL: self.on_sd_vae_unload_signal,
-        }
-
-        for code, handler in signals.items():
-            self.register(code, handler)
-
 
         self.sd_mode = SDMode.DRAWING
         self.loaded = False
@@ -153,9 +137,6 @@ class SDHandler(
         self.model_status = {}
         for model_type in ModelType:
             self.model_status[model_type] = ModelStatus.UNLOADED
-        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
-
-        self.load_stable_diffusion()
 
     @property
     def sd_request(self):
@@ -167,30 +148,16 @@ class SDHandler(
     def sd_request(self, value):
         self._sd_request = value
 
-    def on_sd_vae_load_signal(self, _data: dict):
-        #self._load_vae()
-        pass
-
-    def on_sd_vae_unload_signal(self, _data: dict):
-        #self._unload_vae()
-        pass
-
     def on_load_scheduler_signal(self, _message: dict):
         self.load_scheduler()
 
     def on_unload_scheduler_signal(self, _message: dict):
         self.unload_scheduler()
 
-    def on_reset_applied_memory_settings(self, _data: dict):
-        self.reset_applied_memory_settings()
-
-    def on_model_status_changed_signal(self, message: dict):
+    def model_status_changed(self, message: dict):
         model = message["model"]
         status = message["status"]
         self.model_status[model] = status
-
-    def on_change_scheduler_signal(self, data: dict):
-        self.load_scheduler(force_scheduler_name=data["scheduler"])
 
     @property
     def is_pipe_loaded(self) -> bool:
@@ -273,29 +240,17 @@ class SDHandler(
         self.logger.info("Loading stable diffusion")
 
         if self.settings["nsfw_filter"]:
-            self.load_nsfw_filter()
+            threading.Thread(target=self.load_nsfw_filter).start()
 
         if self.settings["controlnet_enabled"]:
-            self.load_controlnet()
+            threading.Thread(target=self.load_controlnet).start()
 
         if self.settings["sd_enabled"]:
             if not self.scheduler:
-                self.load_scheduler()
-            self.load_stable_diffusion_model()
+                threading.Thread(target=self.load_scheduler).start()
+            threading.Thread(target=self.load_stable_diffusion_model).start()
 
-    def on_start_auto_image_generation_signal(self, _message: dict):
-        # self.sd_mode = SDMode.DRAWING
-        # self.generate()
-        pass
-
-    def on_sd_cancel_signal(self, _message: dict = None):
-        print("on_sd_cancel_signal")
-
-    def on_stop_auto_image_generation_signal(self, _message: dict = None):
-        #self.sd_mode = SDMode.STANDARD
-        pass
-
-    def on_interrupt_image_generation_signal(self, _message: dict = None):
+    def interrupt_image_generation_signal(self, _message: dict = None):
         if self.current_state == HandlerState.GENERATING:
             self.do_interrupt_image_generation = True
 
@@ -348,7 +303,7 @@ class SDHandler(
                 image = image.resize((width, height), resample=Image.NEAREST)
         return image
 
-    def on_do_generate_signal(self, message: dict):
+    def handle_generate_signal(self, message: dict):
         if self.current_state is not HandlerState.GENERATING:
             self.current_state = HandlerState.GENERATING
 
@@ -449,9 +404,6 @@ class SDHandler(
             "total": self.sd_request.generator_settings.steps,
         })
         self.latents_set = True
-
-    def on_move_to_cpu(self, message: dict = None):
-        self.move_pipe_to_cpu()
 
     def log_error(self, error, message=None):
         if message:

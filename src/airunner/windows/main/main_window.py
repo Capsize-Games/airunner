@@ -22,7 +22,6 @@ from bs4 import BeautifulSoup
 
 from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
-from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.logger import Logger
 from airunner.history import History
 from airunner.settings import (
@@ -48,7 +47,6 @@ from airunner.utils.file_system.operations import FileSystemOperations
 
 from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
-from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin
@@ -56,7 +54,6 @@ from airunner.windows.main.lora_mixin import LoraMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
-from airunner.worker_manager import WorkerManager
 
 
 class MainWindow(
@@ -171,6 +168,7 @@ class MainWindow(
         self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+
         self.do_load_llm_on_init = self.settings["llm_enabled"]
 
         self.update_settings()
@@ -414,6 +412,9 @@ class MainWindow(
         if data["model"] == ModelType.SD:
             element_name = "sd_status"
             tool_tip = "Stable Diffusion"
+
+            self.set_sd_status_text()
+
         elif data["model"] == ModelType.CONTROLNET:
             element_name = "controlnet_status"
             tool_tip = "Controlnet"
@@ -435,7 +436,8 @@ class MainWindow(
             getattr(self.ui, element_name).setStyleSheet(styles)
             getattr(self.ui, element_name).setToolTip(tool_tip)
 
-
+    def set_sd_status_text(self):
+        self.ui.sd_status.setText(self.settings["generator_settings"]["version"])
 
     def on_write_file_signal(self, data: dict):
         """
@@ -481,8 +483,46 @@ class MainWindow(
 
     def initialize_ui(self):
         self.logger.debug("Loading ui")
+        from airunner.widgets.status.status_widget import StatusWidget
         self.ui.setupUi(self)
         self.restore_state()
+
+        if self.settings["sd_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.SD,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if self.settings["controlnet_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.CONTROLNET,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if self.settings["llm_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.LLM,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if self.settings["tts_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.TTS,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if self.settings["stt_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.STT,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if self.settings["ocr_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.OCR,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
@@ -710,6 +750,12 @@ class MainWindow(
         new_settings["tts_enabled"] = val
         self.settings = new_settings
         self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL if val else SignalCode.TTS_DISABLE_SIGNAL)
+        if val:
+            self.on_model_status_changed_signal({
+                "model": ModelType.TTS,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
 
     @Slot(bool)
     def ocr_button_toggled(self, val):
@@ -985,6 +1031,7 @@ class MainWindow(
 
     def showEvent(self, event):
         super().showEvent(event)
+        self.set_sd_status_text()
         # self.automatic_filter_manager = AutomaticFilterManager()
         # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
 
@@ -1014,6 +1061,8 @@ class MainWindow(
         if self.tts_handler_class is None:
             from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
             self.tts_handler_class = EspeakTTSHandler
+        from airunner.worker_manager import WorkerManager
+        from airunner.aihandler.llm.agent.base_agent import BaseAgent
         self.worker_manager = WorkerManager(
             disable_sd=self.disable_sd,
             disable_llm=self.disable_llm,

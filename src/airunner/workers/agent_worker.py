@@ -1,5 +1,7 @@
 import traceback
 import torch
+
+from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
 
