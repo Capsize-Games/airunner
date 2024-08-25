@@ -128,7 +128,6 @@ class CausalLMTransformerBaseHandler(
             # LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
             # LLMToolName.BASH_EXECUTE.value: BashExecuteTool(),
             # LLMToolName.WRITE_FILE.value: WriteFileTool(),
-            #LLMToolName.DEFAULT_TOOL.value: RespondToUserTool(),
         }
 
     def process_data(self, data):

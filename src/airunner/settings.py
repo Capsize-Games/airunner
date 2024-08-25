@@ -80,7 +80,7 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.ERROR
 
 ####################################################################
 # Default models for the core application

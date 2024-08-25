@@ -77,7 +77,7 @@ setup(
         
         # Llama index
         "llama-index==0.10.32",
-        "llama-index-readers-file==0.1.19",
+        "llama-index-readers-file==0.1.25",
         "llama-index-readers-web==0.1.13",
         "llama-index-llms-huggingface==0.2.8"
     ],
