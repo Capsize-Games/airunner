@@ -46,6 +46,7 @@ setup(
 
         # TTS Dependencies
         "inflect==7.3.1",
+        "pycountry==24.6.1",
 
         # Security
         "facehuggershield==0.1.11",
