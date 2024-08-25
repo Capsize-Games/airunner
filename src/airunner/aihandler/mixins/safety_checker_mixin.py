@@ -186,7 +186,7 @@ class SafetyCheckerMixin:
                 ),
                 local_files_only=True,
                 torch_dtype=self.data_type,
-                use_safetensors=True,
+                use_safetensors=False,
                 device_map=self.device
             )
             self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED, self.safety_checker_model["path"])
