@@ -46,11 +46,6 @@ class CausalLMTransformerBaseHandler(
 
         super().__init__(*args, **kwargs)
 
-        self.register(SignalCode.LLM_LOAD_SIGNAL, self.on_load_llm_signal)
-        self.register(SignalCode.LLM_LOAD_MODEL_SIGNAL, self.on_load_model_signal)
-        self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal)
-        self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
-
     def on_load_llm_signal(self, _message: dict):
         self.load()
 
@@ -128,7 +123,6 @@ class CausalLMTransformerBaseHandler(
             # LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
             # LLMToolName.BASH_EXECUTE.value: BashExecuteTool(),
             # LLMToolName.WRITE_FILE.value: WriteFileTool(),
-            #LLMToolName.DEFAULT_TOOL.value: RespondToUserTool(),
         }
 
     def process_data(self, data):

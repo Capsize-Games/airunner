@@ -1,21 +1,12 @@
 import traceback
 import numpy as np
 from PySide6.QtCore import QObject, Signal
-from airunner.aihandler.stt.whisper_handler import WhisperHandler
+# from airunner.aihandler.stt.whisper_handler import WhisperHandler
 from airunner.enums import SignalCode, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.workers.audio_capture_worker import AudioCaptureWorker
-from airunner.workers.audio_processor_worker import AudioProcessorWorker
-from airunner.workers.tts_generator_worker import TTSGeneratorWorker
-from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
-from airunner.workers.llm_request_worker import LLMRequestWorker
-from airunner.workers.llm_generate_worker import LLMGenerateWorker
-from airunner.workers.sd_worker import SDWorker
 from airunner.aihandler.logger import Logger
 from airunner.utils.create_worker import create_worker
-# from airunner.workers.vision_capture_worker import VisionCaptureWorker
-# from airunner.workers.vision_processor_worker import VisionProcessorWorker
 
 
 class Message:
@@ -72,17 +63,18 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured)
         self.register(SignalCode.TTS_REQUEST, self.on_tts_request)
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal)
 
+        self.sd_worker = None
         self.sd_state = None
         if not disable_sd:
+            from airunner.workers.sd_worker import SDWorker
             self.sd_worker = create_worker(SDWorker)
             self.sd_state = "loaded"
 
-        if not disable_tts:
-            self.tts_generator_worker = create_worker(TTSGeneratorWorker)
-            self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
-
         if not disable_llm:
+            from airunner.workers.llm_request_worker import LLMRequestWorker
+            from airunner.workers.llm_generate_worker import LLMGenerateWorker
             self.llm_request_worker = create_worker(LLMRequestWorker)
             self.llm_generate_worker = create_worker(
                 LLMGenerateWorker,
@@ -90,17 +82,30 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
                 agent_class=agent_class,
                 agent_options=agent_options
             )
-            self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.llm_generate_worker.on_llm_request_worker_response_signal)
 
-        if not disable_stt:
-            self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-            self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
+        if not disable_tts:
+            from airunner.workers.tts_generator_worker import TTSGeneratorWorker
+            from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
+            self.tts_generator_worker = create_worker(TTSGeneratorWorker)
+            self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
+
+        # if not disable_stt:
+        #     from airunner.workers.audio_capture_worker import AudioCaptureWorker
+        #     from airunner.workers.audio_processor_worker import AudioProcessorWorker
+        #     self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
+        #     self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
 
         # if not disable_vision_capture:
+        #     from airunner.workers.vision_capture_worker import VisionCaptureWorker
+        #     from airunner.workers.vision_processor_worker import VisionProcessorWorker
         #     self.vision_capture_worker = create_worker(VisionCaptureWorker)
         #     self.vision_processor_worker = create_worker(VisionProcessorWorker)
         #
         # self.toggle_vision_capture()
+
+    def on_llm_request_worker_response_signal(self, message: dict):
+        if self.llm_generate_worker:
+            self.llm_generate_worker.on_llm_request_worker_response_signal(message)
 
     def do_response(self, response):
         """
