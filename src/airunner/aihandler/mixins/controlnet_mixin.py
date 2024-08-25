@@ -29,16 +29,6 @@ class ControlnetHandlerMixin:
         self.current_load_controlnet = False
         self.controlnet_loaded = False
         self.downloading_controlnet = False
-        signals = {
-            SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
-            SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
-            SignalCode.CONTROLNET_LOAD_MODEL_SIGNAL: self.on_controlnet_load_model_signal,
-            SignalCode.CONTROLNET_UNLOAD_MODEL_SIGNAL: self.on_unload_controlnet_model_signal,
-            SignalCode.CONTROLNET_PROCESSOR_LOAD_SIGNAL: self.on_controlnet_load_processor_signal,
-            SignalCode.CONTROLNET_PROCESSOR_UNLOAD_SIGNAL: self.on_controlnet_unload_processor_signal,
-        }
-        for code, handler in signals.items():
-            self.register(code, handler)
 
     @property
     def controlnet_type(self):
@@ -153,8 +143,10 @@ class ControlnetHandlerMixin:
                 local_files_only=True,
                 device=self.device,
             )
-            self.change_model_status(ModelType.CONTROLNET, ModelStatus.READY if not self.pipe else ModelStatus.LOADED, short_path)
-            self.swap_pipeline()
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.READY, short_path)
+            if self.pipe:
+                self.pipe.controlnet = self.controlnet
+                self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED, short_path)
         except Exception as e:
             self.logger.error(f"Error loading controlnet {e}")
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED, short_path)

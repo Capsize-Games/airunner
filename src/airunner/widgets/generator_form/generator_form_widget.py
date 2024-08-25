@@ -43,6 +43,9 @@ class GeneratorForm(BaseWidget):
         # iterate over ImagePreset enum and add them to the combobox
         image_presets = [""] + [preset.value for preset in ImagePreset]
         self.ui.image_presets.addItems(image_presets)
+        self.ui.image_presets.setCurrentIndex(
+            self.ui.image_presets.findText(self.settings["generator_settings"]["image_preset"])
+        )
         self.toggle_secondary_prompts()
 
     def toggle_secondary_prompts(self):

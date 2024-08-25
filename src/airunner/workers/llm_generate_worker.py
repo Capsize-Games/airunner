@@ -1,12 +1,13 @@
 #import asyncio
 import queue
+import threading
 
 from PySide6.QtCore import QThread
 
 #from datasynth.messager.consumer import ConsumerMixin
 
 from airunner.aihandler.llm.causal_lm_transfformer_base_handler import CausalLMTransformerBaseHandler
-from airunner.enums import QueueType, SignalCode
+from airunner.enums import QueueType, SignalCode, ModelType, ModelStatus
 from airunner.settings import AVAILABLE_DTYPES, SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
@@ -24,12 +25,55 @@ class LLMGenerateWorker(
         #     actions=None
         # )
         super().__init__(prefix=prefix)
+        signals = {
+            SignalCode.LLM_UNLOAD_SIGNAL: self.on_unload_llm_signal,
+            SignalCode.LLM_LOAD_SIGNAL: self.on_load_llm_signal,
+            SignalCode.LLM_LOAD_MODEL_SIGNAL: self.on_load_model_signal,
+            SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_clear_history_signal,
+            SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
+        }
+
+        for code, handler in signals.items():
+            self.register(code, handler)
+        self.llm = None
+        threading.Thread(target=self.load_llm, args=(
+            do_load_on_init, agent_class, agent_options
+        )).start()
+
+    def on_unload_llm_signal(self, message):
+        if self.llm:
+            self.llm.on_unload_llm_signal(message)
+
+    def on_load_llm_signal(self, message):
+        if self.llm:
+            self.llm.on_load_llm_signal(message)
+
+    def on_load_model_signal(self, message):
+        if self.llm:
+            self.llm.on_load_model_signal(message)
+
+    def on_clear_history_signal(self, message):
+        if self.llm:
+            self.llm.on_clear_history_signal(message)
+
+    def on_interrupt_process_signal(self, message):
+        if self.llm:
+            self.llm.on_interrupt_process_signal(message)
+
+    def load_llm(self, do_load_on_init, agent_class, agent_options):
+        if self.settings["llm_enabled"]:
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.LLM,
+                    "status": ModelStatus.LOADING,
+                    "path": ""
+                }
+            )
         self.llm = CausalLMTransformerBaseHandler(
             do_load_on_init=do_load_on_init,
             agent_class=agent_class,
             agent_options=agent_options
         )
-        self.register(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal)
 
     # def start(self):
     #     try:
