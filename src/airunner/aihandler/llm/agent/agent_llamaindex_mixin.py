@@ -12,10 +12,10 @@ class AgentLlamaIndexMixin:
         self.__index = None
         self.__chat_engine = None
         self.__retriever = None
-        self.__service_context: Optional[ServiceContext] = None
-        self.__storage_context: StorageContext = None
-        self.__transformations: Optional[List[TransformComponent]] = None
-        self.__index_struct: Optional[IndexDict] = None
+        self.__service_context = None
+        self.__storage_context = None
+        self.__transformations = None
+        self.__index_struct = None
         self.__callback_manager = None
         self.__pdf_reader = None
         self.__epub_reader = None
@@ -95,6 +95,7 @@ class AgentLlamaIndexMixin:
         # self.__load_index_struct()
 
     def __load_llm(self, model, tokenizer):
+        # from llama_index.llms.huggingface import HuggingFaceLLM
         try:
             self.__llm = HuggingFaceLLM(
                 model=model,
