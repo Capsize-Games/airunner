@@ -29,16 +29,6 @@ class ControlnetHandlerMixin:
         self.current_load_controlnet = False
         self.controlnet_loaded = False
         self.downloading_controlnet = False
-        signals = {
-            SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
-            SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
-            SignalCode.CONTROLNET_LOAD_MODEL_SIGNAL: self.on_controlnet_load_model_signal,
-            SignalCode.CONTROLNET_UNLOAD_MODEL_SIGNAL: self.on_unload_controlnet_model_signal,
-            SignalCode.CONTROLNET_PROCESSOR_LOAD_SIGNAL: self.on_controlnet_load_processor_signal,
-            SignalCode.CONTROLNET_PROCESSOR_UNLOAD_SIGNAL: self.on_controlnet_unload_processor_signal,
-        }
-        for code, handler in signals.items():
-            self.register(code, handler)
 
     @property
     def controlnet_type(self):
@@ -69,9 +59,9 @@ class ControlnetHandlerMixin:
 
     @property
     def controlnet_image(self):
-        if (
-                self._controlnet_image is None or
-                self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
+        if self.settings["controlnet_enabled"] and (
+            self._controlnet_image is None or
+            self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
         ):
             self.logger.debug("Getting controlnet image")
             self._controlnet_image = self.__preprocess_for_controlnet(self.sd_request.drawing_pad_image)
@@ -153,8 +143,10 @@ class ControlnetHandlerMixin:
                 local_files_only=True,
                 device=self.device,
             )
-            self.change_model_status(ModelType.CONTROLNET, ModelStatus.READY if not self.pipe else ModelStatus.LOADED, short_path)
-            self.swap_pipeline()
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.READY, short_path)
+            if self.pipe:
+                self.pipe.controlnet = self.controlnet
+                self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED, short_path)
         except Exception as e:
             self.logger.error(f"Error loading controlnet {e}")
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED, short_path)
@@ -248,14 +240,5 @@ class ControlnetHandlerMixin:
             self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.LOADED, self.controlnet_type)
 
     def __remove_controlnet_from_pipe(self):
-        if self.pipe and hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
-            status = ModelStatus.READY
-            path = self.controlnet_model["path"]
-        else:
-            status = ModelStatus.UNLOADED
-            path = ""
-
         if self.pipe:
             self.swap_pipeline()
-
-        self.change_model_status(ModelType.CONTROLNET, status, path)

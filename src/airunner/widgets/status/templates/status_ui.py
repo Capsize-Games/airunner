@@ -22,7 +22,7 @@ class Ui_status_widget(object):
     def setupUi(self, status_widget):
         if not status_widget.objectName():
             status_widget.setObjectName(u"status_widget")
-        status_widget.resize(700, 44)
+        status_widget.resize(1198, 152)
         status_widget.setStyleSheet(u"font-size: 12px")
         self.horizontalLayout = QHBoxLayout(status_widget)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
@@ -68,30 +68,6 @@ class Ui_status_widget(object):
 
         self.horizontalLayout.addWidget(self.cuda_status)
 
-        self.line = QFrame(status_widget)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.Shape.VLine)
-        self.line.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.horizontalLayout.addWidget(self.line)
-
-        self.ram_stats = QLabel(status_widget)
-        self.ram_stats.setObjectName(u"ram_stats")
-
-        self.horizontalLayout.addWidget(self.ram_stats)
-
-        self.line_3 = QFrame(status_widget)
-        self.line_3.setObjectName(u"line_3")
-        self.line_3.setFrameShape(QFrame.Shape.VLine)
-        self.line_3.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.horizontalLayout.addWidget(self.line_3)
-
-        self.vram_stats = QLabel(status_widget)
-        self.vram_stats.setObjectName(u"vram_stats")
-
-        self.horizontalLayout.addWidget(self.vram_stats)
-
 
         self.retranslateUi(status_widget)
 
@@ -101,10 +77,8 @@ class Ui_status_widget(object):
     def retranslateUi(self, status_widget):
         status_widget.setWindowTitle(QCoreApplication.translate("status_widget", u"Form", None))
         self.system_message.setText(QCoreApplication.translate("status_widget", u"system message", None))
-        self.queue_stats.setText(QCoreApplication.translate("status_widget", u"queue", None))
-        self.nsfw_status.setText(QCoreApplication.translate("status_widget", u"nsfw", None))
-        self.cuda_status.setText(QCoreApplication.translate("status_widget", u"gpu", None))
-        self.ram_stats.setText(QCoreApplication.translate("status_widget", u"ram", None))
-        self.vram_stats.setText(QCoreApplication.translate("status_widget", u"vram", None))
+        self.queue_stats.setText(QCoreApplication.translate("status_widget", u"Queued items: 0", None))
+        self.nsfw_status.setText(QCoreApplication.translate("status_widget", u"Safety Checker", None))
+        self.cuda_status.setText(QCoreApplication.translate("status_widget", u"NVIDIA", None))
     # retranslateUi
 

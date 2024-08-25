@@ -20,6 +20,48 @@ class TTSHandler(BaseHandler):
     model_class_ = None
     processor_class_ = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.character_replacement_map = {
+            "\n": " ",
+            "’": "'",
+            "-": " "
+        }
+        self.text_queue = Queue()
+        self.single_character_sentence_enders = [".", "?", "!", "…"]
+        self.double_character_sentence_enders = [".”", "?”", "!”", "…”", ".'", "?'", "!'", "…'"]
+        self.sentence_delay_time = 1500
+        self.sentence_sample_rate = 20000
+        self.sentence_blocking = True
+        self.buffer_length = 10
+        self.input_text = ""
+        self.buffer = []
+        self.current_sentence = ""
+        self.new_sentence = ""
+        self.tts_sentence = None
+        self.thread_started = False
+        self.is_playing = False
+        self.current_model = None
+        self.do_offload_to_cpu = True
+        self.message = ""
+        self.loaded = False
+        self.model = None
+        self.tokenizer = None
+        self.current_tokenizer = None
+        self.vocoder = None
+        self.processor = None
+        self.corpus = []
+        self.speaker_embeddings = None
+        self.dataset = None
+        self.sentences = []
+        self.tts_enabled = self.settings["tts_enabled"]
+        self.engine = None
+        self.do_interrupt = False
+        self.cancel_generated_speech = False
+        self.paused = False
+        self.model_type = "tts"
+
     @property
     def cuda_index(self):
         return self.settings["tts_settings"]["cuda_index"]
@@ -79,75 +121,6 @@ class TTSHandler(BaseHandler):
     @property
     def sentence_chunks(self):
         return self.settings["tts_settings"]["sentence_chunks"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.character_replacement_map = {
-            "\n": " ",
-            "’": "'",
-            "-": " "
-        }
-        self.text_queue = Queue()
-        self.single_character_sentence_enders = [".", "?", "!", "…"]
-        self.double_character_sentence_enders = [".”", "?”", "!”", "…”", ".'", "?'", "!'", "…'"]
-        self.sentence_delay_time = 1500
-        self.sentence_sample_rate = 20000
-        self.sentence_blocking = True
-        self.buffer_length = 10
-        self.input_text = ""
-        self.buffer = []
-        self.current_sentence = ""
-        self.new_sentence = ""
-        self.tts_sentence = None
-        self.thread_started = False
-        self.is_playing = False
-        self.current_model = None
-        self.do_offload_to_cpu = True
-        self.message = ""
-        self.loaded = False
-        self.model = None
-        self.tokenizer = None
-        self.current_tokenizer = None
-        self.vocoder = None
-        self.processor = None
-        self.corpus = []
-        self.speaker_embeddings = None
-        self.dataset = None
-        self.sentences = []
-        self.tts_enabled = self.settings["tts_enabled"]
-        self.engine = None
-        self.do_interrupt = False
-        self.cancel_generated_speech = False
-        self.paused = False
-        self.model_type = "tts"
-
-        self.logger.debug("Loading")
-        #self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
-        self.register(SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal)
-        self.register(SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal)
-        self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
-        self.register(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal)
-        self.register(SignalCode.TTS_LOAD_SIGNAL, self.on_tts_load_signal)
-        self.register(SignalCode.TTS_UNLOAD_SIGNAL, self.on_tts_unload_signal)
-
-        self.register(SignalCode.TTS_PROCESSOR_LOAD_SIGNAL, self.on_tts_processor_load_signal)
-        self.register(SignalCode.TTS_PROCESSOR_UNLOAD_SIGNAL, self.on_tts_processor_unload_signal)
-
-        self.register(SignalCode.TTS_VOCODER_LOAD_SIGNAL, self.on_tts_vocoder_load_signal)
-        self.register(SignalCode.TTS_VOCODER_UNLOAD_SIGNAL, self.on_tts_vocoder_unload_signal)
-
-        self.register(SignalCode.TTS_SPEAKER_EMBEDDINGS_LOAD_SIGNAL, self.on_tts_speaker_embeddings_load_signal)
-        self.register(SignalCode.TTS_SPEAKER_EMBEDDINGS_UNLOAD_SIGNAL, self.on_tts_speaker_embeddings_unload_signal)
-
-        self.register(SignalCode.TTS_TOKENIZER_LOAD_SIGNAL, self.on_tts_tokenizer_load_signal)
-        self.register(SignalCode.TTS_TOKENIZER_UNLOAD_SIGNAL, self.on_tts_tokenizer_unload_signal)
-
-        self.register(SignalCode.TTS_DATASET_LOAD_SIGNAL, self.on_dataset_tts_load_signal)
-        self.register(SignalCode.TTS_DATASET_UNLOAD_SIGNAL, self.on_dataset_tts_unload_signal)
-
-        self.register(SignalCode.TTS_FEATURE_EXTRACTOR_LOAD_SIGNAL, self.on_tts_feature_extractor_load_signal)
-        self.register(SignalCode.TTS_FEATURE_EXTRACTOR_UNLOAD_SIGNAL, self.on_tts_feature_extractor_unload_signal)
 
     def on_enable_tts_signal(self, _data: dict = None):
         self.tts_enabled = True
