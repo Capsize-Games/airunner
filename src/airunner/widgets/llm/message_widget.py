@@ -86,6 +86,6 @@ class MessageWidget(BaseWidget):
         return self.sizeHint()
 
     def update_message(self, text):
-        self.message = text
+        self.message += text
         self.ui.content.setPlainText(self.message)
 
