@@ -123,6 +123,9 @@ class ControlnetHandlerMixin:
         self.__load_controlnet_processor()
         self.make_controlnet_memory_efficient()
 
+        if not self.controlnet or not self.processor:
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED, self.model_path)
+
     def apply_controlnet_to_pipe(self):
         self.__apply_controlnet_to_pipe()
         self.__apply_controlnet_processor_to_pipe()
@@ -154,9 +157,7 @@ class ControlnetHandlerMixin:
 
         self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.LOADING, self.controlnet_type)
         try:
-            self.processor = Processor(
-                self.controlnet_type
-            )
+            self.processor = Processor(self.controlnet_type)
             self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.LOADED, self.controlnet_type)
         except Exception as e:
             self.logger.error(e)
@@ -184,6 +185,9 @@ class ControlnetHandlerMixin:
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED, short_path)
 
     def __preprocess_for_controlnet(self, image):
+        if self.processor is None:
+            self.__load_controlnet_processor()
+
         if self.processor is not None:
             if image is not None:
                 self.logger.debug("Controlnet: Processing image")
