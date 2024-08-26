@@ -96,14 +96,11 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         #     self.register_vision_workers()
 
     def register_sd_workers(self):
-        print("register_sd_workers")
         from airunner.workers.sd_worker import SDWorker
         self.sd_worker = create_worker(SDWorker)
         self.sd_state = "loaded"
-        print("DONE")
 
     def register_llm_workers(self, agent_class, do_load_llm_on_init, agent_options):
-        print("register_llm_workers")
         from airunner.workers.llm_request_worker import LLMRequestWorker
         from airunner.workers.llm_generate_worker import LLMGenerateWorker
         if agent_class is None:
@@ -116,31 +113,24 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             agent_class=agent_class,
             agent_options=agent_options
         )
-        print("DONE")
 
     def register_tts_workers(self):
-        print("register_tts_workers")
         from airunner.workers.tts_generator_worker import TTSGeneratorWorker
         from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
         self.tts_generator_worker = create_worker(TTSGeneratorWorker)
         self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
-        print("DONE")
 
     def register_stt_workers(self):
-        print("register_stt_workers")
         from airunner.workers.audio_capture_worker import AudioCaptureWorker
         from airunner.workers.audio_processor_worker import AudioProcessorWorker
         self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
         self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
-        print("DONE")
 
     def register_vision_workers(self):
-        print("register_vision_workers")
         from airunner.workers.vision_capture_worker import VisionCaptureWorker
         from airunner.workers.vision_processor_worker import VisionProcessorWorker
         self.vision_capture_worker = create_worker(VisionCaptureWorker)
         self.vision_processor_worker = create_worker(VisionProcessorWorker)
-        print("DONE")
 
     def on_llm_request_worker_response_signal(self, message: dict):
         if self.llm_generate_worker:
