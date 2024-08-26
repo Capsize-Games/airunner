@@ -118,6 +118,7 @@ class SDHandler(
         self.extra_args = None
         self.latents = None
         self.sd_mode = None
+        self.pipe = None
         self.image_preset = ""
         self.data = {
             "action": "txt2img",
@@ -134,6 +135,10 @@ class SDHandler(
         self.model_status = {}
         for model_type in ModelType:
             self.model_status[model_type] = ModelStatus.UNLOADED
+
+    @property
+    def input_image(self):
+        return self.sd_request.input_image
 
     @property
     def sd_request(self):
@@ -168,41 +173,6 @@ class SDHandler(
             return self.outpaint is not None
         elif self.sd_request.is_depth2img:
             return self.depth2img is not None
-
-    @property
-    def pipe(self):
-        try:
-            if self.sd_request.is_txt2img:
-                return self.txt2img
-            elif self.sd_request.is_img2img:
-                return self.img2img
-            elif self.sd_request.is_outpaint:
-                return self.outpaint
-            elif self.sd_request.is_depth2img:
-                return self.depth2img
-            elif self.sd_request.is_pix2pix:
-                return self.pix2pix
-            else:
-                self.logger.warning(
-                    f"Invalid action for pipe {self.sd_request.section} Unable to load image generator model."
-                )
-                return None
-        except Exception as e:
-            self.logger.error(f"Error getting pipe {e}")
-            return None
-
-    @pipe.setter
-    def pipe(self, value):
-        if self.sd_request.is_txt2img:
-            self.txt2img = value
-        elif self.sd_request.is_img2img:
-            self.img2img = value
-        elif self.sd_request.is_outpaint:
-            self.outpaint = value
-        elif self.sd_request.is_depth2img:
-            self.depth2img = value
-        elif self.sd_request.is_pix2pix:
-            self.pix2pix = value
 
     @property
     def __cuda_error_message(self) -> str:
