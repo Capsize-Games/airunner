@@ -348,8 +348,8 @@ class SDRequest(
         if not self.settings["controlnet_enabled"]:
             if self.is_img2img or self.is_depth2img:
                 extra_args = {**extra_args, **{
-                    "strength": self.generator_settings.strength,
-                    "guidance_scale": self.generator_settings.image_guidance_scale,
+                    "strength": self.settings["brush_settings"]["strength"] / 100,
+                    "guidance_scale": self.settings["brush_settings"]["guidance_scale"] / 100,
                 }}
             elif self.is_pix2pix:
                 extra_args = {**extra_args, **{
@@ -397,9 +397,9 @@ class SDRequest(
                 "guess_mode": None,
                 "control_guidance_start": 0.0,
                 "control_guidance_end": 1.0,
-                "strength": self.settings["brush_settings"]["strength"] / 100, #self.generator_settings.controlnet_image_settings.strength,
-                #"guidance_scale": self.settings["brush_settings"]["guidance_scale"] / 100, #self.generator_settings.controlnet_image_settings.guidance_scale,
-                "controlnet_conditioning_scale": self.settings["brush_settings"]["conditioning_scale"] / 100, #self.generator_settings.controlnet_image_settings.conditioning_scale,
+                "strength": self.settings["brush_settings"]["strength"] / 100,
+                "guidance_scale": self.settings["brush_settings"]["guidance_scale"] / 100,
+                "controlnet_conditioning_scale": self.settings["brush_settings"]["conditioning_scale"] / 100,
                 "controlnet": [
                     self.generator_settings.controlnet_image_settings.controlnet
                 ],
