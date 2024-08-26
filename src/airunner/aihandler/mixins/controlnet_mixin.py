@@ -55,7 +55,7 @@ class ControlnetHandlerMixin:
             return StableDiffusionControlNetInpaintPipeline
         else:
             raise ValueError(
-                f"Invalid action {self.sd_request.generator_settings.section} unable to get controlnet action diffuser")
+                f"Invalid action {self.sd_request.section} unable to get controlnet action diffuser")
 
     @property
     def controlnet_image(self):
@@ -126,9 +126,6 @@ class ControlnetHandlerMixin:
     def apply_controlnet_to_pipe(self):
         self.__apply_controlnet_to_pipe()
         self.__apply_controlnet_processor_to_pipe()
-
-    def remove_controlnet_from_pipe(self):
-        self.__remove_controlnet_from_pipe()
 
     def __load_controlnet_model(self):
         self.logger.debug(f"Loading controlnet {self.controlnet_type} to {self.device}")
@@ -224,7 +221,6 @@ class ControlnetHandlerMixin:
         clear_memory()
         self.reset_applied_memory_settings()
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.UNLOADED, "")
-        self.swap_pipeline()
 
     def __unload_controlnet_processor(self):
         self.processor = None
@@ -238,7 +234,3 @@ class ControlnetHandlerMixin:
     def __apply_controlnet_processor_to_pipe(self):
         if self.pipe and hasattr(self.pipe, "processor") and self.pipe.processor is not None:
             self.change_model_status(ModelType.CONTROLNET_PROCESSOR, ModelStatus.LOADED, self.controlnet_type)
-
-    def __remove_controlnet_from_pipe(self):
-        if self.pipe:
-            self.swap_pipeline()

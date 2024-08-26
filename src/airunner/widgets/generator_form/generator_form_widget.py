@@ -159,11 +159,6 @@ class GeneratorForm(BaseWidget):
         self.do_generate()
 
     def do_generate(self):
-        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, {
-            "callback": self.call_generate
-        })
-
-    def call_generate(self):
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
     def on_application_settings_changed_signal(self, _message: dict):

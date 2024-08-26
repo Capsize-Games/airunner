@@ -187,11 +187,7 @@ class SDHandler(
                 return self.pix2pix
             else:
                 self.logger.warning(
-                    (
-                        f"Invalid action"
-                        f" for pipe {self.sd_request.generator_settings.section}"
-                        " Unable to load image generator model."
-                    )
+                    f"Invalid action for pipe {self.sd_request.section} Unable to load image generator model."
                 )
                 return None
         except Exception as e:
@@ -390,7 +386,7 @@ class SDHandler(
             response = None
 
         if response:
-            response["action"] = self.sd_request.generator_settings.section
+            response["action"] = self.sd_request.section
             response["outpaint_box_rect"] = self.sd_request.active_rect
 
         self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
@@ -416,9 +412,9 @@ class SDHandler(
         message = str(error)
         if (
             "got an unexpected keyword argument 'image'" in message and
-            self.sd_request.generator_settings.section in ["outpaint", "pix2pix", "depth2img"]
+            self.sd_request.section in ["outpaint", "pix2pix", "depth2img"]
         ):
-            message = f"This model does not support {self.sd_request.generator_settings.section}"
+            message = f"This model does not support {self.sd_request.section}"
         traceback.print_exc()
         self.logger.error(error)
         self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, message)
