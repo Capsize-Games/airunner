@@ -210,7 +210,7 @@ class SafetyCheckerMixin:
 
     def __remove_safety_checker_from_pipe(self):
         if self.pipe is not None:
-            if self.pipe.safety_checker is not None:
+            if hasattr(self.pipe, "safety_checker") and self.pipe.safety_checker is not None:
                 self.logger.debug("Removing safety checker from pipe")
                 self.pipe.safety_checker = None
         if self.safety_checker is not None:
