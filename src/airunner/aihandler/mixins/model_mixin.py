@@ -67,16 +67,6 @@ class ModelMixin:
         self.__current_tokenizer_path = ""
         self._pipe = None
 
-    @property
-    def pipe(self):
-        return self._pipe
-
-    @pipe.setter
-    def pipe(self, value):
-        import traceback
-        traceback.print_stack()
-        self._pipe = value
-
     def on_unload_stablediffusion_signal(self, _message: dict = None):
         self.unload_image_generator_model()
 
@@ -282,6 +272,8 @@ class ModelMixin:
         clear_memory()
         if "image" in data and data["image"] is None:
             del data["image"]
+        if self.enable_controlnet and not self.controlnet:
+            self.load_controlnet()
         self.__pipe_swap(data)
         results = self.pipe(**data)
         images = results.get("images", [])

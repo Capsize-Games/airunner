@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>641</width>
-    <height>728</height>
+    <height>537</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -54,25 +54,10 @@
        <string>StableDiffusion</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout">
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
        <item row="0" column="0">
-        <widget class="QSplitter" name="stable_diffusion_splitter">
+        <widget class="QSplitter" name="splitter">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="childrenCollapsible">
-          <bool>false</bool>
          </property>
          <widget class="QScrollArea" name="scrollArea">
           <property name="widgetResizable">
@@ -83,8 +68,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>635</width>
-             <height>113</height>
+             <width>617</width>
+             <height>158</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_4">
