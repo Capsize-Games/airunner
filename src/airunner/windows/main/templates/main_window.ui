@@ -1273,20 +1273,8 @@
           </layout>
          </widget>
          <widget class="QWidget" name="panel_container" native="true">
-          <layout class="QGridLayout" name="gridLayout_2">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item row="0" column="0">
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
             <widget class="ToolTabWidget" name="tool_tab_widget" native="true"/>
            </item>
           </layout>
@@ -1437,6 +1425,8 @@
     <addaction name="separator"/>
     <addaction name="actionUnload_Image_model"/>
     <addaction name="actionUnload_LLm"/>
+    <addaction name="separator"/>
+    <addaction name="actionStats"/>
     <addaction name="separator"/>
     <addaction name="actionClear_Memory"/>
     <addaction name="separator"/>
@@ -2193,6 +2183,11 @@
     <string>Run Setup Wizard</string>
    </property>
   </action>
+  <action name="actionStats">
+   <property name="text">
+    <string>Stats</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -2642,8 +2637,8 @@
    <slot>action_ai_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>57</x>
-     <y>41</y>
+     <x>42</x>
+     <y>111</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -2658,7 +2653,7 @@
    <slot>action_new_document_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>108</x>
+     <x>43</x>
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
@@ -2674,7 +2669,7 @@
    <slot>action_export_image_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>234</x>
+     <x>169</x>
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
@@ -2690,7 +2685,7 @@
    <slot>action_undo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>285</x>
+     <x>220</x>
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
@@ -2706,7 +2701,7 @@
    <slot>action_redo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>327</x>
+     <x>262</x>
      <y>63</y>
     </hint>
     <hint type="destinationlabel">
@@ -2962,8 +2957,8 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>352</x>
-     <y>48</y>
+     <x>313</x>
+     <y>63</y>
     </hint>
     <hint type="destinationlabel">
      <x>498</x>
@@ -2978,8 +2973,8 @@
    <slot>action_toggle_select(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>401</x>
-     <y>35</y>
+     <x>355</x>
+     <y>62</y>
     </hint>
     <hint type="destinationlabel">
      <x>457</x>
@@ -2994,8 +2989,8 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>456</x>
-     <y>43</y>
+     <x>406</x>
+     <y>63</y>
     </hint>
     <hint type="destinationlabel">
      <x>702</x>
@@ -3010,8 +3005,8 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>506</x>
-     <y>52</y>
+     <x>448</x>
+     <y>63</y>
     </hint>
     <hint type="destinationlabel">
      <x>928</x>
@@ -3026,8 +3021,8 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>544</x>
-     <y>49</y>
+     <x>499</x>
+     <y>63</y>
     </hint>
     <hint type="destinationlabel">
      <x>1078</x>
@@ -3042,8 +3037,8 @@
    <slot>action_center_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>592</x>
-     <y>48</y>
+     <x>541</x>
+     <y>63</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3147,6 +3142,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionStats</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_stats_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>539</x>
+     <y>415</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -3242,5 +3253,6 @@
   <slot>action_image_generator_toggled(bool)</slot>
   <slot>action_controlnet_toggled(bool)</slot>
   <slot>action_toggle_llm(bool)</slot>
+  <slot>action_stats_triggered()</slot>
  </slots>
 </ui>

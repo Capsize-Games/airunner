@@ -196,9 +196,10 @@ class SafetyCheckerMixin:
             self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED, self.safety_checker_model["path"])
 
     def __remove_feature_extractor_from_pipe(self):
-        self.logger.debug("Removing feature extractor from pipe")
         if self.pipe is not None:
-            self.pipe.feature_extractor = None
+            if self.pipe.feature_extractor is not None:
+                self.logger.debug("Removing feature extractor from pipe")
+                self.pipe.feature_extractor = None
         if self.feature_extractor is not None:
             status = ModelStatus.READY
             path = self.feature_extractor_path
@@ -208,9 +209,10 @@ class SafetyCheckerMixin:
         self.change_model_status(ModelType.FEATURE_EXTRACTOR, status, path)
 
     def __remove_safety_checker_from_pipe(self):
-        self.logger.debug("Removing safety checker from pipe")
         if self.pipe is not None:
-            self.pipe.safety_checker = None
+            if self.pipe.safety_checker is not None:
+                self.logger.debug("Removing safety checker from pipe")
+                self.pipe.safety_checker = None
         if self.safety_checker is not None:
             status = ModelStatus.READY
             path = self.safety_checker_model["path"]

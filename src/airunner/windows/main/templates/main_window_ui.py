@@ -306,6 +306,8 @@ class Ui_MainWindow(object):
         self.actionModel_Manager_4.setObjectName(u"actionModel_Manager_4")
         self.actionRun_setup_wizard_2 = QAction(MainWindow)
         self.actionRun_setup_wizard_2.setObjectName(u"actionRun_setup_wizard_2")
+        self.actionStats = QAction(MainWindow)
+        self.actionStats.setObjectName(u"actionStats")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setEnabled(True)
@@ -821,13 +823,12 @@ class Ui_MainWindow(object):
         self.content_splitter.addWidget(self.canvas_widget)
         self.panel_container = QWidget(self.content_splitter)
         self.panel_container.setObjectName(u"panel_container")
-        self.gridLayout_2 = QGridLayout(self.panel_container)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_2 = QVBoxLayout(self.panel_container)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.tool_tab_widget = ToolTabWidget(self.panel_container)
         self.tool_tab_widget.setObjectName(u"tool_tab_widget")
 
-        self.gridLayout_2.addWidget(self.tool_tab_widget, 0, 0, 1, 1)
+        self.verticalLayout_2.addWidget(self.tool_tab_widget)
 
         self.content_splitter.addWidget(self.panel_container)
 
@@ -944,6 +945,8 @@ class Ui_MainWindow(object):
         self.menuTools.addAction(self.actionUnload_Image_model)
         self.menuTools.addAction(self.actionUnload_LLm)
         self.menuTools.addSeparator()
+        self.menuTools.addAction(self.actionStats)
+        self.menuTools.addSeparator()
         self.menuTools.addAction(self.actionClear_Memory)
         self.menuTools.addSeparator()
         self.menuTools.addAction(self.actionSafety_Checker)
@@ -1007,6 +1010,7 @@ class Ui_MainWindow(object):
         self.v2t_button.toggled.connect(MainWindow.v2t_button_toggled)
         self.ocr_button.toggled.connect(MainWindow.ocr_button_toggled)
         self.llm_button.toggled.connect(MainWindow.action_toggle_llm)
+        self.actionStats.triggered.connect(MainWindow.action_stats_triggered)
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
@@ -1214,6 +1218,7 @@ class Ui_MainWindow(object):
         self.outpaint_enabled.setText(QCoreApplication.translate("MainWindow", u"Enabled", None))
         self.actionModel_Manager_4.setText(QCoreApplication.translate("MainWindow", u"Model Manager", None))
         self.actionRun_setup_wizard_2.setText(QCoreApplication.translate("MainWindow", u"Run Setup Wizard", None))
+        self.actionStats.setText(QCoreApplication.translate("MainWindow", u"Stats", None))
 #if QT_CONFIG(tooltip)
         self.file_new_button.setToolTip(QCoreApplication.translate("MainWindow", u"New", None))
 #endif // QT_CONFIG(tooltip)
