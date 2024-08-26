@@ -23,7 +23,7 @@ class SchedulerMixin:
 
     @property
     def scheduler_section(self):
-        return self.sd_request.generator_settings.section
+        return self.sd_request.section
 
     def on_scheduler_load_signal(self, _data: dict = None):
         self.load_scheduler()
@@ -42,7 +42,7 @@ class SchedulerMixin:
     def __scheduler_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"][f"{self.sd_request.generator_settings.section}_model_path"],
+                self.settings["path_settings"][f"{self.sd_request.section}_model_path"],
                 self.sd_request.generator_settings.version,
                 "scheduler",
                 "scheduler_config.json"

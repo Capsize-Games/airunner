@@ -104,7 +104,7 @@ class MemoryEfficientMixin:
             return
         self.vae_slicing_applied = self.settings["memory_settings"]["use_enable_vae_slicing"]
 
-        if self.sd_request.generator_settings.section not in [
+        if self.sd_request.section not in [
             "img2img", "depth2img", "pix2pix", "outpaint", "superresolution", "controlnet", "upscale"
         ]:
             if self.settings["memory_settings"]["use_enable_vae_slicing"]:

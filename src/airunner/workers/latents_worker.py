@@ -29,7 +29,7 @@ class LatentsWorker(Worker):
             SignalCode.SD_IMAGE_GENERATED_SIGNAL,
             {
                 "images": [image],
-                "action": sd_request.generator_settings.section,
+                "action": sd_request.section,
                 "outpaint_box_rect": sd_request.active_rect,
             }
         )

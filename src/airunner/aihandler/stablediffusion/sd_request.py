@@ -98,7 +98,6 @@ class GeneratorSettings:
         self.version = generator_settings.get("version", STABLEDIFFUSION_GENERATOR_SETTINGS["version"])
         self.is_preset = generator_settings.get("is_preset", STABLEDIFFUSION_GENERATOR_SETTINGS["is_preset"])
         self.input_image = generator_settings.get("input_image", STABLEDIFFUSION_GENERATOR_SETTINGS["input_image"])
-        self.section = generator_settings.get("section", DEFAULT_GENERATOR_SETTINGS["section"])
         self.generator_name = generator_settings.get("generator_name", DEFAULT_GENERATOR_SETTINGS["generator_name"])
         self.controlnet_image_settings = ControlnetImageSettings()
 
@@ -149,32 +148,46 @@ class SDRequest(
         return self.drawing_pad_image
 
     @property
+    def outpaint_image(self):
+        base_64_image = self.settings["outpaint_settings"]["image"]
+        return convert_base64_to_image(base_64_image)
+
+    @property
+    def section(self):
+        section = GeneratorSection.TXT2IMG
+        if self.drawing_pad_image is not None and self.settings["drawing_pad_settings"]["enabled"]:
+            section = GeneratorSection.IMG2IMG
+        if self.outpaint_image is not None and self.settings["outpaint_settings"]["enabled"]:
+            section = GeneratorSection.OUTPAINT
+        return section.value
+
+    @property
     def is_outpaint(self) -> bool:
-        return self.generator_settings.section == GeneratorSection.OUTPAINT.value
+        return self.section == GeneratorSection.OUTPAINT.value
 
     @property
     def is_txt2img(self) -> bool:
-        return self.generator_settings.section == GeneratorSection.TXT2IMG.value and self.input_image is None
+        return self.section == GeneratorSection.TXT2IMG.value
 
     @property
     def is_upscale(self):
-        return self.generator_settings.section == GeneratorSection.UPSCALE.value
+        return self.section == GeneratorSection.UPSCALE.value
 
     @property
     def is_img2img(self):
-        return self.generator_settings.section == GeneratorSection.TXT2IMG.value and self.input_image is not None
+        return self.section == GeneratorSection.IMG2IMG.value
 
     @property
     def is_depth2img(self):
-        return self.generator_settings.section == GeneratorSection.DEPTH2IMG.value
+        return self.section == GeneratorSection.DEPTH2IMG.value
 
     @property
     def is_pix2pix(self):
-        return self.generator_settings.section == GeneratorSection.PIX2PIX.value
+        return self.section == GeneratorSection.PIX2PIX.value
 
     def load_generator_settings(self):
         self.generator_settings = GeneratorSettings(settings=self.settings)
-        self.action_has_safety_checker = self.generator_settings.section not in [GeneratorSection.DEPTH2IMG.value]
+        self.action_has_safety_checker = self.section not in [GeneratorSection.DEPTH2IMG.value]
 
     def initialize_prompt_embeds(self, prompt_embeds, negative_prompt_embeds, args: dict):
         self.prompt_embeds = prompt_embeds
@@ -283,7 +296,7 @@ class SDRequest(
         clip_skip = int(self.generator_settings.clip_skip)
 
         args = {
-            "action": self.generator_settings.section,
+            "action": self.section,
             "outpaint_box_rect": self.active_rect,
             "width": width,
             "height": height,

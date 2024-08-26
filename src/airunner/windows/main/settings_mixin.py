@@ -194,6 +194,7 @@ class SettingsMixin:
             "text_models": f"{base_path}/text/models",
             "text_other": f"{base_path}/text/other",
             "txt2img_model_path": f"{base_path}/art/models/txt2img",
+            "img2img_model_path": f"{base_path}/art/models/txt2img",
             "depth2img_model_path": f"{base_path}/art/models/depth2img",
             "pix2pix_model_path": f"{base_path}/art/models/pix2pix",
             "inpaint_model_path": f"{base_path}/art/models/inpaint",
