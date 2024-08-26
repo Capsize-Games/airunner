@@ -49,55 +49,61 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.do_process_queue = None
         self.logger = Logger(prefix=self.__class__.__name__)
         self.is_capturing_image = False
-        self.register(SignalCode.STT_HEAR_SIGNAL, self.on_hear_signal)
-        self.register(SignalCode.ENGINE_CANCEL_SIGNAL, self.on_engine_cancel_signal)
-        self.register(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL, self.on_engine_stop_processing_queue_signal)
-        self.register(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL, self.on_engine_start_processing_queue_signal)
-        self.register(SignalCode.LOG_ERROR_SIGNAL, self.on_error_signal)
-        self.register(SignalCode.LOG_WARNING_SIGNAL, self.on_warning_signal)
-        self.register(SignalCode.LOG_STATUS_SIGNAL, self.on_status_signal)
-        self.register(SignalCode.VISION_CAPTION_GENERATED_SIGNAL, self.on_caption_generated_signal)
-        self.register(SignalCode.LLM_RESPONSE_SIGNAL, self.on_llm_response_signal)
-        self.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal)
-        self.register(SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal)
-        self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured)
-        self.register(SignalCode.TTS_REQUEST, self.on_tts_request)
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
-        self.register(SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal)
+        signals = [
+            (SignalCode.STT_HEAR_SIGNAL, self.on_hear_signal),
+            (SignalCode.ENGINE_CANCEL_SIGNAL, self.on_engine_cancel_signal),
+            (SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL, self.on_engine_stop_processing_queue_signal),
+            (SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL, self.on_engine_start_processing_queue_signal),
+            (SignalCode.LOG_ERROR_SIGNAL, self.on_error_signal),
+            (SignalCode.LOG_WARNING_SIGNAL, self.on_warning_signal),
+            (SignalCode.LOG_STATUS_SIGNAL, self.on_status_signal),
+            (SignalCode.VISION_CAPTION_GENERATED_SIGNAL, self.on_caption_generated_signal),
+            (SignalCode.LLM_RESPONSE_SIGNAL, self.on_llm_response_signal),
+            (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal),
+            (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal),
+            (SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured),
+            (SignalCode.TTS_REQUEST, self.on_tts_request),
+            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal),
+            (SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal),
+        ]
+        for signal in signals:
+            self.register(signal[0], signal[1])
 
         self.sd_worker = None
         self.sd_state = None
-        if not disable_sd:
-            from airunner.workers.sd_worker import SDWorker
-            self.sd_worker = create_worker(SDWorker)
-            self.sd_state = "loaded"
-
         self.llm_request_worker = None
         self.llm_generate_worker = None
+        self.tts_generator_worker = None
+        self.tts_vocalizer_worker = None
+        self.stt_audio_capture_worker = None
+        self.stt_audio_processor_worker = None
+        self.vision_capture_worker = None
+        self.vision_processor_worker = None
+
+        if not disable_sd:
+            self.register_sd_workers()
+
         if not disable_llm:
             self.register_llm_workers(agent_class, do_load_llm_on_init, agent_options)
 
         if not disable_tts:
-            from airunner.workers.tts_generator_worker import TTSGeneratorWorker
-            from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
-            self.tts_generator_worker = create_worker(TTSGeneratorWorker)
-            self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
+            self.register_tts_workers()
 
         # if not disable_stt:
-        #     from airunner.workers.audio_capture_worker import AudioCaptureWorker
-        #     from airunner.workers.audio_processor_worker import AudioProcessorWorker
-        #     self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-        #     self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
-
-        # if not disable_vision_capture:
-        #     from airunner.workers.vision_capture_worker import VisionCaptureWorker
-        #     from airunner.workers.vision_processor_worker import VisionProcessorWorker
-        #     self.vision_capture_worker = create_worker(VisionCaptureWorker)
-        #     self.vision_processor_worker = create_worker(VisionProcessorWorker)
+        #     self.register_stt_workers()
         #
-        # self.toggle_vision_capture()
+        # if not disable_vision_capture:
+        #     self.register_vision_workers()
+
+    def register_sd_workers(self):
+        print("register_sd_workers")
+        from airunner.workers.sd_worker import SDWorker
+        self.sd_worker = create_worker(SDWorker)
+        self.sd_state = "loaded"
+        print("DONE")
 
     def register_llm_workers(self, agent_class, do_load_llm_on_init, agent_options):
+        print("register_llm_workers")
         from airunner.workers.llm_request_worker import LLMRequestWorker
         from airunner.workers.llm_generate_worker import LLMGenerateWorker
         if agent_class is None:
@@ -110,6 +116,31 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             agent_class=agent_class,
             agent_options=agent_options
         )
+        print("DONE")
+
+    def register_tts_workers(self):
+        print("register_tts_workers")
+        from airunner.workers.tts_generator_worker import TTSGeneratorWorker
+        from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
+        self.tts_generator_worker = create_worker(TTSGeneratorWorker)
+        self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
+        print("DONE")
+
+    def register_stt_workers(self):
+        print("register_stt_workers")
+        from airunner.workers.audio_capture_worker import AudioCaptureWorker
+        from airunner.workers.audio_processor_worker import AudioProcessorWorker
+        self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
+        self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
+        print("DONE")
+
+    def register_vision_workers(self):
+        print("register_vision_workers")
+        from airunner.workers.vision_capture_worker import VisionCaptureWorker
+        from airunner.workers.vision_processor_worker import VisionProcessorWorker
+        self.vision_capture_worker = create_worker(VisionCaptureWorker)
+        self.vision_processor_worker = create_worker(VisionProcessorWorker)
+        print("DONE")
 
     def on_llm_request_worker_response_signal(self, message: dict):
         if self.llm_generate_worker:
