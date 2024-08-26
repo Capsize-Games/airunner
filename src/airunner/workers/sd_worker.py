@@ -87,7 +87,6 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.get_embeddings(message)
 
-
     def on_update_lora_signal(self, message):
         if self.sd:
             self.sd.on_update_lora_signal(message)
@@ -166,7 +165,6 @@ class SDWorker(Worker):
             )
         from airunner.aihandler.stablediffusion.sd_handler import SDHandler
         self.sd = SDHandler()
-        self.sd.load_stable_diffusion()
 
     def handle_message(self, message):
         if self.sd:

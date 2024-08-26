@@ -122,7 +122,6 @@ class SDHandler(
         self.data = {
             "action": "txt2img",
         }
-
         self.sd_mode = SDMode.DRAWING
         self.loaded = False
         self.loading = False
@@ -131,9 +130,7 @@ class SDHandler(
         self._generator = None
         self.do_interrupt_image_generation = False
         self.latents_worker = create_worker(LatentsWorker)
-
         self.current_state = HandlerState.INITIALIZED
-
         self.model_status = {}
         for model_type in ModelType:
             self.model_status[model_type] = ModelStatus.UNLOADED
@@ -326,25 +323,16 @@ class SDHandler(
             self.logger.error(f"Error adding lora to pipe: {e}")
             self.reload_model = True
 
-        #controlnet_initialized = False
-
-        # try:
-        #     controlnet_initialized = not self.settings["controlnet_enabled"] or (
-        #         self.controlnet is not None and
-        #         self.pipe.controlnet is not None and
-        #         self.processor is not None
-        #     )
-        # except AttributeError:
-        #     pass
-
         if (
             self.pipe is not None and
-            self.safety_checker_initialized is True# and
-            #controlnet_initialized is True
+            self.safety_checker_initialized is True
         ):
             self.current_state = HandlerState.READY
         else:
             self.current_state = HandlerState.ERROR
+
+        if not self.pipe:
+            self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
 
     def __reload_prompts(self):
         if (
