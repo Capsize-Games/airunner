@@ -1,3 +1,5 @@
+import threading
+
 import torch
 from airunner.enums import QueueType, SignalCode, ModelType, ModelStatus
 from airunner.workers.worker import Worker
@@ -197,7 +199,7 @@ class SDWorker(Worker):
 
     def on_do_generate_signal(self, message: dict):
         if self.sd:
-            self.sd.handle_generate_signal(message)
+            threading.Thread(target=self.sd.handle_generate_signal, args=(message,)).start()
 
     def on_interrupt_image_generation_signal(self, _message: dict = None):
         if self.sd:
