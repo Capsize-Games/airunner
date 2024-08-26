@@ -1,5 +1,3 @@
-import threading
-
 import torch
 from airunner.enums import QueueType, SignalCode, ModelType, ModelStatus
 from airunner.workers.worker import Worker
@@ -10,54 +8,44 @@ class SDWorker(Worker):
     queue_type = QueueType.GET_LAST_ITEM
 
     def __init__(self, prefix="SDWorker"):
-        super().__init__(prefix=prefix)
-        signals = {
-            SignalCode.RESET_APPLIED_MEMORY_SETTINGS: self.on_reset_applied_memory_settings,
-            SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.unload_safety_checker,
-            SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
-            SignalCode.SD_MOVE_TO_CPU_SIGNAL: self.on_move_to_cpu,
-            SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
-            SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
-            SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
-            SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
-            SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
-            SignalCode.SD_TOKENIZER_LOAD_SIGNAL: self.on_tokenizer_load_signal,
-            SignalCode.SD_TOKENIZER_UNLOAD_SIGNAL: self.on_tokenizer_unload_signal,
-            SignalCode.SD_LOAD_SIGNAL: self.on_load_stablediffusion_signal,
-            SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_stablediffusion_signal,
-
-            SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
-            SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
-            SignalCode.CONTROLNET_LOAD_MODEL_SIGNAL: self.on_controlnet_load_model_signal,
-            SignalCode.CONTROLNET_UNLOAD_MODEL_SIGNAL: self.on_unload_controlnet_model_signal,
-            SignalCode.CONTROLNET_PROCESSOR_LOAD_SIGNAL: self.on_controlnet_load_processor_signal,
-            SignalCode.CONTROLNET_PROCESSOR_UNLOAD_SIGNAL: self.on_controlnet_unload_processor_signal,
-
-            SignalCode.SCHEDULER_LOAD_SIGNAL: self.on_scheduler_load_signal,
-            SignalCode.SCHEDULER_UNLOAD_SIGNAL: self.on_scheduler_unload_signal,
-
-            SignalCode.LORA_UPDATE_SIGNAL: self.on_update_lora_signal,
-            SignalCode.LORA_ADD_SIGNAL: self.on_add_lora_signal,
-
-            SignalCode.EMBEDDING_UPDATE_SIGNAL: self.update_embedding,
-            SignalCode.EMBEDDING_ADD_SIGNAL: self.add_embedding,
-            SignalCode.EMBEDDING_SCAN_SIGNAL: self.scan_for_embeddings,
-            SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL: self.delete_missing_embeddings,
-            SignalCode.EMBEDDING_GET_ALL_SIGNAL: self.get_embeddings,
-
-            SignalCode.SAFETY_CHECKER_MODEL_LOAD_SIGNAL: self.on_safety_checker_model_load_signal,
-            SignalCode.SAFETY_CHECKER_MODEL_UNLOAD_SIGNAL: self.on_safety_checker_model_unload_signal,
-            SignalCode.FEATURE_EXTRACTOR_LOAD_SIGNAL: self.on_feature_extractor_load_signal,
-            SignalCode.FEATURE_EXTRACTOR_UNLOAD_SIGNAL: self.on_feature_extractor_unload_signal,
-            SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_safety_checker_load_signal,
-        }
-
-        for code, handler in signals.items():
-            self.register(code, handler)
-
+        self.signals = [
+            (SignalCode.RESET_APPLIED_MEMORY_SETTINGS, self.on_reset_applied_memory_settings),
+            (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.unload_safety_checker),
+            (SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal),
+            (SignalCode.SD_MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu),
+            (SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL, self.on_start_auto_image_generation_signal),
+            (SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL, self.on_stop_auto_image_generation_signal),
+            (SignalCode.DO_GENERATE_SIGNAL, self.on_do_generate_signal),
+            (SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL, self.on_interrupt_image_generation_signal),
+            (SignalCode.CHANGE_SCHEDULER_SIGNAL, self.on_change_scheduler_signal),
+            (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
+            (SignalCode.SD_TOKENIZER_LOAD_SIGNAL, self.on_tokenizer_load_signal),
+            (SignalCode.SD_TOKENIZER_UNLOAD_SIGNAL, self.on_tokenizer_unload_signal),
+            (SignalCode.SD_LOAD_SIGNAL, self.on_load_stablediffusion_signal),
+            (SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal),
+            (SignalCode.CONTROLNET_LOAD_SIGNAL, self.on_load_controlnet_signal),
+            (SignalCode.CONTROLNET_UNLOAD_SIGNAL, self.on_unload_controlnet_signal),
+            (SignalCode.CONTROLNET_LOAD_MODEL_SIGNAL, self.on_controlnet_load_model_signal),
+            (SignalCode.CONTROLNET_UNLOAD_MODEL_SIGNAL, self.on_unload_controlnet_model_signal),
+            (SignalCode.CONTROLNET_PROCESSOR_LOAD_SIGNAL, self.on_controlnet_load_processor_signal),
+            (SignalCode.CONTROLNET_PROCESSOR_UNLOAD_SIGNAL, self.on_controlnet_unload_processor_signal),
+            (SignalCode.SCHEDULER_LOAD_SIGNAL, self.on_scheduler_load_signal),
+            (SignalCode.SCHEDULER_UNLOAD_SIGNAL, self.on_scheduler_unload_signal),
+            (SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal),
+            (SignalCode.LORA_ADD_SIGNAL, self.on_add_lora_signal),
+            (SignalCode.EMBEDDING_UPDATE_SIGNAL, self.update_embedding),
+            (SignalCode.EMBEDDING_ADD_SIGNAL, self.add_embedding),
+            (SignalCode.EMBEDDING_SCAN_SIGNAL, self.scan_for_embeddings),
+            (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings),
+            (SignalCode.EMBEDDING_GET_ALL_SIGNAL, self.get_embeddings),
+            (SignalCode.SAFETY_CHECKER_MODEL_LOAD_SIGNAL, self.on_safety_checker_model_load_signal),
+            (SignalCode.SAFETY_CHECKER_MODEL_UNLOAD_SIGNAL, self.on_safety_checker_model_unload_signal),
+            (SignalCode.FEATURE_EXTRACTOR_LOAD_SIGNAL, self.on_feature_extractor_load_signal),
+            (SignalCode.FEATURE_EXTRACTOR_UNLOAD_SIGNAL, self.on_feature_extractor_unload_signal),
+            (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_safety_checker_load_signal),
+        ]
         self.sd = None
-        threading.Thread(target=self.load_stable_diffusion).start()
+        super().__init__(prefix=prefix)
 
     def on_safety_checker_model_load_signal(self, message):
         if self.sd:
@@ -78,7 +66,6 @@ class SDWorker(Worker):
     def on_safety_checker_load_signal(self, message):
         if self.sd:
             self.sd.on_safety_checker_load_signal(message)
-
 
     def update_embedding(self, message):
         if self.sd:
@@ -168,7 +155,7 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.on_tokenizer_unload_signal(data)
 
-    def load_stable_diffusion(self):
+    def start_worker_thread(self):
         if self.settings["sd_enabled"]:
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
