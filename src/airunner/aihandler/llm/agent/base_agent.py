@@ -9,7 +9,6 @@ from PySide6.QtCore import QObject
 
 from airunner.aihandler.llm.agent.agent_llamaindex_mixin import AgentLlamaIndexMixin
 from airunner.aihandler.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
-from airunner.aihandler.llm.agent.rag_search_worker import RagSearchWorker
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import (

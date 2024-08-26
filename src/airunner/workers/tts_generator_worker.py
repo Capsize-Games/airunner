@@ -15,36 +15,32 @@ class TTSGeneratorWorker(Worker):
     tokens = []
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        self.signals = {
+            (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
+            (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
+            # (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal),
+            (SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal),
+            (SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal),
+            (SignalCode.TTS_LOAD_SIGNAL, self.on_tts_load_signal),
+            (SignalCode.TTS_UNLOAD_SIGNAL, self.on_tts_unload_signal),
+            (SignalCode.TTS_PROCESSOR_LOAD_SIGNAL, self.on_tts_processor_load_signal),
+            (SignalCode.TTS_PROCESSOR_UNLOAD_SIGNAL, self.on_tts_processor_unload_signal),
+            (SignalCode.TTS_VOCODER_LOAD_SIGNAL, self.on_tts_vocoder_load_signal),
+            (SignalCode.TTS_VOCODER_UNLOAD_SIGNAL, self.on_tts_vocoder_unload_signal),
+            (SignalCode.TTS_SPEAKER_EMBEDDINGS_LOAD_SIGNAL, self.on_tts_speaker_embeddings_load_signal),
+            (SignalCode.TTS_SPEAKER_EMBEDDINGS_UNLOAD_SIGNAL, self.on_tts_speaker_embeddings_unload_signal),
+            (SignalCode.TTS_TOKENIZER_LOAD_SIGNAL, self.on_tts_tokenizer_load_signal),
+            (SignalCode.TTS_TOKENIZER_UNLOAD_SIGNAL, self.on_tts_tokenizer_unload_signal),
+            (SignalCode.TTS_DATASET_LOAD_SIGNAL, self.on_dataset_tts_load_signal),
+            (SignalCode.TTS_DATASET_UNLOAD_SIGNAL, self.on_dataset_tts_unload_signal),
+            (SignalCode.TTS_FEATURE_EXTRACTOR_LOAD_SIGNAL, self.on_tts_feature_extractor_load_signal),
+            (SignalCode.TTS_FEATURE_EXTRACTOR_UNLOAD_SIGNAL, self.on_tts_feature_extractor_unload_signal),
+        }
         self.tts = None
         self.play_queue = []
         self.play_queue_started = False
         self.do_interrupt = False
-        threading.Thread(target=self.load_tts).start()
-        signals = {
-            SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
-            SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL: self.on_unblock_tts_generator_signal,
-            # SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
-            SignalCode.TTS_ENABLE_SIGNAL: self.on_enable_tts_signal,
-            SignalCode.TTS_DISABLE_SIGNAL: self.on_disable_tts_signal,
-            SignalCode.TTS_LOAD_SIGNAL: self.on_tts_load_signal,
-            SignalCode.TTS_UNLOAD_SIGNAL: self.on_tts_unload_signal,
-            SignalCode.TTS_PROCESSOR_LOAD_SIGNAL: self.on_tts_processor_load_signal,
-            SignalCode.TTS_PROCESSOR_UNLOAD_SIGNAL: self.on_tts_processor_unload_signal,
-            SignalCode.TTS_VOCODER_LOAD_SIGNAL: self.on_tts_vocoder_load_signal,
-            SignalCode.TTS_VOCODER_UNLOAD_SIGNAL: self.on_tts_vocoder_unload_signal,
-            SignalCode.TTS_SPEAKER_EMBEDDINGS_LOAD_SIGNAL: self.on_tts_speaker_embeddings_load_signal,
-            SignalCode.TTS_SPEAKER_EMBEDDINGS_UNLOAD_SIGNAL: self.on_tts_speaker_embeddings_unload_signal,
-            SignalCode.TTS_TOKENIZER_LOAD_SIGNAL: self.on_tts_tokenizer_load_signal,
-            SignalCode.TTS_TOKENIZER_UNLOAD_SIGNAL: self.on_tts_tokenizer_unload_signal,
-            SignalCode.TTS_DATASET_LOAD_SIGNAL: self.on_dataset_tts_load_signal,
-            SignalCode.TTS_DATASET_UNLOAD_SIGNAL: self.on_dataset_tts_unload_signal,
-            SignalCode.TTS_FEATURE_EXTRACTOR_LOAD_SIGNAL: self.on_tts_feature_extractor_load_signal,
-            SignalCode.TTS_FEATURE_EXTRACTOR_UNLOAD_SIGNAL: self.on_tts_feature_extractor_unload_signal,
-
-        }
-        for code, handler in signals.items():
-            self.register(code, handler)
+        super().__init__(*args, **kwargs)
 
     def on_enable_tts_signal(self, message = None):
         if self.tts:
@@ -123,7 +119,7 @@ class TTSGeneratorWorker(Worker):
         if self.tts:
             self.tts.on_application_settings_changed_signal(message)
 
-    def load_tts(self):
+    def start_worker_thread(self):
         tts_model = self.settings["tts_settings"]["tts_model"]
         if tts_model == TTSModel.ESPEAK:
             from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler

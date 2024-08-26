@@ -1,8 +1,5 @@
 import os.path
 
-from llama_index.core.response_synthesizers import ResponseMode
-from llama_index.core import Settings
-
 from airunner.enums import SignalCode, LLMChatRole, AgentState, LLMActionType
 
 
@@ -21,6 +18,7 @@ class AgentLlamaIndexMixin:
         self.__epub_reader = None
         self.__html_reader = None
         self.__markdown_reader = None
+        self.__embed_model = None
         self.__model_name = os.path.expanduser(f"{self.settings['path_settings']['sentence_transformers_path']}/sentence-transformers/sentence-t5-large")
         self.__query_instruction = "Search through all available texts and provide a brief summary of the key points which are relevant to the query."
         self.__text_instruction = "Summarize and provide a brief explanation of the text. Stay concise and to the point."
@@ -95,7 +93,7 @@ class AgentLlamaIndexMixin:
         # self.__load_index_struct()
 
     def __load_llm(self, model, tokenizer):
-        try:
+        # try:
             if self.settings["llm_generator_settings"]["use_api"]:
                 self.__llm = model
             else:
@@ -103,20 +101,20 @@ class AgentLlamaIndexMixin:
                 self.__llm = HuggingFaceLLM(
                     model=model,
                     tokenizer=tokenizer,
-                    max_new_tokens=4096,
-                    generate_kwargs=dict(
-                        top_k=40,
-                        top_p=0.90,
-                        temperature=0.5,
-                        num_return_sequences=1,
-                        num_beams=1,
-                        no_repeat_ngram_size=4,
-                        early_stopping=True,
-                        do_sample=True,
-                    )
+                    # generate_kwargs=dict(
+                    #     max_new_tokens=4096,
+                    #     top_k=40,
+                    #     top_p=0.90,
+                    #     temperature=0.5,
+                    #     num_return_sequences=1,
+                    #     num_beams=1,
+                    #     no_repeat_ngram_size=4,
+                    #     early_stopping=True,
+                    #     do_sample=True,
+                    # )
                 )
-        except Exception as e:
-            self.logger.error(f"Error loading LLM: {str(e)}")
+        # except Exception as e:
+        #     self.logger.error(f"Error loading LLM: {str(e)}")
 
     @property
     def is_llama_instruct(self):
@@ -126,8 +124,12 @@ class AgentLlamaIndexMixin:
         self,
         prompt,
         streaming: bool = False,
-        response_mode: ResponseMode = ResponseMode.COMPACT
+        response_mode = None
     ):
+        from llama_index.core.response_synthesizers import ResponseMode
+        if response_mode is None:
+            response_mode = ResponseMode.COMPACT
+
         if self.__chat_engine is None:
             raise RuntimeError(
                 "Chat engine is not initialized. "
@@ -213,7 +215,9 @@ class AgentLlamaIndexMixin:
     def __load_rag_model(self):
         self.logger.debug("Loading RAG model...")
         from airunner.aihandler.llm.custom_embedding import CustomEmbedding
-        Settings.embed_model = CustomEmbedding(self.__llm)
+        #from llama_index.core import Settings
+        #Settings.embed_model = CustomEmbedding(self.__llm)
+        self.__embed_model = CustomEmbedding(self.__llm)
 
 
     def __load_readers(self):
@@ -285,7 +289,7 @@ class AgentLlamaIndexMixin:
             # Update service context to use the newly created chat engine
             self.__service_context = ServiceContext.from_defaults(
                 llm=self.__llm,
-                embed_model=Settings.embed_model,
+                embed_model=self.__embed_model,
                 #chat_engine=self.__chat_engine,  # Include the chat engine in the service context
                 text_splitter=self.__text_splitter,
                 prompt_helper=self.__prompt_helper,
@@ -371,4 +375,3 @@ class AgentLlamaIndexMixin:
             self.logger.debug("Retriever loaded successfully with index.")
         except Exception as e:
             self.logger.error(f"Error setting up the retriever: {str(e)}")
-
