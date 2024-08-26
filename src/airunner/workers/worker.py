@@ -1,6 +1,7 @@
 import queue
+import threading
 
-from PySide6.QtCore import Signal, QThread, QSettings, QObject, Slot
+from PySide6.QtCore import Signal, QThread, QSettings, QObject
 
 from airunner.enums import QueueType, SignalCode, WorkerState
 from airunner.aihandler.logger import Logger
@@ -13,6 +14,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
     queue_type = QueueType.GET_NEXT_ITEM
     finished = Signal()
     prefix = "Worker"
+    signals = []
 
     def __init__(self, prefix=None):
         self.prefix = prefix or self.__class__.__name__
@@ -27,27 +29,19 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         self.current_index = 0
         self.paused = False
         self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
-        self.update_properties()
-        self.register(
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
-            self.on_application_settings_changed_signal
-        )
-        self.register(
-            SignalCode.QUIT_APPLICATION,
-            self.stop
-        )
+        self.register(SignalCode.QUIT_APPLICATION, self.stop)
         self.register_signals()
 
-    def on_application_settings_changed_signal(self, _message: dict):
-        self.update_properties()
-    
-    def update_properties(self):
-        pass
+        if hasattr(self, "start_worker_thread"):
+            threading.Thread(target=self.start_worker_thread).start()
 
     def register_signals(self):
-        pass
+        for signal in self.signals:
+            self.register(signal[0], signal[1])
 
     def start(self):
+        import traceback
+        traceback.format_exc()
         self.run()
 
     def run(self):
