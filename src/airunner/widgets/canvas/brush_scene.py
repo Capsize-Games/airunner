@@ -27,6 +27,7 @@ class BrushScene(CustomScene):
         self.path = None
         self._is_drawing = False
         self._is_erasing = False
+        self._do_generate_image = False
 
     def register_signals(self):
         signals = [
@@ -41,6 +42,7 @@ class BrushScene(CustomScene):
             (SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.handle_brush_color_changed),
             (SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL, self.export_image),
+            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.handle_settings_changed)
         ]
         for signal, handler in signals:
             self.register(signal, handler)
@@ -192,10 +194,15 @@ class BrushScene(CustomScene):
             else:
                 image = self.image
             pil_image = ImageQt.fromqimage(image)
+            self._do_generate_image = True
             settings = self.settings
             settings[self.settings_key]["image"] = convert_image_to_base64(pil_image)
             self.settings = settings
             self.do_update = False
+
+    def handle_settings_changed(self, _data = None):
+        if self._do_generate_image:
+            self._do_generate_image = False
             if (
                 self.settings["drawing_pad_settings"]["enable_automatic_drawing"] and
                 (

@@ -28,6 +28,7 @@ from airunner.settings import (
     SD_FEATURE_EXTRACTOR_PATH, SD_DEFAULT_MODEL_PATH
 )
 from airunner.utils.clear_memory import clear_memory
+from airunner.utils.convert_base64_to_image import convert_base64_to_image
 
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -272,6 +273,9 @@ class ModelMixin:
         clear_memory()
         if "image" in data and data["image"] is None:
             del data["image"]
+        elif "image" not in data and self.sd_request.is_img2img:
+            image = self.sd_request.drawing_pad_image
+            data["image"] = image
         if self.enable_controlnet and not self.controlnet:
             self.load_controlnet()
         self.__pipe_swap(data)
@@ -289,9 +293,9 @@ class ModelMixin:
                 components = self.pipe.components
                 components["controlnet"] = self.controlnet
                 self.pipe = __pipeline_class(**components)
-                self.pipe.to(self.device)
             else:
                 self.pipe = __pipeline_class.from_pipe(self.pipe)
+            self.__move_model_to_device()
 
     def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
         if self.do_interrupt_image_generation:
