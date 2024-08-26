@@ -141,7 +141,7 @@ class SDWorker(Worker):
                     "path": ""
                 }
             )
-            self.sd.on_load_stablediffusion_signal(data)
+            self.sd.load_stable_diffusion_model()
 
     def on_unload_stablediffusion_signal(self, data: dict = None):
         if self.sd:
