@@ -12,7 +12,7 @@ from airunner.enums import (
     ModelStatus
 )
 from airunner.utils.clear_memory import clear_memory
-
+from airunner.utils.convert_base64_to_image import convert_base64_to_image
 
 RELOAD_CONTROLNET_IMAGE_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -63,7 +63,6 @@ class ControlnetHandlerMixin:
             self._controlnet_image is None or
             self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
         ):
-            self.logger.debug("Getting controlnet image")
             self._controlnet_image = self.__preprocess_for_controlnet(self.sd_request.drawing_pad_image)
         return self._controlnet_image
 

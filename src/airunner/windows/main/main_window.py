@@ -1270,3 +1270,10 @@ class MainWindow(
             self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
         else:
             self.emit_signal(SignalCode.CONTROLNET_UNLOAD_SIGNAL)
+
+    @Slot()
+    def action_stats_triggered(self):
+        from airunner.widgets.stats.stats_widget import StatsWidget
+        widget = StatsWidget()
+        # display in a window
+        widget.show()
