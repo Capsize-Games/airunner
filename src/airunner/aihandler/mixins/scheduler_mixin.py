@@ -44,8 +44,8 @@ class SchedulerMixin:
             os.path.join(
                 BASE_PATH,
                 "art/models",
-                self.sd_request.generator_settings.version,
-                self.sd_request.section,
+                self.settings["generator_settings"]["version"],
+                "txt2img",
                 "scheduler",
                 "scheduler_config.json"
             )
