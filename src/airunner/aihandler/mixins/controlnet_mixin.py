@@ -9,7 +9,7 @@ from airunner.enums import (
     SignalCode,
     SDMode,
     ModelType,
-    ModelStatus
+    ModelStatus, StableDiffusionVersion
 )
 from airunner.settings import BASE_PATH
 from airunner.utils.clear_memory import clear_memory
@@ -138,11 +138,13 @@ class ControlnetHandlerMixin:
 
         path = self.controlnet_path
 
-        if self.is_sd_xl:
+        if self.settings["generator_settings"]["version"] == StableDiffusionVersion.SDXL1_0.value:
             path = os.path.expanduser(
                 os.path.join(
-                    self.settings["path_settings"]["base_path"],
-                    self.settings["path_settings"]["controlnet_model_path"],
+                    BASE_PATH,
+                    "art/models",
+                    self.settings["generator_settings"]["version"],
+                    "controlnet",
                     "diffusers/controlnet-canny-sdxl-1.0"
                 )
             )
@@ -155,6 +157,9 @@ class ControlnetHandlerMixin:
                 torch_dtype=self.data_type,
                 local_files_only=True,
                 device=self.device,
+                use_safetensors=True,
+                use_fp16=True,
+                variant="fp16"
             )
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.READY, short_path)
             if self.pipe:
