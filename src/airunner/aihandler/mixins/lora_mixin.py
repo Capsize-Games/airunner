@@ -32,30 +32,59 @@ class LoraMixin:
         for lora in self.available_lora:
             if lora["enabled"] == False:
                 continue
-            filepath = None
             for root, dirs, files in os.walk(lora_path):
                 for file in files:
                     if file.startswith(lora["name"]):
                         filepath = os.path.join(root, file)
+                        lora["path"] = filepath
                         break
-            self.load_lora(filepath, lora)
+            self.load_lora(lora)
 
-    def load_lora(self, checkpoint_path, lora):
-        if checkpoint_path in self.disabled_lora:
+    def on_update_lora_signal(self, lora: dict):
+        if self.pipe is not None:
+            if lora["enabled"]:
+                self.load_lora(lora)
+            else:
+                self.remove_lora_from_pipe(lora)
+
+    def load_lora(self, lora):
+        if lora["path"] in self.disabled_lora:
             return
-
         try:
-            self.pipe.load_lora_weights(".", weight_name=checkpoint_path)
-            self.loaded_lora.append({"name": lora["name"], "scale": lora["scale"]})
+            filename = lora["path"].split("/")[-1]
+            pathname = os.path.expanduser(
+                os.path.join(
+                    BASE_PATH,
+                    "art/models",
+                    self.settings["generator_settings"]["version"],
+                    "lora"
+                )
+            )
+            for _lora in self.loaded_lora:
+                if _lora["name"] == lora["name"] and _lora["path"] == lora["path"]:
+                    return
+            self.pipe.load_lora_weights(
+                pathname,
+                weight_name=filename
+            )
+            self.loaded_lora.append(lora)
         except AttributeError as e:
             self.logger.warning("This model does not support LORA")
-            self.disable_lora(checkpoint_path)
+            self.disable_lora(lora["path"])
         except RuntimeError:
             self.logger.warning("LORA could not be loaded")
-            self.disable_lora(checkpoint_path)
+            self.disable_lora(lora["path"])
         except ValueError:
             self.logger.warning("LORA could not be loaded")
-            self.disable_lora(checkpoint_path)
+            self.disable_lora(lora["path"])
+
+    def remove_lora_from_pipe(self, lora:dict):
+        for index, _lora in enumerate(self.loaded_lora):
+            if _lora["name"] == lora["name"] and _lora["path"] == lora["path"]:
+                self.loaded_lora.pop(index)
+                break
+        self.pipe.unload_lora_weights()
+        self.apply_lora()
 
     def disable_lora(self, checkpoint_path):
         self.disabled_lora.append(checkpoint_path)
