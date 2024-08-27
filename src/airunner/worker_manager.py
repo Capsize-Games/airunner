@@ -1,3 +1,4 @@
+import threading
 import traceback
 import numpy as np
 from PySide6.QtCore import QObject, Signal
@@ -134,7 +135,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_llm_request_worker_response_signal(self, message: dict):
         if self.llm_generate_worker:
-            self.llm_generate_worker.on_llm_request_worker_response_signal(message)
+            threading.Thread(target=self.llm_generate_worker.on_llm_request_worker_response_signal, args=(message,)).start()
 
     def do_response(self, response):
         """

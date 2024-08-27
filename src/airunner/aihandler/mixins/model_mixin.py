@@ -25,7 +25,7 @@ from airunner.enums import (
 )
 from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException
 from airunner.settings import (
-    SD_FEATURE_EXTRACTOR_PATH, SD_DEFAULT_MODEL_PATH
+    SD_FEATURE_EXTRACTOR_PATH, SD_DEFAULT_MODEL_PATH, BASE_PATH
 )
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
@@ -110,40 +110,36 @@ class ModelMixin:
                 model["version"] == version and
                 model["pipeline_action"] == section
             ):
+                print(os.path.expanduser(
+                    os.path.join(
+                        BASE_PATH,
+                        "art/models",
+                        version,
+                        section,
+                        model["path"]
+                    )
+                ))
+
                 return os.path.expanduser(
                     os.path.join(
-                        self.settings["path_settings"][f"{section}_model_path"],
+                        BASE_PATH,
+                        "art/models",
                         version,
+                        section,
                         model["path"]
                     )
                 )
 
     @property
-    def __base_path(self):
-        action = self.sd_request.section
-        return os.path.expanduser(
-            os.path.join(
-                self.settings["path_settings"][f"{action}_model_path"],
-                self.settings["generator_settings"]["version"]
-            )
-        )
-
-    @property
     def __tokenizer_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["feature_extractor_model_path"],
-                SD_FEATURE_EXTRACTOR_PATH
+                BASE_PATH,
+                "art/models",
+                "SD 1.5",
+                "feature_extractor",
+                "openai/clip-vit-large-patch14"
             )
-        )
-
-    @property
-    def __merges_path(self) -> str:
-        return os.path.join(
-            self.__base_path,
-            SD_DEFAULT_MODEL_PATH,
-            "tokenizer",
-            "merges.txt"
         )
 
     @staticmethod
@@ -220,12 +216,8 @@ class ModelMixin:
         if type(self.pipe) in [StableDiffusionXLPipeline, StableDiffusionPipeline] and "image" in data:
             del data["image"]
 
-        if self.is_sd_xl:
-            for key in ["prompt", "negative_prompt"]:
-                if key in data:
-                    del data[key]
-
-            if not self.use_compel:
+        if not self.use_compel:
+            if self.is_sd_xl:
                 (
                     prompt_embeds,
                     negative_prompt_embeds,
@@ -240,15 +232,23 @@ class ModelMixin:
                     num_images_per_prompt=1,
                     clip_skip=self.settings["generator_settings"]["clip_skip"],
                 )
-            else:
-                prompt_embeds = self.prompt_embeds
-                negative_prompt_embeds = self.negative_prompt_embeds
-                pooled_prompt_embeds = self.pooled_prompt_embeds
-                negative_pooled_prompt_embeds = self.pooled_negative_prompt_embeds
+        else:
+            prompt_embeds = self.prompt_embeds
+            negative_prompt_embeds = self.negative_prompt_embeds
+            pooled_prompt_embeds = self.pooled_prompt_embeds
+            negative_pooled_prompt_embeds = self.pooled_negative_prompt_embeds
 
+        if prompt_embeds is not None:
             data.update(dict(
                 prompt_embeds=prompt_embeds,
                 negative_prompt_embeds=negative_prompt_embeds,
+            ))
+            for key in ["prompt", "negative_prompt"]:
+                if key in data:
+                    del data[key]
+
+        if self.is_sd_xl:
+            data.update(dict(
                 pooled_prompt_embeds=pooled_prompt_embeds,
                 negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
                 crops_coords_top_left=self.settings["generator_settings"]["crops_coord_top_left"],
@@ -289,13 +289,16 @@ class ModelMixin:
             enable_controlnet = False
         __pipeline_class = self.__pipeline_class(enable_controlnet)
         if type(self.pipe) is not __pipeline_class:
+            clear_memory()
             if __pipeline_class in CONTROLNET_PIPELINES_SD or __pipeline_class in CONTROLNET_PIPELINES_SDXL:
-                components = self.pipe.components
-                components["controlnet"] = self.controlnet
-                self.pipe = __pipeline_class(**components)
+                # components = self.pipe.components
+                # components["controlnet"] = self.controlnet
+                #self.pipe = __pipeline_class(**components)
+                self.pipe = __pipeline_class.from_pipe(self.pipe, controlnet=self.controlnet)
             else:
                 self.pipe = __pipeline_class.from_pipe(self.pipe)
-            self.__move_model_to_device()
+            clear_memory()
+            self.make_stable_diffusion_memory_efficient()
 
     def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
         if self.do_interrupt_image_generation:

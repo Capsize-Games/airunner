@@ -8,7 +8,7 @@ from PIL import (
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 from airunner.enums import SignalCode, ModelStatus, ModelType
-from airunner.settings import SD_FEATURE_EXTRACTOR_PATH
+from airunner.settings import SD_FEATURE_EXTRACTOR_PATH, BASE_PATH
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -119,8 +119,9 @@ class SafetyCheckerMixin:
             self.feature_extractor = AutoFeatureExtractor.from_pretrained(
                 os.path.expanduser(
                     os.path.join(
-                        self.settings["path_settings"]["feature_extractor_model_path"],
-                        f"{self.feature_extractor_path}/preprocessor_config.json"
+                        BASE_PATH,
+                        "art/models/SD 1.5/feature_extractor",
+                        "openai/clip-vit-large-patch14/"
                     )
                 ),
                 local_files_only=True,
@@ -180,7 +181,8 @@ class SafetyCheckerMixin:
             self.safety_checker = StableDiffusionSafetyChecker.from_pretrained(
                 os.path.expanduser(
                     os.path.join(
-                        self.settings["path_settings"]["safety_checker_model_path"],
+                        BASE_PATH,
+                        "art/models/SD 1.5/safety_checker",
                         "CompVis/stable-diffusion-safety-checker/"
                     )
                 ),
