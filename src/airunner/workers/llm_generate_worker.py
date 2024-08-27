@@ -1,4 +1,5 @@
 import queue
+import threading
 
 from PySide6.QtCore import QThread
 
@@ -28,7 +29,7 @@ class LLMGenerateWorker(Worker):
 
     def on_load_llm_signal(self, message):
         if self.llm:
-            self.llm.on_load_llm_signal(message)
+            threading.Thread(target=self.llm.on_load_llm_signal, args=(message,)).start()
 
     def on_load_model_signal(self, message):
         if self.llm:
