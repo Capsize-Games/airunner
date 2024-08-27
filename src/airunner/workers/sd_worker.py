@@ -167,7 +167,7 @@ class SDWorker(Worker):
             )
         from airunner.aihandler.stablediffusion.sd_handler import SDHandler
         self.sd = SDHandler()
-        self.sd.load_stable_diffusion()
+        threading.Thread(target=self.sd.load_stable_diffusion).start()
 
     def handle_message(self, message):
         if self.sd:

@@ -374,7 +374,6 @@ class MainWindow(
         self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True))
         self.register(SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal)
         self.register(SignalCode.WRITE_FILE, self.on_write_file_signal)
-        self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.reset_paths)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal)
         self.register(SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts)
@@ -698,11 +697,6 @@ class MainWindow(
     def action_show_about_window(self):
         from airunner.windows.about.about import AboutWindow
         AboutWindow()
-
-    @Slot()
-    def action_show_model_merger_window(self):
-        from airunner.windows.model_merger import ModelMerger
-        ModelMerger()
 
     @Slot()
     def action_show_settings(self):
