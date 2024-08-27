@@ -109,7 +109,8 @@ class ImportWidget(
             })
         elif model_type == "LORA":
             name = file["name"].replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-            lora_data = dict(
+            settings = self.settings
+            settings["lora"][diffuser_model_version].append(dict(
                 name=name,
                 path=file_path,
                 scale=1,
@@ -117,8 +118,8 @@ class ImportWidget(
                 loaded=False,
                 trigger_word=trained_words,
                 version=model_version["baseModel"]
-            )
-            self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
+            ))
+            self.settings = settings
         elif model_type == "TextualInversion":
             # name = file_path.split("/")[-1].split(".")[0]
             # embedding_exists = session.query(Embedding).filter_by(
@@ -280,6 +281,7 @@ class ImportWidget(
         return os.path.expanduser(
             os.path.join(
                 base_path,
+                "art/models",
                 version,
                 action,
                 file["name"]

@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode
 from airunner.settings import BASE_PATH
+from airunner.utils.models.scan_path_for_lora import scan_path_for_lora
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.lora_widget import LoraWidget
 from airunner.widgets.lora.templates.lora_container_ui import Ui_lora_container
@@ -50,7 +51,7 @@ class LoraContainerWidget(BaseWidget):
     def load_lora(self):
         self.remove_spacer()
         filtered_loras = [
-            lora for lora in self.settings["lora"]
+            lora for lora in self.settings["lora"][self.settings["generator_settings"]["version"]]
             if self.search_filter.lower() in lora["name"].lower()
         ]
         for lora in filtered_loras:
@@ -109,55 +110,10 @@ class LoraContainerWidget(BaseWidget):
     def scan_for_lora(self):
         # clear all lora widgets
         self.clear_lora_widgets()
-        lora_path = os.path.expanduser(
-            os.path.join(
-                BASE_PATH,
-                "art/models",
-                self.settings["generator_settings"]["version"],
-                "lora"
-            )
-        )
-        lora_files = []
-        for dirpath, dirnames, filenames in os.walk(lora_path):
-            version = dirpath.split("/")[-1]
-            for file in filenames:
-                if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
-                    lora_files.append((dirpath, file, version))
-
-            # for dirpath, file, version in lora_files:
-                name = file.replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-                if any(lora["name"] == name for lora in self.settings["lora"]):
-                    continue
-                lora_data = dict(
-                    name=name,
-                    path=os.path.join(dirpath, file),
-                    scale=1,
-                    enabled=True,
-                    loaded=False,
-                    trigger_word="",
-                    version=version
-                )
-                self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
+        settings = self.settings
+        settings["lora"] = scan_path_for_lora(settings["lora"])
+        self.settings = settings
         self.load_lora()
-
-    # def toggle_all_lora(self, checked):
-    #     lora_widgets = [
-    #         self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
-    #         for i in range(self.ui.lora_scroll_area.widget().layout().count())
-    #         if isinstance(self.ui.lora_scroll_area.widget().layout().itemAt(i).widget(), LoraWidget)
-    #     ]
-    #
-    #     # Block signals for batch updates
-    #     for lora_widget in lora_widgets:
-    #         lora_widget.ui.enabledCheckbox.blockSignals(True)
-    #
-    #     # Perform the toggle operation
-    #     for lora_widget in lora_widgets:
-    #         lora_widget.set_enabled(checked)
-    #
-    #     # Unblock signals after batch updates
-    #     for lora_widget in lora_widgets:
-    #         lora_widget.ui.enabledCheckbox.blockSignals(False)
 
     def tab_has_lora(self, tab):
         return tab not in ["upscale", "superresolution", "txt2vid"]
