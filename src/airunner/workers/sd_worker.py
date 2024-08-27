@@ -142,7 +142,7 @@ class SDWorker(Worker):
                     "path": ""
                 }
             )
-            self.sd.load_stable_diffusion()
+            threading.Thread(target=self.sd.load_stable_diffusion).start()
 
     def on_unload_stablediffusion_signal(self, data: dict = None):
         if self.sd:
@@ -167,7 +167,7 @@ class SDWorker(Worker):
             )
         from airunner.aihandler.stablediffusion.sd_handler import SDHandler
         self.sd = SDHandler()
-        threading.Thread(target=self.sd.load_stable_diffusion).start()
+        self.sd.load_stable_diffusion()
 
     def handle_message(self, message):
         if self.sd:
