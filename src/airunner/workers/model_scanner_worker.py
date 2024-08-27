@@ -59,7 +59,6 @@ class ModelScannerWorker(
                                 if file_item.is_file():  # ckpt or safetensors file
                                     if file_item.name.endswith(".ckpt") or file_item.name.endswith(".safetensors"):
                                         name = file_item.name.replace(".ckpt", "").replace(".safetensors", "")
-                                        print("setting model name to ", name)
                                         model.name = name
                                     else:
                                         model = None

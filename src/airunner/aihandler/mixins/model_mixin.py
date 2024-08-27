@@ -24,11 +24,8 @@ from airunner.enums import (
     ModelType
 )
 from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException
-from airunner.settings import (
-    SD_FEATURE_EXTRACTOR_PATH, SD_DEFAULT_MODEL_PATH, BASE_PATH
-)
+from airunner.settings import BASE_PATH
 from airunner.utils.clear_memory import clear_memory
-from airunner.utils.convert_base64_to_image import convert_base64_to_image
 
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -101,25 +98,16 @@ class ModelMixin:
 
     @property
     def model_path(self):
-        model_name = self.settings["generator_settings"]["model"]
-        version = self.settings["generator_settings"]["version"]
-        section = self.settings["generator_settings"]["section"]
+        generator_settings = self.settings["generator_settings"]
+        model_name = generator_settings["model"]
+        version = generator_settings["version"]
+        section = generator_settings["section"]
         for model in self.settings["ai_models"]:
             if (
                 model["name"] == model_name and
                 model["version"] == version and
                 model["pipeline_action"] == section
             ):
-                print(os.path.expanduser(
-                    os.path.join(
-                        BASE_PATH,
-                        "art/models",
-                        version,
-                        section,
-                        model["path"]
-                    )
-                ))
-
                 return os.path.expanduser(
                     os.path.join(
                         BASE_PATH,
@@ -216,6 +204,11 @@ class ModelMixin:
         if type(self.pipe) in [StableDiffusionXLPipeline, StableDiffusionPipeline] and "image" in data:
             del data["image"]
 
+        prompt_embeds = None
+        negative_prompt_embeds = None
+        pooled_prompt_embeds = None
+        negative_pooled_prompt_embeds = None
+
         if self.is_sd_xl:
             (
                 prompt_embeds,
@@ -294,9 +287,6 @@ class ModelMixin:
         if type(self.pipe) is not __pipeline_class:
             clear_memory()
             if __pipeline_class in CONTROLNET_PIPELINES_SD or __pipeline_class in CONTROLNET_PIPELINES_SDXL:
-                # components = self.pipe.components
-                # components["controlnet"] = self.controlnet
-                #self.pipe = __pipeline_class(**components)
                 self.pipe = __pipeline_class.from_pipe(self.pipe, controlnet=self.controlnet)
             else:
                 self.pipe = __pipeline_class.from_pipe(self.pipe)
