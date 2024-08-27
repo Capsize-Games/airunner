@@ -11,6 +11,7 @@ from airunner.enums import (
     ModelType,
     ModelStatus
 )
+from airunner.settings import BASE_PATH
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 
@@ -77,7 +78,10 @@ class ControlnetHandlerMixin:
         controlnet_model = self.controlnet_model
         path = os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["controlnet_model_path"],
+                BASE_PATH,
+                "art/models",
+                self.settings["generator_settings"]["version"],
+                "controlnet",
                 controlnet_model["path"]
             )
         )
@@ -133,6 +137,16 @@ class ControlnetHandlerMixin:
         self.logger.debug(f"Loading controlnet {self.controlnet_type} to {self.device}")
 
         path = self.controlnet_path
+
+        if self.is_sd_xl:
+            path = os.path.expanduser(
+                os.path.join(
+                    self.settings["path_settings"]["base_path"],
+                    self.settings["path_settings"]["controlnet_model_path"],
+                    "diffusers/controlnet-canny-sdxl-1.0"
+                )
+            )
+
         short_path = self.controlnet_model["path"]
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING, short_path)
         try:

@@ -825,6 +825,7 @@ class Ui_MainWindow(object):
         self.panel_container.setObjectName(u"panel_container")
         self.verticalLayout_2 = QVBoxLayout(self.panel_container)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.tool_tab_widget = ToolTabWidget(self.panel_container)
         self.tool_tab_widget.setObjectName(u"tool_tab_widget")
 

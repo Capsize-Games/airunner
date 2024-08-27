@@ -90,28 +90,28 @@
    <item row="37" column="0" colspan="5">
     <widget class="Line" name="line_9">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
    <item row="16" column="0" colspan="5">
     <widget class="Line" name="line_4">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
    <item row="10" column="0" colspan="5">
     <widget class="Line" name="line_8">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
    <item row="34" column="0" colspan="5">
     <widget class="Line" name="line_6">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -182,7 +182,7 @@
    <item row="28" column="0" colspan="5">
     <widget class="Line" name="line_3">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -221,7 +221,7 @@
    <item row="22" column="0" colspan="5">
     <widget class="Line" name="line">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -260,7 +260,7 @@
    <item row="31" column="0" colspan="5">
     <widget class="Line" name="line_5">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -369,7 +369,7 @@
    <item row="25" column="0" colspan="5">
     <widget class="Line" name="line_2">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -424,7 +424,7 @@
    <item row="39" column="3" colspan="2">
     <spacer name="verticalSpacer">
      <property name="orientation">
-      <enum>Qt::Vertical</enum>
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>
@@ -437,7 +437,7 @@
    <item row="3" column="0">
     <widget class="Line" name="line_7">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -519,8 +519,8 @@
    <slot>action_toggled_vae_slicing(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>112</x>
-     <y>598</y>
+     <x>121</x>
+     <y>772</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -535,8 +535,8 @@
    <slot>action_toggled_tile_vae(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>59</x>
-     <y>664</y>
+     <x>68</x>
+     <y>831</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -551,8 +551,8 @@
    <slot>action_toggled_tf32(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>56</x>
-     <y>532</y>
+     <x>65</x>
+     <y>713</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -567,8 +567,8 @@
    <slot>action_toggled_sequential_cpu_offload(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>143</x>
-     <y>400</y>
+     <x>152</x>
+     <y>595</y>
     </hint>
     <hint type="destinationlabel">
      <x>258</x>
@@ -583,8 +583,8 @@
    <slot>action_toggled_accelerated_transformers(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>154</x>
-     <y>178</y>
+     <x>163</x>
+     <y>397</y>
     </hint>
     <hint type="destinationlabel">
      <x>5</x>
@@ -615,8 +615,8 @@
    <slot>action_toggled_last_memory(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>182</x>
-     <y>334</y>
+     <x>191</x>
+     <y>536</y>
     </hint>
     <hint type="destinationlabel">
      <x>271</x>
@@ -631,8 +631,8 @@
    <slot>action_toggled_attention_slicing(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>105</x>
-     <y>268</y>
+     <x>114</x>
+     <y>477</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -647,8 +647,8 @@
    <slot>action_toggled_model_cpu_offload(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>103</x>
-     <y>466</y>
+     <x>112</x>
+     <y>654</y>
     </hint>
     <hint type="destinationlabel">
      <x>53</x>
@@ -679,8 +679,8 @@
    <slot>action_changed_llm_combobox(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>337</x>
-     <y>107</y>
+     <x>359</x>
+     <y>346</y>
     </hint>
     <hint type="destinationlabel">
      <x>686</x>
@@ -695,8 +695,8 @@
    <slot>action_changed_tts_combobox(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>639</x>
-     <y>116</y>
+     <x>661</x>
+     <y>271</y>
     </hint>
     <hint type="destinationlabel">
      <x>665</x>
@@ -711,12 +711,28 @@
    <slot>action_changed_stt_combobox(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>812</x>
-     <y>109</y>
+     <x>834</x>
+     <y>196</y>
     </hint>
     <hint type="destinationlabel">
      <x>587</x>
      <y>17</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_tome</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>memory_preferences</receiver>
+   <slot>action_toggled_tome(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>45</x>
+     <y>875</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>861</y>
     </hint>
    </hints>
   </connection>
@@ -736,5 +752,6 @@
   <slot>action_changed_llm_combobox(QString)</slot>
   <slot>action_changed_stt_combobox(QString)</slot>
   <slot>action_changed_tts_combobox(QString)</slot>
+  <slot>action_toggled_use_tome(bool)</slot>
  </slots>
 </ui>

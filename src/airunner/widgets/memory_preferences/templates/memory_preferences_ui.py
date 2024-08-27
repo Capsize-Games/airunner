@@ -324,6 +324,7 @@ class Ui_memory_preferences(object):
         self.llm_combobox.currentTextChanged.connect(memory_preferences.action_changed_llm_combobox)
         self.tts_combobox.currentTextChanged.connect(memory_preferences.action_changed_tts_combobox)
         self.stt_combobox.currentTextChanged.connect(memory_preferences.action_changed_stt_combobox)
+        self.use_tome.toggled.connect(memory_preferences.action_toggled_tome)
 
         QMetaObject.connectSlotsByName(memory_preferences)
     # setupUi

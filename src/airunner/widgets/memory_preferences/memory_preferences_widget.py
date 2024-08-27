@@ -119,6 +119,11 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.use_tome.setChecked(True)
         self.ui.tome_sd_ratio.ui.slider.setValue(600)
 
+    def action_toggled_use_tome(self, val):
+        settings = self.settings
+        settings["memory_settings"]["use_tome_sd"] = val
+        self.settings = settings
+
     def tome_sd_ratio_value_change(self, prop, val):
         settings = self.settings
         settings["memory_settings"]["tome_sd_ratio"] = val

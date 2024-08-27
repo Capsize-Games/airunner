@@ -6,6 +6,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode
+from airunner.settings import BASE_PATH
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.lora_widget import LoraWidget
 from airunner.widgets.lora.templates.lora_container_ui import Ui_lora_container
@@ -89,7 +90,14 @@ class LoraContainerWidget(BaseWidget):
         self.add_spacer()
 
         # Delete the lora from disc
-        lora_path = self.settings["path_settings"]["lora_model_path"]
+        lora_path = os.path.expanduser(
+            os.path.join(
+                BASE_PATH,
+                "art/models",
+                self.settings["generator_settings"]["version"],
+                "lora"
+            )
+        )
         lora_file = lora_widget.lora["name"]
         for dirpath, dirnames, filenames in os.walk(lora_path):
             for file in filenames:
@@ -103,8 +111,10 @@ class LoraContainerWidget(BaseWidget):
         self.clear_lora_widgets()
         lora_path = os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["lora_model_path"],
-                self.settings["generator_settings"]["version"]
+                BASE_PATH,
+                "art/models",
+                self.settings["generator_settings"]["version"],
+                "lora"
             )
         )
         lora_files = []
@@ -160,10 +170,14 @@ class LoraContainerWidget(BaseWidget):
         return available_lora
 
     def get_available_loras(self, tab_name):
-        base_path = self.settings["path_settings"]["base_path"]
-        lora_path = self.settings["path_settings"]["lora_model_path"]
-        if lora_path == "lora":
-            lora_path = os.path.join(base_path, lora_path)
+        lora_path = os.path.expanduser(
+            os.path.join(
+                BASE_PATH,
+                "art/models",
+                self.settings["generator_settings"]["version"],
+                "lora"
+            )
+        )
         if not os.path.exists(lora_path):
             return []
         available_lora = self.get_list_of_available_loras(tab_name, lora_path, lora_names=self.settings["lora"])

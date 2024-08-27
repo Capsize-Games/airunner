@@ -379,7 +379,7 @@ class SDRequest(
                     if mask is not None:
                         mask = mask.convert("RGB")
                     else:
-                        print("IMAGE IS NONE")
+                        print("MASK IMAGE IS NONE")
             extra_args = {**extra_args, **{
                 "width": self.generator_settings.width,
                 "height": self.generator_settings.height,

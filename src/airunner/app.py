@@ -64,11 +64,6 @@ class App(
         SettingsMixin.__init__(self)
         super(App, self).__init__()
 
-        if (
-            "txt2img_model_path" not in self.settings["path_settings"]
-        ):
-            self.reset_paths()
-
         self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
 
         self.start()
