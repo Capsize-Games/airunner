@@ -111,8 +111,10 @@ class LoraContainerWidget(BaseWidget):
         # clear all lora widgets
         self.clear_lora_widgets()
         settings = self.settings
-        settings["lora"] = scan_path_for_lora(settings["lora"])
+        lora = scan_path_for_lora(settings["lora"])
+        settings["lora"] = lora
         self.settings = settings
+        self.save_settings()
         self.load_lora()
 
     def tab_has_lora(self, tab):
