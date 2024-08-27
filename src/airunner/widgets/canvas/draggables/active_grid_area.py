@@ -1,7 +1,7 @@
 from PIL.ImageQt import QImage
 
 from PySide6.QtCore import QRect
-from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter
+from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, Qt
 from PySide6.QtWidgets import QGraphicsItem
 
 from airunner.enums import SignalCode, CanvasToolName
@@ -148,9 +148,21 @@ class ActiveGridArea(DraggablePixmap):
     def change_border_opacity(self, value):
         pass
 
+    mouse_press_pos = None
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.mouse_press_pos = event.pos()
+
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
-        self.emit_signal(SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL)
+        if self.mouse_press_pos and self.settings["current_tool"] == CanvasToolName.ACTIVE_GRID_AREA and (
+            self.mouse_press_pos.x() != event.pos().x() or
+            self.mouse_press_pos.y() != event.pos().y()
+        ):
+            self.emit_signal(SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL)
+        self.mouse_press_pos = None
 
     def mouseMoveEvent(self, event):
         if self.current_tool not in [
