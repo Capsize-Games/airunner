@@ -96,6 +96,7 @@ class SettingsMixin:
         else:
             self.recursive_update(current_settings, default_settings)
         self.settings = current_settings
+        self.save_settings()
 
     def recursive_update(self, current, default):
         # Remove keys that are in current but not in default
@@ -105,30 +106,10 @@ class SettingsMixin:
 
         # Update or add keys from default to current
         for k, v in default.items():
-            if k not in current or not isinstance(current[k], type(v)):
+            if k not in current:
                 current[k] = v
             elif isinstance(v, dict):
                 self.recursive_update(current[k], v)
-
-    # def get_settings(self):
-    #     try:
-    #         settings_byte_array = self.application_settings.value(
-    #             "settings",
-    #             QByteArray()
-    #         )
-    #         if settings_byte_array:
-    #             data_stream = QDataStream(
-    #                 settings_byte_array,
-    #                 QIODevice.ReadOnly
-    #             )
-    #             settings = data_stream.readQVariant()
-    #             return settings
-    #         else:
-    #             return self.default_settings
-    #     except (TypeError, RuntimeError) as e:
-    #         print("Failed to get settings")
-    #         print(e)
-    #         return self.default_settings
 
     def set_settings(self, val):
         if val:

@@ -179,11 +179,11 @@ class Ui_generator_form(object):
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.splitter = QSplitter(self.scrollAreaWidgetContents)
-        self.splitter.setObjectName(u"splitter")
-        self.splitter.setOrientation(Qt.Orientation.Vertical)
-        self.splitter.setChildrenCollapsible(False)
-        self.layoutWidget = QWidget(self.splitter)
+        self.generator_form_splitter = QSplitter(self.scrollAreaWidgetContents)
+        self.generator_form_splitter.setObjectName(u"generator_form_splitter")
+        self.generator_form_splitter.setOrientation(Qt.Orientation.Vertical)
+        self.generator_form_splitter.setChildrenCollapsible(False)
+        self.layoutWidget = QWidget(self.generator_form_splitter)
         self.layoutWidget.setObjectName(u"layoutWidget")
         self.gridLayout_2 = QGridLayout(self.layoutWidget)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
@@ -221,8 +221,8 @@ class Ui_generator_form(object):
 
         self.gridLayout_2.addWidget(self.secondary_prompt, 2, 0, 1, 2)
 
-        self.splitter.addWidget(self.layoutWidget)
-        self.layoutWidget1 = QWidget(self.splitter)
+        self.generator_form_splitter.addWidget(self.layoutWidget)
+        self.layoutWidget1 = QWidget(self.generator_form_splitter)
         self.layoutWidget1.setObjectName(u"layoutWidget1")
         self.negative_prompt_container = QVBoxLayout(self.layoutWidget1)
         self.negative_prompt_container.setObjectName(u"negative_prompt_container")
@@ -243,9 +243,9 @@ class Ui_generator_form(object):
 
         self.negative_prompt_container.addWidget(self.secondary_negative_prompt)
 
-        self.splitter.addWidget(self.layoutWidget1)
+        self.generator_form_splitter.addWidget(self.layoutWidget1)
 
-        self.gridLayout.addWidget(self.splitter, 0, 1, 1, 1)
+        self.gridLayout.addWidget(self.generator_form_splitter, 0, 1, 1, 1)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 

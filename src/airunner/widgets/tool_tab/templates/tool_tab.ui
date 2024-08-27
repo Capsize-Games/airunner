@@ -55,7 +55,7 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout">
        <item row="0" column="0">
-        <widget class="QSplitter" name="splitter">
+        <widget class="QSplitter" name="stable_diffusion_splitter">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
          </property>
@@ -69,7 +69,7 @@
              <x>0</x>
              <y>0</y>
              <width>617</width>
-             <height>158</height>
+             <height>78</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_4">
