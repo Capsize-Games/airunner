@@ -1,6 +1,6 @@
 import os
 import diffusers
-from airunner.settings import AVAILABLE_SCHEDULERS_BY_ACTION
+from airunner.settings import AVAILABLE_SCHEDULERS_BY_ACTION, BASE_PATH
 from airunner.enums import (
     Scheduler,
     SignalCode,
@@ -42,8 +42,10 @@ class SchedulerMixin:
     def __scheduler_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"][f"{self.sd_request.section}_model_path"],
+                BASE_PATH,
+                "art/models",
                 self.sd_request.generator_settings.version,
+                self.sd_request.section,
                 "scheduler",
                 "scheduler_config.json"
             )
