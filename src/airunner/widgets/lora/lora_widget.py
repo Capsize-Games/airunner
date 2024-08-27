@@ -60,17 +60,33 @@ class LoraWidget(BaseWidget):
     def action_changed_trigger_words(self, val):
         self.lora["trigger_word"] = val
         self.create_trigger_word_widgets(self.lora)
-        self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL, self.lora)
+        self.update_lora()
 
-    def action_toggled_lora_enabled(self, val, emit=True):
+    def action_toggled_lora_enabled(self, val):
         self.ui.enabledCheckbox.setChecked(val)
         self.lora['enabled'] = val
-        if emit:
-            self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL, self.lora)
+        self.update_lora()
+        self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL, self.lora)
     
     def action_text_changed_trigger_word(self, val):
         self.lora["trigger_word"] = val
-        self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL, self.lora)
+        self.update_lora()
+
+    def update_lora(self):
+        lora = self.lora
+        settings = self.settings
+        version = lora["version"]
+        if version not in settings["lora"]:
+            settings["lora"][version] = []
+        lora_found = False
+        for index, _lora in enumerate(settings["lora"][version]):
+            if _lora["name"] == lora["name"] and _lora["path"] == lora["path"]:
+                settings["lora"][version][index] = lora
+                lora_found = True
+                break
+        if not lora_found:
+            settings["lora"][version].append(lora)
+        self.settings = settings
 
     def action_clicked_button_deleted(self):
         self.emit_signal(
