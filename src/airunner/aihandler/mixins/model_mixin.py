@@ -216,23 +216,22 @@ class ModelMixin:
         if type(self.pipe) in [StableDiffusionXLPipeline, StableDiffusionPipeline] and "image" in data:
             del data["image"]
 
-        if not self.use_compel:
-            if self.is_sd_xl:
-                (
-                    prompt_embeds,
-                    negative_prompt_embeds,
-                    pooled_prompt_embeds,
-                    negative_pooled_prompt_embeds,
-                ) = self.pipe.encode_prompt(
-                    prompt=self.sd_request.generator_settings.prompt,
-                    negative_prompt=self.sd_request.generator_settings.negative_prompt,
-                    prompt_2=self.settings["generator_settings"]["second_prompt"],
-                    negative_prompt_2=self.settings["generator_settings"]["second_negative_prompt"],
-                    device=self.device,
-                    num_images_per_prompt=1,
-                    clip_skip=self.settings["generator_settings"]["clip_skip"],
-                )
-        else:
+        if self.is_sd_xl:
+            (
+                prompt_embeds,
+                negative_prompt_embeds,
+                pooled_prompt_embeds,
+                negative_pooled_prompt_embeds,
+            ) = self.pipe.encode_prompt(
+                prompt=self.sd_request.generator_settings.prompt,
+                negative_prompt=self.sd_request.generator_settings.negative_prompt,
+                prompt_2=self.settings["generator_settings"]["second_prompt"],
+                negative_prompt_2=self.settings["generator_settings"]["second_negative_prompt"],
+                device=self.device,
+                num_images_per_prompt=1,
+                clip_skip=self.settings["generator_settings"]["clip_skip"],
+            )
+        elif self.use_compel:
             prompt_embeds = self.prompt_embeds
             negative_prompt_embeds = self.negative_prompt_embeds
             pooled_prompt_embeds = self.pooled_prompt_embeds
@@ -252,6 +251,10 @@ class ModelMixin:
                 pooled_prompt_embeds=pooled_prompt_embeds,
                 negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
                 crops_coords_top_left=self.settings["generator_settings"]["crops_coord_top_left"],
+                original_size=self.settings["generator_settings"]["original_size"],
+                target_size=self.settings["generator_settings"]["target_size"],
+                negative_original_size=self.settings["generator_settings"]["negative_original_size"],
+                negative_target_size=self.settings["generator_settings"]["negative_target_size"],
             ))
 
         for key in ["outpaint_box_rect", "action"]:
