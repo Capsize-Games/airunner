@@ -34,7 +34,6 @@ class SDWorker(Worker):
             (SignalCode.SCHEDULER_LOAD_SIGNAL, self.on_scheduler_load_signal),
             (SignalCode.SCHEDULER_UNLOAD_SIGNAL, self.on_scheduler_unload_signal),
             (SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal),
-            (SignalCode.LORA_ADD_SIGNAL, self.on_add_lora_signal),
             (SignalCode.EMBEDDING_UPDATE_SIGNAL, self.update_embedding),
             (SignalCode.EMBEDDING_ADD_SIGNAL, self.add_embedding),
             (SignalCode.EMBEDDING_SCAN_SIGNAL, self.scan_for_embeddings),

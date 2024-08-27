@@ -11,14 +11,9 @@ class LoraMixin:
 
     @property
     def available_lora(self):
-        if not self._available_lora:
-            _available_lora = {}
-            for index, lora in enumerate(self.settings["lora"]):
-                if lora["version"] not in _available_lora:
-                    _available_lora[lora["version"]] = []
-                _available_lora[lora["version"]].append(lora)
-            self._available_lora = _available_lora
-        return self._available_lora
+        if self.settings["generator_settings"]["version"] in self.settings["lora"]:
+            return self.settings["lora"][self.settings["generator_settings"]["version"]]
+        return []
 
     def add_lora_to_pipe(self):
         self.loaded_lora = []
@@ -26,7 +21,6 @@ class LoraMixin:
 
     def apply_lora(self):
         self.logger.debug("Adding LoRA to pipe")
-        model_version = self.settings["generator_settings"]["version"]
         lora_path = os.path.expanduser(
             os.path.join(
                 BASE_PATH,
@@ -35,9 +29,7 @@ class LoraMixin:
                 "lora"
             )
         )
-        if model_version not in self.available_lora:
-            return
-        for lora in self.available_lora[model_version]:
+        for lora in self.available_lora:
             if lora["enabled"] == False:
                 continue
             filepath = None
@@ -51,6 +43,7 @@ class LoraMixin:
     def load_lora(self, checkpoint_path, lora):
         if checkpoint_path in self.disabled_lora:
             return
+
         try:
             self.pipe.load_lora_weights(".", weight_name=checkpoint_path)
             self.loaded_lora.append({"name": lora["name"], "scale": lora["scale"]})
