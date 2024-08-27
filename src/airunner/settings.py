@@ -1078,7 +1078,8 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         is_fullscreen=False,
         canvas_splitter=None,
         canvas_side_splitter=None,
-        canvas_side_splitter_2=None
+        canvas_side_splitter_2=None,
+        generator_form_splitter=None,
     ),
     memory_settings=DEFAULT_MEMORY_SETTINGS,
     grid_settings=dict(
