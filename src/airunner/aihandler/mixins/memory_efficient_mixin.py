@@ -125,12 +125,18 @@ class MemoryEfficientMixin:
             return
         self.attention_slicing_applied = self.settings["memory_settings"]["use_attention_slicing"]
 
-        if self.settings["memory_settings"]["use_attention_slicing"]:
-            self.logger.debug("Enabling attention slicing")
-            self.pipe.enable_attention_slicing(1)
-        else:
-            self.logger.debug("Disabling attention slicing")
-            self.pipe.disable_attention_slicing()
+        try:
+            if self.settings["memory_settings"]["use_attention_slicing"]:
+                self.logger.debug("Enabling attention slicing")
+                self.pipe.enable_attention_slicing(1)
+            else:
+                self.logger.debug("Disabling attention slicing")
+                self.pipe.disable_attention_slicing()
+        except AttributeError:
+            if self.pipe is None:
+                self.logger.warning("Pipe is None, skipping attention slicing")
+            else:
+                self.logger.error("Failed to apply attention slicing")
 
     def __apply_tiled_vae(self):
         if self.tiled_vae_applied == self.settings["memory_settings"]["use_tiled_vae"]:

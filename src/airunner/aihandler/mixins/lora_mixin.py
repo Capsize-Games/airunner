@@ -1,5 +1,7 @@
 import os
 
+from airunner.settings import BASE_PATH
+
 
 class LoraMixin:
     def __init__(self):
@@ -24,17 +26,22 @@ class LoraMixin:
 
     def apply_lora(self):
         self.logger.debug("Adding LoRA to pipe")
-        model_base_path = self.settings["path_settings"]["base_path"]
-        lora_path = self.settings["path_settings"]["lora_model_path"]
         model_version = self.settings["generator_settings"]["version"]
-        path = os.path.join(model_base_path, lora_path) if lora_path == "lora" else lora_path
+        lora_path = os.path.expanduser(
+            os.path.join(
+                BASE_PATH,
+                "art/models",
+                self.settings["generator_settings"]["version"],
+                "lora"
+            )
+        )
         if model_version not in self.available_lora:
             return
         for lora in self.available_lora[model_version]:
             if lora["enabled"] == False:
                 continue
             filepath = None
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in os.walk(lora_path):
                 for file in files:
                     if file.startswith(lora["name"]):
                         filepath = os.path.join(root, file)

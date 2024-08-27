@@ -203,15 +203,15 @@ class SDHandler(
         self.logger.info("Loading stable diffusion")
 
         if self.settings["nsfw_filter"]:
-            threading.Thread(target=self.load_nsfw_filter).start()
+            self.load_nsfw_filter()
 
         if self.settings["controlnet_enabled"]:
-            threading.Thread(target=self.load_controlnet).start()
+            self.load_controlnet()
 
         if self.settings["sd_enabled"]:
             if not self.scheduler:
-                threading.Thread(target=self.load_scheduler).start()
-            threading.Thread(target=self.load_stable_diffusion_model).start()
+                self.load_scheduler()
+            self.load_stable_diffusion_model()
 
     def interrupt_image_generation_signal(self, _message: dict = None):
         if self.current_state == HandlerState.GENERATING:

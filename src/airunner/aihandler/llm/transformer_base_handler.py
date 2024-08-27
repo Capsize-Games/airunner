@@ -6,6 +6,7 @@ from llama_index.llms.groq import Groq
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
+from airunner.settings import BASE_PATH
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -118,15 +119,21 @@ class TransformerBaseHandler(BaseHandler):
     def get_model_path(self, path) -> str:
         current_llm_generator = self.settings.get("current_llm_generator", "")
         if current_llm_generator == "causallm":
-            local_path = self.settings["path_settings"]["llm_causallm_model_path"]
+            local_path = "causallm"
         elif current_llm_generator == "seq2seq":
-            local_path = self.settings["path_settings"]["llm_seq2seq_model_path"]
+            local_path = "seq2seq"
         elif current_llm_generator == "visualqa":
-            local_path = self.settings["path_settings"]["llm_visualqa_model_path"]
+            local_path = "visualqa"
         else:
-            local_path = self.settings["path_settings"]["llm_misc_model_path"]
-        local_path = os.path.join(local_path, path)
-        return os.path.expanduser(local_path)
+            local_path = "misc"
+        return os.path.expanduser(
+            os.path.join(
+                BASE_PATH,
+                "text/models",
+                local_path,
+                path
+            )
+        )
 
     def load_model(self):
         self.logger.debug("Loading model")

@@ -1274,6 +1274,18 @@
          </widget>
          <widget class="QWidget" name="panel_container" native="true">
           <layout class="QVBoxLayout" name="verticalLayout_2">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
             <widget class="ToolTabWidget" name="tool_tab_widget" native="true"/>
            </item>

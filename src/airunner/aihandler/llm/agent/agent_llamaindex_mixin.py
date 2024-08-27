@@ -1,6 +1,7 @@
 import os.path
 
 from airunner.enums import SignalCode, LLMChatRole, AgentState, LLMActionType
+from airunner.settings import BASE_PATH
 
 
 class AgentLlamaIndexMixin:
@@ -19,7 +20,13 @@ class AgentLlamaIndexMixin:
         self.__html_reader = None
         self.__markdown_reader = None
         self.__embed_model = None
-        self.__model_name = os.path.expanduser(f"{self.settings['path_settings']['sentence_transformers_path']}/sentence-transformers/sentence-t5-large")
+        self.__model_name = os.path.expanduser(
+            os.path.join(
+                BASE_PATH,
+                "text/models",
+                "sentence_transformers/sentence-t5-large"
+            )
+        )
         self.__query_instruction = "Search through all available texts and provide a brief summary of the key points which are relevant to the query."
         self.__text_instruction = "Summarize and provide a brief explanation of the text. Stay concise and to the point."
         self.__state = AgentState.SEARCH

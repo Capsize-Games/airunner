@@ -35,10 +35,6 @@ class CompelMixin:
             self.logger.debug("Prompt embeds already loaded, skipping load_prompt_embeds")
             return
 
-        if self.is_sd_xl:
-            prompt = prompt + " " + prompt_2
-            negative_prompt = negative_prompt + " " + negative_prompt_2
-
         try:
             if self.compel_proc is None:
                 self.logger.debug("Loading Compel proc")
