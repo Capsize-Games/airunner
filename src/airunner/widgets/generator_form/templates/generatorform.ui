@@ -306,7 +306,7 @@
             <number>0</number>
            </property>
            <item row="0" column="1">
-            <widget class="QSplitter" name="splitter">
+            <widget class="QSplitter" name="generator_form_splitter">
              <property name="orientation">
               <enum>Qt::Orientation::Vertical</enum>
              </property>

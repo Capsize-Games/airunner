@@ -158,10 +158,6 @@ class MainWindow(
         self.intialized = False
         self.history = History()
 
-        self.splitter_names = [
-            "content_splitter",
-            "splitter",
-        ]
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
@@ -771,26 +767,20 @@ class MainWindow(
         self.quitting = True
         self.logger.debug("Saving window state")
         settings = self.settings
-        settings["window_settings"] = {
-            'is_maximized': self.isMaximized(),
-            'is_fullscreen': self.isFullScreen(),
-        }
-
-        # Store splitter settings in application settings
-        for splitter in self.splitter_names:
-            ui_obj = self.ui
-            if splitter in ["stable_diffusion_splitter", "llm_splitter"]:
-                ui_obj = self.ui.tool_tab_widget.ui
-            try:
-                settings["window_settings"][splitter] = getattr(ui_obj, splitter).saveState()
-            except AttributeError as e:
-                self.logger.error(f"Error saving splitter state: {e}")
-
-        settings["window_settings"]["chat_prompt_splitter"] = self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.saveState()
-        settings["window_settings"]["canvas_splitter"] = self.ui.canvas_widget_2.ui.canvas_splitter.saveState()
-        settings["window_settings"]["canvas_side_splitter"] = self.ui.canvas_widget_2.ui.canvas_side_splitter.saveState()
-        settings["window_settings"]["canvas_side_splitter_2"] = self.ui.canvas_widget_2.ui.canvas_side_splitter_2.saveState()
-
+        window_settings = settings["window_settings"]
+        window_settings.update(dict(
+            is_maximized=self.isMaximized(),
+            is_fullscreen=self.isFullScreen(),
+            stable_diffusion_splitter=self.ui.tool_tab_widget.ui.stable_diffusion_splitter.saveState(),
+            llm_splitter=self.ui.tool_tab_widget.ui.llm_splitter.saveState(),
+            content_splitter=self.ui.content_splitter.saveState(),
+            canvas_splitter=self.ui.canvas_widget_2.ui.canvas_splitter.saveState(),
+            canvas_side_splitter=self.ui.canvas_widget_2.ui.canvas_side_splitter.saveState(),
+            canvas_side_splitter_2=self.ui.canvas_widget_2.ui.canvas_side_splitter_2.saveState(),
+            generator_form_splitter=self.ui.generator_widget.ui.generator_form_splitter.saveState(),
+            tool_tab_widget_index=self.ui.tool_tab_widget.ui.tool_tab_widget_container.currentIndex(),
+        ))
+        settings["window_settings"] = window_settings
         self.settings = settings
         self.save_settings()
 
@@ -809,23 +799,14 @@ class MainWindow(
         self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
 
         # Restore splitters
-        for splitter in self.splitter_names:
-            ui_obj = self.ui
-            if splitter in ["stable_diffusion_splitter", "llm_splitter"]:
-                ui_obj = self.ui.tool_tab_widget.ui
-            try:
-                getattr(ui_obj, splitter).restoreState(window_settings[splitter])
-            except TypeError:
-                self.logger.warning(f"failed to restore {splitter} splitter")
-            except KeyError:
-                self.logger.warning(f"{splitter} missing in window_settings")
-            except AttributeError:
-                self.logger.warning(f"AttributeError: {splitter}")
+        if window_settings["content_splitter"] is not None:
+            self.ui.content_splitter.restoreState(window_settings["content_splitter"])
 
-        if "chat_prompt_splitter" in window_settings:
-            self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.restoreState(
-                window_settings["chat_prompt_splitter"]
-            )
+        if window_settings["stable_diffusion_splitter"] is not None:
+            self.ui.tool_tab_widget.ui.stable_diffusion_splitter.restoreState(window_settings["stable_diffusion_splitter"])
+
+        if window_settings["llm_splitter"] is not None:
+            self.ui.tool_tab_widget.ui.llm_splitter.restoreState(window_settings["llm_splitter"])
 
         if window_settings["canvas_splitter"] is not None:
             self.ui.canvas_widget_2.ui.canvas_splitter.restoreState(window_settings["canvas_splitter"])
@@ -835,6 +816,9 @@ class MainWindow(
 
         if window_settings["canvas_side_splitter_2"] is not None:
             self.ui.canvas_widget_2.ui.canvas_side_splitter_2.restoreState(window_settings["canvas_side_splitter"])
+
+        if window_settings["generator_form_splitter"] is not None:
+            self.ui.generator_widget.ui.generator_form_splitter.restoreState(window_settings["generator_form_splitter"])
     ##### End window properties #####
     #################################
         
