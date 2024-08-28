@@ -42,8 +42,8 @@ from airunner.settings import (
     BUG_REPORT_LINK,
     VULNERABILITY_REPORT_LINK
 )
-from airunner.utils.agents.current_chatbot import current_chatbot, update_chatbot
 from airunner.utils.file_system.operations import FileSystemOperations
+from airunner.utils.get_current_chatbot import get_current_chatbot, set_current_chatbot
 
 from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
@@ -190,21 +190,13 @@ class MainWindow(
         self.is_started = True
         self.image_window = None
 
-        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, {
-            "main_window": self
-        })
-        self.register(
-            SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL,
-            self.on_ai_models_save_or_update_signal
-        )
-        self.register(
-            SignalCode.VAE_MODELS_SAVE_OR_UPDATE_SIGNAL,
-            self.on_vae_models_save_or_update_signal
-        )
-        self.register(
-            SignalCode.NAVIGATE_TO_URL,
-            self.on_navigate_to_url
-        )
+        for item in (
+            (SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal),
+            (SignalCode.NAVIGATE_TO_URL, self.on_navigate_to_url),
+        ):
+            self.register(item[0], item[1])
+
+        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, { "main_window": self })
 
     def download_url(self, url, save_path):
         response = requests.get(url)
@@ -257,9 +249,9 @@ class MainWindow(
             # Update target files to use only the file that was downloaded or navigated to
             # and update the index.
             settings = self.settings
-            chatbot = current_chatbot(settings)
+            chatbot = get_current_chatbot(settings)
             chatbot["target_files"] = [os.path.join(filepath, filename)]
-            settings = update_chatbot(settings, chatbot)
+            settings = set_current_chatbot(settings, chatbot)
             self.settings = settings
             self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
                 "target_files": chatbot["target_files"]
@@ -475,9 +467,10 @@ class MainWindow(
             self.logger.error("on_vision_captured_signal failed - no image")
 
     def initialize_ui(self):
-        self.logger.debug("Loading ui")
-        from airunner.widgets.status.status_widget import StatusWidget
+        self.logger.debug("Loading UI")
         self.ui.setupUi(self)
+
+        self.logger.debug("Restoring state")
         self.restore_state()
 
         if self.settings["sd_enabled"]:
@@ -517,6 +510,7 @@ class MainWindow(
                 "path": ""
             })
 
+        from airunner.widgets.status.status_widget import StatusWidget
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
@@ -572,7 +566,6 @@ class MainWindow(
 
     def closeEvent(self, event) -> None:
         self.logger.debug("Quitting")
-        self.save_state()
         self.save_state()
         super().closeEvent(event)
 
