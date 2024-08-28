@@ -508,7 +508,6 @@ class BaseAgent(
                 )
             )
             is_first_message = False
-
         if streamer:
             for new_text in streamer:
                 # strip all newlines from new_text
@@ -587,7 +586,6 @@ class BaseAgent(
                 )
 
             elif action == LLMActionType.UPDATE_MOOD:
-                print("RESPONSE:", streamed_template)
                 self.bot_mood = streamed_template
 
             elif action == LLMActionType.APPLICATION_COMMAND:
