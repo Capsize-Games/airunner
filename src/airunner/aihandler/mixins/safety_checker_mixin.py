@@ -119,7 +119,7 @@ class SafetyCheckerMixin:
             self.feature_extractor = AutoFeatureExtractor.from_pretrained(
                 os.path.expanduser(
                     os.path.join(
-                        BASE_PATH,
+                        self.settings["path_settings"]["base_path"],
                         "art/models/SD 1.5/feature_extractor",
                         "openai/clip-vit-large-patch14/"
                     )
@@ -181,7 +181,7 @@ class SafetyCheckerMixin:
             self.safety_checker = StableDiffusionSafetyChecker.from_pretrained(
                 os.path.expanduser(
                     os.path.join(
-                        BASE_PATH,
+                        self.settings["path_settings"]["base_path"],
                         "art/models/SD 1.5/safety_checker",
                         "CompVis/stable-diffusion-safety-checker/"
                     )
