@@ -50,8 +50,6 @@ class CanvasWidget(BaseWidget):
         self.signal_handlers = {
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
             SignalCode.CANVAS_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
-            SignalCode.SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL: self.on_image_data_worker_response_signal,
-            SignalCode.CANVAS_UPDATE_SIGNAL: self.on_update_canvas_signal,
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
             SignalCode.CONTROLNET_LOAD_SIGNAL: lambda _message=None: self.set_controlnet_checkbox(True),
             SignalCode.CONTROLNET_UNLOAD_SIGNAL: lambda _message=None: self.set_controlnet_checkbox(False),
@@ -160,28 +158,12 @@ class CanvasWidget(BaseWidget):
             cursor = Qt.CursorShape.ArrowCursor
         self.setCursor(cursor)
 
-    def on_update_canvas_signal(self, _ignore):
-        self.update()
-
     def canvas_drag_pos(self):
         return self.drag_pos
 
     def on_canvas_do_draw_signal(self, force_draw: bool = False):
         self.do_draw(force_draw=force_draw)
 
-    def on_image_data_worker_response_signal(self, message):
-        self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
-        self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
-        nsfw_content_detected = message["nsfw_content_detected"]
-        path = message["path"]
-        if nsfw_content_detected and self.settings["nsfw_filter"]:
-            self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Explicit content detected, try again.")
-        if path is not None:
-            self.emit_signal(
-                SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
-                f"Image generated to {path}"
-            )
-    
     def toggle_grid(self, val):
         self.do_draw()
     
