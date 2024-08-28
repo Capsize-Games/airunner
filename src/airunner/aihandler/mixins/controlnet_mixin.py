@@ -1,4 +1,8 @@
 import os
+import threading
+import time
+from queue import Queue
+
 from PIL import Image
 from controlnet_aux.processor import Processor
 from diffusers.pipelines.controlnet.pipeline_controlnet import StableDiffusionControlNetPipeline
@@ -9,7 +13,7 @@ from airunner.enums import (
     SignalCode,
     SDMode,
     ModelType,
-    ModelStatus, StableDiffusionVersion
+    ModelStatus, StableDiffusionVersion, HandlerState
 )
 from airunner.settings import BASE_PATH
 from airunner.utils.clear_memory import clear_memory
@@ -30,6 +34,18 @@ class ControlnetHandlerMixin:
         self.current_load_controlnet = False
         self.controlnet_loaded = False
         self.downloading_controlnet = False
+        self._controlnet_queue = Queue()
+        self._queue_watcher_thread = threading.Thread(target=self._watch_queue)
+        self._queue_watcher_thread.daemon = True
+        self._queue_watcher_thread.start()
+
+    def _watch_queue(self):
+        while True:
+            if self.current_state == HandlerState.READY and not self._controlnet_queue.empty():
+                action = self._scheduler_queue.get()
+                action()
+                self._scheduler_queue.task_done()
+            time.sleep(1)
 
     @property
     def controlnet_type(self):
@@ -152,19 +168,23 @@ class ControlnetHandlerMixin:
         short_path = self.controlnet_model["path"]
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING, short_path)
         try:
-            self.controlnet = ControlNetModel.from_pretrained(
-                path,
+            params = dict(
                 torch_dtype=self.data_type,
                 local_files_only=True,
                 device=self.device,
                 use_safetensors=True,
-                use_fp16=True,
-                variant="fp16"
+                use_fp16=True
+            )
+            if self.is_sd_xl:
+                params["variant"] = "fp16"
+
+            self.controlnet = ControlNetModel.from_pretrained(
+                path,
+                **params
             )
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.READY, short_path)
-            if self.pipe:
-                self.pipe.controlnet = self.controlnet
-                self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED, short_path)
+            self.__apply_controlnet_to_pipe()
+
         except Exception as e:
             self.logger.error(f"Error loading controlnet {e}")
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED, short_path)
@@ -237,12 +257,24 @@ class ControlnetHandlerMixin:
         self.controlnet_loaded = False
 
     def __unload_controlnet_model(self):
+        if self.current_state != HandlerState.READY:
+            self._controlnet_queue.put(self.__unload_controlnet_model)
+            return
+
         self.controlnet = None
         if self.pipe:
             self.pipe.controlnet = None
         clear_memory()
         self.reset_applied_memory_settings()
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.UNLOADED, "")
+
+    def __apply_controlnet_to_pipe(self):
+        if self.current_state != HandlerState.READY:
+            self._controlnet_queue.put(self.__apply_controlnet_to_pipe)
+            return
+        if self.pipe:
+            self.pipe.controlnet = self.controlnet
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED, "")
 
     def __unload_controlnet_processor(self):
         self.processor = None

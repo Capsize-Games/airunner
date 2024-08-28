@@ -1,10 +1,14 @@
 import os
+import threading
+import time
+from queue import Queue
+
 import diffusers
 from airunner.settings import AVAILABLE_SCHEDULERS_BY_ACTION, BASE_PATH
 from airunner.enums import (
     Scheduler,
     SignalCode,
-    SchedulerAlgorithm, ModelStatus, ModelType
+    SchedulerAlgorithm, ModelStatus, ModelType, HandlerState
 )
 from airunner.settings import (
     SCHEDULER_CLASSES,
@@ -20,6 +24,18 @@ class SchedulerMixin:
         self.current_scheduler_name: str = ""
         self.do_change_scheduler: bool = False
         self.scheduler = None
+        self._scheduler_queue = Queue()
+        self._queue_watcher_thread = threading.Thread(target=self._watch_queue)
+        self._queue_watcher_thread.daemon = True
+        self._queue_watcher_thread.start()
+
+    def _watch_queue(self):
+        while True:
+            if self.current_state == HandlerState.READY and not self._scheduler_queue.empty():
+                action = self._scheduler_queue.get()
+                action()
+                self._scheduler_queue.task_done()
+            time.sleep(1)
 
     @property
     def scheduler_section(self):
@@ -75,8 +91,8 @@ class SchedulerMixin:
                     self.logger.error(f"Failed to load scheduler {scheduler_name}: {e}")
                     self.change_model_status(ModelType.SCHEDULER, ModelStatus.ERROR, self.__scheduler_path)
 
-                if self.pipe:
-                    self.pipe.scheduler = self.scheduler
+                self.apply_scheduler_to_pipe()
+
                 return scheduler
 
     def unload_scheduler(self):
@@ -108,11 +124,19 @@ class SchedulerMixin:
             self.do_change_scheduler = False
 
     def apply_scheduler_to_pipe(self):
+        if self.current_state != HandlerState.READY:
+            self._scheduler_queue.put(self.apply_scheduler_to_pipe)
+            return
+
         if self.pipe and self.pipe.scheduler:
             self.pipe.scheduler = self.scheduler
             self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED, self.__scheduler_path)
 
     def remove_scheduler_from_pipe(self):
+        if self.current_state != HandlerState.READY:
+            self._scheduler_queue.put(self.remove_scheduler_from_pipe)
+            return
+
         if self.pipe and self.pipe.scheduler:
             self.pipe.scheduler = None
             self.change_model_status(ModelType.SCHEDULER, ModelStatus.READY, self.__scheduler_path)
