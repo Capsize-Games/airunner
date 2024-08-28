@@ -22,7 +22,7 @@ class AgentLlamaIndexMixin:
         self.__embed_model = None
         self.__model_name = os.path.expanduser(
             os.path.join(
-                BASE_PATH,
+                self.settings["path_settings"]["base_path"],
                 "text/models",
                 "sentence_transformers/sentence-t5-large"
             )
