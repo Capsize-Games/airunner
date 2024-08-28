@@ -4,6 +4,8 @@ from typing import (
     List
 )
 
+from airunner.settings import DEFAULT_CHATBOT
+
 
 def get_current_chatbot(
     settings: dict
@@ -14,7 +16,10 @@ def get_current_chatbot(
     :return:
     """
     current_bot = settings["llm_generator_settings"]["current_chatbot"]
-    return settings["llm_generator_settings"]["saved_chatbots"][current_bot]
+    try:
+        return settings["llm_generator_settings"]["saved_chatbots"][current_bot]
+    except KeyError:
+        return DEFAULT_CHATBOT
 
 
 def set_current_chatbot(
