@@ -14,6 +14,7 @@ from airunner.settings import (
 from airunner.enums import (
     SignalCode,
 )
+from airunner.utils.get_current_chatbot import get_current_chatbot
 from airunner.utils.os.validate_path import validate_path
 
 
@@ -70,9 +71,7 @@ class SettingsMixin:
 
     @property
     def current_bot(self):
-        current_bot_name = self.settings["llm_generator_settings"]["current_chatbot"]
-        current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][current_bot_name]
-        return current_bot
+        return get_current_chatbot(self.settings)
 
     @property
     def settings(self):
