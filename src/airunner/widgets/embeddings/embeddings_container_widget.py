@@ -120,7 +120,10 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def clear_embedding_widgets(self):
         if self.spacer:
-            self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
+            try:
+                self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
+            except RuntimeError as e:
+                pass
         for i in reversed(range(self.ui.scrollAreaWidgetContents.layout().count())):
             widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
             if isinstance(widget, EmbeddingWidget):
