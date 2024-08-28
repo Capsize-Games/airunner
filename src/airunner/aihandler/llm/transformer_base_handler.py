@@ -128,7 +128,7 @@ class TransformerBaseHandler(BaseHandler):
             local_path = "misc"
         return os.path.expanduser(
             os.path.join(
-                BASE_PATH,
+                self.settings["path_settings"]["base_path"],
                 "text/models",
                 local_path,
                 path
