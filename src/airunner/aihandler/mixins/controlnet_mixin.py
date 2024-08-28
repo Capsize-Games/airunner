@@ -78,7 +78,7 @@ class ControlnetHandlerMixin:
         controlnet_model = self.controlnet_model
         path = os.path.expanduser(
             os.path.join(
-                BASE_PATH,
+                self.settings["path_settings"]["base_path"],
                 "art/models",
                 self.settings["generator_settings"]["version"],
                 "controlnet",
@@ -141,7 +141,7 @@ class ControlnetHandlerMixin:
         if self.settings["generator_settings"]["version"] == StableDiffusionVersion.SDXL1_0.value:
             path = os.path.expanduser(
                 os.path.join(
-                    BASE_PATH,
+                    self.settings["path_settings"]["base_path"],
                     "art/models",
                     self.settings["generator_settings"]["version"],
                     "controlnet",

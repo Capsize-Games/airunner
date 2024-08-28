@@ -42,7 +42,7 @@ class SchedulerMixin:
     def __scheduler_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
-                BASE_PATH,
+                self.settings["path_settings"]["base_path"],
                 "art/models",
                 self.settings["generator_settings"]["version"],
                 "txt2img",
