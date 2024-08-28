@@ -259,7 +259,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>0</height>
+                <height>20</height>
                </size>
               </property>
               <property name="slider_minimum" stdset="0">
@@ -278,7 +278,7 @@
                <bool>false</bool>
               </property>
               <property name="settings_property" stdset="0">
-               <string>sequences</string>
+               <string>llm_generator_settings.sequences</string>
               </property>
               <property name="slider_single_step" stdset="0">
                <number>1</number>
@@ -308,7 +308,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>0</height>
+                <height>20</height>
                </size>
               </property>
               <property name="slider_minimum" stdset="0">
@@ -327,7 +327,7 @@
                <bool>false</bool>
               </property>
               <property name="settings_property" stdset="0">
-               <string>top_k</string>
+               <string>llm_generator_settings.top_k</string>
               </property>
               <property name="slider_single_step" stdset="0">
                <number>1</number>
@@ -404,7 +404,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>0</height>
+                <height>20</height>
                </size>
               </property>
               <property name="slider_minimum" stdset="0">
@@ -423,7 +423,7 @@
                <bool>false</bool>
               </property>
               <property name="settings_property" stdset="0">
-               <string>ngram_size</string>
+               <string>llm_generator_settings.ngram_size</string>
               </property>
               <property name="slider_single_step" stdset="0">
                <number>1</number>
@@ -453,26 +453,26 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>0</height>
+                <height>20</height>
                </size>
               </property>
               <property name="slider_minimum" stdset="0">
                <number>1</number>
               </property>
               <property name="slider_maximum" stdset="0">
-               <number>20000</number>
+               <number>10000</number>
               </property>
               <property name="spinbox_minimum" stdset="0">
                <double>0.000100000000000</double>
               </property>
               <property name="spinbox_maximum" stdset="0">
-               <double>2.000000000000000</double>
+               <double>1.000000000000000</double>
               </property>
               <property name="display_as_float" stdset="0">
                <bool>true</bool>
               </property>
               <property name="settings_property" stdset="0">
-               <string>temperature</string>
+               <string>llm_generator_settings.temperature</string>
               </property>
               <property name="slider_single_step" stdset="0">
                <number>1</number>
@@ -538,7 +538,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>0</height>
+                <height>20</height>
                </size>
               </property>
               <property name="slider_minimum" stdset="0">
@@ -557,7 +557,7 @@
                <bool>true</bool>
               </property>
               <property name="settings_property" stdset="0">
-               <string>repetition_penalty</string>
+               <string>llm_generator_settings.repetition_penalty</string>
               </property>
               <property name="slider_single_step" stdset="0">
                <number>0</number>
@@ -587,7 +587,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>0</height>
+                <height>20</height>
                </size>
               </property>
               <property name="slider_minimum" stdset="0">
@@ -606,7 +606,7 @@
                <bool>false</bool>
               </property>
               <property name="settings_property" stdset="0">
-               <string>min_length</string>
+               <string>llm_generator_settings.min_length</string>
               </property>
               <property name="slider_single_step" stdset="0">
                <number>1</number>
@@ -643,7 +643,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>0</height>
+                <height>20</height>
                </size>
               </property>
               <property name="slider_minimum" stdset="0">
@@ -662,7 +662,7 @@
                <bool>true</bool>
               </property>
               <property name="settings_property" stdset="0">
-               <string>top_p</string>
+               <string>llm_generator_settings.top_p</string>
               </property>
               <property name="slider_single_step" stdset="0">
                <number>1</number>
@@ -692,7 +692,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>0</height>
+                <height>20</height>
                </size>
               </property>
               <property name="slider_minimum" stdset="0">
@@ -711,7 +711,7 @@
                <bool>false</bool>
               </property>
               <property name="settings_property" stdset="0">
-               <string>max_new_tokens</string>
+               <string>llm_generator_settings.max_new_tokens</string>
               </property>
               <property name="slider_single_step" stdset="0">
                <number>1</number>
@@ -745,7 +745,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>0</height>
+                <height>20</height>
                </size>
               </property>
               <property name="slider_minimum" stdset="0">
@@ -764,7 +764,7 @@
                <bool>true</bool>
               </property>
               <property name="settings_property" stdset="0">
-               <string>length_penalty</string>
+               <string>llm_generator_settings.length_penalty</string>
               </property>
               <property name="slider_single_step" stdset="0">
                <number>1</number>
@@ -794,7 +794,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>0</height>
+                <height>20</height>
                </size>
               </property>
               <property name="slider_minimum" stdset="0">
@@ -813,7 +813,7 @@
                <bool>false</bool>
               </property>
               <property name="settings_property" stdset="0">
-               <string>num_beams</string>
+               <string>llm_generator_settings.num_beams</string>
               </property>
               <property name="slider_single_step" stdset="0">
                <number>1</number>
