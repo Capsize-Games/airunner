@@ -3,6 +3,7 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox, QLabel, QPushButton, QH
 
 from airunner.enums import SignalCode
 from airunner.settings import DEFAULT_CHATBOT
+from airunner.utils.get_current_chatbot import get_current_chatbot
 from airunner.utils.open_file_path import open_file_path
 from airunner.utils.toggle_signals import toggle_signals
 from airunner.widgets.base_widget import BaseWidget
@@ -36,11 +37,7 @@ class BotPreferencesWidget(BaseWidget):
 
     @property
     def current_chatbot(self):
-        try:
-            return self.llm_generator_settings["saved_chatbots"][self.current_chatbot_name]
-        except KeyError:
-            self.current_chatbot_name = "Default"
-            return self.llm_generator_settings["saved_chatbots"][self.current_chatbot_name]
+        return get_current_chatbot(self.settings)
 
     def showEvent(self, event):
         self.load_saved_chatbots()
