@@ -1,31 +1,9 @@
 import os
 from airunner.enums import SignalCode
+from airunner.utils.models.scan_path_for_items import scan_path_for_items
 
 
 class EmbeddingMixin:
-    def add_embedding(self, params: dict):
-        settings = self.settings
-        name = params["name"]
-        path = params["path"]
-        # ensure we have a unique name and path combo
-        for index, embedding in enumerate(settings["embeddings"]):
-            if not embedding:
-                del settings["embeddings"][index]
-                continue
-            if embedding["name"] == name and embedding["path"] == path:
-                return
-        embedding = {
-            "name": params.get("name", ""),
-            "path": params.get("path", ""),
-            "tags": params.get("tags", ""),
-            "active": params.get("active", True),
-            "version": params.get("version", "SD 1.5"),
-            'trigger_word': params.get("trigger_word", ""),
-        }
-        settings["embeddings"].append(embedding)
-        self.settings = settings
-        return embedding
-
     def update_embedding(self, embedding: dict):
         settings = self.settings
         for index, _embedding in enumerate(self.settings["embeddings"]):
@@ -67,23 +45,8 @@ class EmbeddingMixin:
                 return
 
     def scan_for_embeddings(self, _message: dict):
-        embeddings_path = os.path.expanduser(self.settings["path_settings"]["embeddings_model_path"])
-        if os.path.exists(embeddings_path):
-            for root, dirs, _ in os.walk(embeddings_path):
-                for directory in dirs:
-                    version = directory.split("/")[-1]
-                    path = os.path.join(root, directory)
-                    for entry in os.scandir(path):
-                        if entry.is_file() and entry.name.endswith((".ckpt", ".safetensors", ".pt")):
-                            name = os.path.splitext(entry.name)[0]
-                            embedding = {
-                                "name": name,
-                                "path": entry.path,
-                                "version": version,
-                                "tags": "",
-                                "active": True,
-                                "trigger_word": ""
-                            }
-                            self.emit_signal(SignalCode.EMBEDDING_ADD_SIGNAL, embedding)
-        # self.delete_missing_embeddings({})
-        # self.get_embeddings()
+        print("SCAN FOR EMBEDDINGS CALLED FROM EMBEDDING MIXIN")
+        settings = self.settings
+        self.settings["embeddings"] = scan_path_for_items(self.settings["path_settings"]["base_path"], settings["embeddings"], scan_type="embeddings")
+        self.settings = settings
+        self.save_settings()
