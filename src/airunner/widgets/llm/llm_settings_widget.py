@@ -103,8 +103,7 @@ class LLMSettingsWidget(
         self.ui.leave_in_vram.setChecked(not self.settings["memory_settings"]["unload_unused_models"] and not self.settings["memory_settings"]["move_unused_model_to_cpu"])
         self.ui.move_to_cpu.setChecked(self.settings["memory_settings"]["move_unused_model_to_cpu"])
         self.ui.unload_model.setChecked(self.settings["memory_settings"]["unload_unused_models"])
-
-        llm_generator_settings = self.generator_settings
+        self.ui.override_parameters.setChecked(self.settings["llm_generator_settings"]["override_parameters"])
 
         dtype = get_current_chatbot_property(self.settings, "dtype")
         use_gpu = get_current_chatbot_property(self.settings, "use_gpu")
