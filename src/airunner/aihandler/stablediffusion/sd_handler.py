@@ -58,7 +58,7 @@ class SDHandler(
 ):
     def  __init__(self, *args, **kwargs):
         self._sd_request = None
-
+        self.current_state = HandlerState.INITIALIZED
         super().__init__(*args, **kwargs)
         LoraDataMixin.__init__(self)
         EmbeddingDataMixin.__init__(self)
@@ -131,7 +131,6 @@ class SDHandler(
         self._generator = None
         self.do_interrupt_image_generation = False
         self.latents_worker = create_worker(LatentsWorker)
-        self.current_state = HandlerState.INITIALIZED
         self.model_status = {}
         for model_type in ModelType:
             self.model_status[model_type] = ModelStatus.UNLOADED
