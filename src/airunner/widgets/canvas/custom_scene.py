@@ -121,26 +121,6 @@ class CustomScene(
                 if not file_path.endswith(VALID_IMAGE_FILES):
                     file_path = f"{file_path}.png"
 
-                # Open the overlay image from disk
-                if all((
-                    self.settings["signature_image"] not in (None, ""),
-                    self.settings["export_with_signature"]
-                )):
-                    overlay_path = os.path.expanduser(
-                        os.path.join(
-                            self.settings["path_settings"]["base_path"],
-                            "art/other",
-                            f"signatures/{self.settings['signature_image']}"
-                        )
-                    )
-                    overlay_image = Image.open(overlay_path).convert("RGBA")
-
-                    # Calculate the position to place the overlay image at the bottom left
-                    position = (0, image.height - overlay_image.height)
-
-                    # Overlay the image
-                    image.paste(overlay_image, position, overlay_image)
-
                 # Save the combined image
                 image.save(file_path)
 

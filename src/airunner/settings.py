@@ -979,8 +979,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     autoload_sd=True,
     autoload_llm=False,
     show_nsfw_warning=True,
-    export_with_signature=True,
-    signature_image="signature.png",
     ocr_settings=dict(
         model_path=DEFAULT_OCR_MODEL_PATH,
     ),
