@@ -89,7 +89,6 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def _scan_for_embeddings(self):
         self.emit_signal(SignalCode.EMBEDDING_SCAN_SIGNAL)
-        self.load_embeddings()
 
     def toggle_all_toggled(self, val):
         embedding_widgets = [
