@@ -1,3 +1,4 @@
+import os
 from types import NoneType
 from typing import Optional
 
@@ -38,7 +39,7 @@ class CustomScene(
         self.image: ImageQt = Optional[None]
         self.item: QGraphicsPixmapItem = Optional[None]
         super().__init__()
-
+        self.last_export_path = None
         self._target_size = None
         self._do_resize = False
 
@@ -100,20 +101,48 @@ class CustomScene(
     def export_image(self, _message):
         image = self.current_active_image()
         if image:
-            file_path, _ = QFileDialog.getSaveFileName(
-                None,
-                "Save Image",
-                "",
-                f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
-            )
-            if file_path == "":
-                return
+            # Set the parent window to the main application window
+            parent_window = self.views()[0].window()
 
-            # If missing file extension, add it
-            if not file_path.endswith(VALID_IMAGE_FILES):
-                file_path = f"{file_path}.png"
+            # Use the last export path if available
+            initial_dir = self.last_export_path if self.last_export_path else ""
 
-            image.save(file_path)
+            file_dialog = QFileDialog(parent_window, "Save Image", initial_dir, f"Image Files ({' '.join(VALID_IMAGE_FILES)})")
+            file_dialog.setAcceptMode(QFileDialog.AcceptSave)
+            if file_dialog.exec() == QFileDialog.Accepted:
+                file_path = file_dialog.selectedFiles()[0]
+                if file_path == "":
+                    return
+
+                # Update the last export path
+                self.last_export_path = os.path.dirname(file_path)
+
+                # If missing file extension, add it
+                if not file_path.endswith(VALID_IMAGE_FILES):
+                    file_path = f"{file_path}.png"
+
+                # Open the overlay image from disk
+                if all((
+                    self.settings["signature_image"] not in (None, ""),
+                    self.settings["export_with_signature"]
+                )):
+                    overlay_path = os.path.expanduser(
+                        os.path.join(
+                            self.settings["path_settings"]["base_path"],
+                            "art/other",
+                            f"signatures/{self.settings['signature_image']}"
+                        )
+                    )
+                    overlay_image = Image.open(overlay_path).convert("RGBA")
+
+                    # Calculate the position to place the overlay image at the bottom left
+                    position = (0, image.height - overlay_image.height)
+
+                    # Overlay the image
+                    image.paste(overlay_image, position, overlay_image)
+
+                # Save the combined image
+                image.save(file_path)
 
     def import_image(self, _message):
         file_path, _ = QFileDialog.getOpenFileName(
