@@ -1105,7 +1105,35 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         guidance_scale=75,
     ),
     path_settings={
-        "base_path": BASE_PATH
+        "base_path": BASE_PATH,
+        "documents_path": os.path.expanduser(
+            os.path.join(
+                BASE_PATH,
+                "text/other",
+                "documents"
+            )
+        ),
+        "ebook_path": os.path.expanduser(
+            os.path.join(
+                BASE_PATH,
+                "text/other",
+                "ebooks"
+            )
+        ),
+        "image_path": os.path.expanduser(
+            os.path.join(
+                BASE_PATH,
+                "art/other",
+                "images"
+            )
+        ),
+        "llama_index_path": os.path.expanduser(
+            os.path.join(
+                BASE_PATH,
+                "text/rag",
+                "db"
+            )
+        )
     },
     active_grid_settings=dict(
         enabled=True,
