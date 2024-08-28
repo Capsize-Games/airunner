@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode
 from airunner.settings import BASE_PATH
-from airunner.utils.models.scan_path_for_lora import scan_path_for_lora
+from airunner.utils.models.scan_path_for_items import scan_path_for_items
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.lora_widget import LoraWidget
 from airunner.widgets.lora.templates.lora_container_ui import Ui_lora_container
@@ -93,7 +93,7 @@ class LoraContainerWidget(BaseWidget):
         # Delete the lora from disc
         lora_path = os.path.expanduser(
             os.path.join(
-                BASE_PATH,
+                self.settings["path_settings"]["base_path"],
                 "art/models",
                 self.settings["generator_settings"]["version"],
                 "lora"
@@ -111,8 +111,7 @@ class LoraContainerWidget(BaseWidget):
         # clear all lora widgets
         self.clear_lora_widgets()
         settings = self.settings
-        lora = scan_path_for_lora(settings["lora"])
-        settings["lora"] = lora
+        settings["lora"] = scan_path_for_items(self.settings["path_settings"]["base_path"], settings["lora"])
         self.settings = settings
         self.save_settings()
         self.load_lora()
@@ -130,7 +129,7 @@ class LoraContainerWidget(BaseWidget):
     def get_available_loras(self, tab_name):
         lora_path = os.path.expanduser(
             os.path.join(
-                BASE_PATH,
+                self.settings["path_settings"]["base_path"],
                 "art/models",
                 self.settings["generator_settings"]["version"],
                 "lora"
