@@ -14,6 +14,18 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item row="0" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
@@ -45,10 +57,10 @@
       </font>
      </property>
      <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
+      <enum>QFrame::Shape::NoFrame</enum>
      </property>
      <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
+      <enum>QFrame::Shadow::Plain</enum>
      </property>
      <property name="widgetResizable">
       <bool>true</bool>
@@ -58,8 +70,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>461</width>
-        <height>175</height>
+        <width>479</width>
+        <height>193</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2"/>
