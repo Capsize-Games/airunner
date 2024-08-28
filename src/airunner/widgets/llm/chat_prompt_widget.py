@@ -142,6 +142,9 @@ class ChatPromptWidget(BaseWidget):
 
     def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="causallm"):
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
+        if prompt is None or prompt == "":
+            self.logger.warning("Prompt is empty")
+            return
 
         if self.generating:
             if self.held_message is None:
@@ -149,30 +152,7 @@ class ChatPromptWidget(BaseWidget):
                 self.disable_send_button()
                 self.interrupt_button_clicked()
             return
-
         self.generating = True
-
-
-        # Here we get the image from the current active scene
-        base_64_image = self.settings["canvas_settings"]["image"]
-        image = convert_base64_to_image(base_64_image)
-
-        image = image if (image_override is None or image_override is False) else image_override
-
-        if prompt is None or prompt == "":
-            self.logger.warning("Prompt is empty")
-            return
-
-        current_bot_name = self.settings["llm_generator_settings"]["current_chatbot"]
-        template_name = self.settings["llm_generator_settings"]["saved_chatbots"][current_bot_name]["prompt_template"]
-        if template_name in self.settings["llm_templates"]:
-            prompt_template = self.settings["llm_templates"][template_name]
-        else:
-            raise PromptTemplateNotFoundExeption()
-
-        llm_generator_settings = self.settings["llm_generator_settings"]
-
-        #parsed_template = parse_template(prompt_template)
 
         current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][self.settings["llm_generator_settings"]["current_chatbot"]]
         self.add_message_to_conversation(
@@ -180,6 +160,7 @@ class ChatPromptWidget(BaseWidget):
             message=self.prompt,
             is_bot=False
         )
+
         self.clear_prompt()
         self.start_progress_bar()
         self.emit_signal(
@@ -192,35 +173,6 @@ class ChatPromptWidget(BaseWidget):
                 }
             }
         )
-        # self.emit_signal(
-        #     SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
-        #     {
-        #         "llm_request": True,
-        #         "request_data": {
-        #             "action": self.action,
-        #             "unload_unused_model": self.settings["memory_settings"]["unload_unused_models"],
-        #             "move_unused_model_to_cpu": self.settings["memory_settings"]["move_unused_model_to_cpu"],
-        #             "generator_name": generator_name,
-        #             "model_path": llm_generator_settings["model_version"],
-        #             "stream": True,
-        #             "prompt": prompt,
-        #             "do_summary": False,
-        #             "is_bot_alive": True,
-        #             "conversation_history": self.conversation_history,
-        #             "generator": self.settings["llm_generator_settings"],
-        #             "prefix": self.prefix,
-        #             "suffix": self.suffix,
-        #             "dtype": llm_generator_settings["dtype"],
-        #             "use_gpu": llm_generator_settings["use_gpu"],
-        #             "template": "",
-        #             "hf_api_key_read_key": self.settings["hf_api_key_read_key"],
-        #             "image": image,
-        #             "callback": callback,
-        #             "tts_settings": self.settings["tts_settings"],
-        #             "vision_history": self.vision_history,
-        #         }
-        #     }
-        # )
 
     def on_token_signal(self, val):
         self.handle_token_signal(val)
