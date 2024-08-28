@@ -16,10 +16,37 @@ from airunner.enums import (
 )
 from airunner.utils.os.validate_path import validate_path
 
+
+class ReadWriteLock:
+    def __init__(self):
+        self._read_ready = threading.Condition(threading.Lock())
+        self._readers = 0
+
+    def acquire_read(self):
+        with self._read_ready:
+            self._readers += 1
+
+    def release_read(self):
+        with self._read_ready:
+            self._readers -= 1
+            if self._readers == 0:
+                self._read_ready.notify_all()
+
+    def acquire_write(self):
+        self._read_ready.acquire()
+        while self._readers > 0:
+            self._read_ready.wait()
+
+    def release_write(self):
+        self._read_ready.release()
+
+
 class SettingsMixin:
     _instance = None
     _lock = threading.Lock()
+    _cached_settings_lock = ReadWriteLock()
     _cached_settings = None
+    _settings_lock = threading.Lock()
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -53,22 +80,25 @@ class SettingsMixin:
         Gets the settings dictionary.
         :return:
         """
-        if SettingsMixin._cached_settings is not None:
-            return SettingsMixin._cached_settings
-
+        self._cached_settings_lock.acquire_read()
         try:
+            if SettingsMixin._cached_settings is not None:
+                return SettingsMixin._cached_settings
+
             settings_byte_array = self.application_settings.value("settings", QByteArray())
             if settings_byte_array:
                 data_stream = QDataStream(settings_byte_array, QIODevice.ReadOnly)
                 settings = data_stream.readQVariant()
-                SettingsMixin._cached_settings = settings
+                self.cached_settings = settings
                 return settings
             else:
                 return self.default_settings
         except (TypeError, RuntimeError) as e:
-            print("Failed to get settings")
-            print(e)
+            logging.error("Failed to get settings")
+            logging.error(e)
             return self.default_settings
+        finally:
+            logging.debug("Releasing _cached_settings_lock after reading settings")
 
     @settings.setter
     def settings(self, val):
@@ -77,12 +107,15 @@ class SettingsMixin:
         :param val:
         :return:
         """
+        self._cached_settings_lock.acquire_read()
         try:
             self.set_settings(val)
             SettingsMixin._cached_settings = val
         except Exception as e:
-            print("Failed to set settings")
-            print(e)
+            logging.error("Failed to set settings")
+            logging.error(e)
+        finally:
+            logging.debug("Releasing _cached_settings_lock after writing settings")
 
     def update_settings(self):
         """
