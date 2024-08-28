@@ -50,14 +50,16 @@ class LoraContainerWidget(BaseWidget):
             self.initialized = True
 
     def load_lora(self):
-        self.remove_spacer()
-        filtered_loras = [
-            lora for lora in self.settings["lora"][self.settings["generator_settings"]["version"]]
-            if self.search_filter.lower() in lora["name"].lower()
-        ]
-        for lora in filtered_loras:
-            self.add_lora(lora)
-        self.add_spacer()
+        version = self.settings["generator_settings"]["version"]
+        if version in self.settings["lora"]:
+            self.remove_spacer()
+            filtered_loras = [
+                lora for lora in self.settings["lora"][version]
+                if self.search_filter.lower() in lora["name"].lower()
+            ]
+            for lora in filtered_loras:
+                self.add_lora(lora)
+            self.add_spacer()
 
     def remove_spacer(self):
         # remove spacer from end of self.ui.scrollAreaWidgetContents.layout()
