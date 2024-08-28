@@ -21,7 +21,7 @@ class SpeechT5TTSHandler(TTSHandler):
     def processor_path(self):
         return os.path.expanduser(
             os.path.join(
-                BASE_PATH,
+                self.settings["path_settings"]["base_path"],
                 "text/models",
                 "tts",
                 self.settings["tts_settings"]["speecht5"]["processor_path"]
@@ -32,7 +32,7 @@ class SpeechT5TTSHandler(TTSHandler):
     def model_path(self):
         return os.path.expanduser(
             os.path.join(
-                BASE_PATH,
+                self.settings["path_settings"]["base_path"],
                 "text/models",
                 "tts",
                 self.settings["tts_settings"]["speecht5"]["model_path"],
@@ -43,7 +43,7 @@ class SpeechT5TTSHandler(TTSHandler):
     def vocoder_path(self):
         return os.path.expanduser(
             os.path.join(
-                BASE_PATH,
+                self.settings["path_settings"]["base_path"],
                 "text/models",
                 "tts",
                 self.settings["tts_settings"]["speecht5"]["vocoder_path"],
@@ -54,7 +54,7 @@ class SpeechT5TTSHandler(TTSHandler):
     def speaker_embeddings_path(self):
         return os.path.expanduser(
             os.path.join(
-                BASE_PATH,
+                self.settings["path_settings"]["base_path"],
                 "text/models",
                 "tts",
                 "speaker_embeddings"
