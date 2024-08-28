@@ -35,11 +35,12 @@ class LoraContainerWidget(BaseWidget):
         settings = self.settings
         for lora_widget in lora_widgets:
             lora_widget.ui.enabledCheckbox.blockSignals(True)
-            lora_widget.action_toggled_lora_enabled(val, emit=False)
+            lora_widget.action_toggled_lora_enabled(val)
             lora_widget.ui.enabledCheckbox.blockSignals(False)
         QApplication.processEvents()
-        for index, _lora in enumerate(self.settings["lora"]):
-            settings["lora"][index]["enabled"] = val == 2
+        for version, loras in settings["lora"].items():
+            for index, _lora in enumerate(loras):
+                settings["lora"][version][index]["enabled"] = val == 2
         self.settings = settings
 
     def showEvent(self, event):
