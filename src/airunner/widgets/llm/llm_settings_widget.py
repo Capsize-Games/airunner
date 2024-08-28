@@ -5,7 +5,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 from airunner.enums import SignalCode
 from airunner.settings import DEFAULT_CHATBOT
-from airunner.utils.get_current_chatbot import get_current_chatbot_property
+from airunner.utils.get_current_chatbot import get_current_chatbot_property, get_current_chatbot
 from airunner.utils.get_current_chatbot import set_current_chatbot_property
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
@@ -285,11 +285,7 @@ class LLMSettingsWidget(
 
     @property
     def current_chatbot(self):
-        try:
-            return self.llm_generator_settings["saved_chatbots"][self.current_chatbot_name]
-        except KeyError:
-            self.current_chatbot_name = "Default"
-            return self.llm_generator_settings["saved_chatbots"][self.current_chatbot_name]
+        return get_current_chatbot(self.settings)
 
     def reset_settings_to_default_clicked(self):
         llm_generator_settings = self.current_chatbot["generator_settings"]
@@ -307,7 +303,8 @@ class LLMSettingsWidget(
 
     def set_dtype(self, dtype):
         settings = self.settings
-        settings["llm_generator_settings"]["saved_chatbots"][self.current_chatbot_name]["dtype"] = dtype
+        chatbot = get_current_chatbot(self.settings)
+        chatbot["dtype"] = dtype
         self.settings = settings
         self.set_dtype_description(dtype)
     
