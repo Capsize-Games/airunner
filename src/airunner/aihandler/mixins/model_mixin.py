@@ -110,7 +110,7 @@ class ModelMixin:
             ):
                 return os.path.expanduser(
                     os.path.join(
-                        BASE_PATH,
+                        self.settings["path_settings"]["base_path"],
                         "art/models",
                         version,
                         section,
@@ -122,7 +122,7 @@ class ModelMixin:
     def __tokenizer_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
-                BASE_PATH,
+                self.settings["path_settings"]["base_path"],
                 "art/models",
                 "SD 1.5",
                 "feature_extractor",
