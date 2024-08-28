@@ -210,14 +210,15 @@ class ModelMixin:
         negative_pooled_prompt_embeds = None
 
         if self.is_sd_xl:
+            self.pipe.to(self.device)
             (
                 prompt_embeds,
                 negative_prompt_embeds,
                 pooled_prompt_embeds,
                 negative_pooled_prompt_embeds,
             ) = self.pipe.encode_prompt(
-                prompt=self.sd_request.generator_settings.prompt,
-                negative_prompt=self.sd_request.generator_settings.negative_prompt,
+                prompt=self.settings["generator_settings"]["prompt"],
+                negative_prompt=self.settings["generator_settings"]["negative_prompt"],
                 prompt_2=self.settings["generator_settings"]["second_prompt"],
                 negative_prompt_2=self.settings["generator_settings"]["second_negative_prompt"],
                 device=self.device,
