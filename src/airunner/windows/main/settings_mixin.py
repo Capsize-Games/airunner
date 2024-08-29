@@ -50,18 +50,17 @@ class SettingsMixin:
     _settings_lock = threading.Lock()
 
     def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            with cls._lock:
-                if not cls._instance:
-                    logging.debug("Creating new instance of SettingsMixin")
-                    cls._instance = super(SettingsMixin, cls).__new__(cls)
+        with cls._lock:
+            if not cls._instance:
+                logging.debug("Creating new instance of SettingsMixin")
+                cls._instance = super(SettingsMixin, cls).__new__(cls)
         return cls._instance
 
     def __init__(self):
         if hasattr(self, '_initialized') and self._initialized:
             logging.debug("SettingsMixin instance already initialized")
             return
-        self._initialized = True
+        self.initialized = True
         logging.debug("Initializing SettingsMixin instance")
 
         self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)

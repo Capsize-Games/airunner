@@ -233,7 +233,7 @@ class TTSHandler(BaseHandler):
 
     def initialize(self):
         target_model = self.target_model
-        if target_model != self.current_model:
+        if target_model != self.current_model and self.current_model != "" and self.current_model is not None:
             self.unload()
         self.load(target_model)
 
@@ -271,7 +271,6 @@ class TTSHandler(BaseHandler):
 
     def run(self):
         self.initialize()
-        self.process_sentences()
 
     def load_model(self):
         self.logger.debug("Loading Model")
@@ -356,35 +355,6 @@ class TTSHandler(BaseHandler):
                 words[i] = ':'.join(parts_in_words)
 
         return ' '.join(words)
-
-    def process_sentences(self):
-        """
-        now we have a list of words, but we want a list of sentences. Sentences should
-        be limited to 10 words each, but should end with a period, comma, question mark,
-        exclamation point, or ellipsis. We'll use a counter to keep track of how many
-        words we've added to the current sentence, and a list to store the sentences.
-        If the sentence doesn't end with one of the above, we'll keep adding words until
-        we find one that does, so its possible that a sentence could be longer than 10
-        words.
-        :return:
-        """
-        self.logger.debug("Processing sentences")
-        self.sentences = []
-        sentence = ""
-        for word in self.corpus:
-            if len(word) == 0:
-                continue
-            sentence += word + " "
-            if word[-1] in self.single_character_sentence_enders or (
-                len(word) > 1 and word[-2:] in self.double_character_sentence_enders
-            ):
-                # remove all white space from sentence
-                sentence = sentence.strip()
-                sentence += "\n"
-                self.sentences.append(sentence)
-                sentence = ""
-        if sentence != "":
-            self.sentences.append(sentence)
 
     def add_text(self, data: dict, is_end_of_message: bool):
         self.initialize()
