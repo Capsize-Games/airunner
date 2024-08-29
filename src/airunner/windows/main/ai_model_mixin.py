@@ -31,7 +31,7 @@ class AIModelMixin:
 
     def on_ai_model_delete_signal(self, item: dict):
         settings = self.settings
-        settings["ai_models"] = [existing_item for existing_item in self.settings["ai_models"] if existing_item['name'] != item['name']]
+        settings["ai_models"] = [existing_item for existing_item in settings["ai_models"] if existing_item['name'] != item['name']]
         self.settings = settings
     
     def ai_model_names_by_section(self, section):

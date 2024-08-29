@@ -81,9 +81,10 @@ class LLMGenerateWorker(Worker):
 
         The choice is dependent on the current dtype and other settings.
         """
-        dtype = self.settings["llm_generator_settings"]["dtype"]
-        do_unload_model = self.settings["memory_settings"]["unload_unused_models"]
-        move_unused_model_to_cpu = self.settings["memory_settings"]["move_unused_model_to_cpu"]
+        settings = self.settings
+        dtype = settings["llm_generator_settings"]["dtype"]
+        do_unload_model = settings["memory_settings"]["unload_unused_models"]
+        move_unused_model_to_cpu = settings["memory_settings"]["move_unused_model_to_cpu"]
         do_move_to_cpu = not do_unload_model and move_unused_model_to_cpu
         callback = message.get("callback", None)
         if dtype in AVAILABLE_DTYPES:

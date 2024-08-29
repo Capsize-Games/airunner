@@ -10,10 +10,7 @@ PLATFORM_DARWIN = "darwin"
 PLATFORM_UNKNOWN = "unknown"
 
 
-from airunner.aihandler.logger import Logger
-from airunner.mediator_mixin import MediatorMixin
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
-from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 def get_platform_name():
@@ -48,15 +45,7 @@ def is_windows():
     return __platform__ == PLATFORM_WINDOWS
 
 
-class ClipboardHandler(
-    SettingsMixin,
-    MediatorMixin
-):
-    def __init__(self):
-        MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
-        self.logger = Logger(prefix=self.__class__.__name__)
-
+class ClipboardHandlerMixin:
     def copy_image(
         self,
         image: Image

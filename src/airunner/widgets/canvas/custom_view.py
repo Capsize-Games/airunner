@@ -107,17 +107,19 @@ class CustomGraphicsView(
         if self.line_group.scene() != self._scene:
             self._scene.addItem(self.line_group)
 
-        cell_size = self.settings["grid_settings"]["cell_size"]
+        settings = self.settings
+
+        cell_size = settings["grid_settings"]["cell_size"]
         scene_width = int(self._scene.width())
         scene_height = int(self._scene.height())
 
         num_vertical_lines = scene_width // cell_size + 1
         num_horizontal_lines = scene_height // cell_size + 1
 
-        color = QColor(self.settings["grid_settings"]["line_color"])
+        color = QColor(settings["grid_settings"]["line_color"])
         pen = QPen(
             color,
-            self.settings["grid_settings"]["line_width"],
+            settings["grid_settings"]["line_width"],
         )
 
         # Create or reuse vertical lines
@@ -197,6 +199,7 @@ class CustomGraphicsView(
 
         # this will update the active grid area in the settings
         if selection_start_pos is not None and selection_stop_pos is not None:
+            settings = self.settings
             rect = QRect(
                 selection_start_pos,
                 selection_stop_pos
@@ -210,7 +213,7 @@ class CustomGraphicsView(
             if height % 8 != 0:
                 height -= height % 8
 
-            cell_size = self.settings["grid_settings"]["cell_size"]
+            cell_size = settings["grid_settings"]["cell_size"]
             if width < cell_size:
                 width = cell_size
             if height < cell_size:
@@ -220,7 +223,7 @@ class CustomGraphicsView(
             y = rect.y()
 
             # update the active grid area in settings
-            settings = self.settings
+            settings = settings
             active_grid_settings = settings["active_grid_settings"]
             active_grid_settings["pos_x"] = x
             active_grid_settings["pos_y"] = y
@@ -241,7 +244,7 @@ class CustomGraphicsView(
         self.emit_signal(
             SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED,
             {
-                "settings": self.settings
+                "settings": settings
             }
         )
 
@@ -311,9 +314,10 @@ class CustomGraphicsView(
     def set_canvas_color(self, _message=None):
         if not self._scene:
             return
-        if self.current_background_color == self.settings["grid_settings"]["canvas_color"]:
+        settings = self.settings
+        if self.current_background_color == settings["grid_settings"]["canvas_color"]:
             return
-        self.current_background_color = self.settings["grid_settings"]["canvas_color"]
+        self.current_background_color = settings["grid_settings"]["canvas_color"]
         color = QColor(self.current_background_color)
         brush = QBrush(color)
         self._scene.setBackgroundBrush(brush)
@@ -350,8 +354,9 @@ class CustomGraphicsView(
         :param event:
         :return:
         """
-        if self.settings["current_tool"] == CanvasToolName.SELECTION:
-            x, y = snap_to_grid(self.settings, event.pos().x(), event.pos().y(), use_floor)
+        settings = self.settings
+        if settings["current_tool"] == CanvasToolName.SELECTION:
+            x, y = snap_to_grid(settings, event.pos().x(), event.pos().y(), use_floor)
         else:
             x = event.pos().x()
             y = event.pos().y()

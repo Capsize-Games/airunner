@@ -154,10 +154,11 @@ class SDRequest(
 
     @property
     def section(self):
+        settings = self.settings
         section = GeneratorSection.TXT2IMG
-        if self.drawing_pad_image is not None and self.settings["drawing_pad_settings"]["enabled"]:
+        if self.drawing_pad_image is not None and settings["drawing_pad_settings"]["enabled"]:
             section = GeneratorSection.IMG2IMG
-        if self.outpaint_image is not None and self.settings["outpaint_settings"]["enabled"]:
+        if self.outpaint_image is not None and settings["outpaint_settings"]["enabled"]:
             section = GeneratorSection.OUTPAINT
         return section.value
 
@@ -220,7 +221,8 @@ class SDRequest(
         controlnet_image=None,
         generator_request_data: dict = None,
     ) -> dict:
-        self.memory_settings = MemorySettings(**self.settings["memory_settings"])
+        settings = self.settings
+        self.memory_settings = MemorySettings(**settings["memory_settings"])
         self.load_generator_settings()
         self.latents = latents
         self.callback_steps: int = 1
@@ -254,8 +256,8 @@ class SDRequest(
         args["clip_skip"] = self.generator_settings.clip_skip
 
         if self.is_img2img or self.is_depth2img or self.is_pix2pix or self.is_outpaint:
-            args["height"] = self.settings["working_height"]
-            args["width"] = self.settings["working_width"]
+            args["height"] = settings["working_height"]
+            args["width"] = settings["working_width"]
             if self.is_img2img:
                 if args["num_inference_steps"] < MIN_NUM_INFERENCE_STEPS_IMG2IMG:
                     args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
@@ -278,21 +280,21 @@ class SDRequest(
         generator_request_data=None,
     ) -> dict:
         self.active_rect = active_rect
-
+        settings = self.settings
         if self.active_rect is None:
             self.active_rect = QRect(
-                self.settings["active_grid_settings"]["pos_x"],
-                self.settings["active_grid_settings"]["pos_y"],
-                self.settings["working_width"],
-                self.settings["working_height"],
+                settings["active_grid_settings"]["pos_x"],
+                settings["active_grid_settings"]["pos_y"],
+                settings["working_width"],
+                settings["working_height"],
             )
             self.active_rect.translate(
-                -self.settings["canvas_settings"]["pos_x"],
-                -self.settings["canvas_settings"]["pos_y"]
+                -settings["canvas_settings"]["pos_x"],
+                -settings["canvas_settings"]["pos_y"]
             )
 
-        width = int(self.settings["working_width"])
-        height = int(self.settings["working_height"])
+        width = int(settings["working_width"])
+        height = int(settings["working_height"])
         clip_skip = int(self.generator_settings.clip_skip)
 
         args = {
@@ -311,7 +313,7 @@ class SDRequest(
 
         extra_args = self.prepare_extra_args(generator_request_data)
 
-        if self.settings["controlnet_enabled"] and controlnet_image:
+        if settings["controlnet_enabled"] and controlnet_image:
             if self.is_txt2img:
                 extra_args["image"] = controlnet_image
             else:
@@ -320,10 +322,11 @@ class SDRequest(
         return {**args, **extra_args}
 
     def prepare_extra_args(self, generator_request_data):
+        settings = self.settings
         extra_args = {
         }
-        width = int(self.settings["working_width"])
-        height = int(self.settings["working_height"])
+        width = int(settings["working_width"])
+        height = int(settings["working_height"])
 
         image = None
         mask = None
@@ -334,7 +337,7 @@ class SDRequest(
                 mask = generator_request_data["mask"]
 
         if image is None and not self.is_outpaint:
-            base64image = self.settings["drawing_pad_settings"]["image"]
+            base64image = settings["drawing_pad_settings"]["image"]
             if base64image != "":
                 image = convert_base64_to_image(base64image)
                 if image is not None:
@@ -345,11 +348,11 @@ class SDRequest(
                 "width": width,
                 "height": height,
             }}
-        if not self.settings["controlnet_enabled"]:
+        if not settings["controlnet_enabled"]:
             if self.is_img2img or self.is_depth2img:
                 extra_args = {**extra_args, **{
-                    "strength": self.settings["brush_settings"]["strength"] / 100,
-                    "guidance_scale": self.settings["brush_settings"]["guidance_scale"] / 100,
+                    "strength": settings["brush_settings"]["strength"] / 100,
+                    "guidance_scale": settings["brush_settings"]["guidance_scale"] / 100,
                 }}
             elif self.is_pix2pix:
                 extra_args = {**extra_args, **{
@@ -365,7 +368,7 @@ class SDRequest(
             }}
         elif self.is_outpaint:
             if image is None:
-                base64image = self.settings["canvas_settings"]["image"]
+                base64image = settings["canvas_settings"]["image"]
                 if base64image != "":
                     image = convert_base64_to_image(base64image)
                     if image is not None:
@@ -373,7 +376,7 @@ class SDRequest(
                     else:
                         print("IMAGE IS NONE")
             if mask is None:
-                base64image = self.settings["canvas_settings"]["mask"]
+                base64image = settings["canvas_settings"]["mask"]
                 if base64image != "":
                     mask = convert_base64_to_image(base64image)
                     if mask is not None:
@@ -392,14 +395,14 @@ class SDRequest(
             extra_args["mask_image"] = mask
 
         controlnet_image = self.controlnet_image
-        if self.settings["controlnet_enabled"] and controlnet_image:
+        if settings["controlnet_enabled"] and controlnet_image:
             controlnet_args = {
                 "guess_mode": None,
                 "control_guidance_start": 0.0,
                 "control_guidance_end": 1.0,
-                "strength": self.settings["brush_settings"]["strength"] / 100,
-                "guidance_scale": self.settings["brush_settings"]["guidance_scale"] / 100,
-                "controlnet_conditioning_scale": self.settings["brush_settings"]["conditioning_scale"] / 100,
+                "strength": settings["brush_settings"]["strength"] / 100,
+                "guidance_scale": settings["brush_settings"]["guidance_scale"] / 100,
+                "controlnet_conditioning_scale": settings["brush_settings"]["conditioning_scale"] / 100,
                 "controlnet": [
                     self.generator_settings.controlnet_image_settings.controlnet
                 ],

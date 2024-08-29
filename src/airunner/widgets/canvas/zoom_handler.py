@@ -14,23 +14,25 @@ class ZoomHandler(
 
     @property
     def zoom_in_step(self) -> float:
-        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        settings = self.settings
+        zoom_level = settings["grid_settings"]["zoom_level"]
         if zoom_level > 6:
             return 2
         elif zoom_level > 4:
             return 1
-        return self.settings["grid_settings"]["zoom_in_step"]
+        return settings["grid_settings"]["zoom_in_step"]
 
     @property
     def zoom_out_step(self) -> float:
-        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        settings = self.settings
+        zoom_level = settings["grid_settings"]["zoom_level"]
         if zoom_level > 6:
             return 2
         elif zoom_level > 4:
             return 1
         if zoom_level <= 1.0:
             return 0.05
-        return self.settings["grid_settings"]["zoom_out_step"]
+        return settings["grid_settings"]["zoom_out_step"]
 
     @property
     def zoom_level(self) -> float:
