@@ -3,7 +3,7 @@ from types import NoneType
 from typing import Optional
 
 import PIL
-from PIL import ImageQt, Image, ImageFilter, ImageOps
+from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
@@ -17,16 +17,18 @@ from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils.snap_to_grid import snap_to_grid
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
-from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
+from airunner.widgets.canvas.mixins.clipboard_handler_mixin import ClipboardHandlerMixin
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
-from airunner.widgets.canvas.image_handler import ImageHandler
+from airunner.widgets.canvas.mixins.image_handler_mixin import ImageHandlerMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class CustomScene(
     QGraphicsScene,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    ImageHandlerMixin,
+    ClipboardHandlerMixin
 ):
     settings_key = "canvas_settings"
 
@@ -35,6 +37,8 @@ class CustomScene(
         self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        ImageHandlerMixin.__init__(self)
+        ClipboardHandlerMixin.__init__(self)
         self.painter = None
         self.image: ImageQt = Optional[None]
         self.item: QGraphicsPixmapItem = Optional[None]
@@ -55,8 +59,6 @@ class CustomScene(
 
         self.register_signals()
 
-        self.clipboard_handler = ClipboardHandler()
-        self.image_handler = ImageHandler()
         self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
 
     def showEvent(self, event):
@@ -157,7 +159,7 @@ class CustomScene(
 
     def paste_image_from_clipboard(self, _message):
         if self.scene_is_active:
-            image = self.clipboard_handler.paste_image_from_clipboard()
+            image = self.paste_image_from_clipboard()
             #self.delete_image()
 
             settings = self.settings
@@ -177,7 +179,8 @@ class CustomScene(
     def resize_image(self, image: Image) -> Image:
         if image is None:
             return
-        max_size = (self.settings["working_width"], self.settings["working_height"])
+        settings = self.settings
+        max_size = (settings["working_width"], settings["working_height"])
         image.thumbnail(max_size, PIL.Image.Resampling.BICUBIC)
         return image
 
@@ -199,19 +202,19 @@ class CustomScene(
         )
 
     def load_image(self, image_path: str):
-        image = self.image_handler.load_image(image_path)
+        image = self.load_image(image_path)
         if self.settings["resize_on_paste"]:
             image = self.resize_image(image)
         self.add_image_to_scene(image)
 
     def cancel_filter(self, _message):
-        image = self.image_handler.cancel_filter()
+        image = self.cancel_filter()
         if image:
             self.load_image_from_object(image=image)
 
     def preview_filter(self, message):
         filter_object: ImageFilter.Filter = message["filter_object"]
-        filtered_image = self.image_handler.preview_filter(
+        filtered_image = self.preview_filter(
             self.current_active_image(),
             filter_object
         )
@@ -384,17 +387,17 @@ class CustomScene(
         self,
         image: Image = None
     ) -> object:
-        return self.clipboard_handler.copy_image(image)
+        return self.copy_image(image)
 
     def rotate_image(self, angle):
-        image = self.image_handler.rotate_image(
+        image = self.rotate_image(
             angle,
             self.current_active_image()
         )
         self.set_current_active_image(image)
 
     def cut_image(self, image: Image = None) -> Image:
-        image = self.clipboard_handler.copy_image(image)
+        image = self.copy_image(image)
         if image is not None:
             self.delete_image()
 
@@ -416,9 +419,10 @@ class CustomScene(
         self.initialize_image()
 
     def set_image(self, pil_image: Image = None):
+        settings = self.settings
         base64image = None
         if not pil_image:
-            base64image = self.settings[self.settings_key]["image"]
+            base64image = settings[self.settings_key]["image"]
 
         if base64image is not None:
             try:
@@ -442,8 +446,8 @@ class CustomScene(
             #self.initialize_image()
         else:
             self.image = QImage(
-                self.settings["working_width"],
-                self.settings["working_height"],
+                settings["working_width"],
+                settings["working_height"],
                 QImage.Format.Format_ARGB32
             )
             self.image.fill(Qt.GlobalColor.transparent)
@@ -505,8 +509,9 @@ class CustomScene(
 
     def wheelEvent(self, event):
         # Calculate the zoom factor
-        zoom_in_factor = self.settings["grid_settings"]["zoom_in_step"]
-        zoom_out_factor = -self.settings["grid_settings"]["zoom_out_step"]
+        settings = self.settings
+        zoom_in_factor = settings["grid_settings"]["zoom_in_step"]
+        zoom_out_factor = -settings["grid_settings"]["zoom_out_step"]
 
         # Use delta instead of angleDelta
         if event.delta() > 0:
@@ -515,11 +520,10 @@ class CustomScene(
             zoom_factor = zoom_out_factor
 
         # Update zoom level
-        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        zoom_level = settings["grid_settings"]["zoom_level"]
         zoom_level += zoom_factor
         if zoom_level < 0.1:
             zoom_level = 0.1
-        settings = self.settings
         settings["grid_settings"]["zoom_level"] = zoom_level
         self.settings = settings
 
@@ -527,13 +531,14 @@ class CustomScene(
 
     def handle_mouse_event(self, event, is_press_event) -> bool:
         if isinstance(event, QMouseEvent) and event.button() == Qt.MouseButton.LeftButton:
+            settings = self.settings
             view = self.views()[0]
             pos = view.mapFromScene(event.scenePos())
             if (
-                self.settings["grid_settings"]["snap_to_grid"] and
-                self.settings["current_tool"] == CanvasToolName.SELECTION
+                settings["grid_settings"]["snap_to_grid"] and
+                settings["current_tool"] == CanvasToolName.SELECTION
             ):
-                x, y = snap_to_grid(self.settings, pos.x(), pos.y(), False)
+                x, y = snap_to_grid(settings, pos.x(), pos.y(), False)
                 pos = QPoint(x, y)
                 if is_press_event:
                     self.selection_stop_pos = None

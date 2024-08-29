@@ -94,9 +94,10 @@ class BrushScene(CustomScene):
             self.painter.drawImage(0, 0, self.image)
 
             if self.last_pos:
-                if self.settings["current_tool"] is CanvasToolName.BRUSH:
+                settings = self.settings
+                if settings["current_tool"] is CanvasToolName.BRUSH:
                     self.draw_at(self.painter)
-                elif self.settings["current_tool"] is CanvasToolName.ERASER:
+                elif settings["current_tool"] is CanvasToolName.ERASER:
                     self.erase_at(self.painter)
         super().drawBackground(painter, rect)
 

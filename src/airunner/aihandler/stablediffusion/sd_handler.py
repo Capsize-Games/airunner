@@ -200,14 +200,15 @@ class SDHandler(
 
     def load_stable_diffusion(self):
         self.logger.info("Loading stable diffusion")
+        settings = self.settings
 
-        if self.settings["nsfw_filter"]:
+        if settings["nsfw_filter"]:
             self.load_nsfw_filter()
 
-        if self.settings["controlnet_enabled"]:
+        if settings["controlnet_enabled"]:
             self.load_controlnet()
 
-        if self.settings["sd_enabled"]:
+        if settings["sd_enabled"]:
             if not self.scheduler:
                 self.load_scheduler()
             self.load_stable_diffusion_model()
@@ -304,10 +305,11 @@ class SDHandler(
             self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
 
     def __reload_prompts(self):
+        settings = self.settings
         if (
-            self.settings["generator_settings"]["image_preset"] != self.image_preset
+            settings["generator_settings"]["image_preset"] != self.image_preset
         ):
-            self.image_preset = self.settings["generator_settings"]["image_preset"]
+            self.image_preset = settings["generator_settings"]["image_preset"]
 
         self.latents = None
         self.latents_set = False

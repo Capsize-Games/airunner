@@ -155,7 +155,7 @@ class MainWindow(
         self._generator = None
         self._generator_settings = None
         self.listening = False
-        self.intialized = False
+        self.initialized = False
         self.history = History()
 
         self.logger = Logger(prefix=self.__class__.__name__)
@@ -223,6 +223,8 @@ class MainWindow(
     def on_navigate_to_url(self, data: dict = None):
         url, ok = QInputDialog.getText(self, 'Browse Web', 'Enter your URL:')
         if ok:
+            settings = self.settings
+
             try:
                 result = urllib.parse.urlparse(url)
                 is_url = all([result.scheme, result.netloc])
@@ -233,11 +235,11 @@ class MainWindow(
             if is_url:
                 if url.lower().endswith('.pdf'):
                     # Handle PDF file
-                    filepath = os.path.expanduser(self.settings["path_settings"]["pdf_path"])
+                    filepath = os.path.expanduser(settings["path_settings"]["pdf_path"])
                     filename = self.download_pdf(url, filepath)
                 else:
                     # Handle URL
-                    filepath = os.path.expanduser(self.settings["path_settings"]["webpages_path"])
+                    filepath = os.path.expanduser(settings["path_settings"]["webpages_path"])
                     filename = self.download_url(url, filepath)
             elif os.path.isfile(url):
                 filepath = os.path.dirname(url)
@@ -248,7 +250,6 @@ class MainWindow(
 
             # Update target files to use only the file that was downloaded or navigated to
             # and update the index.
-            settings = self.settings
             chatbot = get_current_chatbot(settings)
             chatbot["target_files"] = [os.path.join(filepath, filename)]
             settings = set_current_chatbot(settings, chatbot)
@@ -281,14 +282,16 @@ class MainWindow(
                         break
 
     def key_matches(self, key_name, keyboard_key):
-        if not key_name in self.settings["shortcut_key_settings"]:
+        settings = self.settings
+        if not key_name in settings["shortcut_key_settings"]:
             return False
-        return self.settings["shortcut_key_settings"][key_name]["key"] == keyboard_key.value
+        return settings["shortcut_key_settings"][key_name]["key"] == keyboard_key.value
 
     def key_text(self, key_name):
-        if not key_name in self.settings["shortcut_key_settings"]:
+        settings = self.settings
+        if not key_name in settings["shortcut_key_settings"]:
             return ""
-        return self.settings["shortcut_key_settings"][key_name]["text"]
+        return settings["shortcut_key_settings"][key_name]["text"]
 
     def on_update_saved_stablediffusion_prompt_signal(self, options: dict):
         index, prompt, negative_prompt = options
@@ -305,8 +308,8 @@ class MainWindow(
     def on_save_stablediffusion_prompt_signal(self, _message):
         settings = self.settings
         settings["saved_prompts"].append({
-            'prompt': self.settings["generator_settings"]["prompt"],
-            'negative_prompt': self.settings["generator_settings"]["negative_prompt"],
+            'prompt': settings["generator_settings"]["prompt"],
+            'negative_prompt': settings["generator_settings"]["negative_prompt"],
         })
         self.settings = settings
 
@@ -421,8 +424,9 @@ class MainWindow(
             getattr(self.ui, element_name).setStyleSheet(styles)
             getattr(self.ui, element_name).setToolTip(tool_tip)
 
-    def set_sd_status_text(self):
-        self.ui.sd_status.setText(self.settings["generator_settings"]["version"])
+    def set_sd_status_text(self, settings=None):
+        settings = settings or self.settings
+        self.ui.sd_status.setText(settings["generator_settings"]["version"])
 
     def on_write_file_signal(self, data: dict):
         """
@@ -472,38 +476,39 @@ class MainWindow(
 
         self.logger.debug("Restoring state")
         self.restore_state()
+        settings = self.settings
 
-        if self.settings["sd_enabled"]:
+        if settings["sd_enabled"]:
             self.on_model_status_changed_signal({
                 "model": ModelType.SD,
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-        if self.settings["controlnet_enabled"]:
+        if settings["controlnet_enabled"]:
             self.on_model_status_changed_signal({
                 "model": ModelType.CONTROLNET,
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-        if self.settings["llm_enabled"]:
+        if settings["llm_enabled"]:
             self.on_model_status_changed_signal({
                 "model": ModelType.LLM,
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-        if self.settings["tts_enabled"]:
+        if settings["tts_enabled"]:
             self.on_model_status_changed_signal({
                 "model": ModelType.TTS,
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-        if self.settings["stt_enabled"]:
+        if settings["stt_enabled"]:
             self.on_model_status_changed_signal({
                 "model": ModelType.STT,
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-        if self.settings["ocr_enabled"]:
+        if settings["ocr_enabled"]:
             self.on_model_status_changed_signal({
                 "model": ModelType.OCR,
                 "status": ModelStatus.LOADING,
@@ -519,6 +524,8 @@ class MainWindow(
         self.initialize_widget_elements()
 
     def initialize_widget_elements(self):
+        settings = self.settings
+
         self.ui.ocr_button.blockSignals(True)
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)
@@ -527,13 +534,13 @@ class MainWindow(
         self.ui.sd_toggle_button.blockSignals(True)
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.controlnet_toggle_button.blockSignals(True)
-        self.ui.ocr_button.setChecked(self.settings["ocr_enabled"])
-        self.ui.llm_button.setChecked(self.settings["llm_enabled"])
-        self.ui.tts_button.setChecked(self.settings["tts_enabled"])
-        self.ui.v2t_button.setChecked(self.settings["stt_enabled"])
-        self.ui.sd_toggle_button.setChecked(self.settings["sd_enabled"])
-        self.ui.enable_controlnet.setChecked(self.settings["controlnet_enabled"])
-        self.ui.controlnet_toggle_button.setChecked(self.settings["controlnet_enabled"])
+        self.ui.ocr_button.setChecked(settings["ocr_enabled"])
+        self.ui.llm_button.setChecked(settings["llm_enabled"])
+        self.ui.tts_button.setChecked(settings["tts_enabled"])
+        self.ui.v2t_button.setChecked(settings["stt_enabled"])
+        self.ui.sd_toggle_button.setChecked(settings["sd_enabled"])
+        self.ui.enable_controlnet.setChecked(settings["controlnet_enabled"])
+        self.ui.controlnet_toggle_button.setChecked(settings["controlnet_enabled"])
         self.ui.ocr_button.blockSignals(False)
         self.ui.llm_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
@@ -542,7 +549,7 @@ class MainWindow(
         self.ui.enable_controlnet.blockSignals(False)
         self.ui.sd_toggle_button.blockSignals(False)
         self.ui.controlnet_toggle_button.blockSignals(False)
-        self.intialized = True
+        self.initialized = True
 
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
         self.emit_signal(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
@@ -671,7 +678,7 @@ class MainWindow(
         show_path(default_path if default_path and path == "" else path)
 
     def set_icons(self, icon_name, widget_name, theme):
-        if not self.intialized:
+        if not self.initialized:
             return
 
         icon = QtGui.QIcon()
@@ -779,7 +786,9 @@ class MainWindow(
 
     def restore_state(self):
         self.logger.debug("Restoring state")
-        window_settings = self.settings["window_settings"]
+        settings = self.settings
+
+        window_settings = settings["window_settings"]
 
         if window_settings["is_maximized"]:
             self.showMaximized()
@@ -788,30 +797,23 @@ class MainWindow(
         else:
             self.showNormal()
 
-        self.ui.ai_button.setChecked(self.settings["ai_mode"])
-        self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
+        self.ui.ai_button.setChecked(settings["ai_mode"])
+        self.set_button_checked("toggle_grid", settings["grid_settings"]["show_grid"], False)
 
-        # Restore splitters
-        if window_settings["content_splitter"] is not None:
-            self.ui.content_splitter.restoreState(window_settings["content_splitter"])
-
-        if window_settings["stable_diffusion_splitter"] is not None:
-            self.ui.tool_tab_widget.ui.stable_diffusion_splitter.restoreState(window_settings["stable_diffusion_splitter"])
-
-        if window_settings["llm_splitter"] is not None:
-            self.ui.tool_tab_widget.ui.llm_splitter.restoreState(window_settings["llm_splitter"])
-
-        if window_settings["canvas_splitter"] is not None:
-            self.ui.canvas_widget_2.ui.canvas_splitter.restoreState(window_settings["canvas_splitter"])
-
-        if window_settings["canvas_side_splitter"] is not None:
-            self.ui.canvas_widget_2.ui.canvas_side_splitter.restoreState(window_settings["canvas_side_splitter"])
-
-        if window_settings["canvas_side_splitter_2"] is not None:
-            self.ui.canvas_widget_2.ui.canvas_side_splitter_2.restoreState(window_settings["canvas_side_splitter"])
-
-        if window_settings["generator_form_splitter"] is not None:
-            self.ui.generator_widget.ui.generator_form_splitter.restoreState(window_settings["generator_form_splitter"])
+        splitters = [
+            ("content_splitter", self.ui.content_splitter),
+            ("stable_diffusion_splitter", self.ui.tool_tab_widget.ui.stable_diffusion_splitter),
+            ("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter),
+            ("canvas_splitter", self.ui.canvas_widget_2.ui.canvas_splitter),
+            ("canvas_side_splitter", self.ui.canvas_widget_2.ui.canvas_side_splitter),
+            ("canvas_side_splitter_2", self.ui.canvas_widget_2.ui.canvas_side_splitter_2),
+            ("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter),
+        ]
+        for splitter_name, splitter in splitters:
+            if window_settings[splitter_name] is not None:
+                splitter.blockSignals(True)
+                splitter.restoreState(window_settings[splitter_name])
+                splitter.blockSignals(False)
     ##### End window properties #####
     #################################
         
@@ -901,7 +903,9 @@ class MainWindow(
             self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
 
     def show_nsfw_warning_popup(self):
-        if self.settings["show_nsfw_warning"]:
+        settings = self.settings
+
+        if settings["show_nsfw_warning"]:
             """
             Display a popup window which asks the user if they are sure they want to disable the NSFW filter
             along with a checkbox that allows the user to disable the warning in the future.
@@ -934,7 +938,7 @@ class MainWindow(
                 self._disable_nsfw_filter(not checkbox.isChecked())
 
             self.ui.actionSafety_Checker.blockSignals(True)
-            self.ui.actionSafety_Checker.setChecked(self.settings["nsfw_filter"])
+            self.ui.actionSafety_Checker.setChecked(settings["nsfw_filter"])
             self.ui.actionSafety_Checker.blockSignals(False)
         else:
             self._disable_nsfw_filter()
@@ -976,13 +980,14 @@ class MainWindow(
         """
         Sets the stylesheet for the application based on the current theme
         """
+        settings = self.settings
         if (
-            self._override_system_theme is not self.settings["override_system_theme"] or
-            self._dark_mode_enabled is not self.settings["dark_mode_enabled"]
+            self._override_system_theme is not settings["override_system_theme"] or
+            self._dark_mode_enabled is not settings["dark_mode_enabled"]
         ):
             ui = ui or self
-            self._override_system_theme = self.settings["override_system_theme"]
-            self._dark_mode_enabled = self.settings["dark_mode_enabled"]
+            self._override_system_theme = settings["override_system_theme"]
+            self._dark_mode_enabled = settings["dark_mode_enabled"]
 
             if self._override_system_theme:
                 self.logger.debug("Setting stylesheet")
@@ -1000,33 +1005,24 @@ class MainWindow(
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.set_sd_status_text()
-        # self.automatic_filter_manager = AutomaticFilterManager()
-        # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
-
-        # print("*"*1000)
-        # for filename, modules in self.restrict_os_access.logging_importer.imported_files.items():
-        #     print(filename)
-        #     for module, submodules in modules.items():
-        #         print(f"    {module}")
-        #         for submodule in submodules:
-        #             print(f"        {submodule}")
-
-        self.initialize_window()
-        self.initialize_default_buttons()
-        self.initialize_filter_actions()
-        self.intialized = True
+        self.logger.debug("showEvent called, initializing window")
+        settings = self.settings
+        self.set_sd_status_text(settings)
+        self._initialize_window()
+        self._initialize_default_buttons(settings)
+        self._initialize_filter_actions(settings)
+        self.initialized = True
         for icon_data in self.icons:
             self.set_icons(
                 icon_data[0],
                 icon_data[1],
-                "dark" if self.settings["dark_mode_enabled"] else "light"
+                "dark" if settings["dark_mode_enabled"] else "light"
             )
+        #self._initialize_worker_manager()
+        self.logger.debug("Showing window")
 
-        # call initialize_worker_manager after 100ms
-        self.initialize_worker_manager()
-
-    def initialize_worker_manager(self):
+    def _initialize_worker_manager(self):
+        self.logger.debug("Initializing worker manager")
         from airunner.worker_manager import WorkerManager
         self.worker_manager = WorkerManager(
             disable_sd=self.disable_sd,
@@ -1037,9 +1033,9 @@ class MainWindow(
             do_load_llm_on_init=self.do_load_llm_on_init
         )
 
-    def initialize_filter_actions(self):
+    def _initialize_filter_actions(self, settings):
         # add more filters:
-        for filter_name, filter_data in self.settings["image_filters"].items():
+        for filter_name, filter_data in settings["image_filters"].items():
 
             action = self.ui.menuFilters.addAction(filter_data["display_name"])
             action.triggered.connect(partial(self.display_filter_window, filter_data["name"]))
@@ -1048,10 +1044,10 @@ class MainWindow(
         from airunner.windows.filter_window import FilterWindow
         FilterWindow(filter_name)
 
-    def initialize_default_buttons(self):
-        show_grid = self.settings["grid_settings"]["show_grid"]
-        current_tool = self.settings["current_tool"]
-        ai_mode = self.settings["ai_mode"]
+    def _initialize_default_buttons(self, settings):
+        show_grid = settings["grid_settings"]["show_grid"]
+        current_tool = settings["current_tool"]
+        ai_mode = settings["ai_mode"]
 
         set_widget_state(self.ui.toggle_active_grid_area_button, current_tool is CanvasToolName.ACTIVE_GRID_AREA)
         set_widget_state(self.ui.toggle_brush_button, current_tool is CanvasToolName.BRUSH)
@@ -1060,7 +1056,7 @@ class MainWindow(
         set_widget_state(self.ui.ai_button, ai_mode)
 
         self.ui.actionSafety_Checker.blockSignals(True)
-        self.ui.actionSafety_Checker.setChecked(self.settings["nsfw_filter"])
+        self.ui.actionSafety_Checker.setChecked(settings["nsfw_filter"])
         self.ui.actionSafety_Checker.blockSignals(False)
 
     def toggle_tool(self, tool: CanvasToolName, active: bool):
@@ -1091,7 +1087,7 @@ class MainWindow(
         except AttributeError:
             return None
 
-    def initialize_window(self):
+    def _initialize_window(self):
         self.center()
         self.set_window_title()
 

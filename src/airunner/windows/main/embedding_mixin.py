@@ -6,7 +6,7 @@ from airunner.utils.models.scan_path_for_items import scan_path_for_items
 class EmbeddingMixin:
     def update_embedding(self, embedding: dict):
         settings = self.settings
-        for index, _embedding in enumerate(self.settings["embeddings"]):
+        for index, _embedding in enumerate(settings["embeddings"]):
             if _embedding["name"] == embedding["name"] and _embedding["path"] == embedding["path"]:
                 settings["embeddings"][index] = embedding
                 self.settings = settings
@@ -38,7 +38,7 @@ class EmbeddingMixin:
     
     def delete_embedding(self, embedding):
         settings = self.settings
-        for index, _embedding in enumerate(self.settings["embeddings"]):
+        for index, _embedding in enumerate(settings["embeddings"]):
             if _embedding["name"] == embedding["name"] and _embedding["path"] == embedding["path"]:
                 del settings["embeddings"][index]
                 self.settings = settings
@@ -47,6 +47,5 @@ class EmbeddingMixin:
     def scan_for_embeddings(self, _message: dict):
         print("SCAN FOR EMBEDDINGS CALLED FROM EMBEDDING MIXIN")
         settings = self.settings
-        self.settings["embeddings"] = scan_path_for_items(self.settings["path_settings"]["base_path"], settings["embeddings"], scan_type="embeddings")
+        settings["embeddings"] = scan_path_for_items(settings["path_settings"]["base_path"], settings["embeddings"], scan_type="embeddings")
         self.settings = settings
-        self.save_settings()
