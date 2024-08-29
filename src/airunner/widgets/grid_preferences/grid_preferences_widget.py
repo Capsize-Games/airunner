@@ -9,16 +9,16 @@ class GridPreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        settings = self.settings
         self.ui.grid_line_width_spinbox.blockSignals(True)
         self.ui.grid_size_spinbox.blockSignals(True)
         self.ui.show_grid_checkbox.blockSignals(True)
         self.ui.snap_to_grid_checkbox.blockSignals(True)
 
-        line_width = self.settings["grid_settings"]["line_width"]
-        cell_size = self.settings["grid_settings"]["cell_size"]
-        show_grid = self.settings["grid_settings"]["show_grid"]
-        snap_to_grid = self.settings["grid_settings"]["snap_to_grid"]
+        line_width = settings["grid_settings"]["line_width"]
+        cell_size = settings["grid_settings"]["cell_size"]
+        show_grid = settings["grid_settings"]["show_grid"]
+        snap_to_grid = settings["grid_settings"]["snap_to_grid"]
 
         self.ui.grid_line_width_spinbox.setValue(line_width)
         self.ui.grid_size_spinbox.setValue(cell_size)

@@ -1,14 +1,9 @@
 from PySide6 import QtWidgets
 from PySide6.QtCore import Qt
 
-from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
 
 
-class GridHandler(
-    SettingsMixin,
-    MediatorMixin
-):
+class GridHandlerMixin:
     MAX_WORKING_HEIGHT: int = 4096
     MIN_WORKING_HEIGHT: int = 512
     MAX_WORKING_WIDTH: int = 4096
@@ -20,8 +15,7 @@ class GridHandler(
     DIMENSION_HEIGHT: str = "height"
 
     def __init__(self):
-        MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        pass
 
     def update_grid_dimensions_based_on_event(self, event):
         amount = int(abs(event.angleDelta().y()) / self.WHEEL_DELTA_DIVISOR)
@@ -60,13 +54,15 @@ class GridHandler(
         self.update_setting("is_maximized", self.OPERATION_DECREASE, amount, self.MIN_WORKING_WIDTH)
 
     def update_setting(self, key: str, operation: str, amount: int, limit: int):
-        value = self.settings[key]
+        settings = self.settings
+        value = settings[key]
         if operation == self.OPERATION_INCREASE:
-            value += self.settings["grid_settings"]["cell_size"] * amount
+            value += settings["grid_settings"]["cell_size"] * amount
             if value > limit:
                 value = limit
         elif operation == self.OPERATION_DECREASE:
-            value -= self.settings["grid_settings"]["cell_size"] * amount
+            value -= settings["grid_settings"]["cell_size"] * amount
             if value < limit:
                 value = limit
-        self.settings[key] = value
+        settings[key] = value
+        self.settings = settings

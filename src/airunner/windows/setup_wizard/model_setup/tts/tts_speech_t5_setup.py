@@ -7,21 +7,22 @@ class TTSSpeechT5Setup(DownloadWizardPage):
     class_name_ = Ui_speecht5_setup
 
     def start_download(self):
+        settings = self.settings
         self.models_to_download = [
             {
                 "model": {
-                    "path": self.settings["tts_settings"]["speecht5"]["embeddings_path"],
+                    "path": settings["tts_settings"]["speecht5"]["embeddings_path"],
                     "repo_type": "dataset",
                 },
             },
             {
                 "model": {
-                    "path": self.settings["tts_settings"]["speecht5"]["vocoder_path"]
+                    "path": settings["tts_settings"]["speecht5"]["vocoder_path"]
                 },
             },
             {
                 "model": {
-                    "path": self.settings["tts_settings"]["speecht5"]["model_path"]
+                    "path": settings["tts_settings"]["speecht5"]["model_path"]
                 },
             }
         ]
