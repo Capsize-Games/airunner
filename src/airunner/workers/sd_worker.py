@@ -45,43 +45,10 @@ class SDWorker(Worker):
         ]
         self.sd = None
         super().__init__(prefix=prefix)
-        self.__action_queue = Queue()
-        self.__queue_actions = set()
-        self.__queue_watcher_thread = threading.Thread(target=self.__watch_action_queue)
-        self.__queue_watcher_thread.start()
 
     def handle_sd_state_changed_signal(self, _data=None):
         self.sd.controlnet_handle_sd_state_changed_signal()
         self.sd.scheduler_handle_sd_state_changed_signal()
-
-    @property
-    def __sd_worker_ready(self):
-        return False
-
-    def __watch_action_queue(self):
-        while True:
-            if not self.__action_queue.empty():
-                item = self.__action_queue.get()
-                action = item["action"]
-                self.__queue_actions.remove(action)
-                args = item.get("args", []) or []
-                action(*args)
-                self.__action_queue.task_done()
-            time.sleep(0.1)
-
-    def __can_run_action(self, action):
-        if not self.__sd_worker_ready:
-            self.__add_action_to_queue(action)
-            return False
-        return True
-
-    def __add_action_to_queue(self, action, args):
-        if action not in self.__queue_actions:
-            self.__action_queue.put(dict(
-                action=action,
-                args=args
-            ))
-            self.__queue_actions.add(action)
 
     def on_safety_checker_model_load_signal(self, message):
         if self.sd:
