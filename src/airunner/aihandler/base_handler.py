@@ -53,7 +53,7 @@ class BaseHandler(
     def torch_dtype(self):
         return torch.float16 if self.use_cuda else torch.float32
 
-    def change_model_status(self, model: ModelType, status: ModelStatus, path: str):
+    def change_model_status(self, model: ModelType, status: ModelStatus, path: str = ""):
         self.emit_signal(
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                 "model": model,
