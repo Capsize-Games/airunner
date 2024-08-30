@@ -243,9 +243,6 @@ class CanvasWidget(
     def save_image(self, image_path, image=None):
         self.save_image(image_path, image, self.scene.items())
 
-    def apply_filter(self, _filter_object: ImageFilter.Filter):
-        self.apply_filter(_filter_object)
-
     def cell_size_changed(self, _val):
         self.redraw_lines = True
         self.do_draw()
