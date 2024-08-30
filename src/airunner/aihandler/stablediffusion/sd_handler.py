@@ -206,7 +206,7 @@ class SDHandler(
             self.load_nsfw_filter()
 
         if settings["controlnet_enabled"]:
-            self.load_controlnet()
+            self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
 
         if settings["sd_enabled"]:
             if not self.scheduler:
