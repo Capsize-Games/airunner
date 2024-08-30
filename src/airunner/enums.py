@@ -30,6 +30,7 @@ class FilterType(Enum):
 
 class ModelAction(Enum):
     NONE = auto()
+    LOAD = auto()
     CLEAR = auto()
     APPLY_TO_PIPE = auto()
 
