@@ -167,7 +167,37 @@ DEFAULT_IMAGE_LLM_GUARDRAILS = (
 # By default, this is set to ~/.airunner
 ####################################################################
 BASE_PATH = "~/.airunner"
-
+DEFAULT_PATH_SETTINGS = {
+    "base_path": BASE_PATH,
+    "documents_path": os.path.expanduser(
+        os.path.join(
+            BASE_PATH,
+            "text/other",
+            "documents"
+        )
+    ),
+    "ebook_path": os.path.expanduser(
+        os.path.join(
+            BASE_PATH,
+            "text/other",
+            "ebooks"
+        )
+    ),
+    "image_path": os.path.expanduser(
+        os.path.join(
+            BASE_PATH,
+            "art/other",
+            "images"
+        )
+    ),
+    "llama_index_path": os.path.expanduser(
+        os.path.join(
+            BASE_PATH,
+            "text/rag",
+            "db"
+        )
+    )
+}
 
 ####################################################################
 # DEFAULT_CHATBOT is a dictionary that contains the default settings
@@ -1102,37 +1132,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         conditioning_scale=550,
         guidance_scale=75,
     ),
-    path_settings={
-        "base_path": BASE_PATH,
-        "documents_path": os.path.expanduser(
-            os.path.join(
-                BASE_PATH,
-                "text/other",
-                "documents"
-            )
-        ),
-        "ebook_path": os.path.expanduser(
-            os.path.join(
-                BASE_PATH,
-                "text/other",
-                "ebooks"
-            )
-        ),
-        "image_path": os.path.expanduser(
-            os.path.join(
-                BASE_PATH,
-                "art/other",
-                "images"
-            )
-        ),
-        "llama_index_path": os.path.expanduser(
-            os.path.join(
-                BASE_PATH,
-                "text/rag",
-                "db"
-            )
-        )
-    },
+    path_settings=DEFAULT_PATH_SETTINGS,
     active_grid_settings=dict(
         enabled=True,
         render_border=True,
