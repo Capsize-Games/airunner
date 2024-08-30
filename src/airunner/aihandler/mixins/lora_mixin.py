@@ -1,5 +1,6 @@
 import os
 
+from airunner.enums import ModelType, ModelStatus
 from airunner.settings import BASE_PATH
 
 
@@ -8,6 +9,15 @@ class LoraMixin:
         self.loaded_lora: list = []
         self.disabled_lora: list = []
         self._available_lora: dict = None
+        settings = self.settings
+        self.lora_path = os.path.expanduser(
+            os.path.join(
+                settings["path_settings"]["base_path"],
+                "art/models",
+                settings["generator_settings"]["version"],
+                "lora"
+            )
+        )
 
     @property
     def available_lora(self):
@@ -16,55 +26,64 @@ class LoraMixin:
         return []
 
     def add_lora_to_pipe(self):
+        """
+        Called when stable diffusion handler is loaded
+        """
         self.loaded_lora = []
-        self.apply_lora()
+        self.apply_all_lora()
 
-    def apply_lora(self):
-        self.logger.debug("Adding LoRA to pipe")
-        lora_path = os.path.expanduser(
-            os.path.join(
-                self.settings["path_settings"]["base_path"],
-                "art/models",
-                self.settings["generator_settings"]["version"],
-                "lora"
-            )
-        )
-        for lora in self.available_lora:
-            if lora["enabled"] == False:
-                continue
-            for root, dirs, files in os.walk(lora_path):
-                for file in files:
-                    if file.startswith(lora["name"]):
-                        filepath = os.path.join(root, file)
-                        lora["path"] = filepath
-                        break
-            self.load_lora(lora)
-
-    def on_update_lora_signal(self, lora: dict):
+    def on_update_lora_signal(self, message: dict):
+        """
+        Called when LORA status is updated and signal is emitted
+        """
         if self.pipe is not None:
-            if lora["enabled"]:
-                self.load_lora(lora)
-            else:
-                self.remove_lora_from_pipe(lora)
+            self.apply_all_lora(message["lora"])
+
+    def apply_all_lora(self, loras: list=None):
+        """
+        Apply / remove all LORA to the pipe. If none are passed, all available LORA will be considered.
+        """
+        loras = loras or self.available_lora
+        if len(loras) == 0:
+            return
+        self.remove_lora_from_pipe()
+        if self.pipe is not None:
+            self.change_model_status(ModelType.SD, ModelStatus.LOADING)
+            for lora in loras:
+                if lora["enabled"]:
+                    self.load_lora(lora)
+            self.change_model_status(ModelType.SD, ModelStatus.LOADED)
+            if len(self.loaded_lora):
+                self.logger.debug("LoRA loaded")
+
+    def has_lora_changed(self):
+        """
+        Check if there are any changes in the available LORA compared to the loaded LORA.
+        Return True if there are changes, otherwise False.
+        """
+        available_lora = self.available_lora
+        loaded_lora_paths = {lora["path"] for lora in self.loaded_lora}
+
+        for lora in available_lora:
+            if lora["enabled"] and lora["path"] not in loaded_lora_paths:
+                return True
+
+        return False
 
     def load_lora(self, lora):
         if lora["path"] in self.disabled_lora:
             return
+
+        if not self.has_lora_changed():
+            return
+
         try:
             filename = lora["path"].split("/")[-1]
-            pathname = os.path.expanduser(
-                os.path.join(
-                    self.settings["path_settings"]["base_path"],
-                    "art/models",
-                    self.settings["generator_settings"]["version"],
-                    "lora"
-                )
-            )
             for _lora in self.loaded_lora:
                 if _lora["name"] == lora["name"] and _lora["path"] == lora["path"]:
                     return
             self.pipe.load_lora_weights(
-                pathname,
+                self.lora_path,
                 weight_name=filename
             )
             self.loaded_lora.append(lora)
@@ -78,13 +97,9 @@ class LoraMixin:
             self.logger.warning("LORA could not be loaded")
             self.disable_lora(lora["path"])
 
-    def remove_lora_from_pipe(self, lora:dict):
-        for index, _lora in enumerate(self.loaded_lora):
-            if _lora["name"] == lora["name"] and _lora["path"] == lora["path"]:
-                self.loaded_lora.pop(index)
-                break
+    def remove_lora_from_pipe(self):
+        self.loaded_lora = []
         self.pipe.unload_lora_weights()
-        self.apply_lora()
 
     def disable_lora(self, checkpoint_path):
         self.disabled_lora.append(checkpoint_path)
