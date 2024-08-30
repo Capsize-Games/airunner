@@ -22,10 +22,10 @@ class SafetyCheckerMixin:
     def safety_checker_initialized(self) -> bool:
         try:
             return not self.use_safety_checker or (
-                    self.safety_checker is not None and
-                    self.feature_extractor is not None and
-                    self.pipe.safety_checker is not None and
-                    self.pipe.feature_extractor is not None
+                self.safety_checker is not None and
+                self.feature_extractor is not None and
+                self.pipe.safety_checker is not None and
+                self.pipe.feature_extractor is not None
             )
         except AttributeError:
             pass
