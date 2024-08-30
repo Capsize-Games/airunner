@@ -241,7 +241,7 @@ class SDHandler(
                 self.use_compel and (
                     self.prompt_embeds is None or
                     self.negative_prompt_embeds is None
-                )
+                ) and not self.is_sd_xl and not self.is_sd_xl_turbo
             )
         )
 
