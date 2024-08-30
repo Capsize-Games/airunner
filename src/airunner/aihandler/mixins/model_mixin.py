@@ -3,6 +3,7 @@ import ctypes
 import io
 import os
 import threading
+import time
 
 import numpy as np
 from PySide6.QtWidgets import QApplication
@@ -219,6 +220,8 @@ class ModelMixin:
             self.load_stable_diffusion()
             if not self.pipe:
                 raise PipeNotLoadedException()
+        while self.sd_model_status is not ModelStatus.LOADED:
+            time.sleep(0.1)
         self.__load_generator_arguments(settings, generator_request_data)
         self.do_generate = False
         return self.__generate()
