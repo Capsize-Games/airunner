@@ -2,7 +2,7 @@ import threading
 import traceback
 import torch
 from PIL import Image
-from PySide6.QtCore import QRunnable, QThreadPool
+from PySide6.QtCore import QRunnable, QThreadPool, QMutex, QThread, Slot, QObject, Signal
 
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.aihandler.mixins.controlnet_mixin import ControlnetHandlerMixin
@@ -16,7 +16,7 @@ from airunner.enums import (
     SDMode,
     EngineResponseCode,
     ModelStatus,
-    ModelType, HandlerState
+    ModelType, HandlerState, ModelAction
 )
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
@@ -40,19 +40,26 @@ SKIP_RELOAD_CONSTS = (
 )
 
 
-class SDHandlerLoadImageGeneratorModelTask(QRunnable):
+class LoadImageGeneratorModelWorker(QObject):
+    finished = Signal()
+    error = Signal(str)
+
     def __init__(self, sd_handler):
         super().__init__()
         self.sd_handler = sd_handler
 
+    @Slot()
     def run(self):
         try:
             self.sd_handler.load_image_generator_model()
-        except ThreadInterruptException:
-            print("Model loading task was interrupted.")
+        except Exception as e:
+            self.error.emit(str(e))
+        finally:
+            self.finished.emit()
 
     def cancel_load_model(self):
         self.sd_handler.cancel_load()
+
 
 class SDHandler(
     BaseHandler,
@@ -150,12 +157,8 @@ class SDHandler(
         self.model_status = {}
         for model_type in ModelType:
             self.model_status[model_type] = ModelStatus.UNLOADED
-        self.load_model_thread = None
 
         self.register(SignalCode.SD_UNLOAD_SIGNAL, self.__on_unload_stablediffusion_signal)
-
-        self.__thread_pool_load_model = QThreadPool()
-        self.__load_image_generator_model_task = SDHandlerLoadImageGeneratorModelTask(self)
 
     @property
     def current_state(self):
@@ -240,7 +243,14 @@ class SDHandler(
         except IndexError:
             return None
 
+    _loading_thread = None
     def load_stable_diffusion(self):
+        if self._loading_thread is not None:
+            self._loading_thread.join()
+        self._loading_thread = threading.Thread(target=self.__load_stable_diffusion)
+        self._loading_thread.start()
+
+    def __load_stable_diffusion(self):
         self.logger.info("Loading stable diffusion")
         settings = self.settings
 
@@ -250,10 +260,9 @@ class SDHandler(
         if settings["controlnet_enabled"]:
             self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
 
-        if settings["sd_enabled"]:
-            if not self.scheduler:
-                self.load_scheduler()
-            self.load_stable_diffusion_model()
+        if not self.scheduler:
+            self.load_scheduler()
+        self.load_image_generator_model()
 
     def interrupt_image_generation_signal(self, _message: dict = None):
         if self.current_state == HandlerState.GENERATING:
@@ -325,27 +334,6 @@ class SDHandler(
             except Exception as e:
                 self.log_error(e, "Failed to generate")
             self.current_state = HandlerState.READY
-
-    def load_stable_diffusion_model(self):
-        if not self.settings["sd_enabled"]:
-            return
-
-        self.__load_image_generator_model_task = SDHandlerLoadImageGeneratorModelTask(self)
-        self.__thread_pool_load_model.start(
-            self.__load_image_generator_model_task
-        )
-        self.__thread_pool_load_model.waitForDone()
-
-        if (
-            self.pipe is not None and
-            self.safety_checker_initialized is True
-        ):
-            self.current_state = HandlerState.READY
-        else:
-            self.current_state = HandlerState.ERROR
-
-        if not self.pipe:
-            self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
 
     def __reload_prompts(self):
         settings = self.settings
