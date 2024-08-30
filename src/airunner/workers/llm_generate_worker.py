@@ -1,11 +1,30 @@
 import queue
-import threading
 
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QObject, Signal, Slot
 
 from airunner.enums import QueueType, SignalCode, ModelType, ModelStatus
 from airunner.settings import AVAILABLE_DTYPES, SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
+from PySide6.QtCore import QThread
+
+
+class LLMLoaderWorker(QObject):
+    finished = Signal()
+    error = Signal(str)
+
+    def __init__(self, llm, message):
+        super().__init__()
+        self.llm = llm
+        self.message = message
+
+    @Slot()
+    def run(self):
+        try:
+            self.llm.on_load_llm_signal(self.message)
+        except Exception as e:
+            self.error.emit(str(e))
+        finally:
+            self.finished.emit()
 
 
 class LLMGenerateWorker(Worker):
@@ -17,19 +36,47 @@ class LLMGenerateWorker(Worker):
             (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal),
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
         ]
+        self.thread = None
         self.llm = None
         self.do_load_on_init = do_load_on_init
         self.agent_class = agent_class
         self.agent_options = agent_options
         super().__init__(prefix=prefix)
+        self.llm_generate_worker = None
+        self.thread = QThread()
+        self.llm_generate_worker = LLMLoaderWorker(self.llm, "")
+        self.llm_generate_worker.moveToThread(self.thread)
+
+        self.thread.started.connect(self.llm_generate_worker.run)
+        self.llm_generate_worker.finished.connect(self.thread.quit)
+        self.llm_generate_worker.finished.connect(self.llm_generate_worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+        self.llm_generate_worker.error.connect(self.handle_error)
 
     def on_unload_llm_signal(self, message):
+        if self.thread.isRunning():
+            self.thread.quit()
+            self.thread.wait()
+            self.thread = None
         if self.llm:
             self.llm.on_unload_llm_signal(message)
 
-    def on_load_llm_signal(self, message):
-        if self.llm:
-            threading.Thread(target=self.llm.on_load_llm_signal, args=(message,)).start()
+    def on_load_llm_signal(self, message: dict):
+        if self.thread is not None:
+            return
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.LLM,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            }
+        )
+        self.llm_generate_worker.message = message
+        self.thread.start()
+
+    def handle_error(self, error_message):
+        print(f"Error: {error_message}")
 
     def on_load_model_signal(self, message):
         if self.llm:
