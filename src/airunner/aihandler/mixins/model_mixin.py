@@ -283,6 +283,12 @@ class ModelMixin:
         if self.enable_controlnet and not self.controlnet:
             self.load_controlnet()
         self.__pipe_swap(data)
+
+        try:
+            self.add_lora_to_pipe()
+        except Exception as e:
+            self.logger.error(f"Error adding lora to pipe: {e}")
+
         results = self.pipe(**data)
         images = results.get("images", [])
         return self.check_and_mark_nsfw_images(images)
