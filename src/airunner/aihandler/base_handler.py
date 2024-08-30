@@ -26,12 +26,37 @@ class BaseHandler(
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
         self.model_type = None
+        self._requested_action = None
+        self._model_status = ModelStatus.UNLOADED
+
+    @property
+    def model_status(self) -> ModelStatus:
+        return self._model_status
+
+    @model_status.setter
+    def model_status(self, value: ModelStatus):
+        self._model_status = value
+        self.change_model_status(self.model_type, value)
+        if self._requested_action:
+            self.handle_requested_action()
+
+    def handle_requested_action(self):
+        if self._requested_action is ModelAction.LOAD:
+            self.load()
+        if self._requested_action is ModelAction.CLEAR:
+            self.unload()
+
+    def load(self):
+        pass
+
+    def unload(self):
+        pass
 
     @property
     def device(self):
         if not self.model_type:
             raise ValueError("model_type not set")
-        return get_torch_device(self.settings["memory_settings"]["default_gpu"][self.model_type])
+        return get_torch_device(self.settings["memory_settings"]["default_gpu"][self.model_class])
 
     @property
     def llm_dtype(self):
