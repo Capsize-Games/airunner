@@ -12,7 +12,6 @@ class TokenizerHandler(TransformerBaseHandler):
         super().__init__(*args, **kwargs)
         self.register(SignalCode.LLM_TOKENIZER_LOAD_SIGNAL, self.on_load_tokenizer_signal)
         self.register(SignalCode.LLM_TOKENIZER_UNLOAD_SIGNAL, self.on_unload_tokenizer_signal)
-        self.model_type = "llm"
 
     def on_load_tokenizer_signal(self, _message: dict):
         self.load_tokenizer()
@@ -46,16 +45,16 @@ class TokenizerHandler(TransformerBaseHandler):
         if self.chat_template:
             kwargs["chat_template"] = self.chat_template
         try:
-            self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.LOADING, path)
+            self.model_status = ModelStatus.LOADING
             self.tokenizer = self.tokenizer_class_.from_pretrained(
                 path,
                 **kwargs,
             )
-            self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.LOADED, path)
+            self.model_status = ModelStatus.LOADED
             self.logger.debug("Tokenizer loaded")
         except Exception as e:
             self.logger.error(e)
-            self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.FAILED, path)
+            self.model_status = ModelStatus.FAILED
 
         if self.tokenizer:
             self.tokenizer.use_default_system_prompt = False
