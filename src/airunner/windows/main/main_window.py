@@ -405,6 +405,8 @@ class MainWindow(
         styles = "QLabel { color: " + color.value + "; }"
         element_name = ""
         tool_tip = ""
+        if not data["model"]:
+            return
         if data["model"] == ModelType.SD:
             element_name = "sd_status"
             tool_tip = "Stable Diffusion"
