@@ -35,16 +35,6 @@ class ControlnetHandlerMixin:
         self.__requested_action = ModelAction.NONE
         self.__requested_action_lock = threading.Lock()
 
-    @property
-    def requested_action(self):
-        with self.__requested_action_lock:
-            return self.__requested_action
-
-    @requested_action.setter
-    def requested_action(self, action):
-        with self.__requested_action_lock:
-            self.__requested_action = action
-
     def controlnet_handle_sd_state_changed_signal(self, _data=None):
         if self.__requested_action is ModelAction.NONE:
             return
@@ -148,9 +138,9 @@ class ControlnetHandlerMixin:
             self.__apply_controlnet_to_pipe()
             self.__apply_controlnet_processor_to_pipe()
             self.__change_controlnet_model_status(ModelStatus.LOADED)
-            self.requested_action = ModelAction.NONE
+            self.__requested_action = ModelAction.NONE
         else:
-            self.requested_action = ModelAction.APPLY_TO_PIPE
+            self.__requested_action = ModelAction.APPLY_TO_PIPE
             return
 
     def __load_controlnet_model(self):
@@ -236,7 +226,7 @@ class ControlnetHandlerMixin:
 
     def clear_controlnet(self):
         if self.current_state is not HandlerState.READY:
-            self.requested_action = ModelAction.CLEAR
+            self.__requested_action = ModelAction.CLEAR
             return
 
         self.logger.debug("Clearing controlnet")
