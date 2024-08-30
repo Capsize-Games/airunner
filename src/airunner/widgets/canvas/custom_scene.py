@@ -89,7 +89,7 @@ class CustomScene(
             (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
             (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
-            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
+            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.on_paste_image_from_clipboard),
             (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
             (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter),
@@ -157,7 +157,7 @@ class CustomScene(
             "pivot_point_y": value.y()
         })
 
-    def paste_image_from_clipboard(self, _message):
+    def on_paste_image_from_clipboard(self, _message=None):
         if self.scene_is_active:
             image = self.paste_image_from_clipboard()
             #self.delete_image()

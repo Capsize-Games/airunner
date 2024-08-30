@@ -49,6 +49,7 @@ class BaseWidget(
         """
         self.register_signals()
         self.initialize_workers()
+        self.initialize_form()
 
     def register_signals(self):
         """
@@ -80,6 +81,9 @@ class BaseWidget(
             worker = create_worker(worker_class_name_)
             setattr(self, property_name, worker)
 
+    def initialize_form(self):
+        pass
+
     def add_to_grid(self, widget, row, column, row_span=1, column_span=1):
         self.layout().addWidget(widget, row, column, row_span, column_span)
     
@@ -91,7 +95,7 @@ class BaseWidget(
         using __init__.
         """
         self.initialize()
-    
+
     def set_icons(self):
         theme = "dark" if self.is_dark else "light"
         for icon_data in self.icons:
