@@ -1024,7 +1024,7 @@ class MainWindow(
                 icon_data[1],
                 "dark" if settings["dark_mode_enabled"] else "light"
             )
-        #self._initialize_worker_manager()
+        self._initialize_worker_manager()
         self.logger.debug("Showing window")
 
     def _initialize_worker_manager(self):
