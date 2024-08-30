@@ -41,7 +41,7 @@ class SDWorker(Worker):
             (SignalCode.FEATURE_EXTRACTOR_LOAD_SIGNAL, self.on_feature_extractor_load_signal),
             (SignalCode.FEATURE_EXTRACTOR_UNLOAD_SIGNAL, self.on_feature_extractor_unload_signal),
             (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_safety_checker_load_signal),
-            (SignalCode.SD_STATE_CHANGED_SIGNAL, self.on_controlnet_handle_sd_state_changed_signal)
+            (SignalCode.SD_STATE_CHANGED_SIGNAL, self.handle_sd_state_changed_signal)
         ]
         self.sd = None
         super().__init__(prefix=prefix)
@@ -50,8 +50,9 @@ class SDWorker(Worker):
         self.__queue_watcher_thread = threading.Thread(target=self.__watch_action_queue)
         self.__queue_watcher_thread.start()
 
-    def on_controlnet_handle_sd_state_changed_signal(self, _data=None):
+    def handle_sd_state_changed_signal(self, _data=None):
         self.sd.controlnet_handle_sd_state_changed_signal()
+        self.sd.scheduler_handle_sd_state_changed_signal()
 
     @property
     def __sd_worker_ready(self):
