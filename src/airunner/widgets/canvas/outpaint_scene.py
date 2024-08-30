@@ -20,7 +20,7 @@ class OutpaintScene(CustomScene):
             (SignalCode.OUTPAINT_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
             (SignalCode.OUTPAINT_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
             (SignalCode.OUTPAINT_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
-            (SignalCode.OUTPAINT_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
+            (SignalCode.OUTPAINT_PASTE_IMAGE_SIGNAL, self.on_paste_image_from_clipboard),
             (SignalCode.OUTPAINT_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.OUTPAINT_EXPORT_IMAGE_SIGNAL, self.export_image),
             (SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL, self.on_mask_generator_worker_response_signal),
