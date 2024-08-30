@@ -87,20 +87,9 @@ class TransformerBaseHandler(BaseHandler):
                 bnb_4bit_compute_dtype=torch.bfloat16,
                 bnb_4bit_use_double_quant=True,
                 bnb_4bit_quant_type='nf4',
-                #llm_int8_enable_fp32_cpu_offload=True,
             )
         elif self.llm_dtype == "4bit":
             config = BitsAndBytesConfig(load_in_4bit=True)
-            # config = BitsAndBytesConfig(
-            #     load_in_4bit=True,
-            #     load_in_8bit=False,
-            #     llm_int8_threshold=6.0,
-            #     llm_int8_has_fp16_weight=False,
-            #     bnb_4bit_compute_dtype=torch.bfloat16,
-            #     bnb_4bit_use_double_quant=True,
-            #     bnb_4bit_quant_type='nf4',
-            #     # llm_int8_enable_fp32_cpu_offload=True,
-            # )
         elif self.llm_dtype == "2bit":
             config = GPTQConfig(
                 bits=2,
