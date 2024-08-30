@@ -3,7 +3,7 @@ from transformers.generation.streamers import TextIteratorStreamer
 
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ModelStatus
 from airunner.enums import LLMActionType
 
 
@@ -13,6 +13,8 @@ class CausalLMTransformerBaseHandler(
     auto_class_ = AutoModelForCausalLM
 
     def __init__(self, *args, **kwargs):
+        self.agent_class_ = kwargs.pop("agent_class", BaseAgent)
+        self.agent_options = kwargs.pop("agent_options", {})
         self.streamer = None
         self.chat_engine = None
         self.chat_agent = None
@@ -41,9 +43,7 @@ class CausalLMTransformerBaseHandler(
         self.return_agent_code: bool = False
         self.batch_size: int = 1
         self.vision_history: list = []
-        self.agent_class_ = kwargs.pop("agent_class", BaseAgent)
-        self.agent_options = kwargs.pop("agent_options", {})
-
+        self._model_status = ModelStatus.UNLOADED
         super().__init__(*args, **kwargs)
 
     def on_load_llm_signal(self, _message: dict):
@@ -229,8 +229,7 @@ class CausalLMTransformerBaseHandler(
         self.chat_agent.run(
             prompt,
             action,
-            vision_history=self.vision_history,
-            **self.override_parameters
+            vision_history=self.vision_history
         )
         self.send_final_message()
         self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)

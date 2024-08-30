@@ -1,13 +1,31 @@
 import threading
 import traceback
 import numpy as np
-from PySide6.QtCore import QObject, Signal
-# from airunner.aihandler.stt.whisper_handler import WhisperHandler
+from PySide6.QtCore import QObject, Signal, Slot, QThread
 from airunner.enums import SignalCode, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.aihandler.logger import Logger
 from airunner.utils.create_worker import create_worker
+
+
+class LLMRequestWorker(QObject):
+    finished = Signal()
+    error = Signal(str)
+
+    def __init__(self, llm_generate_worker, message):
+        super().__init__()
+        self.llm_generate_worker = llm_generate_worker
+        self.message = message
+
+    @Slot()
+    def run(self):
+        try:
+            self.llm_generate_worker.on_llm_request_worker_response_signal(self.message)
+        except Exception as e:
+            self.error.emit(str(e))
+        finally:
+            self.finished.emit()
 
 
 class Message:
@@ -135,7 +153,21 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_llm_request_worker_response_signal(self, message: dict):
         if self.llm_generate_worker:
-            threading.Thread(target=self.llm_generate_worker.on_llm_request_worker_response_signal, args=(message,)).start()
+            self.thread = QThread()
+            self.worker = LLMRequestWorker(self.llm_generate_worker, message)
+            self.worker.moveToThread(self.thread)
+
+            self.thread.started.connect(self.worker.run)
+            self.worker.finished.connect(self.thread.quit)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.thread.finished.connect(self.thread.deleteLater)
+
+            self.worker.error.connect(self.handle_error)
+
+            self.thread.start()
+
+    def handle_error(self, error_message):
+        print(f"Error: {error_message}")
 
     def do_response(self, response):
         """

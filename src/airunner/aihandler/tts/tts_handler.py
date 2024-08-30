@@ -60,7 +60,8 @@ class TTSHandler(BaseHandler):
         self.do_interrupt = False
         self.cancel_generated_speech = False
         self.paused = False
-        self.model_type = "tts"
+        self.model_type = ModelType.TTS
+        self.model_class = "tts"
 
     @property
     def cuda_index(self):
