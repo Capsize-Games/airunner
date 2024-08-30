@@ -49,7 +49,6 @@ class LLMSettingsWidget(
     def showEvent(self, event):
         super().showEvent(event)
         self.emit_signal(SignalCode.WINDOW_LOADED_SIGNAL)
-        self.initialize_form()
 
     def early_stopping_toggled(self, val):
         settings = self.settings
