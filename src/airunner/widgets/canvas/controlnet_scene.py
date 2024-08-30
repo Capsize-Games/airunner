@@ -19,7 +19,7 @@ class ControlnetScene(BrushScene):
             (SignalCode.CONTROLNET_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
             (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
-            (SignalCode.CONTROLNET_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
+            (SignalCode.CONTROLNET_PASTE_IMAGE_SIGNAL, self.on_paste_image_from_clipboard),
             (SignalCode.CONTROLNET_EXPORT_IMAGE_SIGNAL, self.export_image),
             (SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.SD_CONTROLNET_IMAGE_GENERATED_SIGNAL, self.handle_controlnet_image_generated),
