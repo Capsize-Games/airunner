@@ -55,17 +55,10 @@ class CanvasWidget(
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
             SignalCode.CANVAS_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
-            SignalCode.CONTROLNET_LOAD_SIGNAL: lambda _message=None: self.set_controlnet_checkbox(True),
-            SignalCode.CONTROLNET_UNLOAD_SIGNAL: lambda _message=None: self.set_controlnet_checkbox(False),
         }
         self.worker_class_map = {
             "image_data_worker": ImageDataWorker,
         }
-
-    def set_controlnet_checkbox(self, val):
-        self.ui.controlnet_groupbox.blockSignals(True)
-        self.ui.controlnet_groupbox.setChecked(val)
-        self.ui.controlnet_groupbox.blockSignals(False)
 
     def sync_splitter_1(self, pos, index):
         self.ui.canvas_side_splitter_2.setSizes(self.ui.canvas_side_splitter.sizes())
@@ -219,8 +212,6 @@ class CanvasWidget(
         self.ui.drawing_pad_groupbox.blockSignals(True)
         self.ui.drawing_pad_groupbox.checked = settings["drawing_pad_settings"]["enabled"]
         self.ui.drawing_pad_groupbox.blockSignals(False)
-
-        self.set_controlnet_checkbox(settings["controlnet_enabled"])
 
         self.ui.canvas_side_splitter.splitterMoved.connect(self.sync_splitter_1)
         self.ui.canvas_side_splitter_2.splitterMoved.connect(self.sync_splitter_2)
