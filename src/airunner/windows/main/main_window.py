@@ -28,7 +28,7 @@ from airunner.settings import (
     STATUS_ERROR_COLOR,
     STATUS_NORMAL_COLOR_LIGHT,
     STATUS_NORMAL_COLOR_DARK,
-    NSFW_CONTENT_DETECTED_MESSAGE
+    NSFW_CONTENT_DETECTED_MESSAGE, DEFAULT_PATH_SETTINGS
 )
 from airunner.enums import (
     SignalCode,
@@ -369,6 +369,12 @@ class MainWindow(
         self.register(SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal)
         self.register(SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts)
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
+        self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal)
+
+    def on_reset_paths_signal(self, _message: dict):
+        settings = self.settings
+        settings["path_settings"] = DEFAULT_PATH_SETTINGS
+        self.settings = settings
 
     def on_reset_settings_signal(self, _message: dict):
         self.settings = self.default_settings
