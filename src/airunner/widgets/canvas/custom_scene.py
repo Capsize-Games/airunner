@@ -92,8 +92,8 @@ class CustomScene(
             (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.on_paste_image_from_clipboard),
             (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
             (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
-            (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter),
-            (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.preview_filter),
+            (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.handle_cancel_filter),
+            (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.handle_preview_filter),
             (SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path),
             (SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, self.on_image_generated_signal),
         ]
@@ -135,7 +135,7 @@ class CustomScene(
         )
         if file_path == "":
             return
-        self.load_image(file_path)
+        self.handle_load_image(file_path)
 
     def current_layer(self):
         # TODO
@@ -201,18 +201,18 @@ class CustomScene(
             image=image
         )
 
-    def load_image(self, image_path: str):
+    def handle_load_image(self, image_path: str):
         image = self.load_image(image_path)
         if self.settings["resize_on_paste"]:
             image = self.resize_image(image)
         self.add_image_to_scene(image)
 
-    def cancel_filter(self, _message):
+    def handle_cancel_filter(self, _message):
         image = self.cancel_filter()
         if image:
             self.load_image_from_object(image=image)
 
-    def preview_filter(self, message):
+    def handle_preview_filter(self, message):
         filter_object: ImageFilter.Filter = message["filter_object"]
         filtered_image = self.preview_filter(
             self.current_active_image(),
@@ -221,12 +221,12 @@ class CustomScene(
         self.load_image_from_object(image=filtered_image)
 
     def add_image_to_scene(
-            self,
-            image: Image,
-            is_outpaint: bool = False,
-            outpaint_box_rect: QPoint = None,
-            border_size: int = 1,  # size of the border
-            border_color: tuple = (255, 0, 0, 255)  # color of the border in RGBA format
+        self,
+        image: Image,
+        is_outpaint: bool = False,
+        outpaint_box_rect: QPoint = None,
+        border_size: int = 1,  # size of the border
+        border_color: tuple = (255, 0, 0, 255)  # color of the border in RGBA format
     ):
         """
         Adds a given image to the scene
