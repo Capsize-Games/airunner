@@ -64,6 +64,13 @@ class ModelMixin:
         self.__tokenizer = None
         self.__current_tokenizer_path = ""
         self._pipe = None
+        self.__sd_model_status = ModelStatus.UNLOADED
+        self.__tokenizer_status = ModelStatus.UNLOADED
+
+        self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
+
+    def action_quit_triggered(self, _message=None):
+        pass
 
     def on_unload_stablediffusion_signal(self, _message: dict = None):
         self.unload_image_generator_model()
@@ -182,7 +189,7 @@ class ModelMixin:
         return self.model_status[model] == ModelStatus.LOADED
 
     def apply_tokenizer_to_pipe(self):
-        self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.LOADED, self.__tokenizer_path)
+        self.__change_sd_tokenizer_status(ModelStatus.LOADED)
 
     def __move_model_to_device(self):
         if self.pipe:
@@ -303,9 +310,6 @@ class ModelMixin:
     def __generate(self):
         if not self.pipe:
             raise PipeNotLoadedException()
-
-        self.logger.debug("sample_diffusers_model")
-
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, f"Generating media")
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
         self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
@@ -373,7 +377,15 @@ class ModelMixin:
         self.logger.debug("Unloading model")
         self.remove_safety_checker_from_pipe()
         self.pipe = None
-        self.change_model_status(ModelType.SD, ModelStatus.UNLOADED, "")
+        self.__change_sd_model_status(ModelStatus.UNLOADED)
+
+    def __change_sd_model_status(self, status: ModelStatus):
+        self.__sd_model_status = status
+        self.change_model_status(ModelType.SD, status, self.model_path)
+
+    def __change_sd_tokenizer_status(self, status: ModelStatus):
+        self.__tokenizer_status = status
+        self.change_model_status(ModelType.SD_TOKENIZER, status, self.__tokenizer_path)
 
     def __handle_model_changed(self):
         self.reload_model = True
@@ -419,7 +431,7 @@ class ModelMixin:
         self.embeds_loaded = False
 
         if self.pipe is None or self.reload_model:
-            self.change_model_status(ModelType.SD, ModelStatus.LOADING, self.model_path)
+            self.__change_sd_model_status(ModelStatus.LOADING)
 
             self.logger.debug(
                 f"Loading model from scratch {self.reload_model} for {self.sd_request.section}")
@@ -467,7 +479,7 @@ class ModelMixin:
                     )
                 except FileNotFoundError as e:
                     self.logger.error(f"Failed to load model from {self.model_path}: {e}")
-                    self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
+                    self.__change_sd_model_status(ModelStatus.FAILED)
                     return
             else:
                 if self.enable_controlnet:
@@ -480,7 +492,7 @@ class ModelMixin:
                     )
                 except (FileNotFoundError, OSError) as e:
                     self.logger.error(f"Failed to load model from {self.model_path}: {e}")
-                    self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
+                    self.__change_sd_model_status(ModelStatus.FAILED)
                     return
 
             self.apply_controlnet_to_pipe()
@@ -489,13 +501,11 @@ class ModelMixin:
                 self.apply_tokenizer_to_pipe()
 
             if self.pipe is None:
-                self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
+                self.__change_sd_model_status(ModelStatus.FAILED)
                 return
 
             self.make_stable_diffusion_memory_efficient()
-            self.change_model_status(ModelType.SD, ModelStatus.LOADED, self.model_path)
-            if hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
-                self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED, "")
+            self.__change_sd_model_status(ModelStatus.LOADED)
 
             if self.settings["nsfw_filter"] is False:
                 self.remove_safety_checker_from_pipe()
@@ -566,7 +576,7 @@ class ModelMixin:
 
     def __unload_tokenizer(self):
         self.__tokenizer = None
-        self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.UNLOADED, "")
+        self.__change_sd_tokenizer_status(ModelStatus.UNLOADED)
         clear_memory()
 
     def __load_tokenizer(self):
@@ -583,8 +593,8 @@ class ModelMixin:
                 torch_dtype=self.data_type
             )
             self.__current_tokenizer_path = self.__tokenizer_path
-            self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.READY, self.__tokenizer_path)
+            self.__change_sd_tokenizer_status(ModelStatus.READY)
         except Exception as e:
             self.logger.error(f"Failed to load tokenizer")
             self.logger.error(e)
-            self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.FAILED, self.__tokenizer_path)
+            self.__change_sd_tokenizer_status(ModelStatus.FAILED)
