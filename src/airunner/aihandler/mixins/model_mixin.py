@@ -216,7 +216,7 @@ class ModelMixin:
         generator_request_data: dict
     ):
         if not self.pipe:
-            self.load_stable_diffusion_model()
+            self.load_stable_diffusion()
             if not self.pipe:
                 raise PipeNotLoadedException()
         self.__load_generator_arguments(settings, generator_request_data)

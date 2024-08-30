@@ -1,11 +1,29 @@
-import threading
-import time
-from queue import Queue
-
 import torch
-from airunner.enums import QueueType, SignalCode, ModelType, ModelStatus
+from PySide6.QtCore import QThread
+from PySide6.QtCore import QObject, Signal, Slot
+
+from airunner.enums import QueueType, SignalCode, ModelType, ModelStatus, ModelAction
 from airunner.workers.worker import Worker
 torch.backends.cuda.matmul.allow_tf32 = True
+
+
+class GenerateWorker(QObject):
+    finished = Signal()
+    error = Signal(str)
+
+    def __init__(self, sd, message):
+        super().__init__()
+        self.sd = sd
+        self.message = message
+
+    @Slot()
+    def run(self):
+        try:
+            self.sd.handle_generate_signal(self.message)
+        except Exception as e:
+            self.error.emit(str(e))
+        finally:
+            self.finished.emit()
 
 
 class SDWorker(Worker):
@@ -45,6 +63,9 @@ class SDWorker(Worker):
         ]
         self.sd = None
         super().__init__(prefix=prefix)
+        self.__requested_action = ModelAction.NONE
+        self._threads = []
+        self._workers = []
 
     def handle_sd_state_changed_signal(self, _data=None):
         self.sd.controlnet_handle_sd_state_changed_signal()
@@ -121,15 +142,15 @@ class SDWorker(Worker):
             )
             self.sd.load_stable_diffusion()
 
-    def on_unload_stablediffusion_signal(self, data: dict = None):
+    def on_unload_stablediffusion_signal(self, _data: dict = None):
         if self.sd and self.sd.sd_model_status in (
             ModelStatus.LOADED,
             ModelStatus.FAILED,
             ModelStatus.READY,
         ):
-            self.sd.on_unload_stablediffusion_signal(data)
+            self.sd.on_unload_stablediffusion_signal()
         elif self.sd and self.sd.sd_model_status is ModelStatus.LOADING:
-            self.__add_action_to_queue(self.on_unload_stablediffusion_signal, args=data)
+            self.__requested_action = ModelAction.CLEAR
 
     def on_tokenizer_load_signal(self, data: dict = None):
         if self.sd:
@@ -150,7 +171,8 @@ class SDWorker(Worker):
             )
         from airunner.aihandler.stablediffusion.sd_handler import SDHandler
         self.sd = SDHandler()
-        self.sd.load_stable_diffusion()
+        if self.settings["sd_enabled"]:
+            self.sd.load_stable_diffusion()
 
     def handle_message(self, message):
         if self.sd:
@@ -182,7 +204,20 @@ class SDWorker(Worker):
 
     def on_do_generate_signal(self, message: dict):
         if self.sd:
-            threading.Thread(target=self.sd.handle_generate_signal, args=(message,)).start()
+            thread = QThread()
+            worker = GenerateWorker(self.sd, message)
+            worker.moveToThread(thread)
+            thread.started.connect(worker.run)
+            worker.finished.connect(thread.quit)
+            worker.finished.connect(worker.deleteLater)
+            thread.finished.connect(thread.deleteLater)
+            worker.error.connect(self.handle_error)
+            self._threads.append(thread)
+            self._workers.append(worker)
+            thread.start()
+
+    def handle_error(self, error_message):
+        print(f"Error: {error_message}")
 
     def on_interrupt_image_generation_signal(self, _message: dict = None):
         if self.sd:
@@ -195,3 +230,8 @@ class SDWorker(Worker):
     def on_model_status_changed_signal(self, message: dict):
         if self.sd:
             self.sd.model_status_changed(message)
+
+            if message["model"] == ModelType.SD:
+                if self.__requested_action is ModelAction.CLEAR:
+                    self.on_unload_stablediffusion_signal()
+                self.__requested_action = ModelAction.NONE

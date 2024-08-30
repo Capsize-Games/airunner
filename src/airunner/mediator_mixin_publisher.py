@@ -17,28 +17,7 @@ class MediatorMixin(PublisherMixin):
         self.threads = []
         self.workers = []
         self.mediator = SignalMediator()
-        self.publisher_signals = [
-            SignalCode.LLM_LOAD_SIGNAL
-        ]
-
-    def handle_publish_message(self, data: object):
-        print("PUBLISH MESSAGE", data)
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-
-        if loop.is_running():
-            loop.create_task(self.publish_message({
-                "action": SignalCode.LLM_LOAD_SIGNAL.value,
-                "data": data
-            }))
-        else:
-            asyncio.run(self.publish_message({
-                "action": SignalCode.LLM_LOAD_SIGNAL.value,
-                "data": data
-            }))
-
+        self.publisher_signals = []
 
     def emit_signal(
         self,
@@ -58,7 +37,4 @@ class MediatorMixin(PublisherMixin):
         :param slot_function:
         :return:
         """
-        if code in self.publisher_signals:
-            self.mediator.register(code, self.handle_publish_message)
-        else:
-            self.mediator.register(code, slot_function)
+        self.mediator.register(code, slot_function)

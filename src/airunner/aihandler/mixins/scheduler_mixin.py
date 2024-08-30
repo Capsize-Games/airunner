@@ -1,7 +1,4 @@
 import os
-import threading
-import time
-from queue import Queue
 
 import diffusers
 from airunner.enums import (
