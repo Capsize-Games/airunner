@@ -6,7 +6,7 @@ from queue import Queue
 import diffusers
 from airunner.enums import (
     Scheduler,
-    ModelStatus, ModelType, HandlerState
+    ModelStatus, ModelType, HandlerState, ModelAction
 )
 from airunner.settings import (
     SCHEDULER_CLASSES,
@@ -23,9 +23,15 @@ class SchedulerMixin:
         self.do_change_scheduler: bool = False
         self.scheduler = None
         self.__scheduler_status = ModelStatus.UNLOADED
-        self.__scheduler_queue = Queue()
-        self._controlnet_queue_watcher_thread = threading.Thread(target=self.__scheduler_watch_queue)
-        self._controlnet_queue_watcher_thread.start()
+        self.__requested_action = ModelAction.NONE
+
+    def scheduler_handle_sd_state_changed_signal(self):
+        if self.__requested_action is ModelAction.NONE:
+            return
+        if self.__requested_action is ModelAction.CLEAR:
+            self.remove_scheduler_from_pipe()
+        elif self.__requested_action is ModelAction.APPLY_TO_PIPE:
+            self.apply_scheduler_to_pipe()
 
     @property
     def __scheduler_ready(self):
@@ -33,21 +39,6 @@ class SchedulerMixin:
             self.current_state == HandlerState.READY and
             self.__scheduler_status == ModelStatus.LOADED
         )
-
-    def __scheduler_watch_queue(self):
-        while True:
-            if self.current_state == HandlerState.READY and not self.__scheduler_queue.empty():
-                action = self.__scheduler_queue.get()
-                action()
-                self.__scheduler_queue.task_done()
-            time.sleep(1)
-
-    def __scheduler_can_run_action(self, action):
-        if not self.__scheduler_ready:
-            if action not in self.__scheduler_queue.queue:
-                self.__scheduler_queue.put(action)
-            return False
-        return True
 
     @property
     def scheduler_section(self):
@@ -142,13 +133,16 @@ class SchedulerMixin:
             self.do_change_scheduler = False
 
     def apply_scheduler_to_pipe(self):
-        if not self.__scheduler_can_run_action(self.apply_scheduler_to_pipe):
-            if self.pipe:
-                self.pipe.scheduler = self.scheduler
-                self.__change_scheduler_model_status(ModelStatus.LOADED)
+        if self.pipe and self.__scheduler_ready:
+            self.pipe.scheduler = self.scheduler
+            self.__change_scheduler_model_status(ModelStatus.LOADED)
+        else:
+            self.__requested_action = ModelAction.APPLY_TO_PIPE
 
     def remove_scheduler_from_pipe(self):
-        if self.__scheduler_can_run_action(self.remove_scheduler_from_pipe):
+        if self.__scheduler_ready:
             if self.pipe:
                 self.pipe.scheduler = None
-                self.__change_scheduler_model_status(ModelStatus.READY)
+            self.__change_scheduler_model_status(ModelStatus.READY)
+        else:
+            self.__requested_action = ModelAction.CLEAR
