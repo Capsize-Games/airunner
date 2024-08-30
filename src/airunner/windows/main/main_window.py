@@ -1232,6 +1232,10 @@ class MainWindow(
         if val:
             self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
         else:
+            self.ui.controlnet_toggle_button.blockSignals(True)
+            self.ui.controlnet_toggle_button.setChecked(False)
+            self.ui.controlnet_toggle_button.blockSignals(False)
+            self.update()
             self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
 
     @Slot(bool)
