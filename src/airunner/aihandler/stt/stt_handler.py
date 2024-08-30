@@ -24,7 +24,8 @@ class STTHandler(BaseHandler):
         self.feature_extractor = None
         self.model = None
         self.is_on_gpu = False
-        self.model_type = "stt"
+        self.model_type = ModelType.STT
+        self.model_class = "stt"
 
         self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
         # self.register(SignalCode.PROCESS_SPEECH_SIGNAL, self.process_given_speech)

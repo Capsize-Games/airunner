@@ -338,6 +338,38 @@ class BaseAgent(
         return rendered_template
 
     @property
+    def override_parameters(self):
+        data = {}
+        data.update(self.settings["llm_generator_settings"])
+        min_length_penalty = 0.0001
+        length_penalty = data["length_penalty"] / 1000
+        if length_penalty < min_length_penalty:
+            length_penalty = min_length_penalty
+        data["length_penalty"] = length_penalty
+
+        min_repetition_penalty = 0.0001
+        repetition_penalty = data["repetition_penalty"] / 100
+        if repetition_penalty < min_repetition_penalty:
+            repetition_penalty = min_repetition_penalty
+        data["repetition_penalty"] = repetition_penalty
+        return dict(
+            length_penalty=length_penalty,
+            repetition_penalty=repetition_penalty,
+            do_sample=True,#data["do_sample"],
+            early_stopping=data["early_stopping"],
+            eta_cutoff=data["eta_cutoff"],
+            max_new_tokens=data["max_new_tokens"],
+            min_length=data["min_length"],
+            no_repeat_ngram_size=data["ngram_size"],
+            num_return_sequences=data["sequences"],
+            temperature=data["temperature"] / 10000,
+            top_k=data["top_k"],
+            top_p=data["top_p"] / 1000,
+            use_cache=data["use_cache"],
+            num_beams=data["num_beams"],
+        ) if data["override_parameters"] else {}
+
+    @property
     def system_instructions(self):
         return self.chatbot["system_instructions"]
 
@@ -450,11 +482,13 @@ class BaseAgent(
             return response
 
     def prepare_generate_data(self, model_inputs, stopping_criteria):
-        return dict(
+        data = dict(
             **model_inputs,
             **self.generator_settings,
             stopping_criteria=[stopping_criteria]
         )
+        data.update(self.override_parameters)
+        return data
 
     def run_with_thread(
         self,
@@ -474,6 +508,10 @@ class BaseAgent(
         data["streamer"] = streamer
 
         try:
+            from transformers import BitsAndBytesConfig
+
+            if "attention_mask" in data:
+                del data["attention_mask"]
             self.response_worker.add_to_queue({
                 "model": self.model,
                 "kwargs": data,
