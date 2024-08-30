@@ -4,11 +4,9 @@ import time
 from queue import Queue
 
 import diffusers
-from airunner.settings import AVAILABLE_SCHEDULERS_BY_ACTION, BASE_PATH
 from airunner.enums import (
     Scheduler,
-    SignalCode,
-    SchedulerAlgorithm, ModelStatus, ModelType, HandlerState
+    ModelStatus, ModelType, HandlerState
 )
 from airunner.settings import (
     SCHEDULER_CLASSES,
@@ -24,18 +22,33 @@ class SchedulerMixin:
         self.current_scheduler_name: str = ""
         self.do_change_scheduler: bool = False
         self.scheduler = None
-        self._scheduler_queue = Queue()
-        self._queue_watcher_thread = threading.Thread(target=self._watch_queue)
-        self._queue_watcher_thread.daemon = True
-        self._queue_watcher_thread.start()
+        self.__scheduler_status = ModelStatus.UNLOADED
+        self.__scheduler_queue = Queue()
+        self._controlnet_queue_watcher_thread = threading.Thread(target=self.__scheduler_watch_queue)
+        self._controlnet_queue_watcher_thread.daemon = True
+        self._controlnet_queue_watcher_thread.start()
 
-    def _watch_queue(self):
+    @property
+    def __scheduler_ready(self):
+        return (
+            self.current_state == HandlerState.READY and
+            self.__scheduler_status == ModelStatus.LOADED
+        )
+
+    def __scheduler_watch_queue(self):
         while True:
-            if self.current_state == HandlerState.READY and not self._scheduler_queue.empty():
-                action = self._scheduler_queue.get()
+            if self.current_state == HandlerState.READY and not self.__scheduler_queue.empty():
+                action = self.__scheduler_queue.get()
                 action()
-                self._scheduler_queue.task_done()
+                self.__scheduler_queue.task_done()
             time.sleep(1)
+
+    def __scheduler_can_run_action(self, action):
+        if not self.__scheduler_ready:
+            if action not in self.__scheduler_queue.queue:
+                self.__scheduler_queue.put(action)
+            return False
+        return True
 
     @property
     def scheduler_section(self):
@@ -67,7 +80,13 @@ class SchedulerMixin:
             )
         )
 
+    def __change_scheduler_model_status(self, status):
+        self.__scheduler_status = status
+        self.change_model_status(ModelType.SCHEDULER, status, self.__scheduler_path)
+
     def load_scheduler(self, force_scheduler_name=None, config=None):
+        if self.__scheduler_status is ModelStatus.LOADING:
+            return
         scheduler_name = force_scheduler_name if force_scheduler_name else self.settings["generator_settings"]["scheduler"]
         kwargs = {
             "subfolder": "scheduler",
@@ -79,17 +98,17 @@ class SchedulerMixin:
                 scheduler_class_name = SCHEDULER_CLASSES[scheduler_name]
                 scheduler_class = getattr(diffusers, scheduler_class_name)
                 try:
-                    self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING, self.__scheduler_path)
+                    self.__change_scheduler_model_status(ModelStatus.LOADING)
                     self.scheduler = scheduler_class.from_pretrained(
                         self.__scheduler_path,
                         **kwargs
                     )
-                    self.change_model_status(ModelType.SCHEDULER, ModelStatus.READY, self.__scheduler_path)
+                    self.__change_scheduler_model_status(ModelStatus.READY)
                     self.current_scheduler_name = scheduler_name
                     self.logger.debug(f"Loaded scheduler {scheduler_name}")
                 except Exception as e:
                     self.logger.error(f"Failed to load scheduler {scheduler_name}: {e}")
-                    self.change_model_status(ModelType.SCHEDULER, ModelStatus.ERROR, self.__scheduler_path)
+                    self.__change_scheduler_model_status(ModelStatus.ERROR)
 
                 self.apply_scheduler_to_pipe()
 
@@ -101,7 +120,7 @@ class SchedulerMixin:
         self.current_scheduler_name = ""
         self.do_change_scheduler = True
         self.scheduler = None
-        self.change_model_status(ModelType.SCHEDULER, ModelStatus.UNLOADED, "")
+        self.__change_scheduler_model_status(ModelStatus.UNLOADED)
 
     def change_scheduler(self):
         if not self.do_change_scheduler or not self.pipe:
@@ -124,19 +143,13 @@ class SchedulerMixin:
             self.do_change_scheduler = False
 
     def apply_scheduler_to_pipe(self):
-        if self.current_state != HandlerState.READY:
-            self._scheduler_queue.put(self.apply_scheduler_to_pipe)
-            return
-
-        if self.pipe and self.pipe.scheduler:
-            self.pipe.scheduler = self.scheduler
-            self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED, self.__scheduler_path)
+        if not self.__scheduler_can_run_action(self.apply_scheduler_to_pipe):
+            if self.pipe:
+                self.pipe.scheduler = self.scheduler
+                self.__change_scheduler_model_status(ModelStatus.LOADED)
 
     def remove_scheduler_from_pipe(self):
-        if self.current_state != HandlerState.READY:
-            self._scheduler_queue.put(self.remove_scheduler_from_pipe)
-            return
-
-        if self.pipe and self.pipe.scheduler:
-            self.pipe.scheduler = None
-            self.change_model_status(ModelType.SCHEDULER, ModelStatus.READY, self.__scheduler_path)
+        if self.__scheduler_can_run_action(self.remove_scheduler_from_pipe):
+            if self.pipe:
+                self.pipe.scheduler = None
+                self.__change_scheduler_model_status(ModelStatus.READY)
