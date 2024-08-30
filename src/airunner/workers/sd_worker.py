@@ -117,6 +117,7 @@ class SDWorker(Worker):
     def on_unload_stablediffusion_signal(self, data: dict = None):
         if self.sd:
             self.sd.on_unload_stablediffusion_signal(data)
+            self.sd.on_unload_controlnet_signal(data)
 
     def on_tokenizer_load_signal(self, data: dict = None):
         if self.sd:
