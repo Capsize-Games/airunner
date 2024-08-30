@@ -410,7 +410,7 @@ class SettingsWindow(BaseWindow):
             if _widget_class is not None:
                 widget_object = _widget_class()
         if widget_object is None:
-            self.logger.error(f"Unable to load widget {name}")
+            print(f"Unable to load widget {name}")
             return
 
         self.clear_scroll_area()
