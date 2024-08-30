@@ -520,6 +520,7 @@ class ModelType(Enum):
 
 class HandlerState(Enum):
     INITIALIZED = "Initialized"
+    LOADING = "Loading"
     READY = "Ready"
     GENERATING = "Generating"
     ERROR = "Error"
