@@ -2,6 +2,8 @@ import threading
 import traceback
 import torch
 from PIL import Image
+from PySide6.QtCore import QRunnable, QThreadPool
+
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.aihandler.mixins.controlnet_mixin import ControlnetHandlerMixin
 from airunner.aihandler.mixins.model_mixin import ModelMixin
@@ -22,7 +24,7 @@ from airunner.aihandler.mixins.lora_mixin import LoraMixin
 from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
 from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
-from airunner.exceptions import InterruptedException, PipeNotLoadedException
+from airunner.exceptions import InterruptedException, PipeNotLoadedException, ThreadInterruptException
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
@@ -37,6 +39,20 @@ SKIP_RELOAD_CONSTS = (
     SDMode.DRAWING,
 )
 
+
+class SDHandlerLoadImageGeneratorModelTask(QRunnable):
+    def __init__(self, sd_handler):
+        super().__init__()
+        self.sd_handler = sd_handler
+
+    def run(self):
+        try:
+            self.sd_handler.load_image_generator_model()
+        except ThreadInterruptException:
+            print("Model loading task was interrupted.")
+
+    def cancel_load_model(self):
+        self.sd_handler.cancel_load()
 
 class SDHandler(
     BaseHandler,
@@ -58,7 +74,7 @@ class SDHandler(
 ):
     def  __init__(self, *args, **kwargs):
         self._sd_request = None
-        self.current_state = HandlerState.INITIALIZED
+        self.__current_state = HandlerState.INITIALIZED
         super().__init__(*args, **kwargs)
         LoraDataMixin.__init__(self)
         EmbeddingDataMixin.__init__(self)
@@ -135,6 +151,31 @@ class SDHandler(
         for model_type in ModelType:
             self.model_status[model_type] = ModelStatus.UNLOADED
         self.load_model_thread = None
+
+        self.register(SignalCode.SD_UNLOAD_SIGNAL, self.__on_unload_stablediffusion_signal)
+
+        self.__thread_pool_load_model = QThreadPool()
+        self.__load_image_generator_model_task = SDHandlerLoadImageGeneratorModelTask(self)
+
+    @property
+    def current_state(self):
+        return self.__current_state
+
+    @current_state.setter
+    def current_state(self, value):
+        self.__current_state = value
+        self.emit_signal(SignalCode.SD_STATE_CHANGED_SIGNAL, value)
+
+    def __on_unload_stablediffusion_signal(self, __message):
+        if self.__load_image_generator_model_task.isRunning():
+            self.__load_image_generator_model_task.cancel_load_model()
+            self.logger.info("Cancelled the image generator model loading task.")
+        self.current_state = HandlerState.UNLOADED
+        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+            "model": ModelType.SD,
+            "status": ModelStatus.UNLOADED,
+            "path": ""
+        })
 
     @property
     def input_image(self):
@@ -268,8 +309,11 @@ class SDHandler(
         return image
 
     def handle_generate_signal(self, message: dict):
-        if self.current_state is not HandlerState.GENERATING:
-            self.current_state = HandlerState.GENERATING
+        if self.current_state not in (
+            HandlerState.GENERATING,
+            HandlerState.PREPARING_TO_GENERATE
+        ):
+            self.current_state = HandlerState.PREPARING_TO_GENERATE
 
             self.do_generate = True
             self.generator_request_data = message
@@ -286,9 +330,11 @@ class SDHandler(
         if not self.settings["sd_enabled"]:
             return
 
-        self.load_model_thread = threading.Thread(target=self.load_image_generator_model)
-        self.load_model_thread.start()
-        self.load_model_thread.join()
+        self.__load_image_generator_model_task = SDHandlerLoadImageGeneratorModelTask(self)
+        self.__thread_pool_load_model.start(
+            self.__load_image_generator_model_task
+        )
+        self.__thread_pool_load_model.waitForDone()
 
         if (
             self.pipe is not None and

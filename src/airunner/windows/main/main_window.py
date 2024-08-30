@@ -391,12 +391,14 @@ class MainWindow(
         QProcess.startDetached(sys.executable, sys.argv)
 
     def on_model_status_changed_signal(self, data: dict):
-        if data["status"] == ModelStatus.LOADING:
+        if data["status"] is ModelStatus.LOADING:
             color = StatusColors.LOADING
-        elif data["status"] == ModelStatus.LOADED:
+        elif data["status"] is ModelStatus.LOADED:
             color = StatusColors.LOADED
-        elif data["status"] == ModelStatus.FAILED:
+        elif data["status"] is ModelStatus.FAILED:
             color = StatusColors.FAILED
+        elif data["status"] is ModelStatus.READY:
+            color = StatusColors.READY
         else:
             color = StatusColors.UNLOADED
 
@@ -424,7 +426,7 @@ class MainWindow(
         # elif data["model"] == ModelType.OCR:
         #     element_name = "ocr_status"
 
-        tool_tip += " model status: " + data["status"].value
+        tool_tip += " " + data["status"].value
 
         if element_name != "":
             getattr(self.ui, element_name).setStyleSheet(styles)
@@ -580,7 +582,8 @@ class MainWindow(
     def closeEvent(self, event) -> None:
         self.logger.debug("Quitting")
         self.save_state()
-        super().closeEvent(event)
+        self.emit(SignalCode.QUIT_APPLICATION)
+        # super().closeEvent(event)
 
     @Slot()
     def action_new_document_triggered(self):
@@ -1232,9 +1235,6 @@ class MainWindow(
         if val:
             self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
         else:
-            self.ui.controlnet_toggle_button.blockSignals(True)
-            self.ui.controlnet_toggle_button.setChecked(False)
-            self.ui.controlnet_toggle_button.blockSignals(False)
             self.update()
             self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
 

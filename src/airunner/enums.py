@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 
 class WorkerState(Enum):
@@ -28,7 +28,14 @@ class FilterType(Enum):
     PIXEL_ART = "pixelart"
 
 
+class ModelAction(Enum):
+    NONE = auto()
+    CLEAR = auto()
+    APPLY_TO_PIPE = auto()
+
+
 class SignalCode(Enum):
+    SD_STATE_CHANGED_SIGNAL = "sd_state_changed_signal"
     NAVIGATE_TO_URL = "navigate_to_url"
     LLM_RAG_SEARCH_SIGNAL = "llm_rag_search_signal"
     RAG_RELOAD_INDEX_SIGNAL = "rag_reload_index_signal"
@@ -483,11 +490,11 @@ class ModelStatus(Enum):
     READY = "Ready"
     LOADING = "Loading"
     FAILED = "Failed"
-    ERROR = "Error"
 
 
 class StatusColors(Enum):
     LOADED = "#00ff00"
+    READY = "#00ffff"
     LOADING = "#ffff00"
     FAILED = "#ff0000"
     UNLOADED = "#c0c0c0"
@@ -523,6 +530,7 @@ class HandlerState(Enum):
     LOADING = "Loading"
     READY = "Ready"
     GENERATING = "Generating"
+    PREPARING_TO_GENERATE = "Preparing to Generate"
     ERROR = "Error"
 
 
