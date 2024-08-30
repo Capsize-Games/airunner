@@ -35,12 +35,15 @@ class LoraContainerWidget(BaseWidget):
         settings = self.settings
         for lora_widget in lora_widgets:
             lora_widget.ui.enabledCheckbox.blockSignals(True)
-            lora_widget.action_toggled_lora_enabled(val)
+            lora_widget.action_toggled_lora_enabled(val, emit_signal=False)
             lora_widget.ui.enabledCheckbox.blockSignals(False)
         for version, loras in settings["lora"].items():
             for index, _lora in enumerate(loras):
                 settings["lora"][version][index]["enabled"] = val == 2
         self.settings = settings
+        self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL, {
+            "lora": settings["lora"][self.settings["generator_settings"]["version"]]
+        })
 
     def showEvent(self, event):
         if not self.initialized:
