@@ -29,8 +29,11 @@ class LoraMixin:
         """
         Called when stable diffusion handler is loaded
         """
-        self.loaded_lora = []
-        self.apply_all_lora()
+        try:
+            self.loaded_lora = []
+            self.apply_all_lora()
+        except Exception as e:
+            self.logger.error(f"Error adding lora to pipe: {e}")
 
     def on_update_lora_signal(self, message: dict):
         """

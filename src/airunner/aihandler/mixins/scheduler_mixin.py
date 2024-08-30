@@ -25,7 +25,6 @@ class SchedulerMixin:
         self.__scheduler_status = ModelStatus.UNLOADED
         self.__scheduler_queue = Queue()
         self._controlnet_queue_watcher_thread = threading.Thread(target=self.__scheduler_watch_queue)
-        self._controlnet_queue_watcher_thread.daemon = True
         self._controlnet_queue_watcher_thread.start()
 
     @property
@@ -108,7 +107,7 @@ class SchedulerMixin:
                     self.logger.debug(f"Loaded scheduler {scheduler_name}")
                 except Exception as e:
                     self.logger.error(f"Failed to load scheduler {scheduler_name}: {e}")
-                    self.__change_scheduler_model_status(ModelStatus.ERROR)
+                    self.__change_scheduler_model_status(ModelStatus.FAILED)
 
                 self.apply_scheduler_to_pipe()
 

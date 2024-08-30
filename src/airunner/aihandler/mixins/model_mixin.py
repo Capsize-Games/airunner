@@ -1,6 +1,9 @@
 import base64
+import ctypes
 import io
 import os
+import threading
+
 import numpy as np
 from PySide6.QtWidgets import QApplication
 from typing import List
@@ -21,9 +24,10 @@ from airunner.enums import (
     SDMode,
     StableDiffusionVersion,
     ModelStatus,
-    ModelType
+    ModelType, HandlerState
 )
-from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException
+from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException, \
+    ThreadInterruptException
 from airunner.settings import BASE_PATH
 from airunner.utils.clear_memory import clear_memory
 
@@ -66,8 +70,14 @@ class ModelMixin:
         self._pipe = None
         self.__sd_model_status = ModelStatus.UNLOADED
         self.__tokenizer_status = ModelStatus.UNLOADED
+        self.cancel_load_flag = False
+        self.load_thread = None
 
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
+
+    @property
+    def sd_model_status(self):
+        return self.__sd_model_status
 
     def action_quit_triggered(self, _message=None):
         pass
@@ -140,14 +150,35 @@ class ModelMixin:
     @staticmethod
     def __is_pytorch_error(e) -> bool:
         return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
+        self.cancel_load_flag = Falsed
 
     def unload_image_generator_model(self):
+        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
         self.__unload_model()
         self.__do_reset_applied_memory_settings()
         clear_memory()
 
+    def cancel_load(self):
+        self.cancel_load_flag = True
+        if self.load_thread:
+            self.raise_exception_in_thread(self.load_thread, ThreadInterruptException)
+
+    def raise_exception_in_thread(self, thread, exception):
+        if not thread.is_alive():
+            return
+
+        thread_id = next(t.ident for t in threading.enumerate() if t is thread)
+        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, ctypes.py_object(exception))
+        if res == 0:
+            raise ValueError("Invalid thread id")
+        elif res > 1:
+            ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
+            raise SystemError("PyThreadState_SetAsyncExc failed")
+
+
     def load_image_generator_model(self):
         self.logger.info("Loading image generator model")
+        self.load_thread = threading.current_thread()
 
         # Unload the pipeline if it is already loaded
         if self.pipe:
@@ -158,12 +189,19 @@ class ModelMixin:
         self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
         self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
 
-        self.__load_generator(torch.device(self.device), self.settings["generator_settings"]["seed"])
-        self.__load_tokenizer()
-        self.__prepare_model()
-        self.__load_model()
-        self.__move_model_to_device()
-        self.load_scheduler()
+        try:
+            self.__load_generator(torch.device(self.device), self.settings["generator_settings"]["seed"])
+            self.__load_tokenizer()
+            self.__prepare_model()
+            self.__load_model()
+            self.__move_model_to_device()
+            self.load_scheduler()
+        except ThreadInterruptException:
+            self.logger.info("Model loading was interrupted.")
+            self.__unload_model()
+            self.__do_reset_applied_memory_settings()
+            clear_memory()
+            return
 
     @property
     def use_compel(self):
@@ -264,6 +302,13 @@ class ModelMixin:
 
         data["callback_on_step_end"] = self.__interrupt_callback
 
+        # Clean up the data based on the operation
+        if "image" in data and data["image"] is None:
+            del data["image"]
+        elif "image" not in data and self.sd_request.is_img2img:
+            image = self.sd_request.drawing_pad_image
+            data["image"] = image
+
         return data
 
     def __call_pipe(self):
@@ -271,27 +316,44 @@ class ModelMixin:
         Generate an image using the pipe
         :return:
         """
+        # Raise an exception if the safety checker is not loaded and we have safety checker enabled
         if not self.safety_checker_ready:
             raise SafetyCheckerNotLoadedException()
+
+        # Prepare the arguments for the pipeline
         data = self.__prepare_data()
-        clear_memory()
-        if "image" in data and data["image"] is None:
-            del data["image"]
-        elif "image" not in data and self.sd_request.is_img2img:
-            image = self.sd_request.drawing_pad_image
-            data["image"] = image
-        if self.enable_controlnet and not self.controlnet:
-            self.load_controlnet()
-        self.__pipe_swap(data)
+        self.__finalize_pipeline(data)
 
-        try:
-            self.add_lora_to_pipe()
-        except Exception as e:
-            self.logger.error(f"Error adding lora to pipe: {e}")
+        self.current_state = HandlerState.GENERATING
 
+        # Generate the image
         results = self.pipe(**data)
         images = results.get("images", [])
+
+        # Check if NSFW content is detected and return the results
         return self.check_and_mark_nsfw_images(images)
+
+    def __finalize_pipeline(self, data):
+        # Ensure controlnet is applied to the pipeline.
+        if self.enable_controlnet and (
+            (not hasattr(self.pipe, "controlnet") or not hasattr(self.pipe, "processor")) or
+            (self.pipe.controlnet is None or self.pipe.processor is None)
+        ):
+            self.on_load_controlnet_signal()
+            self.apply_controlnet_to_pipe()
+
+        # Swap the pipeline if the request is different from the current pipeline
+        self.__pipe_swap(data)
+
+        # Add lora to the pipeline
+        self.add_lora_to_pipe()
+
+        # Apply memory settings
+        self.make_stable_diffusion_memory_efficient()
+        self.make_controlnet_memory_efficient()
+
+        # Clear the memory before generating the image
+        clear_memory()
 
     def __pipe_swap(self, data):
         enable_controlnet = self.enable_controlnet
@@ -383,6 +445,7 @@ class ModelMixin:
         self.logger.debug("Unloading model")
         self.remove_safety_checker_from_pipe()
         self.pipe = None
+        self.on_unload_controlnet_signal()
         self.__change_sd_model_status(ModelStatus.UNLOADED)
 
     def __change_sd_model_status(self, status: ModelStatus):
@@ -501,8 +564,6 @@ class ModelMixin:
                     self.__change_sd_model_status(ModelStatus.FAILED)
                     return
 
-            self.apply_controlnet_to_pipe()
-
             if not self.is_sd_xl:
                 self.apply_tokenizer_to_pipe()
 
@@ -510,7 +571,6 @@ class ModelMixin:
                 self.__change_sd_model_status(ModelStatus.FAILED)
                 return
 
-            self.make_stable_diffusion_memory_efficient()
             self.__change_sd_model_status(ModelStatus.LOADED)
 
             if self.settings["nsfw_filter"] is False:
