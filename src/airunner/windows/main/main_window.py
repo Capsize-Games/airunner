@@ -582,7 +582,7 @@ class MainWindow(
     def closeEvent(self, event) -> None:
         self.logger.debug("Quitting")
         self.save_state()
-        self.emit(SignalCode.QUIT_APPLICATION)
+        self.emit_signal(SignalCode.QUIT_APPLICATION)
         # super().closeEvent(event)
 
     @Slot()
