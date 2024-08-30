@@ -7,8 +7,7 @@ class TTSPreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.initialize_form()
-    
+
     def initialize_form(self):
         settings = self.settings
         elements = [

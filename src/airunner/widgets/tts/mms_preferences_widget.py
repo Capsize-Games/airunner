@@ -9,7 +9,6 @@ class SpeechT5PreferencesWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.voices = BARK_VOICES
-        self.initialize_form()
 
     def initialize_form(self):
         elements = [
