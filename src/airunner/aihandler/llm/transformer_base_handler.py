@@ -5,8 +5,7 @@ import torch
 from llama_index.llms.groq import Groq
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
-from airunner.settings import BASE_PATH
+from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType, ModelAction
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -57,8 +56,8 @@ class TransformerBaseHandler(BaseHandler):
         self._generator = None
         self.template = None
         self.image = None
-        self.override_parameters = {}
-        self.model_type = "llm"
+        self.model_type = ModelType.LLM
+        self.model_class = "llm"
 
         if self.model_path is None:
             self.model_path = self.get_model_path(self.current_bot["model_version"])
@@ -143,7 +142,7 @@ class TransformerBaseHandler(BaseHandler):
                 model=self.settings["llm_generator_settings"]["api_model"],
                 api_key=self.settings["llm_generator_settings"]["api_key"],
             )
-            self.change_model_status(ModelType.LLM, ModelStatus.LOADED, "")
+            self.model_status = ModelStatus.LOADED
         else:
             self.load_model_local()
 
@@ -167,15 +166,15 @@ class TransformerBaseHandler(BaseHandler):
             params["device_map"] = self.device
 
         try:
-            self.change_model_status(ModelType.LLM, ModelStatus.LOADING, path)
+            self.model_status = ModelStatus.LOADING
             print("loading path", path)
             self.model = self.auto_class_.from_pretrained(
                 path,
                 **params
             )
-            self.change_model_status(ModelType.LLM, ModelStatus.LOADED, path)
+            self.model_status = ModelStatus.LOADED
         except Exception as e:
-            self.change_model_status(ModelType.LLM, ModelStatus.FAILED, path)
+            self.model_status = ModelStatus.FAILED
             self.logger.error(f"Error loading model: {e}")
             self.model = None
 
@@ -188,9 +187,14 @@ class TransformerBaseHandler(BaseHandler):
         pass
 
     def unload(self, do_clear_memory: bool = False):
+        if self.model_status is ModelStatus.LOADING:
+            self._requested_action = ModelAction.CLEAR
+            return False
+        elif self.model_status is not ModelStatus.LOADED:
+            return False
         self._processing_request = False
-        model_unloaded = self.unload_model()
-        tokenizer_unloaded = self.unload_tokenizer()
+        model_unloaded = self._unload_model()
+        tokenizer_unloaded = self._unload_tokenizer()
         self.image = None
         if (
             do_clear_memory or
@@ -200,16 +204,16 @@ class TransformerBaseHandler(BaseHandler):
             self.logger.debug("Clearing memory")
             clear_memory()
 
-    def unload_tokenizer(self):
+    def _unload_tokenizer(self):
         self.logger.debug("Unloading tokenizer")
         self.tokenizer = None
-        self.change_model_status(ModelType.LLM_TOKENIZER, ModelStatus.UNLOADED, "")
+        self.model_status = ModelStatus.UNLOADED
         return True
 
-    def unload_model(self):
+    def _unload_model(self):
         self.logger.debug("Unloading model")
         self.model = None
-        self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED, "")
+        self.model_status = ModelStatus.UNLOADED
         return True
 
     def pre_load(self):
@@ -218,11 +222,17 @@ class TransformerBaseHandler(BaseHandler):
         Override this function to add custom pre load functionality.
         :return:
         """
-        self.change_model_status(ModelType.LLM, ModelStatus.LOADING, "")
+        self.model_status = ModelStatus.LOADING
         self.current_model_path = self.model_path
 
     def load(self):
+        if self.model_status in (
+            ModelStatus.LOADED,
+            ModelStatus.LOADING
+        ):
+            return
         self.logger.debug("Loading model")
+        self.model_status = ModelStatus.LOADING
         do_load_model = self.do_load_model
         do_load_tokenizer = self.tokenizer is None
 
@@ -244,7 +254,7 @@ class TransformerBaseHandler(BaseHandler):
         :return:
         """
         self.logger.error("Define post_load here")
-        self.change_model_status(ModelType.LLM, ModelStatus.LOADED, "")
+        self.model_status = ModelStatus.LOADING
 
     def generate(self, prompt, action) -> str:
         return self.do_generate(prompt, action)

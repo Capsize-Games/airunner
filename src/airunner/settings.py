@@ -1218,6 +1218,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         use_api=False,
         api_key="",
         api_model="",
+        use_cache=True
     ),
     tts_settings=TTS_SETTINGS_DEFAULT,
     stt_settings=dict(
