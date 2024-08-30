@@ -238,51 +238,45 @@ class MemoryEfficientMixin:
         self.__move_pipe_to_cuda()
 
     def __move_pipe_to_cuda(self):
-        if (
-            self.use_enable_sequential_cpu_offload == self.settings["memory_settings"]["use_enable_sequential_cpu_offload"] and
-            self.enable_model_cpu_offload == self.settings["memory_settings"]["enable_model_cpu_offload"]
-        ):
-            # Return if memory settings have not changed
+        # Check if memory settings have changed
+        if (self.use_enable_sequential_cpu_offload == self.settings["memory_settings"]["use_enable_sequential_cpu_offload"] and
+            self.enable_model_cpu_offload == self.settings["memory_settings"]["enable_model_cpu_offload"]):
             return
 
+        # Update memory settings
         self.use_enable_sequential_cpu_offload = self.settings["memory_settings"]["use_enable_sequential_cpu_offload"]
         self.enable_model_cpu_offload = self.settings["memory_settings"]["enable_model_cpu_offload"]
 
-        # Keep track of applied memory settings
-        if (
-            self.cuda_is_available and not (
-                self.use_enable_sequential_cpu_offload or
-                self.enable_model_cpu_offload
-            )
-        ):
-            if not str(self.pipe.device).startswith("cuda"):
-                self.logger.debug(f"Moving pipe to cuda (currently {self.pipe.device})")
-                clear_memory()
-                try:
-                    self.pipe.to(self.device, self.data_type)
-                except Exception as e:
-                    self.logger.error(f"Error moving to cuda: {e}")
-            if hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
-                try:
-                    if str(self.pipe.controlnet.device).startswith("cuda"):
-                        self.logger.debug(f"Moving controlnet to cuda (currently {self.pipe.controlnet.device})")
-                        self.pipe.controlnet.half().to(self.device)
-                except Exception as e:
-                    self.logger.error(f"Error moving controlnet to cuda: {e}")
+        # If CUDA is available and no CPU offload is enabled
+        if self.cuda_is_available and not (self.use_enable_sequential_cpu_offload or self.enable_model_cpu_offload):
+            self.__move_pipe_to_cuda()
+            self.__move_controlnet_to_cuda()
 
-                try:
-                    if not self.pipe.controlnet.dtype == torch.float16:
-                        self.logger.debug("Changing controlnet dtype to float16")
-                        self.pipe.controlnet.half()
-                except Exception as e:
-                    self.logger.error(f"Error changing controlnet dtype to float16: {e}")
+    def __move_pipe_to_cuda(self):
+        if not str(self.pipe.device).startswith("cuda"):
+            self.logger.debug(f"Moving pipe to cuda (currently {self.pipe.device})")
+            clear_memory()
+            try:
+                self.pipe.to(self.device, self.data_type)
+            except Exception as e:
+                self.logger.error(f"Error moving to cuda: {e}")
 
     def __move_controlnet_to_cuda(self):
-        try:
-            self.controlnet.to(self.device, self.data_type)
-        except Exception as e:
-            self.logger.error(f"Error moving controlnet to cuda: {e}")
-            self.logger.error(e)
+        if hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
+            try:
+                if not str(self.pipe.controlnet.device).startswith("cuda"):
+                    self.logger.debug(f"Moving controlnet to cuda (currently {self.pipe.controlnet.device})")
+                    self.pipe.controlnet.half()
+                    self.pipe.controlnet.to(self.device)
+            except Exception as e:
+                self.logger.error(f"Error moving controlnet to cuda: {e}")
+
+            try:
+                if self.pipe.controlnet.dtype != torch.float16:
+                    self.logger.debug("Changing controlnet dtype to float16")
+                    self.pipe.controlnet.half()
+            except Exception as e:
+                self.logger.error(f"Error changing controlnet dtype to float16: {e}")
 
     def __move_stable_diffusion_to_cpu(self):
         self.__move_pipe_to_cpu()
