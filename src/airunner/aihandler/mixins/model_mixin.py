@@ -338,25 +338,28 @@ class ModelMixin:
 
     def __finalize_pipeline(self, data):
         # Ensure controlnet is applied to the pipeline.
+        model_changed = self.sd_request.model_changed
         if self.enable_controlnet and (
             (not hasattr(self.pipe, "controlnet") or not hasattr(self.pipe, "processor")) or
             (self.pipe.controlnet is None or self.pipe.processor is None)
         ):
             self.on_load_controlnet_signal()
             self.apply_controlnet_to_pipe()
+            model_changed = True
 
-        # Swap the pipeline if the request is different from the current pipeline
-        self.__pipe_swap(data)
+        if model_changed:
+            # Swap the pipeline if the request is different from the current pipeline
+            self.__pipe_swap(data)
 
-        # Add lora to the pipeline
-        self.add_lora_to_pipe()
+            # Add lora to the pipeline
+            self.add_lora_to_pipe()
 
-        # Apply memory settings
-        self.make_stable_diffusion_memory_efficient()
-        self.make_controlnet_memory_efficient()
+            # Clear the memory before generating the image
+            clear_memory()
 
-        # Clear the memory before generating the image
-        clear_memory()
+            # Apply memory settings
+            self.make_stable_diffusion_memory_efficient()
+            self.make_controlnet_memory_efficient()
 
     def __pipe_swap(self, data):
         enable_controlnet = self.enable_controlnet
@@ -609,7 +612,6 @@ class ModelMixin:
         """
         requested_model = settings["generator_settings"]["model"]
         model = self.sd_request.generator_settings.model
-        self.logger.debug(f"Model changed clearing")
 
         model_changed = (
             model is not None and
@@ -617,6 +619,7 @@ class ModelMixin:
             model != requested_model
         )
         if model_changed:
+            self.logger.debug(f"Model changed clearing")
             self.__handle_model_changed()
             self.clear_scheduler()
             self.clear_controlnet()
