@@ -134,6 +134,7 @@ class SDHandler(
         self.model_status = {}
         for model_type in ModelType:
             self.model_status[model_type] = ModelStatus.UNLOADED
+        self.load_model_thread = None
 
     @property
     def input_image(self):
@@ -285,13 +286,9 @@ class SDHandler(
         if not self.settings["sd_enabled"]:
             return
 
-        self.load_image_generator_model()
-
-        try:
-            self.add_lora_to_pipe()
-        except Exception as e:
-            self.logger.error(f"Error adding lora to pipe: {e}")
-            self.reload_model = True
+        self.load_model_thread = threading.Thread(target=self.load_image_generator_model)
+        self.load_model_thread.start()
+        self.load_model_thread.join()
 
         if (
             self.pipe is not None and
