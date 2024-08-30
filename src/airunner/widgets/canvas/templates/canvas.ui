@@ -83,13 +83,7 @@
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
          </property>
-         <widget class="QGroupBox" name="drawing_pad_groupbox">
-          <property name="title">
-           <string>Drawing pad</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
+         <widget class="QWidget" name="drawing_pad_groupbox" native="true">
           <layout class="QGridLayout" name="gridLayout_3">
            <property name="leftMargin">
             <number>0</number>
@@ -118,13 +112,7 @@
            </item>
           </layout>
          </widget>
-         <widget class="QGroupBox" name="controlnet_groupbox">
-          <property name="title">
-           <string>Controlnet</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
+         <widget class="QWidget" name="controlnet_groupbox" native="true">
           <layout class="QGridLayout" name="gridLayout_2">
            <property name="leftMargin">
             <number>0</number>
@@ -158,10 +146,7 @@
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
          </property>
-         <widget class="QGroupBox" name="groupBox">
-          <property name="title">
-           <string>Main</string>
-          </property>
+         <widget class="QWidget" name="widget" native="true">
           <layout class="QGridLayout" name="gridLayout_4">
            <property name="leftMargin">
             <number>0</number>
@@ -190,13 +175,7 @@
            </item>
           </layout>
          </widget>
-         <widget class="QGroupBox" name="groupBox_2">
-          <property name="title">
-           <string>Outpaint</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
+         <widget class="QWidget" name="widget_2" native="true">
           <layout class="QGridLayout" name="gridLayout_5">
            <property name="leftMargin">
             <number>0</number>
@@ -241,56 +220,7 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections>
-  <connection>
-   <sender>controlnet_groupbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>canvas</receiver>
-   <slot>toggle_controlnet(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>85</x>
-     <y>446</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>167</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>drawing_pad_groupbox</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>canvas</receiver>
-   <slot>toggle_drawing_pad(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>66</x>
-     <y>25</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>46</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>groupBox_2</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>canvas</receiver>
-   <slot>toggle_outpaint(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>476</x>
-     <y>402</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>504</x>
-     <y>-7</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>toggle_controlnet(bool)</slot>
   <slot>toggle_drawing_pad(bool)</slot>
