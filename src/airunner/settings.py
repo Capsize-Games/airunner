@@ -596,7 +596,6 @@ DEFAULT_MODELS = dict(
         inpaint=SD_DEFAULT_MODEL,
         outpaint=SD_DEFAULT_MODEL,
         depth2img=SD_DEFAULT_MODEL,
-        pix2pix=SD_DEFAULT_MODEL,
     )
 )
 
@@ -671,9 +670,7 @@ ESPEAK_SETTINGS = {
 AVAILABLE_ACTIONS = [
     "txt2img",
     "img2img",
-    "pix2pix",
     "outpaint",
-    "depth2img",
     "controlnet",
     "safety_checker",
 ]
@@ -704,24 +701,10 @@ AVAILABLE_SCHEDULERS_BY_ACTION = {
     action: SCHEDULERS for action in [
         "txt2img",
         "img2img",
-        "depth2img",
-        "pix2pix",
-        "vid2vid",
         "outpaint",
         "controlnet",
-        "txt2vid"
     ]
 }
-AVAILABLE_SCHEDULERS_BY_ACTION.update({
-    "upscale": [
-        Scheduler.EULER.value
-    ],
-    "superresolution": [
-        Scheduler.DDIM.value,
-        Scheduler.LMS.value,
-        Scheduler.PLMS.value
-    ],
-})
 MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
 NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
 
@@ -771,7 +754,6 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     scheduler=DEFAULT_SCHEDULER,
     prompt_triggers="",
     strength=50,
-    image_guidance_scale=750,  # pix2pix
     n_samples=1,
     clip_skip=0,
     variation=False,
@@ -821,10 +803,6 @@ for category in ImageCategory:
 
     # Iterate over each section in GeneratorSection
     for section in GeneratorSection:
-        # Skip the upscale model
-        if section == GeneratorSection.UPSCALE:
-            continue
-
         sec = section.value
         default_model = DEFAULT_MODELS[img_gen_name][sec]
 
@@ -1232,11 +1210,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         volume_input_threshold=0.08,
         silence_buffer_seconds=1.0,
         chunk_duration=0.03,
-    ),
-    upscale_settings=dict(
-        model="",
-        face_enhance=False,
-        upscale_amount=1,
     ),
     schedulers=[
         dict(
