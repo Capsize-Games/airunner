@@ -32,7 +32,6 @@ class SDWorker(Worker):
     def __init__(self, prefix="SDWorker"):
         self.signals = [
             (SignalCode.RESET_APPLIED_MEMORY_SETTINGS, self.on_reset_applied_memory_settings),
-            (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.unload_safety_checker),
             (SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal),
             (SignalCode.SD_MOVE_TO_CPU_SIGNAL, self.on_move_to_cpu),
             (SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL, self.on_start_auto_image_generation_signal),
@@ -54,12 +53,9 @@ class SDWorker(Worker):
             (SignalCode.EMBEDDING_SCAN_SIGNAL, self.scan_for_embeddings),
             (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings),
             (SignalCode.EMBEDDING_GET_ALL_SIGNAL, self.get_embeddings),
-            (SignalCode.SAFETY_CHECKER_MODEL_LOAD_SIGNAL, self.on_safety_checker_model_load_signal),
-            (SignalCode.SAFETY_CHECKER_MODEL_UNLOAD_SIGNAL, self.on_safety_checker_model_unload_signal),
-            (SignalCode.FEATURE_EXTRACTOR_LOAD_SIGNAL, self.on_feature_extractor_load_signal),
-            (SignalCode.FEATURE_EXTRACTOR_UNLOAD_SIGNAL, self.on_feature_extractor_unload_signal),
-            (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_safety_checker_load_signal),
-            (SignalCode.SD_STATE_CHANGED_SIGNAL, self.handle_sd_state_changed_signal)
+            (SignalCode.SD_STATE_CHANGED_SIGNAL, self.handle_sd_state_changed_signal),
+            (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_load_safety_checker),
+            (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.on_unload_safety_checker),
         ]
         self.sd = None
         super().__init__(prefix=prefix)
@@ -71,25 +67,13 @@ class SDWorker(Worker):
         self.sd.controlnet_handle_sd_state_changed_signal()
         self.sd.scheduler_handle_sd_state_changed_signal()
 
-    def on_safety_checker_model_load_signal(self, message):
+    def on_load_safety_checker(self, message):
         if self.sd:
-            self.sd.on_safety_checker_model_load_signal(message)
+            self.sd.load_safety_checker()
 
-    def on_safety_checker_model_unload_signal(self, message):
+    def on_unload_safety_checker(self, _data: dict):
         if self.sd:
-            self.sd.on_safety_checker_model_unload_signal(message)
-
-    def on_feature_extractor_load_signal(self, message):
-        if self.sd:
-            self.sd.on_feature_extractor_load_signal(message)
-
-    def on_feature_extractor_unload_signal(self, message):
-        if self.sd:
-            self.sd.on_feature_extractor_unload_signal(message)
-
-    def on_safety_checker_load_signal(self, message):
-        if self.sd:
-            self.sd.on_safety_checker_load_signal(message)
+            self.sd.unload_safety_checker()
 
     def update_embedding(self, message):
         if self.sd:
@@ -181,10 +165,6 @@ class SDWorker(Worker):
     def on_reset_applied_memory_settings(self, _data: dict):
         if self.sd:
             self.sd.reset_applied_memory_settings()
-
-    def unload_safety_checker(self, _data: dict):
-        if self.sd:
-            self.sd.unload_safety_checker()
 
     def on_sd_cancel_signal(self, _data: dict = None):
         print("on_sd_cancel_signal")

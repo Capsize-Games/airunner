@@ -81,6 +81,7 @@ class SDHandler(
         self._sd_request = None
         self.__current_state = HandlerState.INITIALIZED
         super().__init__(*args, **kwargs)
+        SafetyCheckerMixin.__init__(self)
         LoraDataMixin.__init__(self)
         EmbeddingDataMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
@@ -90,7 +91,6 @@ class SDHandler(
         SchedulerMixin.__init__(self)
         MemoryEfficientMixin.__init__(self)
         ControlnetHandlerMixin.__init__(self)
-        SafetyCheckerMixin.__init__(self)
         ModelMixin.__init__(self)
         PipelineMixin.__init__(self)
         self.logger.debug("Loading Stable Diffusion model runner...")
@@ -249,7 +249,7 @@ class SDHandler(
         settings = self.settings
 
         if settings["nsfw_filter"]:
-            self.load_nsfw_filter()
+            self.load_safety_checker()
 
         if settings["controlnet_enabled"]:
             self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)

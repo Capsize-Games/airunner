@@ -37,7 +37,7 @@ class StatusWidget(BaseWidget):
         if model == ModelType.SAFETY_CHECKER:
             self.safety_checker_status = data["status"]
             self.update_safety_checker_status()
-        else:
+        elif model == ModelType.FEATURE_EXTRACTOR:
             self.feature_extractor_status = data["status"]
             self.update_safety_checker_status()
 
@@ -69,6 +69,8 @@ class StatusWidget(BaseWidget):
             color = StatusColors.LOADING
         elif self.safety_checker_status == ModelStatus.LOADED:
             color = StatusColors.LOADED
+        elif self.safety_checker_status == ModelStatus.UNLOADED:
+            color = StatusColors.UNLOADED
         else:
             color = StatusColors.FAILED
 

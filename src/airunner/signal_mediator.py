@@ -27,7 +27,11 @@ class Signal(QObject):
 
     @Slot(object)
     def on_signal_received(self, data: dict):
-        self.callback(data)
+        # Check if the callback expects a parameter
+        if len(inspect.signature(self.callback).parameters) == 0:
+            self.callback()
+        else:
+            self.callback(data)
 
 
 SIGNALS = {}

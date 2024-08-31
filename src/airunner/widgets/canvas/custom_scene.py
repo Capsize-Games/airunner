@@ -350,10 +350,14 @@ class CustomScene(
         code = response["code"]
         if code == EngineResponseCode.IMAGE_GENERATED:
             message = response["message"]
-            if message:
-                self.create_image(message["images"][0].convert("RGBA"))
+            images = message["images"]
+            if len(images) == 0:
+                self.logger.debug("No images received from engine")
+            elif message:
+                self.create_image(images[0].convert("RGBA"))
         else:
             self.logger.error(f"Unhandled response code: {code}")
+        self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
 
     def on_canvas_clear_signal(self, _message):
         settings = self.settings
