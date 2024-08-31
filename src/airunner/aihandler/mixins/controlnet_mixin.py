@@ -35,11 +35,11 @@ class ControlnetHandlerMixin:
         self.__requested_action = ModelAction.NONE
         self.__requested_action_lock = threading.Lock()
 
-    def controlnet_handle_sd_state_changed_signal(self, _data=None):
+    def controlnet_handle_sd_state_changed_signal(self):
         if self.__requested_action is ModelAction.NONE:
             return
         if self.__requested_action is ModelAction.CLEAR:
-            self.clear_controlnet()
+            self.__unload_controlnet()
         elif self.__requested_action is ModelAction.APPLY_TO_PIPE:
             self.apply_controlnet_to_pipe()
 
@@ -107,10 +107,10 @@ class ControlnetHandlerMixin:
         )
         return path
 
-    def on_load_controlnet_signal(self, _message: dict=None):
+    def load_controlnet(self):
         self.__load_controlnet()
 
-    def on_unload_controlnet_signal(self, _message: dict=None):
+    def unload_controlnet(self):
         self.__unload_controlnet()
 
     def __stop_controlnet_queue_watcher(self):
@@ -222,13 +222,9 @@ class ControlnetHandlerMixin:
             self.logger.error("No controlnet processor found")
 
     def __unload_controlnet(self):
-        self.clear_controlnet()
-
-    def clear_controlnet(self):
         if self.current_state is not HandlerState.READY:
             self.__requested_action = ModelAction.CLEAR
             return
-
         self.logger.debug("Clearing controlnet")
         self.__unload_controlnet_processor()
         self.__unload_controlnet_model()

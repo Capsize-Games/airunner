@@ -34,7 +34,7 @@ class ControlnetScene(BrushScene):
         self.settings = settings
         self.refresh_image()
 
-    def export_image(self, _message):
+    def export_image(self):
         image = self.current_active_image()
         if image:
             file_path, _ = QFileDialog.getSaveFileName(
@@ -52,7 +52,7 @@ class ControlnetScene(BrushScene):
 
             image.save(file_path)
 
-    def import_image(self, _message):
+    def import_image(self):
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",

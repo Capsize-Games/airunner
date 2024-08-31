@@ -79,16 +79,16 @@ class ModelMixin:
     def sd_model_status(self):
         return self.__sd_model_status
 
-    def action_quit_triggered(self, _message=None):
+    def action_quit_triggered(self):
         pass
 
-    def on_unload_stablediffusion_signal(self, _message: dict = None):
+    def on_unload_stablediffusion_signal(self):
         self.unload_image_generator_model()
 
-    def on_tokenizer_load_signal(self, _data: dict = None):
+    def on_tokenizer_load_signal(self):
         self.__load_tokenizer()
 
-    def on_tokenizer_unload_signal(self, _data: dict = None):
+    def on_tokenizer_unload_signal(self):
         self.__unload_tokenizer()
 
     @property
@@ -353,7 +353,7 @@ class ModelMixin:
             (not hasattr(self.pipe, "controlnet") or not hasattr(self.pipe, "processor")) or
             (self.pipe.controlnet is None or self.pipe.processor is None)
         ):
-            self.on_load_controlnet_signal()
+            self.load_controlnet()
             self.apply_controlnet_to_pipe()
             model_changed = True
 
@@ -478,7 +478,7 @@ class ModelMixin:
     def __unload_model(self):
         self.logger.debug("Unloading model")
         self.pipe = None
-        self.on_unload_controlnet_signal()
+        self.unload_controlnet()
         self.__change_sd_model_status(ModelStatus.UNLOADED)
 
     def __change_sd_model_status(self, status: ModelStatus):

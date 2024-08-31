@@ -105,7 +105,6 @@ class SafetyCheckerMixin:
         clear_memory()
 
     def __load_feature_extractor_model(self):
-        return
         self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING)
         try:
             self.feature_extractor = AutoFeatureExtractor.from_pretrained(

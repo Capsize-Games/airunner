@@ -25,7 +25,7 @@ class ActiveGridArea(DraggablePixmap):
         self._border_brush: QBrush = None
 
         super().__init__(QPixmap())
-        self.render_fill(None)
+        self.render_fill()
 
         painter = self.draw_border()
         super().paint(painter, None, None)
@@ -57,7 +57,7 @@ class ActiveGridArea(DraggablePixmap):
             min(self.rect.y(), self.rect.y() + self.rect.height())
         )
 
-    def render_fill(self, _message):
+    def render_fill(self):
         settings = self.settings
         active_grid_settings = settings["active_grid_settings"]
 

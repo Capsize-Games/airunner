@@ -13,10 +13,10 @@ class TokenizerHandler(TransformerBaseHandler):
         self.register(SignalCode.LLM_TOKENIZER_LOAD_SIGNAL, self.on_load_tokenizer_signal)
         self.register(SignalCode.LLM_TOKENIZER_UNLOAD_SIGNAL, self.on_unload_tokenizer_signal)
 
-    def on_load_tokenizer_signal(self, _message: dict):
+    def on_load_tokenizer_signal(self):
         self.load_tokenizer()
 
-    def on_unload_tokenizer_signal(self, _message: dict):
+    def on_unload_tokenizer_signal(self):
         self.unload_tokenizer()
 
     @property

@@ -112,7 +112,7 @@ class ChatPromptWidget(BaseWidget):
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
     
     @Slot(bool)
-    def action_button_clicked_send(self, _ignore):
+    def action_button_clicked_send(self):
         self.do_generate()
 
     def interrupt_button_clicked(self):
