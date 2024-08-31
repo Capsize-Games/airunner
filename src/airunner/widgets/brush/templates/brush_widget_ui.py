@@ -42,7 +42,7 @@ class Ui_brush_widget(object):
         self.gridLayout.setContentsMargins(10, 0, 10, 0)
         self.widget_2 = QWidget(self.scrollAreaWidgetContents)
         self.widget_2.setObjectName(u"widget_2")
-        self.widget_2.setMinimumSize(QSize(0, 20))
+        self.widget_2.setMinimumSize(QSize(0, 0))
         self.widget_2.setStyleSheet(u"")
         self.horizontalLayout_2 = QHBoxLayout(self.widget_2)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
@@ -77,7 +77,7 @@ class Ui_brush_widget(object):
 
         self.groupBox_4 = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_4.setObjectName(u"groupBox_4")
-        self.groupBox_4.setMinimumSize(QSize(0, 60))
+        self.groupBox_4.setMinimumSize(QSize(0, 0))
         font = QFont()
         font.setPointSize(10)
         font.setBold(True)
