@@ -23,7 +23,7 @@ class StableDiffusionSettingsWidget(
         super().showEvent(event)
         self.update_form()
 
-    def update_form(self, _data: dict = None):
+    def update_form(self):
         steps = self.settings["generator_settings"]["steps"]
         scale = self.settings["generator_settings"]["scale"]
 
