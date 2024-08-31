@@ -149,9 +149,10 @@ QTabWidget::pane {
 
 QTabBar::tab {
     background-color: #000; /* Darker background when not highlighted */
-    padding: 5px 10px; /* Adjust padding as needed */
+    padding: 5px 5px; /* Adjust padding as needed */
     margin: 0; /* Remove margin to make tabs square */
     border-radius: 0; /* Make tabs square */
+    font-size: 11px;
 }
 
 QTabBar::tab:selected, QTabBar::tab:selected:hover {

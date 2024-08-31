@@ -86,9 +86,9 @@ class LLMGenerateWorker(Worker):
         if self.llm:
             self.llm.on_clear_history_signal(message)
 
-    def on_interrupt_process_signal(self, message):
+    def on_interrupt_process_signal(self):
         if self.llm:
-            self.llm.on_interrupt_process_signal(message)
+            self.llm.on_interrupt_process_signal()
 
     def start_worker_thread(self):
         from airunner.aihandler.llm.causal_lm_transfformer_base_handler import CausalLMTransformerBaseHandler

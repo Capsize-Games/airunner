@@ -22,12 +22,12 @@ class Ui_status_widget(object):
     def setupUi(self, status_widget):
         if not status_widget.objectName():
             status_widget.setObjectName(u"status_widget")
-        status_widget.resize(444, 84)
+        status_widget.resize(483, 84)
         status_widget.setStyleSheet(u"font-size: 12px")
         self.horizontalLayout = QHBoxLayout(status_widget)
         self.horizontalLayout.setSpacing(5)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setContentsMargins(0, 0, 10, 0)
         self.system_message = QLabel(status_widget)
         self.system_message.setObjectName(u"system_message")
         self.system_message.setAlignment(Qt.AlignmentFlag.AlignCenter)

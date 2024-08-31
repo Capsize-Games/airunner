@@ -15,68 +15,108 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QScrollArea, QSizePolicy,
-    QSplitter, QTabWidget, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QSplitter,
+    QTabWidget, QWidget)
 
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.controlnet.controlnet_settings_widget import ControlnetSettingsWidget
+from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
+from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
 
 class Ui_tool_tab_widget(object):
     def setupUi(self, tool_tab_widget):
         if not tool_tab_widget.objectName():
             tool_tab_widget.setObjectName(u"tool_tab_widget")
-        tool_tab_widget.resize(641, 537)
+        tool_tab_widget.resize(641, 868)
         self.gridLayout_3 = QGridLayout(tool_tab_widget)
+        self.gridLayout_3.setSpacing(0)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
         self.tool_tab_widget_container = QTabWidget(tool_tab_widget)
         self.tool_tab_widget_container.setObjectName(u"tool_tab_widget_container")
         self.tool_tab_widget_container.setMinimumSize(QSize(0, 0))
         self.tool_tab_widget_container.setMaximumSize(QSize(16777215, 16777215))
+        font = QFont()
+        font.setPointSize(8)
+        self.tool_tab_widget_container.setFont(font)
         self.tool_tab_widget_container.setCursor(QCursor(Qt.ArrowCursor))
         self.tool_tab_widget_container.setAcceptDrops(False)
         self.tool_tab_widget_container.setTabPosition(QTabWidget.TabPosition.North)
         self.tab_3 = QWidget()
         self.tab_3.setObjectName(u"tab_3")
-        self.gridLayout = QGridLayout(self.tab_3)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.stable_diffusion_splitter = QSplitter(self.tab_3)
-        self.stable_diffusion_splitter.setObjectName(u"stable_diffusion_splitter")
-        self.stable_diffusion_splitter.setOrientation(Qt.Orientation.Vertical)
-        self.stable_diffusion_splitter.setChildrenCollapsible(False)
-        self.scrollArea = QScrollArea(self.stable_diffusion_splitter)
-        self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollAreaWidgetContents_2 = QWidget()
-        self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 635, 68))
-        self.gridLayout_4 = QGridLayout(self.scrollAreaWidgetContents_2)
+        self.gridLayout_4 = QGridLayout(self.tab_3)
+        self.gridLayout_4.setSpacing(0)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.stable_diffusion_widget = StableDiffusionSettingsWidget(self.scrollAreaWidgetContents_2)
+        self.stable_diffusion_widget = StableDiffusionSettingsWidget(self.tab_3)
         self.stable_diffusion_widget.setObjectName(u"stable_diffusion_widget")
 
-        self.gridLayout_4.addWidget(self.stable_diffusion_widget, 0, 0, 1, 1)
-
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
-        self.stable_diffusion_splitter.addWidget(self.scrollArea)
-        self.brush_container_widget = BrushContainerWidget(self.stable_diffusion_splitter)
-        self.brush_container_widget.setObjectName(u"brush_container_widget")
-        self.stable_diffusion_splitter.addWidget(self.brush_container_widget)
-        self.active_grid_settings_widget = ActiveGridSettingsWidget(self.stable_diffusion_splitter)
-        self.active_grid_settings_widget.setObjectName(u"active_grid_settings_widget")
-        self.stable_diffusion_splitter.addWidget(self.active_grid_settings_widget)
-        self.controlnet_settings_widget = ControlnetSettingsWidget(self.stable_diffusion_splitter)
-        self.controlnet_settings_widget.setObjectName(u"controlnet_settings_widget")
-        self.stable_diffusion_splitter.addWidget(self.controlnet_settings_widget)
-
-        self.gridLayout.addWidget(self.stable_diffusion_splitter, 0, 0, 1, 1)
+        self.gridLayout_4.addWidget(self.stable_diffusion_widget, 0, 0, 2, 2)
 
         self.tool_tab_widget_container.addTab(self.tab_3, "")
+        self.tab_5 = QWidget()
+        self.tab_5.setObjectName(u"tab_5")
+        self.gridLayout = QGridLayout(self.tab_5)
+        self.gridLayout.setSpacing(0)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.controlnet_settings_widget = ControlnetSettingsWidget(self.tab_5)
+        self.controlnet_settings_widget.setObjectName(u"controlnet_settings_widget")
+
+        self.gridLayout.addWidget(self.controlnet_settings_widget, 0, 0, 1, 1)
+
+        self.tool_tab_widget_container.addTab(self.tab_5, "")
+        self.tab_6 = QWidget()
+        self.tab_6.setObjectName(u"tab_6")
+        self.gridLayout_7 = QGridLayout(self.tab_6)
+        self.gridLayout_7.setSpacing(0)
+        self.gridLayout_7.setObjectName(u"gridLayout_7")
+        self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
+        self.lora_container_widget = LoraContainerWidget(self.tab_6)
+        self.lora_container_widget.setObjectName(u"lora_container_widget")
+
+        self.gridLayout_7.addWidget(self.lora_container_widget, 0, 0, 1, 1)
+
+        self.tool_tab_widget_container.addTab(self.tab_6, "")
+        self.tab_7 = QWidget()
+        self.tab_7.setObjectName(u"tab_7")
+        self.gridLayout_8 = QGridLayout(self.tab_7)
+        self.gridLayout_8.setSpacing(0)
+        self.gridLayout_8.setObjectName(u"gridLayout_8")
+        self.gridLayout_8.setContentsMargins(0, 0, 0, 0)
+        self.embeddings_container_widget = EmbeddingsContainerWidget(self.tab_7)
+        self.embeddings_container_widget.setObjectName(u"embeddings_container_widget")
+
+        self.gridLayout_8.addWidget(self.embeddings_container_widget, 0, 0, 1, 1)
+
+        self.tool_tab_widget_container.addTab(self.tab_7, "")
+        self.tab_2 = QWidget()
+        self.tab_2.setObjectName(u"tab_2")
+        self.gridLayout_5 = QGridLayout(self.tab_2)
+        self.gridLayout_5.setSpacing(0)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.brush_container_widget = BrushContainerWidget(self.tab_2)
+        self.brush_container_widget.setObjectName(u"brush_container_widget")
+
+        self.gridLayout_5.addWidget(self.brush_container_widget, 0, 0, 1, 1)
+
+        self.tool_tab_widget_container.addTab(self.tab_2, "")
+        self.tab_4 = QWidget()
+        self.tab_4.setObjectName(u"tab_4")
+        self.gridLayout_6 = QGridLayout(self.tab_4)
+        self.gridLayout_6.setSpacing(0)
+        self.gridLayout_6.setObjectName(u"gridLayout_6")
+        self.gridLayout_6.setContentsMargins(0, 0, 0, 0)
+        self.active_grid_settings_widget = ActiveGridSettingsWidget(self.tab_4)
+        self.active_grid_settings_widget.setObjectName(u"active_grid_settings_widget")
+
+        self.gridLayout_6.addWidget(self.active_grid_settings_widget, 0, 0, 1, 1)
+
+        self.tool_tab_widget_container.addTab(self.tab_4, "")
         self.tab = QWidget()
         self.tab.setObjectName(u"tab")
         self.gridLayout_2 = QGridLayout(self.tab)
@@ -109,7 +149,12 @@ class Ui_tool_tab_widget(object):
 
     def retranslateUi(self, tool_tab_widget):
         tool_tab_widget.setWindowTitle(QCoreApplication.translate("tool_tab_widget", u"Form", None))
-        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("tool_tab_widget", u"StableDiffusion", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("tool_tab_widget", u"Art", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_5), QCoreApplication.translate("tool_tab_widget", u"ControlNet", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_6), QCoreApplication.translate("tool_tab_widget", u"LoRA", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_7), QCoreApplication.translate("tool_tab_widget", u"Embeddings", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("tool_tab_widget", u"Brush", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_4), QCoreApplication.translate("tool_tab_widget", u"Grid", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab), QCoreApplication.translate("tool_tab_widget", u"LLM", None))
     # retranslateUi
 

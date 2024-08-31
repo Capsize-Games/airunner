@@ -223,7 +223,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Controlnet Settings</string>
+         <string>Controlnet</string>
         </property>
        </widget>
       </item>
