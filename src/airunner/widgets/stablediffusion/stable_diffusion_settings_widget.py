@@ -35,7 +35,7 @@ class StableDiffusionSettingsWidget(
 
         if scale != current_scale:
             self.get_form_element("scale_widget").setProperty("current_value", scale)
-        
+
         self.ui.seed_widget.setProperty("generator_section", self.settings["pipeline"])
         self.ui.seed_widget.setProperty("generator_name", ImageGenerator.STABLEDIFFUSION.value)
 

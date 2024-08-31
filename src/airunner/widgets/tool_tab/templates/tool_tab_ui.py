@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QSplitter
 
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
-from airunner.widgets.controlnet.controlnet_settings_widget import ControlnetSettingsWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
 from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
@@ -57,18 +56,6 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_4.addWidget(self.stable_diffusion_widget, 0, 0, 2, 2)
 
         self.tool_tab_widget_container.addTab(self.tab_3, "")
-        self.tab_5 = QWidget()
-        self.tab_5.setObjectName(u"tab_5")
-        self.gridLayout = QGridLayout(self.tab_5)
-        self.gridLayout.setSpacing(0)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.controlnet_settings_widget = ControlnetSettingsWidget(self.tab_5)
-        self.controlnet_settings_widget.setObjectName(u"controlnet_settings_widget")
-
-        self.gridLayout.addWidget(self.controlnet_settings_widget, 0, 0, 1, 1)
-
-        self.tool_tab_widget_container.addTab(self.tab_5, "")
         self.tab_6 = QWidget()
         self.tab_6.setObjectName(u"tab_6")
         self.gridLayout_7 = QGridLayout(self.tab_6)
@@ -150,7 +137,6 @@ class Ui_tool_tab_widget(object):
     def retranslateUi(self, tool_tab_widget):
         tool_tab_widget.setWindowTitle(QCoreApplication.translate("tool_tab_widget", u"Form", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("tool_tab_widget", u"Art", None))
-        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_5), QCoreApplication.translate("tool_tab_widget", u"ControlNet", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_6), QCoreApplication.translate("tool_tab_widget", u"LoRA", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_7), QCoreApplication.translate("tool_tab_widget", u"Embeddings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("tool_tab_widget", u"Brush", None))

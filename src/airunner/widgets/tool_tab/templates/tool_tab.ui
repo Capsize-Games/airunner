@@ -85,31 +85,6 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_5">
-      <attribute name="title">
-       <string>ControlNet</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout">
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <property name="spacing">
-        <number>0</number>
-       </property>
-       <item row="0" column="0">
-        <widget class="ControlnetSettingsWidget" name="controlnet_settings_widget" native="true"/>
-       </item>
-      </layout>
-     </widget>
      <widget class="QWidget" name="tab_6">
       <attribute name="title">
        <string>LoRA</string>
@@ -265,12 +240,6 @@
    <class>ActiveGridSettingsWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/active_grid_settings/active_grid_settings_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ControlnetSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/controlnet/controlnet_settings_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
