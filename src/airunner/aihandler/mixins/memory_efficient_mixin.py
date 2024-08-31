@@ -253,6 +253,8 @@ class MemoryEfficientMixin:
             self.__move_controlnet_to_cuda()
 
     def __move_pipe_to_cuda(self):
+        if not self.pipe:
+            return
         if not str(self.pipe.device).startswith("cuda"):
             self.logger.debug(f"Moving pipe to cuda (currently {self.pipe.device})")
             clear_memory()

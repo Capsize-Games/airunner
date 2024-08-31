@@ -24,7 +24,7 @@ class StatsWidget(
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_memory_stats)
-        self.timer.start(5000)
+        self.timer.start(500)
 
     def update_memory_stats(self):
         # Clear the table

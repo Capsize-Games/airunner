@@ -371,26 +371,19 @@ class ModelMixin:
 
             self.pipe_finalized = True
 
-        # Clear the memory before generating the image
-        clear_memory()
-
-        # Apply memory settings
-        self.make_stable_diffusion_memory_efficient()
-        self.make_controlnet_memory_efficient()
-
     def __pipe_swap(self, data):
         enable_controlnet = self.enable_controlnet
         if "image" not in data:
             enable_controlnet = False
         __pipeline_class = self.__pipeline_class(enable_controlnet)
         if type(self.pipe) is not __pipeline_class:
-            clear_memory()
             if __pipeline_class in CONTROLNET_PIPELINES_SD or __pipeline_class in CONTROLNET_PIPELINES_SDXL:
                 self.pipe = __pipeline_class.from_pipe(self.pipe, controlnet=self.controlnet)
             else:
                 self.pipe = __pipeline_class.from_pipe(self.pipe)
             clear_memory()
             self.make_stable_diffusion_memory_efficient()
+            self.make_controlnet_memory_efficient()
 
     def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
         if self.do_interrupt_image_generation:
@@ -477,13 +470,17 @@ class ModelMixin:
 
     def __unload_model(self):
         self.logger.debug("Unloading model")
-        self.pipe = None
-        self.unload_controlnet()
+        self.__change_sd_model_status(ModelStatus.LOADING)
+        self.pipe.to("cpu")
         self.__change_sd_model_status(ModelStatus.UNLOADED)
 
     def __change_sd_model_status(self, status: ModelStatus):
         self.__sd_model_status = status
         self.change_model_status(ModelType.SD, status, self.model_path)
+        if status in (ModelStatus.FAILED, ModelStatus.UNLOADED):
+            clear_memory()
+        elif status == ModelStatus.LOADED:
+            self.make_stable_diffusion_memory_efficient()
 
     def __change_sd_tokenizer_status(self, status: ModelStatus):
         self.__tokenizer_status = status
@@ -611,6 +608,10 @@ class ModelMixin:
             self.current_model = self.model_path
             self.current_model = old_model_path
             self.controlnet_loaded = self.settings["controlnet_enabled"]
+        elif self.pipe and self.pipe.device.type == "cpu":
+            self.__change_sd_model_status(ModelStatus.LOADING)
+            self.pipe.to(self.device)
+            self.__change_sd_model_status(ModelStatus.LOADED)
 
     def __get_pipeline_action(self, action=None):
         action = self.sd_request.section if not action else action

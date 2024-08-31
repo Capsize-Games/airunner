@@ -42,82 +42,82 @@ class TTSGeneratorWorker(Worker):
         self.do_interrupt = False
         super().__init__(*args, **kwargs)
 
-    def on_enable_tts_signal(self, message = None):
+    def on_enable_tts_signal(self):
         if self.tts:
-            self.tts.on_enable_tts_signal(message)
+            self.tts.enable_tts_signal()
 
-    def on_disable_tts_signal(self, message = None):
+    def on_disable_tts_signal(self):
         if self.tts:
-            self.tts.on_disable_tts_signal(message)
+            self.tts.disable_tts_signal()
 
     def on_tts_load_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_load_signal(message)
+            self.tts.tts_load_signal(message)
 
     def on_tts_unload_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_unload_signal(message)
+            self.tts.tts_unload_signal(message)
 
     def on_tts_processor_load_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_processor_load_signal(message)
+            self.tts.tts_processor_load_signal(message)
 
     def on_tts_processor_unload_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_processor_unload_signal(message)
+            self.tts.tts_processor_unload_signal(message)
 
     def on_tts_vocoder_load_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_vocoder_load_signal(message)
+            self.tts.tts_vocoder_load_signal(message)
 
     def on_tts_vocoder_unload_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_vocoder_unload_signal(message)
+            self.tts.tts_vocoder_unload_signal(message)
 
     def on_tts_speaker_embeddings_load_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_speaker_embeddings_load_signal(message)
+            self.tts.tts_speaker_embeddings_load_signal(message)
 
     def on_tts_speaker_embeddings_unload_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_speaker_embeddings_unload_signal(message)
+            self.tts.tts_speaker_embeddings_unload_signal(message)
 
     def on_tts_tokenizer_load_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_tokenizer_load_signal(message)
+            self.tts.tts_tokenizer_load_signal(message)
 
     def on_tts_tokenizer_unload_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_tokenizer_unload_signal(message)
+            self.tts.tts_tokenizer_unload_signal(message)
 
     def on_dataset_tts_load_signal(self, message: dict):
         if self.tts:
-            self.tts.on_dataset_tts_load_signal(message)
+            self.tts.dataset_tts_load_signal(message)
 
     def on_dataset_tts_unload_signal(self, message: dict):
         if self.tts:
-            self.tts.on_dataset_tts_unload_signal(message)
+            self.tts.dataset_tts_unload_signal(message)
 
     def on_tts_feature_extractor_load_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_feature_extractor_load_signal(message)
+            self.tts.tts_feature_extractor_load_signal(message)
 
     def on_tts_feature_extractor_unload_signal(self, message: dict):
         if self.tts:
-            self.tts.on_tts_feature_extractor_unload_signal(message)
+            self.tts.tts_feature_extractor_unload_signal(message)
 
     def on_interrupt_process_signal(self):
         if self.tts:
-            self.tts.on_interrupt_process_signal()
+            self.tts.interrupt_process_signal()
 
     def on_unblock_tts_generator_signal(self, message):
         if self.tts:
-            self.tts.on_unblock_tts_generator_signal(message)
+            self.tts.unblock_tts_generator_signal(message)
 
 
     def on_application_settings_changed_signal(self, message: dict):
         if self.tts:
-            self.tts.on_application_settings_changed_signal(message)
+            self.tts.application_settings_changed_signal(message)
 
     def start_worker_thread(self):
         tts_model = self.settings["tts_settings"]["tts_model"]
