@@ -132,7 +132,7 @@ class GeneratorForm(BaseWidget):
     def do_generate(self):
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
-    def on_application_settings_changed_signal(self, _message: dict):
+    def on_application_settings_changed_signal(self):
         self.activate_ai_mode()
         self.toggle_secondary_prompts()
     
@@ -158,7 +158,7 @@ class GeneratorForm(BaseWidget):
     def handle_second_negative_prompt_changed(self):
         pass
 
-    def on_generate_image_signal(self, _message):
+    def on_generate_image_signal(self):
         self.handle_generate_button_clicked()
 
     def handle_generate_button_clicked(self):

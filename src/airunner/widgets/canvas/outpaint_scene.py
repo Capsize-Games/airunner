@@ -31,7 +31,7 @@ class OutpaintScene(CustomScene):
     def on_mask_generator_worker_response_signal(self, message: dict):
         self.create_image(message["mask"])
 
-    def export_image(self, _message):
+    def export_image(self):
         image = self.current_active_image()
         if image:
             file_path, _ = QFileDialog.getSaveFileName(
@@ -49,7 +49,7 @@ class OutpaintScene(CustomScene):
 
             image.save(file_path)
 
-    def import_image(self, _message):
+    def import_image(self):
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",

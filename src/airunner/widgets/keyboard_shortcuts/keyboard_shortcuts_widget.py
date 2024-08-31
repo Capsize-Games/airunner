@@ -36,6 +36,7 @@ class KeyboardShortcutsWidget(BaseWidget):
         ui.line_edit.mousePressEvent = lambda event: self.set_shortcut(key, ui.line_edit)
         ui.line_edit.keyPressEvent = lambda event: self.get_shortcut(key, ui.line_edit, event)
         self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
+        self.shortcuts[key]["widget"] = ui
         return widget
 
     def set_shortcut(self, key, line_edit):
@@ -50,8 +51,18 @@ class KeyboardShortcutsWidget(BaseWidget):
         line_edit.setText(self.shortcuts[key]["text"])
         self.shortcuts[key]["key"] = event.key()
 
-        # iterate over modifiers and store them as a list of strings
-        self.shortcuts[key]["modifiers"] = [mod.value for mod in event.modifiers()]
+        # Check for each modifier and store them as a list of strings
+        modifiers = []
+        if event.modifiers() & QtCore.Qt.KeyboardModifier.ControlModifier:
+            modifiers.append("Control")
+        if event.modifiers() & QtCore.Qt.KeyboardModifier.AltModifier:
+            modifiers.append("Alt")
+        if event.modifiers() & QtCore.Qt.KeyboardModifier.ShiftModifier:
+            modifiers.append("Shift")
+        if event.modifiers() & QtCore.Qt.KeyboardModifier.MetaModifier:
+            modifiers.append("Meta")
+
+        self.shortcuts[key]["modifiers"] = modifiers
         self.save_shortcuts()
 
     def get_key_text(self, event):

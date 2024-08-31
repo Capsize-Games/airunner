@@ -123,57 +123,57 @@ class TTSHandler(BaseHandler):
     def sentence_chunks(self):
         return self.settings["tts_settings"]["sentence_chunks"]
 
-    def on_enable_tts_signal(self, _data: dict = None):
+    def on_enable_tts_signal(self):
         self.tts_enabled = True
         self.initialize()
 
-    def on_disable_tts_signal(self, _data: dict = None):
+    def on_disable_tts_signal(self):
         self.tts_enabled = False
         self.unload()
 
     def on_tts_load_signal(self, message: dict):
         self.load_model()
 
-    def on_tts_unload_signal(self, _message: dict):
+    def on_tts_unload_signal(self):
         self.unload_model()
 
     def on_tts_processor_load_signal(self, message: dict):
         self.load_processor()
 
-    def on_tts_processor_unload_signal(self, _message: dict):
+    def on_tts_processor_unload_signal(self):
         self.unload_processor()
 
     def on_tts_vocoder_load_signal(self, message: dict):
         self.load_vocoder()
 
-    def on_tts_vocoder_unload_signal(self, _message: dict):
+    def on_tts_vocoder_unload_signal(self):
         self.unload_vocoder()
 
     def on_tts_speaker_embeddings_load_signal(self, message: dict):
         self.load_speaker_embeddings()
 
-    def on_tts_speaker_embeddings_unload_signal(self, _message: dict):
+    def on_tts_speaker_embeddings_unload_signal(self):
         self.unload_speaker_embeddings()
 
     def on_tts_tokenizer_load_signal(self, message: dict):
         self.load_tokenizer()
 
-    def on_tts_tokenizer_unload_signal(self, _message: dict):
+    def on_tts_tokenizer_unload_signal(self):
         self.unload_tokenizer()
 
     def on_dataset_tts_load_signal(self, message: dict):
         self.load_dataset()
 
-    def on_dataset_tts_unload_signal(self, _message: dict):
+    def on_dataset_tts_unload_signal(self):
         self.unload_dataset()
 
     def on_tts_feature_extractor_load_signal(self, message: dict):
         self.load_feature_extractor()
 
-    def on_tts_feature_extractor_unload_signal(self, _message: dict):
+    def on_tts_feature_extractor_unload_signal(self):
         self.unload_feature_extractor()
 
-    def on_interrupt_process_signal(self, _message: dict):
+    def on_interrupt_process_signal(self):
         self.do_interrupt = True
         self.cancel_generated_speech = False
         self.paused = True
@@ -184,13 +184,13 @@ class TTSHandler(BaseHandler):
         self.tts_sentence = None
         self.is_playing = False
 
-    def on_unblock_tts_generator_signal(self, _ignore):
+    def on_unblock_tts_generator_signal(self):
         self.logger.debug("Unblocking TTS generation...")
         self.do_interrupt = False
         self.paused = False
 
 
-    def on_application_settings_changed_signal(self, _message: dict):
+    def on_application_settings_changed_signal(self):
         tts_enabled = self.settings["tts_enabled"]
         if tts_enabled != self.tts_enabled:
             self.tts_enabled = tts_enabled

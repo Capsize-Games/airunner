@@ -47,7 +47,7 @@ class BrushScene(CustomScene):
         for signal, handler in signals:
             self.register(signal, handler)
 
-    def export_image(self, _message):
+    def export_image(self):
         image = self.current_active_image()
         if image:
             file_path, _ = QFileDialog.getSaveFileName(
@@ -65,7 +65,7 @@ class BrushScene(CustomScene):
 
             image.save(file_path)
 
-    def import_image(self, _message):
+    def import_image(self):
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",
@@ -201,7 +201,7 @@ class BrushScene(CustomScene):
             self.settings = settings
             self.do_update = False
 
-    def handle_settings_changed(self, _data = None):
+    def handle_settings_changed(self):
         if self._do_generate_image:
             self._do_generate_image = False
             if (

@@ -46,17 +46,17 @@ class CausalLMTransformerBaseHandler(
         self._model_status = ModelStatus.UNLOADED
         super().__init__(*args, **kwargs)
 
-    def on_load_llm_signal(self, _message: dict):
+    def on_load_llm_signal(self):
         self.load()
 
-    def on_load_model_signal(self, _message: dict):
+    def on_load_model_signal(self):
         self.load_model()
 
-    def on_interrupt_process_signal(self, _message: dict):
+    def on_interrupt_process_signal(self):
         if self.chat_agent is not None:
             self.chat_agent.interrupt_process()
 
-    def on_clear_history_signal(self, _message):
+    def on_clear_history_signal(self):
         if self.chat_agent is not None:
             self.logger.debug("Clearing chat history")
             self.chat_agent.history = []

@@ -100,7 +100,7 @@ class CustomScene(
         for signal, handler in signals:
             self.register(signal, handler)
 
-    def export_image(self, _message):
+    def export_image(self):
         image = self.current_active_image()
         if image:
             # Set the parent window to the main application window
@@ -126,7 +126,7 @@ class CustomScene(
                 # Save the combined image
                 image.save(file_path)
 
-    def import_image(self, _message):
+    def import_image(self):
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",
@@ -157,7 +157,7 @@ class CustomScene(
             "pivot_point_y": value.y()
         })
 
-    def on_paste_image_from_clipboard(self, _message=None):
+    def on_paste_image_from_clipboard(self):
         if self.scene_is_active:
             image = self.paste_image_from_clipboard()
             #self.delete_image()
@@ -207,7 +207,7 @@ class CustomScene(
             image = self.resize_image(image)
         self.add_image_to_scene(image)
 
-    def handle_cancel_filter(self, _message):
+    def handle_cancel_filter(self):
         image = self.cancel_filter()
         if image:
             self.load_image_from_object(image=image)
@@ -359,25 +359,25 @@ class CustomScene(
             self.logger.error(f"Unhandled response code: {code}")
         self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
 
-    def on_canvas_clear_signal(self, _message):
+    def on_canvas_clear_signal(self):
         settings = self.settings
         settings[self.settings_key]["image"] = None
         self.settings = settings
         self.delete_image()
 
-    def on_canvas_copy_image_signal(self, _message):
+    def on_canvas_copy_image_signal(self):
         if self.scene_is_active:
             self.copy_image(self.current_active_image())
 
-    def on_canvas_cut_image_signal(self, _message):
+    def on_canvas_cut_image_signal(self):
         if self.scene_is_active:
             self.cut_image(self.current_active_image())
 
-    def on_canvas_rotate_90_clockwise_signal(self, _message):
+    def on_canvas_rotate_90_clockwise_signal(self):
         if self.scene_is_active:
             self.rotate_90_clockwise()
 
-    def on_canvas_rotate_90_counter_clockwise_signal(self, _message):
+    def on_canvas_rotate_90_counter_clockwise_signal(self):
         if self.scene_is_active:
             self.rotate_90_counterclockwise()
 

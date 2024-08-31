@@ -192,10 +192,10 @@ class SDHandler(
     def sd_request(self, value):
         self._sd_request = value
 
-    def on_load_scheduler_signal(self, _message: dict):
+    def on_load_scheduler_signal(self):
         self.load_scheduler()
 
-    def on_unload_scheduler_signal(self, _message: dict):
+    def on_unload_scheduler_signal(self):
         self.unload_scheduler()
 
     def model_status_changed(self, message: dict):
@@ -258,7 +258,7 @@ class SDHandler(
             self.load_scheduler()
         self.load_image_generator_model()
 
-    def interrupt_image_generation_signal(self, _message: dict = None):
+    def interrupt_image_generation_signal(self):
         if self.current_state == HandlerState.GENERATING:
             self.do_interrupt_image_generation = True
 

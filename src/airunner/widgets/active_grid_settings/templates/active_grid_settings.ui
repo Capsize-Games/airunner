@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>724</width>
-    <height>699</height>
+    <height>369</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -98,7 +98,7 @@
         <x>0</x>
         <y>0</y>
         <width>724</width>
-        <height>639</height>
+        <height>309</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_3">
@@ -139,16 +139,16 @@
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout">
           <property name="leftMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
           <property name="topMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
           <property name="rightMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
           <property name="bottomMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
           <item>
            <widget class="SliderWidget" name="width_slider_widget" native="true">
@@ -268,20 +268,20 @@
          <property name="checked">
           <bool>false</bool>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <layout class="QGridLayout" name="gridLayout_4">
           <property name="leftMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
           <property name="topMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
           <property name="rightMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
           <property name="bottomMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
-          <item>
+          <item row="0" column="0">
            <widget class="SliderWidget" name="border_opacity_slider_widget" native="true">
             <property name="spinbox_single_step" stdset="0">
              <double>0.010000000000000</double>
@@ -321,7 +321,7 @@
             </property>
            </widget>
           </item>
-          <item>
+          <item row="1" column="0">
            <widget class="QPushButton" name="border_choose_color_button">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
@@ -363,20 +363,20 @@
          <property name="checked">
           <bool>false</bool>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <layout class="QGridLayout" name="gridLayout_5">
           <property name="leftMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
           <property name="topMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
           <property name="rightMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
           <property name="bottomMargin">
-           <number>10</number>
+           <number>0</number>
           </property>
-          <item>
+          <item row="0" column="0">
            <widget class="SliderWidget" name="fill_opacity_slider_widget" native="true">
             <property name="spinbox_single_step" stdset="0">
              <double>0.010000000000000</double>
@@ -416,7 +416,7 @@
             </property>
            </widget>
           </item>
-          <item>
+          <item row="1" column="0">
            <widget class="QPushButton" name="fill_choose_color_button">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Preferred">

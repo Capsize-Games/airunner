@@ -61,7 +61,7 @@ class CustomGraphicsView(
     def canvas_type(self) -> str:
         return self.property("canvas_type")
 
-    def on_main_window_loaded_signal(self, _message):
+    def on_main_window_loaded_signal(self):
         self.initialized = True
         self.do_draw()
 
@@ -71,7 +71,7 @@ class CustomGraphicsView(
             do_draw_layers=data.get("do_draw_layers", None)
         )
 
-    def on_application_settings_changed_signal(self, _message):
+    def on_application_settings_changed_signal(self):
         self.set_canvas_color()
         if self.settings["grid_settings"]["show_grid"]:
             self.do_draw()
@@ -151,7 +151,7 @@ class CustomGraphicsView(
         for i in range(num_vertical_lines + num_horizontal_lines, len(self.line_group.childItems())):
             self.line_group.childItems()[i].setVisible(False)
 
-    def clear_lines(self, _message: dict = None):
+    def clear_lines(self):
         self.remove_scene_item(self.line_group)
 
     def register_line_data(self, lines_data):
@@ -173,7 +173,7 @@ class CustomGraphicsView(
             canvas_container_size.height()
         )
 
-    def update_scene(self, _message=None):
+    def update_scene(self):
         self._scene.update()
 
     def remove_scene_item(self, item):
@@ -182,7 +182,7 @@ class CustomGraphicsView(
         if item.scene() == self._scene:
             self._scene.removeItem(item)
 
-    def draw_selected_area(self, _message):
+    def draw_selected_area(self):
         """
         Draw the selected active grid area container
         """
@@ -259,7 +259,7 @@ class CustomGraphicsView(
             self.active_grid_area.setZValue(1)
             self._scene.addItem(self.active_grid_area)
 
-    def on_zoom_level_changed_signal(self, _message):
+    def on_zoom_level_changed_signal(self):
         transform = self.zoom_handler.on_zoom_level_changed()
 
         # Set the transform
@@ -311,7 +311,7 @@ class CustomGraphicsView(
         self.setScene(self._scene)
         self.set_canvas_color()
 
-    def set_canvas_color(self, _message=None):
+    def set_canvas_color(self):
         if not self._scene:
             return
         settings = self.settings
