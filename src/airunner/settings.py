@@ -595,7 +595,6 @@ DEFAULT_MODELS = dict(
         img2img=SD_DEFAULT_MODEL,
         inpaint=SD_DEFAULT_MODEL,
         outpaint=SD_DEFAULT_MODEL,
-        depth2img=SD_DEFAULT_MODEL,
     )
 )
 

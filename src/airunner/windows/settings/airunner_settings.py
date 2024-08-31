@@ -161,33 +161,6 @@ class SettingsWindow(BaseWindow):
                 ]
             },
             {
-                "section": "Import / Export Preferences",
-                "files": [
-                    {
-                        "name": "paths",
-                        "display_name": "Paths",
-                        "checkable": False
-                    },
-                    {
-                        "name": "export_preferences",
-                        "display_name": "Image import / export",
-                        "checkable": False
-                    },
-                    {
-                        "name": "resize_on_import",
-                        "display_name": "Resize on import",
-                        "checkable": True,
-                        "description": "If enabled, images will be resized to the active grid area size when pasted."
-                    },
-                    {
-                        "name": "image_to_new_layer",
-                        "display_name": "Image to new layer",
-                        "checkable": True,
-                        "description": "If enabled, images will be pasted to a new layer."
-                    }
-                ]
-            },
-            {
                 "section": "Grid & Canvas Preferences",
                 "files": [
                     {
