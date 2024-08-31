@@ -337,6 +337,17 @@ class ModelMixin:
         # Check if NSFW content is detected and return the results
         return self.check_and_mark_nsfw_images(images)
 
+    @property
+    def pipeline_is_controlnet(self):
+        return type(self.pipe) in (
+            StableDiffusionControlNetPipeline,
+            StableDiffusionControlNetImg2ImgPipeline,
+            StableDiffusionControlNetInpaintPipeline,
+            StableDiffusionXLControlNetPipeline,
+            StableDiffusionXLControlNetImg2ImgPipeline,
+            StableDiffusionXLControlNetInpaintPipeline
+        )
+
     def __finalize_pipeline(self, data):
         # Ensure controlnet is applied to the pipeline.
         model_changed = self.sd_request.model_changed
@@ -348,7 +359,12 @@ class ModelMixin:
             self.apply_controlnet_to_pipe()
             model_changed = True
 
-        if model_changed or not self.pipe_finalized:
+        if (
+            model_changed or
+            not self.pipe_finalized or
+            (not self.settings["controlnet_enabled"] and self.pipeline_is_controlnet) or
+            (self.settings["controlnet_enabled"] and not self.pipeline_is_controlnet)
+        ):
             # Swap the pipeline if the request is different from the current pipeline
             self.__pipe_swap(data)
 
