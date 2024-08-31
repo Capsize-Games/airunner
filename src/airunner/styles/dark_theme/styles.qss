@@ -633,7 +633,86 @@ QSplitter::handle::horizontal:hover {
     border-left: 4px solid rgba(0, 132, 185, 255);
 }
 
+#tool_tab_widget QGroupBox {
+    border: 0;
+}
+
+QGroupBox {
+    padding: 10px 0;
+}
+
+QDoubleSpinBox {
+    background-color: #333; /* Set the desired background color */
+    border: 1px solid rgba(0, 132, 185, 50); /* Add a border */
+    padding: 5px; /* Adjust padding as needed */
+    color: #C8C8C8; /* Set text color */
+}
+
+QDoubleSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right; /* Position the up arrow */
+    border-left: 1px solid rgba(0, 132, 185, 50); /* Add a vertical line */
+    border-bottom: 1px solid rgba(0, 132, 185, 50); /* Add a horizontal line */
+    background-color: #111; /* Ensure the button inherits the background color */
+}
+
+QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right; /* Position the down arrow */
+    border-left: 1px solid rgba(0, 132, 185, 50); /* Add a vertical line */
+    background-color: #111; /* Ensure the button inherits the background color */
+}
+
+#slider_widget QDoubleSpinBox::up-arrow {
+    image: url(:/icons/up-arrow.svg); /* Ensure the up arrow is visible */
+}
+
+#slider_widget QDoubleSpinBox::down-arrow {
+    image: url(:/icons/down-arrow.svg); /* Ensure the down arrow is visible */
+}
+
+#slider_widget QSlider {
+    border: 1px solid rgba(0, 132, 185, 50);
+    background-color: #333;
+}
+
+QSlider::groove:horizontal {
+    background: #333; /* Set the desired gutter background color */
+    height: 6px; /* Adjust the height as needed */
+}
+
+QSlider::groove:vertical {
+    background: #333; /* Set the desired gutter background color */
+    width: 6px; /* Adjust the width as needed */
+}
+
+QSlider::handle:horizontal {
+    background: #C8C8C8; /* Set the desired handle color */
+    border: 1px solid rgba(0, 132, 185, 255); /* Optional: add a border */
+    width: 10px; /* Adjust the width as needed */
+    height: 20px; /* Adjust the height as needed */
+    margin: -7px 0; /* Center the handle */
+    border-radius: 3px; /* Optional: round the corners */
+}
+
+QSlider::handle:vertical {
+    background: #C8C8C8; /* Set the desired handle color */
+    border: 1px solid rgba(0, 132, 185, 255); /* Optional: add a border */
+    width: 20px; /* Adjust the width as needed */
+    height: 10px; /* Adjust the height as needed */
+    margin: 0 -7px; /* Center the handle */
+    border-radius: 3px; /* Optional: round the corners */
+}
+
+QSlider::sub-page:horizontal {
+    background: rgba(0, 132, 185, 255); /* Set the desired color for the left side of the gutter */
+}
+
+QSlider::sub-page:vertical {
+    background: rgba(0, 132, 185, 255); /* Set the desired color for the top side of the gutter */
+}
+
 #border_choose_color_button,
 #fill_choose_color_button {
-    border: 2px solid rgba(255, 255, 255, 255);
+    border: 1px solid rgba(255, 255, 255, 255);
 }
