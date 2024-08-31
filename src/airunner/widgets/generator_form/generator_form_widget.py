@@ -311,6 +311,7 @@ class GeneratorForm(BaseWidget):
         QApplication.processEvents()
 
     def start_progress_bar(self):
+        self.ui.progress_bar.setFormat("Generating %p%")
         self.ui.progress_bar.setRange(0, 0)
         self.ui.progress_bar.show()
 
@@ -391,3 +392,6 @@ class GeneratorForm(BaseWidget):
             return
         progressbar.setRange(0, 100)
         progressbar.setValue(100)
+
+        # set text of progressbar to "complete"
+        progressbar.setFormat("Complete")
