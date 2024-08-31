@@ -1110,6 +1110,10 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         canvas_side_splitter=None,
         canvas_side_splitter_2=None,
         generator_form_splitter=None,
+        width=800,
+        height=600,
+        x_pos=0,
+        y_pos=0,
     ),
     memory_settings=DEFAULT_MEMORY_SETTINGS,
     grid_settings=dict(
