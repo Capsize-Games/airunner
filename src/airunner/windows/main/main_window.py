@@ -677,7 +677,6 @@ class MainWindow(
         window_settings.update(dict(
             is_maximized=self.isMaximized(),
             is_fullscreen=self.isFullScreen(),
-            stable_diffusion_splitter=self.ui.tool_tab_widget.ui.stable_diffusion_splitter.saveState(),
             llm_splitter=self.ui.tool_tab_widget.ui.llm_splitter.saveState(),
             content_splitter=self.ui.content_splitter.saveState(),
             canvas_splitter=self.ui.canvas_widget_2.ui.canvas_splitter.saveState(),
