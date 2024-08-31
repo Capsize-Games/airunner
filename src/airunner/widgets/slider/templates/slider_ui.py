@@ -23,7 +23,7 @@ class Ui_slider_widget(object):
         if not slider_widget.objectName():
             slider_widget.setObjectName(u"slider_widget")
         slider_widget.resize(474, 50)
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(slider_widget.sizePolicy().hasHeightForWidth())
