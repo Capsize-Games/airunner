@@ -305,7 +305,7 @@ class MainWindow(
             self.logger.error(f"Unable to update prompt at index {index}")
         self.settings = settings
 
-    def on_save_stablediffusion_prompt_signal(self, _message):
+    def on_save_stablediffusion_prompt_signal(self):
         settings = self.settings
         settings["saved_prompts"].append({
             'prompt': settings["generator_settings"]["prompt"],
@@ -365,20 +365,16 @@ class MainWindow(
         self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True))
         self.register(SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal)
         self.register(SignalCode.WRITE_FILE, self.on_write_file_signal)
-        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal)
         self.register(SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts)
-        self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
+        self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.action_reset_settings)
         self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal)
+        self.register(SignalCode.REFRESH_STYLESHEET_SIGNAL, self.refresh_stylesheet)
 
-    def on_reset_paths_signal(self, _message: dict):
+    def on_reset_paths_signal(self):
         settings = self.settings
         settings["path_settings"] = DEFAULT_PATH_SETTINGS
         self.settings = settings
-
-    def on_reset_settings_signal(self, _message: dict):
-        self.settings = self.default_settings
-        self.restart()
 
     def restart(self):
         # Save the current state
@@ -389,54 +385,6 @@ class MainWindow(
 
         # Start a new instance of the application
         QProcess.startDetached(sys.executable, sys.argv)
-
-    def on_model_status_changed_signal(self, data: dict):
-        if data["status"] is ModelStatus.LOADING:
-            color = StatusColors.LOADING
-        elif data["status"] is ModelStatus.LOADED:
-            color = StatusColors.LOADED
-        elif data["status"] is ModelStatus.FAILED:
-            color = StatusColors.FAILED
-        elif data["status"] is ModelStatus.READY:
-            color = StatusColors.READY
-        else:
-            color = StatusColors.UNLOADED
-
-        styles = "QLabel { color: " + color.value + "; }"
-        element_name = ""
-        tool_tip = ""
-        if not data["model"]:
-            return
-        if data["model"] == ModelType.SD:
-            element_name = "sd_status"
-            tool_tip = "Stable Diffusion"
-
-            self.set_sd_status_text()
-
-        elif data["model"] == ModelType.CONTROLNET:
-            element_name = "controlnet_status"
-            tool_tip = "Controlnet"
-        elif data["model"] == ModelType.LLM:
-            element_name = "llm_status"
-            tool_tip = "LLM"
-        elif data["model"] == ModelType.TTS:
-            element_name = "tts_status"
-            tool_tip = "TTS"
-        elif data["model"] == ModelType.STT:
-            element_name = "stt_status"
-            tool_tip = "STT"
-        # elif data["model"] == ModelType.OCR:
-        #     element_name = "ocr_status"
-
-        tool_tip += " " + data["status"].value
-
-        if element_name != "":
-            getattr(self.ui, element_name).setStyleSheet(styles)
-            getattr(self.ui, element_name).setToolTip(tool_tip)
-
-    def set_sd_status_text(self, settings=None):
-        settings = settings or self.settings
-        self.ui.sd_status.setText(settings["generator_settings"]["version"])
 
     def on_write_file_signal(self, data: dict):
         """
@@ -462,7 +410,7 @@ class MainWindow(
         args = data["args"]
         return bash_execute(args[0])
 
-    def on_application_settings_changed_signal(self, _message: dict):
+    def on_application_settings_changed_signal(self):
         if not self._updating_settings:
             self.set_stylesheet()
 
@@ -487,43 +435,6 @@ class MainWindow(
         self.logger.debug("Restoring state")
         self.restore_state()
         settings = self.settings
-
-        if settings["sd_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.SD,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
-        if settings["controlnet_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.CONTROLNET,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
-        if settings["llm_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.LLM,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
-        if settings["tts_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.TTS,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
-        if settings["stt_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.STT,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
-        if settings["ocr_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.OCR,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
 
         from airunner.widgets.status.status_widget import StatusWidget
         self.status_widget = StatusWidget()
@@ -570,11 +481,11 @@ class MainWindow(
     The following functions are defined in and connected to the appropriate
     signals in the corresponding ui file.
     """
-    def action_quit_triggered(self, _message: dict):
+    def action_quit_triggered(self):
         QApplication.quit()
         self.close()
 
-    def on_nsfw_content_detected_signal(self, _message: dict):
+    def on_nsfw_content_detected_signal(self):
         # display message in status
         self.emit_signal(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
@@ -981,17 +892,18 @@ class MainWindow(
         from airunner.windows.update.update_window import UpdateWindow
         self.update_popup = UpdateWindow()
 
-    def refresh_styles(self):
-        self.set_stylesheet()
+    def refresh_stylesheet(self):
+        self.set_stylesheet(force=True)
 
-    def set_stylesheet(self, ui=None):
+    def set_stylesheet(self, ui=None, force=False):
         """
         Sets the stylesheet for the application based on the current theme
         """
         settings = self.settings
         if (
             self._override_system_theme is not settings["override_system_theme"] or
-            self._dark_mode_enabled is not settings["dark_mode_enabled"]
+            self._dark_mode_enabled is not settings["dark_mode_enabled"] or
+            force
         ):
             ui = ui or self
             self._override_system_theme = settings["override_system_theme"]
@@ -1015,7 +927,6 @@ class MainWindow(
         super().showEvent(event)
         self.logger.debug("showEvent called, initializing window")
         settings = self.settings
-        self.set_sd_status_text(settings)
         self._initialize_window()
         self._initialize_default_buttons(settings)
         self._initialize_filter_actions(settings)
@@ -1160,12 +1071,8 @@ class MainWindow(
         print("center clicked")
 
     def action_reset_settings(self):
-        self.emit_signal(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
-
-    def action_toggle_controlnet(self, val):
-        settings = self.settings
-        settings["controlnet_enabled"] = val
-        self.settings = settings
+        self.settings = self.default_settings
+        self.restart()
 
     def import_controlnet_image(self):
         self.emit_signal(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
@@ -1246,6 +1153,13 @@ class MainWindow(
             self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
         else:
             self.emit_signal(SignalCode.CONTROLNET_UNLOAD_SIGNAL)
+
+        self.ui.controlnet_toggle_button.blockSignals(True)
+        self.ui.enable_controlnet.blockSignals(True)
+        self.ui.controlnet_toggle_button.setChecked(val)
+        self.ui.enable_controlnet.setChecked(val)
+        self.ui.enable_controlnet.blockSignals(False)
+        self.ui.controlnet_toggle_button.blockSignals(False)
 
     @Slot()
     def action_stats_triggered(self):

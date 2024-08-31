@@ -40,6 +40,9 @@
        <height>16777215</height>
       </size>
      </property>
+     <property name="cursor">
+      <cursorShape>ArrowCursor</cursorShape>
+     </property>
      <property name="acceptDrops">
       <bool>false</bool>
      </property>
@@ -147,18 +150,6 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>BrushContainerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/brush/brush_container_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ActiveGridSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/active_grid_settings/active_grid_settings_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>StableDiffusionSettingsWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/stablediffusion/stable_diffusion_settings_widget</header>
@@ -168,6 +159,18 @@
    <class>LLMSettingsWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/llm/llm_settings_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>BrushContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/brush/brush_container_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ActiveGridSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/active_grid_settings/active_grid_settings_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>

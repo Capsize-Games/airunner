@@ -80,7 +80,7 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.ERROR
+LOG_LEVEL = logging.DEBUG
 
 ####################################################################
 # Default models for the core application
@@ -822,8 +822,8 @@ End of system feature flags
 SLEEP_TIME_IN_MS = 50
 DEFAULT_SHORTCUTS = {
     "Generate Image": {
-        "text": "F5",
-        "key": QtCore.Qt.Key.Key_F5.value,
+        "text": "F1",
+        "key": QtCore.Qt.Key.Key_F1.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
         "signal": SignalCode.SD_GENERATE_IMAGE_SIGNAL.value
@@ -876,6 +876,13 @@ DEFAULT_SHORTCUTS = {
         "modifiers": QtCore.Qt.KeyboardModifier.ControlModifier.value,
         "description": "Quit key. Responsible for quitting the application.",
         "signal": SignalCode.QUIT_APPLICATION.value
+    },
+    "Refresh Stylesheet": {
+        "text": "F5",
+        "key": QtCore.Qt.Key.Key_F5.value,
+        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
+        "description": "Refresh the stylesheet. Useful when creating a template.",
+        "signal": SignalCode.REFRESH_STYLESHEET_SIGNAL.value
     },
 }
 

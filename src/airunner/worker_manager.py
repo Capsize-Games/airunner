@@ -179,14 +179,14 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             'message': response
         })
 
-    def on_engine_cancel_signal(self, _ignore):
+    def on_engine_cancel_signal(self):
         self.logger.debug("Canceling")
         self.emit_signal(SignalCode.SD_CANCEL_SIGNAL)
 
-    def on_engine_stop_processing_queue_signal(self, _message):
+    def on_engine_stop_processing_queue_signal(self):
         self.do_process_queue = False
 
-    def on_engine_start_processing_queue_signal(self, _message):
+    def on_engine_start_processing_queue_signal(self):
         self.do_process_queue = True
 
     def on_hear_signal(self, message):
@@ -214,7 +214,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             else:
                 self.emit_signal(SignalCode.VISION_STOP_CAPTURE)
 
-    def on_application_settings_changed_signal(self, _message: dict):
+    def on_application_settings_changed_signal(self):
         self.toggle_vision_capture()
 
     def on_vision_captured(self, message: dict):

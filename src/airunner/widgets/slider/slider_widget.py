@@ -101,7 +101,7 @@ class SliderWidget(BaseWidget):
         self.ui.slider.sliderReleased.connect(self.handle_slider_release)
         self._callback = None
 
-    def on_main_window_loaded_signal(self, _message):
+    def on_main_window_loaded_signal(self):
         try:
             self.init()
         except RuntimeError as e:
