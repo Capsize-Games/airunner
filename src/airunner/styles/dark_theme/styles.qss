@@ -15,7 +15,7 @@ QWidget {
 QComboBox {
     border-radius: None;
     padding: 5px;
-    border: 1px solid rgba(0, 132, 185, 100);
+    border: 1px solid #333;
     color: #C8C8C8;
     background-color: #000;
 }
@@ -64,7 +64,7 @@ QLabel {
 QLineEdit {
     border-radius: 0;
     padding: 5px;
-    border: 1px solid rgba(0, 132, 185, 100);
+    border: 1px solid #333;
 }
 
 QLineEdit:disabled {
@@ -144,10 +144,10 @@ QFrame[frameShape="5"] {
 }
 
 QTabWidget::pane {
+    border-top: 1px solid #333;
 }
 
 QTabBar::tab {
-    border: 1px solid rgba(0, 132, 185, 255); /* Border for the tabs */
     background-color: #000; /* Darker background when not highlighted */
     padding: 5px 10px; /* Adjust padding as needed */
     margin: 0; /* Remove margin to make tabs square */
@@ -216,17 +216,12 @@ QWidget#scrollAreaWidgetContents {
 }
 
 QStatusBar {
-    border-top: 1px solid rgba(0, 132, 185, 255);
+    border-top: 1px solid #333;
 }
 
 QStatusBar QLabel {
    margin-top: 10px;
 }
-
-/* QFrame#line,
-QFrame#line_4 {
-    border-bottom: 1px solid rgba(0, 132, 185, 255);
-} */
 
 #header_widget QPushButton {
     border-radius: 0px;
@@ -249,13 +244,6 @@ QFrame#line_4 {
     border-radius: 5px;
 }
 
-#center_tab QScrollArea,
-#center_tab QWidget#central_widget {
-    border: 1px solid rgba(0, 132, 185, 100);
-    border-bottom: none;
-    border-top: none;
-}
-
 #basic_prompt,
 #prompt,
 #negative_prompt,
@@ -268,14 +256,10 @@ QFrame#line_4 {
 }
 
 #button_menu {
-    border-right: 1px solid rgba(0, 132, 185, 100);
+    border-right: 1px solid #333;
 }
 
 #button_menu QPushButton {
-}
-
-#bottom_panel_tab_widget QWidget {
-    border-top: 1px solid rgba(0, 132, 185, 255);
 }
 
 QMenuBar {
@@ -386,7 +370,7 @@ QRadioButton::indicator:checked {
 
 QGroupBox {
     margin-top: 14px;
-    border: 1px solid rgba(0, 132, 185, 50);
+    border: 1px solid #333;
 }
 
 QGroupBox::title {
@@ -686,8 +670,4 @@ QWidget QWidget#header {
 
 #button_menu QPushButton {
     border: none;
-}
-
-QMainWindow {
-    1px solid rgba(0, 132, 185, 100);
 }
