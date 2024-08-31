@@ -39,7 +39,7 @@ class ControlnetHandlerMixin:
         if self.__requested_action is ModelAction.NONE:
             return
         if self.__requested_action is ModelAction.CLEAR:
-            self.__unload_controlnet()
+            self.unload_controlnet()
         elif self.__requested_action is ModelAction.APPLY_TO_PIPE:
             self.apply_controlnet_to_pipe()
 
@@ -108,10 +108,22 @@ class ControlnetHandlerMixin:
         return path
 
     def load_controlnet(self):
-        self.__load_controlnet()
+        self.__load_controlnet_model()
+        self.__load_controlnet_processor()
+        self.apply_controlnet_to_pipe()
 
     def unload_controlnet(self):
-        self.__unload_controlnet()
+        if self.current_state not in (
+            HandlerState.READY,
+            HandlerState.INITIALIZED
+        ):
+            print("CURRENT STATE NOT READ", self.current_state)
+            self.__requested_action = ModelAction.CLEAR
+            return
+        self.logger.debug("Clearing controlnet")
+        self.__unload_controlnet_processor()
+        self.__unload_controlnet_model()
+        self.controlnet_loaded = False
 
     def __stop_controlnet_queue_watcher(self):
         self.running = False
@@ -128,11 +140,6 @@ class ControlnetHandlerMixin:
             )
         return controlnet_image
 
-    def __load_controlnet(self):
-        self.__load_controlnet_model()
-        self.__load_controlnet_processor()
-        self.apply_controlnet_to_pipe()
-
     def apply_controlnet_to_pipe(self):
         if self.pipe and self.__controlnet_ready:
             self.__apply_controlnet_to_pipe()
@@ -148,6 +155,12 @@ class ControlnetHandlerMixin:
             ModelStatus.LOADED, ModelStatus.READY, ModelStatus.LOADING
         ):
             return
+        elif self.__controlnet_model_status is ModelStatus.UNLOADED:
+            if self.controlnet:
+                self.__change_controlnet_model_status(ModelStatus.LOADING)
+                self.controlnet.to(self.device)
+                self.__change_controlnet_model_status(ModelStatus.LOADED)
+                return
         self.logger.debug(f"Loading controlnet {self.controlnet_type} to {self.device}")
         self.__change_controlnet_model_status(ModelStatus.LOADING)
 
@@ -221,30 +234,27 @@ class ControlnetHandlerMixin:
         else:
             self.logger.error("No controlnet processor found")
 
-    def __unload_controlnet(self):
-        if self.current_state is not HandlerState.READY:
-            self.__requested_action = ModelAction.CLEAR
-            return
-        self.logger.debug("Clearing controlnet")
-        self.__unload_controlnet_processor()
-        self.__unload_controlnet_model()
-        self.controlnet_loaded = False
-
     def __change_controlnet_model_status(self, status):
         self.__controlnet_model_status = status
         self.change_model_status(ModelType.CONTROLNET, status, self.controlnet_model["path"])
+        if status is ModelStatus.LOADED:
+            self.make_controlnet_memory_efficient()
+        elif status in (ModelStatus.UNLOADED, ModelStatus.FAILED):
+            clear_memory()
 
     def __change_controlnet_processor_status(self, status):
         self.__controlnet_processor_status = status
         self.change_model_status(ModelType.CONTROLNET_PROCESSOR, status, self.controlnet_type)
 
     def __unload_controlnet_model(self):
-        self.__change_controlnet_model_status(ModelStatus.UNLOADED)
-        self.controlnet = None
+        if not self.controlnet:
+            return
+        self.__change_controlnet_model_status(ModelStatus.LOADING)
         if self.pipe:
             self.pipe.controlnet = None
+        self.controlnet.to("cpu")
         clear_memory()
-        self.reset_applied_memory_settings()
+        self.__change_controlnet_model_status(ModelStatus.READY)
 
     def __apply_controlnet_to_pipe(self):
         self.pipe.controlnet = self.controlnet
