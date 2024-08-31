@@ -405,14 +405,25 @@ class ModelMixin:
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
         self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
 
-        images, nsfw_content_detected = self.__call_pipe()
+        images = None
+        try:
+            images, nsfw_content_detected = self.__call_pipe()
+        except SafetyCheckerNotLoadedException:
+            self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Safety checker is not loaded")
+            self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
 
-        self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
-
-        return self.__image_handler(
-            images,
-            nsfw_content_detected
-        )
+        if images is not None:
+            self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
+            return self.__image_handler(
+                images,
+                nsfw_content_detected
+            )
+        else:
+            return dict(
+                images=[],
+                data=self.data,
+                nsfw_content_detected=False,
+            )
 
     @staticmethod
     def __convert_image_to_base64(image):
@@ -466,7 +477,6 @@ class ModelMixin:
 
     def __unload_model(self):
         self.logger.debug("Unloading model")
-        self.remove_safety_checker_from_pipe()
         self.pipe = None
         self.on_unload_controlnet_signal()
         self.__change_sd_model_status(ModelStatus.UNLOADED)
@@ -595,9 +605,6 @@ class ModelMixin:
                 return
 
             self.__change_sd_model_status(ModelStatus.LOADED)
-
-            if self.settings["nsfw_filter"] is False:
-                self.remove_safety_checker_from_pipe()
 
             old_model_path = self.current_model
 
