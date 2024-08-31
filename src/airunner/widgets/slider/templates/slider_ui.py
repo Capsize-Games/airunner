@@ -22,7 +22,7 @@ class Ui_slider_widget(object):
     def setupUi(self, slider_widget):
         if not slider_widget.objectName():
             slider_widget.setObjectName(u"slider_widget")
-        slider_widget.resize(474, 71)
+        slider_widget.resize(548, 50)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
