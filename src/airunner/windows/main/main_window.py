@@ -198,8 +198,6 @@ class MainWindow(
 
         self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, { "main_window": self })
 
-        self.setMinimumSize(100, 100)  # Set a reasonable minimum size
-
     def download_url(self, url, save_path):
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -776,6 +774,10 @@ class MainWindow(
             canvas_side_splitter_2=self.ui.canvas_widget_2.ui.canvas_side_splitter_2.saveState(),
             generator_form_splitter=self.ui.generator_widget.ui.generator_form_splitter.saveState(),
             tool_tab_widget_index=self.ui.tool_tab_widget.ui.tool_tab_widget_container.currentIndex(),
+            width=self.width(),
+            height=self.height(),
+            x_pos=self.pos().x(),
+            y_pos=self.pos().y()
         ))
         settings["window_settings"] = window_settings
         self.settings = settings
@@ -811,6 +813,15 @@ class MainWindow(
                 splitter.blockSignals(True)
                 splitter.restoreState(window_settings[splitter_name])
                 splitter.blockSignals(False)
+
+        self.setMinimumSize(100, 100)  # Set a reasonable minimum size
+        width = window_settings["width"] if "width" in window_settings else 800
+        height = window_settings["height"] if "height" in window_settings else 600
+        self.resize(width, height)
+
+        x_pos = window_settings["x_pos"] if "x_pos" in window_settings else 0
+        y_pos = window_settings["y_pos"] if "y_pos" in window_settings else 0
+        self.move(x_pos, y_pos)
     ##### End window properties #####
     #################################
         
