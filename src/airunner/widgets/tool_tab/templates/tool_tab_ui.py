@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QScrollArea, QSizePoli
 
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
+from airunner.widgets.controlnet.controlnet_settings_widget import ControlnetSettingsWidget
 from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
 
@@ -44,12 +45,13 @@ class Ui_tool_tab_widget(object):
         self.stable_diffusion_splitter = QSplitter(self.tab_3)
         self.stable_diffusion_splitter.setObjectName(u"stable_diffusion_splitter")
         self.stable_diffusion_splitter.setOrientation(Qt.Orientation.Vertical)
+        self.stable_diffusion_splitter.setChildrenCollapsible(False)
         self.scrollArea = QScrollArea(self.stable_diffusion_splitter)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 617, 78))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 617, 68))
         self.gridLayout_4 = QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
@@ -66,6 +68,9 @@ class Ui_tool_tab_widget(object):
         self.active_grid_settings_widget = ActiveGridSettingsWidget(self.stable_diffusion_splitter)
         self.active_grid_settings_widget.setObjectName(u"active_grid_settings_widget")
         self.stable_diffusion_splitter.addWidget(self.active_grid_settings_widget)
+        self.controlnet_settings_widget = ControlnetSettingsWidget(self.stable_diffusion_splitter)
+        self.controlnet_settings_widget.setObjectName(u"controlnet_settings_widget")
+        self.stable_diffusion_splitter.addWidget(self.controlnet_settings_widget)
 
         self.gridLayout.addWidget(self.stable_diffusion_splitter, 0, 0, 1, 1)
 
