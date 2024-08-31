@@ -65,6 +65,7 @@ class ModelMixin:
         self.reload_model = False
         self.batch_size = 1
         self.moved_to_cpu = False
+        self.pipe_finalized = False
         self.__generator = None
         self.__tokenizer = None
         self.__current_tokenizer_path = ""
@@ -347,19 +348,21 @@ class ModelMixin:
             self.apply_controlnet_to_pipe()
             model_changed = True
 
-        if model_changed:
+        if model_changed or not self.pipe_finalized:
             # Swap the pipeline if the request is different from the current pipeline
             self.__pipe_swap(data)
 
             # Add lora to the pipeline
             self.add_lora_to_pipe()
 
-            # Clear the memory before generating the image
-            clear_memory()
+            self.pipe_finalized = True
 
-            # Apply memory settings
-            self.make_stable_diffusion_memory_efficient()
-            self.make_controlnet_memory_efficient()
+        # Clear the memory before generating the image
+        clear_memory()
+
+        # Apply memory settings
+        self.make_stable_diffusion_memory_efficient()
+        self.make_controlnet_memory_efficient()
 
     def __pipe_swap(self, data):
         enable_controlnet = self.enable_controlnet
