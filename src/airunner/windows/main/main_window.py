@@ -645,7 +645,7 @@ class MainWindow(
         self.settings = new_settings
         self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL if val else SignalCode.TTS_DISABLE_SIGNAL)
         if val:
-            self.on_model_status_changed_signal({
+            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                 "model": ModelType.TTS,
                 "status": ModelStatus.LOADING,
                 "path": ""
