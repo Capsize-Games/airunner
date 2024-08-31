@@ -28,31 +28,18 @@ class Ui_brush_widget(object):
         brush_widget.resize(1004, 622)
         self.gridLayout_2 = QGridLayout(brush_widget)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.line = QFrame(brush_widget)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.Shape.HLine)
-        self.line.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.gridLayout_2.addWidget(self.line, 1, 0, 1, 1)
-
-        self.label = QLabel(brush_widget)
-        self.label.setObjectName(u"label")
-        font = QFont()
-        font.setPointSize(11)
-        font.setBold(True)
-        self.label.setFont(font)
-
-        self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
-
+        self.gridLayout_2.setVerticalSpacing(10)
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.scrollArea = QScrollArea(brush_widget)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 984, 570))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 1002, 560))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(9, 0, 9, 0)
+        self.gridLayout.setVerticalSpacing(10)
+        self.gridLayout.setContentsMargins(10, 0, 10, 0)
         self.widget_2 = QWidget(self.scrollAreaWidgetContents)
         self.widget_2.setObjectName(u"widget_2")
         self.widget_2.setMinimumSize(QSize(0, 20))
@@ -91,10 +78,10 @@ class Ui_brush_widget(object):
         self.groupBox_4 = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_4.setObjectName(u"groupBox_4")
         self.groupBox_4.setMinimumSize(QSize(0, 60))
-        font1 = QFont()
-        font1.setPointSize(10)
-        font1.setBold(True)
-        self.groupBox_4.setFont(font1)
+        font = QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        self.groupBox_4.setFont(font)
         self.gridLayout_3 = QGridLayout(self.groupBox_4)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setContentsMargins(6, 9, 6, 6)
@@ -105,7 +92,7 @@ class Ui_brush_widget(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.primary_color_button.sizePolicy().hasHeightForWidth())
         self.primary_color_button.setSizePolicy(sizePolicy)
-        self.primary_color_button.setFont(font1)
+        self.primary_color_button.setFont(font)
 
         self.gridLayout_3.addWidget(self.primary_color_button, 0, 0, 1, 1)
 
@@ -114,7 +101,37 @@ class Ui_brush_widget(object):
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
-        self.gridLayout_2.addWidget(self.scrollArea, 2, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.scrollArea, 4, 0, 1, 1)
+
+        self.line = QFrame(brush_widget)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.gridLayout_2.addWidget(self.line, 3, 0, 1, 1)
+
+        self.widget = QWidget(brush_widget)
+        self.widget.setObjectName(u"widget")
+        self.widget.setMinimumSize(QSize(0, 37))
+        self.gridLayout_4 = QGridLayout(self.widget)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.gridLayout_4.setContentsMargins(10, 10, 10, 0)
+        self.label = QLabel(self.widget)
+        self.label.setObjectName(u"label")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy1)
+        font1 = QFont()
+        font1.setPointSize(11)
+        font1.setBold(True)
+        self.label.setFont(font1)
+
+        self.gridLayout_4.addWidget(self.label, 0, 0, 1, 1)
+
+
+        self.gridLayout_2.addWidget(self.widget, 1, 0, 1, 1)
 
 
         self.retranslateUi(brush_widget)
@@ -126,10 +143,10 @@ class Ui_brush_widget(object):
 
     def retranslateUi(self, brush_widget):
         brush_widget.setWindowTitle(QCoreApplication.translate("brush_widget", u"Form", None))
-        self.label.setText(QCoreApplication.translate("brush_widget", u"Brush Settings", None))
         self.brush_size_slider.setProperty("label_text", QCoreApplication.translate("brush_widget", u"Brush Size", None))
         self.toggle_auto_generate_while_drawing.setText(QCoreApplication.translate("brush_widget", u"Auto-generate while drawing", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("brush_widget", u"Brush color", None))
         self.primary_color_button.setText("")
+        self.label.setText(QCoreApplication.translate("brush_widget", u"Brush Settings", None))
     # retranslateUi
 
