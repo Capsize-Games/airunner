@@ -122,9 +122,6 @@ class LoraContainerWidget(BaseWidget):
         self.save_settings()
         self.load_lora()
 
-    def tab_has_lora(self, tab):
-        return tab not in ["upscale", "superresolution", "txt2vid"]
-
     def available_lora(self, action):
         available_lora = []
         settings = self.settings
@@ -214,8 +211,6 @@ class LoraContainerWidget(BaseWidget):
             trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
             for tab_name in self.tabs.keys():
                 tab = self.tabs[tab_name]
-                if not self.tab_has_lora(tab_name):
-                    continue
                 for i in range(self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget().layout().count()):
                     lora_widget = self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget().layout().itemAt(
                         i).widget()

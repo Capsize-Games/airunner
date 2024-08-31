@@ -218,7 +218,6 @@ class SignalCode(Enum):
     STOP_AUTO_IMAGE_GENERATION_SIGNAL = "stop_auto_image_generation_signal"
     LINES_UPDATED_SIGNAL = "lines_updated_signal"
     DO_GENERATE_SIGNAL = "do_generate_signal"
-    UPSCALE_SIGNAL = "upscale_signal"
     BASH_EXECUTE_SIGNAL = "bash_execute_signal"
     WRITE_FILE = "write_file_signal"
     LLM_CHOOSE_RESPONSE_LENGTH_SIGNAL = "choose_response_length_signal"
@@ -304,7 +303,6 @@ class EngineRequestCode(Enum):
     GENERATE_IMAGE = 100
     GENERATE_TEXT = 200
     GENERATE_CAPTION = 300
-    UPSCALE = 400
 
 
 class Scheduler(Enum):
@@ -423,9 +421,6 @@ class GeneratorSection(Enum):
     IMG2IMG = "img2img"
     INPAINT = "inpaint"
     OUTPAINT = "outpaint"
-    DEPTH2IMG = "depth2img"
-    PIX2PIX = "pix2pix"
-    UPSCALE = "upscale"
 
 
 class StableDiffusionVersion(Enum):

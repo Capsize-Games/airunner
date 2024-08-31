@@ -22,7 +22,6 @@ from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
 from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
-from airunner.aihandler.mixins.merge_mixin import MergeMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.exceptions import InterruptedException, PipeNotLoadedException, ThreadInterruptException
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
@@ -63,7 +62,6 @@ class LoadImageGeneratorModelWorker(QObject):
 
 class SDHandler(
     BaseHandler,
-    MergeMixin,
     LoraMixin,
     MemoryEfficientMixin,
     EmbeddingMixin,
@@ -211,12 +209,8 @@ class SDHandler(
             return self.txt2img is not None
         elif self.sd_request.is_img2img:
             return self.img2img is not None
-        elif self.sd_request.is_pix2pix:
-            return self.pix2pix is not None
         elif self.sd_request.is_outpaint:
             return self.outpaint is not None
-        elif self.sd_request.is_depth2img:
-            return self.depth2img is not None
 
     @property
     def __cuda_error_message(self) -> str:
@@ -402,7 +396,7 @@ class SDHandler(
         message = str(error)
         if (
             "got an unexpected keyword argument 'image'" in message and
-            self.sd_request.section in ["outpaint", "pix2pix", "depth2img"]
+            self.sd_request.section in ("outpaint",)
         ):
             message = f"This model does not support {self.sd_request.section}"
         traceback.print_exc()
