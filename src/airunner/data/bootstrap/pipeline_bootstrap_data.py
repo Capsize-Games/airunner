@@ -59,12 +59,6 @@ pipeline_bootstrap_data = [
         "classname": "diffusers.AutoPipelineForImage2Image",
     },
     {
-        "pipeline_action": "pix2pix",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "classname": "diffusers.StableDiffusionInstructPix2PixPipeline",
-    },
-    {
         "pipeline_action": "outpaint",
         "version": "SD 1.5",
         "category": "stablediffusion",
@@ -82,42 +76,6 @@ pipeline_bootstrap_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "classname": "diffusers.AsymmetricAutoencoderKL",
-    },
-    {
-        "pipeline_action": "depth2img",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "classname": "diffusers.StableDiffusionDepth2ImgPipeline",
-    },
-    {
-        "pipeline_action": "upscale",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "classname": "diffusers.StableDiffusionLatentUpscalePipeline",
-    },
-    {
-        "pipeline_action": "latent-upscale",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "classname": "diffusers.StableDiffusionLatentUpscalePipeline",
-    },
-    {
-        "pipeline_action": "txt2vid",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "classname": "diffusers.TextToVideoZeroPipeline",
-    },
-    {
-        "pipeline_action": "vid2vid",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "classname": "diffusers.StableDiffusionControlNetPipeline",
-    },
-    {
-        "pipeline_action": "superresolution",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "classname": "diffusers.StableDiffusionUpscalePipeline",
     },
     {
         "pipeline_action": "text_encoder",

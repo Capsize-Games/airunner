@@ -653,24 +653,8 @@ class MainWindow(
         self.show_settings_path("txt2img_model_path")
 
     @Slot()
-    def action_show_model_path_depth2img(self):
-        self.show_settings_path("depth2img_model_path")
-
-    @Slot()
-    def action_show_model_path_pix2pix(self):
-        self.show_settings_path("pix2pix_model_path")
-
-    @Slot()
     def action_show_model_path_inpaint(self):
         self.show_settings_path("inpaint_model_path")
-
-    @Slot()
-    def action_show_model_path_upscale(self):
-        self.show_settings_path("upscale_model_path")
-
-    @Slot()
-    def action_show_model_path_txt2vid(self):
-        self.show_settings_path("txt2vid_model_path")
 
     @Slot()
     def action_show_model_path_embeddings(self):

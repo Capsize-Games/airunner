@@ -59,9 +59,7 @@ class ModelMixin:
         self.data = None
         self.txt2img = None
         self.img2img = None
-        self.pix2pix = None
         self.outpaint = None
-        self.depth2img = None
         self.reload_model = False
         self.batch_size = 1
         self.moved_to_cpu = False
@@ -650,7 +648,6 @@ class ModelMixin:
             extra_options={},
             callback=self.__callback,
             cross_attention_kwargs_scale=(
-                not self.sd_request.is_pix2pix and
                 len(self.available_lora) > 0 and
                 len(self.loaded_lora) > 0
             ),
