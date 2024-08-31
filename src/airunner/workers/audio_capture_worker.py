@@ -78,7 +78,7 @@ class AudioCaptureWorker(Worker):
     def handle_message(self, message):
         pass
 
-    def start_listening(self, _message=None):
+    def start_listening(self):
         self.logger.debug("Start listening")
         self.listening = True
         fs = self.settings["stt_settings"]["fs"]
@@ -91,7 +91,7 @@ class AudioCaptureWorker(Worker):
         except Exception as e:
             self.logger.error(e)
 
-    def stop_listening(self, _message):
+    def stop_listening(self):
         self.logger.debug("Stop listening")
         self.listening = False
         try:

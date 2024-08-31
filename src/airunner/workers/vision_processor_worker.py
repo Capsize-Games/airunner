@@ -12,7 +12,7 @@ class VisionProcessorWorker(Worker):
         self.register(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, self.on_vision_process)
         self.vision_handler = VisionHandler(do_quantize_model=True)
 
-    def on_stop_vision_capture(self, _message: dict):
+    def on_stop_vision_capture(self):
         self.vision_handler.unload()
 
     def on_vision_process(self, message: dict):

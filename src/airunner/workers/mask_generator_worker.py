@@ -45,8 +45,10 @@ class MaskGeneratorWorker(Worker):
             black_right = min(image_width, settings["working_width"] - self.active_rect.left())
             black_bottom = min(image_height, settings["working_height"] - self.active_rect.top())
 
-            # Draw the black rectangle (image) on the mask
-            draw.rectangle((black_left, black_top, black_right, black_bottom), fill='black')
+            # Ensure the coordinates are valid
+            if black_right >= black_left and black_bottom >= black_top:
+                # Draw the black rectangle (image) on the mask
+                draw.rectangle((black_left, black_top, black_right, black_bottom), fill='black')
 
             return mask
         return None

@@ -20,13 +20,13 @@ class VisionCaptureWorker(Worker):
         self.register(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL, self.unlock)
         self.register(SignalCode.VISION_CAPTURE_LOCK_SIGNAL, self.lock)
 
-    def lock(self, _message: dict):
+    def lock(self):
         self.locked = True
 
-    def unlock(self, _message: dict):
+    def unlock(self):
         self.locked = False
 
-    def start_vision_capture(self, _message: dict):
+    def start_vision_capture(self):
         """
         Starts capturing images
         :param message:
@@ -34,7 +34,7 @@ class VisionCaptureWorker(Worker):
         """
         self.state = WorkerState.RUNNING
 
-    def stop_capturing(self, _message: dict):
+    def stop_capturing(self):
         """
         Stops capturing images
         :return:

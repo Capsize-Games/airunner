@@ -36,6 +36,7 @@ class Ui_tool_tab_widget(object):
         self.tool_tab_widget_container.setObjectName(u"tool_tab_widget_container")
         self.tool_tab_widget_container.setMinimumSize(QSize(0, 0))
         self.tool_tab_widget_container.setMaximumSize(QSize(16777215, 16777215))
+        self.tool_tab_widget_container.setCursor(QCursor(Qt.ArrowCursor))
         self.tool_tab_widget_container.setAcceptDrops(False)
         self.tool_tab_widget_container.setTabPosition(QTabWidget.TabPosition.North)
         self.tab_3 = QWidget()

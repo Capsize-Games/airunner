@@ -63,7 +63,7 @@ class SDWorker(Worker):
         self._threads = []
         self._workers = []
 
-    def handle_sd_state_changed_signal(self, _data=None):
+    def handle_sd_state_changed_signal(self):
         self.sd.controlnet_handle_sd_state_changed_signal()
         self.sd.scheduler_handle_sd_state_changed_signal()
 
@@ -71,7 +71,7 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.load_safety_checker()
 
-    def on_unload_safety_checker(self, _data: dict):
+    def on_unload_safety_checker(self):
         if self.sd:
             self.sd.unload_safety_checker()
 
@@ -107,13 +107,13 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.on_scheduler_unload_signal(message)
 
-    def on_load_controlnet_signal(self, message: dict):
+    def on_load_controlnet_signal(self):
         if self.sd:
-            self.sd.on_load_controlnet_signal(message)
+            self.sd.load_controlnet()
 
-    def on_unload_controlnet_signal(self, message: dict):
+    def on_unload_controlnet_signal(self):
         if self.sd:
-            self.sd.on_unload_controlnet_signal(message)
+            self.sd.unload_controlnet()
 
     def on_load_stablediffusion_signal(self, data: dict = None):
         if self.sd:
@@ -126,7 +126,7 @@ class SDWorker(Worker):
             )
             self.sd.load_stable_diffusion()
 
-    def on_unload_stablediffusion_signal(self, _data: dict = None):
+    def on_unload_stablediffusion_signal(self):
         if self.sd and self.sd.sd_model_status in (
             ModelStatus.LOADED,
             ModelStatus.FAILED,
@@ -162,23 +162,23 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.run()
 
-    def on_reset_applied_memory_settings(self, _data: dict):
+    def on_reset_applied_memory_settings(self):
         if self.sd:
             self.sd.reset_applied_memory_settings()
 
-    def on_sd_cancel_signal(self, _data: dict = None):
+    def on_sd_cancel_signal(self):
         print("on_sd_cancel_signal")
 
-    def on_move_to_cpu(self, _data: dict = None):
+    def on_move_to_cpu(self):
         if self.sd:
             self.sd.move_pipe_to_cpu()
 
-    def on_start_auto_image_generation_signal(self, _message: dict):
+    def on_start_auto_image_generation_signal(self):
         # self.sd_mode = SDMode.DRAWING
         # self.generate()
         pass
 
-    def on_stop_auto_image_generation_signal(self, _message: dict = None):
+    def on_stop_auto_image_generation_signal(self):
         #self.sd_mode = SDMode.STANDARD
         pass
 
@@ -199,7 +199,7 @@ class SDWorker(Worker):
     def handle_error(self, error_message):
         print(f"Error: {error_message}")
 
-    def on_interrupt_image_generation_signal(self, _message: dict = None):
+    def on_interrupt_image_generation_signal(self):
         if self.sd:
             self.sd.interrupt_image_generation_signal()
 

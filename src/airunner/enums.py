@@ -36,6 +36,7 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    REFRESH_STYLESHEET_SIGNAL = "refresh_stylesheet_signal"
     SD_STATE_CHANGED_SIGNAL = "sd_state_changed_signal"
     NAVIGATE_TO_URL = "navigate_to_url"
     LLM_RAG_SEARCH_SIGNAL = "llm_rag_search_signal"

@@ -287,7 +287,7 @@ class InstallWorker(
         print("update progress", current, total)
 
     @Slot()
-    def download_finished(self, _data: dict = None):
+    def download_finished(self):
         self.total_models_in_current_step -= 1
         if self.total_models_in_current_step <= 0:
             self.set_page()
@@ -404,7 +404,7 @@ class InstallPage(BaseWizard):
             progress = data["current"] / data["total"]
         self.ui.status_bar.setValue(progress * 100)
 
-    def update_progress_bar(self, _data: dict = None):
+    def update_progress_bar(self):
         self.steps_completed += 1
         if self.total_steps == self.steps_completed:
             self.ui.progress_bar.setValue(100)
@@ -418,6 +418,6 @@ class InstallPage(BaseWizard):
     def update_download_log(self, data: dict):
         self.ui.log.appendPlainText(data["message"]+"\n")
 
-    def clear_status_bar(self, _data: dict):
+    def clear_status_bar(self):
         self.ui.status.setText("")
         self.ui.status_bar.setValue(0)

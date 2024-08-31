@@ -30,7 +30,7 @@ class EmbeddingMixin:
         )
         return embeddings
 
-    def delete_missing_embeddings(self, _message: dict):
+    def delete_missing_embeddings(self):
         embeddings = self.get_embeddings()
         for embedding in embeddings:
             if not os.path.exists(embedding["path"]):
@@ -44,7 +44,7 @@ class EmbeddingMixin:
                 self.settings = settings
                 return
 
-    def scan_for_embeddings(self, _message: dict):
+    def scan_for_embeddings(self):
         print("SCAN FOR EMBEDDINGS CALLED FROM EMBEDDING MIXIN")
         settings = self.settings
         settings["embeddings"] = scan_path_for_items(settings["path_settings"]["base_path"], settings["embeddings"], scan_type="embeddings")

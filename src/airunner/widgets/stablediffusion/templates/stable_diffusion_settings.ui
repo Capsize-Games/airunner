@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>335</width>
-    <height>776</height>
+    <height>454</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -36,11 +36,11 @@
     <number>10</number>
    </property>
    <item row="1" column="0">
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="header" native="true">
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>37</height>
+       <height>0</height>
       </size>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
@@ -81,8 +81,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>333</width>
-        <height>714</height>
+        <width>319</width>
+        <height>545</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -508,8 +508,8 @@
    <slot>handle_pipeline_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>97</x>
-     <y>67</y>
+     <x>98</x>
+     <y>142</y>
     </hint>
     <hint type="destinationlabel">
      <x>121</x>
@@ -524,8 +524,8 @@
    <slot>handle_version_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>76</x>
-     <y>119</y>
+     <x>77</x>
+     <y>100</y>
     </hint>
     <hint type="destinationlabel">
      <x>59</x>
@@ -540,8 +540,8 @@
    <slot>handle_model_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>210</x>
-     <y>171</y>
+     <x>211</x>
+     <y>212</y>
     </hint>
     <hint type="destinationlabel">
      <x>202</x>
@@ -556,8 +556,8 @@
    <slot>handle_scheduler_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>195</x>
-     <y>223</y>
+     <x>196</x>
+     <y>268</y>
     </hint>
     <hint type="destinationlabel">
      <x>177</x>
@@ -573,7 +573,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>42</x>
-     <y>525</y>
+     <y>580</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
