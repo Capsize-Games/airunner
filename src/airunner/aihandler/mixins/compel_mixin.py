@@ -62,6 +62,7 @@ class CompelMixin:
                 self.compel_proc = Compel(
                     **parameters
                 )
+                self.compel_proc.to(self.device)
         except Exception as e:
             self.logger.error(f"Error creating compel proc: {e}")
             return None

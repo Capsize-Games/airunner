@@ -344,28 +344,33 @@ class SDRequest(
                     image = image.convert("RGB")
 
         if self.is_txt2img:
-            extra_args = {**extra_args, **{
+            extra_args.update({
                 "width": width,
                 "height": height,
-            }}
+            })
         if not settings["controlnet_enabled"]:
-            if self.is_img2img or self.is_depth2img:
-                extra_args = {**extra_args, **{
+            if self.is_depth2img:
+                extra_args.update({
                     "strength": settings["brush_settings"]["strength"] / 100,
-                    "guidance_scale": settings["brush_settings"]["guidance_scale"] / 100,
-                }}
+                    "guidance_scale": self.generator_settings.scale / 100,
+                })
             elif self.is_pix2pix:
-                extra_args = {**extra_args, **{
+                extra_args.update({
                     "image_guidance_scale": self.generator_settings.strength,
-                }}
+                })
             elif self.is_txt2img:
-                extra_args = {**extra_args, **{
+                extra_args.update({
                     "guidance_scale": self.generator_settings.scale,
-                }}
+                })
+            elif self.is_img2img:
+                extra_args.update({
+                    "strength": settings["brush_settings"]["strength"] / 100,
+                    "guidance_scale": self.generator_settings.scale,
+                })
         if self.is_upscale:
-            extra_args = {**extra_args, **{
+            extra_args.update({
                 "image": image,
-            }}
+            })
         elif self.is_outpaint:
             if image is None:
                 base64image = settings["canvas_settings"]["image"]
@@ -383,10 +388,10 @@ class SDRequest(
                         mask = mask.convert("RGB")
                     else:
                         print("MASK IMAGE IS NONE")
-            extra_args = {**extra_args, **{
+            extra_args.update({
                 "width": self.generator_settings.width,
                 "height": self.generator_settings.height,
-            }}
+            })
 
         if image is not None:
             extra_args["image"] = image
@@ -401,7 +406,7 @@ class SDRequest(
                 "control_guidance_start": 0.0,
                 "control_guidance_end": 1.0,
                 "strength": settings["brush_settings"]["strength"] / 100,
-                "guidance_scale": settings["brush_settings"]["guidance_scale"] / 100,
+                "guidance_scale": self.generator_settings.scale,
                 "controlnet_conditioning_scale": settings["brush_settings"]["conditioning_scale"] / 100,
                 "controlnet": [
                     self.generator_settings.controlnet_image_settings.controlnet
@@ -413,7 +418,7 @@ class SDRequest(
             else:
                 controlnet_args["control_image"] = controlnet_image
 
-            extra_args = {**extra_args, **controlnet_args}
+            extra_args.update(controlnet_args)
         return extra_args
 
     def load_prompt_embed_args(
