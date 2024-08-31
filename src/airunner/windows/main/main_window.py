@@ -712,7 +712,6 @@ class MainWindow(
 
         splitters = [
             ("content_splitter", self.ui.content_splitter),
-            ("stable_diffusion_splitter", self.ui.tool_tab_widget.ui.stable_diffusion_splitter),
             ("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter),
             ("canvas_splitter", self.ui.canvas_widget_2.ui.canvas_splitter),
             ("canvas_side_splitter", self.ui.canvas_widget_2.ui.canvas_side_splitter),
