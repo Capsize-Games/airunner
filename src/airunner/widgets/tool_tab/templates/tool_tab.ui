@@ -54,6 +54,18 @@
        <string>StableDiffusion</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item row="0" column="0">
         <widget class="QSplitter" name="stable_diffusion_splitter">
          <property name="orientation">
@@ -71,7 +83,7 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>617</width>
+             <width>635</width>
              <height>68</height>
             </rect>
            </property>

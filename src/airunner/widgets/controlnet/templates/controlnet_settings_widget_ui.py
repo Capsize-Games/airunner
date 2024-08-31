@@ -28,6 +28,8 @@ class Ui_controlnet_settings_widget(object):
         controlnet_settings_widget.resize(1004, 622)
         self.gridLayout_2 = QGridLayout(controlnet_settings_widget)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setVerticalSpacing(10)
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.line = QFrame(controlnet_settings_widget)
         self.line.setObjectName(u"line")
         self.line.setFrameShape(QFrame.Shape.HLine)
@@ -35,24 +37,16 @@ class Ui_controlnet_settings_widget(object):
 
         self.gridLayout_2.addWidget(self.line, 1, 0, 1, 1)
 
-        self.label = QLabel(controlnet_settings_widget)
-        self.label.setObjectName(u"label")
-        font = QFont()
-        font.setPointSize(11)
-        font.setBold(True)
-        self.label.setFont(font)
-
-        self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
-
         self.scrollArea = QScrollArea(controlnet_settings_widget)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 984, 570))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 1002, 560))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(9, 0, 9, 0)
+        self.gridLayout.setVerticalSpacing(10)
+        self.gridLayout.setContentsMargins(10, 0, 10, 0)
         self.widget = QWidget(self.scrollAreaWidgetContents)
         self.widget.setObjectName(u"widget")
         self.widget.setMinimumSize(QSize(0, 0))
@@ -107,6 +101,29 @@ class Ui_controlnet_settings_widget(object):
 
         self.gridLayout_2.addWidget(self.scrollArea, 2, 0, 1, 1)
 
+        self.widget_2 = QWidget(controlnet_settings_widget)
+        self.widget_2.setObjectName(u"widget_2")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.widget_2.sizePolicy().hasHeightForWidth())
+        self.widget_2.setSizePolicy(sizePolicy)
+        self.widget_2.setMinimumSize(QSize(0, 37))
+        self.gridLayout_3 = QGridLayout(self.widget_2)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gridLayout_3.setContentsMargins(10, 10, 10, 0)
+        self.label = QLabel(self.widget_2)
+        self.label.setObjectName(u"label")
+        font = QFont()
+        font.setPointSize(11)
+        font.setBold(True)
+        self.label.setFont(font)
+
+        self.gridLayout_3.addWidget(self.label, 0, 0, 1, 1)
+
+
+        self.gridLayout_2.addWidget(self.widget_2, 0, 0, 1, 1)
+
 
         self.retranslateUi(controlnet_settings_widget)
         self.controlnet.currentTextChanged.connect(controlnet_settings_widget.controlnet_changed)
@@ -116,8 +133,8 @@ class Ui_controlnet_settings_widget(object):
 
     def retranslateUi(self, controlnet_settings_widget):
         controlnet_settings_widget.setWindowTitle(QCoreApplication.translate("controlnet_settings_widget", u"Form", None))
-        self.label.setText(QCoreApplication.translate("controlnet_settings_widget", u"Controlnet Settings", None))
         self.controlnet_conditioning_scale.setProperty("label_text", QCoreApplication.translate("controlnet_settings_widget", u"Conditioning Scale", None))
         self.strength_slider.setProperty("label_text", QCoreApplication.translate("controlnet_settings_widget", u"Strength", None))
+        self.label.setText(QCoreApplication.translate("controlnet_settings_widget", u"Controlnet Settings", None))
     # retranslateUi
 
