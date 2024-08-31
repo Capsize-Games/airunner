@@ -646,7 +646,7 @@ class ModelMixin:
             self.logger.debug(f"Model changed clearing")
             self.__handle_model_changed()
             self.clear_scheduler()
-            self.clear_controlnet()
+            self.unload_controlnet()
 
         # Set a reference to pipe
         controlnet_image = self.get_controlnet_image()
