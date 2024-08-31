@@ -88,10 +88,7 @@ class StableDiffusionSettingsWidget(
         self.ui.pipeline.clear()
         pipeline_names = [
             f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}",
-            f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}",
-            GeneratorSection.DEPTH2IMG.value,
-            GeneratorSection.PIX2PIX.value,
-            GeneratorSection.UPSCALE.value,
+            f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}"
         ]
         self.ui.pipeline.addItems(pipeline_names)
         current_pipeline = self.settings["pipeline"]

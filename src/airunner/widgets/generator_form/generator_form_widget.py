@@ -74,26 +74,6 @@ class GeneratorForm(BaseWidget):
         return self.generator_section == GeneratorSection.OUTPAINT.value
 
     @property
-    def is_depth2img(self):
-        return self.generator_section == GeneratorSection.DEPTH2IMG.value
-
-    @property
-    def is_pix2pix(self):
-        return self.generator_section == GeneratorSection.PIX2PIX.value
-
-    @property
-    def is_upscale(self):
-        return self.generator_section == GeneratorSection.UPSCALE.value
-
-    @property
-    def is_superresolution(self):
-        return False  # deprecated
-
-    @property
-    def is_txt2vid(self):
-        return False  # deprecated
-
-    @property
     def generator_section(self):
         return self.settings["pipeline"]
 
