@@ -89,7 +89,6 @@ class GeneratorSettings:
         self.scheduler = generator_settings.get("scheduler", STABLEDIFFUSION_GENERATOR_SETTINGS["scheduler"])
         self.prompt_triggers = generator_settings.get("prompt_triggers", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt_triggers"])
         self.strength = generator_settings.get("strength", STABLEDIFFUSION_GENERATOR_SETTINGS["strength"]) / 100.0
-        self.image_guidance_scale = generator_settings.get("image_guidance_scale", STABLEDIFFUSION_GENERATOR_SETTINGS["image_guidance_scale"]) / 100.0
         self.n_samples = generator_settings.get("n_samples", STABLEDIFFUSION_GENERATOR_SETTINGS["n_samples"])
         self.enable_controlnet = settings["controlnet_enabled"]
         self.clip_skip = generator_settings.get("clip_skip", STABLEDIFFUSION_GENERATOR_SETTINGS["clip_skip"])
@@ -171,24 +170,11 @@ class SDRequest(
         return self.section == GeneratorSection.TXT2IMG.value
 
     @property
-    def is_upscale(self):
-        return self.section == GeneratorSection.UPSCALE.value
-
-    @property
     def is_img2img(self):
         return self.section == GeneratorSection.IMG2IMG.value
 
-    @property
-    def is_depth2img(self):
-        return self.section == GeneratorSection.DEPTH2IMG.value
-
-    @property
-    def is_pix2pix(self):
-        return self.section == GeneratorSection.PIX2PIX.value
-
     def load_generator_settings(self):
         self.generator_settings = GeneratorSettings(settings=self.settings)
-        self.action_has_safety_checker = self.section not in [GeneratorSection.DEPTH2IMG.value]
 
     def initialize_prompt_embeds(self, prompt_embeds, negative_prompt_embeds, args: dict):
         self.prompt_embeds = prompt_embeds
@@ -255,7 +241,7 @@ class SDRequest(
         args["callback_steps"] = self.callback_steps
         args["clip_skip"] = self.generator_settings.clip_skip
 
-        if self.is_img2img or self.is_depth2img or self.is_pix2pix or self.is_outpaint:
+        if self.is_img2img or self.is_outpaint:
             args["height"] = settings["working_height"]
             args["width"] = settings["working_width"]
             if self.is_img2img:
@@ -349,16 +335,7 @@ class SDRequest(
                 "height": height,
             })
         if not settings["controlnet_enabled"]:
-            if self.is_depth2img:
-                extra_args.update({
-                    "strength": settings["brush_settings"]["strength"] / 100,
-                    "guidance_scale": self.generator_settings.scale / 100,
-                })
-            elif self.is_pix2pix:
-                extra_args.update({
-                    "image_guidance_scale": self.generator_settings.strength,
-                })
-            elif self.is_txt2img:
+            if self.is_txt2img:
                 extra_args.update({
                     "guidance_scale": self.generator_settings.scale,
                 })
@@ -367,11 +344,7 @@ class SDRequest(
                     "strength": settings["brush_settings"]["strength"] / 100,
                     "guidance_scale": self.generator_settings.scale,
                 })
-        if self.is_upscale:
-            extra_args.update({
-                "image": image,
-            })
-        elif self.is_outpaint:
+        if self.is_outpaint:
             if image is None:
                 base64image = settings["canvas_settings"]["image"]
                 if base64image != "":
