@@ -106,9 +106,9 @@ class TTSGeneratorWorker(Worker):
         if self.tts:
             self.tts.on_tts_feature_extractor_unload_signal(message)
 
-    def on_interrupt_process_signal(self, message: dict):
+    def on_interrupt_process_signal(self):
         if self.tts:
-            self.tts.on_interrupt_process_signal(message)
+            self.tts.on_interrupt_process_signal()
 
     def on_unblock_tts_generator_signal(self, message):
         if self.tts:

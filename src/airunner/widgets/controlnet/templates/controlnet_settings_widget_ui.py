@@ -135,6 +135,6 @@ class Ui_controlnet_settings_widget(object):
         controlnet_settings_widget.setWindowTitle(QCoreApplication.translate("controlnet_settings_widget", u"Form", None))
         self.controlnet_conditioning_scale.setProperty("label_text", QCoreApplication.translate("controlnet_settings_widget", u"Conditioning Scale", None))
         self.strength_slider.setProperty("label_text", QCoreApplication.translate("controlnet_settings_widget", u"Strength", None))
-        self.label.setText(QCoreApplication.translate("controlnet_settings_widget", u"Controlnet Settings", None))
+        self.label.setText(QCoreApplication.translate("controlnet_settings_widget", u"Controlnet", None))
     # retranslateUi
 
