@@ -198,6 +198,8 @@ class MainWindow(
 
         self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, { "main_window": self })
 
+        self.setMinimumSize(100, 100)  # Set a reasonable minimum size
+
     def download_url(self, url, save_path):
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
