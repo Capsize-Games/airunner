@@ -28,14 +28,8 @@ class Ui_active_grid_settings_widget(object):
         active_grid_settings_widget.resize(724, 663)
         self.gridLayout = QGridLayout(active_grid_settings_widget)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.label = QLabel(active_grid_settings_widget)
-        self.label.setObjectName(u"label")
-        font = QFont()
-        font.setBold(True)
-        self.label.setFont(font)
-
-        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
-
+        self.gridLayout.setVerticalSpacing(10)
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.line = QFrame(active_grid_settings_widget)
         self.line.setObjectName(u"line")
         self.line.setFrameShape(QFrame.Shape.HLine)
@@ -49,6 +43,7 @@ class Ui_active_grid_settings_widget(object):
         self.active_grid_area_groupbox.setChecked(False)
         self.gridLayout_4 = QGridLayout(self.active_grid_area_groupbox)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.gridLayout_4.setVerticalSpacing(0)
         self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
         self.scrollArea = QScrollArea(self.active_grid_area_groupbox)
         self.scrollArea.setObjectName(u"scrollArea")
@@ -57,11 +52,11 @@ class Ui_active_grid_settings_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 700, 587))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 718, 577))
         self.gridLayout_3 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setVerticalSpacing(10)
-        self.gridLayout_3.setContentsMargins(-1, 9, -1, 9)
+        self.gridLayout_3.setContentsMargins(10, 10, 10, 0)
         self.groupBox_3 = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_3.setObjectName(u"groupBox_3")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
@@ -185,6 +180,26 @@ class Ui_active_grid_settings_widget(object):
 
         self.gridLayout.addWidget(self.active_grid_area_groupbox, 2, 0, 1, 1)
 
+        self.widget = QWidget(active_grid_settings_widget)
+        self.widget.setObjectName(u"widget")
+        sizePolicy.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
+        self.widget.setSizePolicy(sizePolicy)
+        self.widget.setMinimumSize(QSize(0, 37))
+        self.gridLayout_2 = QGridLayout(self.widget)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setVerticalSpacing(0)
+        self.gridLayout_2.setContentsMargins(10, 10, 10, 0)
+        self.label = QLabel(self.widget)
+        self.label.setObjectName(u"label")
+        font = QFont()
+        font.setBold(True)
+        self.label.setFont(font)
+
+        self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
+
+
+        self.gridLayout.addWidget(self.widget, 0, 0, 1, 1)
+
 
         self.retranslateUi(active_grid_settings_widget)
         self.active_grid_border_groupbox.toggled.connect(active_grid_settings_widget.action_clicked_checkbox_toggle_active_grid_border)
@@ -198,7 +213,6 @@ class Ui_active_grid_settings_widget(object):
 
     def retranslateUi(self, active_grid_settings_widget):
         active_grid_settings_widget.setWindowTitle(QCoreApplication.translate("active_grid_settings_widget", u"Form", None))
-        self.label.setText(QCoreApplication.translate("active_grid_settings_widget", u"Active Grid Area", None))
         self.active_grid_area_groupbox.setTitle(QCoreApplication.translate("active_grid_settings_widget", u"Enable", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("active_grid_settings_widget", u"Active Grid Size", None))
         self.width_slider_widget.setProperty("label_text", QCoreApplication.translate("active_grid_settings_widget", u"Width", None))
@@ -212,5 +226,6 @@ class Ui_active_grid_settings_widget(object):
         self.fill_opacity_slider_widget.setProperty("label_text", QCoreApplication.translate("active_grid_settings_widget", u"Fill Opacity", None))
         self.fill_opacity_slider_widget.setProperty("settings_property", QCoreApplication.translate("active_grid_settings_widget", u"active_grid_settings.fill_opacity", None))
         self.fill_choose_color_button.setText("")
+        self.label.setText(QCoreApplication.translate("active_grid_settings_widget", u"Active Grid Area", None))
     # retranslateUi
 
