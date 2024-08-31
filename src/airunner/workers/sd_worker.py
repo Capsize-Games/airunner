@@ -67,7 +67,7 @@ class SDWorker(Worker):
         self.sd.controlnet_handle_sd_state_changed_signal()
         self.sd.scheduler_handle_sd_state_changed_signal()
 
-    def on_load_safety_checker(self, message):
+    def on_load_safety_checker(self):
         if self.sd:
             self.sd.load_safety_checker()
 
@@ -79,9 +79,9 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.update_embedding(message)
 
-    def scan_for_embeddings(self, message):
+    def scan_for_embeddings(self):
         if self.sd:
-            self.sd.scan_for_embeddings(message)
+            self.sd.scan_for_embeddings()
 
     def delete_missing_embeddings(self, message):
         if self.sd:
