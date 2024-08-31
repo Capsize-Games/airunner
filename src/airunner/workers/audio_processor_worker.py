@@ -22,6 +22,6 @@ class AudioProcessorWorker(Worker):
             "message": audio_data
         })
     
-    def update_properties(self, _data=None):
+    def update_properties(self):
         settings = self.settings
         self.fs = settings["stt_settings"]["fs"]

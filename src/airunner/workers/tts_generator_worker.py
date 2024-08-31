@@ -163,7 +163,7 @@ class TTSGeneratorWorker(Worker):
             return None
         return super().get_item_from_queue()
 
-    def on_interrupt_process_signal(self, _message: dict):
+    def on_interrupt_process_signal(self):
         self.play_queue = []
         self.play_queue_started = False
         self.tokens = []
@@ -171,7 +171,7 @@ class TTSGeneratorWorker(Worker):
         self.do_interrupt = True
         self.paused = True
 
-    def on_unblock_tts_generator_signal(self, _ignore: dict):
+    def on_unblock_tts_generator_signal(self):
         self.logger.debug("Unblocking TTS generation...")
         self.do_interrupt = False
         self.paused = False

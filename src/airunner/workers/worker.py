@@ -1,3 +1,4 @@
+import inspect
 import queue
 import threading
 
@@ -54,7 +55,10 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
             try:
                 msg = self.get_item_from_queue()
                 if msg is not None:
-                    self.handle_message(msg)
+                    if len(inspect.signature(self.handle_message).parameters) == 0:
+                        self.handle_message()
+                    else:
+                        self.handle_message(msg)
             except queue.Empty:
                 msg = None
             if self.paused:
@@ -100,10 +104,10 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         except queue.Empty:
             return None
 
-    def pause(self, _message: None):
+    def pause(self):
         self.state = WorkerState.PAUSED
 
-    def unpause(self, _message: dict):
+    def unpause(self):
         if self.state == WorkerState.PAUSED:
             self.state = WorkerState.RUNNING
 
@@ -135,7 +139,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         self.items = {}
         self.current_index = 0
 
-    def stop(self, _message: dict=None):
+    def stop(self):
         self.logger.debug("Stopping")
         self.running = False
         self.finished.emit()
