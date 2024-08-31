@@ -59,6 +59,9 @@
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
          </property>
+         <property name="childrenCollapsible">
+          <bool>false</bool>
+         </property>
          <widget class="QScrollArea" name="scrollArea">
           <property name="widgetResizable">
            <bool>true</bool>
@@ -69,7 +72,7 @@
              <x>0</x>
              <y>0</y>
              <width>617</width>
-             <height>78</height>
+             <height>68</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_4">
@@ -93,6 +96,7 @@
          </widget>
          <widget class="BrushContainerWidget" name="brush_container_widget" native="true"/>
          <widget class="ActiveGridSettingsWidget" name="active_grid_settings_widget" native="true"/>
+         <widget class="ControlnetSettingsWidget" name="controlnet_settings_widget" native="true"/>
         </widget>
        </item>
       </layout>
@@ -152,6 +156,12 @@
    <class>LLMSettingsWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/llm/llm_settings_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ControlnetSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/controlnet/controlnet_settings_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
