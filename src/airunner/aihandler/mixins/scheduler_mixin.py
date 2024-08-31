@@ -33,7 +33,10 @@ class SchedulerMixin:
     @property
     def __scheduler_ready(self):
         return (
-            self.current_state == HandlerState.READY and
+            self.current_state in (
+            HandlerState.READY,
+            HandlerState.INITIALIZED
+        ) and
             self.__scheduler_status == ModelStatus.LOADED
         )
 

@@ -67,7 +67,7 @@ class Ui_controlnet_settings_widget(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
-        self.gridLayout.setContentsMargins(10, 0, 10, 0)
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.controlnet = QComboBox(self.widget_3)
         self.controlnet.setObjectName(u"controlnet")
 
