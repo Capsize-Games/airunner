@@ -23,7 +23,6 @@ class SetupWizard(
     def __init__(self, *args):
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
-        self.reset_paths()
         super(SetupWizard, self).__init__(*args)
 
         # Reset agreements
