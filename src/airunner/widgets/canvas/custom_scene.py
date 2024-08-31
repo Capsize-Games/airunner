@@ -350,6 +350,9 @@ class CustomScene(
         code = response["code"]
         if code == EngineResponseCode.IMAGE_GENERATED:
             message = response["message"]
+            if message is None:
+                self.logger.error("No message received from engine")
+                return
             images = message["images"]
             if len(images) == 0:
                 self.logger.debug("No images received from engine")
@@ -518,10 +521,11 @@ class CustomScene(
         zoom_out_factor = -settings["grid_settings"]["zoom_out_step"]
 
         # Use delta instead of angleDelta
-        if event.delta() > 0:
-            zoom_factor = zoom_in_factor
-        else:
-            zoom_factor = zoom_out_factor
+        if event.type() == event.Wheel:
+            if event.delta() > 0:
+                zoom_factor = zoom_in_factor
+            else:
+                zoom_factor = zoom_out_factor
 
         # Update zoom level
         zoom_level = settings["grid_settings"]["zoom_level"]
