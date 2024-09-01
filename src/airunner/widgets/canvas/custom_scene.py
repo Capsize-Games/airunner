@@ -390,12 +390,6 @@ class CustomScene(
     def rotate_90_counterclockwise(self):
         self.rotate_image(Image.ROTATE_90)
 
-    def copy_image(
-        self,
-        image: Image = None
-    ) -> object:
-        return self.copy_image(image)
-
     def rotate_image(self, angle):
         image = self.rotate_image(
             angle,
