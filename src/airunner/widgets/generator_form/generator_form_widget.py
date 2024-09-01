@@ -185,25 +185,34 @@ class GeneratorForm(BaseWidget):
         self.current_secondary_negative_prompt_value = value
         settings["generator_settings"]["second_negative_prompt"] = value
 
-        x = int(self.ui.crops_coord_top_left_x.text())
-        y = int(self.ui.crops_coord_top_left_y.text())
+        def get_integer_value(widget):
+            try:
+                return int(widget.text())
+            except ValueError:
+                return 0
+
+        x = get_integer_value(self.ui.crops_coord_top_left_x)
+        y = get_integer_value(self.ui.crops_coord_top_left_y)
         settings["generator_settings"]["crops_coord_top_left"] = (x, y)
 
-        x = int(self.ui.original_size_x.text())
-        y = int(self.ui.original_size_y.text())
+        x = get_integer_value(self.ui.original_size_x)
+        y = get_integer_value(self.ui.original_size_y)
         settings["generator_settings"]["original_size"] = (x, y)
 
-        x = int(self.ui.target_size_x.text())
-        y = int(self.ui.target_size_y.text())
+        x = get_integer_value(self.ui.target_size_x)
+        y = get_integer_value(self.ui.target_size_y)
         settings["generator_settings"]["target_size"] = (x, y)
 
-        x = int(self.ui.negative_original_size_x.text())
-        y = int(self.ui.negative_original_size_y.text())
+
+        x = get_integer_value(self.ui.negative_original_size_x)
+        y = get_integer_value(self.ui.negative_original_size_y)
         settings["generator_settings"]["negative_original_size"] = (x, y)
 
-        x = int(self.ui.negative_target_size_x.text())
-        y = int(self.ui.negative_target_size_y.text())
+        x = get_integer_value(self.ui.negative_target_size_x)
+        y = get_integer_value(self.ui.negative_target_size_y)
         settings["generator_settings"]["negative_target_size"] = (x, y)
+
+        print(settings["generator_settings"]["second_prompt"])
 
         self.settings = settings
 
