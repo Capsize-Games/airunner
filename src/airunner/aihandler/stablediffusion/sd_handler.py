@@ -325,35 +325,6 @@ class SDHandler(
                 self.log_error(e, "Failed to generate")
             self.current_state = HandlerState.READY
 
-    def reload_prompts(self):
-        settings = self.settings
-        if (
-            settings["generator_settings"]["image_preset"] != self.image_preset
-        ):
-            self.image_preset = settings["generator_settings"]["image_preset"]
-
-        self.latents = None
-        self.latents_set = False
-
-        if self.do_load_compel:
-            self.clear_prompt_embeds()
-            self.load_prompt_embeds(
-                self.pipe,
-                prompt=self.sd_request.generator_settings.prompt,
-                negative_prompt=self.sd_request.generator_settings.negative_prompt
-            )
-            self.data = self.sd_request.initialize_prompt_embeds(
-                prompt_embeds=self.prompt_embeds,
-                negative_prompt_embeds=self.negative_prompt_embeds,
-                args=self.data
-            )
-
-        if "prompt" in self.data and "prompt_embeds" in self.data:
-            del self.data["prompt"]
-
-        if "negative_prompt" in self.data and "negative_prompt_embeds" in self.data:
-            del self.data["negative_prompt"]
-
     def __run(self, message: dict):
         try:
             response = self.generate(

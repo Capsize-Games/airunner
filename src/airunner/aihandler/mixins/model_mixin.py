@@ -245,6 +245,35 @@ class ModelMixin:
         QApplication.processEvents()
         return {}
 
+    def reload_prompts(self):
+        settings = self.settings
+        if (
+            settings["generator_settings"]["image_preset"] != self.image_preset
+        ):
+            self.image_preset = settings["generator_settings"]["image_preset"]
+
+        self.latents = None
+        self.latents_set = False
+
+        if self.do_load_compel:
+            self.clear_prompt_embeds()
+            self.load_prompt_embeds(
+                self.pipe,
+                prompt=self.sd_request.generator_settings.prompt,
+                negative_prompt=self.sd_request.generator_settings.negative_prompt
+            )
+            self.data = self.sd_request.initialize_prompt_embeds(
+                prompt_embeds=self.prompt_embeds,
+                negative_prompt_embeds=self.negative_prompt_embeds,
+                args=self.data
+            )
+
+        if "prompt" in self.data and "prompt_embeds" in self.data:
+            del self.data["prompt"]
+
+        if "negative_prompt" in self.data and "negative_prompt_embeds" in self.data:
+            del self.data["negative_prompt"]
+
     def __prepare_data(self):
         data = self.data.copy()
 
@@ -307,11 +336,13 @@ class ModelMixin:
         data["callback_on_step_end"] = self.__interrupt_callback
 
         # Clean up the data based on the operation
-        if "image" in data and data["image"] is None:
-            del data["image"]
-        elif "image" not in data and self.sd_request.is_img2img:
+        if "image" not in data and self.sd_request.is_img2img:
             image = self.sd_request.drawing_pad_image
             data["image"] = image
+
+        if "image" in data and data["image"] is None:
+            del data["image"]
+
 
         return data
 
@@ -325,12 +356,6 @@ class ModelMixin:
             raise SafetyCheckerNotLoadedException()
 
         # Prepare the arguments for the pipeline
-
-        # Add lora to the pipeline
-        self.add_lora_to_pipe()
-
-        # Add embeddings to the pipeline
-        self.load_learned_embed_in_clip()
 
         data = self.__prepare_data()
         self.__finalize_pipeline(data)
@@ -374,6 +399,12 @@ class ModelMixin:
         ):
             # Swap the pipeline if the request is different from the current pipeline
             self.__pipe_swap(data)
+
+            # Add lora to the pipeline
+            self.add_lora_to_pipe()
+
+            # Add embeddings to the pipeline
+            self.load_learned_embed_in_clip()
 
             self.pipe_finalized = True
 
