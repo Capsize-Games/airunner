@@ -23,7 +23,7 @@ class Ui_lora(object):
     def setupUi(self, lora):
         if not lora.objectName():
             lora.setObjectName(u"lora")
-        lora.resize(437, 103)
+        lora.resize(437, 49)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -34,7 +34,9 @@ class Ui_lora(object):
         font.setPointSize(9)
         lora.setFont(font)
         self.gridLayout_2 = QGridLayout(lora)
+        self.gridLayout_2.setSpacing(0)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.gridLayout = QGridLayout()
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -42,7 +44,9 @@ class Ui_lora(object):
         self.enabledCheckbox.setObjectName(u"enabledCheckbox")
         self.enabledCheckbox.setCheckable(True)
         self.gridLayout_3 = QGridLayout(self.enabledCheckbox)
+        self.gridLayout_3.setSpacing(0)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
         self.trigger_word_edit = QLineEdit(self.enabledCheckbox)
         self.trigger_word_edit.setObjectName(u"trigger_word_edit")
 

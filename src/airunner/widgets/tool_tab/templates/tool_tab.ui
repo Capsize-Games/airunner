@@ -66,19 +66,22 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
        <property name="leftMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="topMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <property name="spacing">
+       <property name="horizontalSpacing">
         <number>0</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
        </property>
        <item row="0" column="0" rowspan="2" colspan="2">
         <widget class="StableDiffusionSettingsWidget" name="stable_diffusion_widget" native="true"/>
@@ -91,19 +94,22 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_7">
        <property name="leftMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="topMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <property name="spacing">
+       <property name="horizontalSpacing">
         <number>0</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
        </property>
        <item row="0" column="0">
         <widget class="LoraContainerWidget" name="lora_container_widget" native="true"/>
@@ -116,19 +122,22 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_8">
        <property name="leftMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="topMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <property name="spacing">
+       <property name="horizontalSpacing">
         <number>0</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
        </property>
        <item row="0" column="0">
         <widget class="EmbeddingsContainerWidget" name="embeddings_container_widget" native="true"/>
@@ -141,19 +150,22 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_5">
        <property name="leftMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="topMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <property name="spacing">
+       <property name="horizontalSpacing">
         <number>0</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
        </property>
        <item row="0" column="0">
         <widget class="BrushContainerWidget" name="brush_container_widget" native="true"/>
@@ -166,19 +178,22 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_6">
        <property name="leftMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="topMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <property name="spacing">
+       <property name="horizontalSpacing">
         <number>0</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
        </property>
        <item row="0" column="0">
         <widget class="ActiveGridSettingsWidget" name="active_grid_settings_widget" native="true"/>
@@ -191,16 +206,22 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_2">
        <property name="leftMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="topMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
         <number>0</number>
+       </property>
+       <property name="horizontalSpacing">
+        <number>0</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
        </property>
        <item row="0" column="0">
         <widget class="QSplitter" name="llm_splitter">

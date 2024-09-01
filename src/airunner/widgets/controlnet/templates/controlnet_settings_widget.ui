@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1004</width>
+    <width>243</width>
     <height>622</height>
    </rect>
   </property>
@@ -33,9 +33,9 @@
     <number>10</number>
    </property>
    <item row="0" column="0">
-    <widget class="QWidget" name="widget_2" native="true">
+    <widget class="QWidget" name="section_header" native="true">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -43,15 +43,15 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>37</height>
+       <height>0</height>
       </size>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <property name="leftMargin">
-       <number>10</number>
+       <number>0</number>
       </property>
       <property name="topMargin">
-       <number>10</number>
+       <number>0</number>
       </property>
       <property name="rightMargin">
        <number>10</number>

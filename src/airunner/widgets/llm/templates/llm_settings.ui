@@ -26,9 +26,32 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
+   <property name="horizontalSpacing">
+    <number>0</number>
+   </property>
    <property name="verticalSpacing">
     <number>10</number>
    </property>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>LLM Settings</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
    <item row="2" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="frameShadow">
@@ -46,21 +69,24 @@
         <x>0</x>
         <y>0</y>
         <width>579</width>
-        <height>690</height>
+        <height>700</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
        <property name="leftMargin">
-        <number>10</number>
+        <number>0</number>
        </property>
        <property name="topMargin">
         <number>0</number>
        </property>
        <property name="rightMargin">
-        <number>10</number>
+        <number>0</number>
        </property>
        <property name="bottomMargin">
-        <number>10</number>
+        <number>0</number>
+       </property>
+       <property name="horizontalSpacing">
+        <number>0</number>
        </property>
        <property name="verticalSpacing">
         <number>10</number>
@@ -94,15 +120,15 @@
           <property name="bottomMargin">
            <number>0</number>
           </property>
-          <property name="spacing">
+          <property name="horizontalSpacing">
            <number>0</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>10</number>
           </property>
           <item row="6" column="0">
            <widget class="QWidget" name="widget_19" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_4">
-             <property name="spacing">
-              <number>10</number>
-             </property>
+            <layout class="QGridLayout" name="gridLayout_2">
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -115,7 +141,13 @@
              <property name="bottomMargin">
               <number>0</number>
              </property>
-             <item>
+             <property name="horizontalSpacing">
+              <number>0</number>
+             </property>
+             <property name="verticalSpacing">
+              <number>10</number>
+             </property>
+             <item row="0" column="0">
               <widget class="QLineEdit" name="seed">
                <property name="minimumSize">
                 <size>
@@ -125,7 +157,7 @@
                </property>
               </widget>
              </item>
-             <item>
+             <item row="0" column="1">
               <widget class="QCheckBox" name="random_seed">
                <property name="minimumSize">
                 <size>
@@ -143,6 +175,9 @@
           </item>
           <item row="3" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout_3">
+            <property name="spacing">
+             <number>10</number>
+            </property>
             <item>
              <widget class="SliderWidget" name="length_penalty" native="true">
               <property name="sizePolicy">
@@ -245,6 +280,9 @@
           </item>
           <item row="0" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout">
+            <property name="spacing">
+             <number>10</number>
+            </property>
             <property name="sizeConstraint">
              <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
             </property>
@@ -357,6 +395,9 @@
           </item>
           <item row="5" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout_6">
+            <property name="spacing">
+             <number>10</number>
+            </property>
             <item>
              <widget class="SliderWidget" name="sequences" native="true">
               <property name="sizePolicy">
@@ -459,6 +500,9 @@
           </item>
           <item row="4" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <property name="spacing">
+             <number>10</number>
+            </property>
             <item>
              <widget class="SliderWidget" name="ngram_size" native="true">
               <property name="sizePolicy">
@@ -561,6 +605,12 @@
           </item>
           <item row="8" column="0">
            <layout class="QGridLayout" name="gridLayout_3">
+            <property name="horizontalSpacing">
+             <number>0</number>
+            </property>
+            <property name="verticalSpacing">
+             <number>10</number>
+            </property>
             <item row="0" column="0">
              <widget class="QCheckBox" name="early_stopping">
               <property name="text">
@@ -593,6 +643,9 @@
           </item>
           <item row="2" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <property name="spacing">
+             <number>10</number>
+            </property>
             <item>
              <widget class="SliderWidget" name="repetition_penalty" native="true">
               <property name="sizePolicy">
@@ -724,8 +777,11 @@
           <property name="bottomMargin">
            <number>0</number>
           </property>
-          <property name="spacing">
+          <property name="horizontalSpacing">
            <number>0</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>10</number>
           </property>
           <item row="1" column="0">
            <widget class="QComboBox" name="model_version">
@@ -764,8 +820,11 @@
           <property name="bottomMargin">
            <number>0</number>
           </property>
-          <property name="spacing">
+          <property name="horizontalSpacing">
            <number>0</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>10</number>
           </property>
           <item row="1" column="0">
            <widget class="QComboBox" name="prompt_template"/>
@@ -805,8 +864,11 @@
           <property name="bottomMargin">
            <number>0</number>
           </property>
-          <property name="spacing">
+          <property name="horizontalSpacing">
            <number>0</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>10</number>
           </property>
           <item row="1" column="0">
            <widget class="QComboBox" name="model"/>
@@ -823,59 +885,6 @@
        </item>
       </layout>
      </widget>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="Line" name="line_2">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0">
-    <widget class="QWidget" name="header" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_5">
-      <property name="leftMargin">
-       <number>10</number>
-      </property>
-      <property name="topMargin">
-       <number>10</number>
-      </property>
-      <property name="rightMargin">
-       <number>10</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <property name="horizontalSpacing">
-       <number>4</number>
-      </property>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_2">
-        <property name="font">
-         <font>
-          <pointsize>11</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>LLM Settings</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
     </widget>
    </item>
   </layout>
