@@ -215,7 +215,7 @@ class ModelMixin:
         settings: dict,
         generator_request_data: dict
     ):
-        if not self.pipe:
+        if not self.pipe or self.pipe.device.type == "cpu":
             self.load_stable_diffusion()
             if not self.pipe:
                 raise PipeNotLoadedException()
@@ -469,18 +469,25 @@ class ModelMixin:
         return self.__generator
 
     def __unload_model(self):
+        threading.Thread(target=self.__unload_model_thread).start()
+
+    def __unload_model_thread(self):
+        if self.pipe.device.type == "cpu":
+            return
         self.logger.debug("Unloading model")
         self.__change_sd_model_status(ModelStatus.LOADING)
         self.pipe.to("cpu")
         self.__change_sd_model_status(ModelStatus.UNLOADED)
 
     def __change_sd_model_status(self, status: ModelStatus):
+        if self.__sd_model_status is status:
+            return
         self.__sd_model_status = status
-        self.change_model_status(ModelType.SD, status, self.model_path)
         if status in (ModelStatus.FAILED, ModelStatus.UNLOADED):
             clear_memory()
         elif status == ModelStatus.LOADED:
             self.make_stable_diffusion_memory_efficient()
+        self.change_model_status(ModelType.SD, status, self.model_path)
 
     def __change_sd_tokenizer_status(self, status: ModelStatus):
         self.__tokenizer_status = status

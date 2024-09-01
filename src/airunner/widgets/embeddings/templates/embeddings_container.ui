@@ -26,8 +26,31 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
+   <property name="horizontalSpacing">
+    <number>0</number>
+   </property>
+   <property name="verticalSpacing">
+    <number>10</number>
+   </property>
    <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Embeddings</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
      <item>
       <widget class="QLineEdit" name="lineEdit">
        <property name="placeholderText">
@@ -49,7 +72,7 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="0">
+   <item row="3" column="0">
     <widget class="QScrollArea" name="embeddings">
      <property name="font">
       <font>
@@ -71,14 +94,33 @@
         <x>0</x>
         <y>0</y>
         <width>479</width>
-        <height>193</height>
+        <height>145</height>
        </rect>
       </property>
-      <layout class="QGridLayout" name="gridLayout_2"/>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="horizontalSpacing">
+        <number>0</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
+       </property>
+      </layout>
      </widget>
     </widget>
    </item>
-   <item row="2" column="0">
+   <item row="4" column="0">
     <widget class="QPushButton" name="pushButton">
      <property name="text">
       <string>Scan for embeddings</string>

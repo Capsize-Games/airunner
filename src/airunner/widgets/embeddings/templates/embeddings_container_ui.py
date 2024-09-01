@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGridLayout,
-    QHBoxLayout, QLineEdit, QPushButton, QScrollArea,
-    QSizePolicy, QWidget)
+    QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QScrollArea, QSizePolicy, QWidget)
 
 class Ui_embeddings_container(object):
     def setupUi(self, embeddings_container):
@@ -26,8 +26,23 @@ class Ui_embeddings_container(object):
         embeddings_container.resize(479, 257)
         self.gridLayout = QGridLayout(embeddings_container)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setHorizontalSpacing(0)
+        self.gridLayout.setVerticalSpacing(10)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.label = QLabel(embeddings_container)
+        self.label.setObjectName(u"label")
+
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+
+        self.line = QFrame(embeddings_container)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.gridLayout.addWidget(self.line, 1, 0, 1, 1)
+
         self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setSpacing(10)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.lineEdit = QLineEdit(embeddings_container)
         self.lineEdit.setObjectName(u"lineEdit")
@@ -43,7 +58,7 @@ class Ui_embeddings_container(object):
         self.horizontalLayout.addWidget(self.checkBox)
 
 
-        self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
+        self.gridLayout.addLayout(self.horizontalLayout, 2, 0, 1, 1)
 
         self.embeddings = QScrollArea(embeddings_container)
         self.embeddings.setObjectName(u"embeddings")
@@ -53,17 +68,20 @@ class Ui_embeddings_container(object):
         self.embeddings.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 479, 193))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 479, 145))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setHorizontalSpacing(0)
+        self.gridLayout_2.setVerticalSpacing(10)
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.embeddings.setWidget(self.scrollAreaWidgetContents)
 
-        self.gridLayout.addWidget(self.embeddings, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.embeddings, 3, 0, 1, 1)
 
         self.pushButton = QPushButton(embeddings_container)
         self.pushButton.setObjectName(u"pushButton")
 
-        self.gridLayout.addWidget(self.pushButton, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.pushButton, 4, 0, 1, 1)
 
 
         self.retranslateUi(embeddings_container)
@@ -76,6 +94,7 @@ class Ui_embeddings_container(object):
 
     def retranslateUi(self, embeddings_container):
         embeddings_container.setWindowTitle(QCoreApplication.translate("embeddings_container", u"Form", None))
+        self.label.setText(QCoreApplication.translate("embeddings_container", u"Embeddings", None))
         self.lineEdit.setPlaceholderText(QCoreApplication.translate("embeddings_container", u"Search", None))
         self.checkBox.setText(QCoreApplication.translate("embeddings_container", u"Toggle all", None))
         self.pushButton.setText(QCoreApplication.translate("embeddings_container", u"Scan for embeddings", None))
