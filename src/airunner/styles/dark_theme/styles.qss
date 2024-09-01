@@ -145,10 +145,6 @@ QFrame[frameShape="5"] {
     width: 1px;
 }
 
-QTabWidget::pane {
-    border-top: 1px solid #333;
-}
-
 QTabBar::tab {
     background-color: #000; /* Darker background when not highlighted */
     padding: 5px 5px; /* Adjust padding as needed */
@@ -223,7 +219,6 @@ QStatusBar {
 }
 
 QStatusBar QLabel {
-   margin-top: 10px;
 }
 
 #header_widget QPushButton {
@@ -574,6 +569,7 @@ QSplitter::handle::horizontal:hover {
     border-left: 4px solid rgba(0, 132, 185, 255);
 }
 
+#stable_diffusion_generator_form QGroupBox,
 #tool_tab_widget QGroupBox {
     border: 0;
 }

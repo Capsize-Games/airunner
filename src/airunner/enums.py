@@ -13,12 +13,6 @@ class QueueType(Enum):
     NONE = 300
 
 
-class WorkerCode(Enum):
-    START_VISION_CAPTURE = 100
-    STOP_VISION_CAPTURE = 200
-    UNPAUSE_VISION_CAPTURE = 300
-
-
 class HandlerType(Enum):
     TRANSFORMER = 100
     DIFFUSER = 200
@@ -200,18 +194,6 @@ class SignalCode(Enum):
     TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = "TTSGeneratorWorker_add_to_stream_signal"
     TTS_ENABLE_SIGNAL = "tts_enable_signal"
     TTS_DISABLE_SIGNAL = "tts_disable_signal"
-    VISION_START_CAPTURE = "start_vision_capture"
-    VISION_STOP_CAPTURE = "stop_vision_capture"
-    VISION_CAPTURE_UNPAUSE_SIGNAL = "unpause_vision_capture"
-    VISION_CAPTURE_PAUSE_SIGNAL = "pause_vision_capture"
-    VISION_CAPTURE_LOCK_SIGNAL = "lock_vision_capture"
-    VISION_CAPTURE_UNLOCK_SIGNAL = "unlock_vision_capture"
-    VISION_CAPTURE_PROCESS_SIGNAL = "vision_capture_process_signal"
-    VISION_CAPTURED_SIGNAL = "vision_captured_signal"
-    VISION_PROCESSED_SIGNAL = "vision_processed_signal"
-    VISION_CAPTION_GENERATED_SIGNAL = "caption_generated_signal"
-    VISION_DESCRIBE_IMAGE_SIGNAL = "describe_image_signal"
-    VISION_PROCESS_IMAGES = "process_images"
     QUIT_APPLICATION = "quit"
     TOGGLE_FULLSCREEN_SIGNAL = "fullscreen_signal"
     TOGGLE_TTS_SIGNAL = "toggle_tts_signal"
@@ -364,9 +346,6 @@ class LLMToolName(Enum):
     STT_STOP_CAPTURE = "stt_stop_audio_capture"
     TTS_ENABLE = "tts_enable"
     TTS_DISABLE = "tts_disable"
-    VISION_PROCESS_IMAGES = "vision_process_images"
-    VISION_START_CAPTURE = "vision_start_capture"
-    VISION_STOP_CAPTURE = "vision_stop_capture"
     BASH_EXECUTE = "bash_execute"
     WRITE_FILE = "write_file"
     CHOOSE_RESPONSE_LENGTH = "choose_response_length"
@@ -383,7 +362,6 @@ class LLMActionType(Enum):
     DO_NOT_RESPOND = "DO NOT RESPOND: Use this option when the user has asked you to stop responding or if the text does not require a response."
     CHAT = "RESPOND TO THE USER: Respond to the user's message."
     GENERATE_IMAGE = "GENERATE IMAGE: Generate an image based on the text."
-    ANALYZE_VISION_HISTORY = "ANALYZE VISION HISTORY: Analyze the vision history."
     APPLICATION_COMMAND = "APPLICATION COMMAND: Execute an application command."
     UPDATE_MOOD = "UPDATE MOOD: {{ username }} has made you feel a certain way. Respond with an emotion or feeling so that you can update your current mood."
     QUIT_APPLICATION = "QUIT: Quit or close the application."

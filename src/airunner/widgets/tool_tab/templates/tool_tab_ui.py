@@ -50,7 +50,7 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.gridLayout_4.setHorizontalSpacing(0)
         self.gridLayout_4.setVerticalSpacing(10)
-        self.gridLayout_4.setContentsMargins(10, 10, 10, 0)
+        self.gridLayout_4.setContentsMargins(10, 10, 0, 0)
         self.stable_diffusion_widget = StableDiffusionSettingsWidget(self.tab_3)
         self.stable_diffusion_widget.setObjectName(u"stable_diffusion_widget")
 
@@ -63,7 +63,7 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_7.setObjectName(u"gridLayout_7")
         self.gridLayout_7.setHorizontalSpacing(0)
         self.gridLayout_7.setVerticalSpacing(10)
-        self.gridLayout_7.setContentsMargins(10, 10, 10, 0)
+        self.gridLayout_7.setContentsMargins(10, 10, 0, 0)
         self.lora_container_widget = LoraContainerWidget(self.tab_6)
         self.lora_container_widget.setObjectName(u"lora_container_widget")
 
@@ -76,7 +76,7 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_8.setObjectName(u"gridLayout_8")
         self.gridLayout_8.setHorizontalSpacing(0)
         self.gridLayout_8.setVerticalSpacing(10)
-        self.gridLayout_8.setContentsMargins(10, 10, 10, 0)
+        self.gridLayout_8.setContentsMargins(10, 10, 0, 0)
         self.embeddings_container_widget = EmbeddingsContainerWidget(self.tab_7)
         self.embeddings_container_widget.setObjectName(u"embeddings_container_widget")
 
@@ -89,7 +89,7 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.gridLayout_5.setHorizontalSpacing(0)
         self.gridLayout_5.setVerticalSpacing(10)
-        self.gridLayout_5.setContentsMargins(10, 10, 10, 0)
+        self.gridLayout_5.setContentsMargins(10, 10, 0, 0)
         self.brush_container_widget = BrushContainerWidget(self.tab_2)
         self.brush_container_widget.setObjectName(u"brush_container_widget")
 
@@ -102,7 +102,7 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_6.setObjectName(u"gridLayout_6")
         self.gridLayout_6.setHorizontalSpacing(0)
         self.gridLayout_6.setVerticalSpacing(10)
-        self.gridLayout_6.setContentsMargins(10, 10, 10, 0)
+        self.gridLayout_6.setContentsMargins(10, 10, 0, 0)
         self.active_grid_settings_widget = ActiveGridSettingsWidget(self.tab_4)
         self.active_grid_settings_widget.setObjectName(u"active_grid_settings_widget")
 
@@ -115,7 +115,7 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setHorizontalSpacing(0)
         self.gridLayout_2.setVerticalSpacing(10)
-        self.gridLayout_2.setContentsMargins(10, 10, 10, 0)
+        self.gridLayout_2.setContentsMargins(10, 10, 0, 0)
         self.llm_splitter = QSplitter(self.tab)
         self.llm_splitter.setObjectName(u"llm_splitter")
         self.llm_splitter.setOrientation(Qt.Orientation.Vertical)
@@ -143,7 +143,7 @@ class Ui_tool_tab_widget(object):
 
     def retranslateUi(self, tool_tab_widget):
         tool_tab_widget.setWindowTitle(QCoreApplication.translate("tool_tab_widget", u"Form", None))
-        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("tool_tab_widget", u"Art", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("tool_tab_widget", u"Stable Diffusion", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_6), QCoreApplication.translate("tool_tab_widget", u"LoRA", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_7), QCoreApplication.translate("tool_tab_widget", u"Embeddings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("tool_tab_widget", u"Brush", None))

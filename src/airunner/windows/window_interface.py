@@ -12,8 +12,6 @@ DISABLE_SD = os.getenv("DISABLE_SD", "False").lower() == "true"
 DISABLE_LLM = os.getenv("DISABLE_LLM", "False").lower() == "true"
 DISABLE_TTS = os.getenv("DISABLE_TTS", "False").lower() == "true"
 DISABLE_STT = os.getenv("DISABLE_STT", "False").lower() == "true"
-OCR_ENABLED = os.getenv("OCR_ENABLED", "False").lower() == "true"
-DISABLE_VISION_CAPTURE = os.getenv("DISABLE_VISION_CAPTURE", "True").lower() == "true"
 TTS_ENABLED = os.getenv("TTS_ENABLED", "True").lower() == "true"
 STT_ENABLED = os.getenv("STT_ENABLED", "True").lower() == "true"
 DO_LOAD_LLM_ON_INIT = os.getenv("DO_LOAD_LLM_ON_INIT", "True").lower() == "true"
@@ -41,8 +39,6 @@ class WindowInterface(
         disable_llm: bool = False,
         disable_tts: bool = False,
         disable_stt: bool = False,
-        ocr_enabled: bool = False,
-        disable_vision_capture: bool = True,
         tts_enabled: bool = True,
         stt_enabled: bool = True,
         do_load_llm_on_init: bool = True,
@@ -53,7 +49,6 @@ class WindowInterface(
         super().__init__()
 
         self.conversation_history = []
-        self.vision_history = []
         self.prefix = ""
         self.prompt = ""
         self.suffix = ""
@@ -63,7 +58,6 @@ class WindowInterface(
             disable_llm=disable_llm,
             disable_tts=disable_tts,
             disable_stt=disable_stt,
-            disable_vision_capture=disable_vision_capture,
             do_load_llm_on_init=do_load_llm_on_init,
             tts_handler_class=tts_handler_class
         )

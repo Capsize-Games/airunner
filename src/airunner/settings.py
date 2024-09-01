@@ -94,7 +94,6 @@ DEFAULT_BARK_MODEL_PATHS = {
     "model": "suno/bark-small",
 }
 EMBEDDINGS_MODEL_PATH = ""
-DEFAULT_OCR_MODEL_PATH = "Salesforce/blip-vqa-base"
 
 ####################################################################
 # Default system prompts
@@ -936,7 +935,6 @@ DEFAULT_USE_CUDA = True
 DEFAULT_SD_ENABLED = False
 DEFAULT_CONTROLNET_ENABLED = False
 DEFAULT_LLM_ENABLED = False
-DEFAULT_OCR_ENABLED = False
 DEFAULT_TTS_ENABLED = False
 DEFAULT_STT_ENABLED = False
 DEFAULT_AI_MODE = True
@@ -951,7 +949,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     sd_enabled=DEFAULT_SD_ENABLED,
     controlnet_enabled=DEFAULT_CONTROLNET_ENABLED,
     llm_enabled=DEFAULT_LLM_ENABLED,
-    ocr_enabled=DEFAULT_OCR_ENABLED,
     tts_enabled=DEFAULT_TTS_ENABLED,
     stt_enabled=DEFAULT_STT_ENABLED,
     ai_mode=DEFAULT_AI_MODE,
@@ -993,9 +990,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     autoload_sd=True,
     autoload_llm=False,
     show_nsfw_warning=True,
-    ocr_settings=dict(
-        model_path=DEFAULT_OCR_MODEL_PATH,
-    ),
     document_settings={
         "width": 512,
         "height": 512,
@@ -1016,18 +1010,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
             "template_name": "image",
             "guardrails": DEFAULT_IMAGE_LLM_GUARDRAILS,
             "system": DEFAULT_IMAGE_SYSTEM_PROMPT,
-        },
-        "ocr": {
-            "use_guardrails": False,
-            "template_name": "ocr",
-            "guardrails": "",
-            "system": (
-                "You have eyes, you can see. You see many things but they "
-                "are no always correct. You must try to determine what you "
-                "are seeing based on these images Try to summarize them to "
-                "determine what is happening. Here is a list of things that "
-                "you currently saw:"
-            ),
         },
         "application_command": {
             "use_guardrails": False,

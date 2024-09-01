@@ -51,6 +51,9 @@
      <property name="spacing">
       <number>10</number>
      </property>
+     <property name="rightMargin">
+      <number>10</number>
+     </property>
      <item>
       <widget class="QLineEdit" name="lineEdit">
        <property name="placeholderText">
@@ -105,7 +108,7 @@
         <number>0</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
         <number>0</number>
