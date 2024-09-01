@@ -49,8 +49,6 @@ from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
-from airunner.windows.main.embedding_mixin import EmbeddingMixin
-from airunner.windows.main.lora_mixin import LoraMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
@@ -60,8 +58,6 @@ class MainWindow(
     QMainWindow,
     MediatorMixin,
     SettingsMixin,
-    LoraMixin,
-    EmbeddingMixin,
     PipelineMixin,
     ControlnetModelMixin,
     AIModelMixin
@@ -169,8 +165,6 @@ class MainWindow(
         self._updating_settings = True
         self.update_settings()
 
-        LoraMixin.__init__(self)
-        EmbeddingMixin.__init__(self)
         PipelineMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)

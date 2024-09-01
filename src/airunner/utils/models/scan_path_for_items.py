@@ -12,6 +12,8 @@ def scan_path_for_items(base_path, current_items, scan_type="lora"):
                 scan_type
             )
         )
+        if not os.path.exists(embedding_path):
+            continue
         for dirpath, dirnames, filenames in os.walk(embedding_path):
             for file in filenames:
                 if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):

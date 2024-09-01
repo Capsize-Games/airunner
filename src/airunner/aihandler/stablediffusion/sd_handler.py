@@ -2,7 +2,7 @@ import threading
 import traceback
 import torch
 from PIL import Image
-from PySide6.QtCore import QRunnable, QThreadPool, QMutex, QThread, Slot, QObject, Signal
+from PySide6.QtCore import Slot, QObject, Signal
 
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.aihandler.mixins.controlnet_mixin import ControlnetHandlerMixin
@@ -16,16 +16,16 @@ from airunner.enums import (
     SDMode,
     EngineResponseCode,
     ModelStatus,
-    ModelType, HandlerState, ModelAction
+    ModelType,
+    HandlerState
 )
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
 from airunner.aihandler.mixins.lora_mixin import LoraMixin
 from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
-from airunner.exceptions import InterruptedException, PipeNotLoadedException, ThreadInterruptException
+from airunner.exceptions import InterruptedException, PipeNotLoadedException
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
-from airunner.windows.main.lora_mixin import LoraMixin as LoraDataMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
@@ -68,7 +68,6 @@ class SDHandler(
     CompelMixin,
     SchedulerMixin,
     # Data Mixins
-    LoraDataMixin,
     EmbeddingDataMixin,
     PipelineMixin,
     ControlnetModelMixin,
@@ -81,8 +80,8 @@ class SDHandler(
         self._sd_request = None
         self.__current_state = HandlerState.INITIALIZED
         super().__init__(*args, **kwargs)
+        EmbeddingMixin.__init__(self)
         SafetyCheckerMixin.__init__(self)
-        LoraDataMixin.__init__(self)
         EmbeddingDataMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)

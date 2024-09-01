@@ -23,7 +23,7 @@ class LoraContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.loars = None
+        self.loras = None
         self.initialized = False
 
     def toggle_all(self, val):
@@ -39,7 +39,7 @@ class LoraContainerWidget(BaseWidget):
             lora_widget.ui.enabledCheckbox.blockSignals(False)
         for version, loras in settings["lora"].items():
             for index, _lora in enumerate(loras):
-                settings["lora"][version][index]["enabled"] = val == 2
+                settings["lora"][version][index]["enabled"] = val
         self.settings = settings
         self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL, {
             "lora": settings["lora"][self.settings["generator_settings"]["version"]]

@@ -29,6 +29,7 @@ class LoraMixin:
         """
         Called when stable diffusion handler is loaded
         """
+        self.logger.debug("Adding LoRA to pipe")
         try:
             self.loaded_lora = []
             self.apply_all_lora()
