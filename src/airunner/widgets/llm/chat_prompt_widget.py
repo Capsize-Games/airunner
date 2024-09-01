@@ -38,8 +38,6 @@ class ChatPromptWidget(BaseWidget):
         self.ui.action.blockSignals(False)
         self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
-        self.vision_history = []
-        self.register(SignalCode.VISION_PROCESSED_SIGNAL, self.on_vision_processed)
         self.register(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, self.on_hear_signal)
         self.held_message = None
 
@@ -62,13 +60,6 @@ class ChatPromptWidget(BaseWidget):
         transcription = data["transcription"]
         self.respond_to_voice(transcription)
         self.ui.prompt.setPlainText(transcription)
-
-    def on_vision_processed(self, data):
-        message = data["message"]
-        message = message.replace("this is an image of ", "")
-        if message not in self.vision_history:
-            self.vision_history.append(message)
-        self.emit_signal(SignalCode.VISION_CAPTURE_UNPAUSE_SIGNAL)
 
     def on_add_to_conversation_signal(self, name, text, is_bot):
         self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
