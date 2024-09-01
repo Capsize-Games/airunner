@@ -148,14 +148,6 @@ class BaseAgent(
             f"{history}"
         )
 
-    def add_vision_prompt(self, vision_history: list, system_prompt: list) -> list:
-        if len(vision_history) > 0:
-            vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
-            system_prompt.append("\n======\n")
-            system_prompt.append(self.settings["prompt_templates"]["ocr"]["system"])
-            system_prompt.append(','.join(vision_history))
-        return system_prompt
-
     def append_date_time_timezone(self, system_prompt: list) -> list:
         current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
         current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
@@ -168,8 +160,7 @@ class BaseAgent(
 
     def build_system_prompt(
         self,
-        action,
-        vision_history: list = []
+        action
     ):
         system_instructions = ""
         guardrails_prompt = ""
@@ -201,7 +192,6 @@ class BaseAgent(
                 self.personality_prompt(bot_personality, use_personality),
                 self.history_prompt(),
             ]
-            system_prompt = self.add_vision_prompt(vision_history, system_prompt)
 
             if self.chatbot["use_datetime"]:
                 system_prompt = self.append_date_time_timezone(system_prompt)
@@ -271,10 +261,9 @@ class BaseAgent(
 
     def prepare_messages(
         self,
-        action,
-        vision_history: list = []
+        action
     ) -> list:
-        system_prompt = self.build_system_prompt(action, vision_history=vision_history)
+        system_prompt = self.build_system_prompt(action)
         if action == LLMActionType.APPLICATION_COMMAND:
             prompt = (
                 "Choose an action from THE LIST of commands for the text above. "
@@ -308,12 +297,10 @@ class BaseAgent(
 
     def get_rendered_template(
         self,
-        action: LLMActionType,
-        vision_history: list
+        action: LLMActionType
     ) -> str:
         conversation = self.prepare_messages(
-            action,
-            vision_history=vision_history
+            action
         )
 
         rendered_template = self.tokenizer.apply_chat_template(
@@ -385,12 +372,10 @@ class BaseAgent(
     def get_model_inputs(
         self,
         action: LLMActionType,
-        vision_history: list,
         **kwargs
     ):
         self.rendered_template = self.get_rendered_template(
-            action,
-            vision_history
+            action
         )
 
         # Encode the rendered template
@@ -409,7 +394,6 @@ class BaseAgent(
         self,
         prompt: str,
         action: str,
-        vision_history: list = [],
         **kwargs
     ):
         self.action = action
@@ -420,7 +404,6 @@ class BaseAgent(
 
         return self.do_run(
             action,
-            vision_history,
             **kwargs,
             system_instructions=system_instructions,
             use_names=True,
@@ -430,7 +413,6 @@ class BaseAgent(
     def do_run(
         self,
         action: LLMActionType,
-        vision_history: list = [],
         streamer=None,
         do_emit_response: bool = True,
         use_names: bool = True,
@@ -447,7 +429,6 @@ class BaseAgent(
 
         model_inputs = self.get_model_inputs(
             action,
-            vision_history,
             use_names=use_names,
             **kwargs
         )

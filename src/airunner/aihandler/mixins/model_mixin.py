@@ -396,17 +396,14 @@ class ModelMixin:
             raise PipeNotLoadedException()
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, f"Generating media")
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
-        self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
 
         images = None
         try:
             images, nsfw_content_detected = self.__call_pipe()
         except SafetyCheckerNotLoadedException:
             self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Safety checker is not loaded")
-            self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
 
         if images is not None:
-            self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
             return self.__image_handler(
                 images,
                 nsfw_content_detected

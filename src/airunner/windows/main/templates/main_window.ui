@@ -347,7 +347,7 @@
               <item>
                <spacer name="horizontalSpacer_2">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -954,40 +954,6 @@
             </property>
             <property name="icon">
              <iconset theme="audio-input-microphone"/>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>18</width>
-              <height>18</height>
-             </size>
-            </property>
-            <property name="checkable">
-             <bool>true</bool>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="ocr_button">
-            <property name="minimumSize">
-             <size>
-              <width>36</width>
-              <height>36</height>
-             </size>
-            </property>
-            <property name="cursor">
-             <cursorShape>PointingHandCursor</cursorShape>
-            </property>
-            <property name="toolTip">
-             <string>Toggle Vision</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset theme="camera-web"/>
             </property>
             <property name="iconSize">
              <size>
@@ -2754,22 +2720,6 @@
     <hint type="sourcelabel">
      <x>20</x>
      <y>728</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>830</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>ocr_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>ocr_button_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>15</x>
-     <y>767</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>

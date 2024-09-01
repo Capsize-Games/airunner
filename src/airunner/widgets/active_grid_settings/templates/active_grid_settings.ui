@@ -32,26 +32,7 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="0" column="0">
-    <widget class="QCheckBox" name="active_grid_area_checkbox">
-     <property name="font">
-      <font>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Active Grid Area</string>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="0">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="frameShape">
       <enum>QFrame::Shape::NoFrame</enum>
@@ -68,7 +49,7 @@
         <x>0</x>
         <y>0</y>
         <width>724</width>
-        <height>323</height>
+        <height>336</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_3">
@@ -79,7 +60,7 @@
         <number>0</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
         <number>0</number>
@@ -423,6 +404,18 @@
        </item>
       </layout>
      </widget>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QCheckBox" name="active_grid_area_checkbox">
+     <property name="font">
+      <font>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Active Grid Area</string>
+     </property>
     </widget>
    </item>
   </layout>

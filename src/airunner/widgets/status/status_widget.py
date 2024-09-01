@@ -67,12 +67,6 @@ class StatusWidget(BaseWidget):
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-        if settings["ocr_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.OCR,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
 
     def update_model_status(self, data):
         if data["status"] is ModelStatus.LOADING:
@@ -109,8 +103,6 @@ class StatusWidget(BaseWidget):
         elif data["model"] == ModelType.STT:
             element_name = "stt_status"
             tool_tip = "STT"
-        # elif data["model"] == ModelType.OCR:
-        #     element_name = "ocr_status"
 
         tool_tip += " " + data["status"].value
 
@@ -141,8 +133,7 @@ class StatusWidget(BaseWidget):
     def on_clear_status_message_signal(self):
         self.set_system_status("", error=False)
 
-    def update_system_stats(self, queue_size=0):
-        queue_stats = f"Queued items: {queue_size}"
+    def update_system_stats(self):
         cuda_status = f"{'NVIDIA' if torch.cuda.is_available() else 'CPU'}"
 
         # Color by has_cuda red for disabled, green for enabled
@@ -152,7 +143,6 @@ class StatusWidget(BaseWidget):
         )
 
         self.ui.cuda_status.setText(cuda_status)
-        self.ui.queue_stats.setText(queue_stats)
 
     def update_safety_checker_status(self):
         # Color by safety checker status red, yellow, green for failed, loading, loaded

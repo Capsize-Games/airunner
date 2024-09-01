@@ -50,7 +50,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         disable_llm: bool = False,
         disable_tts: bool = False,
         disable_stt: bool = False,
-        disable_vision_capture: bool = False,
         do_load_llm_on_init: bool = False,
         agent_class=None,
         agent_options: dict = None,
@@ -76,13 +75,10 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             (SignalCode.LOG_ERROR_SIGNAL, self.on_error_signal),
             (SignalCode.LOG_WARNING_SIGNAL, self.on_warning_signal),
             (SignalCode.LOG_STATUS_SIGNAL, self.on_status_signal),
-            (SignalCode.VISION_CAPTION_GENERATED_SIGNAL, self.on_caption_generated_signal),
             (SignalCode.LLM_RESPONSE_SIGNAL, self.on_llm_response_signal),
             (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal),
             (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal),
-            (SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured),
             (SignalCode.TTS_REQUEST, self.on_tts_request),
-            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal),
             (SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal),
         ]
         for signal in signals:
@@ -96,8 +92,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.tts_vocalizer_worker = None
         self.stt_audio_capture_worker = None
         self.stt_audio_processor_worker = None
-        self.vision_capture_worker = None
-        self.vision_processor_worker = None
 
         if not disable_sd:
             self.register_sd_workers()
@@ -111,8 +105,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         # if not disable_stt:
         #     self.register_stt_workers()
         #
-        # if not disable_vision_capture:
-        #     self.register_vision_workers()
 
     def register_sd_workers(self):
         from airunner.workers.sd_worker import SDWorker
@@ -144,12 +136,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         from airunner.workers.audio_processor_worker import AudioProcessorWorker
         self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
         self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
-
-    def register_vision_workers(self):
-        from airunner.workers.vision_capture_worker import VisionCaptureWorker
-        from airunner.workers.vision_processor_worker import VisionProcessorWorker
-        self.vision_capture_worker = create_worker(VisionCaptureWorker)
-        self.vision_processor_worker = create_worker(VisionProcessorWorker)
 
     def on_llm_request_worker_response_signal(self, message: dict):
         if self.llm_generate_worker:
@@ -204,21 +190,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def handle_text_generated(self, message, code):
         print("TODO: handle text generated no stream")
-
-    def toggle_vision_capture(self):
-        do_capture_image = self.settings["ocr_enabled"]
-        if do_capture_image != self.is_capturing_image:
-            self.is_capturing_image = do_capture_image
-            if self.is_capturing_image:
-                self.emit_signal(SignalCode.VISION_START_CAPTURE)
-            else:
-                self.emit_signal(SignalCode.VISION_STOP_CAPTURE)
-
-    def on_application_settings_changed_signal(self):
-        self.toggle_vision_capture()
-
-    def on_vision_captured(self, message: dict):
-        self.emit_signal(SignalCode.VISION_CAPTURE_PROCESS_SIGNAL, message)
 
     def on_AudioCaptureWorker_response_signal(self, message: dict):
         item: np.ndarray = message["item"]

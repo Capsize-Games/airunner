@@ -99,9 +99,7 @@ class MainWindow(
         disable_llm: bool = False,
         disable_tts: bool = False,
         disable_stt: bool = False,
-        disable_vision_capture: bool = False,
         use_cuda: bool = True,
-        ocr_enabled: bool = False,
         tts_enabled: bool = False,
         stt_enabled: bool = False,
         ai_mode: bool = True,
@@ -114,7 +112,6 @@ class MainWindow(
         self.disable_llm = disable_llm
         self.disable_tts = disable_tts
         self.disable_stt = disable_stt
-        self.disable_vision_capture = disable_vision_capture
 
         self.restrict_os_access = restrict_os_access
         self.defendatron = defendatron
@@ -353,12 +350,10 @@ class MainWindow(
 
     def register_signals(self):
         self.logger.debug("Connecting signals")
-        self.register(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
         self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
         self.register(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
         self.register(SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal)
-        self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured_signal)
         self.register(SignalCode.ENABLE_BRUSH_TOOL_SIGNAL, lambda _message: self.action_toggle_brush(True))
         self.register(SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda _message: self.action_toggle_eraser(True))
         self.register(SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True))
@@ -415,20 +410,6 @@ class MainWindow(
         if not self._updating_settings:
             self.set_stylesheet()
 
-    def on_vision_captured_signal(self, data: dict):
-        # Create the window if it doesn't exist
-        if self.image_window is None:
-            from airunner.windows.image_window import ImageWindow
-            self.image_window = ImageWindow()
-
-        image = data.get("image", None)
-
-        if image:
-            # Update the image in the window
-            self.image_window.update_image(image)
-        else:
-            self.logger.error("on_vision_captured_signal failed - no image")
-
     def initialize_ui(self):
         self.logger.debug("Loading UI")
         self.ui.setupUi(self)
@@ -448,7 +429,6 @@ class MainWindow(
     def initialize_widget_elements(self):
         settings = self.settings
 
-        self.ui.ocr_button.blockSignals(True)
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)
         self.ui.llm_button.blockSignals(True)
@@ -456,14 +436,12 @@ class MainWindow(
         self.ui.sd_toggle_button.blockSignals(True)
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.controlnet_toggle_button.blockSignals(True)
-        self.ui.ocr_button.setChecked(settings["ocr_enabled"])
         self.ui.llm_button.setChecked(settings["llm_enabled"])
         self.ui.tts_button.setChecked(settings["tts_enabled"])
         self.ui.v2t_button.setChecked(settings["stt_enabled"])
         self.ui.sd_toggle_button.setChecked(settings["sd_enabled"])
         self.ui.enable_controlnet.setChecked(settings["controlnet_enabled"])
         self.ui.controlnet_toggle_button.setChecked(settings["controlnet_enabled"])
-        self.ui.ocr_button.blockSignals(False)
         self.ui.llm_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
@@ -651,12 +629,6 @@ class MainWindow(
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-
-    @Slot(bool)
-    def ocr_button_toggled(self, val):
-        new_settings = self.settings
-        new_settings["ocr_enabled"] = val
-        self.settings = new_settings
 
     @Slot(bool)
     def v2t_button_toggled(self, val):
@@ -947,7 +919,6 @@ class MainWindow(
             disable_llm=self.disable_llm,
             disable_tts=self.disable_tts,
             disable_stt=self.disable_stt,
-            disable_vision_capture=self.disable_vision_capture,
             do_load_llm_on_init=self.do_load_llm_on_init
         )
 

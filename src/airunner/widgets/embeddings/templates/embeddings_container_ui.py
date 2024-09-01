@@ -44,6 +44,7 @@ class Ui_embeddings_container(object):
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setSpacing(10)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(-1, -1, 10, -1)
         self.lineEdit = QLineEdit(embeddings_container)
         self.lineEdit.setObjectName(u"lineEdit")
 
@@ -73,7 +74,7 @@ class Ui_embeddings_container(object):
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setHorizontalSpacing(0)
         self.gridLayout_2.setVerticalSpacing(10)
-        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout_2.setContentsMargins(0, 0, 10, 0)
         self.embeddings.setWidget(self.scrollAreaWidgetContents)
 
         self.gridLayout.addWidget(self.embeddings, 3, 0, 1, 1)
