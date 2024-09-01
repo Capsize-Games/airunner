@@ -6,136 +6,291 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>474</width>
-    <height>1030</height>
+    <width>597</width>
+    <height>986</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <item row="5" column="0">
-    <widget class="QProgressBar" name="progressBar">
-     <property name="value">
+  <layout class="QGridLayout" name="gridLayout_3">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="horizontalSpacing">
+    <number>0</number>
+   </property>
+   <property name="verticalSpacing">
+    <number>10</number>
+   </property>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
       <number>0</number>
      </property>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="QPushButton" name="clear_conversatiion_button">
-     <property name="toolTip">
-      <string>Clear conversation</string>
+     <property name="leftMargin">
+      <number>10</number>
      </property>
-     <property name="text">
-      <string/>
+     <property name="topMargin">
+      <number>10</number>
      </property>
-     <property name="icon">
-      <iconset theme="user-trash"/>
+     <property name="rightMargin">
+      <number>10</number>
      </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QPushButton" name="pushButton">
-     <property name="text">
-      <string>Interrupt</string>
+     <property name="bottomMargin">
+      <number>10</number>
      </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QPushButton" name="send_button">
-     <property name="toolTip">
-      <string>Send message</string>
-     </property>
-     <property name="text">
-      <string>Send</string>
-     </property>
-    </widget>
+     <item>
+      <widget class="QProgressBar" name="progressBar">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="value">
+        <number>0</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="send_button">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>30</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>Send message</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="go-up"/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>30</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>Cancel message</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="application-exit"/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="clear_conversatiion_button">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>30</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>Clear conversation</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="user-trash"/>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item row="0" column="0">
-    <widget class="QSplitter" name="chat_prompt_splitter">
-     <property name="orientation">
-      <enum>Qt::Orientation::Vertical</enum>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
      </property>
-     <property name="childrenCollapsible">
-      <bool>false</bool>
-     </property>
-     <widget class="QWidget" name="verticalLayoutWidget">
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <widget class="QScrollArea" name="chat_container">
-         <property name="frameShape">
-          <enum>QFrame::Shape::NoFrame</enum>
+     <widget class="QWidget" name="scrollAreaWidgetContents_2">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>595</width>
+        <height>924</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayout">
+       <property name="leftMargin">
+        <number>10</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="horizontalSpacing">
+        <number>0</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
+       </property>
+       <item row="1" column="0">
+        <widget class="QComboBox" name="action">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
          </property>
-         <property name="widgetResizable">
-          <bool>true</bool>
+         <property name="sizeAdjustPolicy">
+          <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
          </property>
-         <widget class="QWidget" name="scrollAreaWidgetContents">
-          <property name="geometry">
-           <rect>
-            <x>0</x>
-            <y>0</y>
-            <width>454</width>
-            <height>427</height>
-           </rect>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_2">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item row="0" column="0">
-            <widget class="QTextEdit" name="conversation">
-             <property name="font">
-              <font>
-               <family>CCJoeKubert</family>
-              </font>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QSplitter" name="chat_prompt_splitter">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="childrenCollapsible">
+          <bool>false</bool>
+         </property>
+         <widget class="QWidget" name="verticalLayoutWidget">
+          <layout class="QVBoxLayout" name="verticalLayout">
+           <item>
+            <widget class="QScrollArea" name="chat_container">
+             <property name="frameShape">
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
-             <property name="readOnly">
+             <property name="widgetResizable">
               <bool>true</bool>
              </property>
+             <widget class="QWidget" name="scrollAreaWidgetContents">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>573</width>
+                <height>440</height>
+               </rect>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_2">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="QTextEdit" name="conversation">
+                 <property name="font">
+                  <font>
+                   <family>CCJoeKubert</family>
+                  </font>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </item>
           </layout>
+         </widget>
+         <widget class="QPlainTextEdit" name="prompt">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>150</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>16777215</height>
+           </size>
+          </property>
          </widget>
         </widget>
        </item>
       </layout>
      </widget>
-     <widget class="QPlainTextEdit" name="prompt">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>150</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>16777215</height>
-       </size>
-      </property>
-     </widget>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QComboBox" name="action">
-     <property name="sizeAdjustPolicy">
-      <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
-     </property>
     </widget>
    </item>
   </layout>

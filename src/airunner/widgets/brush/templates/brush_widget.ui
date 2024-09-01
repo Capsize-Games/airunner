@@ -32,33 +32,7 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="0" column="0">
-    <widget class="QLabel" name="label">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Brush Settings</string>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="0">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="widgetResizable">
       <bool>true</bool>
@@ -69,7 +43,7 @@
         <x>0</x>
         <y>0</y>
         <width>1002</width>
-        <height>580</height>
+        <height>593</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -80,7 +54,7 @@
         <number>0</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
         <number>0</number>
@@ -232,6 +206,25 @@
        </item>
       </layout>
      </widget>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Brush Settings</string>
+     </property>
     </widget>
    </item>
   </layout>

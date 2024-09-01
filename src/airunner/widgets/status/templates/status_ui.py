@@ -22,7 +22,7 @@ class Ui_status_widget(object):
     def setupUi(self, status_widget):
         if not status_widget.objectName():
             status_widget.setObjectName(u"status_widget")
-        status_widget.resize(483, 84)
+        status_widget.resize(493, 84)
         status_widget.setStyleSheet(u"font-size: 12px")
         self.horizontalLayout = QHBoxLayout(status_widget)
         self.horizontalLayout.setSpacing(5)
@@ -34,26 +34,11 @@ class Ui_status_widget(object):
 
         self.horizontalLayout.addWidget(self.system_message)
 
-        self.line_5 = QFrame(status_widget)
-        self.line_5.setObjectName(u"line_5")
+        self.nsfw_line = QFrame(status_widget)
+        self.nsfw_line.setObjectName(u"nsfw_line")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.line_5.sizePolicy().hasHeightForWidth())
-        self.line_5.setSizePolicy(sizePolicy)
-        self.line_5.setFrameShape(QFrame.Shape.VLine)
-        self.line_5.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.horizontalLayout.addWidget(self.line_5)
-
-        self.queue_stats = QLabel(status_widget)
-        self.queue_stats.setObjectName(u"queue_stats")
-        self.queue_stats.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        self.horizontalLayout.addWidget(self.queue_stats)
-
-        self.nsfw_line = QFrame(status_widget)
-        self.nsfw_line.setObjectName(u"nsfw_line")
         sizePolicy.setHeightForWidth(self.nsfw_line.sizePolicy().hasHeightForWidth())
         self.nsfw_line.setSizePolicy(sizePolicy)
         self.nsfw_line.setFrameShape(QFrame.Shape.VLine)
@@ -149,7 +134,6 @@ class Ui_status_widget(object):
     def retranslateUi(self, status_widget):
         status_widget.setWindowTitle(QCoreApplication.translate("status_widget", u"Form", None))
         self.system_message.setText(QCoreApplication.translate("status_widget", u"system message", None))
-        self.queue_stats.setText(QCoreApplication.translate("status_widget", u"Queued items: 0", None))
         self.nsfw_status.setText(QCoreApplication.translate("status_widget", u"Safety Checker", None))
         self.cuda_status.setText(QCoreApplication.translate("status_widget", u"NVIDIA", None))
         self.sd_status.setText(QCoreApplication.translate("status_widget", u"SD", None))
