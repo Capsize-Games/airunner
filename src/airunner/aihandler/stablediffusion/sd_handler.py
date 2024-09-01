@@ -283,10 +283,7 @@ class SDHandler(
     def do_load_compel(self) -> bool:
         return self.pipe and (
             (
-                self.use_compel and (
-                    self.prompt_embeds is None or
-                    self.negative_prompt_embeds is None
-                ) and not self.is_sd_xl and not self.is_sd_xl_turbo
+                self.use_compel and not self.is_sd_xl and not self.is_sd_xl_turbo
             )
         )
 
