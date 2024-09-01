@@ -42,7 +42,6 @@ class CausalLMTransformerBaseHandler(
         self.restrict_tools_to_additional: bool = True
         self.return_agent_code: bool = False
         self.batch_size: int = 1
-        self.vision_history: list = []
         self._model_status = ModelStatus.UNLOADED
         super().__init__(*args, **kwargs)
 
@@ -113,13 +112,10 @@ class CausalLMTransformerBaseHandler(
     def load_tools() -> dict:
         return {
             # LLMToolName.QUIT_APPLICATION.value: QuitApplicationTool(),
-            # LLMToolName.VISION_START_CAPTURE.value: StartVisionCaptureTool(),
-            # LLMToolName.VISION_STOP_CAPTURE.value: StopVisionCaptureTool(),
             # LLMToolName.STT_START_CAPTURE.value: StartAudioCaptureTool(),
             # LLMToolName.STT_STOP_CAPTURE.value: StopAudioCaptureTool(),
             # LLMToolName.TTS_ENABLE.value: StartSpeakersTool(),
             # LLMToolName.TTS_DISABLE.value: StopSpeakersTool(),
-            # LLMToolName.DESCRIBE_IMAGE.value: ProcessVisionTool,
             # LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
             # LLMToolName.BASH_EXECUTE.value: BashExecuteTool(),
             # LLMToolName.WRITE_FILE.value: WriteFileTool(),
@@ -144,7 +140,6 @@ class CausalLMTransformerBaseHandler(
         self.guardrails_prompt = current_bot["guardrails_prompt"]
         self.system_instructions = current_bot["system_instructions"]
         self.batch_size = self.settings["llm_generator_settings"]["batch_size"]
-        self.vision_history = data.get("vision_history", [])
         action = self.settings["llm_generator_settings"]["action"]
         for action_type in LLMActionType:
             if action_type.value == action:
@@ -225,14 +220,11 @@ class CausalLMTransformerBaseHandler(
 
     def do_generate(self, prompt, action):
         self.logger.debug("Generating response")
-        self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
         self.chat_agent.run(
             prompt,
-            action,
-            vision_history=self.vision_history
+            action
         )
         self.send_final_message()
-        self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
 
     def emit_streamed_text_signal(self, **kwargs):
         kwargs["name"] = self.botname
