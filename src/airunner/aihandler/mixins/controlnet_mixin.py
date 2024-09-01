@@ -113,11 +113,13 @@ class ControlnetHandlerMixin:
         self.apply_controlnet_to_pipe()
 
     def unload_controlnet(self):
-        if self.current_state not in (
+        threading.Thread(target=self.__unload_controlnet_thread).start()
+
+    def __unload_controlnet_thread(self):
+        if self.current_state in (
             HandlerState.READY,
             HandlerState.INITIALIZED
         ):
-            print("CURRENT STATE NOT READ", self.current_state)
             self.__requested_action = ModelAction.CLEAR
             return
         self.logger.debug("Clearing controlnet")
@@ -189,7 +191,7 @@ class ControlnetHandlerMixin:
             if is_sd_xl:
                 params["variant"] = "fp16"
             self.controlnet = ControlNetModel.from_pretrained(path, **params)
-            self.__change_controlnet_model_status(ModelStatus.READY)
+            self.__change_controlnet_model_status(ModelStatus.LOADED)
 
         except Exception as e:
             self.logger.error(f"Error loading controlnet {e}")
@@ -254,7 +256,7 @@ class ControlnetHandlerMixin:
             self.pipe.controlnet = None
         self.controlnet.to("cpu")
         clear_memory()
-        self.__change_controlnet_model_status(ModelStatus.READY)
+        self.__change_controlnet_model_status(ModelStatus.UNLOADED)
 
     def __apply_controlnet_to_pipe(self):
         self.pipe.controlnet = self.controlnet

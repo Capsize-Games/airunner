@@ -56,9 +56,11 @@ QFrame {
 
 QLabel {
     color: #C8C8C8;
-    margin-bottom: 10px;
-    font-size: 8px;
     font-weight: bold;
+}
+
+QWidget#section_header {
+    font-size: 14pt;
 }
 
 QLineEdit {
@@ -583,8 +585,9 @@ QGroupBox {
 QDoubleSpinBox {
     background-color: #333; /* Set the desired background color */
     border: 1px solid rgba(0, 132, 185, 50); /* Add a border */
-    padding: 5px; /* Adjust padding as needed */
+    padding: 2px; /* Adjust padding as needed */
     color: #C8C8C8; /* Set text color */
+    min-width: 50px; /* Set the minimum width */
 }
 
 QDoubleSpinBox::up-button {

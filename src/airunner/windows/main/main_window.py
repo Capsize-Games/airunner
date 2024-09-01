@@ -370,6 +370,7 @@ class MainWindow(
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.action_reset_settings)
         self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal)
         self.register(SignalCode.REFRESH_STYLESHEET_SIGNAL, self.refresh_stylesheet)
+        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
 
     def on_reset_paths_signal(self):
         settings = self.settings
@@ -1142,22 +1143,25 @@ class MainWindow(
             self.update()
             self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
 
+        self.ui.sd_toggle_button.setEnabled(False)
+
     @Slot(bool)
     def action_controlnet_toggled(self, val: bool):
         settings = self.settings
         settings["controlnet_enabled"] = val
         self.settings = settings
-        if val:
-            self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
-        else:
-            self.emit_signal(SignalCode.CONTROLNET_UNLOAD_SIGNAL)
-
         self.ui.controlnet_toggle_button.blockSignals(True)
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.controlnet_toggle_button.setChecked(val)
         self.ui.enable_controlnet.setChecked(val)
+        self.ui.enable_controlnet.setEnabled(False)
+        self.ui.controlnet_toggle_button.setEnabled(False)
         self.ui.enable_controlnet.blockSignals(False)
         self.ui.controlnet_toggle_button.blockSignals(False)
+        if val:
+            self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
+        else:
+            self.emit_signal(SignalCode.CONTROLNET_UNLOAD_SIGNAL)
 
     @Slot()
     def action_stats_triggered(self):
@@ -1165,3 +1169,17 @@ class MainWindow(
         widget = StatsWidget()
         # display in a window
         widget.show()
+
+
+    def on_model_status_changed_signal(self, data):
+        if data["status"] in (
+            ModelStatus.LOADED,
+            ModelStatus.FAILED,
+            ModelStatus.READY,
+            ModelStatus.UNLOADED
+        ):
+            if data["model"] is ModelType.SD:
+                print(data["status"])
+                self.ui.sd_toggle_button.setEnabled(True)
+            elif data["model"] is ModelType.CONTROLNET:
+                self.ui.controlnet_toggle_button.setEnabled(True)

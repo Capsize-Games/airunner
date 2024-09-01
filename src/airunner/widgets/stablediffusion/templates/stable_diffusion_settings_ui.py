@@ -32,19 +32,35 @@ class Ui_stable_diffusion_settings_widget(object):
         stable_diffusion_settings_widget.setMaximumSize(QSize(16777215, 16777215))
         self.gridLayout_2 = QGridLayout(stable_diffusion_settings_widget)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setHorizontalSpacing(0)
         self.gridLayout_2.setVerticalSpacing(10)
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.label = QLabel(stable_diffusion_settings_widget)
+        self.label.setObjectName(u"label")
+        font = QFont()
+        font.setBold(True)
+        self.label.setFont(font)
+
+        self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
+
+        self.line = QFrame(stable_diffusion_settings_widget)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.gridLayout_2.addWidget(self.line, 1, 0, 1, 1)
+
         self.scrollArea = QScrollArea(stable_diffusion_settings_widget)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 409, 912))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 409, 922))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
-        self.gridLayout.setContentsMargins(10, 0, 10, 0)
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalSpacer = QSpacerItem(20, 394, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.gridLayout.addItem(self.verticalSpacer, 11, 1, 1, 1)
@@ -101,10 +117,10 @@ class Ui_stable_diffusion_settings_widget(object):
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.label_6 = QLabel(self.scrollAreaWidgetContents)
         self.label_6.setObjectName(u"label_6")
-        font = QFont()
-        font.setPointSize(8)
-        font.setBold(True)
-        self.label_6.setFont(font)
+        font1 = QFont()
+        font1.setPointSize(8)
+        font1.setBold(True)
+        self.label_6.setFont(font1)
 
         self.verticalLayout_7.addWidget(self.label_6)
 
@@ -121,7 +137,7 @@ class Ui_stable_diffusion_settings_widget(object):
         self.model_layout.setObjectName(u"model_layout")
         self.label_3 = QLabel(self.scrollAreaWidgetContents)
         self.label_3.setObjectName(u"label_3")
-        self.label_3.setFont(font)
+        self.label_3.setFont(font1)
 
         self.model_layout.addWidget(self.label_3)
 
@@ -139,7 +155,7 @@ class Ui_stable_diffusion_settings_widget(object):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.label_4 = QLabel(self.scrollAreaWidgetContents)
         self.label_4.setObjectName(u"label_4")
-        self.label_4.setFont(font)
+        self.label_4.setFont(font1)
 
         self.verticalLayout_2.addWidget(self.label_4)
 
@@ -228,7 +244,7 @@ class Ui_stable_diffusion_settings_widget(object):
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.label_5 = QLabel(self.scrollAreaWidgetContents)
         self.label_5.setObjectName(u"label_5")
-        self.label_5.setFont(font)
+        self.label_5.setFont(font1)
 
         self.verticalLayout_4.addWidget(self.label_5)
 
@@ -251,31 +267,7 @@ class Ui_stable_diffusion_settings_widget(object):
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
-        self.gridLayout_2.addWidget(self.scrollArea, 3, 0, 1, 1)
-
-        self.line = QFrame(stable_diffusion_settings_widget)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.Shape.HLine)
-        self.line.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.gridLayout_2.addWidget(self.line, 2, 0, 1, 1)
-
-        self.header = QWidget(stable_diffusion_settings_widget)
-        self.header.setObjectName(u"header")
-        self.header.setMinimumSize(QSize(0, 0))
-        self.gridLayout_3 = QGridLayout(self.header)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.gridLayout_3.setContentsMargins(10, 10, 10, 0)
-        self.label = QLabel(self.header)
-        self.label.setObjectName(u"label")
-        font1 = QFont()
-        font1.setBold(True)
-        self.label.setFont(font1)
-
-        self.gridLayout_3.addWidget(self.label, 1, 0, 1, 1)
-
-
-        self.gridLayout_2.addWidget(self.header, 1, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.scrollArea, 2, 0, 1, 1)
 
 
         self.retranslateUi(stable_diffusion_settings_widget)
@@ -290,6 +282,7 @@ class Ui_stable_diffusion_settings_widget(object):
 
     def retranslateUi(self, stable_diffusion_settings_widget):
         stable_diffusion_settings_widget.setWindowTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Form", None))
+        self.label.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Stable Diffusion", None))
         self.steps_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Steps", None))
         self.scale_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Scale", None))
         self.use_compel.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Use Compel", None))
@@ -303,6 +296,5 @@ class Ui_stable_diffusion_settings_widget(object):
         self.seed_widget.setProperty("property_name", QCoreApplication.translate("stable_diffusion_settings_widget", u"generator_settings.random_seed", None))
         self.clip_skip_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Clip Skip", None))
         self.label_5.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Pipeline", None))
-        self.label.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Stable Diffusion", None))
     # retranslateUi
 
