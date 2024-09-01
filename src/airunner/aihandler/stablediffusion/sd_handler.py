@@ -326,7 +326,7 @@ class SDHandler(
                 self.log_error(e, "Failed to generate")
             self.current_state = HandlerState.READY
 
-    def __reload_prompts(self):
+    def reload_prompts(self):
         settings = self.settings
         if (
             settings["generator_settings"]["image_preset"] != self.image_preset
@@ -356,7 +356,6 @@ class SDHandler(
             del self.data["negative_prompt"]
 
     def __run(self, message: dict):
-        self.__reload_prompts()
         try:
             response = self.generate(
                 self.settings,

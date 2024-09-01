@@ -212,8 +212,6 @@ class GeneratorForm(BaseWidget):
         y = get_integer_value(self.ui.negative_target_size_y)
         settings["generator_settings"]["negative_target_size"] = (x, y)
 
-        print(settings["generator_settings"]["second_prompt"])
-
         self.settings = settings
 
     def handle_interrupt_button_clicked(self):
