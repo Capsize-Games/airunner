@@ -325,6 +325,13 @@ class ModelMixin:
             raise SafetyCheckerNotLoadedException()
 
         # Prepare the arguments for the pipeline
+
+        # Add lora to the pipeline
+        self.add_lora_to_pipe()
+
+        # Add embeddings to the pipeline
+        self.load_learned_embed_in_clip()
+
         data = self.__prepare_data()
         self.__finalize_pipeline(data)
 
@@ -368,10 +375,8 @@ class ModelMixin:
             # Swap the pipeline if the request is different from the current pipeline
             self.__pipe_swap(data)
 
-            # Add lora to the pipeline
-            self.add_lora_to_pipe()
-
             self.pipe_finalized = True
+
 
     def __pipe_swap(self, data):
         enable_controlnet = self.enable_controlnet
