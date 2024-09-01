@@ -256,6 +256,8 @@ class ModelMixin:
         pooled_prompt_embeds = None
         negative_pooled_prompt_embeds = None
 
+        self.reload_prompts()
+
         if self.is_sd_xl:
             self.pipe.to(self.device)
             (
