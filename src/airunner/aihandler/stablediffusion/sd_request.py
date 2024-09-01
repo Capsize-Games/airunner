@@ -7,7 +7,7 @@ from cryptography.fernet import Fernet
 from airunner.enums import (
     SDMode,
     GeneratorSection,
-    Controlnet, ImageCategory, ImagePreset
+    Controlnet, ImageCategory, ImagePreset, StableDiffusionVersion
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import (
@@ -35,6 +35,10 @@ class ControlnetImageSettings:
 
 class GeneratorSettings:
     @property
+    def image_preset(self):
+        return self.generator_settings.get("image_preset", "")
+
+    @property
     def prompt(self):
         prompt = ""
         if self.image_preset != "":
@@ -61,12 +65,40 @@ class GeneratorSettings:
             elif preset_enum is ImagePreset.PHOTOGRAPH:
                 negative_prompt = "illustration, drawing, painting, digital art"
             elif preset_enum is ImagePreset.PAINTING:
-                negative_prompt = "illustration, drawing, photograph, photo, realistic, photo realistic, ultra realistic, cgi"
+                negative_prompt = "photograph, photo, cgi, video footage, video game footage"
         return f"{negative_prompt} {self._negative_prompt}"
 
     @negative_prompt.setter
     def negative_prompt(self, value):
         self._negative_prompt = value
+
+    @property
+    def second_prompt(self):
+        second_prompt = self.generator_settings.get("second_prompt", "")
+        prompt = ""
+        if self.image_preset != "":
+            preset_enum = ImagePreset(self.image_preset)
+            if preset_enum is ImagePreset.ILLUSTRATION:
+                prompt = "A beautiful illustration of a"
+            elif preset_enum is ImagePreset.PHOTOGRAPH:
+                prompt = "A beautiful photograph of a"
+            elif preset_enum is ImagePreset.PAINTING:
+                prompt = "A beautiful painting of a"
+        return f"{prompt} {second_prompt}"
+
+    @property
+    def second_negative_prompt(self):
+        second_negative_prompt = self.generator_settings.get("second_negative_prompt", "")
+        negative_prompt = ""
+        if self.image_preset != "":
+            preset_enum = ImagePreset(self.image_preset)
+            if preset_enum is ImagePreset.ILLUSTRATION:
+                negative_prompt = "photograph, realistic, photo realistic, ultra realistic, cgi"
+            elif preset_enum is ImagePreset.PHOTOGRAPH:
+                negative_prompt = "illustration, drawing, painting, digital art"
+            elif preset_enum is ImagePreset.PAINTING:
+                negative_prompt = "illustration, drawing, photograph, photo, realistic, photo realistic, ultra realistic, cgi"
+        return f"{negative_prompt} {second_negative_prompt}"
 
     def __init__(self, settings: dict):
         generator_settings = settings["generator_settings"]
@@ -75,7 +107,7 @@ class GeneratorSettings:
         self._prompt = ""
         self._negative_prompt = ""
 
-        self.image_preset = generator_settings.get("image_preset", STABLEDIFFUSION_GENERATOR_SETTINGS["image_preset"])
+
         self.prompt = generator_settings.get("prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt"])
         self.negative_prompt = generator_settings.get("negative_prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["negative_prompt"])
         self.steps = generator_settings.get("steps", STABLEDIFFUSION_GENERATOR_SETTINGS["steps"])
