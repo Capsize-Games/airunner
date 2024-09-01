@@ -49,10 +49,8 @@ class SDWorker(Worker):
             (SignalCode.SCHEDULER_LOAD_SIGNAL, self.on_scheduler_load_signal),
             (SignalCode.SCHEDULER_UNLOAD_SIGNAL, self.on_scheduler_unload_signal),
             (SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal),
-            (SignalCode.EMBEDDING_UPDATE_SIGNAL, self.update_embedding),
             (SignalCode.EMBEDDING_SCAN_SIGNAL, self.scan_for_embeddings),
             (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings),
-            (SignalCode.EMBEDDING_GET_ALL_SIGNAL, self.get_embeddings),
             (SignalCode.SD_STATE_CHANGED_SIGNAL, self.handle_sd_state_changed_signal),
             (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_load_safety_checker),
             (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.on_unload_safety_checker),
@@ -74,10 +72,6 @@ class SDWorker(Worker):
     def on_unload_safety_checker(self):
         if self.sd:
             self.sd.unload_safety_checker()
-
-    def update_embedding(self, message):
-        if self.sd:
-            self.sd.update_embedding(message)
 
     def scan_for_embeddings(self):
         if self.sd:

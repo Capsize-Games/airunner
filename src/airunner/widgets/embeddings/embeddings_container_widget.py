@@ -1,16 +1,19 @@
-import threading
+import os
 
-from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode
-from airunner.utils.create_worker import create_worker
+from airunner.utils.models.scan_path_for_items import scan_path_for_items
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
+from airunner.windows.main.embedding_mixin import EmbeddingMixin
 
 
-class EmbeddingsContainerWidget(BaseWidget):
+class EmbeddingsContainerWidget(
+    BaseWidget,
+    EmbeddingMixin
+):
     widget_class_ = Ui_embeddings_container
     _embedding_names = None
     embedding_widgets = {}
@@ -19,9 +22,8 @@ class EmbeddingsContainerWidget(BaseWidget):
     spacer = None
 
     def __init__(self, *args, **kwargs):
+        EmbeddingMixin.__init__(self)
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.EMBEDDING_LOAD_FAILED_SIGNAL, self.on_embedding_load_failed_signal)
-        self.register(SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL, self.on_get_all_embeddings_signal)
         self.initialized = False
 
     def showEvent(self, event):
@@ -41,29 +43,18 @@ class EmbeddingsContainerWidget(BaseWidget):
     def register_embedding_widget(self, name, widget):
         self.embedding_widgets[name] = widget
 
-    def handle_embedding_load_failed(self, message):
-        # TODO:
-        #  on model change, re-enable the buttons
-        embedding_name = message["embedding_name"]
-        model_name = message["model_name"]
-        self.disable_embedding(embedding_name, model_name)
-
     def update_embedding_names(self):
         self._embedding_names = None
         self.load_embeddings()
 
-    def on_embedding_load_failed_signal(self, response: dict):
-        self.handle_embedding_load_failed(response["message"])
-
     def load_embeddings(self):
-        threading.Thread(target=self._load_embeddings).start()
+        self._load_embeddings()
 
     def _load_embeddings(self):
-        self.emit_signal(SignalCode.EMBEDDING_GET_ALL_SIGNAL, {"name_filter": self.search_filter})
+        embeddings = self.get_embeddings({"name_filter": self.search_filter})
 
-    def on_get_all_embeddings_signal(self, message: dict):
-        embeddings = message["embeddings"]
         self.clear_embedding_widgets()
+
 
         for embedding in embeddings:
             self.add_embedding(embedding)
@@ -85,10 +76,16 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.emit_signal(SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL)
 
     def scan_for_embeddings(self):
-        threading.Thread(target=self._scan_for_embeddings).start()
-
-    def _scan_for_embeddings(self):
-        self.emit_signal(SignalCode.EMBEDDING_SCAN_SIGNAL)
+        self.clear_embedding_widgets()
+        settings = self.settings
+        settings["embeddings"] = scan_path_for_items(
+            base_path=self.settings["path_settings"]["base_path"],
+            current_items=self.settings["embeddings"],
+            scan_type="embeddings"
+        )
+        self.settings = settings
+        self.save_settings()
+        self.load_embeddings()
 
     def toggle_all_toggled(self, val):
         embedding_widgets = [
@@ -102,8 +99,8 @@ class EmbeddingsContainerWidget(BaseWidget):
             embedding_widget.action_toggled_embedding(val, False)
             embedding_widget.ui.enabledCheckbox.blockSignals(False)
         QApplication.processEvents()
-        for index, _embedding in enumerate(self.settings["embeddings"]):
-            settings["embeddings"][index]["active"] = val
+        for index, _embedding in enumerate(self.settings["embeddings"][self.settings["generator_settings"]["version"]]):
+            settings["embeddings"][self.settings["generator_settings"]["version"]][index]["active"] = val
         self.settings = settings
 
     def search_text_changed(self, val):
