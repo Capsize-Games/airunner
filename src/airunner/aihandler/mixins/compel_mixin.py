@@ -1,4 +1,6 @@
 from compel import Compel, DiffusersTextualInversionManager, ReturnedEmbeddingsType
+
+from airunner.utils.clear_memory import clear_memory
 from airunner.utils.get_torch_device import get_torch_device
 
 
@@ -14,10 +16,15 @@ class CompelMixin:
 
     def clear_prompt_embeds(self):
         self.logger.debug("Clearing prompt embeds")
+        if self.prompt_embeds is not None:
+            self.prompt_embeds.to("cpu")
+        if self.negative_prompt_embeds is not None:
+            self.negative_prompt_embeds.to("cpu")
         self.prompt_embeds = None
         self.negative_prompt_embeds = None
         self.pooled_prompt_embeds = None
         self.pooled_negative_prompt_embeds = None
+        clear_memory()
 
     def load_prompt_embeds(
         self,
