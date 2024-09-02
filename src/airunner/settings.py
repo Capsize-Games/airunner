@@ -741,8 +741,6 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     second_negative_prompt="",
     steps=20,
     ddim_eta=0.5,
-    height=512,
-    width=512,
     scale=750,
     seed=42,
     random_seed=True,
@@ -990,10 +988,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     autoload_sd=True,
     autoload_llm=False,
     show_nsfw_warning=True,
-    document_settings={
-        "width": 512,
-        "height": 512,
-    },
     font_settings={
         "chat": {
             "font_family": "Arial",
