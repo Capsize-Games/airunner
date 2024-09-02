@@ -97,8 +97,8 @@ class GeneratorForm(BaseWidget):
         rect = QRect(
             settings["active_grid_settings"]["pos_x"],
             settings["active_grid_settings"]["pos_y"],
-            settings["active_grid_settings"]["width"],
-            settings["active_grid_settings"]["height"]
+            settings["working_width"],
+            settings["working_height"]
         )
         rect.translate(-settings["canvas_settings"]["pos_x"], -settings["canvas_settings"]["pos_y"])
 
