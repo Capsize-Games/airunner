@@ -52,7 +52,6 @@ class CanvasWidget(
         self.canvas_resize_worker = None
         self.signal_handlers = {
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
-            SignalCode.CANVAS_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
         }
         self.worker_class_map = {
@@ -138,9 +137,6 @@ class CanvasWidget(
     def canvas_drag_pos(self):
         return self.drag_pos
 
-    def on_canvas_do_draw_signal(self, force_draw: bool = False):
-        self.do_draw(force_draw=force_draw)
-
     def toggle_grid(self, val):
         self.do_draw()
     
@@ -208,12 +204,10 @@ class CanvasWidget(
     
     def do_draw(
         self,
-        force_draw: bool = False,
-        do_draw_layers: bool = None
+        force_draw: bool = False
     ):
         self.emit_signal(SignalCode.SCENE_DO_DRAW_SIGNAL, {
-            "force_draw": force_draw,
-            "do_draw_layers": do_draw_layers
+            "force_draw": force_draw
         })
         self.ui.canvas_container_size = self.ui.canvas_container.viewport().size()
 
