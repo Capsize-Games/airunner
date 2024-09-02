@@ -1111,18 +1111,15 @@ class MainWindow(
         settings = self.settings
         settings["controlnet_enabled"] = val
         self.settings = settings
-        self.ui.controlnet_toggle_button.blockSignals(True)
-        self.ui.enable_controlnet.blockSignals(True)
-        self.ui.controlnet_toggle_button.setChecked(val)
-        self.ui.enable_controlnet.setChecked(val)
-        self.ui.enable_controlnet.setEnabled(False)
-        self.ui.controlnet_toggle_button.setEnabled(False)
-        self.ui.enable_controlnet.blockSignals(False)
-        self.ui.controlnet_toggle_button.blockSignals(False)
-        if val:
-            self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
-        else:
-            self.emit_signal(SignalCode.CONTROLNET_UNLOAD_SIGNAL)
+
+        for widget in [self.ui.controlnet_toggle_button, self.ui.enable_controlnet]:
+            widget.blockSignals(True)
+            widget.setChecked(val)
+            widget.setEnabled(False)
+            widget.blockSignals(False)
+
+        signal = SignalCode.CONTROLNET_LOAD_SIGNAL if val else SignalCode.CONTROLNET_UNLOAD_SIGNAL
+        self.emit_signal(signal)
 
     @Slot()
     def action_stats_triggered(self):
