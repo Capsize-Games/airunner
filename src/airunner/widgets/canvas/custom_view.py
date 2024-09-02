@@ -61,6 +61,19 @@ class CustomGraphicsView(
     def canvas_type(self) -> str:
         return self.property("canvas_type")
 
+    @property
+    def __do_show_active_grid_area(self):
+        return self.canvas_type in (
+            CanvasType.IMAGE.value,
+        )
+
+    @property
+    def __can_draw_grid(self):
+        return self.settings["grid_settings"]["show_grid"] and self.canvas_type in (
+            CanvasType.IMAGE.value,
+            CanvasType.BRUSH.value,
+        )
+
     def on_main_window_loaded_signal(self):
         self.initialized = True
         self.do_draw()
@@ -92,8 +105,8 @@ class CustomGraphicsView(
         self.drawing = False
 
     def draw_grid(self):
-        if self.canvas_type != CanvasType.IMAGE.value:
-            return
+        if not self.__can_draw_grid:
+            pass
 
         if self.line_group is None:
             self.line_group = QGraphicsItemGroup()
@@ -239,15 +252,12 @@ class CustomGraphicsView(
             # Clear the selection from the scene
             self._scene.clear_selection()
         self.show_active_grid_area()
-        self.emit_signal(
-            SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED,
-            {
-                "settings": settings
-            }
-        )
+        self.emit_signal(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED, {
+            "settings": settings
+        })
 
     def show_active_grid_area(self):
-        if self.canvas_type != CanvasType.IMAGE.value:
+        if not self.__do_show_active_grid_area:
             return
 
         # Create an ActiveGridArea object if it doesn't exist
@@ -279,8 +289,8 @@ class CustomGraphicsView(
         self.setContentsMargins(0, 0, 0, 0)
         self.create_scene()
 
-        if self.canvas_type == CanvasType.IMAGE.value:
-            self.do_draw(True)
+        self.do_draw(True)
+
         self._scene.showEvent(event)
         self.toggle_drag_mode()
 
@@ -288,21 +298,9 @@ class CustomGraphicsView(
         if self._scene and self._scene.painter:
             self._scene.painter.end()
         if self.canvas_type == CanvasType.IMAGE.value:
-            self._scene = CustomScene(
-                self.canvas_type
-            )
+            self._scene = CustomScene(self.canvas_type)
         elif self.canvas_type == CanvasType.BRUSH.value:
-            self._scene = BrushScene(
-                self.canvas_type
-            )
-        elif self.canvas_type == CanvasType.CONTROLNET.value:
-            self._scene = ControlnetScene(
-                self.canvas_type
-            )
-        elif self.canvas_type == CanvasType.OUTPAINT.value:
-            self._scene = OutpaintScene(
-                self.canvas_type
-            )
+            self._scene = BrushScene(self.canvas_type)
         self.setScene(self._scene)
         self.set_canvas_color()
 
