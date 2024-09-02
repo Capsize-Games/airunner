@@ -25,4 +25,5 @@ class EmbeddingMixin:
                 try:
                     self.pipe.unload_textual_inversion(embedding["name"])
                 except ValueError as e:
-                    self.logger.error(f"Failed to unload embedding {embedding['name']}: {e}")
+                    if "No tokens to remove" not in str(e):
+                        self.logger.error(f"Failed to unload embedding {embedding['name']}: {e}")
