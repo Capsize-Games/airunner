@@ -112,8 +112,8 @@ class GeneratorSettings:
         self.negative_prompt = generator_settings.get("negative_prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["negative_prompt"])
         self.steps = generator_settings.get("steps", STABLEDIFFUSION_GENERATOR_SETTINGS["steps"])
         self.ddim_eta = generator_settings.get("ddim_eta", STABLEDIFFUSION_GENERATOR_SETTINGS["ddim_eta"])
-        self.height = generator_settings.get("height", STABLEDIFFUSION_GENERATOR_SETTINGS["height"])
-        self.width = generator_settings.get("width", STABLEDIFFUSION_GENERATOR_SETTINGS["width"])
+        self.height = generator_settings.get("height", settings["working_height"])
+        self.width = generator_settings.get("width", settings["working_width"])
         self.scale = generator_settings.get("scale", STABLEDIFFUSION_GENERATOR_SETTINGS["scale"]) / 100.0
         self.seed = generator_settings.get("seed", STABLEDIFFUSION_GENERATOR_SETTINGS["seed"])
         self.random_seed = generator_settings.get("random_seed", STABLEDIFFUSION_GENERATOR_SETTINGS["random_seed"])
@@ -394,8 +394,8 @@ class SDRequest(
                     else:
                         print("MASK IMAGE IS NONE")
             extra_args.update({
-                "width": self.generator_settings.width,
-                "height": self.generator_settings.height,
+                "width": self.settings["working_width"],
+                "height": self.settings["working_height"],
             })
 
         if image is not None:
