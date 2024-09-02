@@ -1,5 +1,4 @@
 import os
-from airunner.enums import SignalCode
 
 
 class EmbeddingMixin:
@@ -13,16 +12,16 @@ class EmbeddingMixin:
     def load_learned_embed_in_clip(self):
         self.logger.debug("Loading embeddings")
         for embedding in self.available_embeddings:
+            path = os.path.expanduser(embedding["path"])
             if embedding["active"]:
-                path = os.path.expanduser(embedding["path"])
                 if os.path.exists(path):
                     token = embedding["name"]
                     try:
                         self.pipe.load_textual_inversion(path, token=token, weight_name=path)
                     except Exception as e:
-                        pass
+                        self.logger.error(f"Failed to load embedding {token}: {e}")
             else:
                 try:
                     self.pipe.unload_textual_inversion(embedding["name"])
-                except ValueError:
-                    pass
+                except ValueError as e:
+                    self.logger.error(f"Failed to unload embedding {embedding['name']}: {e}")
