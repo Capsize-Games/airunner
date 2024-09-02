@@ -380,6 +380,15 @@ class ModelMixin:
             StableDiffusionXLControlNetInpaintPipeline
         )
 
+    @property
+    def pipeline_is_img2img(self):
+        return type(self.pipe) in (
+            StableDiffusionImg2ImgPipeline,
+            StableDiffusionControlNetImg2ImgPipeline,
+            StableDiffusionXLImg2ImgPipeline,
+            StableDiffusionXLControlNetImg2ImgPipeline
+        )
+
     def __finalize_pipeline(self, data):
         # Ensure controlnet is applied to the pipeline.
         model_changed = self.sd_request.model_changed
@@ -395,7 +404,8 @@ class ModelMixin:
             model_changed or
             not self.pipe_finalized or
             (not self.settings["controlnet_enabled"] and self.pipeline_is_controlnet) or
-            (self.settings["controlnet_enabled"] and not self.pipeline_is_controlnet)
+            (self.settings["controlnet_enabled"] and not self.pipeline_is_controlnet) or
+            (self.pipe and self.pipeline_is_img2img and ("image" not in data or data["image"] is None))
         ):
             # Swap the pipeline if the request is different from the current pipeline
             self.__pipe_swap(data)
@@ -411,7 +421,7 @@ class ModelMixin:
 
     def __pipe_swap(self, data):
         enable_controlnet = self.enable_controlnet
-        if "image" not in data:
+        if "image" not in data or data["image"] is None:
             enable_controlnet = False
         __pipeline_class = self.__pipeline_class(enable_controlnet)
         if type(self.pipe) is not __pipeline_class:
