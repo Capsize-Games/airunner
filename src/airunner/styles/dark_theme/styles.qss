@@ -115,17 +115,17 @@ QProgressBar {
     text-align: center;
 }
 
+QPushButton:disabled {
+    background-color: #000;
+    color: #666666;
+}
+
 QPushButton:checked {
     background-color: rgba(0, 132, 185, 100);
 }
 
 QPushButton:pressed {
     background-color: rgba(0, 132, 185, 100);
-}
-
-QPushButton:disabled {
-    background-color: #000;
-    color: #666666;
 }
 
 QWidget#qt_scrollarea_viewport {
