@@ -1,30 +1,8 @@
-import os
 import torch
-import functools
 from dataclasses import dataclass
-from typing import Optional
 import tomesd
 
-from airunner.enums import SignalCode, ModelType, DeviceName
 from airunner.utils.clear_memory import clear_memory
-
-
-@dataclass
-class UNet2DConditionOutput:
-    sample: torch.FloatTensor
-
-
-class TracedUNet(torch.nn.Module):
-    def __init__(self, pipe):
-        super().__init__()
-        self.config = pipe.unet.config
-        self.in_channels = pipe.unet.in_channels
-        self.device = pipe.unet.device
-
-    def forward(self, latent_model_input, t, encoder_hidden_states, **kwargs):
-        unet_traced = torch.jit.load("unet_traced.pt")
-        sample = unet_traced(latent_model_input, t, encoder_hidden_states)[0]
-        return UNet2DConditionOutput(sample=sample)
 
 
 class MemoryEfficientMixin:
