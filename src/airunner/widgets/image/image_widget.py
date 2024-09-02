@@ -206,42 +206,6 @@ class ImageWidget(BaseWidget):
     def cancel_delete(self):
         pass
 
-    def generate_similar(self):
-        image = Image.open(self.image_path)
-        meta_data = self.meta_data.copy()
-        meta_data.pop("seed", None)
-        meta_data["action"] = "txt2img"
-        meta_data["width"] = image.width
-        meta_data["height"] = image.height
-        meta_data["enable_controlnet"] = True
-        meta_data["controlnet"] = "canny"
-        meta_data["controlnet_conditioning_scale"] = 1000
-        meta_data["strength"] = 1.0
-        meta_data["enable_input_image"] = True
-        meta_data["use_cropped_image"] = False
-        self.emit_signal(SignalCode.SD_GENERATE_IMAGE_SIGNAL, {
-            'image': image,
-            'override_data': meta_data
-        })
-        
-    def generate_variant(self):
-        image = Image.open(self.image_path)
-        meta_data = self.meta_data.copy()
-        meta_data.pop("seed", None)
-        meta_data["action"] = "txt2img"
-        meta_data["width"] = image.width
-        meta_data["height"] = image.height
-        meta_data["enable_controlnet"] = True
-        meta_data["controlnet"] = "canny"
-        meta_data["controlnet_conditioning_scale"] = 250
-        meta_data["strength"] = 1.0
-        meta_data["enable_input_image"] = True
-        meta_data["use_cropped_image"] = False
-        self.emit_signal(SignalCode.SD_GENERATE_IMAGE_SIGNAL, {
-            'image': image,
-            'override_data': meta_data
-        })
-
 
 class BrushImageWidget(ImageWidget):
     def __init__(self, *args, **kwargs):
