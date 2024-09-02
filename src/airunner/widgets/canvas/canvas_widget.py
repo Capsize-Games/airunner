@@ -1,8 +1,7 @@
 from typing import Optional
 
-from PIL import ImageFilter
 from PySide6 import QtWidgets
-from PySide6.QtCore import Qt, QPoint, QRect, Slot
+from PySide6.QtCore import Qt, QPoint
 
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, CanvasToolName
@@ -77,42 +76,6 @@ class CanvasWidget(
         settings["pivot_point_y"] = value.y()
         self.settings = settings
 
-    @property
-    def active_grid_area_rect(self):
-        settings = self.settings
-        rect = QRect(
-            settings["active_grid_settings"]["pos_x"],
-            settings["active_grid_settings"]["pos_y"],
-            settings["active_grid_settings"]["width"],
-            settings["active_grid_settings"]["height"]
-        )
-
-        # apply self.pos_x and self.pox_y to the rect
-        rect.translate(
-            settings["canvas_settings"]["pos_x"],
-            settings["canvas_settings"]["pos_y"]
-        )
-
-        return rect
-
-    @Slot(bool)
-    def toggle_controlnet(self, val: bool):
-        settings = self.settings
-        settings["controlnet_enabled"] = val
-        self.settings = settings
-
-    @Slot(bool)
-    def toggle_drawing_pad(self, val: bool):
-        settings = self.settings
-        settings["drawing_pad_settings"]["enabled"] = val
-        self.settings = settings
-
-    @Slot(bool)
-    def toggle_outpaint(self, val: bool):
-        settings = self.settings
-        settings["outpaint_settings"]["enabled"] = val
-        self.settings = settings
-
     def on_canvas_update_cursor_signal(self, message: dict):
         settings = self.settings
         event = message["event"]
@@ -134,9 +97,6 @@ class CanvasWidget(
             cursor = Qt.CursorShape.ArrowCursor
         self.setCursor(cursor)
 
-    def canvas_drag_pos(self):
-        return self.drag_pos
-
     def toggle_grid(self, val):
         self.do_draw()
     
@@ -152,41 +112,6 @@ class CanvasWidget(
         else:
             super().wheelEvent(event)  # Propagate the event to the base class if no modifier keys are pressed
 
-    def grid_settings_changed(self) -> bool:
-        changed = False
-        settings = self.settings
-        if "grid_settings" in settings:
-            grid_settings = settings["grid_settings"]
-            for k, v in grid_settings.items():
-                if k not in self._grid_settings or self._grid_settings[k] != v:
-                    self._grid_settings[k] = v
-                    if k == "canvas_color":
-                        self.emit_signal(SignalCode.SET_CANVAS_COLOR_SIGNAL)
-                    changed = True
-        return changed
-
-    def active_grid_settings_changed(self) -> bool:
-        changed = False
-        settings = self.settings
-        if "active_grid_settings" in settings:
-            active_grid_settings = settings["active_grid_settings"]
-            for k, v in active_grid_settings.items():
-                if k not in self._active_grid_settings or self._active_grid_settings[k] != v:
-                    self._active_grid_settings[k] = v
-                    changed = True
-        return changed
-
-    def canvas_settings_changed(self) -> bool:
-        changed = False
-        settings = self.settings
-        if "canvas_settings" in settings:
-            canvas_settings = settings["canvas_settings"]
-            for k, v in canvas_settings.items():
-                if k not in self._canvas_settings or self._canvas_settings[k] != v:
-                    self._canvas_settings[k] = v
-                    changed = True
-        return changed
-
     def showEvent(self, event):
         super().showEvent(event)
         self.do_draw(force_draw=True)
@@ -198,10 +123,6 @@ class CanvasWidget(
         self.ui.drawing_pad_groupbox.checked = settings["drawing_pad_settings"]["enabled"]
         self.ui.drawing_pad_groupbox.blockSignals(False)
 
-    def action_button_clicked_focus(self):
-        self.last_pos = QPoint(0, 0)
-        self.do_draw()
-    
     def do_draw(
         self,
         force_draw: bool = False
@@ -213,12 +134,3 @@ class CanvasWidget(
 
     def save_image(self, image_path, image=None):
         self.save_image(image_path, image, self.scene.items())
-
-    def cell_size_changed(self, _val):
-        self.do_draw()
-
-    def line_width_changed(self, _val):
-        self.do_draw()
-
-    def line_color_changed(self, _val):
-        self.do_draw()
