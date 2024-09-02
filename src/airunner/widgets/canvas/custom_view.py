@@ -66,10 +66,7 @@ class CustomGraphicsView(
         self.do_draw()
 
     def on_canvas_do_draw_signal(self, data: dict):
-        self.do_draw(
-            force_draw=data.get("force_draw", False),
-            do_draw_layers=data.get("do_draw_layers", None)
-        )
+        self.do_draw(force_draw=data.get("force_draw", False))
 
     def on_application_settings_changed_signal(self):
         self.set_canvas_color()
@@ -80,11 +77,8 @@ class CustomGraphicsView(
 
     def do_draw(
         self,
-        force_draw: bool = False,
-        do_draw_layers: bool = None
+        force_draw: bool = False
     ):
-        if do_draw_layers is not None:
-            self.do_draw_layers = do_draw_layers
         if (self.drawing or not self.initialized) and not force_draw:
             return
         self.drawing = True
@@ -165,6 +159,8 @@ class CustomGraphicsView(
                 self.logger.error(f"AttributeError: {e}")
 
     def set_scene_rect(self):
+        if not self._scene:
+            return
         canvas_container_size = self.viewport().size()
         self._scene.setSceneRect(
             0,
@@ -174,6 +170,8 @@ class CustomGraphicsView(
         )
 
     def update_scene(self):
+        if not self._scene:
+            return
         self._scene.update()
 
     def remove_scene_item(self, item):
@@ -266,7 +264,7 @@ class CustomGraphicsView(
         self.setTransform(transform)
 
         # Redraw lines
-        self.emit_signal(SignalCode.CANVAS_DO_DRAW_SIGNAL)
+        self.emit_signal(SignalCode.SCENE_DO_DRAW_SIGNAL)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -282,10 +280,9 @@ class CustomGraphicsView(
         self.create_scene()
 
         if self.canvas_type == CanvasType.IMAGE.value:
-            self.emit_signal(
-                SignalCode.CANVAS_DO_DRAW_SIGNAL,
-                True
-            )
+            self.emit_signal(SignalCode.SCENE_DO_DRAW_SIGNAL, {
+                "force_draw": True
+            })
         self._scene.showEvent(event)
         self.toggle_drag_mode()
 
@@ -333,7 +330,7 @@ class CustomGraphicsView(
                 self.horizontalScrollBar().setValue(horizontal_value)
                 self.verticalScrollBar().setValue(vertical_value)
             self.last_pos = event.pos()
-            self.emit_signal(SignalCode.CANVAS_DO_DRAW_SIGNAL)
+            self.emit_signal(SignalCode.SCENE_DO_DRAW_SIGNAL)
         original_mouse_event(event)
 
     def on_tool_changed_signal(self, message):
@@ -385,6 +382,5 @@ class CustomGraphicsView(
 
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         super().resizeEvent(event)
-        #self.emit_signal(SignalCode.CANVAS_DO_DRAW_SIGNAL)
         #self.toggle_drag_mode()
         self.do_draw()
