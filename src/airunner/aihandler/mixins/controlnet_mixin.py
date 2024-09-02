@@ -81,8 +81,8 @@ class ControlnetHandlerMixin:
     @property
     def controlnet_image(self):
         if self.settings["controlnet_enabled"] and (
-                self._controlnet_image is None or
-                self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
+            self._controlnet_image is None or
+            self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
         ):
             self._controlnet_image = self.__preprocess_for_controlnet(self.sd_request.drawing_pad_image)
         return self._controlnet_image
@@ -116,10 +116,7 @@ class ControlnetHandlerMixin:
         threading.Thread(target=self.__unload_controlnet_thread).start()
 
     def __unload_controlnet_thread(self):
-        if self.current_state in (
-            HandlerState.READY,
-            HandlerState.INITIALIZED
-        ):
+        if self.current_state is HandlerState.LOADING:
             self.__requested_action = ModelAction.CLEAR
             return
         self.logger.debug("Clearing controlnet")
@@ -130,17 +127,6 @@ class ControlnetHandlerMixin:
     def __stop_controlnet_queue_watcher(self):
         self.running = False
         self._controlnet_queue_watcher_thread.join()
-
-    def get_controlnet_image(self) -> Image.Image:
-        controlnet_image = self.controlnet_image
-        if controlnet_image:
-            self.emit_signal(
-                SignalCode.SD_CONTROLNET_IMAGE_GENERATED_SIGNAL,
-                {
-                    "image": controlnet_image
-                }
-            )
-        return controlnet_image
 
     def apply_controlnet_to_pipe(self):
         if self.pipe and self.__controlnet_ready:
