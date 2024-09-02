@@ -35,6 +35,9 @@ class MemoryEfficientMixin:
         self.__apply_all_memory_settings()
         self.__move_stable_diffusion_to_cuda()
 
+    def make_controlnet_memory_efficient(self):
+        self.__move_controlnet_to_cuda()
+
     def reset_applied_memory_settings(self):
         for key in self.settings_flags:
             if key.endswith("_applied"):
