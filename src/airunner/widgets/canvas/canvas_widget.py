@@ -60,12 +60,6 @@ class CanvasWidget(
             "image_data_worker": ImageDataWorker,
         }
 
-    def sync_splitter_1(self, pos, index):
-        self.ui.canvas_side_splitter_2.setSizes(self.ui.canvas_side_splitter.sizes())
-
-    def sync_splitter_2(self, pos, index):
-        self.ui.canvas_side_splitter.setSizes(self.ui.canvas_side_splitter_2.sizes())
-
     @property
     def image_pivot_point(self):
         settings = self.settings
@@ -212,9 +206,6 @@ class CanvasWidget(
         self.ui.drawing_pad_groupbox.blockSignals(True)
         self.ui.drawing_pad_groupbox.checked = settings["drawing_pad_settings"]["enabled"]
         self.ui.drawing_pad_groupbox.blockSignals(False)
-
-        self.ui.canvas_side_splitter.splitterMoved.connect(self.sync_splitter_1)
-        self.ui.canvas_side_splitter_2.splitterMoved.connect(self.sync_splitter_2)
 
     def action_button_clicked_focus(self):
         self.last_pos = QPoint(0, 0)
