@@ -19,7 +19,8 @@ class EmbeddingMixin:
                     try:
                         self.pipe.load_textual_inversion(path, token=token, weight_name=path)
                     except Exception as e:
-                        self.logger.error(f"Failed to load embedding {token}: {e}")
+                        if "already in tokenizer" not in str(e):
+                            self.logger.error(f"Failed to load embedding {token}: {e}")
             else:
                 try:
                     self.pipe.unload_textual_inversion(embedding["name"])
