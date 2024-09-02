@@ -42,17 +42,14 @@ class Ui_canvas(object):
         self.central_widget.setSizePolicy(sizePolicy)
         self.central_widget.setMinimumSize(QSize(0, 0))
         self.central_widget.setStyleSheet(u"")
-        self.gridLayout_6 = QGridLayout(self.central_widget)
-        self.gridLayout_6.setSpacing(0)
-        self.gridLayout_6.setObjectName(u"gridLayout_6")
-        self.gridLayout_6.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout_2 = QGridLayout(self.central_widget)
+        self.gridLayout_2.setSpacing(0)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.canvas_splitter = QSplitter(self.central_widget)
         self.canvas_splitter.setObjectName(u"canvas_splitter")
         self.canvas_splitter.setOrientation(Qt.Orientation.Horizontal)
-        self.canvas_side_splitter = QSplitter(self.canvas_splitter)
-        self.canvas_side_splitter.setObjectName(u"canvas_side_splitter")
-        self.canvas_side_splitter.setOrientation(Qt.Orientation.Vertical)
-        self.drawing_pad_groupbox = QWidget(self.canvas_side_splitter)
+        self.drawing_pad_groupbox = QWidget(self.canvas_splitter)
         self.drawing_pad_groupbox.setObjectName(u"drawing_pad_groupbox")
         self.gridLayout_3 = QGridLayout(self.drawing_pad_groupbox)
         self.gridLayout_3.setSpacing(0)
@@ -65,26 +62,8 @@ class Ui_canvas(object):
 
         self.gridLayout_3.addWidget(self.drawing_pad, 4, 0, 1, 1)
 
-        self.canvas_side_splitter.addWidget(self.drawing_pad_groupbox)
-        self.controlnet_groupbox = QWidget(self.canvas_side_splitter)
-        self.controlnet_groupbox.setObjectName(u"controlnet_groupbox")
-        self.gridLayout_2 = QGridLayout(self.controlnet_groupbox)
-        self.gridLayout_2.setSpacing(0)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.controlnet = CustomGraphicsView(self.controlnet_groupbox)
-        self.controlnet.setObjectName(u"controlnet")
-        self.controlnet.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.controlnet.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        self.gridLayout_2.addWidget(self.controlnet, 0, 0, 1, 1)
-
-        self.canvas_side_splitter.addWidget(self.controlnet_groupbox)
-        self.canvas_splitter.addWidget(self.canvas_side_splitter)
-        self.canvas_side_splitter_2 = QSplitter(self.canvas_splitter)
-        self.canvas_side_splitter_2.setObjectName(u"canvas_side_splitter_2")
-        self.canvas_side_splitter_2.setOrientation(Qt.Orientation.Vertical)
-        self.widget = QWidget(self.canvas_side_splitter_2)
+        self.canvas_splitter.addWidget(self.drawing_pad_groupbox)
+        self.widget = QWidget(self.canvas_splitter)
         self.widget.setObjectName(u"widget")
         self.gridLayout_4 = QGridLayout(self.widget)
         self.gridLayout_4.setSpacing(0)
@@ -97,24 +76,9 @@ class Ui_canvas(object):
 
         self.gridLayout_4.addWidget(self.canvas_container, 0, 0, 1, 1)
 
-        self.canvas_side_splitter_2.addWidget(self.widget)
-        self.widget_2 = QWidget(self.canvas_side_splitter_2)
-        self.widget_2.setObjectName(u"widget_2")
-        self.gridLayout_5 = QGridLayout(self.widget_2)
-        self.gridLayout_5.setSpacing(0)
-        self.gridLayout_5.setObjectName(u"gridLayout_5")
-        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
-        self.controlnet_2 = CustomGraphicsView(self.widget_2)
-        self.controlnet_2.setObjectName(u"controlnet_2")
-        self.controlnet_2.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.controlnet_2.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.canvas_splitter.addWidget(self.widget)
 
-        self.gridLayout_5.addWidget(self.controlnet_2, 0, 0, 1, 1)
-
-        self.canvas_side_splitter_2.addWidget(self.widget_2)
-        self.canvas_splitter.addWidget(self.canvas_side_splitter_2)
-
-        self.gridLayout_6.addWidget(self.canvas_splitter, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.canvas_splitter, 0, 0, 1, 1)
 
 
         self.gridLayout.addWidget(self.central_widget, 0, 0, 1, 1)
@@ -128,8 +92,6 @@ class Ui_canvas(object):
     def retranslateUi(self, canvas):
         canvas.setWindowTitle(QCoreApplication.translate("canvas", u"Form", None))
         self.drawing_pad.setProperty("canvas_type", QCoreApplication.translate("canvas", u"brush", None))
-        self.controlnet.setProperty("canvas_type", QCoreApplication.translate("canvas", u"controlnet", None))
         self.canvas_container.setProperty("canvas_type", QCoreApplication.translate("canvas", u"image", None))
-        self.controlnet_2.setProperty("canvas_type", QCoreApplication.translate("canvas", u"outpaint", None))
     # retranslateUi
 
