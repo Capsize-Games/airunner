@@ -41,7 +41,6 @@ class CanvasWidget(
         self.active_grid_area_position = QPoint(0, 0)
         self.current_image_index = 0
         self.draggable_pixmaps_in_scene = {}
-        self.redraw_lines = False
         self.grid_settings: dict = {}
         self.active_grid_settings: dict = {}
         self.canvas_settings: dict = {}
@@ -167,8 +166,6 @@ class CanvasWidget(
                     self._grid_settings[k] = v
                     if k == "canvas_color":
                         self.emit_signal(SignalCode.SET_CANVAS_COLOR_SIGNAL)
-                    elif k in ["line_color", "cell_size", "line_width"]:
-                        self.redraw_lines = True
                     changed = True
         return changed
 
@@ -180,8 +177,6 @@ class CanvasWidget(
             for k, v in active_grid_settings.items():
                 if k not in self._active_grid_settings or self._active_grid_settings[k] != v:
                     self._active_grid_settings[k] = v
-                    if k in ["pos_x", "pos_y", "width", "height"]:
-                        self.redraw_lines = True
                     changed = True
         return changed
 
@@ -226,13 +221,10 @@ class CanvasWidget(
         self.save_image(image_path, image, self.scene.items())
 
     def cell_size_changed(self, _val):
-        self.redraw_lines = True
         self.do_draw()
 
     def line_width_changed(self, _val):
-        self.redraw_lines = True
         self.do_draw()
 
     def line_color_changed(self, _val):
-        self.redraw_lines = True
         self.do_draw()

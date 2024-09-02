@@ -1020,12 +1020,6 @@ class MainWindow(
         widget.setChecked(val)
         if block_signals:
             widget.blockSignals(False)
-    
-    def redraw(self):
-        self.set_stylesheet()
-
-        # Update the window
-        self.update()
 
     def action_center_clicked(self):
         print("center clicked")
