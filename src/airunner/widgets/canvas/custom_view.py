@@ -48,7 +48,8 @@ class CustomGraphicsView(
             SignalCode.CANVAS_CLEAR_LINES_SIGNAL: self.clear_lines,
             SignalCode.SCENE_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
+            SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL: self.handle_active_grid_area_moved_signal,
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
@@ -65,6 +66,7 @@ class CustomGraphicsView(
     def __do_show_active_grid_area(self):
         return self.canvas_type in (
             CanvasType.IMAGE.value,
+            CanvasType.BRUSH.value,
         )
 
     @property
@@ -73,6 +75,9 @@ class CustomGraphicsView(
             CanvasType.IMAGE.value,
             CanvasType.BRUSH.value,
         )
+
+    def handle_active_grid_area_moved_signal(self):
+        self.active_grid_area.update_position()
 
     def on_main_window_loaded_signal(self):
         self.initialized = True
@@ -238,8 +243,8 @@ class CustomGraphicsView(
             active_grid_settings = settings["active_grid_settings"]
             active_grid_settings["pos_x"] = x
             active_grid_settings["pos_y"] = y
-            active_grid_settings["width"] = width
-            active_grid_settings["height"] = height
+            settings["working_width"] = width
+            settings["working_height"] = height
             generator_settings = settings["generator_settings"]
             generator_settings["width"] = width
             generator_settings["height"] = height
