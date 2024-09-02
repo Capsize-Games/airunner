@@ -264,7 +264,7 @@ class CustomGraphicsView(
         self.setTransform(transform)
 
         # Redraw lines
-        self.emit_signal(SignalCode.SCENE_DO_DRAW_SIGNAL)
+        self.do_draw()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -280,9 +280,7 @@ class CustomGraphicsView(
         self.create_scene()
 
         if self.canvas_type == CanvasType.IMAGE.value:
-            self.emit_signal(SignalCode.SCENE_DO_DRAW_SIGNAL, {
-                "force_draw": True
-            })
+            self.do_draw(True)
         self._scene.showEvent(event)
         self.toggle_drag_mode()
 
@@ -330,7 +328,7 @@ class CustomGraphicsView(
                 self.horizontalScrollBar().setValue(horizontal_value)
                 self.verticalScrollBar().setValue(vertical_value)
             self.last_pos = event.pos()
-            self.emit_signal(SignalCode.SCENE_DO_DRAW_SIGNAL)
+            self.do_draw()
         original_mouse_event(event)
 
     def on_tool_changed_signal(self, message):
