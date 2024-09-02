@@ -29,8 +29,8 @@ from airunner.enums import (
 )
 from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException, \
     ThreadInterruptException
-from airunner.settings import BASE_PATH
 from airunner.utils.clear_memory import clear_memory
+from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -691,8 +691,12 @@ class ModelMixin:
             self.clear_scheduler()
             self.unload_controlnet()
 
-        # Set a reference to pipe
-        controlnet_image = self.get_controlnet_image()
+        # Set a reference to pipeline
+        settings = self.settings
+        settings["controlnet_settings"]["image"] = convert_image_to_base64(self.controlnet_image)
+        self.settings = settings
+
+
         self.data = self.sd_request(
             model_data=model,
             extra_options={},
@@ -705,7 +709,7 @@ class ModelMixin:
             device=self.device,
             generator=self.__generator,
             model_changed=model_changed,
-            controlnet_image=controlnet_image,
+            controlnet_image=self.controlnet_image,
             generator_request_data=generator_request_data
         )
         self.__generator.manual_seed(self.sd_request.generator_settings.seed)
