@@ -7,9 +7,9 @@ class TTSPreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.initialize_form()
-    
+
     def initialize_form(self):
+        settings = self.settings
         elements = [
             self.ui.enable_tts,
             self.ui.model_combobox,
@@ -18,8 +18,8 @@ class TTSPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(True)
 
-        tts_model = self.settings["tts_settings"]["model"]
-        self.ui.enable_tts.setChecked(self.settings["tts_enabled"])
+        tts_model = settings["tts_settings"]["model"]
+        self.ui.enable_tts.setChecked(settings["tts_enabled"])
         self.ui.model_combobox.clear()
         models = ["Bark", "SpeechT5", "Espeak"]
         self.ui.model_combobox.addItems(models)

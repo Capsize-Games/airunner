@@ -1,6 +1,5 @@
 import datetime
 import json
-import random
 import time
 import traceback
 from typing import AnyStr
@@ -9,7 +8,6 @@ from PySide6.QtCore import QObject
 
 from airunner.aihandler.llm.agent.agent_llamaindex_mixin import AgentLlamaIndexMixin
 from airunner.aihandler.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
-from airunner.aihandler.llm.agent.rag_search_worker import RagSearchWorker
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import (
@@ -53,8 +51,8 @@ class BaseAgent(
         self.thread = None
         self.do_interrupt = False
         self.response_worker = create_worker(AgentWorker)
-        self.__rag_search_worker = create_worker(RagSearchWorker)
-        self.__rag_search_worker.initialize(agent=self, model=self.model, tokenizer=self.tokenizer)
+        # self.__rag_search_worker = create_worker(RagSearchWorker)
+        # self.__rag_search_worker.initialize(agent=self, model=self.model, tokenizer=self.tokenizer)
 
     @property
     def available_actions(self):
@@ -145,17 +143,10 @@ class BaseAgent(
             elif message["role"] == LLMChatRole.ASSISTANT.value:
                 history += f"{self.botname}: {message['content']}\n"
         return (
+            "------\n"
             "Chat History:\n"
             f"{history}"
         )
-
-    def add_vision_prompt(self, vision_history: list, system_prompt: list) -> list:
-        if len(vision_history) > 0:
-            vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
-            system_prompt.append("\n======\n")
-            system_prompt.append(self.settings["prompt_templates"]["ocr"]["system"])
-            system_prompt.append(','.join(vision_history))
-        return system_prompt
 
     def append_date_time_timezone(self, system_prompt: list) -> list:
         current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
@@ -169,8 +160,7 @@ class BaseAgent(
 
     def build_system_prompt(
         self,
-        action,
-        vision_history: list = []
+        action
     ):
         system_instructions = ""
         guardrails_prompt = ""
@@ -202,28 +192,16 @@ class BaseAgent(
                 self.personality_prompt(bot_personality, use_personality),
                 self.history_prompt(),
             ]
-            system_prompt = self.add_vision_prompt(vision_history, system_prompt)
 
             if self.chatbot["use_datetime"]:
                 system_prompt = self.append_date_time_timezone(system_prompt)
 
-        elif action == LLMActionType.ANALYZE_VISION_HISTORY:
-            vision_history = vision_history[-10:] if len(vision_history) > 10 else vision_history
-            vision_history = ','.join(vision_history)
-            system_instructions = self.settings["prompt_templates"]["image"]["system"]
-            system_prompt = [
-                system_instructions,
-                vision_history,
-            ]
-
         elif action == LLMActionType.GENERATE_IMAGE:
-            ", ".join([
-                "'%s'" % category.value for category in ImageCategory
-            ])
             guardrails = self.settings["prompt_templates"]["image"]["guardrails"] if self.settings["prompt_templates"]["image"]["use_guardrails"] else ""
             system_prompt = [
                 guardrails,
-                self.settings["prompt_templates"]["image"]["system"]
+                self.settings["prompt_templates"]["image"]["system"],
+                self.history_prompt()
             ]
 
         elif action == LLMActionType.APPLICATION_COMMAND:
@@ -281,83 +259,48 @@ class BaseAgent(
             f"Your personality: {bot_personality}."
         ) if use_personality else ""
 
-    def latest_human_message(
-        self,
-        action
-    ) -> dict:
-        if self.prompt:
-            prompt = self.prompt
-            if action == LLMActionType.APPLICATION_COMMAND:
-                prompt = (
-                    f"`{prompt}`\n\n"
-                    "Choose an action from THE LIST of commands for the text above. Only return the number of the command."
-                )
-            ran = random.randint(0, 6)
-            random.seed(ran)
-            print("RANDOM", ran)
-            listener_name = self.username
-            if ran == 0:
-                prompt = f"start a converation."
-            elif ran == 1:
-                prompt = f"flatter {listener_name}."
-            elif ran == 2:
-                prompt = f"lie to {listener_name}."
-            elif ran == 3:
-                prompt = f"insult {listener_name}."
-            elif ran == 4:
-                prompt = f"mock {listener_name}."
-            elif ran == 5:
-                prompt = f"ask {listener_name} a question."
-            elif ran == 6:
-                prompt = f"change the subject."
-            return {
-                "content": f"respond to {listener_name}",
-                "role": LLMChatRole.HUMAN.value
-            }
-
-        return {}
-
     def prepare_messages(
         self,
-        action,
-        vision_history: list = []
+        action
     ) -> list:
-        system_prompt = self.build_system_prompt(
-            action,
-            vision_history=vision_history
-        )
+        system_prompt = self.build_system_prompt(action)
+        if action == LLMActionType.APPLICATION_COMMAND:
+            prompt = (
+                "Choose an action from THE LIST of commands for the text above. "
+                "Only return the number of the command."
+            )
+        elif action == LLMActionType.GENERATE_IMAGE:
+            prompt = (
+                "Generate an image based on the user's request.\n"
+                "You will return a JSON string which matches the following data structure:\n"
+                "```json\n{\n"
+                "    \"prompt\": \"[PLACEHOLDER]\",\n"
+                "    \"secondary_prompt\": \"[PLACEHOLDER]\",\n"
+                "    \"negative_prompt\": \"[PLACEHOLDER]\",\n"
+                "    \"secondary_negative_prompt\": \"[PLACEHOLDER]\",\n"
+                "}```\n"
+                f"Replace the [PLACEHOLDER] with the appropriate text basd on {self.username}'s request.\n"
+            )
+        else:
+            prompt = f"Respond to {self.username}"
         messages = [
             {
                 "content": system_prompt,
                 "role": LLMChatRole.SYSTEM.value
+            },
+            {
+                "content": prompt,
+                "role": LLMChatRole.HUMAN.value
             }
         ]
-
-        if action in [LLMActionType.CHAT, LLMActionType.PERFORM_RAG_SEARCH]:
-            messages += self.history
-
-        messages.append(
-            self.latest_human_message(action)
-        )
-
         return messages
 
     def get_rendered_template(
         self,
-        action: LLMActionType,
-        vision_history: list
+        action: LLMActionType
     ) -> str:
         conversation = self.prepare_messages(
-            action,
-            vision_history=vision_history
-        )
-
-        # get the first message
-        conversation = conversation[:1]
-
-        # add the last message
-        conversation.append(
-            self.latest_human_message(action)
+            action
         )
 
         rendered_template = self.tokenizer.apply_chat_template(
@@ -382,6 +325,38 @@ class BaseAgent(
         return rendered_template
 
     @property
+    def override_parameters(self):
+        data = {}
+        data.update(self.settings["llm_generator_settings"])
+        min_length_penalty = 0.0001
+        length_penalty = data["length_penalty"] / 1000
+        if length_penalty < min_length_penalty:
+            length_penalty = min_length_penalty
+        data["length_penalty"] = length_penalty
+
+        min_repetition_penalty = 0.0001
+        repetition_penalty = data["repetition_penalty"] / 100
+        if repetition_penalty < min_repetition_penalty:
+            repetition_penalty = min_repetition_penalty
+        data["repetition_penalty"] = repetition_penalty
+        return dict(
+            length_penalty=length_penalty,
+            repetition_penalty=repetition_penalty,
+            do_sample=True,#data["do_sample"],
+            early_stopping=data["early_stopping"],
+            eta_cutoff=data["eta_cutoff"],
+            max_new_tokens=data["max_new_tokens"],
+            min_length=data["min_length"],
+            no_repeat_ngram_size=data["ngram_size"],
+            num_return_sequences=data["sequences"],
+            temperature=data["temperature"] / 10000,
+            top_k=data["top_k"],
+            top_p=data["top_p"] / 1000,
+            use_cache=data["use_cache"],
+            num_beams=data["num_beams"],
+        ) if data["override_parameters"] else {}
+
+    @property
     def system_instructions(self):
         return self.chatbot["system_instructions"]
 
@@ -397,12 +372,10 @@ class BaseAgent(
     def get_model_inputs(
         self,
         action: LLMActionType,
-        vision_history: list,
         **kwargs
     ):
         self.rendered_template = self.get_rendered_template(
-            action,
-            vision_history
+            action
         )
 
         # Encode the rendered template
@@ -421,7 +394,6 @@ class BaseAgent(
         self,
         prompt: str,
         action: str,
-        vision_history: list = [],
         **kwargs
     ):
         self.action = action
@@ -432,7 +404,6 @@ class BaseAgent(
 
         return self.do_run(
             action,
-            vision_history,
             **kwargs,
             system_instructions=system_instructions,
             use_names=True,
@@ -442,7 +413,6 @@ class BaseAgent(
     def do_run(
         self,
         action: LLMActionType,
-        vision_history: list = [],
         streamer=None,
         do_emit_response: bool = True,
         use_names: bool = True,
@@ -455,20 +425,10 @@ class BaseAgent(
             return
 
         # Add the user's message to history
-        if action in [
-            LLMActionType.CHAT,
-            LLMActionType.UPDATE_MOOD,
-            LLMActionType.DO_NOT_RESPOND,
-            LLMActionType.PERFORM_RAG_SEARCH
-        ]:
-            self.add_message_to_history(
-                self.prompt,
-                LLMChatRole.HUMAN
-            )
+        self.add_message_to_history(self.prompt, LLMChatRole.HUMAN)
 
         model_inputs = self.get_model_inputs(
             action,
-            vision_history,
             use_names=use_names,
             **kwargs
         )
@@ -503,11 +463,13 @@ class BaseAgent(
             return response
 
     def prepare_generate_data(self, model_inputs, stopping_criteria):
-        return dict(
+        data = dict(
             **model_inputs,
             **self.generator_settings,
             stopping_criteria=[stopping_criteria]
         )
+        data.update(self.override_parameters)
+        return data
 
     def run_with_thread(
         self,
@@ -527,6 +489,10 @@ class BaseAgent(
         data["streamer"] = streamer
 
         try:
+            from transformers import BitsAndBytesConfig
+
+            if "attention_mask" in data:
+                del data["attention_mask"]
             self.response_worker.add_to_queue({
                 "model": self.model,
                 "kwargs": data,
@@ -550,6 +516,17 @@ class BaseAgent(
         is_end_of_message = False
         is_first_message = True
         response = ""
+        if action == LLMActionType.GENERATE_IMAGE:
+            self.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                dict(
+                    message="Generating image prompt.\n",
+                    is_first_message=is_first_message,
+                    is_end_of_message=False,
+                    name=self.botname,
+                )
+            )
+            is_first_message = False
         if streamer:
             for new_text in streamer:
                 # strip all newlines from new_text
@@ -583,8 +560,7 @@ class BaseAgent(
                         is_end_of_message = True
                     # strip botname from new_text
                     new_text = new_text.replace(f"{self.botname}:", "")
-                    new_text = new_text.replace(f"{self.botname}", "")
-                    if action == LLMActionType.CHAT:
+                    if action == LLMActionType.CHAT or action == LLMActionType.GENERATE_IMAGE:
                         self.emit_signal(
                             SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                             dict(
@@ -629,7 +605,6 @@ class BaseAgent(
                 )
 
             elif action == LLMActionType.UPDATE_MOOD:
-                print("RESPONSE:", streamed_template)
                 self.bot_mood = streamed_template
 
             elif action == LLMActionType.APPLICATION_COMMAND:

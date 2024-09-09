@@ -1,66 +1,98 @@
-#import asyncio
 import queue
-import threading
 
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QObject, Signal, Slot
 
-#from datasynth.messager.consumer import ConsumerMixin
-
-from airunner.aihandler.llm.causal_lm_transfformer_base_handler import CausalLMTransformerBaseHandler
 from airunner.enums import QueueType, SignalCode, ModelType, ModelStatus
 from airunner.settings import AVAILABLE_DTYPES, SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
+from PySide6.QtCore import QThread
 
 
-class LLMGenerateWorker(
-    Worker,
-    #ConsumerMixin
-):
-    llm = None
+class LLMLoaderWorker(QObject):
+    finished = Signal()
+    error = Signal(str)
 
+    def __init__(self, llm, message):
+        super().__init__()
+        self.llm = llm
+        self.message = message
+
+    @Slot()
+    def run(self):
+        try:
+            self.llm.on_load_llm_signal(self.message)
+        except Exception as e:
+            self.error.emit(str(e))
+        finally:
+            self.finished.emit()
+
+
+class LLMGenerateWorker(Worker):
     def __init__(self, prefix=None, do_load_on_init=False, agent_class=None, agent_options=None):
-        # ConsumerMixin.__init__(
-        #     self,
-        #     subject="llm_queue",
-        #     actions=None
-        # )
-        super().__init__(prefix=prefix)
-        signals = {
-            SignalCode.LLM_UNLOAD_SIGNAL: self.on_unload_llm_signal,
-            SignalCode.LLM_LOAD_SIGNAL: self.on_load_llm_signal,
-            SignalCode.LLM_LOAD_MODEL_SIGNAL: self.on_load_model_signal,
-            SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_clear_history_signal,
-            SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
-        }
-
-        for code, handler in signals.items():
-            self.register(code, handler)
+        self.signals = [
+            (SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal),
+            (SignalCode.LLM_LOAD_SIGNAL, self.on_load_llm_signal),
+            (SignalCode.LLM_LOAD_MODEL_SIGNAL, self.on_load_model_signal),
+            (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal),
+            (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
+        ]
+        self.thread = None
         self.llm = None
-        threading.Thread(target=self.load_llm, args=(
-            do_load_on_init, agent_class, agent_options
-        )).start()
+        self.do_load_on_init = do_load_on_init
+        self.agent_class = agent_class
+        self.agent_options = agent_options
+        super().__init__(prefix=prefix)
+        self.llm_generate_worker = None
+        self.thread = QThread()
+        self.llm_generate_worker = LLMLoaderWorker(self.llm, "")
+        self.llm_generate_worker.moveToThread(self.thread)
+
+        self.thread.started.connect(self.llm_generate_worker.run)
+        self.llm_generate_worker.finished.connect(self.thread.quit)
+        self.llm_generate_worker.finished.connect(self.llm_generate_worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+        self.llm_generate_worker.error.connect(self.handle_error)
 
     def on_unload_llm_signal(self, message):
+        if self.thread.isRunning():
+            self.thread.quit()
+            self.thread.wait()
+            self.thread = None
         if self.llm:
             self.llm.on_unload_llm_signal(message)
 
-    def on_load_llm_signal(self, message):
-        if self.llm:
-            self.llm.on_load_llm_signal(message)
+    def on_load_llm_signal(self, message: dict):
+        if self.thread is not None:
+            return
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                "model": ModelType.LLM,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            }
+        )
+        self.llm_generate_worker.message = message
+        self.thread.start()
 
-    def on_load_model_signal(self, message):
-        if self.llm:
-            self.llm.on_load_model_signal(message)
+    def handle_error(self, error_message):
+        print(f"Error: {error_message}")
 
-    def on_clear_history_signal(self, message):
+    def on_load_model_signal(self):
         if self.llm:
-            self.llm.on_clear_history_signal(message)
+            self.llm.on_load_model_signal()
 
-    def on_interrupt_process_signal(self, message):
+    def on_clear_history_signal(self):
         if self.llm:
-            self.llm.on_interrupt_process_signal(message)
+            self.llm.on_clear_history_signal()
 
-    def load_llm(self, do_load_on_init, agent_class, agent_options):
+    def on_interrupt_process_signal(self):
+        if self.llm:
+            self.llm.on_interrupt_process_signal()
+
+    def start_worker_thread(self):
+        from airunner.aihandler.llm.causal_lm_transfformer_base_handler import CausalLMTransformerBaseHandler
+
         if self.settings["llm_enabled"]:
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
@@ -70,9 +102,9 @@ class LLMGenerateWorker(
                 }
             )
         self.llm = CausalLMTransformerBaseHandler(
-            do_load_on_init=do_load_on_init,
-            agent_class=agent_class,
-            agent_options=agent_options
+            do_load_on_init=self.do_load_on_init,
+            agent_class=self.agent_class,
+            agent_options=self.agent_options
         )
 
     # def start(self):
@@ -96,9 +128,10 @@ class LLMGenerateWorker(
 
         The choice is dependent on the current dtype and other settings.
         """
-        dtype = self.settings["llm_generator_settings"]["dtype"]
-        do_unload_model = self.settings["memory_settings"]["unload_unused_models"]
-        move_unused_model_to_cpu = self.settings["memory_settings"]["move_unused_model_to_cpu"]
+        settings = self.settings
+        dtype = settings["llm_generator_settings"]["dtype"]
+        do_unload_model = settings["memory_settings"]["unload_unused_models"]
+        move_unused_model_to_cpu = settings["memory_settings"]["move_unused_model_to_cpu"]
         do_move_to_cpu = not do_unload_model and move_unused_model_to_cpu
         callback = message.get("callback", None)
         if dtype in AVAILABLE_DTYPES:

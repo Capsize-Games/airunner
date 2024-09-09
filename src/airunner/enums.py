@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 
 class WorkerState(Enum):
@@ -13,12 +13,6 @@ class QueueType(Enum):
     NONE = 300
 
 
-class WorkerCode(Enum):
-    START_VISION_CAPTURE = 100
-    STOP_VISION_CAPTURE = 200
-    UNPAUSE_VISION_CAPTURE = 300
-
-
 class HandlerType(Enum):
     TRANSFORMER = 100
     DIFFUSER = 200
@@ -28,7 +22,16 @@ class FilterType(Enum):
     PIXEL_ART = "pixelart"
 
 
+class ModelAction(Enum):
+    NONE = auto()
+    LOAD = auto()
+    CLEAR = auto()
+    APPLY_TO_PIPE = auto()
+
+
 class SignalCode(Enum):
+    REFRESH_STYLESHEET_SIGNAL = "refresh_stylesheet_signal"
+    SD_STATE_CHANGED_SIGNAL = "sd_state_changed_signal"
     NAVIGATE_TO_URL = "navigate_to_url"
     LLM_RAG_SEARCH_SIGNAL = "llm_rag_search_signal"
     RAG_RELOAD_INDEX_SIGNAL = "rag_reload_index_signal"
@@ -39,12 +42,10 @@ class SignalCode(Enum):
     ENABLE_MOVE_TOOL_SIGNAL = "enable_move_tool_signal"
     INTERRUPT_PROCESS_SIGNAL = "interrupt_process_signal"
     INTERRUPT_IMAGE_GENERATION_SIGNAL = "interrupt_image_generation_signal"
-    AI_MODELS_REFRESH_SIGNAL = "refresh_ai_models_signal"
     AI_MODELS_SAVE_OR_UPDATE_SIGNAL = "ai_models_save_or_update_signal"
     VAE_MODELS_SAVE_OR_UPDATE_SIGNAL = "vae_models_save_or_update_signal"
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"
     AI_MODELS_CREATE_SIGNAL = "ai_models_create_signal"
-    VAE_MODELS_CREATE_SIGNAL = "vae_models_create_signal"
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
     WINDOW_LOADED_SIGNAL = "window_loaded_signal"
     APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"
@@ -69,7 +70,6 @@ class SignalCode(Enum):
     PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL = "preset_image_generator_display_menu_signal"
     PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL = "activate_brush"
     CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL = "load_image_from_path_signal"
-    CANVAS_DO_DRAW_SIGNAL = "canvas_do_draw_signal"
     SCENE_DO_DRAW_SIGNAL = "scene_do_draw_signal"
     SCENE_DO_UPDATE_IMAGE_SIGNAL = "scene_do_update_image_signal"
     CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"
@@ -178,7 +178,6 @@ class SignalCode(Enum):
     SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL = "ImageDataWorker_response_signal"
     SD_GENERATE_IMAGE_SIGNAL = "generate_image_signal"
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
-    SD_CONTROLNET_IMAGE_GENERATED_SIGNAL = "controlnet_image_generated_signal"
     SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
     HANDLE_LATENTS_SIGNAL = "handle_latents_signal"
     STT_HEAR_SIGNAL = "hear_signal"
@@ -191,18 +190,6 @@ class SignalCode(Enum):
     TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = "TTSGeneratorWorker_add_to_stream_signal"
     TTS_ENABLE_SIGNAL = "tts_enable_signal"
     TTS_DISABLE_SIGNAL = "tts_disable_signal"
-    VISION_START_CAPTURE = "start_vision_capture"
-    VISION_STOP_CAPTURE = "stop_vision_capture"
-    VISION_CAPTURE_UNPAUSE_SIGNAL = "unpause_vision_capture"
-    VISION_CAPTURE_PAUSE_SIGNAL = "pause_vision_capture"
-    VISION_CAPTURE_LOCK_SIGNAL = "lock_vision_capture"
-    VISION_CAPTURE_UNLOCK_SIGNAL = "unlock_vision_capture"
-    VISION_CAPTURE_PROCESS_SIGNAL = "vision_capture_process_signal"
-    VISION_CAPTURED_SIGNAL = "vision_captured_signal"
-    VISION_PROCESSED_SIGNAL = "vision_processed_signal"
-    VISION_CAPTION_GENERATED_SIGNAL = "caption_generated_signal"
-    VISION_DESCRIBE_IMAGE_SIGNAL = "describe_image_signal"
-    VISION_PROCESS_IMAGES = "process_images"
     QUIT_APPLICATION = "quit"
     TOGGLE_FULLSCREEN_SIGNAL = "fullscreen_signal"
     TOGGLE_TTS_SIGNAL = "toggle_tts_signal"
@@ -210,7 +197,6 @@ class SignalCode(Enum):
     STOP_AUTO_IMAGE_GENERATION_SIGNAL = "stop_auto_image_generation_signal"
     LINES_UPDATED_SIGNAL = "lines_updated_signal"
     DO_GENERATE_SIGNAL = "do_generate_signal"
-    UPSCALE_SIGNAL = "upscale_signal"
     BASH_EXECUTE_SIGNAL = "bash_execute_signal"
     WRITE_FILE = "write_file_signal"
     LLM_CHOOSE_RESPONSE_LENGTH_SIGNAL = "choose_response_length_signal"
@@ -266,16 +252,8 @@ class SignalCode(Enum):
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
     CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
     CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
-    CONTROLNET_LOAD_MODEL_SIGNAL = "load_controlnet_model_signal"
-    CONTROLNET_UNLOAD_MODEL_SIGNAL = "unload_controlnet_model_signal"
-    CONTROLNET_PROCESSOR_LOAD_SIGNAL = "load_controlnet_processor_signal"
-    CONTROLNET_PROCESSOR_UNLOAD_SIGNAL = "unload_controlnet_processor_signal"
     SAFETY_CHECKER_LOAD_SIGNAL = "SAFETY_CHECKER_LOAD_SIGNAL"
     SAFETY_CHECKER_UNLOAD_SIGNAL = "SAFETY_CHECKER_UNLOAD_SIGNAL"
-    SAFETY_CHECKER_MODEL_LOAD_SIGNAL = "SAFETY_CHECKER_MODEL_LOAD_SIGNAL"
-    SAFETY_CHECKER_MODEL_UNLOAD_SIGNAL = "SAFETY_CHECKER_MODEL_UNLOAD_SIGNAL"
-    FEATURE_EXTRACTOR_LOAD_SIGNAL = "FEATURE_EXTRACTOR_LOAD_SIGNAL"
-    FEATURE_EXTRACTOR_UNLOAD_SIGNAL = "FEATURE_EXTRACTOR_UNLOAD_SIGNAL"
     SCHEDULER_LOAD_SIGNAL = "SCHEDULER_LOAD_SIGNAL"
     SCHEDULER_UNLOAD_SIGNAL = "SCHEDULER_UNLOAD_SIGNAL"
 
@@ -300,7 +278,6 @@ class EngineRequestCode(Enum):
     GENERATE_IMAGE = 100
     GENERATE_TEXT = 200
     GENERATE_CAPTION = 300
-    UPSCALE = 400
 
 
 class Scheduler(Enum):
@@ -365,9 +342,6 @@ class LLMToolName(Enum):
     STT_STOP_CAPTURE = "stt_stop_audio_capture"
     TTS_ENABLE = "tts_enable"
     TTS_DISABLE = "tts_disable"
-    VISION_PROCESS_IMAGES = "vision_process_images"
-    VISION_START_CAPTURE = "vision_start_capture"
-    VISION_STOP_CAPTURE = "vision_stop_capture"
     BASH_EXECUTE = "bash_execute"
     WRITE_FILE = "write_file"
     CHOOSE_RESPONSE_LENGTH = "choose_response_length"
@@ -384,7 +358,6 @@ class LLMActionType(Enum):
     DO_NOT_RESPOND = "DO NOT RESPOND: Use this option when the user has asked you to stop responding or if the text does not require a response."
     CHAT = "RESPOND TO THE USER: Respond to the user's message."
     GENERATE_IMAGE = "GENERATE IMAGE: Generate an image based on the text."
-    ANALYZE_VISION_HISTORY = "ANALYZE VISION HISTORY: Analyze the vision history."
     APPLICATION_COMMAND = "APPLICATION COMMAND: Execute an application command."
     UPDATE_MOOD = "UPDATE MOOD: {{ username }} has made you feel a certain way. Respond with an emotion or feeling so that you can update your current mood."
     QUIT_APPLICATION = "QUIT: Quit or close the application."
@@ -419,9 +392,6 @@ class GeneratorSection(Enum):
     IMG2IMG = "img2img"
     INPAINT = "inpaint"
     OUTPAINT = "outpaint"
-    DEPTH2IMG = "depth2img"
-    PIX2PIX = "pix2pix"
-    UPSCALE = "upscale"
 
 
 class StableDiffusionVersion(Enum):
@@ -487,11 +457,11 @@ class ModelStatus(Enum):
     READY = "Ready"
     LOADING = "Loading"
     FAILED = "Failed"
-    ERROR = "Error"
 
 
 class StatusColors(Enum):
     LOADED = "#00ff00"
+    READY = "#00ffff"
     LOADING = "#ffff00"
     FAILED = "#ff0000"
     UNLOADED = "#c0c0c0"
@@ -524,8 +494,10 @@ class ModelType(Enum):
 
 class HandlerState(Enum):
     INITIALIZED = "Initialized"
+    LOADING = "Loading"
     READY = "Ready"
     GENERATING = "Generating"
+    PREPARING_TO_GENERATE = "Preparing to Generate"
     ERROR = "Error"
 
 

@@ -24,19 +24,103 @@ class StatusWidget(BaseWidget):
         self.safety_checker_status = ModelStatus.UNLOADED
         self.feature_extractor_status = ModelStatus.UNLOADED
 
-        if self.settings["nsfw_filter"] and self.settings["sd_enabled"]:
+        settings = self.settings
+        if settings["nsfw_filter"] and settings["sd_enabled"]:
             self.safety_checker_status = ModelStatus.LOADING
             self.feature_extractor_status = ModelStatus.LOADING
 
         self.update_safety_checker_status()
         self.update_system_stats()
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.set_sd_status_text(self.settings)
+
+        settings = self.settings
+        if settings["sd_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.SD,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if settings["controlnet_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.CONTROLNET,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if settings["llm_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.LLM,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if settings["tts_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.TTS,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+        if settings["stt_enabled"]:
+            self.on_model_status_changed_signal({
+                "model": ModelType.STT,
+                "status": ModelStatus.LOADING,
+                "path": ""
+            })
+
+    def update_model_status(self, data):
+        if data["status"] is ModelStatus.LOADING:
+            color = StatusColors.LOADING
+        elif data["status"] is ModelStatus.LOADED:
+            color = StatusColors.LOADED
+        elif data["status"] is ModelStatus.FAILED:
+            color = StatusColors.FAILED
+        elif data["status"] is ModelStatus.READY:
+            color = StatusColors.READY
+        else:
+            color = StatusColors.UNLOADED
+
+        styles = "QLabel { color: " + color.value + "; }"
+        element_name = ""
+        tool_tip = ""
+        if not data["model"]:
+            return
+        if data["model"] == ModelType.SD:
+            element_name = "sd_status"
+            tool_tip = "Stable Diffusion"
+
+            self.set_sd_status_text()
+
+        elif data["model"] == ModelType.CONTROLNET:
+            element_name = "controlnet_status"
+            tool_tip = "Controlnet"
+        elif data["model"] == ModelType.LLM:
+            element_name = "llm_status"
+            tool_tip = "LLM"
+        elif data["model"] == ModelType.TTS:
+            element_name = "tts_status"
+            tool_tip = "TTS"
+        elif data["model"] == ModelType.STT:
+            element_name = "stt_status"
+            tool_tip = "STT"
+
+        tool_tip += " " + data["status"].value
+
+        if element_name != "":
+            getattr(self.ui, element_name).setStyleSheet(styles)
+            getattr(self.ui, element_name).setToolTip(tool_tip)
+
+    def set_sd_status_text(self, settings=None):
+        settings = settings or self.settings
+        self.ui.sd_status.setText(settings["generator_settings"]["version"])
+
     def on_model_status_changed_signal(self, data):
+        self.update_model_status(data)
         model = data["model"]
         if model == ModelType.SAFETY_CHECKER:
             self.safety_checker_status = data["status"]
             self.update_safety_checker_status()
-        else:
+        elif model == ModelType.FEATURE_EXTRACTOR:
             self.feature_extractor_status = data["status"]
             self.update_safety_checker_status()
 
@@ -46,11 +130,10 @@ class StatusWidget(BaseWidget):
     def on_status_error_signal(self, message):
         self.set_system_status(message, error=True)
 
-    def on_clear_status_message_signal(self, _ignore):
+    def on_clear_status_message_signal(self):
         self.set_system_status("", error=False)
 
-    def update_system_stats(self, queue_size=0):
-        queue_stats = f"Queued items: {queue_size}"
+    def update_system_stats(self):
         cuda_status = f"{'NVIDIA' if torch.cuda.is_available() else 'CPU'}"
 
         # Color by has_cuda red for disabled, green for enabled
@@ -60,7 +143,6 @@ class StatusWidget(BaseWidget):
         )
 
         self.ui.cuda_status.setText(cuda_status)
-        self.ui.queue_stats.setText(queue_stats)
 
     def update_safety_checker_status(self):
         # Color by safety checker status red, yellow, green for failed, loading, loaded
@@ -68,6 +150,8 @@ class StatusWidget(BaseWidget):
             color = StatusColors.LOADING
         elif self.safety_checker_status == ModelStatus.LOADED:
             color = StatusColors.LOADED
+        elif self.safety_checker_status == ModelStatus.UNLOADED:
+            color = StatusColors.UNLOADED
         else:
             color = StatusColors.FAILED
 

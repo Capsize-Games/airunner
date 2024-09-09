@@ -25,8 +25,6 @@ class BaseWizard(
             layout.addWidget(widget)
             self.setLayout(layout)
 
-        self.initialize_form()
-
         # attach to parent page id changed signal
         parent.button(QWizard.FinishButton).clicked.connect(self.save_settings)
         self.parent = parent

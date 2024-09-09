@@ -1,6 +1,10 @@
 import base64
+import ctypes
 import io
 import os
+import threading
+import time
+
 import numpy as np
 from PySide6.QtWidgets import QApplication
 from typing import List
@@ -21,17 +25,26 @@ from airunner.enums import (
     SDMode,
     StableDiffusionVersion,
     ModelStatus,
-    ModelType
+    ModelType, HandlerState
 )
-from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException
-from airunner.settings import (
-    SD_FEATURE_EXTRACTOR_PATH, SD_DEFAULT_MODEL_PATH
-)
+from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException, \
+    ThreadInterruptException
 from airunner.utils.clear_memory import clear_memory
+from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
     SDMode.DRAWING,
+)
+CONTROLNET_PIPELINES_SD = (
+    StableDiffusionControlNetPipeline,
+    StableDiffusionControlNetImg2ImgPipeline,
+    StableDiffusionControlNetInpaintPipeline
+)
+CONTROLNET_PIPELINES_SDXL = (
+    StableDiffusionXLControlNetPipeline,
+    StableDiffusionXLControlNetImg2ImgPipeline,
+    StableDiffusionXLControlNetInpaintPipeline
 )
 
 
@@ -44,36 +57,47 @@ class ModelMixin:
         self.do_generate = False
 
         self.data = None
-        self.pipe = None
         self.txt2img = None
         self.img2img = None
-        self.pix2pix = None
         self.outpaint = None
-        self.depth2img = None
         self.reload_model = False
         self.batch_size = 1
         self.moved_to_cpu = False
+        self.pipe_finalized = False
         self.__generator = None
         self.__tokenizer = None
         self.__current_tokenizer_path = ""
+        self._pipe = None
+        self.__sd_model_status = ModelStatus.UNLOADED
+        self.__tokenizer_status = ModelStatus.UNLOADED
+        self.cancel_load_flag = False
+        self.load_thread = None
+        self.prompt_embeds = None
+        self.negative_prompt_embeds = None
+        self.pooled_prompt_embeds = None
+        self.negative_pooled_prompt_embeds = None
 
-    def on_load_stablediffusion_signal(self, _message: dict = None):
-        self.load_stable_diffusion_model()
+        self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
 
-    def on_unload_stablediffusion_signal(self, _message: dict = None):
+    @property
+    def sd_model_status(self):
+        return self.__sd_model_status
+
+    def action_quit_triggered(self):
+        pass
+
+    def on_unload_stablediffusion_signal(self):
         self.unload_image_generator_model()
 
-    def on_tokenizer_load_signal(self, _data: dict = None):
+    def on_tokenizer_load_signal(self):
         self.__load_tokenizer()
 
-    def on_tokenizer_unload_signal(self, _data: dict = None):
+    def on_tokenizer_unload_signal(self):
         self.__unload_tokenizer()
 
     @property
     def enable_controlnet(self):
-        return (
-            self.sd_request.generator_settings.enable_controlnet
-        )
+        return self.settings["controlnet_enabled"]
 
     @property
     def is_single_file(self) -> bool:
@@ -95,9 +119,10 @@ class ModelMixin:
 
     @property
     def model_path(self):
-        model_name = self.settings["generator_settings"]["model"]
-        version = self.settings["generator_settings"]["version"]
-        section = self.settings["generator_settings"]["section"]
+        generator_settings = self.settings["generator_settings"]
+        model_name = generator_settings["model"]
+        version = generator_settings["version"]
+        section = generator_settings["section"]
         for model in self.settings["ai_models"]:
             if (
                 model["name"] == model_name and
@@ -106,51 +131,58 @@ class ModelMixin:
             ):
                 return os.path.expanduser(
                     os.path.join(
-                        self.settings["path_settings"][f"{section}_model_path"],
+                        self.settings["path_settings"]["base_path"],
+                        "art/models",
                         version,
+                        section,
                         model["path"]
                     )
                 )
 
     @property
-    def __base_path(self):
-        action = self.sd_request.generator_settings.section
-        return os.path.expanduser(
-            os.path.join(
-                self.settings["path_settings"][f"{action}_model_path"],
-                self.settings["generator_settings"]["version"]
-            )
-        )
-
-    @property
     def __tokenizer_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["feature_extractor_model_path"],
-                SD_FEATURE_EXTRACTOR_PATH
+                self.settings["path_settings"]["base_path"],
+                "art/models",
+                "SD 1.5",
+                "feature_extractor",
+                "openai/clip-vit-large-patch14"
             )
-        )
-
-    @property
-    def __merges_path(self) -> str:
-        return os.path.join(
-            self.__base_path,
-            SD_DEFAULT_MODEL_PATH,
-            "tokenizer",
-            "merges.txt"
         )
 
     @staticmethod
     def __is_pytorch_error(e) -> bool:
         return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
+        self.cancel_load_flag = Falsed
 
     def unload_image_generator_model(self):
+        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
         self.__unload_model()
         self.__do_reset_applied_memory_settings()
         clear_memory()
 
+    def cancel_load(self):
+        self.cancel_load_flag = True
+        if self.load_thread:
+            self.raise_exception_in_thread(self.load_thread, ThreadInterruptException)
+
+    def raise_exception_in_thread(self, thread, exception):
+        if not thread.is_alive():
+            return
+
+        thread_id = next(t.ident for t in threading.enumerate() if t is thread)
+        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, ctypes.py_object(exception))
+        if res == 0:
+            raise ValueError("Invalid thread id")
+        elif res > 1:
+            ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
+            raise SystemError("PyThreadState_SetAsyncExc failed")
+
+
     def load_image_generator_model(self):
         self.logger.info("Loading image generator model")
+        self.load_thread = threading.current_thread()
 
         # Unload the pipeline if it is already loaded
         if self.pipe:
@@ -161,12 +193,19 @@ class ModelMixin:
         self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
         self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
 
-        self.__load_generator(torch.device(self.device), self.settings["generator_settings"]["seed"])
-        self.__load_tokenizer()
-        self.__prepare_model()
-        self.__load_model()
-        self.__move_model_to_device()
-        self.load_scheduler()
+        try:
+            self.__load_generator(torch.device(self.device), self.settings["generator_settings"]["seed"])
+            self.__load_tokenizer()
+            self.__prepare_model()
+            self.__load_model()
+            self.__move_model_to_device()
+            self.load_scheduler()
+        except ThreadInterruptException:
+            self.logger.info("Model loading was interrupted.")
+            self.__unload_model()
+            self.__do_reset_applied_memory_settings()
+            clear_memory()
+            return
 
     @property
     def use_compel(self):
@@ -180,72 +219,21 @@ class ModelMixin:
         settings: dict,
         generator_request_data: dict
     ):
-        if not self.pipe:
-            raise PipeNotLoadedException()
+        if not self.pipe or self.pipe.device.type == "cpu":
+            self.load_stable_diffusion()
+            if not self.pipe:
+                raise PipeNotLoadedException()
+        while self.sd_model_status is not ModelStatus.LOADED:
+            time.sleep(0.1)
         self.__load_generator_arguments(settings, generator_request_data)
         self.do_generate = False
-
-        self.swap_pipeline()
-
         return self.__generate()
 
     def model_is_loaded(self, model: ModelType) -> bool:
         return self.model_status[model] == ModelStatus.LOADED
 
-    def swap_pipeline(self):
-        if not self.pipe:
-            return
-
-        is_txt2img = self.sd_request.is_txt2img
-        is_outpaint = self.sd_request.is_outpaint
-        is_img2img = self.sd_request.is_img2img
-
-        if not is_img2img and not is_outpaint:
-            is_txt2img = True
-
-        if is_img2img and (
-            "image" not in self.data or ("image" in self.data and self.data["image"] is None)
-        ):
-            self.data = self.sd_request.disable_img2img(self.data)
-            is_txt2img = True
-
-        operation_type = "txt2img" if is_txt2img else "img2img" if is_img2img else "outpaint"
-
-        pipeline_class_ = self.__pipeline_class(operation_type)
-
-        if pipeline_class_ is not None:
-            self.logger.debug("Swapping pipeline")
-            components = self.pipe.components
-            if "controlnet" in components:
-                del components["controlnet"]
-
-            if "tokenizer" not in components:
-                self.__load_tokenizer()
-
-            if pipeline_class_ in [
-                StableDiffusionControlNetPipeline,
-                StableDiffusionControlNetImg2ImgPipeline,
-                StableDiffusionControlNetInpaintPipeline,
-                StableDiffusionXLControlNetPipeline,
-                StableDiffusionXLControlNetImg2ImgPipeline,
-                StableDiffusionXLControlNetInpaintPipeline
-            ]:
-                components["controlnet"] = self.controlnet
-
-            device = self.pipe.device
-
-            self.pipe = pipeline_class_(**components)
-
-            if not self.is_sd_xl:
-                self.pipe.tokenizer = self.__tokenizer
-
-            try:
-                self.pipe.to(device)
-            except Exception as e:
-                self.logger.error(e)
-
     def apply_tokenizer_to_pipe(self):
-        self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.LOADED, self.__tokenizer_path)
+        self.__change_sd_tokenizer_status(ModelStatus.LOADED)
 
     def __move_model_to_device(self):
         if self.pipe:
@@ -261,44 +249,122 @@ class ModelMixin:
         QApplication.processEvents()
         return {}
 
+    def reload_prompts(self):
+        settings = self.settings
+        if (
+            settings["generator_settings"]["image_preset"] != self.image_preset
+        ):
+            self.image_preset = settings["generator_settings"]["image_preset"]
+
+        self.latents = None
+        self.latents_set = False
+
+        if self.use_compel:
+            self.clear_prompt_embeds()
+            self.load_prompt_embeds(
+                self.pipe,
+                prompt=self.sd_request.generator_settings.prompt,
+                negative_prompt=self.sd_request.generator_settings.negative_prompt,
+                prompt_2=self.sd_request.generator_settings.second_prompt,
+                negative_prompt_2=self.sd_request.generator_settings.second_negative_prompt,
+            )
+            self.data = self.sd_request.initialize_prompt_embeds(
+                prompt_embeds=self.prompt_embeds,
+                negative_prompt_embeds=self.negative_prompt_embeds,
+                args=self.data
+            )
+        elif self.is_sd_xl:
+            self.pipe.to(self.device)
+            (
+                self.prompt_embeds,
+                self.negative_prompt_embeds,
+                self.pooled_prompt_embeds,
+                self.negative_pooled_prompt_embeds,
+            ) = self.pipe.encode_prompt(
+                prompt=self.sd_request.generator_settings.prompt,
+                negative_prompt=self.sd_request.generator_settings.negative_prompt,
+                prompt_2=self.sd_request.generator_settings.second_prompt,
+                negative_prompt_2=self.sd_request.generator_settings.second_negative_prompt,
+                device=self.device,
+                num_images_per_prompt=1,
+                clip_skip=self.settings["generator_settings"]["clip_skip"],
+            )
+            self.data = self.sd_request.initialize_prompt_embeds(
+                prompt_embeds=self.prompt_embeds,
+                negative_prompt_embeds=self.negative_prompt_embeds,
+                pooled_prompt_embeds=self.pooled_prompt_embeds,
+                negative_pooled_prompt_embeds=self.negative_pooled_prompt_embeds,
+                args=self.data
+            )
+
+        for k in ("prompt", "negative_prompt", "prompt_2", "negative_prompt_2"):
+            try:
+                del self.data[k]
+            except KeyError:
+                pass
+
     def __prepare_data(self):
         data = self.data.copy()
 
-        if type(self.pipe) in [StableDiffusionXLPipeline, StableDiffusionPipeline] and "image" in data:
+        if self.pipeline_is_txt2img and "image" in data:
             del data["image"]
 
-        if self.is_sd_xl:
+        self.reload_prompts()
+
+        if self.prompt_embeds is not None:
+            data.update(dict(
+                prompt_embeds=self.prompt_embeds,
+                negative_prompt_embeds=self.negative_prompt_embeds,
+            ))
             for key in ["prompt", "negative_prompt"]:
                 if key in data:
                     del data[key]
 
-            if not self.use_compel:
-                (
-                    prompt_embeds,
-                    negative_prompt_embeds,
-                    pooled_prompt_embeds,
-                    negative_pooled_prompt_embeds,
-                ) = self.pipe.encode_prompt(
-                    prompt=self.sd_request.generator_settings.prompt,
-                    negative_prompt=self.sd_request.generator_settings.negative_prompt,
-                    prompt_2=self.settings["generator_settings"]["second_prompt"],
-                    negative_prompt_2=self.settings["generator_settings"]["second_negative_prompt"],
-                    device=self.device,
-                    num_images_per_prompt=1,
-                    clip_skip=self.settings["generator_settings"]["clip_skip"],
-                )
+        if self.is_sd_xl:
+            generate_size = (self.settings["working_width"], self.settings["working_height"])
+            quality_effects = self.settings["generator_settings"]["quality_effects"]
 
-            else:
-                prompt_embeds = self.prompt_embeds
-                negative_prompt_embeds = self.negative_prompt_embeds
-                pooled_prompt_embeds = self.pooled_prompt_embeds
-                negative_pooled_prompt_embeds = self.pooled_negative_prompt_embeds
+            do_upscale = quality_effects == "Upscaled"
+            do_downscale = quality_effects == "Downscaled"
+            use_sizes = quality_effects != ""
+            original_size = None
+            target_size = None
+            negative_original_size = None
+            negative_target_size = None
+
+            if do_upscale:
+                original_size = generate_size
+                target_size = (generate_size[0] * 2, generate_size[1] * 2)
+                negative_original_size = (original_size[0] / 2, original_size[1] / 2)
+                negative_target_size = negative_original_size
+            elif do_downscale:
+                original_size = generate_size
+                target_size = (generate_size[0] / 2, generate_size[1] / 2)
+                negative_original_size = (original_size[0] * 2, original_size[1] * 2)
+                negative_target_size = negative_original_size
+            elif use_sizes:
+                original_size = generate_size
+                target_size = generate_size
+                negative_original_size = generate_size
+                negative_target_size = generate_size
+
+            if self.pooled_prompt_embeds is not None and self.negative_pooled_prompt_embeds is not None:
+                data.update(dict(
+                    pooled_prompt_embeds=self.pooled_prompt_embeds,
+                    negative_pooled_prompt_embeds=self.negative_pooled_prompt_embeds,
+                ))
+            elif self.prompt_embeds is None and self.negative_prompt_embeds is None:
+                data.update(dict(
+                    prompt_2=self.sd_request.generator_settings.second_prompt,
+                    negative_prompt_2=self.sd_request.generator_settings.second_negative_prompt,
+                ))
+
             data.update(dict(
-                prompt_embeds=prompt_embeds,
-                negative_prompt_embeds=negative_prompt_embeds,
-                pooled_prompt_embeds=pooled_prompt_embeds,
-                negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
                 crops_coords_top_left=self.settings["generator_settings"]["crops_coord_top_left"],
+                original_size=original_size,
+                target_size=target_size,
+                negative_original_size=negative_original_size,
+                negative_target_size=negative_target_size,
             ))
 
         for key in ["outpaint_box_rect", "action"]:
@@ -307,6 +373,15 @@ class ModelMixin:
 
         data["callback_on_step_end"] = self.__interrupt_callback
 
+        # Clean up the data based on the operation
+        if "image" not in data and self.sd_request.is_img2img:
+            image = self.sd_request.drawing_pad_image
+            data["image"] = image
+
+        if "image" in data and data["image"] is None:
+            del data["image"]
+
+
         return data
 
     def __call_pipe(self):
@@ -314,30 +389,96 @@ class ModelMixin:
         Generate an image using the pipe
         :return:
         """
+        # Raise an exception if the safety checker is not loaded and we have safety checker enabled
         if not self.safety_checker_ready:
             raise SafetyCheckerNotLoadedException()
+
+        # Prepare the arguments for the pipeline
+
         data = self.__prepare_data()
-        clear_memory()
-        if "image" in data and data["image"] is None:
-            del data["image"]
+        self.__finalize_pipeline(data)
 
-        if "image" not in data:
-            if type(self.pipe) in [
-                StableDiffusionControlNetPipeline,
-                StableDiffusionControlNetImg2ImgPipeline,
-                StableDiffusionControlNetInpaintPipeline
-            ]:
-                self.pipe = StableDiffusionPipeline.from_pipe(self.pipe)
-            elif type(self.pipe) in [
-                StableDiffusionXLControlNetPipeline,
-                StableDiffusionXLControlNetImg2ImgPipeline,
-                StableDiffusionXLControlNetInpaintPipeline
-            ]:
-                self.pipe = StableDiffusionXLPipeline.from_pipe(self.pipe)
+        self.current_state = HandlerState.GENERATING
 
+        # Generate the image
         results = self.pipe(**data)
         images = results.get("images", [])
+
+        # Check if NSFW content is detected and return the results
         return self.check_and_mark_nsfw_images(images)
+
+    @property
+    def pipeline_is_controlnet(self):
+        return type(self.pipe) in (
+            StableDiffusionControlNetPipeline,
+            StableDiffusionControlNetImg2ImgPipeline,
+            StableDiffusionControlNetInpaintPipeline,
+            StableDiffusionXLControlNetPipeline,
+            StableDiffusionXLControlNetImg2ImgPipeline,
+            StableDiffusionXLControlNetInpaintPipeline
+        )
+
+    @property
+    def pipeline_is_img2img(self):
+        return type(self.pipe) in (
+            StableDiffusionImg2ImgPipeline,
+            StableDiffusionControlNetImg2ImgPipeline,
+            StableDiffusionXLImg2ImgPipeline,
+            StableDiffusionXLControlNetImg2ImgPipeline
+        )
+
+    @property
+    def pipeline_is_txt2img(self):
+        return type(self.pipe) in (
+            StableDiffusionPipeline,
+            StableDiffusionControlNetPipeline,
+            StableDiffusionXLControlNetPipeline,
+            StableDiffusionXLControlNetInpaintPipeline
+        )
+
+    def __finalize_pipeline(self, data):
+        # Ensure controlnet is applied to the pipeline.
+        model_changed = self.sd_request.model_changed
+        if self.enable_controlnet and (
+            (not hasattr(self.pipe, "controlnet") or not hasattr(self.pipe, "processor")) or
+            (self.pipe.controlnet is None or self.pipe.processor is None)
+        ):
+            self.load_controlnet()
+            self.apply_controlnet_to_pipe()
+            model_changed = True
+
+        if (
+            model_changed or
+            not self.pipe_finalized or
+            (not self.settings["controlnet_enabled"] and self.pipeline_is_controlnet) or
+            (self.settings["controlnet_enabled"] and not self.pipeline_is_controlnet) or
+            (self.pipe and self.pipeline_is_img2img and ("image" not in data or data["image"] is None))
+        ):
+            # Swap the pipeline if the request is different from the current pipeline
+            self.__pipe_swap(data)
+
+            # Add lora to the pipeline
+            self.add_lora_to_pipe()
+
+            # Add embeddings to the pipeline
+            self.load_learned_embed_in_clip()
+
+            self.pipe_finalized = True
+
+
+    def __pipe_swap(self, data):
+        enable_controlnet = self.enable_controlnet
+        if "image" not in data or data["image"] is None:
+            enable_controlnet = False
+        __pipeline_class = self.__pipeline_class(enable_controlnet)
+        if type(self.pipe) is not __pipeline_class:
+            if __pipeline_class in CONTROLNET_PIPELINES_SD or __pipeline_class in CONTROLNET_PIPELINES_SDXL:
+                self.pipe = __pipeline_class.from_pipe(self.pipe, controlnet=self.controlnet)
+            else:
+                self.pipe = __pipeline_class.from_pipe(self.pipe)
+            clear_memory()
+            self.make_stable_diffusion_memory_efficient()
+            self.make_controlnet_memory_efficient()
 
     def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
         if self.do_interrupt_image_generation:
@@ -348,21 +489,26 @@ class ModelMixin:
     def __generate(self):
         if not self.pipe:
             raise PipeNotLoadedException()
-
-        self.logger.debug("sample_diffusers_model")
-
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, f"Generating media")
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
-        self.emit_signal(SignalCode.VISION_CAPTURE_LOCK_SIGNAL)
 
-        images, nsfw_content_detected = self.__call_pipe()
+        images = None
+        try:
+            images, nsfw_content_detected = self.__call_pipe()
+        except SafetyCheckerNotLoadedException:
+            self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Safety checker is not loaded")
 
-        self.emit_signal(SignalCode.VISION_CAPTURE_UNLOCK_SIGNAL)
-
-        return self.__image_handler(
-            images,
-            nsfw_content_detected
-        )
+        if images is not None:
+            return self.__image_handler(
+                images,
+                nsfw_content_detected
+            )
+        else:
+            return dict(
+                images=[],
+                data=self.data,
+                nsfw_content_detected=False,
+            )
 
     @staticmethod
     def __convert_image_to_base64(image):
@@ -415,11 +561,29 @@ class ModelMixin:
         return self.__generator
 
     def __unload_model(self):
+        threading.Thread(target=self.__unload_model_thread).start()
+
+    def __unload_model_thread(self):
+        if self.pipe.device.type == "cpu":
+            return
         self.logger.debug("Unloading model")
-        self.remove_safety_checker_from_pipe()
-        self.pipe = None
-        self.remove_controlnet_from_pipe()
-        self.change_model_status(ModelType.SD, ModelStatus.UNLOADED, "")
+        self.__change_sd_model_status(ModelStatus.LOADING)
+        self.pipe.to("cpu")
+        self.__change_sd_model_status(ModelStatus.UNLOADED)
+
+    def __change_sd_model_status(self, status: ModelStatus):
+        if self.__sd_model_status is status:
+            return
+        self.__sd_model_status = status
+        if status in (ModelStatus.FAILED, ModelStatus.UNLOADED):
+            clear_memory()
+        elif status == ModelStatus.LOADED:
+            self.make_stable_diffusion_memory_efficient()
+        self.change_model_status(ModelType.SD, status, self.model_path)
+
+    def __change_sd_tokenizer_status(self, status: ModelStatus):
+        self.__tokenizer_status = status
+        self.change_model_status(ModelType.SD_TOKENIZER, status, self.__tokenizer_path)
 
     def __handle_model_changed(self):
         self.reload_model = True
@@ -427,14 +591,9 @@ class ModelMixin:
     def __do_reset_applied_memory_settings(self):
         self.emit_signal(SignalCode.RESET_APPLIED_MEMORY_SETTINGS)
 
-    def __pipeline_class(self, operation_type=None):
-        if operation_type is None:
-            operation_type = self.sd_request.generator_settings.section
-
-        if (
-            self.enable_controlnet and
-            self.controlnet is not None
-        ):
+    def __pipeline_class(self, enable_controlnet):
+        operation_type = self.sd_request.section
+        if enable_controlnet:
             operation_type = f"{operation_type}_controlnet"
 
         pipeline_map = {
@@ -469,22 +628,17 @@ class ModelMixin:
         self.lora_loaded = False
         self.embeds_loaded = False
 
-        if self.pipe is not None and not self.reload_model:
-            sd_class = self.__pipeline_class(self.sd_request.generator_settings.section)
-            if type(sd_class) is not type(self.pipe):
-                self.pipe = sd_class.from_pipe(self.pipe)
-
-        elif self.pipe is None or self.reload_model:
-            self.change_model_status(ModelType.SD, ModelStatus.LOADING, self.model_path)
+        if self.pipe is None or self.reload_model:
+            self.__change_sd_model_status(ModelStatus.LOADING)
 
             self.logger.debug(
-                f"Loading model from scratch {self.reload_model} for {self.sd_request.generator_settings.section}")
+                f"Loading model from scratch {self.reload_model} for {self.sd_request.section}")
 
             self.reset_applied_memory_settings()
 
-            self.logger.debug(f"Loading model `{self.model_path}` for {self.sd_request.generator_settings.section}")
+            self.logger.debug(f"Loading model `{self.model_path}` for {self.sd_request.section}")
 
-            pipeline_class_ = self.__pipeline_class()
+            pipeline_class_ = self.__pipeline_class(self.settings["controlnet_enabled"])
 
             data = dict(
                 torch_dtype=self.data_type,
@@ -523,7 +677,7 @@ class ModelMixin:
                     )
                 except FileNotFoundError as e:
                     self.logger.error(f"Failed to load model from {self.model_path}: {e}")
-                    self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
+                    self.__change_sd_model_status(ModelStatus.FAILED)
                     return
             else:
                 if self.enable_controlnet:
@@ -536,35 +690,30 @@ class ModelMixin:
                     )
                 except (FileNotFoundError, OSError) as e:
                     self.logger.error(f"Failed to load model from {self.model_path}: {e}")
-                    self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
+                    self.__change_sd_model_status(ModelStatus.FAILED)
                     return
-
-            self.apply_controlnet_to_pipe()
 
             if not self.is_sd_xl:
                 self.apply_tokenizer_to_pipe()
 
             if self.pipe is None:
-                self.change_model_status(ModelType.SD, ModelStatus.FAILED, self.model_path)
+                self.__change_sd_model_status(ModelStatus.FAILED)
                 return
 
-            self.make_stable_diffusion_memory_efficient()
-            self.change_model_status(ModelType.SD, ModelStatus.LOADED, self.model_path)
-            if hasattr(self.pipe, "controlnet") and self.pipe.controlnet is not None:
-                self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED, "")
-
-            if self.settings["nsfw_filter"] is False:
-                self.remove_safety_checker_from_pipe()
-                self.remove_controlnet_from_pipe()
+            self.__change_sd_model_status(ModelStatus.LOADED)
 
             old_model_path = self.current_model
 
             self.current_model = self.model_path
             self.current_model = old_model_path
             self.controlnet_loaded = self.settings["controlnet_enabled"]
+        elif self.pipe and self.pipe.device.type == "cpu":
+            self.__change_sd_model_status(ModelStatus.LOADING)
+            self.pipe.to(self.device)
+            self.__change_sd_model_status(ModelStatus.LOADED)
 
     def __get_pipeline_action(self, action=None):
-        action = self.sd_request.generator_settings.section if not action else action
+        action = self.sd_request.section if not action else action
         if action == "txt2img" and self.sd_request.is_img2img:
             action = "img2img"
         return action
@@ -587,7 +736,6 @@ class ModelMixin:
         """
         requested_model = settings["generator_settings"]["model"]
         model = self.sd_request.generator_settings.model
-        self.logger.debug(f"Model changed clearing")
 
         model_changed = (
             model is not None and
@@ -595,21 +743,22 @@ class ModelMixin:
             model != requested_model
         )
         if model_changed:
+            self.logger.debug(f"Model changed clearing")
             self.__handle_model_changed()
             self.clear_scheduler()
-            self.clear_controlnet()
+            self.unload_controlnet()
 
-        # Set a reference to pipe
-        is_txt2img = self.sd_request.is_txt2img
-        is_img2img = self.sd_request.is_img2img
-        is_outpaint = self.sd_request.is_outpaint
-        controlnet_image = self.get_controlnet_image()
+        # Set a reference to pipeline
+        settings = self.settings
+        settings["controlnet_settings"]["image"] = convert_image_to_base64(self.controlnet_image)
+        self.settings = settings
+
+
         self.data = self.sd_request(
             model_data=model,
             extra_options={},
             callback=self.__callback,
             cross_attention_kwargs_scale=(
-                not self.sd_request.is_pix2pix and
                 len(self.available_lora) > 0 and
                 len(self.loaded_lora) > 0
             ),
@@ -617,56 +766,20 @@ class ModelMixin:
             device=self.device,
             generator=self.__generator,
             model_changed=model_changed,
-            controlnet_image=controlnet_image,
-            generator_request_data=generator_request_data
+            controlnet_image=self.controlnet_image,
+            generator_request_data=generator_request_data,
+            prompt_embeds=self.prompt_embeds,
+            negative_prompt_embeds=self.negative_prompt_embeds,
+            pooled_prompt_embeds=self.pooled_prompt_embeds,
+            negative_pooled_prompt_embeds=self.negative_pooled_prompt_embeds,
         )
-
-        pipe = None
-        pipeline_class_ = None
-
-        if self.sd_request.is_txt2img and not is_txt2img:
-            if is_img2img:
-                pipe = self.img2img
-            elif is_outpaint:
-                pipe = self.outpaint
-            if pipe is not None:
-                if self.enable_controlnet:
-                    pipeline_class_ = StableDiffusionControlNetPipeline
-                else:
-                    pipeline_class_ = StableDiffusionPipeline
-                self.pipe = pipeline_class_(**pipe.components)
-        elif self.sd_request.is_img2img and not is_img2img:
-            if is_txt2img:
-                pipe = self.txt2img
-            elif is_outpaint:
-                pipe = self.outpaint
-            if pipe is not None:
-                if self.enable_controlnet:
-                    pipeline_class_ = StableDiffusionControlNetImg2ImgPipeline
-                else:
-                    pipeline_class_ = StableDiffusionImg2ImgPipeline
-                self.pipe = pipeline_class_(**pipe.components)
-        elif self.sd_request.is_outpaint and not is_outpaint:
-            if is_txt2img:
-                pipe = self.txt2img
-            elif is_img2img:
-                pipe = self.img2img
-            if pipe is not None:
-                if self.enable_controlnet:
-                    pipeline_class_ = StableDiffusionControlNetInpaintPipeline
-                else:
-                    pipeline_class_ = StableDiffusionInpaintPipeline
-
-        if pipe is not None and pipeline_class_ is not None:
-            self.pipe = pipeline_class_(**pipe.components)
-
         self.__generator.manual_seed(self.sd_request.generator_settings.seed)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
 
     def __unload_tokenizer(self):
         self.__tokenizer = None
-        self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.UNLOADED, "")
+        self.__change_sd_tokenizer_status(ModelStatus.UNLOADED)
         clear_memory()
 
     def __load_tokenizer(self):
@@ -683,8 +796,8 @@ class ModelMixin:
                 torch_dtype=self.data_type
             )
             self.__current_tokenizer_path = self.__tokenizer_path
-            self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.READY, self.__tokenizer_path)
+            self.__change_sd_tokenizer_status(ModelStatus.READY)
         except Exception as e:
             self.logger.error(f"Failed to load tokenizer")
             self.logger.error(e)
-            self.change_model_status(ModelType.SD_TOKENIZER, ModelStatus.FAILED, self.__tokenizer_path)
+            self.__change_sd_tokenizer_status(ModelStatus.FAILED)

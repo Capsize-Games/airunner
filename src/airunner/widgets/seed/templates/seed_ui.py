@@ -24,10 +24,19 @@ class Ui_seed_widget(object):
     def setupUi(self, seed_widget):
         if not seed_widget.objectName():
             seed_widget.setObjectName(u"seed_widget")
-        seed_widget.resize(558, 45)
+        seed_widget.resize(558, 92)
         self.gridLayout = QGridLayout(seed_widget)
+        self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.lineEdit = QLineEdit(seed_widget)
+        self.lineEdit.setObjectName(u"lineEdit")
+        font = QFont()
+        font.setPointSize(8)
+        self.lineEdit.setFont(font)
+
+        self.gridLayout.addWidget(self.lineEdit, 1, 0, 1, 1)
+
         self.random_button = QPushButton(seed_widget)
         self.random_button.setObjectName(u"random_button")
         self.random_button.setMinimumSize(QSize(24, 24))
@@ -40,14 +49,6 @@ class Ui_seed_widget(object):
         self.random_button.setFlat(True)
 
         self.gridLayout.addWidget(self.random_button, 1, 1, 1, 1)
-
-        self.lineEdit = QLineEdit(seed_widget)
-        self.lineEdit.setObjectName(u"lineEdit")
-        font = QFont()
-        font.setPointSize(8)
-        self.lineEdit.setFont(font)
-
-        self.gridLayout.addWidget(self.lineEdit, 1, 0, 1, 1)
 
         self.label = QLabel(seed_widget)
         self.label.setObjectName(u"label")
@@ -68,11 +69,11 @@ class Ui_seed_widget(object):
 
     def retranslateUi(self, seed_widget):
         seed_widget.setWindowTitle(QCoreApplication.translate("seed_widget", u"Form", None))
+        self.lineEdit.setPlaceholderText(QCoreApplication.translate("seed_widget", u"seed", None))
 #if QT_CONFIG(tooltip)
         self.random_button.setToolTip(QCoreApplication.translate("seed_widget", u"Toggle random seed", None))
 #endif // QT_CONFIG(tooltip)
         self.random_button.setText("")
-        self.lineEdit.setPlaceholderText(QCoreApplication.translate("seed_widget", u"seed", None))
         self.label.setText(QCoreApplication.translate("seed_widget", u"Seed", None))
     # retranslateUi
 

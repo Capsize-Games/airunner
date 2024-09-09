@@ -109,7 +109,8 @@ class ImportWidget(
             })
         elif model_type == "LORA":
             name = file["name"].replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-            lora_data = dict(
+            settings = self.settings
+            settings["lora"][diffuser_model_version].append(dict(
                 name=name,
                 path=file_path,
                 scale=1,
@@ -117,8 +118,8 @@ class ImportWidget(
                 loaded=False,
                 trigger_word=trained_words,
                 version=model_version["baseModel"]
-            )
-            self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
+            ))
+            self.settings = settings
         elif model_type == "TextualInversion":
             # name = file_path.split("/")[-1].split(".")[0]
             # embedding_exists = session.query(Embedding).filter_by(
@@ -264,32 +265,28 @@ class ImportWidget(
         self.set_model_form_data()
     
     def download_path(self, file, version, pipeline_action, model_type):
-
+        base_path = self.settings["path_settings"]["base_path"]
         if model_type == "LORA":
-            path = self.settings["path_settings"]["lora_model_path"]
+            action = "lora"
         elif model_type == "Checkpoint":
-            if pipeline_action == "txt2img":
-                path = self.settings["path_settings"]["txt2img_model_path"]
-            elif pipeline_action == "outpaint":
-                path = self.settings["path_settings"]["inpaint_model_path"]
-            elif pipeline_action == "upscale":
-                path = self.settings["path_settings"]["upscale_model_path"]
-            elif pipeline_action == "depth2img":
-                path = self.settings["path_settings"]["depth2img_model_path"]
-            elif pipeline_action == "pix2pix":
-                path = self.settings["path_settings"]["pix2pix_model_path"]
+            action = pipeline_action
+            if action == "img2img":
+                action = "txt2img"
         elif model_type == "TextualInversion":
-            path = self.settings["path_settings"]["embeddings_model_path"]
+            action = "embeddings"
         elif model_type == "VAE":
-            path = self.settings["path_settings"]["vae_model_path"]
+            action = "vae"
         elif model_type == "Controlnet":
-            path = self.settings["path_settings"]["controlnet_model_path"]
-        elif model_type == "Poses":
-            # todo save poses here
-            pass
-
-        file_name = file["name"]
-        return f"{path}/{version}/{file_name}"
+            action = "controlnet"
+        return os.path.expanduser(
+            os.path.join(
+                base_path,
+                "art/models",
+                version,
+                action,
+                file["name"]
+            )
+        )
 
     def get_pipeline_classname(self, pipeline_action, version, category):
         pipelines = self.get_pipelines(pipeline_action, version, category)

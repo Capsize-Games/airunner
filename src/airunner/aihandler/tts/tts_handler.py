@@ -60,7 +60,8 @@ class TTSHandler(BaseHandler):
         self.do_interrupt = False
         self.cancel_generated_speech = False
         self.paused = False
-        self.model_type = "tts"
+        self.model_type = ModelType.TTS
+        self.model_class = "tts"
 
     @property
     def cuda_index(self):
@@ -122,57 +123,57 @@ class TTSHandler(BaseHandler):
     def sentence_chunks(self):
         return self.settings["tts_settings"]["sentence_chunks"]
 
-    def on_enable_tts_signal(self, _data: dict = None):
+    def enable_tts_signal(self):
         self.tts_enabled = True
         self.initialize()
 
-    def on_disable_tts_signal(self, _data: dict = None):
+    def disable_tts_signal(self):
         self.tts_enabled = False
         self.unload()
 
-    def on_tts_load_signal(self, message: dict):
+    def tts_load_signal(self):
         self.load_model()
 
-    def on_tts_unload_signal(self, _message: dict):
+    def tts_unload_signal(self):
         self.unload_model()
 
-    def on_tts_processor_load_signal(self, message: dict):
+    def tts_processor_load_signal(self):
         self.load_processor()
 
-    def on_tts_processor_unload_signal(self, _message: dict):
+    def tts_processor_unload_signal(self):
         self.unload_processor()
 
-    def on_tts_vocoder_load_signal(self, message: dict):
+    def tts_vocoder_load_signal(self):
         self.load_vocoder()
 
-    def on_tts_vocoder_unload_signal(self, _message: dict):
+    def tts_vocoder_unload_signal(self):
         self.unload_vocoder()
 
-    def on_tts_speaker_embeddings_load_signal(self, message: dict):
+    def tts_speaker_embeddings_load_signal(self):
         self.load_speaker_embeddings()
 
-    def on_tts_speaker_embeddings_unload_signal(self, _message: dict):
+    def tts_speaker_embeddings_unload_signal(self):
         self.unload_speaker_embeddings()
 
-    def on_tts_tokenizer_load_signal(self, message: dict):
+    def tts_tokenizer_load_signal(self):
         self.load_tokenizer()
 
-    def on_tts_tokenizer_unload_signal(self, _message: dict):
+    def tts_tokenizer_unload_signal(self):
         self.unload_tokenizer()
 
-    def on_dataset_tts_load_signal(self, message: dict):
+    def dataset_tts_load_signal(self):
         self.load_dataset()
 
-    def on_dataset_tts_unload_signal(self, _message: dict):
+    def dataset_tts_unload_signal(self):
         self.unload_dataset()
 
-    def on_tts_feature_extractor_load_signal(self, message: dict):
+    def tts_feature_extractor_load_signal(self):
         self.load_feature_extractor()
 
-    def on_tts_feature_extractor_unload_signal(self, _message: dict):
+    def tts_feature_extractor_unload_signal(self):
         self.unload_feature_extractor()
 
-    def on_interrupt_process_signal(self, _message: dict):
+    def interrupt_process_signal(self):
         self.do_interrupt = True
         self.cancel_generated_speech = False
         self.paused = True
@@ -183,13 +184,13 @@ class TTSHandler(BaseHandler):
         self.tts_sentence = None
         self.is_playing = False
 
-    def on_unblock_tts_generator_signal(self, _ignore):
+    def unblock_tts_generator_signal(self):
         self.logger.debug("Unblocking TTS generation...")
         self.do_interrupt = False
         self.paused = False
 
 
-    def on_application_settings_changed_signal(self, _message: dict):
+    def application_settings_changed_signal(self):
         tts_enabled = self.settings["tts_enabled"]
         if tts_enabled != self.tts_enabled:
             self.tts_enabled = tts_enabled
@@ -233,7 +234,7 @@ class TTSHandler(BaseHandler):
 
     def initialize(self):
         target_model = self.target_model
-        if target_model != self.current_model:
+        if target_model != self.current_model and self.current_model != "" and self.current_model is not None:
             self.unload()
         self.load(target_model)
 
@@ -271,7 +272,6 @@ class TTSHandler(BaseHandler):
 
     def run(self):
         self.initialize()
-        self.process_sentences()
 
     def load_model(self):
         self.logger.debug("Loading Model")
@@ -356,35 +356,6 @@ class TTSHandler(BaseHandler):
                 words[i] = ':'.join(parts_in_words)
 
         return ' '.join(words)
-
-    def process_sentences(self):
-        """
-        now we have a list of words, but we want a list of sentences. Sentences should
-        be limited to 10 words each, but should end with a period, comma, question mark,
-        exclamation point, or ellipsis. We'll use a counter to keep track of how many
-        words we've added to the current sentence, and a list to store the sentences.
-        If the sentence doesn't end with one of the above, we'll keep adding words until
-        we find one that does, so its possible that a sentence could be longer than 10
-        words.
-        :return:
-        """
-        self.logger.debug("Processing sentences")
-        self.sentences = []
-        sentence = ""
-        for word in self.corpus:
-            if len(word) == 0:
-                continue
-            sentence += word + " "
-            if word[-1] in self.single_character_sentence_enders or (
-                len(word) > 1 and word[-2:] in self.double_character_sentence_enders
-            ):
-                # remove all white space from sentence
-                sentence = sentence.strip()
-                sentence += "\n"
-                self.sentences.append(sentence)
-                sentence = ""
-        if sentence != "":
-            self.sentences.append(sentence)
 
     def add_text(self, data: dict, is_end_of_message: bool):
         self.initialize()

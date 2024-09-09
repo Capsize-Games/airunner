@@ -16,41 +16,94 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
-    QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
-    QSizePolicy, QSplitter, QTextEdit, QVBoxLayout,
-    QWidget)
+    QHBoxLayout, QPlainTextEdit, QProgressBar, QPushButton,
+    QScrollArea, QSizePolicy, QSplitter, QTextEdit,
+    QVBoxLayout, QWidget)
 
 class Ui_chat_prompt(object):
     def setupUi(self, chat_prompt):
         if not chat_prompt.objectName():
             chat_prompt.setObjectName(u"chat_prompt")
-        chat_prompt.resize(474, 1030)
-        self.gridLayout = QGridLayout(chat_prompt)
-        self.gridLayout.setObjectName(u"gridLayout")
+        chat_prompt.resize(597, 986)
+        self.gridLayout_3 = QGridLayout(chat_prompt)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gridLayout_3.setHorizontalSpacing(0)
+        self.gridLayout_3.setVerticalSpacing(10)
+        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setSpacing(0)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(10, 10, 10, 10)
         self.progressBar = QProgressBar(chat_prompt)
         self.progressBar.setObjectName(u"progressBar")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.progressBar.sizePolicy().hasHeightForWidth())
+        self.progressBar.setSizePolicy(sizePolicy)
+        self.progressBar.setMinimumSize(QSize(0, 30))
         self.progressBar.setValue(0)
 
-        self.gridLayout.addWidget(self.progressBar, 5, 0, 1, 1)
-
-        self.clear_conversatiion_button = QPushButton(chat_prompt)
-        self.clear_conversatiion_button.setObjectName(u"clear_conversatiion_button")
-        icon = QIcon(QIcon.fromTheme(u"user-trash"))
-        self.clear_conversatiion_button.setIcon(icon)
-
-        self.gridLayout.addWidget(self.clear_conversatiion_button, 4, 0, 1, 1)
-
-        self.pushButton = QPushButton(chat_prompt)
-        self.pushButton.setObjectName(u"pushButton")
-
-        self.gridLayout.addWidget(self.pushButton, 3, 0, 1, 1)
+        self.horizontalLayout.addWidget(self.progressBar)
 
         self.send_button = QPushButton(chat_prompt)
         self.send_button.setObjectName(u"send_button")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.send_button.sizePolicy().hasHeightForWidth())
+        self.send_button.setSizePolicy(sizePolicy1)
+        self.send_button.setMinimumSize(QSize(30, 30))
+        self.send_button.setMaximumSize(QSize(30, 30))
+        icon = QIcon(QIcon.fromTheme(u"go-up"))
+        self.send_button.setIcon(icon)
 
-        self.gridLayout.addWidget(self.send_button, 2, 0, 1, 1)
+        self.horizontalLayout.addWidget(self.send_button)
 
-        self.chat_prompt_splitter = QSplitter(chat_prompt)
+        self.pushButton = QPushButton(chat_prompt)
+        self.pushButton.setObjectName(u"pushButton")
+        sizePolicy1.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
+        self.pushButton.setSizePolicy(sizePolicy1)
+        self.pushButton.setMinimumSize(QSize(30, 30))
+        self.pushButton.setMaximumSize(QSize(30, 30))
+        icon1 = QIcon(QIcon.fromTheme(u"application-exit"))
+        self.pushButton.setIcon(icon1)
+
+        self.horizontalLayout.addWidget(self.pushButton)
+
+        self.clear_conversatiion_button = QPushButton(chat_prompt)
+        self.clear_conversatiion_button.setObjectName(u"clear_conversatiion_button")
+        sizePolicy1.setHeightForWidth(self.clear_conversatiion_button.sizePolicy().hasHeightForWidth())
+        self.clear_conversatiion_button.setSizePolicy(sizePolicy1)
+        self.clear_conversatiion_button.setMinimumSize(QSize(30, 30))
+        self.clear_conversatiion_button.setMaximumSize(QSize(30, 30))
+        icon2 = QIcon(QIcon.fromTheme(u"user-trash"))
+        self.clear_conversatiion_button.setIcon(icon2)
+
+        self.horizontalLayout.addWidget(self.clear_conversatiion_button)
+
+
+        self.gridLayout_3.addLayout(self.horizontalLayout, 1, 0, 1, 1)
+
+        self.scrollArea = QScrollArea(chat_prompt)
+        self.scrollArea.setObjectName(u"scrollArea")
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents_2 = QWidget()
+        self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 595, 924))
+        self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setHorizontalSpacing(0)
+        self.gridLayout.setVerticalSpacing(10)
+        self.gridLayout.setContentsMargins(10, 0, 10, 0)
+        self.action = QComboBox(self.scrollAreaWidgetContents_2)
+        self.action.setObjectName(u"action")
+        self.action.setMinimumSize(QSize(0, 30))
+        self.action.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+
+        self.gridLayout.addWidget(self.action, 1, 0, 1, 1)
+
+        self.chat_prompt_splitter = QSplitter(self.scrollAreaWidgetContents_2)
         self.chat_prompt_splitter.setObjectName(u"chat_prompt_splitter")
         self.chat_prompt_splitter.setOrientation(Qt.Orientation.Vertical)
         self.chat_prompt_splitter.setChildrenCollapsible(False)
@@ -65,7 +118,7 @@ class Ui_chat_prompt(object):
         self.chat_container.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 454, 427))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 573, 440))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
@@ -85,22 +138,20 @@ class Ui_chat_prompt(object):
         self.chat_prompt_splitter.addWidget(self.verticalLayoutWidget)
         self.prompt = QPlainTextEdit(self.chat_prompt_splitter)
         self.prompt.setObjectName(u"prompt")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.prompt.sizePolicy().hasHeightForWidth())
-        self.prompt.setSizePolicy(sizePolicy)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.prompt.sizePolicy().hasHeightForWidth())
+        self.prompt.setSizePolicy(sizePolicy2)
         self.prompt.setMinimumSize(QSize(0, 150))
         self.prompt.setMaximumSize(QSize(16777215, 16777215))
         self.chat_prompt_splitter.addWidget(self.prompt)
 
         self.gridLayout.addWidget(self.chat_prompt_splitter, 0, 0, 1, 1)
 
-        self.action = QComboBox(chat_prompt)
-        self.action.setObjectName(u"action")
-        self.action.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
 
-        self.gridLayout.addWidget(self.action, 1, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.scrollArea, 0, 0, 1, 1)
 
 
         self.retranslateUi(chat_prompt)
@@ -116,13 +167,16 @@ class Ui_chat_prompt(object):
     def retranslateUi(self, chat_prompt):
         chat_prompt.setWindowTitle(QCoreApplication.translate("chat_prompt", u"Form", None))
 #if QT_CONFIG(tooltip)
+        self.send_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Send message", None))
+#endif // QT_CONFIG(tooltip)
+        self.send_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.pushButton.setToolTip(QCoreApplication.translate("chat_prompt", u"Cancel message", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton.setText("")
+#if QT_CONFIG(tooltip)
         self.clear_conversatiion_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Clear conversation", None))
 #endif // QT_CONFIG(tooltip)
         self.clear_conversatiion_button.setText("")
-        self.pushButton.setText(QCoreApplication.translate("chat_prompt", u"Interrupt", None))
-#if QT_CONFIG(tooltip)
-        self.send_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Send message", None))
-#endif // QT_CONFIG(tooltip)
-        self.send_button.setText(QCoreApplication.translate("chat_prompt", u"Send", None))
     # retranslateUi
 

@@ -46,7 +46,7 @@ class MessageWidget(BaseWidget):
         self.font_size = None
         self.set_chat_font()
 
-    def on_application_settings_changed_signal(self, _message):
+    def on_application_settings_changed_signal(self):
         self.set_chat_font()
 
     def set_chat_font(self):

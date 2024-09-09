@@ -17,9 +17,6 @@ def auto_export_image(
 
     data["options"]["seed"] = seed
 
-    if data and "action" in data and data["action"] == "txt2vid":
-        return None, None
-
     if type == "image":
         image_path = "images" if image_path == "" else image_path
     elif type == "controlnet":

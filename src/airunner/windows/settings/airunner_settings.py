@@ -3,20 +3,6 @@ from PySide6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPa
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
 from airunner.enums import SignalCode
-from airunner.widgets.api_token.api_token_widget import APITokenWidget
-from airunner.widgets.civitai_preferences.civitai_preferences_widget import CivitAIPreferencesWidget
-from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
-from airunner.widgets.font_settings.font_settings_widget import FontSettingsWidget
-from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
-from airunner.widgets.image_generator_preferences.image_generator_preferences_widget import ImageGeneratorPreferencesWidget
-from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
-from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
-from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
-from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
-from airunner.widgets.paths.paths_widget import PathsWidget
-from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
-from airunner.widgets.translation_preferences.translation_preferences_widget import TranslationPreferencesWidget
-from airunner.widgets.tts.tts_preferences_widget import TTSPreferencesWidget
 from airunner.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
 
@@ -46,12 +32,59 @@ class SettingsWindow(BaseWindow):
     template_class_ = Ui_airunner_settings
 
     def __init__(self, **kwargs):
+        self.widgets = {}
         super().__init__(**kwargs)
         self.model = None
         self.scroll_widget = None
         self.scroll_layout = None
         self.highlight_delegate = None
         self.emit_signal(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
+
+    def available_widgets(self, name):
+        if name == "image_generator_preferences":
+            from airunner.widgets.image_generator_preferences.image_generator_preferences_widget import \
+                ImageGeneratorPreferencesWidget
+            return ImageGeneratorPreferencesWidget
+        if name == "stable_diffusion_preferences":
+            from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
+            return StableDiffusionSettingsWidget
+        if name == "lora_settings":
+            from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
+            return LoraContainerWidget
+        if name == "embeddings_settings":
+            from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
+            return EmbeddingsContainerWidget
+        if name == "paths":
+            from airunner.widgets.paths.paths_widget import PathsWidget
+            return PathsWidget
+        if name == "keyboard_shortcuts":
+            from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
+            return KeyboardShortcutsWidget
+        if name == "grid":
+            from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
+            return GridPreferencesWidget
+        if name == "memory":
+            from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
+            return MemoryPreferencesWidget
+        if name == "hf_api_key":
+            from airunner.widgets.api_token.api_token_widget import APITokenWidget
+            return APITokenWidget
+        if name == "translation_preferences":
+            from airunner.widgets.translation_preferences.translation_preferences_widget import \
+                TranslationPreferencesWidget
+            return TranslationPreferencesWidget
+        if name == "tts_preferences":
+            from airunner.widgets.tts.tts_preferences_widget import TTSPreferencesWidget
+            return TTSPreferencesWidget
+        if name == "bot_preferences":
+            from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
+            return BotPreferencesWidget
+        if name == "font_settings":
+            from airunner.widgets.font_settings.font_settings_widget import FontSettingsWidget
+            return FontSettingsWidget
+        if name == "civitai":
+            from airunner.widgets.civitai_preferences.civitai_preferences_widget import CivitAIPreferencesWidget
+            return CivitAIPreferencesWidget
 
     def handle_value_change(self, attr_name, value=None, widget=None):
         """
@@ -124,33 +157,6 @@ class SettingsWindow(BaseWindow):
                         "name": "embeddings_settings",
                         "display_name": "Embeddings",
                         "checkable": False
-                    }
-                ]
-            },
-            {
-                "section": "Import / Export Preferences",
-                "files": [
-                    {
-                        "name": "paths",
-                        "display_name": "Paths",
-                        "checkable": False
-                    },
-                    {
-                        "name": "export_preferences",
-                        "display_name": "Image import / export",
-                        "checkable": False
-                    },
-                    {
-                        "name": "resize_on_import",
-                        "display_name": "Resize on import",
-                        "checkable": True,
-                        "description": "If enabled, images will be resized to the active grid area size when pasted."
-                    },
-                    {
-                        "name": "image_to_new_layer",
-                        "display_name": "Image to new layer",
-                        "checkable": True,
-                        "description": "If enabled, images will be pasted to a new layer."
                     }
                 ]
             },
@@ -307,18 +313,19 @@ class SettingsWindow(BaseWindow):
         file_item.setCheckable(checkable)
         if checkable:
             checked = False
+            settings = self.settings
             if name == "resize_on_import":
-                checked = self.settings["resize_on_paste"]
+                checked = settings["resize_on_paste"]
             elif name == "image_to_new_layer":
-                checked = self.settings["image_to_new_layer"] is True
+                checked = settings["image_to_new_layer"] is True
             elif name == "dark_mode":
-                checked = self.settings["dark_mode_enabled"]
+                checked = settings["dark_mode_enabled"]
             elif name == "override_system_theme":
-                checked = self.settings["override_system_theme"]
+                checked = settings["override_system_theme"]
             elif name == "check_for_updates":
-                checked = self.settings["latest_version_check"]
+                checked = settings["latest_version_check"]
             elif name == "allow_online_mode":
-                checked = self.settings["allow_online_mode"]
+                checked = settings["allow_online_mode"]
 
             file_item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
         # prevent file_item from being edited
@@ -371,24 +378,13 @@ class SettingsWindow(BaseWindow):
         label = QLabel(f"<p><b>{section} > {display_name}</b></p>")
 
         widget_object = None
-        widgets = {
-            "image_generator_preferences": ImageGeneratorPreferencesWidget,
-            "stable_diffusion_preferences": StableDiffusionSettingsWidget,
-            "lora_settings": LoraContainerWidget,
-            "embeddings_settings": EmbeddingsContainerWidget,
-            "paths": PathsWidget,
-            "keyboard_shortcuts": KeyboardShortcutsWidget,
-            "grid": GridPreferencesWidget,
-            "memory": MemoryPreferencesWidget,
-            "hf_api_key": APITokenWidget,
-            "translation_preferences": TranslationPreferencesWidget,
-            "tts_preferences": TTSPreferencesWidget,
-            "bot_preferences": BotPreferencesWidget,
-            "font_settings": FontSettingsWidget,
-            "civitai": CivitAIPreferencesWidget
-        }
-        if name in widgets:
-            widget_object = widgets[name]()
+        if widget_object is None:
+            _widget_class = self.available_widgets(name)
+            if _widget_class is not None:
+                widget_object = _widget_class()
+        if widget_object is None:
+            print(f"Unable to load widget {name}")
+            return
 
         self.clear_scroll_area()
         self.scroll_layout.addWidget(label)

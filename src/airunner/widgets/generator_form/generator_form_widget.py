@@ -25,9 +25,6 @@ class GeneratorForm(BaseWidget):
         self.current_secondary_prompt_value = None
         self.current_secondary_negative_prompt_value = None
         self.initialized = False
-        self.ui.generator_form_tabs.tabBar().hide()
-        self.activate_ai_mode()
-
         self.signal_handlers = {
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.SD_GENERATE_IMAGE_SIGNAL: self.on_generate_image_signal,
@@ -40,35 +37,20 @@ class GeneratorForm(BaseWidget):
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
         }
 
-        # iterate over ImagePreset enum and add them to the combobox
-        image_presets = [""] + [preset.value for preset in ImagePreset]
-        self.ui.image_presets.addItems(image_presets)
-        self.ui.image_presets.setCurrentIndex(
-            self.ui.image_presets.findText(self.settings["generator_settings"]["image_preset"])
-        )
-        self.toggle_secondary_prompts()
-
     def toggle_secondary_prompts(self):
-        if self.settings["generator_settings"]["version"] != StableDiffusionVersion.SDXL1_0.value:
-            if self.settings["generator_settings"]["version"] == StableDiffusionVersion.SDXL_TURBO.value:
+        settings = self.settings
+        if settings["generator_settings"]["version"] != StableDiffusionVersion.SDXL1_0.value:
+            if settings["generator_settings"]["version"] == StableDiffusionVersion.SDXL_TURBO.value:
                 self.ui.negative_prompt_label.hide()
                 self.ui.negative_prompt.hide()
             else:
                 self.ui.negative_prompt_label.show()
                 self.ui.negative_prompt.show()
             self.ui.croops_coord_top_left_groupbox.hide()
-            self.ui.original_size_groupbox.hide()
-            self.ui.target_size_groupbox.hide()
-            self.ui.negative_original_size_groupbox.hide()
-            self.ui.negative_target_size_groupbox.hide()
             self.ui.secondary_prompt.hide()
             self.ui.secondary_negative_prompt.hide()
         else:
             self.ui.croops_coord_top_left_groupbox.show()
-            self.ui.original_size_groupbox.show()
-            self.ui.target_size_groupbox.show()
-            self.ui.negative_original_size_groupbox.show()
-            self.ui.negative_target_size_groupbox.show()
             self.ui.negative_prompt_label.show()
             self.ui.negative_prompt.show()
             self.ui.secondary_prompt.show()
@@ -82,26 +64,6 @@ class GeneratorForm(BaseWidget):
     @property
     def is_outpaint(self):
         return self.generator_section == GeneratorSection.OUTPAINT.value
-
-    @property
-    def is_depth2img(self):
-        return self.generator_section == GeneratorSection.DEPTH2IMG.value
-
-    @property
-    def is_pix2pix(self):
-        return self.generator_section == GeneratorSection.PIX2PIX.value
-
-    @property
-    def is_upscale(self):
-        return self.generator_section == GeneratorSection.UPSCALE.value
-
-    @property
-    def is_superresolution(self):
-        return False  # deprecated
-
-    @property
-    def is_txt2vid(self):
-        return False  # deprecated
 
     @property
     def generator_section(self):
@@ -123,25 +85,26 @@ class GeneratorForm(BaseWidget):
 
     @property
     def active_rect(self):
+        settings = self.settings
         rect = QRect(
-            self.settings["active_grid_settings"]["pos_x"],
-            self.settings["active_grid_settings"]["pos_y"],
-            self.settings["active_grid_settings"]["width"],
-            self.settings["active_grid_settings"]["height"]
+            settings["active_grid_settings"]["pos_x"],
+            settings["active_grid_settings"]["pos_y"],
+            settings["working_width"],
+            settings["working_height"]
         )
-        rect.translate(-self.settings["canvas_settings"]["pos_x"], -self.settings["canvas_settings"]["pos_y"])
+        rect.translate(-settings["canvas_settings"]["pos_x"], -settings["canvas_settings"]["pos_y"])
 
         return rect
 
     def on_load_saved_stablediffuion_prompt_signal(self, index):
+        settings = self.settings
         try:
-            saved_prompt = self.settings["saved_prompts"][index]
+            saved_prompt = settings["saved_prompts"][index]
         except KeyError:
             self.logger.error(f"Unable to load prompt at index {index}")
             saved_prompt = None
 
         if saved_prompt:
-            settings = self.settings
             settings["generator_settings"]["prompt"] = saved_prompt["prompt"]
             settings["generator_settings"]["negative_prompt"] = saved_prompt["negative_prompt"]
             self.settings = settings
@@ -159,14 +122,9 @@ class GeneratorForm(BaseWidget):
         self.do_generate()
 
     def do_generate(self):
-        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, {
-            "callback": self.call_generate
-        })
-
-    def call_generate(self):
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
-    def on_application_settings_changed_signal(self, _message: dict):
+    def on_application_settings_changed_signal(self):
         self.activate_ai_mode()
         self.toggle_secondary_prompts()
     
@@ -192,7 +150,7 @@ class GeneratorForm(BaseWidget):
     def handle_second_negative_prompt_changed(self):
         pass
 
-    def on_generate_image_signal(self, _message):
+    def on_generate_image_signal(self):
         self.handle_generate_button_clicked()
 
     def handle_generate_button_clicked(self):
@@ -219,25 +177,15 @@ class GeneratorForm(BaseWidget):
         self.current_secondary_negative_prompt_value = value
         settings["generator_settings"]["second_negative_prompt"] = value
 
-        x = int(self.ui.crops_coord_top_left_x.text())
-        y = int(self.ui.crops_coord_top_left_y.text())
+        def get_integer_value(widget):
+            try:
+                return int(widget.text())
+            except ValueError:
+                return 0
+
+        x = get_integer_value(self.ui.crops_coord_top_left_x)
+        y = get_integer_value(self.ui.crops_coord_top_left_y)
         settings["generator_settings"]["crops_coord_top_left"] = (x, y)
-
-        x = int(self.ui.original_size_x.text())
-        y = int(self.ui.original_size_y.text())
-        settings["generator_settings"]["original_size"] = (x, y)
-
-        x = int(self.ui.target_size_x.text())
-        y = int(self.ui.target_size_y.text())
-        settings["generator_settings"]["target_size"] = (x, y)
-
-        x = int(self.ui.negative_original_size_x.text())
-        y = int(self.ui.negative_original_size_y.text())
-        settings["generator_settings"]["negative_original_size"] = (x, y)
-
-        x = int(self.ui.negative_target_size_x.text())
-        y = int(self.ui.negative_target_size_y.text())
-        settings["generator_settings"]["negative_target_size"] = (x, y)
 
         self.settings = settings
 
@@ -245,9 +193,10 @@ class GeneratorForm(BaseWidget):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
     def generate(self):
-        if self.settings["generator_settings"]["random_seed"]:
+        settings = self.settings
+        if settings["generator_settings"]["random_seed"]:
             self.seed = random_seed()
-        if self.settings["generator_settings"]["n_samples"] > 1:
+        if settings["generator_settings"]["n_samples"] > 1:
             self.emit_signal(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL)
         self.do_generate()
         self.seed_override = None
@@ -255,16 +204,17 @@ class GeneratorForm(BaseWidget):
 
     def do_generate_image(self):
         time.sleep(0.1)
+        settings = self.settings
 
-        if self.settings["generator_settings"]["section"] == GeneratorSection.OUTPAINT.value:
-            image = convert_base64_to_image(self.settings["canvas_settings"]["image"])
-            mask = convert_base64_to_image(self.settings["outpaint_settings"]["image"])
+        if settings["generator_settings"]["section"] == GeneratorSection.OUTPAINT.value:
+            image = convert_base64_to_image(settings["canvas_settings"]["image"])
+            mask = convert_base64_to_image(settings["outpaint_settings"]["image"])
 
             active_rect = self.active_rect
             overlap_left = max(0, active_rect.left())
-            overlap_right = min(self.settings["working_width"], active_rect.right())
+            overlap_right = min(settings["working_width"], active_rect.right())
             overlap_top = max(0, active_rect.top())
-            overlap_bottom = min(self.settings["working_height"], active_rect.bottom())
+            overlap_bottom = min(settings["working_height"], active_rect.bottom())
 
             crop_rect = (overlap_left, overlap_top, overlap_right, overlap_bottom)
 
@@ -272,7 +222,7 @@ class GeneratorForm(BaseWidget):
             cropped_image = image.crop(crop_rect)
 
             # Create a new black image of the same size as the input image
-            new_image = Image.new('RGB', (self.settings["working_width"], self.settings["working_height"]), 'black')
+            new_image = Image.new('RGB', (settings["working_width"], settings["working_height"]), 'black')
 
             # Paste the cropped image to the top of the new image
             position = (0, 0)
@@ -301,20 +251,27 @@ class GeneratorForm(BaseWidget):
         self.handle_generate_button_clicked()
 
     def get_memory_options(self):
+        settings = self.settings
         return {
-            "use_last_channels": self.settings["memory_settings"]["use_last_channels"],
-            "use_enable_sequential_cpu_offload": self.settings["memory_settings"]["use_enable_sequential_cpu_offload"],
-            "enable_model_cpu_offload": self.settings["memory_settings"]["enable_model_cpu_offload"],
-            "use_attention_slicing": self.settings["memory_settings"]["use_attention_slicing"],
-            "use_tf32": self.settings["memory_settings"]["use_tf32"],
-            "use_cudnn_benchmark": self.settings["memory_settings"]["use_cudnn_benchmark"],
-            "use_enable_vae_slicing": self.settings["memory_settings"]["use_enable_vae_slicing"],
-            "use_accelerated_transformers": self.settings["memory_settings"]["use_accelerated_transformers"],
-            "use_torch_compile": self.settings["memory_settings"]["use_torch_compile"],
-            "use_tiled_vae": self.settings["memory_settings"]["use_tiled_vae"],
-            "use_tome_sd": self.settings["memory_settings"]["use_tome_sd"],
-            "tome_sd_ratio": self.settings["memory_settings"]["tome_sd_ratio"],
+            "use_last_channels": settings["memory_settings"]["use_last_channels"],
+            "use_enable_sequential_cpu_offload": settings["memory_settings"]["use_enable_sequential_cpu_offload"],
+            "enable_model_cpu_offload": settings["memory_settings"]["enable_model_cpu_offload"],
+            "use_attention_slicing": settings["memory_settings"]["use_attention_slicing"],
+            "use_tf32": settings["memory_settings"]["use_tf32"],
+            "use_cudnn_benchmark": settings["memory_settings"]["use_cudnn_benchmark"],
+            "use_enable_vae_slicing": settings["memory_settings"]["use_enable_vae_slicing"],
+            "use_accelerated_transformers": settings["memory_settings"]["use_accelerated_transformers"],
+            "use_torch_compile": settings["memory_settings"]["use_torch_compile"],
+            "use_tiled_vae": settings["memory_settings"]["use_tiled_vae"],
+            "use_tome_sd": settings["memory_settings"]["use_tome_sd"],
+            "tome_sd_ratio": settings["memory_settings"]["tome_sd_ratio"],
         }
+
+    def handle_quality_effects_changed(self, val):
+        print("quality_effects", val)
+        settings = self.settings
+        settings["generator_settings"]["quality_effects"] = val
+        self.settings = settings
 
     def handle_progress_bar(self, message):
         step = message.get("step")
@@ -342,33 +299,53 @@ class GeneratorForm(BaseWidget):
         QApplication.processEvents()
 
     def start_progress_bar(self):
+        self.ui.progress_bar.setFormat("Generating %p%")
         self.ui.progress_bar.setRange(0, 0)
         self.ui.progress_bar.show()
 
     def showEvent(self, event):
         super().showEvent(event)
+        self.ui.generator_form_tabs.tabBar().hide()
+        self.activate_ai_mode()
         self.set_form_values()
+        self.toggle_secondary_prompts()
         self.initialized = True
 
     def set_form_values(self):
+        settings = self.settings
         self.ui.prompt.blockSignals(True)
         self.ui.negative_prompt.blockSignals(True)
-        self.ui.prompt.setPlainText(self.settings["generator_settings"]["prompt"])
-        self.ui.negative_prompt.setPlainText(self.settings["generator_settings"]["negative_prompt"])
-        self.ui.secondary_prompt.setPlainText(self.settings["generator_settings"]["second_prompt"])
-        self.ui.secondary_negative_prompt.setPlainText(self.settings["generator_settings"]["second_negative_prompt"])
-        self.ui.crops_coord_top_left_x.setText(str(self.settings["generator_settings"]["crops_coord_top_left"][0]))
-        self.ui.crops_coord_top_left_y.setText(str(self.settings["generator_settings"]["crops_coord_top_left"][1]))
-        self.ui.original_size_x.setText(str(self.settings["generator_settings"]["original_size"][0]))
-        self.ui.original_size_y.setText(str(self.settings["generator_settings"]["original_size"][1]))
-        self.ui.target_size_x.setText(str(self.settings["generator_settings"]["target_size"][0]))
-        self.ui.target_size_y.setText(str(self.settings["generator_settings"]["target_size"][1]))
-        self.ui.negative_original_size_x.setText(str(self.settings["generator_settings"]["negative_original_size"][0]))
-        self.ui.negative_original_size_y.setText(str(self.settings["generator_settings"]["negative_original_size"][1]))
-        self.ui.negative_target_size_x.setText(str(self.settings["generator_settings"]["negative_target_size"][0]))
-        self.ui.negative_target_size_y.setText(str(self.settings["generator_settings"]["negative_target_size"][1]))
+        self.ui.secondary_prompt.blockSignals(True)
+        self.ui.secondary_negative_prompt.blockSignals(True)
+        self.ui.crops_coord_top_left_x.blockSignals(True)
+        self.ui.crops_coord_top_left_y.blockSignals(True)
+        self.ui.image_presets.blockSignals(True)
+        self.ui.quality_effects.blockSignals(True)
+
+        self.ui.prompt.setPlainText(settings["generator_settings"]["prompt"])
+        self.ui.negative_prompt.setPlainText(settings["generator_settings"]["negative_prompt"])
+        self.ui.secondary_prompt.setPlainText(settings["generator_settings"]["second_prompt"])
+        self.ui.secondary_negative_prompt.setPlainText(settings["generator_settings"]["second_negative_prompt"])
+        self.ui.crops_coord_top_left_x.setText(str(settings["generator_settings"]["crops_coord_top_left"][0]))
+        self.ui.crops_coord_top_left_y.setText(str(settings["generator_settings"]["crops_coord_top_left"][1]))
+
+        image_presets = [""] + [preset.value for preset in ImagePreset]
+        self.ui.image_presets.addItems(image_presets)
+        self.ui.image_presets.setCurrentIndex(
+            self.ui.image_presets.findText(self.settings["generator_settings"]["image_preset"])
+        )
+
+        self.ui.quality_effects.setCurrentText(settings["generator_settings"]["quality_effects"])
+
         self.ui.prompt.blockSignals(False)
         self.ui.negative_prompt.blockSignals(False)
+        self.ui.secondary_prompt.blockSignals(False)
+        self.ui.secondary_negative_prompt.blockSignals(False)
+        self.ui.crops_coord_top_left_x.blockSignals(False)
+        self.ui.crops_coord_top_left_y.blockSignals(False)
+        self.ui.image_presets.blockSignals(False)
+        self.ui.quality_effects.blockSignals(False)
+
 
     def clear_prompts(self):
         self.ui.prompt.setPlainText("")
@@ -383,3 +360,6 @@ class GeneratorForm(BaseWidget):
             return
         progressbar.setRange(0, 100)
         progressbar.setValue(100)
+
+        # set text of progressbar to "complete"
+        progressbar.setFormat("Complete")
