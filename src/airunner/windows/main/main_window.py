@@ -649,6 +649,7 @@ class MainWindow(
             canvas_splitter=self.ui.canvas_widget_2.ui.canvas_splitter.saveState(),
             generator_form_splitter=self.ui.generator_widget.ui.generator_form_splitter.saveState(),
             tool_tab_widget_index=self.ui.tool_tab_widget.ui.tool_tab_widget_container.currentIndex(),
+            grid_settings_splitter=self.ui.tool_tab_widget.ui.grid_settings_splitter.saveState(),
             width=self.width(),
             height=self.height(),
             x_pos=self.pos().x(),
@@ -679,6 +680,7 @@ class MainWindow(
             ("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter),
             ("canvas_splitter", self.ui.canvas_widget_2.ui.canvas_splitter),
             ("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter),
+            ("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter),
         ]
         for splitter_name, splitter in splitters:
             if window_settings[splitter_name] is not None:
