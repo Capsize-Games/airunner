@@ -101,7 +101,7 @@ class SliderWidget(BaseWidget):
         self.ui.slider.sliderReleased.connect(self.handle_slider_release)
         self._callback = None
 
-    def on_main_window_loaded_signal(self, _message):
+    def on_main_window_loaded_signal(self):
         try:
             self.init()
         except RuntimeError as e:
@@ -109,7 +109,7 @@ class SliderWidget(BaseWidget):
 
     def init(self, **kwargs):
         self.is_loading = True
-        self._callback = kwargs.get("callback", None)
+        self._callback = kwargs.get("slider_callback", None)
         slider_minimum = kwargs.get("slider_minimum", self.property("slider_minimum") or 0)
         slider_maximum = kwargs.get("slider_maximum", self.property("slider_maximum") or 100)
         spinbox_minimum = kwargs.get("spinbox_minimum", self.property("spinbox_minimum") or 0.0)
@@ -181,7 +181,7 @@ class SliderWidget(BaseWidget):
         :return:
         """
         if self._callback:
-            self._callback(attr_name, value, widget)
+            self._callback(attr_name, value)
         else:
             self.set_settings_value(attr_name, value)
 
@@ -221,10 +221,6 @@ class SliderWidget(BaseWidget):
 
         single_step = self.ui.slider.singleStep()
         adjusted_value = val
-        if single_step > 0:
-            val = float(val)
-            single_step = float(single_step)
-            adjusted_value = round(val / single_step) * single_step
         normalized = adjusted_value / self.slider_maximum
         spinbox_val = normalized * self.spinbox_maximum
         spinbox_val = round(spinbox_val, 2)

@@ -44,39 +44,6 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
-        "name": "Stability AI 4x resolution",
-        "path": "stabilityai/stable-diffusion-x4-upscaler",
-        "branch": "fp16",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "pipeline_action": "superresolution",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
-        "name": "Instruct pix2pix",
-        "path": "timbrooks/instruct-pix2pix",
-        "branch": "fp16",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "pipeline_action": "pix2pix",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
-        "name": "sd-x2-latent-upscaler",
-        "path": "stabilityai/sd-x2-latent-upscaler",
-        "branch": "fp16",
-        "version": "SD 1.5",
-        "category": "stablediffusion",
-        "pipeline_action": "upscale",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True
-    },
-    {
         "name": "CompVis Safety Checker",
         "path": "CompVis/stable-diffusion-safety-checker",
         "branch": "fp16",

@@ -9,7 +9,7 @@ import requests
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
-    Signal, QTimer, QProcess
+    Signal, QProcess
 )
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
@@ -28,7 +28,7 @@ from airunner.settings import (
     STATUS_ERROR_COLOR,
     STATUS_NORMAL_COLOR_LIGHT,
     STATUS_NORMAL_COLOR_DARK,
-    NSFW_CONTENT_DETECTED_MESSAGE
+    NSFW_CONTENT_DETECTED_MESSAGE, DEFAULT_PATH_SETTINGS
 )
 from airunner.enums import (
     SignalCode,
@@ -42,15 +42,13 @@ from airunner.settings import (
     BUG_REPORT_LINK,
     VULNERABILITY_REPORT_LINK
 )
-from airunner.utils.agents.current_chatbot import current_chatbot, update_chatbot
 from airunner.utils.file_system.operations import FileSystemOperations
+from airunner.utils.get_current_chatbot import get_current_chatbot, set_current_chatbot
 
 from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
-from airunner.windows.main.embedding_mixin import EmbeddingMixin
-from airunner.windows.main.lora_mixin import LoraMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
@@ -60,8 +58,6 @@ class MainWindow(
     QMainWindow,
     MediatorMixin,
     SettingsMixin,
-    LoraMixin,
-    EmbeddingMixin,
     PipelineMixin,
     ControlnetModelMixin,
     AIModelMixin
@@ -99,13 +95,10 @@ class MainWindow(
         disable_llm: bool = False,
         disable_tts: bool = False,
         disable_stt: bool = False,
-        disable_vision_capture: bool = False,
         use_cuda: bool = True,
-        ocr_enabled: bool = False,
         tts_enabled: bool = False,
         stt_enabled: bool = False,
         ai_mode: bool = True,
-        tts_handler_class=None,
         restrict_os_access=None,
         defendatron=None,
         **kwargs
@@ -115,8 +108,6 @@ class MainWindow(
         self.disable_llm = disable_llm
         self.disable_tts = disable_tts
         self.disable_stt = disable_stt
-        self.disable_vision_capture = disable_vision_capture
-        self.tts_handler_class = tts_handler_class
 
         self.restrict_os_access = restrict_os_access
         self.defendatron = defendatron
@@ -157,13 +148,9 @@ class MainWindow(
         self._generator = None
         self._generator_settings = None
         self.listening = False
-        self.intialized = False
+        self.initialized = False
         self.history = History()
 
-        self.splitter_names = [
-            "content_splitter",
-            "splitter",
-        ]
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
@@ -178,8 +165,6 @@ class MainWindow(
         self._updating_settings = True
         self.update_settings()
 
-        LoraMixin.__init__(self)
-        EmbeddingMixin.__init__(self)
         PipelineMixin.__init__(self)
         ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
@@ -196,21 +181,13 @@ class MainWindow(
         self.is_started = True
         self.image_window = None
 
-        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, {
-            "main_window": self
-        })
-        self.register(
-            SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL,
-            self.on_ai_models_save_or_update_signal
-        )
-        self.register(
-            SignalCode.VAE_MODELS_SAVE_OR_UPDATE_SIGNAL,
-            self.on_vae_models_save_or_update_signal
-        )
-        self.register(
-            SignalCode.NAVIGATE_TO_URL,
-            self.on_navigate_to_url
-        )
+        for item in (
+            (SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal),
+            (SignalCode.NAVIGATE_TO_URL, self.on_navigate_to_url),
+        ):
+            self.register(item[0], item[1])
+
+        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, { "main_window": self })
 
     def download_url(self, url, save_path):
         response = requests.get(url)
@@ -237,6 +214,8 @@ class MainWindow(
     def on_navigate_to_url(self, data: dict = None):
         url, ok = QInputDialog.getText(self, 'Browse Web', 'Enter your URL:')
         if ok:
+            settings = self.settings
+
             try:
                 result = urllib.parse.urlparse(url)
                 is_url = all([result.scheme, result.netloc])
@@ -247,11 +226,11 @@ class MainWindow(
             if is_url:
                 if url.lower().endswith('.pdf'):
                     # Handle PDF file
-                    filepath = os.path.expanduser(self.settings["path_settings"]["pdf_path"])
+                    filepath = os.path.expanduser(settings["path_settings"]["pdf_path"])
                     filename = self.download_pdf(url, filepath)
                 else:
                     # Handle URL
-                    filepath = os.path.expanduser(self.settings["path_settings"]["webpages_path"])
+                    filepath = os.path.expanduser(settings["path_settings"]["webpages_path"])
                     filename = self.download_url(url, filepath)
             elif os.path.isfile(url):
                 filepath = os.path.dirname(url)
@@ -262,10 +241,9 @@ class MainWindow(
 
             # Update target files to use only the file that was downloaded or navigated to
             # and update the index.
-            settings = self.settings
-            chatbot = current_chatbot(settings)
+            chatbot = get_current_chatbot(settings)
             chatbot["target_files"] = [os.path.join(filepath, filename)]
-            settings = update_chatbot(settings, chatbot)
+            settings = set_current_chatbot(settings, chatbot)
             self.settings = settings
             self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
                 "target_files": chatbot["target_files"]
@@ -295,14 +273,16 @@ class MainWindow(
                         break
 
     def key_matches(self, key_name, keyboard_key):
-        if not key_name in self.settings["shortcut_key_settings"]:
+        settings = self.settings
+        if not key_name in settings["shortcut_key_settings"]:
             return False
-        return self.settings["shortcut_key_settings"][key_name]["key"] == keyboard_key.value
+        return settings["shortcut_key_settings"][key_name]["key"] == keyboard_key.value
 
     def key_text(self, key_name):
-        if not key_name in self.settings["shortcut_key_settings"]:
+        settings = self.settings
+        if not key_name in settings["shortcut_key_settings"]:
             return ""
-        return self.settings["shortcut_key_settings"][key_name]["text"]
+        return settings["shortcut_key_settings"][key_name]["text"]
 
     def on_update_saved_stablediffusion_prompt_signal(self, options: dict):
         index, prompt, negative_prompt = options
@@ -316,11 +296,11 @@ class MainWindow(
             self.logger.error(f"Unable to update prompt at index {index}")
         self.settings = settings
 
-    def on_save_stablediffusion_prompt_signal(self, _message):
+    def on_save_stablediffusion_prompt_signal(self):
         settings = self.settings
         settings["saved_prompts"].append({
-            'prompt': self.settings["generator_settings"]["prompt"],
-            'negative_prompt': self.settings["generator_settings"]["negative_prompt"],
+            'prompt': settings["generator_settings"]["prompt"],
+            'negative_prompt': settings["generator_settings"]["negative_prompt"],
         })
         self.settings = settings
 
@@ -364,27 +344,27 @@ class MainWindow(
 
     def register_signals(self):
         self.logger.debug("Connecting signals")
-        self.register(SignalCode.VISION_DESCRIBE_IMAGE_SIGNAL, self.on_describe_image_signal)
         self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
         self.register(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, self.on_update_saved_stablediffusion_prompt_signal)
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
         self.register(SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal)
-        self.register(SignalCode.VISION_CAPTURED_SIGNAL, self.on_vision_captured_signal)
         self.register(SignalCode.ENABLE_BRUSH_TOOL_SIGNAL, lambda _message: self.action_toggle_brush(True))
         self.register(SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda _message: self.action_toggle_eraser(True))
         self.register(SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True))
         self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True))
         self.register(SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal)
         self.register(SignalCode.WRITE_FILE, self.on_write_file_signal)
-        self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.reset_paths)
-        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal)
         self.register(SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts)
-        self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.on_reset_settings_signal)
+        self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.action_reset_settings)
+        self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal)
+        self.register(SignalCode.REFRESH_STYLESHEET_SIGNAL, self.refresh_stylesheet)
+        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
 
-    def on_reset_settings_signal(self, _message: dict):
-        self.settings = self.default_settings
-        self.restart()
+    def on_reset_paths_signal(self):
+        settings = self.settings
+        settings["path_settings"] = DEFAULT_PATH_SETTINGS
+        self.settings = settings
 
     def restart(self):
         # Save the current state
@@ -395,49 +375,6 @@ class MainWindow(
 
         # Start a new instance of the application
         QProcess.startDetached(sys.executable, sys.argv)
-
-    def on_model_status_changed_signal(self, data: dict):
-        if data["status"] == ModelStatus.LOADING:
-            color = StatusColors.LOADING
-        elif data["status"] == ModelStatus.LOADED:
-            color = StatusColors.LOADED
-        elif data["status"] == ModelStatus.FAILED:
-            color = StatusColors.FAILED
-        else:
-            color = StatusColors.UNLOADED
-
-        styles = "QLabel { color: " + color.value + "; }"
-        element_name = ""
-        tool_tip = ""
-        if data["model"] == ModelType.SD:
-            element_name = "sd_status"
-            tool_tip = "Stable Diffusion"
-
-            self.set_sd_status_text()
-
-        elif data["model"] == ModelType.CONTROLNET:
-            element_name = "controlnet_status"
-            tool_tip = "Controlnet"
-        elif data["model"] == ModelType.LLM:
-            element_name = "llm_status"
-            tool_tip = "LLM"
-        elif data["model"] == ModelType.TTS:
-            element_name = "tts_status"
-            tool_tip = "TTS"
-        elif data["model"] == ModelType.STT:
-            element_name = "stt_status"
-            tool_tip = "STT"
-        # elif data["model"] == ModelType.OCR:
-        #     element_name = "ocr_status"
-
-        tool_tip += " model status: " + data["status"].value
-
-        if element_name != "":
-            getattr(self.ui, element_name).setStyleSheet(styles)
-            getattr(self.ui, element_name).setToolTip(tool_tip)
-
-    def set_sd_status_text(self):
-        self.ui.sd_status.setText(self.settings["generator_settings"]["version"])
 
     def on_write_file_signal(self, data: dict):
         """
@@ -463,67 +400,19 @@ class MainWindow(
         args = data["args"]
         return bash_execute(args[0])
 
-    def on_application_settings_changed_signal(self, _message: dict):
+    def on_application_settings_changed_signal(self):
         if not self._updating_settings:
             self.set_stylesheet()
 
-    def on_vision_captured_signal(self, data: dict):
-        # Create the window if it doesn't exist
-        if self.image_window is None:
-            from airunner.windows.image_window import ImageWindow
-            self.image_window = ImageWindow()
-
-        image = data.get("image", None)
-
-        if image:
-            # Update the image in the window
-            self.image_window.update_image(image)
-        else:
-            self.logger.error("on_vision_captured_signal failed - no image")
-
     def initialize_ui(self):
-        self.logger.debug("Loading ui")
-        from airunner.widgets.status.status_widget import StatusWidget
+        self.logger.debug("Loading UI")
         self.ui.setupUi(self)
+
+        self.logger.debug("Restoring state")
         self.restore_state()
+        settings = self.settings
 
-        if self.settings["sd_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.SD,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
-        if self.settings["controlnet_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.CONTROLNET,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
-        if self.settings["llm_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.LLM,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
-        if self.settings["tts_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.TTS,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
-        if self.settings["stt_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.STT,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
-        if self.settings["ocr_enabled"]:
-            self.on_model_status_changed_signal({
-                "model": ModelType.OCR,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
-
+        from airunner.widgets.status.status_widget import StatusWidget
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
@@ -532,7 +421,8 @@ class MainWindow(
         self.initialize_widget_elements()
 
     def initialize_widget_elements(self):
-        self.ui.ocr_button.blockSignals(True)
+        settings = self.settings
+
         self.ui.tts_button.blockSignals(True)
         self.ui.v2t_button.blockSignals(True)
         self.ui.llm_button.blockSignals(True)
@@ -540,14 +430,12 @@ class MainWindow(
         self.ui.sd_toggle_button.blockSignals(True)
         self.ui.enable_controlnet.blockSignals(True)
         self.ui.controlnet_toggle_button.blockSignals(True)
-        self.ui.ocr_button.setChecked(self.settings["ocr_enabled"])
-        self.ui.llm_button.setChecked(self.settings["llm_enabled"])
-        self.ui.tts_button.setChecked(self.settings["tts_enabled"])
-        self.ui.v2t_button.setChecked(self.settings["stt_enabled"])
-        self.ui.sd_toggle_button.setChecked(self.settings["sd_enabled"])
-        self.ui.enable_controlnet.setChecked(self.settings["controlnet_enabled"])
-        self.ui.controlnet_toggle_button.setChecked(self.settings["controlnet_enabled"])
-        self.ui.ocr_button.blockSignals(False)
+        self.ui.llm_button.setChecked(settings["llm_enabled"])
+        self.ui.tts_button.setChecked(settings["tts_enabled"])
+        self.ui.v2t_button.setChecked(settings["stt_enabled"])
+        self.ui.sd_toggle_button.setChecked(settings["sd_enabled"])
+        self.ui.enable_controlnet.setChecked(settings["controlnet_enabled"])
+        self.ui.controlnet_toggle_button.setChecked(settings["controlnet_enabled"])
         self.ui.llm_button.blockSignals(False)
         self.ui.tts_button.blockSignals(False)
         self.ui.v2t_button.blockSignals(False)
@@ -555,7 +443,7 @@ class MainWindow(
         self.ui.enable_controlnet.blockSignals(False)
         self.ui.sd_toggle_button.blockSignals(False)
         self.ui.controlnet_toggle_button.blockSignals(False)
-        self.intialized = True
+        self.initialized = True
 
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
         self.emit_signal(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
@@ -566,11 +454,11 @@ class MainWindow(
     The following functions are defined in and connected to the appropriate
     signals in the corresponding ui file.
     """
-    def action_quit_triggered(self, _message: dict):
+    def action_quit_triggered(self):
         QApplication.quit()
         self.close()
 
-    def on_nsfw_content_detected_signal(self, _message: dict):
+    def on_nsfw_content_detected_signal(self):
         # display message in status
         self.emit_signal(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
@@ -580,8 +468,8 @@ class MainWindow(
     def closeEvent(self, event) -> None:
         self.logger.debug("Quitting")
         self.save_state()
-        self.save_state()
-        super().closeEvent(event)
+        self.emit_signal(SignalCode.QUIT_APPLICATION)
+        # super().closeEvent(event)
 
     @Slot()
     def action_new_document_triggered(self):
@@ -649,24 +537,8 @@ class MainWindow(
         self.show_settings_path("txt2img_model_path")
 
     @Slot()
-    def action_show_model_path_depth2img(self):
-        self.show_settings_path("depth2img_model_path")
-
-    @Slot()
-    def action_show_model_path_pix2pix(self):
-        self.show_settings_path("pix2pix_model_path")
-
-    @Slot()
     def action_show_model_path_inpaint(self):
         self.show_settings_path("inpaint_model_path")
-
-    @Slot()
-    def action_show_model_path_upscale(self):
-        self.show_settings_path("upscale_model_path")
-
-    @Slot()
-    def action_show_model_path_txt2vid(self):
-        self.show_settings_path("txt2vid_model_path")
 
     @Slot()
     def action_show_model_path_embeddings(self):
@@ -685,7 +557,7 @@ class MainWindow(
         show_path(default_path if default_path and path == "" else path)
 
     def set_icons(self, icon_name, widget_name, theme):
-        if not self.intialized:
+        if not self.initialized:
             return
 
         icon = QtGui.QIcon()
@@ -700,11 +572,6 @@ class MainWindow(
     def action_show_about_window(self):
         from airunner.windows.about.about import AboutWindow
         AboutWindow()
-
-    @Slot()
-    def action_show_model_merger_window(self):
-        from airunner.windows.model_merger import ModelMerger
-        ModelMerger()
 
     @Slot()
     def action_show_settings(self):
@@ -751,17 +618,11 @@ class MainWindow(
         self.settings = new_settings
         self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL if val else SignalCode.TTS_DISABLE_SIGNAL)
         if val:
-            self.on_model_status_changed_signal({
+            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                 "model": ModelType.TTS,
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-
-    @Slot(bool)
-    def ocr_button_toggled(self, val):
-        new_settings = self.settings
-        new_settings["ocr_enabled"] = val
-        self.settings = new_settings
 
     @Slot(bool)
     def v2t_button_toggled(self, val):
@@ -779,32 +640,30 @@ class MainWindow(
         self.quitting = True
         self.logger.debug("Saving window state")
         settings = self.settings
-        settings["window_settings"] = {
-            'is_maximized': self.isMaximized(),
-            'is_fullscreen': self.isFullScreen(),
-        }
-
-        # Store splitter settings in application settings
-        for splitter in self.splitter_names:
-            ui_obj = self.ui
-            if splitter in ["stable_diffusion_splitter", "llm_splitter"]:
-                ui_obj = self.ui.tool_tab_widget.ui
-            try:
-                settings["window_settings"][splitter] = getattr(ui_obj, splitter).saveState()
-            except AttributeError as e:
-                self.logger.error(f"Error saving splitter state: {e}")
-
-        settings["window_settings"]["chat_prompt_splitter"] = self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.saveState()
-        settings["window_settings"]["canvas_splitter"] = self.ui.canvas_widget_2.ui.canvas_splitter.saveState()
-        settings["window_settings"]["canvas_side_splitter"] = self.ui.canvas_widget_2.ui.canvas_side_splitter.saveState()
-        settings["window_settings"]["canvas_side_splitter_2"] = self.ui.canvas_widget_2.ui.canvas_side_splitter_2.saveState()
-
+        window_settings = settings["window_settings"]
+        window_settings.update(dict(
+            is_maximized=self.isMaximized(),
+            is_fullscreen=self.isFullScreen(),
+            llm_splitter=self.ui.tool_tab_widget.ui.llm_splitter.saveState(),
+            content_splitter=self.ui.content_splitter.saveState(),
+            canvas_splitter=self.ui.canvas_widget_2.ui.canvas_splitter.saveState(),
+            generator_form_splitter=self.ui.generator_widget.ui.generator_form_splitter.saveState(),
+            tool_tab_widget_index=self.ui.tool_tab_widget.ui.tool_tab_widget_container.currentIndex(),
+            grid_settings_splitter=self.ui.tool_tab_widget.ui.grid_settings_splitter.saveState(),
+            width=self.width(),
+            height=self.height(),
+            x_pos=self.pos().x(),
+            y_pos=self.pos().y()
+        ))
+        settings["window_settings"] = window_settings
         self.settings = settings
         self.save_settings()
 
     def restore_state(self):
         self.logger.debug("Restoring state")
-        window_settings = self.settings["window_settings"]
+        settings = self.settings
+
+        window_settings = settings["window_settings"]
 
         if window_settings["is_maximized"]:
             self.showMaximized()
@@ -813,36 +672,30 @@ class MainWindow(
         else:
             self.showNormal()
 
-        self.ui.ai_button.setChecked(self.settings["ai_mode"])
-        self.set_button_checked("toggle_grid", self.settings["grid_settings"]["show_grid"], False)
+        self.ui.ai_button.setChecked(settings["ai_mode"])
+        self.set_button_checked("toggle_grid", settings["grid_settings"]["show_grid"], False)
 
-        # Restore splitters
-        for splitter in self.splitter_names:
-            ui_obj = self.ui
-            if splitter in ["stable_diffusion_splitter", "llm_splitter"]:
-                ui_obj = self.ui.tool_tab_widget.ui
-            try:
-                getattr(ui_obj, splitter).restoreState(window_settings[splitter])
-            except TypeError:
-                self.logger.warning(f"failed to restore {splitter} splitter")
-            except KeyError:
-                self.logger.warning(f"{splitter} missing in window_settings")
-            except AttributeError:
-                self.logger.warning(f"AttributeError: {splitter}")
+        splitters = [
+            ("content_splitter", self.ui.content_splitter),
+            ("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter),
+            ("canvas_splitter", self.ui.canvas_widget_2.ui.canvas_splitter),
+            ("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter),
+            ("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter),
+        ]
+        for splitter_name, splitter in splitters:
+            if window_settings[splitter_name] is not None:
+                splitter.blockSignals(True)
+                splitter.restoreState(window_settings[splitter_name])
+                splitter.blockSignals(False)
 
-        if "chat_prompt_splitter" in window_settings:
-            self.ui.generator_widget.ui.chat_prompt_widget.ui.chat_prompt_splitter.restoreState(
-                window_settings["chat_prompt_splitter"]
-            )
+        self.setMinimumSize(100, 100)  # Set a reasonable minimum size
+        width = window_settings["width"] if "width" in window_settings else 800
+        height = window_settings["height"] if "height" in window_settings else 600
+        self.resize(width, height)
 
-        if window_settings["canvas_splitter"] is not None:
-            self.ui.canvas_widget_2.ui.canvas_splitter.restoreState(window_settings["canvas_splitter"])
-
-        if window_settings["canvas_side_splitter"] is not None:
-            self.ui.canvas_widget_2.ui.canvas_side_splitter.restoreState(window_settings["canvas_side_splitter"])
-
-        if window_settings["canvas_side_splitter_2"] is not None:
-            self.ui.canvas_widget_2.ui.canvas_side_splitter_2.restoreState(window_settings["canvas_side_splitter"])
+        x_pos = window_settings["x_pos"] if "x_pos" in window_settings else 0
+        y_pos = window_settings["y_pos"] if "y_pos" in window_settings else 0
+        self.move(x_pos, y_pos)
     ##### End window properties #####
     #################################
         
@@ -932,7 +785,9 @@ class MainWindow(
             self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
 
     def show_nsfw_warning_popup(self):
-        if self.settings["show_nsfw_warning"]:
+        settings = self.settings
+
+        if settings["show_nsfw_warning"]:
             """
             Display a popup window which asks the user if they are sure they want to disable the NSFW filter
             along with a checkbox that allows the user to disable the warning in the future.
@@ -965,7 +820,7 @@ class MainWindow(
                 self._disable_nsfw_filter(not checkbox.isChecked())
 
             self.ui.actionSafety_Checker.blockSignals(True)
-            self.ui.actionSafety_Checker.setChecked(self.settings["nsfw_filter"])
+            self.ui.actionSafety_Checker.setChecked(settings["nsfw_filter"])
             self.ui.actionSafety_Checker.blockSignals(False)
         else:
             self._disable_nsfw_filter()
@@ -1000,20 +855,22 @@ class MainWindow(
         from airunner.windows.update.update_window import UpdateWindow
         self.update_popup = UpdateWindow()
 
-    def refresh_styles(self):
-        self.set_stylesheet()
+    def refresh_stylesheet(self):
+        self.set_stylesheet(force=True)
 
-    def set_stylesheet(self, ui=None):
+    def set_stylesheet(self, ui=None, force=False):
         """
         Sets the stylesheet for the application based on the current theme
         """
+        settings = self.settings
         if (
-            self._override_system_theme is not self.settings["override_system_theme"] or
-            self._dark_mode_enabled is not self.settings["dark_mode_enabled"]
+            self._override_system_theme is not settings["override_system_theme"] or
+            self._dark_mode_enabled is not settings["dark_mode_enabled"] or
+            force
         ):
             ui = ui or self
-            self._override_system_theme = self.settings["override_system_theme"]
-            self._dark_mode_enabled = self.settings["dark_mode_enabled"]
+            self._override_system_theme = settings["override_system_theme"]
+            self._dark_mode_enabled = settings["dark_mode_enabled"]
 
             if self._override_system_theme:
                 self.logger.debug("Setting stylesheet")
@@ -1031,52 +888,35 @@ class MainWindow(
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.set_sd_status_text()
-        # self.automatic_filter_manager = AutomaticFilterManager()
-        # self.automatic_filter_manager.register_filter(PixelFilter, base_size=256)
-
-        # print("*"*1000)
-        # for filename, modules in self.restrict_os_access.logging_importer.imported_files.items():
-        #     print(filename)
-        #     for module, submodules in modules.items():
-        #         print(f"    {module}")
-        #         for submodule in submodules:
-        #             print(f"        {submodule}")
-
-        self.initialize_window()
-        self.initialize_default_buttons()
-        self.initialize_filter_actions()
-        self.intialized = True
+        self.logger.debug("showEvent called, initializing window")
+        settings = self.settings
+        self._initialize_window()
+        self._initialize_default_buttons(settings)
+        self._initialize_filter_actions(settings)
+        self.initialized = True
         for icon_data in self.icons:
             self.set_icons(
                 icon_data[0],
                 icon_data[1],
-                "dark" if self.settings["dark_mode_enabled"] else "light"
+                "dark" if settings["dark_mode_enabled"] else "light"
             )
+        self._initialize_worker_manager()
+        self.logger.debug("Showing window")
 
-        # call initialize_worker_manager after 100ms
-        QTimer.singleShot(500, self.initialize_worker_manager)
-
-    def initialize_worker_manager(self):
-        if self.tts_handler_class is None:
-            from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
-            self.tts_handler_class = EspeakTTSHandler
+    def _initialize_worker_manager(self):
+        self.logger.debug("Initializing worker manager")
         from airunner.worker_manager import WorkerManager
-        from airunner.aihandler.llm.agent.base_agent import BaseAgent
         self.worker_manager = WorkerManager(
             disable_sd=self.disable_sd,
             disable_llm=self.disable_llm,
             disable_tts=self.disable_tts,
             disable_stt=self.disable_stt,
-            disable_vision_capture=self.disable_vision_capture,
-            do_load_llm_on_init=self.do_load_llm_on_init,
-            tts_handler_class=self.tts_handler_class,
-            agent_class=BaseAgent
+            do_load_llm_on_init=self.do_load_llm_on_init
         )
 
-    def initialize_filter_actions(self):
+    def _initialize_filter_actions(self, settings):
         # add more filters:
-        for filter_name, filter_data in self.settings["image_filters"].items():
+        for filter_name, filter_data in settings["image_filters"].items():
 
             action = self.ui.menuFilters.addAction(filter_data["display_name"])
             action.triggered.connect(partial(self.display_filter_window, filter_data["name"]))
@@ -1085,10 +925,10 @@ class MainWindow(
         from airunner.windows.filter_window import FilterWindow
         FilterWindow(filter_name)
 
-    def initialize_default_buttons(self):
-        show_grid = self.settings["grid_settings"]["show_grid"]
-        current_tool = self.settings["current_tool"]
-        ai_mode = self.settings["ai_mode"]
+    def _initialize_default_buttons(self, settings):
+        show_grid = settings["grid_settings"]["show_grid"]
+        current_tool = settings["current_tool"]
+        ai_mode = settings["ai_mode"]
 
         set_widget_state(self.ui.toggle_active_grid_area_button, current_tool is CanvasToolName.ACTIVE_GRID_AREA)
         set_widget_state(self.ui.toggle_brush_button, current_tool is CanvasToolName.BRUSH)
@@ -1097,7 +937,7 @@ class MainWindow(
         set_widget_state(self.ui.ai_button, ai_mode)
 
         self.ui.actionSafety_Checker.blockSignals(True)
-        self.ui.actionSafety_Checker.setChecked(self.settings["nsfw_filter"])
+        self.ui.actionSafety_Checker.setChecked(settings["nsfw_filter"])
         self.ui.actionSafety_Checker.blockSignals(False)
 
     def toggle_tool(self, tool: CanvasToolName, active: bool):
@@ -1128,7 +968,7 @@ class MainWindow(
         except AttributeError:
             return None
 
-    def initialize_window(self):
+    def _initialize_window(self):
         self.center()
         self.set_window_title()
 
@@ -1182,23 +1022,13 @@ class MainWindow(
         widget.setChecked(val)
         if block_signals:
             widget.blockSignals(False)
-    
-    def redraw(self):
-        self.set_stylesheet()
-
-        # Update the window
-        self.update()
 
     def action_center_clicked(self):
         print("center clicked")
 
     def action_reset_settings(self):
-        self.emit_signal(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
-
-    def action_toggle_controlnet(self, val):
-        settings = self.settings
-        settings["controlnet_enabled"] = val
-        self.settings = settings
+        self.settings = self.default_settings
+        self.restart()
 
     def import_controlnet_image(self):
         self.emit_signal(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
@@ -1267,14 +1097,43 @@ class MainWindow(
         if val:
             self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
         else:
+            self.update()
             self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
+
+        self.ui.sd_toggle_button.setEnabled(False)
 
     @Slot(bool)
     def action_controlnet_toggled(self, val: bool):
         settings = self.settings
         settings["controlnet_enabled"] = val
         self.settings = settings
-        if val:
-            self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
-        else:
-            self.emit_signal(SignalCode.CONTROLNET_UNLOAD_SIGNAL)
+
+        for widget in [self.ui.controlnet_toggle_button, self.ui.enable_controlnet]:
+            widget.blockSignals(True)
+            widget.setChecked(val)
+            widget.setEnabled(False)
+            widget.blockSignals(False)
+
+        signal = SignalCode.CONTROLNET_LOAD_SIGNAL if val else SignalCode.CONTROLNET_UNLOAD_SIGNAL
+        self.emit_signal(signal)
+
+    @Slot()
+    def action_stats_triggered(self):
+        from airunner.widgets.stats.stats_widget import StatsWidget
+        widget = StatsWidget()
+        # display in a window
+        widget.show()
+
+
+    def on_model_status_changed_signal(self, data):
+        if data["status"] in (
+            ModelStatus.LOADED,
+            ModelStatus.FAILED,
+            ModelStatus.READY,
+            ModelStatus.UNLOADED
+        ):
+            if data["model"] is ModelType.SD:
+                print(data["status"])
+                self.ui.sd_toggle_button.setEnabled(True)
+            elif data["model"] is ModelType.CONTROLNET:
+                self.ui.controlnet_toggle_button.setEnabled(True)

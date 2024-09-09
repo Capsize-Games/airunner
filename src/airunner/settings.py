@@ -80,7 +80,7 @@ PROMPT_FOR_ONLINE_ACCESS = True
 # These logs are not stored and are used for development
 # purposes only.
 ####################################################################
-LOG_LEVEL = logging.ERROR
+LOG_LEVEL = logging.DEBUG
 
 ####################################################################
 # Default models for the core application
@@ -94,7 +94,6 @@ DEFAULT_BARK_MODEL_PATHS = {
     "model": "suno/bark-small",
 }
 EMBEDDINGS_MODEL_PATH = ""
-DEFAULT_OCR_MODEL_PATH = "Salesforce/blip-vqa-base"
 
 ####################################################################
 # Default system prompts
@@ -167,7 +166,37 @@ DEFAULT_IMAGE_LLM_GUARDRAILS = (
 # By default, this is set to ~/.airunner
 ####################################################################
 BASE_PATH = "~/.airunner"
-
+DEFAULT_PATH_SETTINGS = {
+    "base_path": BASE_PATH,
+    "documents_path": os.path.expanduser(
+        os.path.join(
+            BASE_PATH,
+            "text/other",
+            "documents"
+        )
+    ),
+    "ebook_path": os.path.expanduser(
+        os.path.join(
+            BASE_PATH,
+            "text/other",
+            "ebooks"
+        )
+    ),
+    "image_path": os.path.expanduser(
+        os.path.join(
+            BASE_PATH,
+            "art/other",
+            "images"
+        )
+    ),
+    "llama_index_path": os.path.expanduser(
+        os.path.join(
+            BASE_PATH,
+            "text/rag",
+            "db"
+        )
+    )
+}
 
 ####################################################################
 # DEFAULT_CHATBOT is a dictionary that contains the default settings
@@ -565,8 +594,6 @@ DEFAULT_MODELS = dict(
         img2img=SD_DEFAULT_MODEL,
         inpaint=SD_DEFAULT_MODEL,
         outpaint=SD_DEFAULT_MODEL,
-        depth2img=SD_DEFAULT_MODEL,
-        pix2pix=SD_DEFAULT_MODEL,
     )
 )
 
@@ -641,9 +668,7 @@ ESPEAK_SETTINGS = {
 AVAILABLE_ACTIONS = [
     "txt2img",
     "img2img",
-    "pix2pix",
     "outpaint",
-    "depth2img",
     "controlnet",
     "safety_checker",
 ]
@@ -674,24 +699,10 @@ AVAILABLE_SCHEDULERS_BY_ACTION = {
     action: SCHEDULERS for action in [
         "txt2img",
         "img2img",
-        "depth2img",
-        "pix2pix",
-        "vid2vid",
         "outpaint",
         "controlnet",
-        "txt2vid"
     ]
 }
-AVAILABLE_SCHEDULERS_BY_ACTION.update({
-    "upscale": [
-        Scheduler.EULER.value
-    ],
-    "superresolution": [
-        Scheduler.DDIM.value,
-        Scheduler.LMS.value,
-        Scheduler.PLMS.value
-    ],
-})
 MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
 NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
 
@@ -730,8 +741,6 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     second_negative_prompt="",
     steps=20,
     ddim_eta=0.5,
-    height=512,
-    width=512,
     scale=750,
     seed=42,
     random_seed=True,
@@ -741,7 +750,6 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     scheduler=DEFAULT_SCHEDULER,
     prompt_triggers="",
     strength=50,
-    image_guidance_scale=750,  # pix2pix
     n_samples=1,
     clip_skip=0,
     variation=False,
@@ -750,7 +758,7 @@ STABLEDIFFUSION_GENERATOR_SETTINGS = dict(
     is_preset=False,
     input_image=None,
     crops_coord_top_left=(0, 0),
-    original_size=(1024, 1024),
+    original_size=(512, 512),
     target_size=(1024, 1024),
     negative_original_size=(512, 512),
     negative_target_size=(512, 512),
@@ -773,6 +781,7 @@ DEFAULT_GENERATOR_SETTINGS = dict(
     section="txt2img",
     generator_name="stablediffusion",
     presets={},
+    quality_effects="",
 )
 
 # Define the generator settings
@@ -791,10 +800,6 @@ for category in ImageCategory:
 
     # Iterate over each section in GeneratorSection
     for section in GeneratorSection:
-        # Skip the upscale model
-        if section == GeneratorSection.UPSCALE:
-            continue
-
         sec = section.value
         default_model = DEFAULT_MODELS[img_gen_name][sec]
 
@@ -815,8 +820,8 @@ End of system feature flags
 SLEEP_TIME_IN_MS = 50
 DEFAULT_SHORTCUTS = {
     "Generate Image": {
-        "text": "F5",
-        "key": QtCore.Qt.Key.Key_F5.value,
+        "text": "F1",
+        "key": QtCore.Qt.Key.Key_F1.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
         "signal": SignalCode.SD_GENERATE_IMAGE_SIGNAL.value
@@ -870,6 +875,13 @@ DEFAULT_SHORTCUTS = {
         "description": "Quit key. Responsible for quitting the application.",
         "signal": SignalCode.QUIT_APPLICATION.value
     },
+    "Refresh Stylesheet": {
+        "text": "F5",
+        "key": QtCore.Qt.Key.Key_F5.value,
+        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
+        "description": "Refresh the stylesheet. Useful when creating a template.",
+        "signal": SignalCode.REFRESH_STYLESHEET_SIGNAL.value
+    },
 }
 
 
@@ -922,7 +934,6 @@ DEFAULT_USE_CUDA = True
 DEFAULT_SD_ENABLED = False
 DEFAULT_CONTROLNET_ENABLED = False
 DEFAULT_LLM_ENABLED = False
-DEFAULT_OCR_ENABLED = False
 DEFAULT_TTS_ENABLED = False
 DEFAULT_STT_ENABLED = False
 DEFAULT_AI_MODE = True
@@ -937,7 +948,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     sd_enabled=DEFAULT_SD_ENABLED,
     controlnet_enabled=DEFAULT_CONTROLNET_ENABLED,
     llm_enabled=DEFAULT_LLM_ENABLED,
-    ocr_enabled=DEFAULT_OCR_ENABLED,
     tts_enabled=DEFAULT_TTS_ENABLED,
     stt_enabled=DEFAULT_STT_ENABLED,
     ai_mode=DEFAULT_AI_MODE,
@@ -979,13 +989,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     autoload_sd=True,
     autoload_llm=False,
     show_nsfw_warning=True,
-    ocr_settings=dict(
-        model_path=DEFAULT_OCR_MODEL_PATH,
-    ),
-    document_settings={
-        "width": 512,
-        "height": 512,
-    },
     font_settings={
         "chat": {
             "font_family": "Arial",
@@ -1002,18 +1005,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
             "template_name": "image",
             "guardrails": DEFAULT_IMAGE_LLM_GUARDRAILS,
             "system": DEFAULT_IMAGE_SYSTEM_PROMPT,
-        },
-        "ocr": {
-            "use_guardrails": False,
-            "template_name": "ocr",
-            "guardrails": "",
-            "system": (
-                "You have eyes, you can see. You see many things but they "
-                "are no always correct. You must try to determine what you "
-                "are seeing based on these images Try to summarize them to "
-                "determine what is happening. Here is a list of things that "
-                "you currently saw:"
-            ),
         },
         "application_command": {
             "use_guardrails": False,
@@ -1077,8 +1068,12 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         is_maximized=True,
         is_fullscreen=False,
         canvas_splitter=None,
-        canvas_side_splitter=None,
-        canvas_side_splitter_2=None
+        generator_form_splitter=None,
+        grid_settings_splitter=None,
+        width=800,
+        height=600,
+        x_pos=0,
+        y_pos=0,
     ),
     memory_settings=DEFAULT_MEMORY_SETTINGS,
     grid_settings=dict(
@@ -1101,9 +1096,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         conditioning_scale=550,
         guidance_scale=75,
     ),
-    path_settings={
-        "base_path": BASE_PATH
-    },
+    path_settings=DEFAULT_PATH_SETTINGS,
     active_grid_settings=dict(
         enabled=True,
         render_border=True,
@@ -1137,7 +1130,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         image=None,
         mask=None,
         enabled=True,
-        enable_automatic_drawing=True
+        enable_automatic_drawing=True,
     ),
     metadata_settings=dict(
         image_export_metadata_prompt=True,
@@ -1167,7 +1160,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         ngram_size=0,
         temperature=1000,
         sequences=1,
-        top_k=0,
+        top_k=10,
         seed=0,
         do_sample=False,
         eta_cutoff=10,
@@ -1185,10 +1178,11 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         ),
         prompt_template="Mistral 7B Instruct: Default Chatbot",
         batch_size=1,
-        max_new_tokens=100,
+        max_new_tokens=1000,
         use_api=False,
         api_key="",
         api_model="",
+        use_cache=True
     ),
     tts_settings=TTS_SETTINGS_DEFAULT,
     stt_settings=dict(
@@ -1198,11 +1192,6 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         volume_input_threshold=0.08,
         silence_buffer_seconds=1.0,
         chunk_duration=0.03,
-    ),
-    upscale_settings=dict(
-        model="",
-        face_enhance=False,
-        upscale_amount=1,
     ),
     schedulers=[
         dict(
