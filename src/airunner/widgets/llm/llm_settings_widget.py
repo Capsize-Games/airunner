@@ -75,16 +75,16 @@ class LLMSettingsWidget(
         for element in elements:
             element.blockSignals(True)
 
-        self.ui.top_p.init(callback=self.callback, current_value=self.generator_settings["top_p"])
-        self.ui.max_new_tokens.init(callback=self.callback, current_value=self.generator_settings["max_new_tokens"])
-        self.ui.repetition_penalty.init(callback=self.callback, current_value=self.generator_settings["repetition_penalty"])
-        self.ui.min_length.init(callback=self.callback, current_value=self.generator_settings["min_length"])
-        self.ui.length_penalty.init(callback=self.callback, current_value=self.generator_settings["length_penalty"])
-        self.ui.num_beams.init(callback=self.callback, current_value=self.generator_settings["num_beams"])
-        self.ui.ngram_size.init(callback=self.callback, current_value=self.chatbot["ngram_size"])
-        self.ui.temperature.init(callback=self.callback, current_value=self.generator_settings["temperature"])
-        self.ui.sequences.init(callback=self.callback, current_value=self.chatbot["sequences"])
-        self.ui.top_k.init(callback=self.callback, current_value=self.generator_settings["top_k"])
+        self.ui.top_p.init(slider_callback=self.callback, current_value=self.generator_settings["top_p"])
+        self.ui.max_new_tokens.init(slider_callback=self.callback, current_value=self.generator_settings["max_new_tokens"])
+        self.ui.repetition_penalty.init(slider_callback=self.callback, current_value=self.generator_settings["repetition_penalty"])
+        self.ui.min_length.init(slider_callback=self.callback, current_value=self.generator_settings["min_length"])
+        self.ui.length_penalty.init(slider_callback=self.callback, current_value=self.generator_settings["length_penalty"])
+        self.ui.num_beams.init(slider_callback=self.callback, current_value=self.generator_settings["num_beams"])
+        self.ui.ngram_size.init(slider_callback=self.callback, current_value=self.chatbot["ngram_size"])
+        self.ui.temperature.init(slider_callback=self.callback, current_value=self.generator_settings["temperature"])
+        self.ui.sequences.init(slider_callback=self.callback, current_value=self.chatbot["sequences"])
+        self.ui.top_k.init(slider_callback=self.callback, current_value=self.generator_settings["top_k"])
 
         self.ui.override_parameters.setChecked(self.settings["llm_generator_settings"]["override_parameters"])
 
@@ -132,7 +132,7 @@ class LLMSettingsWidget(
         for element in elements:
             element.blockSignals(False)
 
-    def callback(self, attr_name, value, widget):
+    def callback(self, attr_name, value, widget=None):
         settings = self.settings
         current_chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
         generator_settings = settings["llm_generator_settings"]["saved_chatbots"][current_chatbot_name]["generator_settings"]

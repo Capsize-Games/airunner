@@ -55,13 +55,22 @@ class TTSHandler(BaseHandler):
         self.speaker_embeddings = None
         self.dataset = None
         self.sentences = []
-        self.tts_enabled = self.settings["tts_enabled"]
         self.engine = None
         self.do_interrupt = False
         self.cancel_generated_speech = False
         self.paused = False
         self.model_type = ModelType.TTS
         self.model_class = "tts"
+
+    @property
+    def tts_enabled(self):
+        return self.settings["tts_enabled"]
+
+    @tts_enabled.setter
+    def tts_enabled(self, value):
+        settings = self.settings
+        settings["tts_enabled"] = value
+        self.settings = settings
 
     @property
     def cuda_index(self):
@@ -189,17 +198,14 @@ class TTSHandler(BaseHandler):
         self.do_interrupt = False
         self.paused = False
 
-
-    def application_settings_changed_signal(self):
-        tts_enabled = self.settings["tts_enabled"]
-        if tts_enabled != self.tts_enabled:
-            self.tts_enabled = tts_enabled
-            if not self.tts_enabled:
-                self.unload()
-                self.logger.debug("Text to Speech is disabled")
-            else:
-                self.initialize()
-                self.logger.debug("Text to Speech is enabled")
+    #
+    # def application_settings_changed_signal(self):
+    #     if not self.tts_enabled:
+    #         self.unload()
+    #         self.logger.debug("Text to Speech is disabled")
+    #     else:
+    #         self.initialize()
+    #         self.logger.debug("Text to Speech is enabled")
 
     def move_model(self, to_cpu: bool = False):
         if to_cpu and self.do_offload_to_cpu:
@@ -239,8 +245,7 @@ class TTSHandler(BaseHandler):
         self.load(target_model)
 
     def load(self, target_model=None):
-        if self.tts_enabled:
-            self.logger.debug("Text to Speech is disabled")
+        if self.tts_enabled and not self.loaded:
             self.logger.debug(f"Loading {target_model}...")
             target_model = target_model or self.current_model
             if self.current_model is None or self.model is None:
@@ -261,14 +266,15 @@ class TTSHandler(BaseHandler):
             self.loaded = True
 
     def unload(self):
-        self.logger.debug("Unloading")
-        self.loaded = False
-        self.unload_model()
-        self.unload_processor()
-        self.unload_vocoder()
-        self.unload_speaker_embeddings()
-        self.unload_tokenizer()
-        self.unload_dataset()
+        if self.loaded:
+            self.logger.debug("Unloading")
+            self.loaded = False
+            self.unload_model()
+            self.unload_processor()
+            self.unload_vocoder()
+            self.unload_speaker_embeddings()
+            self.unload_tokenizer()
+            self.unload_dataset()
 
     def run(self):
         self.initialize()

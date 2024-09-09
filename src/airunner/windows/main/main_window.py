@@ -614,12 +614,6 @@ class MainWindow(
         new_settings["tts_enabled"] = val
         self.settings = new_settings
         self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL if val else SignalCode.TTS_DISABLE_SIGNAL)
-        if val:
-            self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": ModelType.TTS,
-                "status": ModelStatus.LOADING,
-                "path": ""
-            })
 
     @Slot(bool)
     def v2t_button_toggled(self, val):

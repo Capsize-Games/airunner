@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
-    QGridLayout, QGroupBox, QSizePolicy, QSpacerItem,
-    QWidget)
+    QGridLayout, QGroupBox, QScrollArea, QSizePolicy,
+    QSpacerItem, QWidget)
 
 from airunner.widgets.tts.bark_preferences_widget import BarkPreferencesWidget
 from airunner.widgets.tts.espeak_preferences_widget import ESpeakPreferencesWidget
@@ -27,22 +27,32 @@ class Ui_tts_preferences(object):
     def setupUi(self, tts_preferences):
         if not tts_preferences.objectName():
             tts_preferences.setObjectName(u"tts_preferences")
-        tts_preferences.resize(512, 787)
-        self.gridLayout = QGridLayout(tts_preferences)
+        tts_preferences.resize(512, 576)
+        self.gridLayout_2 = QGridLayout(tts_preferences)
+        self.gridLayout_2.setSpacing(0)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.scrollArea = QScrollArea(tts_preferences)
+        self.scrollArea.setObjectName(u"scrollArea")
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 510, 574))
+        self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.enable_tts = QCheckBox(tts_preferences)
+        self.enable_tts = QCheckBox(self.scrollAreaWidgetContents)
         self.enable_tts.setObjectName(u"enable_tts")
 
         self.gridLayout.addWidget(self.enable_tts, 0, 0, 1, 1)
 
-        self.line = QFrame(tts_preferences)
+        self.line = QFrame(self.scrollAreaWidgetContents)
         self.line.setObjectName(u"line")
         self.line.setFrameShape(QFrame.Shape.HLine)
         self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line, 1, 0, 1, 1)
 
-        self.groupBox_7 = QGroupBox(tts_preferences)
+        self.groupBox_7 = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_7.setObjectName(u"groupBox_7")
         self.gridLayout_9 = QGridLayout(self.groupBox_7)
         self.gridLayout_9.setObjectName(u"gridLayout_9")
@@ -54,24 +64,28 @@ class Ui_tts_preferences(object):
 
         self.gridLayout.addWidget(self.groupBox_7, 2, 0, 1, 1)
 
-        self.espeak_preferences = ESpeakPreferencesWidget(tts_preferences)
-        self.espeak_preferences.setObjectName(u"espeak_preferences")
-
-        self.gridLayout.addWidget(self.espeak_preferences, 4, 0, 1, 1)
-
-        self.speecht5_preferences = SpeechT5PreferencesWidget(tts_preferences)
-        self.speecht5_preferences.setObjectName(u"speecht5_preferences")
-
-        self.gridLayout.addWidget(self.speecht5_preferences, 5, 0, 1, 1)
-
-        self.bark_preferences = BarkPreferencesWidget(tts_preferences)
+        self.bark_preferences = BarkPreferencesWidget(self.scrollAreaWidgetContents)
         self.bark_preferences.setObjectName(u"bark_preferences")
 
         self.gridLayout.addWidget(self.bark_preferences, 3, 0, 1, 1)
 
+        self.espeak_preferences = ESpeakPreferencesWidget(self.scrollAreaWidgetContents)
+        self.espeak_preferences.setObjectName(u"espeak_preferences")
+
+        self.gridLayout.addWidget(self.espeak_preferences, 4, 0, 1, 1)
+
+        self.speecht5_preferences = SpeechT5PreferencesWidget(self.scrollAreaWidgetContents)
+        self.speecht5_preferences.setObjectName(u"speecht5_preferences")
+
+        self.gridLayout.addWidget(self.speecht5_preferences, 5, 0, 1, 1)
+
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.gridLayout.addItem(self.verticalSpacer, 6, 0, 1, 1)
+
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+        self.gridLayout_2.addWidget(self.scrollArea, 0, 0, 1, 1)
 
 
         self.retranslateUi(tts_preferences)
