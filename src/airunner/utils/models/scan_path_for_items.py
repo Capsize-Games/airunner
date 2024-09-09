@@ -34,7 +34,7 @@ def scan_path_for_items(base_path, current_items, scan_type="lora"):
                                 name=name,
                                 path=path,
                                 scale=1,
-                                enabled=True,
+                                enabled=False,
                                 loaded=False,
                                 trigger_word="",
                                 version=version
@@ -45,7 +45,7 @@ def scan_path_for_items(base_path, current_items, scan_type="lora"):
                                 path= path,
                                 version= version,
                                 tags= "",
-                                active= True,
+                                active= False,
                                 trigger_word= "",
                             )
                         else:
