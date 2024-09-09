@@ -264,41 +264,39 @@ DEFAULT_CHATBOT = {
         "You will generate responses which are appropriate for your personality and given character.\n"
         "------\n"
     ),
-    "generator_settings": {
-        "max_new_tokens": 200,
-        "min_length": 1,
-        "do_sample": True,
-        "early_stopping": True,
-        "num_beams": 1,
-        "temperature": 10000,
-        "top_p": 900,
-        "no_repeat_ngram_size": 2,
-        "top_k": 50,
-        "eta_cutoff": 200,
-        "repetition_penalty": 10000,
-        "num_return_sequences": 1,
-        "decoder_start_token_id": None,
-        "use_cache": True,
-        "length_penalty": 1000,
-    },
+    "generator_settings": dict(
+        top_p=90,
+        max_length=50,
+        repetition_penalty=100,
+        min_length=10,
+        length_penalty=100,
+        num_beams=1,
+        temperature=1000,
+        top_k=10,
+        do_sample=False,
+        eta_cutoff=10,
+        early_stopping=True,
+        max_new_tokens=1000,
+        use_cache=True
+    ),
 }
 AGENT_CHATBOT = DEFAULT_CHATBOT.copy()
 AGENT_CHATBOT["generator_settings"] = {
-    "max_new_tokens": 2,
+    "top_p": 90,
     "min_length": 1,
+    "max_new_tokens": 2,
+    "repetition_penalty": 100,
     "do_sample": True,
     "early_stopping": True,
     "num_beams": 1,
-    "temperature": 0.1,
-    "top_p": 900,
+    "temperature": 100,
     "no_repeat_ngram_size": 2,
-    "top_k": 50,
-    "eta_cutoff": 200,
-    "repetition_penalty": 10000,
+    "top_k": 10,
+    "eta_cutoff": 10,
     "num_return_sequences": 1,
     "decoder_start_token_id": None,
     "use_cache": True,
-    "length_penalty": 1000,
+    "length_penalty": 100,
 }
 
 
