@@ -166,6 +166,8 @@ class SDRequest(
         self.parent = None
         self.prompt_embeds = None
         self.negative_prompt_embeds = None
+        self.pooled_prompt_embeds = None
+        self.negative_pooled_prompt_embeds = None
         self.input_image = None
         self.load_generator_settings()
 
@@ -208,12 +210,23 @@ class SDRequest(
     def load_generator_settings(self):
         self.generator_settings = GeneratorSettings(settings=self.settings)
 
-    def initialize_prompt_embeds(self, prompt_embeds, negative_prompt_embeds, args: dict):
+    def initialize_prompt_embeds(
+        self,
+        prompt_embeds,
+        negative_prompt_embeds,
+        pooled_prompt_embeds=None,
+        negative_pooled_prompt_embeds=None,
+        args: dict = None
+    ):
         self.prompt_embeds = prompt_embeds
         self.negative_prompt_embeds = negative_prompt_embeds
+        self.pooled_prompt_embeds = pooled_prompt_embeds
+        self.negative_pooled_prompt_embeds = negative_pooled_prompt_embeds
         args = self.load_prompt_embed_args(
             prompt_embeds,
             negative_prompt_embeds,
+            pooled_prompt_embeds,
+            negative_pooled_prompt_embeds,
             args
         )
         return args
@@ -229,6 +242,8 @@ class SDRequest(
         strength=None,
         prompt_embeds=None,
         negative_prompt_embeds=None,
+        pooled_prompt_embeds=None,
+        negative_pooled_prompt_embeds=None,
         callback=None,
         cross_attention_kwargs_scale=None,
         latents=None,
@@ -259,6 +274,8 @@ class SDRequest(
             strength=strength,
             prompt_embeds=prompt_embeds,
             negative_prompt_embeds=negative_prompt_embeds,
+            pooled_prompt_embeds=pooled_prompt_embeds,
+            negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
             generator_request_data=generator_request_data
         )
 
@@ -295,6 +312,8 @@ class SDRequest(
         strength=None,
         prompt_embeds=None,
         negative_prompt_embeds=None,
+        pooled_prompt_embeds=None,
+        negative_pooled_prompt_embeds=None,
         generator_request_data=None,
     ) -> dict:
         self.active_rect = active_rect
@@ -326,6 +345,8 @@ class SDRequest(
         args = self.load_prompt_embed_args(
             prompt_embeds,
             negative_prompt_embeds,
+            pooled_prompt_embeds,
+            negative_pooled_prompt_embeds,
             args
         )
 
@@ -430,6 +451,8 @@ class SDRequest(
         self,
         prompt_embeds,
         negative_prompt_embeds,
+        pooled_prompt_embeds,
+        negative_pooled_prompt_embeds,
         args
     ):
         """
@@ -442,6 +465,16 @@ class SDRequest(
                 del args["prompt"]
             if "negative_prompt" in args:
                 del args["negative_prompt"]
+
+            if pooled_prompt_embeds is not None and negative_pooled_prompt_embeds is not None:
+                args["pooled_prompt_embeds"] = pooled_prompt_embeds
+                args["negative_pooled_prompt_embeds"] = negative_pooled_prompt_embeds
+
+                if "prompt_2" in args:
+                    del args["prompt_2"]
+                if "negative_prompt_2" in args:
+                    del args["negative_prompt_2"]
+
         else:
             args["prompt"] = self.generator_settings.prompt
             args["negative_prompt"] = self.generator_settings.negative_prompt
