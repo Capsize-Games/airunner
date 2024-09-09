@@ -5,7 +5,7 @@ from typing import Optional
 import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint, QEvent
+from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent
@@ -56,6 +56,10 @@ class CustomScene(
         self.generate_image_time_in_ms = 0.5
         self.do_generate_image = False
         self.generate_image_time = 0
+        self.undo_history = []
+        self.redo_history = []
+        self.right_mouse_button_pressed = False
+        self.handling_event = False
 
         self.register_signals()
 
@@ -96,6 +100,9 @@ class CustomScene(
             (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.handle_preview_filter),
             (SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path),
             (SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, self.on_image_generated_signal),
+            (SignalCode.UNDO_SIGNAL, self.action_undo_triggered),
+            (SignalCode.REDO_SIGNAL, self.action_redo_triggered),
+            (SignalCode.HISTORY_CLEAR_SIGNAL, self.clear_history),
         ]
         for signal, handler in signals:
             self.register(signal, handler)
@@ -239,6 +246,10 @@ class CustomScene(
         """
         # image = ImageOps.expand(image, border=border_size, fill=border_color)
 
+        if image is None:
+            self.logger.warning("Image is None, unable to add to scene")
+            return
+
         if is_outpaint:
             image, root_point, pivot_point = self.handle_outpaint(
                 outpaint_box_rect,
@@ -333,6 +344,10 @@ class CustomScene(
             settings[self.settings_key]["image"] = base_64_image
             self.settings = settings
 
+        # Save the current viewport position
+        view = self.views()[0]
+        current_viewport_rect = view.mapToScene(view.viewport().rect()).boundingRect()
+
         # Update the pixmap item, image+painter and scene
         try:
             item_scene = self.item.scene()
@@ -345,6 +360,9 @@ class CustomScene(
         self.set_image(image)
         self.set_item()
         self.initialize_image()
+
+        # Restore the viewport position
+        view.setSceneRect(current_viewport_rect)
 
     def on_image_generated_signal(self, response):
         code = response["code"]
@@ -377,30 +395,76 @@ class CustomScene(
             self.cut_image(self.current_active_image())
 
     def on_canvas_rotate_90_clockwise_signal(self):
-        if self.scene_is_active:
-            self.rotate_90_clockwise()
+        self.rotate_90_clockwise()
 
     def on_canvas_rotate_90_counter_clockwise_signal(self):
-        if self.scene_is_active:
-            self.rotate_90_counterclockwise()
+        self.rotate_90_counterclockwise()
 
     def rotate_90_clockwise(self):
-        self.rotate_image(Image.ROTATE_270)
+        self.rotate_image(-90)
 
     def rotate_90_counterclockwise(self):
-        self.rotate_image(Image.ROTATE_90)
+        self.rotate_image(90)
+
+    def __add_undo_history(self, data: dict):
+        self.undo_history.append(data)
+
+    def __add_redo_history(self, data: dict):
+        self.redo_history.append(data)
+
+    def __clear_history(self):
+        self.undo_history = []
+        self.redo_history = []
+
+    def action_undo_triggered(self):
+        if len(self.undo_history) == 0:
+            return
+        data = self.undo_history.pop()
+        self.__add_image_to_redo()
+        self.history_set_image(data)
+
+    def action_redo_triggered(self):
+        if len(self.redo_history) == 0:
+            return
+        data = self.redo_history.pop()
+        self.__add_image_to_undo()
+        self.history_set_image(data)
 
     def rotate_image(self, angle):
-        image = self.rotate_image(
-            angle,
-            self.current_active_image()
-        )
-        self.set_current_active_image(image)
+        self.__add_image_to_undo()
+        image = self.current_active_image()
+        if image is not None:
+            image = image.rotate(angle, expand=True)
+            self.refresh_image(image)
+        else:
+            self.logger.warning("No image to rotate")
 
     def cut_image(self, image: Image = None) -> Image:
         image = self.copy_image(image)
         if image is not None:
+            self.__add_image_to_undo()
             self.delete_image()
+
+    def history_set_image(self, data: dict):
+        if data is not None:
+            self.refresh_image(data["image"])
+
+    def clear_history(self):
+        self.__clear()
+
+    def __add_image_to_undo(self):
+        image = self.current_active_image()
+        if image is not None:
+            self.__add_undo_history({
+                "image": image.copy()
+            })
+
+    def __add_image_to_redo(self):
+        image = self.current_active_image()
+        if image is not None:
+            self.__add_redo_history({
+                "image": image.copy()
+            })
 
     def delete_image(self):
         self.logger.debug("Deleting image from canvas")
@@ -509,14 +573,16 @@ class CustomScene(
             self.item.setPixmap(pixmap)
 
     def wheelEvent(self, event):
-        # Calculate the zoom factor
-        settings = self.settings
-        zoom_in_factor = settings["grid_settings"]["zoom_in_step"]
-        zoom_out_factor = -settings["grid_settings"]["zoom_out_step"]
+        if not hasattr(event, "delta"):
+            return
 
-        # Use angleDelta instead of delta
-        if event.type() == QEvent.Type.Wheel:
-            if event.angleDelta().y() > 0:
+        # Check if the Ctrl key is pressed
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            settings = self.settings
+            zoom_in_factor = settings["grid_settings"]["zoom_in_step"]
+            zoom_out_factor = -settings["grid_settings"]["zoom_out_step"]
+
+            if event.delta() > 0:
                 zoom_factor = zoom_in_factor
             else:
                 zoom_factor = zoom_out_factor
@@ -530,8 +596,6 @@ class CustomScene(
             self.settings = settings
 
             self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
-
-        self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
     def handle_mouse_event(self, event, is_press_event) -> bool:
         if isinstance(event, QMouseEvent) and event.button() == Qt.MouseButton.LeftButton:
@@ -565,25 +629,46 @@ class CustomScene(
 
     def mousePressEvent(self, event):
         if isinstance(event, QGraphicsSceneMouseEvent):
-            if not self.handle_left_mouse_press(event):
+            if event.button() == Qt.MouseButton.RightButton:
+                self.right_mouse_button_pressed = True
+                self.start_pos = event.scenePos()
+            elif not self.handle_left_mouse_press(event):
                 super(CustomScene, self).mousePressEvent(event)
         self.handle_cursor(event)
         self.last_pos = event.scenePos()
         self.update()
 
+    def mouseMoveEvent(self, event):
+        if self.right_mouse_button_pressed:
+            view = self.views()[0]
+            view.setTransformationAnchor(view.ViewportAnchor.NoAnchor)
+            view.setResizeAnchor(view.ViewportAnchor.NoAnchor)
+            delta = event.scenePos() - self.last_pos
+            scale_factor = view.transform().m11()  # Get the current scale factor
+            view.translate(delta.x() / scale_factor, delta.y() / scale_factor)
+            self.last_pos = event.scenePos()
+        else:
+            self.handle_cursor(event)
+            super(CustomScene, self).mouseMoveEvent(event)
+
     def mouseReleaseEvent(self, event):
-        if not self.handle_left_mouse_release(event):
+        if event.button() == Qt.MouseButton.RightButton:
+            self.right_mouse_button_pressed = False
+        elif not self.handle_left_mouse_release(event):
             super(CustomScene, self).mouseReleaseEvent(event)
         self.handle_cursor(event)
 
     def event(self, event):
-        if type(event) == QEnterEvent:
-            self.handle_cursor(event)
-        return super(CustomScene, self).event(event)
+        if self.handling_event:
+            return False  # Prevent recursive event calls
 
-    def mouseMoveEvent(self, event):
-        self.handle_cursor(event)
-        super(CustomScene, self).mouseMoveEvent(event)
+        self.handling_event = True
+        try:
+            if type(event) == QEnterEvent:
+                self.handle_cursor(event)
+            return super(CustomScene, self).event(event)
+        finally:
+            self.handling_event = False
 
     def leaveEvent(self, event):
         self.handle_cursor(event)
