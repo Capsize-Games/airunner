@@ -9,7 +9,7 @@ from PySide6.QtCore import (
 from airunner.settings import (
     ORGANIZATION,
     APPLICATION_NAME,
-    DEFAULT_APPLICATION_SETTINGS, BASE_PATH
+    DEFAULT_APPLICATION_SETTINGS
 )
 from airunner.enums import (
     SignalCode,
