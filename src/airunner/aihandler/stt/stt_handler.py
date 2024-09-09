@@ -24,7 +24,8 @@ class STTHandler(BaseHandler):
         self.feature_extractor = None
         self.model = None
         self.is_on_gpu = False
-        self.model_type = "stt"
+        self.model_type = ModelType.STT
+        self.model_class = "stt"
 
         self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
         # self.register(SignalCode.PROCESS_SPEECH_SIGNAL, self.process_given_speech)
@@ -44,28 +45,28 @@ class STTHandler(BaseHandler):
         if self.settings["stt_enabled"]:
             self.load_model()
 
-    def on_stop_listenening(self, _message: dict):
+    def on_stop_listenening(self):
         self.unload()
 
-    def on_start_listening(self, _message: dict):
+    def on_start_listening(self):
         self.load()
 
-    def on_stt_load_signal(self, _message: dict):
+    def on_stt_load_signal(self):
         self.load_model()
 
-    def on_stt_processor_load_signal(self, _message):
+    def on_stt_processor_load_signal(self):
         self.load_processor()
 
-    def on_stt_feature_extractor_load_signal(self, _message):
+    def on_stt_feature_extractor_load_signal(self):
         self.load_feature_extractor()
 
-    def on_stt_unload_signal(self, _message):
+    def on_stt_unload_signal(self):
         self.unload_model()
 
-    def on_stt_processor_unload_signal(self, _message):
+    def on_stt_processor_unload_signal(self):
         self.unload_processor()
 
-    def on_stt_feature_extractor_unload_signal(self, _message):
+    def on_stt_feature_extractor_unload_signal(self):
         self.unload_feature_extractor()
 
     def on_stt_start_capture_signal(self, data: dict):

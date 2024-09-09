@@ -20,7 +20,7 @@ class PipelineMixin:
 
     def pipeline_delete(self, item):
         settings = self.settings
-        settings["pipelines"] = [existing_item for existing_item in self.settings["pipelines"] if existing_item['name'] != item['name']]
+        settings["pipelines"] = [existing_item for existing_item in settings["pipelines"] if existing_item['name'] != item['name']]
         self.settings = settings
 
     def get_pipeline_classname(self, pipeline_action, version, category):

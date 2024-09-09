@@ -8,7 +8,7 @@ from PIL import (
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 from airunner.enums import SignalCode, ModelStatus, ModelType
-from airunner.settings import SD_FEATURE_EXTRACTOR_PATH
+from airunner.settings import SD_FEATURE_EXTRACTOR_PATH, BASE_PATH
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -17,15 +17,28 @@ class SafetyCheckerMixin:
         self.safety_checker = None
         self.feature_extractor = None
         self.feature_extractor_path = SD_FEATURE_EXTRACTOR_PATH
+        self.__safety_checker_model_status = ModelStatus.UNLOADED
+        self.__feature_extractor_model_status = ModelStatus.UNLOADED
+
+    def __change_model_status(self, model, status):
+        if model is ModelType.FEATURE_EXTRACTOR:
+            self.__feature_extractor_model_status = status
+            if self.__safety_checker_model_status is ModelStatus.LOADED and status is ModelStatus.LOADED:
+                self.change_model_status(ModelType.SAFETY_CHECKER, status)
+        elif model is ModelType.SAFETY_CHECKER:
+            self.__safety_checker_model_status = status
+            if status is ModelStatus.LOADED and self.__feature_extractor_model_status is not status:
+                status = self.__feature_extractor_model_status
+        self.change_model_status(model, status)
 
     @property
     def safety_checker_initialized(self) -> bool:
         try:
             return not self.use_safety_checker or (
-                    self.safety_checker is not None and
-                    self.feature_extractor is not None and
-                    self.pipe.safety_checker is not None and
-                    self.pipe.feature_extractor is not None
+                self.safety_checker is not None and
+                self.feature_extractor is not None and
+                self.pipe.safety_checker is not None and
+                self.pipe.feature_extractor is not None
             )
         except AttributeError:
             pass
@@ -63,64 +76,43 @@ class SafetyCheckerMixin:
             not self.use_safety_checker
         )))
 
-    def on_safety_checker_load_signal(self, _message: dict = None):
-        self.load_nsfw_filter()
-
-    def on_safety_checker_model_load_signal(self, data_: dict):
+    def load_safety_checker(self):
+        self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING)
         self.__load_safety_checker_model()
-
-    def on_safety_checker_model_unload_signal(self, data_: dict):
-        self.__unload_safety_checker_model()
-
-    def on_feature_extractor_load_signal(self, data_: dict):
         self.__load_feature_extractor_model()
 
-    def on_feature_extractor_unload_signal(self, data_: dict):
-        self.__unload_feature_extractor_model()
-
-    def load_nsfw_filter(self):
-        if self.use_safety_checker and self.safety_checker is None and "path" in self.safety_checker_model:
-            self.__load_safety_checker_model()
-
-        if self.use_safety_checker and self.feature_extractor is None and "path" in self.safety_checker_model:
-            self.__load_feature_extractor_model()
-
-    def remove_safety_checker_from_pipe(self):
-        self.__remove_feature_extractor_from_pipe()
-        self.__remove_safety_checker_from_pipe()
-
-    def unload_safety_checker(self, data_: dict = None):
+    def unload_safety_checker(self):
         self.__unload_safety_checker_model()
         self.__unload_feature_extractor_model()
 
     def unload_feature_extractor(self):
         self.feature_extractor = None
         clear_memory()
-        self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.UNLOADED, "")
-
-    def __unload_safety_checker_model(self):
-        if self.pipe is not None:
-            self.pipe.safety_checker = None
-        self.safety_checker = None
-        clear_memory()
-        self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED, "")
+        self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.UNLOADED)
 
     def __unload_feature_extractor_model(self):
         if self.pipe is not None:
             self.pipe.feature_extractor = None
         self.feature_extractor = None
         clear_memory()
-        self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.UNLOADED, "")
+        self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.UNLOADED)
+
+    def __unload_safety_checker_model(self):
+        if self.pipe is not None:
+            self.pipe.safety_checker = None
+        self.safety_checker = None
+        self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED)
+        clear_memory()
 
     def __load_feature_extractor_model(self):
-        feature_extractor = None
-        self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING, self.feature_extractor_path)
+        self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING)
         try:
             self.feature_extractor = AutoFeatureExtractor.from_pretrained(
                 os.path.expanduser(
                     os.path.join(
-                        self.settings["path_settings"]["feature_extractor_model_path"],
-                        f"{self.feature_extractor_path}/preprocessor_config.json"
+                        self.settings["path_settings"]["base_path"],
+                        "art/models/SD 1.5/feature_extractor",
+                        "openai/clip-vit-large-patch14/"
                     )
                 ),
                 local_files_only=True,
@@ -128,11 +120,11 @@ class SafetyCheckerMixin:
                 use_safetensors=True,
                 device_map=self.device
             )
-            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED, self.feature_extractor_path)
+            self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED)
         except Exception as e:
             print(e)
             self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Unable to load feature extractor")
-            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED, self.safety_checker_model["path"])
+            self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED)
 
     def check_and_mark_nsfw_images(self, images) -> bool:
         if not self.feature_extractor or not self.safety_checker:
@@ -175,12 +167,13 @@ class SafetyCheckerMixin:
     def __load_safety_checker_model(self):
         self.logger.debug(f"Initializing safety checker")
         safety_checker = None
-        self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING, self.safety_checker_model["path"])
+        self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING)
         try:
             self.safety_checker = StableDiffusionSafetyChecker.from_pretrained(
                 os.path.expanduser(
                     os.path.join(
-                        self.settings["path_settings"]["safety_checker_model_path"],
+                        self.settings["path_settings"]["base_path"],
+                        "art/models/SD 1.5/safety_checker",
                         "CompVis/stable-diffusion-safety-checker/"
                     )
                 ),
@@ -189,32 +182,8 @@ class SafetyCheckerMixin:
                 use_safetensors=False,
                 device_map=self.device
             )
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED, self.safety_checker_model["path"])
+            self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED)
         except Exception as e:
             print(e)
             self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Unable to load safety checker")
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED, self.safety_checker_model["path"])
-
-    def __remove_feature_extractor_from_pipe(self):
-        self.logger.debug("Removing feature extractor from pipe")
-        if self.pipe is not None:
-            self.pipe.feature_extractor = None
-        if self.feature_extractor is not None:
-            status = ModelStatus.READY
-            path = self.feature_extractor_path
-        else:
-            status = ModelStatus.UNLOADED
-            path = ""
-        self.change_model_status(ModelType.FEATURE_EXTRACTOR, status, path)
-
-    def __remove_safety_checker_from_pipe(self):
-        self.logger.debug("Removing safety checker from pipe")
-        if self.pipe is not None:
-            self.pipe.safety_checker = None
-        if self.safety_checker is not None:
-            status = ModelStatus.READY
-            path = self.safety_checker_model["path"]
-        else:
-            status = ModelStatus.UNLOADED
-            path = ""
-        self.change_model_status(ModelType.SAFETY_CHECKER, status, path)
+            self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED)

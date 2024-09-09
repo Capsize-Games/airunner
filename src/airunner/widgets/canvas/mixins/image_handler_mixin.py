@@ -1,17 +1,10 @@
 from PIL import ImageFilter, Image
 
-from airunner.mediator_mixin import MediatorMixin
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
-from airunner.windows.main.settings_mixin import SettingsMixin
 
 
-class ImageHandler(
-    SettingsMixin,
-    MediatorMixin
-):
+class ImageHandlerMixin:
     def __init__(self, image=None):
-        MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
         self.image = image
         self.image_backup = None
         self.previewing_filter = False

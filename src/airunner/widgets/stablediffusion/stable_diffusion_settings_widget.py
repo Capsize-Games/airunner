@@ -23,7 +23,7 @@ class StableDiffusionSettingsWidget(
         super().showEvent(event)
         self.update_form()
 
-    def update_form(self, _data: dict = None):
+    def update_form(self):
         steps = self.settings["generator_settings"]["steps"]
         scale = self.settings["generator_settings"]["scale"]
 
@@ -35,7 +35,7 @@ class StableDiffusionSettingsWidget(
 
         if scale != current_scale:
             self.get_form_element("scale_widget").setProperty("current_value", scale)
-        
+
         self.ui.seed_widget.setProperty("generator_section", self.settings["pipeline"])
         self.ui.seed_widget.setProperty("generator_name", ImageGenerator.STABLEDIFFUSION.value)
 
@@ -88,10 +88,7 @@ class StableDiffusionSettingsWidget(
         self.ui.pipeline.clear()
         pipeline_names = [
             f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}",
-            f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}",
-            GeneratorSection.DEPTH2IMG.value,
-            GeneratorSection.PIX2PIX.value,
-            GeneratorSection.UPSCALE.value,
+            f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}"
         ]
         self.ui.pipeline.addItems(pipeline_names)
         current_pipeline = self.settings["pipeline"]
