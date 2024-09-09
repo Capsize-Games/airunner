@@ -142,7 +142,7 @@ class Ui_tool_tab_widget(object):
 
         self.retranslateUi(tool_tab_widget)
 
-        self.tool_tab_widget_container.setCurrentIndex(4)
+        self.tool_tab_widget_container.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(tool_tab_widget)
