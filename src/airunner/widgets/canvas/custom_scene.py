@@ -529,6 +529,8 @@ class CustomScene(
             settings["grid_settings"]["zoom_level"] = zoom_level
             self.settings = settings
 
+            self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
+
         self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
     def handle_mouse_event(self, event, is_press_event) -> bool:

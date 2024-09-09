@@ -671,3 +671,26 @@ QWidget QWidget#header {
 #button_menu QPushButton {
     border: none;
 }
+
+QWidget#button_menu,
+QWidget#statusbar,
+QWidget#menubar
+{
+    border-left: 1px solid #333;
+}
+
+QWidget#content_splitter,
+QWidget#statusbar,
+QWidget#menubar
+{
+    border-right: 1px solid #333;
+}
+
+QWidget#statusbar {
+    border-bottom: 1px solid #333;
+}
+
+QSizeGrip {
+    border: 1px solid #333; /* Light grey border */
+    background-color: #000; /* Ensure the handle inherits the background color */
+}
