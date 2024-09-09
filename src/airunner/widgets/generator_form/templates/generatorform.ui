@@ -101,6 +101,108 @@
            <property name="verticalSpacing">
             <number>10</number>
            </property>
+           <item row="11" column="0">
+            <widget class="QGroupBox" name="croops_coord_top_left_groupbox">
+             <property name="title">
+              <string>Crops Coord (top left)</string>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_2">
+              <property name="leftMargin">
+               <number>2</number>
+              </property>
+              <property name="topMargin">
+               <number>2</number>
+              </property>
+              <property name="rightMargin">
+               <number>2</number>
+              </property>
+              <property name="bottomMargin">
+               <number>2</number>
+              </property>
+              <item>
+               <widget class="QLineEdit" name="crops_coord_top_left_x">
+                <property name="placeholderText">
+                 <string>x position</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="crops_coord_top_left_y">
+                <property name="placeholderText">
+                 <string>y position</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <layout class="QVBoxLayout" name="verticalLayout">
+               <item>
+                <widget class="QLabel" name="label_2">
+                 <property name="text">
+                  <string>Presets</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="image_presets"/>
+               </item>
+               <item>
+                <widget class="Line" name="line_2">
+                 <property name="orientation">
+                  <enum>Qt::Orientation::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QVBoxLayout" name="verticalLayout_2">
+               <item>
+                <widget class="QLabel" name="label_3">
+                 <property name="text">
+                  <string>Quality Effects</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="quality_effects">
+                 <item>
+                  <property name="text">
+                   <string/>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Normal</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Upscaled</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Downscaled</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+               <item>
+                <widget class="Line" name="line">
+                 <property name="orientation">
+                  <enum>Qt::Orientation::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
            <item row="0" column="0">
             <widget class="QSplitter" name="generator_form_splitter">
              <property name="orientation">
@@ -219,205 +321,6 @@
                </item>
               </layout>
              </widget>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="Line" name="line_2">
-             <property name="orientation">
-              <enum>Qt::Orientation::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_2">
-             <property name="text">
-              <string>Presets</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QComboBox" name="image_presets"/>
-           </item>
-           <item row="4" column="0">
-            <widget class="Line" name="line">
-             <property name="orientation">
-              <enum>Qt::Orientation::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QGroupBox" name="croops_coord_top_left_groupbox">
-             <property name="title">
-              <string>Crops Coord (top left)</string>
-             </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_2">
-              <property name="leftMargin">
-               <number>2</number>
-              </property>
-              <property name="topMargin">
-               <number>2</number>
-              </property>
-              <property name="rightMargin">
-               <number>2</number>
-              </property>
-              <property name="bottomMargin">
-               <number>2</number>
-              </property>
-              <item>
-               <widget class="QLineEdit" name="crops_coord_top_left_x">
-                <property name="placeholderText">
-                 <string>x position</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLineEdit" name="crops_coord_top_left_y">
-                <property name="placeholderText">
-                 <string>y position</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="6" column="0">
-            <widget class="QGroupBox" name="original_size_groupbox">
-             <property name="title">
-              <string>Original Size</string>
-             </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_4">
-              <property name="leftMargin">
-               <number>2</number>
-              </property>
-              <property name="topMargin">
-               <number>2</number>
-              </property>
-              <property name="rightMargin">
-               <number>2</number>
-              </property>
-              <property name="bottomMargin">
-               <number>2</number>
-              </property>
-              <item>
-               <widget class="QLineEdit" name="original_size_x">
-                <property name="placeholderText">
-                 <string>width</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLineEdit" name="original_size_y">
-                <property name="placeholderText">
-                 <string>height</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="7" column="0">
-            <widget class="QGroupBox" name="target_size_groupbox">
-             <property name="title">
-              <string>Target Size</string>
-             </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_3">
-              <property name="leftMargin">
-               <number>2</number>
-              </property>
-              <property name="topMargin">
-               <number>2</number>
-              </property>
-              <property name="rightMargin">
-               <number>2</number>
-              </property>
-              <property name="bottomMargin">
-               <number>2</number>
-              </property>
-              <item>
-               <widget class="QLineEdit" name="target_size_x">
-                <property name="placeholderText">
-                 <string>width</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLineEdit" name="target_size_y">
-                <property name="placeholderText">
-                 <string>height</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="8" column="0">
-            <widget class="QGroupBox" name="negative_original_size_groupbox">
-             <property name="title">
-              <string>Negative Original Size</string>
-             </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_5">
-              <property name="leftMargin">
-               <number>2</number>
-              </property>
-              <property name="topMargin">
-               <number>2</number>
-              </property>
-              <property name="rightMargin">
-               <number>2</number>
-              </property>
-              <property name="bottomMargin">
-               <number>2</number>
-              </property>
-              <item>
-               <widget class="QLineEdit" name="negative_original_size_x">
-                <property name="placeholderText">
-                 <string>width</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLineEdit" name="negative_original_size_y">
-                <property name="placeholderText">
-                 <string>height</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="9" column="0">
-            <widget class="QGroupBox" name="negative_target_size_groupbox">
-             <property name="title">
-              <string>Negative Target Size</string>
-             </property>
-             <layout class="QHBoxLayout" name="horizontalLayout">
-              <property name="leftMargin">
-               <number>2</number>
-              </property>
-              <property name="topMargin">
-               <number>2</number>
-              </property>
-              <property name="rightMargin">
-               <number>2</number>
-              </property>
-              <property name="bottomMargin">
-               <number>2</number>
-              </property>
-              <item>
-               <widget class="QLineEdit" name="negative_target_size_x">
-                <property name="placeholderText">
-                 <string>width</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLineEdit" name="negative_target_size_y">
-                <property name="placeholderText">
-                 <string>height</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
             </widget>
            </item>
           </layout>
@@ -568,17 +471,8 @@
   <tabstop>negative_prompt</tabstop>
   <tabstop>secondary_negative_prompt</tabstop>
   <tabstop>pushButton</tabstop>
-  <tabstop>image_presets</tabstop>
   <tabstop>crops_coord_top_left_x</tabstop>
   <tabstop>crops_coord_top_left_y</tabstop>
-  <tabstop>original_size_x</tabstop>
-  <tabstop>original_size_y</tabstop>
-  <tabstop>target_size_x</tabstop>
-  <tabstop>target_size_y</tabstop>
-  <tabstop>negative_original_size_x</tabstop>
-  <tabstop>negative_original_size_y</tabstop>
-  <tabstop>negative_target_size_x</tabstop>
-  <tabstop>negative_target_size_y</tabstop>
   <tabstop>generate_button</tabstop>
   <tabstop>interrupt_button</tabstop>
  </tabstops>
@@ -594,8 +488,8 @@
    <slot>action_clicked_button_save_prompts()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>348</x>
-     <y>82</y>
+     <x>940</x>
+     <y>46</y>
     </hint>
     <hint type="destinationlabel">
      <x>502</x>
@@ -610,8 +504,8 @@
    <slot>handle_interrupt_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>350</x>
-     <y>909</y>
+     <x>942</x>
+     <y>933</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -626,8 +520,8 @@
    <slot>handle_generate_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>43</x>
-     <y>882</y>
+     <x>906</x>
+     <y>933</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -658,8 +552,8 @@
    <slot>handle_negative_prompt_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>274</x>
-     <y>668</y>
+     <x>276</x>
+     <y>584</y>
     </hint>
     <hint type="destinationlabel">
      <x>93</x>
@@ -674,8 +568,8 @@
    <slot>handle_image_presets_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>236</x>
-     <y>42</y>
+     <x>239</x>
+     <y>804</y>
     </hint>
     <hint type="destinationlabel">
      <x>193</x>
@@ -715,6 +609,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>quality_effects</sender>
+   <signal>textActivated(QString)</signal>
+   <receiver>generator_form</receiver>
+   <slot>handle_quality_effects_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>563</x>
+     <y>812</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>955</x>
+     <y>764</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>handle_prompt_changed()</slot>
@@ -733,5 +643,6 @@
   <slot>handle_image_presets_changed(QString)</slot>
   <slot>handle_second_prompt_changed()</slot>
   <slot>handle_second_negative_prompt_changed()</slot>
+  <slot>handle_quality_effects_changed(QString)</slot>
  </slots>
 </ui>
