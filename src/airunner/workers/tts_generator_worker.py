@@ -120,14 +120,15 @@ class TTSGeneratorWorker(Worker):
             self.tts.application_settings_changed_signal(message)
 
     def start_worker_thread(self):
-        tts_model = self.settings["tts_settings"]["tts_model"]
-        if tts_model == TTSModel.ESPEAK:
+        tts_model = self.settings["tts_settings"]["model"].lower()
+
+        if tts_model == TTSModel.ESPEAK.value:
             from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
             tts_handler_class_ = EspeakTTSHandler
-        elif tts_model == TTSModel.SPEECHT5:
+        elif tts_model == TTSModel.SPEECHT5.value:
             from airunner.aihandler.tts.speecht5_tts_handler import SpeechT5TTSHandler
             tts_handler_class_ = SpeechT5TTSHandler
-        elif tts_model == TTSModel.BARK:
+        elif tts_model == TTSModel.BARK.value:
             from airunner.aihandler.tts.bark_tts_handler import BarkTTSHandler
             tts_handler_class_ = BarkTTSHandler
         self.tts = tts_handler_class_()
