@@ -4,7 +4,6 @@ import torch
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 from airunner.aihandler.tts.tts_handler import TTSHandler
 from airunner.enums import SignalCode, LLMChatRole, ModelType, ModelStatus
-from airunner.settings import BASE_PATH
 from airunner.utils.clear_memory import clear_memory
 
 

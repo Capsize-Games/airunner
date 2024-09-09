@@ -4,7 +4,7 @@ from queue import Queue
 import torch.cuda
 from transformers import AutoTokenizer
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.enums import SignalCode, ModelType, ModelStatus
+from airunner.enums import ModelType, ModelStatus
 from airunner.utils.clear_memory import clear_memory
 
 
