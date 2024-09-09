@@ -1,8 +1,6 @@
-import os
-
 from transformers import RagTokenizer, AutoTokenizer
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
-from airunner.enums import SignalCode, ModelType, ModelStatus
+from airunner.enums import SignalCode, ModelStatus
 
 
 class TokenizerHandler(TransformerBaseHandler):
