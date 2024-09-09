@@ -5,7 +5,7 @@ from typing import Optional
 import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QEvent
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent
@@ -514,20 +514,20 @@ class CustomScene(
         zoom_in_factor = settings["grid_settings"]["zoom_in_step"]
         zoom_out_factor = -settings["grid_settings"]["zoom_out_step"]
 
-        # Use delta instead of angleDelta
-        if event.type() == event.Wheel:
-            if event.delta() > 0:
+        # Use angleDelta instead of delta
+        if event.type() == QEvent.Type.Wheel:
+            if event.angleDelta().y() > 0:
                 zoom_factor = zoom_in_factor
             else:
                 zoom_factor = zoom_out_factor
 
-        # Update zoom level
-        zoom_level = settings["grid_settings"]["zoom_level"]
-        zoom_level += zoom_factor
-        if zoom_level < 0.1:
-            zoom_level = 0.1
-        settings["grid_settings"]["zoom_level"] = zoom_level
-        self.settings = settings
+            # Update zoom level
+            zoom_level = settings["grid_settings"]["zoom_level"]
+            zoom_level += zoom_factor
+            if zoom_level < 0.1:
+                zoom_level = 0.1
+            settings["grid_settings"]["zoom_level"] = zoom_level
+            self.settings = settings
 
         self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
