@@ -13,12 +13,16 @@ class EspeakTTSHandler(TTSHandler):
         voice = settings["voice"]
         language = settings["language"]
         gender = settings["gender"]
-        print("USING ESPEAK", message, rate, volume, pitch, voice)
 
-        self.engine.setProperty('rate', 100.0)
-        self.engine.setProperty('volume', 100.0 / 100.0)
-        self.engine.setProperty('pitch', 100.0)
+        self.engine.setProperty('rate', float(rate))
+        self.engine.setProperty('volume', volume / 100.0)
+        self.engine.setProperty('pitch', float(pitch))
+        print(rate)
+        print(volume)
+        print(pitch)
         self.engine.setProperty('voice', f'{voice}')
+        self.engine.setProperty('language', language)
+        self.engine.setProperty('gender', gender)
         self.engine.say(message)
         self.engine.runAndWait()
 
@@ -28,6 +32,8 @@ class EspeakTTSHandler(TTSHandler):
             self.engine = pyttsx3.init()
         super().run()
 
-    def load(self, target_model=None):
-        super().load(target_model)
-        self.change_model_status(ModelType.TTS, ModelStatus.LOADED, self.model_path)
+    def load_model(self):
+        self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
+
+    def unload_model(self):
+        self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED)

@@ -44,6 +44,16 @@ class ESpeakPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(False)
 
+        self.ui.rate.init(slider_callback=self.callback, current_value=settings["tts_settings"]["espeak"]["rate"])
+        self.ui.volume.init(slider_callback=self.callback, current_value=settings["tts_settings"]["espeak"]["volume"])
+        self.ui.pitch.init(slider_callback=self.callback, current_value=settings["tts_settings"]["espeak"]["pitch"])
+
+    def callback(self, attr_name, value, widget=None):
+        print(attr_name, value)
+        settings = self.settings
+        settings["tts_settings"]["espeak"][attr_name] = value
+        self.settings = settings
+
     def language_changed(self, text):
         settings = self.settings
         settings["tts_settings"]["espeak"]["language"] = text
