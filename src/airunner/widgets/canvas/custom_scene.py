@@ -333,6 +333,10 @@ class CustomScene(
             settings[self.settings_key]["image"] = base_64_image
             self.settings = settings
 
+        # Save the current viewport position
+        view = self.views()[0]
+        current_viewport_rect = view.mapToScene(view.viewport().rect()).boundingRect()
+
         # Update the pixmap item, image+painter and scene
         try:
             item_scene = self.item.scene()
@@ -345,6 +349,9 @@ class CustomScene(
         self.set_image(image)
         self.set_item()
         self.initialize_image()
+
+        # Restore the viewport position
+        view.setSceneRect(current_viewport_rect)
 
     def on_image_generated_signal(self, response):
         code = response["code"]
@@ -385,17 +392,16 @@ class CustomScene(
             self.rotate_90_counterclockwise()
 
     def rotate_90_clockwise(self):
-        self.rotate_image(Image.ROTATE_270)
+        self.rotate_image(-90)
 
     def rotate_90_counterclockwise(self):
-        self.rotate_image(Image.ROTATE_90)
+        self.rotate_image(90)
 
     def rotate_image(self, angle):
-        image = self.rotate_image(
-            angle,
-            self.current_active_image()
-        )
-        self.set_current_active_image(image)
+        image = self.current_active_image()
+        if image is not None:
+            image = image.rotate(angle, expand=True)
+            self.refresh_image(image)
 
     def cut_image(self, image: Image = None) -> Image:
         image = self.copy_image(image)
