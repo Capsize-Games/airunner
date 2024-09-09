@@ -47,18 +47,10 @@ class GeneratorForm(BaseWidget):
                 self.ui.negative_prompt_label.show()
                 self.ui.negative_prompt.show()
             self.ui.croops_coord_top_left_groupbox.hide()
-            self.ui.original_size_groupbox.hide()
-            self.ui.target_size_groupbox.hide()
-            self.ui.negative_original_size_groupbox.hide()
-            self.ui.negative_target_size_groupbox.hide()
             self.ui.secondary_prompt.hide()
             self.ui.secondary_negative_prompt.hide()
         else:
             self.ui.croops_coord_top_left_groupbox.show()
-            self.ui.original_size_groupbox.show()
-            self.ui.target_size_groupbox.show()
-            self.ui.negative_original_size_groupbox.show()
-            self.ui.negative_target_size_groupbox.show()
             self.ui.negative_prompt_label.show()
             self.ui.negative_prompt.show()
             self.ui.secondary_prompt.show()
@@ -195,23 +187,6 @@ class GeneratorForm(BaseWidget):
         y = get_integer_value(self.ui.crops_coord_top_left_y)
         settings["generator_settings"]["crops_coord_top_left"] = (x, y)
 
-        x = get_integer_value(self.ui.original_size_x)
-        y = get_integer_value(self.ui.original_size_y)
-        settings["generator_settings"]["original_size"] = (x, y)
-
-        x = get_integer_value(self.ui.target_size_x)
-        y = get_integer_value(self.ui.target_size_y)
-        settings["generator_settings"]["target_size"] = (x, y)
-
-
-        x = get_integer_value(self.ui.negative_original_size_x)
-        y = get_integer_value(self.ui.negative_original_size_y)
-        settings["generator_settings"]["negative_original_size"] = (x, y)
-
-        x = get_integer_value(self.ui.negative_target_size_x)
-        y = get_integer_value(self.ui.negative_target_size_y)
-        settings["generator_settings"]["negative_target_size"] = (x, y)
-
         self.settings = settings
 
     def handle_interrupt_button_clicked(self):
@@ -292,6 +267,12 @@ class GeneratorForm(BaseWidget):
             "tome_sd_ratio": settings["memory_settings"]["tome_sd_ratio"],
         }
 
+    def handle_quality_effects_changed(self, val):
+        print("quality_effects", val)
+        settings = self.settings
+        settings["generator_settings"]["quality_effects"] = val
+        self.settings = settings
+
     def handle_progress_bar(self, message):
         step = message.get("step")
         total = message.get("total")
@@ -338,15 +319,8 @@ class GeneratorForm(BaseWidget):
         self.ui.secondary_negative_prompt.blockSignals(True)
         self.ui.crops_coord_top_left_x.blockSignals(True)
         self.ui.crops_coord_top_left_y.blockSignals(True)
-        self.ui.original_size_x.blockSignals(True)
-        self.ui.original_size_y.blockSignals(True)
-        self.ui.target_size_x.blockSignals(True)
-        self.ui.target_size_y.blockSignals(True)
-        self.ui.negative_original_size_x.blockSignals(True)
-        self.ui.negative_original_size_y.blockSignals(True)
-        self.ui.negative_target_size_x.blockSignals(True)
-        self.ui.negative_target_size_y.blockSignals(True)
         self.ui.image_presets.blockSignals(True)
+        self.ui.quality_effects.blockSignals(True)
 
         self.ui.prompt.setPlainText(settings["generator_settings"]["prompt"])
         self.ui.negative_prompt.setPlainText(settings["generator_settings"]["negative_prompt"])
@@ -354,14 +328,6 @@ class GeneratorForm(BaseWidget):
         self.ui.secondary_negative_prompt.setPlainText(settings["generator_settings"]["second_negative_prompt"])
         self.ui.crops_coord_top_left_x.setText(str(settings["generator_settings"]["crops_coord_top_left"][0]))
         self.ui.crops_coord_top_left_y.setText(str(settings["generator_settings"]["crops_coord_top_left"][1]))
-        self.ui.original_size_x.setText(str(settings["generator_settings"]["original_size"][0]))
-        self.ui.original_size_y.setText(str(settings["generator_settings"]["original_size"][1]))
-        self.ui.target_size_x.setText(str(settings["generator_settings"]["target_size"][0]))
-        self.ui.target_size_y.setText(str(settings["generator_settings"]["target_size"][1]))
-        self.ui.negative_original_size_x.setText(str(settings["generator_settings"]["negative_original_size"][0]))
-        self.ui.negative_original_size_y.setText(str(settings["generator_settings"]["negative_original_size"][1]))
-        self.ui.negative_target_size_x.setText(str(settings["generator_settings"]["negative_target_size"][0]))
-        self.ui.negative_target_size_y.setText(str(settings["generator_settings"]["negative_target_size"][1]))
 
         image_presets = [""] + [preset.value for preset in ImagePreset]
         self.ui.image_presets.addItems(image_presets)
@@ -369,21 +335,16 @@ class GeneratorForm(BaseWidget):
             self.ui.image_presets.findText(self.settings["generator_settings"]["image_preset"])
         )
 
+        self.ui.quality_effects.setCurrentText(settings["generator_settings"]["quality_effects"])
+
         self.ui.prompt.blockSignals(False)
         self.ui.negative_prompt.blockSignals(False)
         self.ui.secondary_prompt.blockSignals(False)
         self.ui.secondary_negative_prompt.blockSignals(False)
         self.ui.crops_coord_top_left_x.blockSignals(False)
         self.ui.crops_coord_top_left_y.blockSignals(False)
-        self.ui.original_size_x.blockSignals(False)
-        self.ui.original_size_y.blockSignals(False)
-        self.ui.target_size_x.blockSignals(False)
-        self.ui.target_size_y.blockSignals(False)
-        self.ui.negative_original_size_x.blockSignals(False)
-        self.ui.negative_original_size_y.blockSignals(False)
-        self.ui.negative_target_size_x.blockSignals(False)
-        self.ui.negative_target_size_y.blockSignals(False)
         self.ui.image_presets.blockSignals(False)
+        self.ui.quality_effects.blockSignals(False)
 
 
     def clear_prompts(self):

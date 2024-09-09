@@ -781,6 +781,7 @@ DEFAULT_GENERATOR_SETTINGS = dict(
     section="txt2img",
     generator_name="stablediffusion",
     presets={},
+    quality_effects="",
 )
 
 # Define the generator settings
@@ -1068,6 +1069,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         is_fullscreen=False,
         canvas_splitter=None,
         generator_form_splitter=None,
+        grid_settings_splitter=None,
         width=800,
         height=600,
         x_pos=0,
