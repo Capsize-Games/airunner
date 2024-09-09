@@ -1,10 +1,11 @@
+import os
 from types import NoneType
 from typing import Optional
 
 import PIL
-from PIL import ImageQt, Image, ImageFilter, ImageOps
+from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QEvent
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent
@@ -16,16 +17,18 @@ from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils.snap_to_grid import snap_to_grid
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
-from airunner.widgets.canvas.clipboard_handler import ClipboardHandler
+from airunner.widgets.canvas.mixins.clipboard_handler_mixin import ClipboardHandlerMixin
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
-from airunner.widgets.canvas.image_handler import ImageHandler
+from airunner.widgets.canvas.mixins.image_handler_mixin import ImageHandlerMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class CustomScene(
     QGraphicsScene,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    ImageHandlerMixin,
+    ClipboardHandlerMixin
 ):
     settings_key = "canvas_settings"
 
@@ -34,11 +37,13 @@ class CustomScene(
         self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        ImageHandlerMixin.__init__(self)
+        ClipboardHandlerMixin.__init__(self)
         self.painter = None
         self.image: ImageQt = Optional[None]
         self.item: QGraphicsPixmapItem = Optional[None]
         super().__init__()
-
+        self.last_export_path = None
         self._target_size = None
         self._do_resize = False
 
@@ -54,8 +59,6 @@ class CustomScene(
 
         self.register_signals()
 
-        self.clipboard_handler = ClipboardHandler()
-        self.image_handler = ImageHandler()
         self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
 
     def showEvent(self, event):
@@ -86,36 +89,44 @@ class CustomScene(
             (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
             (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
-            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.paste_image_from_clipboard),
+            (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.on_paste_image_from_clipboard),
             (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
             (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
-            (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.cancel_filter),
-            (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.preview_filter),
+            (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.handle_cancel_filter),
+            (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.handle_preview_filter),
             (SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path),
             (SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, self.on_image_generated_signal),
         ]
         for signal, handler in signals:
             self.register(signal, handler)
 
-    def export_image(self, _message):
+    def export_image(self):
         image = self.current_active_image()
         if image:
-            file_path, _ = QFileDialog.getSaveFileName(
-                None,
-                "Save Image",
-                "",
-                f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
-            )
-            if file_path == "":
-                return
+            # Set the parent window to the main application window
+            parent_window = self.views()[0].window()
 
-            # If missing file extension, add it
-            if not file_path.endswith(VALID_IMAGE_FILES):
-                file_path = f"{file_path}.png"
+            # Use the last export path if available
+            initial_dir = self.last_export_path if self.last_export_path else ""
 
-            image.save(file_path)
+            file_dialog = QFileDialog(parent_window, "Save Image", initial_dir, f"Image Files ({' '.join(VALID_IMAGE_FILES)})")
+            file_dialog.setAcceptMode(QFileDialog.AcceptSave)
+            if file_dialog.exec() == QFileDialog.Accepted:
+                file_path = file_dialog.selectedFiles()[0]
+                if file_path == "":
+                    return
 
-    def import_image(self, _message):
+                # Update the last export path
+                self.last_export_path = os.path.dirname(file_path)
+
+                # If missing file extension, add it
+                if not file_path.endswith(VALID_IMAGE_FILES):
+                    file_path = f"{file_path}.png"
+
+                # Save the combined image
+                image.save(file_path)
+
+    def import_image(self):
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",
@@ -124,7 +135,7 @@ class CustomScene(
         )
         if file_path == "":
             return
-        self.load_image(file_path)
+        self.handle_load_image(file_path)
 
     def current_layer(self):
         # TODO
@@ -146,9 +157,9 @@ class CustomScene(
             "pivot_point_y": value.y()
         })
 
-    def paste_image_from_clipboard(self, _message):
+    def on_paste_image_from_clipboard(self):
         if self.scene_is_active:
-            image = self.clipboard_handler.paste_image_from_clipboard()
+            image = self.paste_image_from_clipboard()
             #self.delete_image()
 
             settings = self.settings
@@ -168,7 +179,8 @@ class CustomScene(
     def resize_image(self, image: Image) -> Image:
         if image is None:
             return
-        max_size = (self.settings["working_width"], self.settings["working_height"])
+        settings = self.settings
+        max_size = (settings["working_width"], settings["working_height"])
         image.thumbnail(max_size, PIL.Image.Resampling.BICUBIC)
         return image
 
@@ -189,32 +201,32 @@ class CustomScene(
             image=image
         )
 
-    def load_image(self, image_path: str):
-        image = self.image_handler.load_image(image_path)
+    def handle_load_image(self, image_path: str):
+        image = self.load_image(image_path)
         if self.settings["resize_on_paste"]:
             image = self.resize_image(image)
         self.add_image_to_scene(image)
 
-    def cancel_filter(self, _message):
-        image = self.image_handler.cancel_filter()
+    def handle_cancel_filter(self):
+        image = self.cancel_filter()
         if image:
             self.load_image_from_object(image=image)
 
-    def preview_filter(self, message):
+    def handle_preview_filter(self, message):
         filter_object: ImageFilter.Filter = message["filter_object"]
-        filtered_image = self.image_handler.preview_filter(
+        filtered_image = self.preview_filter(
             self.current_active_image(),
             filter_object
         )
         self.load_image_from_object(image=filtered_image)
 
     def add_image_to_scene(
-            self,
-            image: Image,
-            is_outpaint: bool = False,
-            outpaint_box_rect: QPoint = None,
-            border_size: int = 1,  # size of the border
-            border_color: tuple = (255, 0, 0, 255)  # color of the border in RGBA format
+        self,
+        image: Image,
+        is_outpaint: bool = False,
+        outpaint_box_rect: QPoint = None,
+        border_size: int = 1,  # size of the border
+        border_color: tuple = (255, 0, 0, 255)  # color of the border in RGBA format
     ):
         """
         Adds a given image to the scene
@@ -338,30 +350,37 @@ class CustomScene(
         code = response["code"]
         if code == EngineResponseCode.IMAGE_GENERATED:
             message = response["message"]
-            if message:
-                self.create_image(message["images"][0].convert("RGBA"))
+            if message is None:
+                self.logger.error("No message received from engine")
+                return
+            images = message["images"]
+            if len(images) == 0:
+                self.logger.debug("No images received from engine")
+            elif message:
+                self.create_image(images[0].convert("RGBA"))
         else:
             self.logger.error(f"Unhandled response code: {code}")
+        self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
 
-    def on_canvas_clear_signal(self, _message):
+    def on_canvas_clear_signal(self):
         settings = self.settings
         settings[self.settings_key]["image"] = None
         self.settings = settings
         self.delete_image()
 
-    def on_canvas_copy_image_signal(self, _message):
+    def on_canvas_copy_image_signal(self):
         if self.scene_is_active:
             self.copy_image(self.current_active_image())
 
-    def on_canvas_cut_image_signal(self, _message):
+    def on_canvas_cut_image_signal(self):
         if self.scene_is_active:
             self.cut_image(self.current_active_image())
 
-    def on_canvas_rotate_90_clockwise_signal(self, _message):
+    def on_canvas_rotate_90_clockwise_signal(self):
         if self.scene_is_active:
             self.rotate_90_clockwise()
 
-    def on_canvas_rotate_90_counter_clockwise_signal(self, _message):
+    def on_canvas_rotate_90_counter_clockwise_signal(self):
         if self.scene_is_active:
             self.rotate_90_counterclockwise()
 
@@ -371,21 +390,15 @@ class CustomScene(
     def rotate_90_counterclockwise(self):
         self.rotate_image(Image.ROTATE_90)
 
-    def copy_image(
-        self,
-        image: Image = None
-    ) -> object:
-        return self.clipboard_handler.copy_image(image)
-
     def rotate_image(self, angle):
-        image = self.image_handler.rotate_image(
+        image = self.rotate_image(
             angle,
             self.current_active_image()
         )
         self.set_current_active_image(image)
 
     def cut_image(self, image: Image = None) -> Image:
-        image = self.clipboard_handler.copy_image(image)
+        image = self.copy_image(image)
         if image is not None:
             self.delete_image()
 
@@ -407,9 +420,10 @@ class CustomScene(
         self.initialize_image()
 
     def set_image(self, pil_image: Image = None):
+        settings = self.settings
         base64image = None
         if not pil_image:
-            base64image = self.settings[self.settings_key]["image"]
+            base64image = settings[self.settings_key]["image"]
 
         if base64image is not None:
             try:
@@ -433,8 +447,8 @@ class CustomScene(
             #self.initialize_image()
         else:
             self.image = QImage(
-                self.settings["working_width"],
-                self.settings["working_height"],
+                settings["working_width"],
+                settings["working_height"],
                 QImage.Format.Format_ARGB32
             )
             self.image.fill(Qt.GlobalColor.transparent)
@@ -496,35 +510,39 @@ class CustomScene(
 
     def wheelEvent(self, event):
         # Calculate the zoom factor
-        zoom_in_factor = self.settings["grid_settings"]["zoom_in_step"]
-        zoom_out_factor = -self.settings["grid_settings"]["zoom_out_step"]
-
-        # Use delta instead of angleDelta
-        if event.delta() > 0:
-            zoom_factor = zoom_in_factor
-        else:
-            zoom_factor = zoom_out_factor
-
-        # Update zoom level
-        zoom_level = self.settings["grid_settings"]["zoom_level"]
-        zoom_level += zoom_factor
-        if zoom_level < 0.1:
-            zoom_level = 0.1
         settings = self.settings
-        settings["grid_settings"]["zoom_level"] = zoom_level
-        self.settings = settings
+        zoom_in_factor = settings["grid_settings"]["zoom_in_step"]
+        zoom_out_factor = -settings["grid_settings"]["zoom_out_step"]
+
+        # Use angleDelta instead of delta
+        if event.type() == QEvent.Type.Wheel:
+            if event.angleDelta().y() > 0:
+                zoom_factor = zoom_in_factor
+            else:
+                zoom_factor = zoom_out_factor
+
+            # Update zoom level
+            zoom_level = settings["grid_settings"]["zoom_level"]
+            zoom_level += zoom_factor
+            if zoom_level < 0.1:
+                zoom_level = 0.1
+            settings["grid_settings"]["zoom_level"] = zoom_level
+            self.settings = settings
+
+            self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
         self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
     def handle_mouse_event(self, event, is_press_event) -> bool:
         if isinstance(event, QMouseEvent) and event.button() == Qt.MouseButton.LeftButton:
+            settings = self.settings
             view = self.views()[0]
             pos = view.mapFromScene(event.scenePos())
             if (
-                self.settings["grid_settings"]["snap_to_grid"] and
-                self.settings["current_tool"] == CanvasToolName.SELECTION
+                settings["grid_settings"]["snap_to_grid"] and
+                settings["current_tool"] == CanvasToolName.SELECTION
             ):
-                x, y = snap_to_grid(self.settings, pos.x(), pos.y(), False)
+                x, y = snap_to_grid(settings, pos.x(), pos.y(), False)
                 pos = QPoint(x, y)
                 if is_press_event:
                     self.selection_stop_pos = None

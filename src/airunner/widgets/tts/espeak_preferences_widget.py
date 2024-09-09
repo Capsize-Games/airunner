@@ -10,9 +10,9 @@ class ESpeakPreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.initialize_form()
 
     def initialize_form(self):
+        settings = self.settings
         elements = [
             self.ui.language_combobox,
             self.ui.gender_combobox,
@@ -22,9 +22,9 @@ class ESpeakPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(True)
 
-        language = self.settings["tts_settings"]["espeak"]["language"]
-        gender = self.settings["tts_settings"]["espeak"]["gender"]
-        voice = self.settings["tts_settings"]["espeak"]["voice"]
+        language = settings["tts_settings"]["espeak"]["language"]
+        gender = settings["tts_settings"]["espeak"]["gender"]
+        voice = settings["tts_settings"]["espeak"]["voice"]
         iso_codes = [country.alpha_2 for country in pycountry.countries]
 
         engine = pyttsx3.init()

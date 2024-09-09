@@ -9,9 +9,9 @@ class BarkPreferencesWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.voices = BARK_VOICES
-        self.initialize_form()
 
     def initialize_form(self):
+        settings = self.settings
         elements = [
             self.ui.language_combobox,
             self.ui.gender_combobox,
@@ -21,9 +21,9 @@ class BarkPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(True)
 
-        language = self.settings["tts_settings"]["bark"]["language"]
-        gender = self.settings["tts_settings"]["bark"]["gender"]
-        voice = self.settings["tts_settings"]["bark"]["voice"]
+        language = settings["tts_settings"]["bark"]["language"]
+        gender = settings["tts_settings"]["bark"]["gender"]
+        voice = settings["tts_settings"]["bark"]["voice"]
 
         self.ui.voice_combobox.clear()
         self.ui.language_combobox.addItems(self.voices.keys())

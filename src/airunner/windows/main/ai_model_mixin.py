@@ -31,7 +31,7 @@ class AIModelMixin:
 
     def on_ai_model_delete_signal(self, item: dict):
         settings = self.settings
-        settings["ai_models"] = [existing_item for existing_item in self.settings["ai_models"] if existing_item['name'] != item['name']]
+        settings["ai_models"] = [existing_item for existing_item in settings["ai_models"] if existing_item['name'] != item['name']]
         self.settings = settings
     
     def ai_model_names_by_section(self, section):
@@ -70,16 +70,6 @@ class AIModelMixin:
 
         self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL, {
             "models": merged_models
-        })
-
-    def on_vae_models_save_or_update_signal(self, data: dict):
-        new_models = data.get("models", [])
-        settings = self.settings
-        existing_models = settings["vae_models"]
-        settings["vae_models"] = existing_models + new_models
-        self.settings = settings
-        self.emit_signal(SignalCode.VAE_MODELS_CREATE_SIGNAL, {
-            "models": settings["vae_models"]
         })
         
     def ai_model_paths(self, model_type=None, pipeline_action=None):

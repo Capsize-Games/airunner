@@ -4,6 +4,7 @@ import torch
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 from airunner.aihandler.tts.tts_handler import TTSHandler
 from airunner.enums import SignalCode, LLMChatRole, ModelType, ModelStatus
+from airunner.settings import BASE_PATH
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -13,10 +14,6 @@ class SpeechT5TTSHandler(TTSHandler):
     processor_class_ = SpeechT5Processor
 
     @property
-    def base_path(self):
-        return self.settings["path_settings"]["tts_model_path"]
-
-    @property
     def tts_settings(self):
         return self.settings["tts_settings"]["speecht5"]
 
@@ -24,8 +21,10 @@ class SpeechT5TTSHandler(TTSHandler):
     def processor_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.base_path,
-                self.tts_settings["processor_path"]
+                self.settings["path_settings"]["base_path"],
+                "text/models",
+                "tts",
+                self.settings["tts_settings"]["speecht5"]["processor_path"]
             )
         )
 
@@ -33,8 +32,10 @@ class SpeechT5TTSHandler(TTSHandler):
     def model_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.base_path,
-                self.tts_settings["model_path"]
+                self.settings["path_settings"]["base_path"],
+                "text/models",
+                "tts",
+                self.settings["tts_settings"]["speecht5"]["model_path"],
             )
         )
 
@@ -42,8 +43,10 @@ class SpeechT5TTSHandler(TTSHandler):
     def vocoder_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.base_path,
-                self.tts_settings["vocoder_path"]
+                self.settings["path_settings"]["base_path"],
+                "text/models",
+                "tts",
+                self.settings["tts_settings"]["speecht5"]["vocoder_path"],
             )
         )
 
@@ -51,7 +54,9 @@ class SpeechT5TTSHandler(TTSHandler):
     def speaker_embeddings_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["tts_speaker_embeddings_path"],
+                self.settings["path_settings"]["base_path"],
+                "text/models",
+                "tts",
                 "speaker_embeddings"
             )
         )

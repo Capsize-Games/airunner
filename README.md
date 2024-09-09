@@ -207,3 +207,27 @@ See [Facehuggershield](https://github.com/capsize-games/facehuggershield) for mo
 We plant o remove the Huggingface libraries from the application in the future.
 Although the architecture is currently dependent on these libraries, we will
 migrate to a better solution in the future.
+
+---
+
+## Improving performance
+
+To profile various functions in an effort to improve performance, you can install `line_profiler`
+
+```bash
+pip install line_profiler
+```
+
+To profile a function, add the `@profile` decorator to the function you wish to profile.
+
+Then run the following command:
+
+```bash
+kernprof -l -v main.py
+```
+
+To view the results after
+
+```bash
+python display_profile_data.py
+```

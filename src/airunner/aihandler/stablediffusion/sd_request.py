@@ -7,7 +7,7 @@ from cryptography.fernet import Fernet
 from airunner.enums import (
     SDMode,
     GeneratorSection,
-    Controlnet, ImageCategory, ImagePreset
+    Controlnet, ImageCategory, ImagePreset, StableDiffusionVersion
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import (
@@ -35,6 +35,10 @@ class ControlnetImageSettings:
 
 class GeneratorSettings:
     @property
+    def image_preset(self):
+        return self.generator_settings.get("image_preset", "")
+
+    @property
     def prompt(self):
         prompt = ""
         if self.image_preset != "":
@@ -61,12 +65,40 @@ class GeneratorSettings:
             elif preset_enum is ImagePreset.PHOTOGRAPH:
                 negative_prompt = "illustration, drawing, painting, digital art"
             elif preset_enum is ImagePreset.PAINTING:
-                negative_prompt = "illustration, drawing, photograph, photo, realistic, photo realistic, ultra realistic, cgi"
+                negative_prompt = "photograph, photo, cgi, video footage, video game footage"
         return f"{negative_prompt} {self._negative_prompt}"
 
     @negative_prompt.setter
     def negative_prompt(self, value):
         self._negative_prompt = value
+
+    @property
+    def second_prompt(self):
+        second_prompt = self.generator_settings.get("second_prompt", "")
+        prompt = ""
+        if self.image_preset != "":
+            preset_enum = ImagePreset(self.image_preset)
+            if preset_enum is ImagePreset.ILLUSTRATION:
+                prompt = "A beautiful illustration of a"
+            elif preset_enum is ImagePreset.PHOTOGRAPH:
+                prompt = "A beautiful photograph of a"
+            elif preset_enum is ImagePreset.PAINTING:
+                prompt = "A beautiful painting of a"
+        return f"{prompt} {second_prompt}"
+
+    @property
+    def second_negative_prompt(self):
+        second_negative_prompt = self.generator_settings.get("second_negative_prompt", "")
+        negative_prompt = ""
+        if self.image_preset != "":
+            preset_enum = ImagePreset(self.image_preset)
+            if preset_enum is ImagePreset.ILLUSTRATION:
+                negative_prompt = "photograph, realistic, photo realistic, ultra realistic, cgi"
+            elif preset_enum is ImagePreset.PHOTOGRAPH:
+                negative_prompt = "illustration, drawing, painting, digital art"
+            elif preset_enum is ImagePreset.PAINTING:
+                negative_prompt = "illustration, drawing, photograph, photo, realistic, photo realistic, ultra realistic, cgi"
+        return f"{negative_prompt} {second_negative_prompt}"
 
     def __init__(self, settings: dict):
         generator_settings = settings["generator_settings"]
@@ -75,13 +107,13 @@ class GeneratorSettings:
         self._prompt = ""
         self._negative_prompt = ""
 
-        self.image_preset = generator_settings.get("image_preset", STABLEDIFFUSION_GENERATOR_SETTINGS["image_preset"])
+
         self.prompt = generator_settings.get("prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt"])
         self.negative_prompt = generator_settings.get("negative_prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["negative_prompt"])
         self.steps = generator_settings.get("steps", STABLEDIFFUSION_GENERATOR_SETTINGS["steps"])
         self.ddim_eta = generator_settings.get("ddim_eta", STABLEDIFFUSION_GENERATOR_SETTINGS["ddim_eta"])
-        self.height = generator_settings.get("height", STABLEDIFFUSION_GENERATOR_SETTINGS["height"])
-        self.width = generator_settings.get("width", STABLEDIFFUSION_GENERATOR_SETTINGS["width"])
+        self.height = generator_settings.get("height", settings["working_height"])
+        self.width = generator_settings.get("width", settings["working_width"])
         self.scale = generator_settings.get("scale", STABLEDIFFUSION_GENERATOR_SETTINGS["scale"]) / 100.0
         self.seed = generator_settings.get("seed", STABLEDIFFUSION_GENERATOR_SETTINGS["seed"])
         self.random_seed = generator_settings.get("random_seed", STABLEDIFFUSION_GENERATOR_SETTINGS["random_seed"])
@@ -89,7 +121,6 @@ class GeneratorSettings:
         self.scheduler = generator_settings.get("scheduler", STABLEDIFFUSION_GENERATOR_SETTINGS["scheduler"])
         self.prompt_triggers = generator_settings.get("prompt_triggers", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt_triggers"])
         self.strength = generator_settings.get("strength", STABLEDIFFUSION_GENERATOR_SETTINGS["strength"]) / 100.0
-        self.image_guidance_scale = generator_settings.get("image_guidance_scale", STABLEDIFFUSION_GENERATOR_SETTINGS["image_guidance_scale"]) / 100.0
         self.n_samples = generator_settings.get("n_samples", STABLEDIFFUSION_GENERATOR_SETTINGS["n_samples"])
         self.enable_controlnet = settings["controlnet_enabled"]
         self.clip_skip = generator_settings.get("clip_skip", STABLEDIFFUSION_GENERATOR_SETTINGS["clip_skip"])
@@ -98,7 +129,6 @@ class GeneratorSettings:
         self.version = generator_settings.get("version", STABLEDIFFUSION_GENERATOR_SETTINGS["version"])
         self.is_preset = generator_settings.get("is_preset", STABLEDIFFUSION_GENERATOR_SETTINGS["is_preset"])
         self.input_image = generator_settings.get("input_image", STABLEDIFFUSION_GENERATOR_SETTINGS["input_image"])
-        self.section = generator_settings.get("section", DEFAULT_GENERATOR_SETTINGS["section"])
         self.generator_name = generator_settings.get("generator_name", DEFAULT_GENERATOR_SETTINGS["generator_name"])
         self.controlnet_image_settings = ControlnetImageSettings()
 
@@ -136,6 +166,8 @@ class SDRequest(
         self.parent = None
         self.prompt_embeds = None
         self.negative_prompt_embeds = None
+        self.pooled_prompt_embeds = None
+        self.negative_pooled_prompt_embeds = None
         self.input_image = None
         self.load_generator_settings()
 
@@ -149,39 +181,52 @@ class SDRequest(
         return self.drawing_pad_image
 
     @property
+    def outpaint_image(self):
+        base_64_image = self.settings["outpaint_settings"]["image"]
+        return convert_base64_to_image(base_64_image)
+
+    @property
+    def section(self):
+        settings = self.settings
+        section = GeneratorSection.TXT2IMG
+        if self.drawing_pad_image is not None and settings["drawing_pad_settings"]["enabled"]:
+            section = GeneratorSection.IMG2IMG
+        if self.outpaint_image is not None and settings["outpaint_settings"]["enabled"]:
+            section = GeneratorSection.OUTPAINT
+        return section.value
+
+    @property
     def is_outpaint(self) -> bool:
-        return self.generator_settings.section == GeneratorSection.OUTPAINT.value
+        return self.section == GeneratorSection.OUTPAINT.value
 
     @property
     def is_txt2img(self) -> bool:
-        return self.generator_settings.section == GeneratorSection.TXT2IMG.value and self.input_image is None
-
-    @property
-    def is_upscale(self):
-        return self.generator_settings.section == GeneratorSection.UPSCALE.value
+        return self.section == GeneratorSection.TXT2IMG.value
 
     @property
     def is_img2img(self):
-        return self.generator_settings.section == GeneratorSection.TXT2IMG.value and self.input_image is not None
-
-    @property
-    def is_depth2img(self):
-        return self.generator_settings.section == GeneratorSection.DEPTH2IMG.value
-
-    @property
-    def is_pix2pix(self):
-        return self.generator_settings.section == GeneratorSection.PIX2PIX.value
+        return self.section == GeneratorSection.IMG2IMG.value
 
     def load_generator_settings(self):
         self.generator_settings = GeneratorSettings(settings=self.settings)
-        self.action_has_safety_checker = self.generator_settings.section not in [GeneratorSection.DEPTH2IMG.value]
 
-    def initialize_prompt_embeds(self, prompt_embeds, negative_prompt_embeds, args: dict):
+    def initialize_prompt_embeds(
+        self,
+        prompt_embeds,
+        negative_prompt_embeds,
+        pooled_prompt_embeds=None,
+        negative_pooled_prompt_embeds=None,
+        args: dict = None
+    ):
         self.prompt_embeds = prompt_embeds
         self.negative_prompt_embeds = negative_prompt_embeds
+        self.pooled_prompt_embeds = pooled_prompt_embeds
+        self.negative_pooled_prompt_embeds = negative_pooled_prompt_embeds
         args = self.load_prompt_embed_args(
             prompt_embeds,
             negative_prompt_embeds,
+            pooled_prompt_embeds,
+            negative_pooled_prompt_embeds,
             args
         )
         return args
@@ -197,6 +242,8 @@ class SDRequest(
         strength=None,
         prompt_embeds=None,
         negative_prompt_embeds=None,
+        pooled_prompt_embeds=None,
+        negative_pooled_prompt_embeds=None,
         callback=None,
         cross_attention_kwargs_scale=None,
         latents=None,
@@ -207,7 +254,8 @@ class SDRequest(
         controlnet_image=None,
         generator_request_data: dict = None,
     ) -> dict:
-        self.memory_settings = MemorySettings(**self.settings["memory_settings"])
+        settings = self.settings
+        self.memory_settings = MemorySettings(**settings["memory_settings"])
         self.load_generator_settings()
         self.latents = latents
         self.callback_steps: int = 1
@@ -226,6 +274,8 @@ class SDRequest(
             strength=strength,
             prompt_embeds=prompt_embeds,
             negative_prompt_embeds=negative_prompt_embeds,
+            pooled_prompt_embeds=pooled_prompt_embeds,
+            negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
             generator_request_data=generator_request_data
         )
 
@@ -240,9 +290,9 @@ class SDRequest(
         args["callback_steps"] = self.callback_steps
         args["clip_skip"] = self.generator_settings.clip_skip
 
-        if self.is_img2img or self.is_depth2img or self.is_pix2pix or self.is_outpaint:
-            args["height"] = self.settings["working_height"]
-            args["width"] = self.settings["working_width"]
+        if self.is_img2img or self.is_outpaint:
+            args["height"] = settings["working_height"]
+            args["width"] = settings["working_width"]
             if self.is_img2img:
                 if args["num_inference_steps"] < MIN_NUM_INFERENCE_STEPS_IMG2IMG:
                     args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
@@ -262,28 +312,30 @@ class SDRequest(
         strength=None,
         prompt_embeds=None,
         negative_prompt_embeds=None,
+        pooled_prompt_embeds=None,
+        negative_pooled_prompt_embeds=None,
         generator_request_data=None,
     ) -> dict:
         self.active_rect = active_rect
-
+        settings = self.settings
         if self.active_rect is None:
             self.active_rect = QRect(
-                self.settings["active_grid_settings"]["pos_x"],
-                self.settings["active_grid_settings"]["pos_y"],
-                self.settings["working_width"],
-                self.settings["working_height"],
+                settings["active_grid_settings"]["pos_x"],
+                settings["active_grid_settings"]["pos_y"],
+                settings["working_width"],
+                settings["working_height"],
             )
             self.active_rect.translate(
-                -self.settings["canvas_settings"]["pos_x"],
-                -self.settings["canvas_settings"]["pos_y"]
+                -settings["canvas_settings"]["pos_x"],
+                -settings["canvas_settings"]["pos_y"]
             )
 
-        width = int(self.settings["working_width"])
-        height = int(self.settings["working_height"])
+        width = int(settings["working_width"])
+        height = int(settings["working_height"])
         clip_skip = int(self.generator_settings.clip_skip)
 
         args = {
-            "action": self.generator_settings.section,
+            "action": self.section,
             "outpaint_box_rect": self.active_rect,
             "width": width,
             "height": height,
@@ -293,12 +345,14 @@ class SDRequest(
         args = self.load_prompt_embed_args(
             prompt_embeds,
             negative_prompt_embeds,
+            pooled_prompt_embeds,
+            negative_pooled_prompt_embeds,
             args
         )
 
         extra_args = self.prepare_extra_args(generator_request_data)
 
-        if self.settings["controlnet_enabled"] and controlnet_image:
+        if settings["controlnet_enabled"] and controlnet_image:
             if self.is_txt2img:
                 extra_args["image"] = controlnet_image
             else:
@@ -307,10 +361,11 @@ class SDRequest(
         return {**args, **extra_args}
 
     def prepare_extra_args(self, generator_request_data):
+        settings = self.settings
         extra_args = {
         }
-        width = int(self.settings["working_width"])
-        height = int(self.settings["working_height"])
+        width = int(settings["working_width"])
+        height = int(settings["working_height"])
 
         image = None
         mask = None
@@ -321,38 +376,30 @@ class SDRequest(
                 mask = generator_request_data["mask"]
 
         if image is None and not self.is_outpaint:
-            base64image = self.settings["drawing_pad_settings"]["image"]
+            base64image = settings["drawing_pad_settings"]["image"]
             if base64image != "":
                 image = convert_base64_to_image(base64image)
                 if image is not None:
                     image = image.convert("RGB")
 
         if self.is_txt2img:
-            extra_args = {**extra_args, **{
+            extra_args.update({
                 "width": width,
                 "height": height,
-            }}
-        if not self.settings["controlnet_enabled"]:
-            if self.is_img2img or self.is_depth2img:
-                extra_args = {**extra_args, **{
-                    "strength": self.generator_settings.strength,
-                    "guidance_scale": self.generator_settings.image_guidance_scale,
-                }}
-            elif self.is_pix2pix:
-                extra_args = {**extra_args, **{
-                    "image_guidance_scale": self.generator_settings.strength,
-                }}
-            elif self.is_txt2img:
-                extra_args = {**extra_args, **{
+            })
+        if not settings["controlnet_enabled"]:
+            if self.is_txt2img:
+                extra_args.update({
                     "guidance_scale": self.generator_settings.scale,
-                }}
-        if self.is_upscale:
-            extra_args = {**extra_args, **{
-                "image": image,
-            }}
-        elif self.is_outpaint:
+                })
+            elif self.is_img2img:
+                extra_args.update({
+                    "strength": settings["brush_settings"]["strength"] / 100,
+                    "guidance_scale": self.generator_settings.scale,
+                })
+        if self.is_outpaint:
             if image is None:
-                base64image = self.settings["canvas_settings"]["image"]
+                base64image = settings["canvas_settings"]["image"]
                 if base64image != "":
                     image = convert_base64_to_image(base64image)
                     if image is not None:
@@ -360,17 +407,17 @@ class SDRequest(
                     else:
                         print("IMAGE IS NONE")
             if mask is None:
-                base64image = self.settings["canvas_settings"]["mask"]
+                base64image = settings["canvas_settings"]["mask"]
                 if base64image != "":
                     mask = convert_base64_to_image(base64image)
                     if mask is not None:
                         mask = mask.convert("RGB")
                     else:
-                        print("IMAGE IS NONE")
-            extra_args = {**extra_args, **{
-                "width": self.generator_settings.width,
-                "height": self.generator_settings.height,
-            }}
+                        print("MASK IMAGE IS NONE")
+            extra_args.update({
+                "width": self.settings["working_width"],
+                "height": self.settings["working_height"],
+            })
 
         if image is not None:
             extra_args["image"] = image
@@ -379,14 +426,14 @@ class SDRequest(
             extra_args["mask_image"] = mask
 
         controlnet_image = self.controlnet_image
-        if self.settings["controlnet_enabled"] and controlnet_image:
+        if settings["controlnet_enabled"] and controlnet_image:
             controlnet_args = {
                 "guess_mode": None,
                 "control_guidance_start": 0.0,
                 "control_guidance_end": 1.0,
-                "strength": self.settings["brush_settings"]["strength"] / 100, #self.generator_settings.controlnet_image_settings.strength,
-                #"guidance_scale": self.settings["brush_settings"]["guidance_scale"] / 100, #self.generator_settings.controlnet_image_settings.guidance_scale,
-                "controlnet_conditioning_scale": self.settings["brush_settings"]["conditioning_scale"] / 100, #self.generator_settings.controlnet_image_settings.conditioning_scale,
+                "strength": settings["brush_settings"]["strength"] / 100,
+                "guidance_scale": self.generator_settings.scale,
+                "controlnet_conditioning_scale": settings["brush_settings"]["conditioning_scale"] / 100,
                 "controlnet": [
                     self.generator_settings.controlnet_image_settings.controlnet
                 ],
@@ -397,13 +444,15 @@ class SDRequest(
             else:
                 controlnet_args["control_image"] = controlnet_image
 
-            extra_args = {**extra_args, **controlnet_args}
+            extra_args.update(controlnet_args)
         return extra_args
 
     def load_prompt_embed_args(
         self,
         prompt_embeds,
         negative_prompt_embeds,
+        pooled_prompt_embeds,
+        negative_pooled_prompt_embeds,
         args
     ):
         """
@@ -416,6 +465,16 @@ class SDRequest(
                 del args["prompt"]
             if "negative_prompt" in args:
                 del args["negative_prompt"]
+
+            if pooled_prompt_embeds is not None and negative_pooled_prompt_embeds is not None:
+                args["pooled_prompt_embeds"] = pooled_prompt_embeds
+                args["negative_pooled_prompt_embeds"] = negative_pooled_prompt_embeds
+
+                if "prompt_2" in args:
+                    del args["prompt_2"]
+                if "negative_prompt_2" in args:
+                    del args["negative_prompt_2"]
+
         else:
             args["prompt"] = self.generator_settings.prompt
             args["negative_prompt"] = self.generator_settings.negative_prompt
