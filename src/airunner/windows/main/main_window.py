@@ -1027,8 +1027,17 @@ class MainWindow(
         print("center clicked")
 
     def action_reset_settings(self):
-        self.settings = self.default_settings
-        self.restart()
+        reply = QMessageBox.question(
+            self,
+            'Reset Settings',
+            'Are you sure you want to reset all settings to their default values?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            self.settings = self.default_settings
+            self.restart()
 
     def import_controlnet_image(self):
         self.emit_signal(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
