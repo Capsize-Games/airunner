@@ -1,3 +1,4 @@
+import enum
 from enum import Enum, auto
 
 
@@ -256,6 +257,10 @@ class SignalCode(Enum):
     SAFETY_CHECKER_UNLOAD_SIGNAL = "SAFETY_CHECKER_UNLOAD_SIGNAL"
     SCHEDULER_LOAD_SIGNAL = "SCHEDULER_LOAD_SIGNAL"
     SCHEDULER_UNLOAD_SIGNAL = "SCHEDULER_UNLOAD_SIGNAL"
+
+    HISTORY_CLEAR_SIGNAL = enum.auto()
+    UNDO_SIGNAL = enum.auto()
+    REDO_SIGNAL = enum.auto()
 
 class EngineResponseCode(Enum):
     STATUS = 100
