@@ -5,7 +5,7 @@ from typing import Optional
 import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint, QEvent
+from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent
@@ -58,6 +58,8 @@ class CustomScene(
         self.generate_image_time = 0
         self.undo_history = []
         self.redo_history = []
+        self.right_mouse_button_pressed = False
+        self.handling_event = False
 
         self.register_signals()
 
@@ -571,14 +573,16 @@ class CustomScene(
             self.item.setPixmap(pixmap)
 
     def wheelEvent(self, event):
-        # Calculate the zoom factor
-        settings = self.settings
-        zoom_in_factor = settings["grid_settings"]["zoom_in_step"]
-        zoom_out_factor = -settings["grid_settings"]["zoom_out_step"]
+        if not hasattr(event, "delta"):
+            return
 
-        # Use angleDelta instead of delta
-        if event.type() == QEvent.Type.Wheel:
-            if event.angleDelta().y() > 0:
+        # Check if the Ctrl key is pressed
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            settings = self.settings
+            zoom_in_factor = settings["grid_settings"]["zoom_in_step"]
+            zoom_out_factor = -settings["grid_settings"]["zoom_out_step"]
+
+            if event.delta() > 0:
                 zoom_factor = zoom_in_factor
             else:
                 zoom_factor = zoom_out_factor
@@ -592,8 +596,6 @@ class CustomScene(
             self.settings = settings
 
             self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
-
-        self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
     def handle_mouse_event(self, event, is_press_event) -> bool:
         if isinstance(event, QMouseEvent) and event.button() == Qt.MouseButton.LeftButton:
@@ -627,25 +629,46 @@ class CustomScene(
 
     def mousePressEvent(self, event):
         if isinstance(event, QGraphicsSceneMouseEvent):
-            if not self.handle_left_mouse_press(event):
+            if event.button() == Qt.MouseButton.RightButton:
+                self.right_mouse_button_pressed = True
+                self.start_pos = event.scenePos()
+            elif not self.handle_left_mouse_press(event):
                 super(CustomScene, self).mousePressEvent(event)
         self.handle_cursor(event)
         self.last_pos = event.scenePos()
         self.update()
 
+    def mouseMoveEvent(self, event):
+        if self.right_mouse_button_pressed:
+            view = self.views()[0]
+            view.setTransformationAnchor(view.ViewportAnchor.NoAnchor)
+            view.setResizeAnchor(view.ViewportAnchor.NoAnchor)
+            delta = event.scenePos() - self.last_pos
+            scale_factor = view.transform().m11()  # Get the current scale factor
+            view.translate(delta.x() / scale_factor, delta.y() / scale_factor)
+            self.last_pos = event.scenePos()
+        else:
+            self.handle_cursor(event)
+            super(CustomScene, self).mouseMoveEvent(event)
+
     def mouseReleaseEvent(self, event):
-        if not self.handle_left_mouse_release(event):
+        if event.button() == Qt.MouseButton.RightButton:
+            self.right_mouse_button_pressed = False
+        elif not self.handle_left_mouse_release(event):
             super(CustomScene, self).mouseReleaseEvent(event)
         self.handle_cursor(event)
 
     def event(self, event):
-        if type(event) == QEnterEvent:
-            self.handle_cursor(event)
-        return super(CustomScene, self).event(event)
+        if self.handling_event:
+            return False  # Prevent recursive event calls
 
-    def mouseMoveEvent(self, event):
-        self.handle_cursor(event)
-        super(CustomScene, self).mouseMoveEvent(event)
+        self.handling_event = True
+        try:
+            if type(event) == QEnterEvent:
+                self.handle_cursor(event)
+            return super(CustomScene, self).event(event)
+        finally:
+            self.handling_event = False
 
     def leaveEvent(self, event):
         self.handle_cursor(event)
