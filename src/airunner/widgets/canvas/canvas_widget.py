@@ -1,13 +1,11 @@
 from typing import Optional
 
-from PySide6 import QtWidgets
 from PySide6.QtCore import Qt, QPoint
 
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.mixins.clipboard_handler_mixin import ClipboardHandlerMixin
-from airunner.widgets.canvas.mixins.grid_handler_mixin import GridHandlerMixin
 from airunner.widgets.canvas.mixins.image_handler_mixin import ImageHandlerMixin
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
 from airunner.workers.image_data_worker import ImageDataWorker
@@ -15,7 +13,6 @@ from airunner.workers.image_data_worker import ImageDataWorker
 
 class CanvasWidget(
     BaseWidget,
-    GridHandlerMixin,
     ImageHandlerMixin,
     ClipboardHandlerMixin
 ):
@@ -30,7 +27,6 @@ class CanvasWidget(
     widget_class_ = Ui_canvas
 
     def __init__(self, *args, **kwargs):
-        GridHandlerMixin.__init__(self)
         ImageHandlerMixin.__init__(self)
         ClipboardHandlerMixin.__init__(self)
         super().__init__(*args, **kwargs)
@@ -99,18 +95,6 @@ class CanvasWidget(
 
     def toggle_grid(self, val):
         self.do_draw()
-    
-    def wheelEvent(self, event):
-        modifiers = QtWidgets.QApplication.keyboardModifiers()
-        if modifiers in [
-            Qt.KeyboardModifier.ControlModifier,
-            Qt.KeyboardModifier.ShiftModifier,
-            Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
-        ]:
-            self.update_grid_dimensions_based_on_event(event)
-            self.do_draw()
-        else:
-            super().wheelEvent(event)  # Propagate the event to the base class if no modifier keys are pressed
 
     def showEvent(self, event):
         super().showEvent(event)
