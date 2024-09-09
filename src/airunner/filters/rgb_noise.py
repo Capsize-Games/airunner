@@ -1,4 +1,6 @@
-from PIL import Image
+import numpy as np
+from PIL import Image, ImageChops
+
 from airunner.filters.base_filter import BaseFilter
 
 
@@ -10,16 +12,19 @@ class RGBNoiseFilter(BaseFilter):
         self.blue_grain = None
 
     def apply_filter(self, image, do_reset):
-        self.red_grain = Image.new("L", image.size)
-        self.green_grain = Image.new("L", image.size)
-        self.blue_grain = Image.new("L", image.size)
-        self.red_grain = self.red_grain.point(lambda i: i + (i * self.red))
-        self.green_grain = self.green_grain.point(lambda i: i + (i * self.green))
-        self.blue_grain = self.blue_grain.point(lambda i: i + (i * self.blue))
+        # Convert image to numpy array
+        image_array = np.array(image)
 
-        red, green, blue, alpha = image.split()
-        red = Image.blend(red, self.red_grain, self.red)
-        green = Image.blend(green, self.green_grain, self.green)
-        blue = Image.blend(blue, self.blue_grain, self.blue)
-        image = Image.merge("RGBA", (red, green, blue, alpha))
+        # Generate random noise
+        red_noise = np.random.rand(*image.size) * self.red
+        green_noise = np.random.rand(*image.size) * self.green
+        blue_noise = np.random.rand(*image.size) * self.blue
+
+        # Add noise to each channel
+        image_array[..., 0] = np.clip(image_array[..., 0] + red_noise, 0, 255)
+        image_array[..., 1] = np.clip(image_array[..., 1] + green_noise, 0, 255)
+        image_array[..., 2] = np.clip(image_array[..., 2] + blue_noise, 0, 255)
+
+        # Convert back to PIL image
+        image = Image.fromarray(image_array.astype('uint8'), 'RGBA')
         return image
