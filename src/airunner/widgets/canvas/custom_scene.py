@@ -56,6 +56,8 @@ class CustomScene(
         self.generate_image_time_in_ms = 0.5
         self.do_generate_image = False
         self.generate_image_time = 0
+        self.undo_history = []
+        self.redo_history = []
 
         self.register_signals()
 
@@ -96,6 +98,9 @@ class CustomScene(
             (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.handle_preview_filter),
             (SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path),
             (SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, self.on_image_generated_signal),
+            (SignalCode.UNDO_SIGNAL, self.action_undo_triggered),
+            (SignalCode.REDO_SIGNAL, self.action_redo_triggered),
+            (SignalCode.HISTORY_CLEAR_SIGNAL, self.clear_history),
         ]
         for signal, handler in signals:
             self.register(signal, handler)
@@ -388,12 +393,10 @@ class CustomScene(
             self.cut_image(self.current_active_image())
 
     def on_canvas_rotate_90_clockwise_signal(self):
-        if self.scene_is_active:
-            self.rotate_90_clockwise()
+        self.rotate_90_clockwise()
 
     def on_canvas_rotate_90_counter_clockwise_signal(self):
-        if self.scene_is_active:
-            self.rotate_90_counterclockwise()
+        self.rotate_90_counterclockwise()
 
     def rotate_90_clockwise(self):
         self.rotate_image(-90)
@@ -401,16 +404,65 @@ class CustomScene(
     def rotate_90_counterclockwise(self):
         self.rotate_image(90)
 
+    def __add_undo_history(self, data: dict):
+        self.undo_history.append(data)
+
+    def __add_redo_history(self, data: dict):
+        self.redo_history.append(data)
+
+    def __clear_history(self):
+        self.undo_history = []
+        self.redo_history = []
+
+    def action_undo_triggered(self):
+        if len(self.undo_history) == 0:
+            return
+        data = self.undo_history.pop()
+        self.__add_image_to_redo()
+        self.history_set_image(data)
+
+    def action_redo_triggered(self):
+        if len(self.redo_history) == 0:
+            return
+        data = self.redo_history.pop()
+        self.__add_image_to_undo()
+        self.history_set_image(data)
+
     def rotate_image(self, angle):
+        self.__add_image_to_undo()
         image = self.current_active_image()
         if image is not None:
             image = image.rotate(angle, expand=True)
             self.refresh_image(image)
+        else:
+            self.logger.warning("No image to rotate")
 
     def cut_image(self, image: Image = None) -> Image:
         image = self.copy_image(image)
         if image is not None:
+            self.__add_image_to_undo()
             self.delete_image()
+
+    def history_set_image(self, data: dict):
+        if data is not None:
+            self.refresh_image(data["image"])
+
+    def clear_history(self):
+        self.__clear()
+
+    def __add_image_to_undo(self):
+        image = self.current_active_image()
+        if image is not None:
+            self.__add_undo_history({
+                "image": image.copy()
+            })
+
+    def __add_image_to_redo(self):
+        image = self.current_active_image()
+        if image is not None:
+            self.__add_redo_history({
+                "image": image.copy()
+            })
 
     def delete_image(self):
         self.logger.debug("Deleting image from canvas")
