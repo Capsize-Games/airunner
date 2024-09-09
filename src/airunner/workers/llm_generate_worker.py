@@ -78,13 +78,13 @@ class LLMGenerateWorker(Worker):
     def handle_error(self, error_message):
         print(f"Error: {error_message}")
 
-    def on_load_model_signal(self, message):
+    def on_load_model_signal(self):
         if self.llm:
-            self.llm.on_load_model_signal(message)
+            self.llm.on_load_model_signal()
 
-    def on_clear_history_signal(self, message):
+    def on_clear_history_signal(self):
         if self.llm:
-            self.llm.on_clear_history_signal(message)
+            self.llm.on_clear_history_signal()
 
     def on_interrupt_process_signal(self):
         if self.llm:
