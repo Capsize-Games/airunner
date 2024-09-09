@@ -72,6 +72,10 @@ class ModelMixin:
         self.__tokenizer_status = ModelStatus.UNLOADED
         self.cancel_load_flag = False
         self.load_thread = None
+        self.prompt_embeds = None
+        self.negative_prompt_embeds = None
+        self.pooled_prompt_embeds = None
+        self.negative_pooled_prompt_embeds = None
 
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
 
@@ -255,45 +259,27 @@ class ModelMixin:
         self.latents = None
         self.latents_set = False
 
-        if self.do_load_compel:
+        if self.use_compel:
             self.clear_prompt_embeds()
             self.load_prompt_embeds(
                 self.pipe,
                 prompt=self.sd_request.generator_settings.prompt,
-                negative_prompt=self.sd_request.generator_settings.negative_prompt
+                negative_prompt=self.sd_request.generator_settings.negative_prompt,
+                prompt_2=self.sd_request.generator_settings.second_prompt,
+                negative_prompt_2=self.sd_request.generator_settings.second_negative_prompt,
             )
             self.data = self.sd_request.initialize_prompt_embeds(
                 prompt_embeds=self.prompt_embeds,
                 negative_prompt_embeds=self.negative_prompt_embeds,
                 args=self.data
             )
-
-        if "prompt" in self.data and "prompt_embeds" in self.data:
-            del self.data["prompt"]
-
-        if "negative_prompt" in self.data and "negative_prompt_embeds" in self.data:
-            del self.data["negative_prompt"]
-
-    def __prepare_data(self):
-        data = self.data.copy()
-
-        if type(self.pipe) in [StableDiffusionXLPipeline, StableDiffusionPipeline] and "image" in data:
-            del data["image"]
-
-        prompt_embeds = None
-        negative_prompt_embeds = None
-        pooled_prompt_embeds = None
-        negative_pooled_prompt_embeds = None
-
-        self.reload_prompts()
-
-        if self.is_sd_xl:
+        elif self.is_sd_xl:
             self.pipe.to(self.device)
             (
-                prompt_embeds,
-                negative_prompt_embeds,
-                pooled_prompt_embeds,
-                negative_pooled_prompt_embeds,
+                self.prompt_embeds,
+                self.negative_prompt_embeds,
+                self.pooled_prompt_embeds,
+                self.negative_pooled_prompt_embeds,
             ) = self.pipe.encode_prompt(
                 prompt=self.sd_request.generator_settings.prompt,
                 negative_prompt=self.sd_request.generator_settings.negative_prompt,
@@ -303,30 +289,82 @@ class ModelMixin:
                 num_images_per_prompt=1,
                 clip_skip=self.settings["generator_settings"]["clip_skip"],
             )
-        elif self.use_compel:
-            prompt_embeds = self.prompt_embeds
-            negative_prompt_embeds = self.negative_prompt_embeds
-            pooled_prompt_embeds = self.pooled_prompt_embeds
-            negative_pooled_prompt_embeds = self.pooled_negative_prompt_embeds
+            self.data = self.sd_request.initialize_prompt_embeds(
+                prompt_embeds=self.prompt_embeds,
+                negative_prompt_embeds=self.negative_prompt_embeds,
+                pooled_prompt_embeds=self.pooled_prompt_embeds,
+                negative_pooled_prompt_embeds=self.negative_pooled_prompt_embeds,
+                args=self.data
+            )
 
-        if prompt_embeds is not None:
+        for k in ("prompt", "negative_prompt", "prompt_2", "negative_prompt_2"):
+            try:
+                del self.data[k]
+            except KeyError:
+                pass
+
+    def __prepare_data(self):
+        data = self.data.copy()
+
+        if self.pipeline_is_txt2img and "image" in data:
+            del data["image"]
+
+        self.reload_prompts()
+
+        if self.prompt_embeds is not None:
             data.update(dict(
-                prompt_embeds=prompt_embeds,
-                negative_prompt_embeds=negative_prompt_embeds,
+                prompt_embeds=self.prompt_embeds,
+                negative_prompt_embeds=self.negative_prompt_embeds,
             ))
             for key in ["prompt", "negative_prompt"]:
                 if key in data:
                     del data[key]
 
         if self.is_sd_xl:
+            generate_size = (self.settings["working_width"], self.settings["working_height"])
+            quality_effects = self.settings["generator_settings"]["quality_effects"]
+
+            do_upscale = quality_effects == "Upscaled"
+            do_downscale = quality_effects == "Downscaled"
+            use_sizes = quality_effects != ""
+            original_size = None
+            target_size = None
+            negative_original_size = None
+            negative_target_size = None
+
+            if do_upscale:
+                original_size = generate_size
+                target_size = (generate_size[0] * 2, generate_size[1] * 2)
+                negative_original_size = (original_size[0] / 2, original_size[1] / 2)
+                negative_target_size = negative_original_size
+            elif do_downscale:
+                original_size = generate_size
+                target_size = (generate_size[0] / 2, generate_size[1] / 2)
+                negative_original_size = (original_size[0] * 2, original_size[1] * 2)
+                negative_target_size = negative_original_size
+            elif use_sizes:
+                original_size = generate_size
+                target_size = generate_size
+                negative_original_size = generate_size
+                negative_target_size = generate_size
+
+            if self.pooled_prompt_embeds is not None and self.negative_pooled_prompt_embeds is not None:
+                data.update(dict(
+                    pooled_prompt_embeds=self.pooled_prompt_embeds,
+                    negative_pooled_prompt_embeds=self.negative_pooled_prompt_embeds,
+                ))
+            elif self.prompt_embeds is None and self.negative_prompt_embeds is None:
+                data.update(dict(
+                    prompt_2=self.sd_request.generator_settings.second_prompt,
+                    negative_prompt_2=self.sd_request.generator_settings.second_negative_prompt,
+                ))
+
             data.update(dict(
-                pooled_prompt_embeds=pooled_prompt_embeds,
-                negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
                 crops_coords_top_left=self.settings["generator_settings"]["crops_coord_top_left"],
-                original_size=self.settings["generator_settings"]["original_size"],
-                target_size=self.settings["generator_settings"]["target_size"],
-                negative_original_size=self.settings["generator_settings"]["negative_original_size"],
-                negative_target_size=self.settings["generator_settings"]["negative_target_size"],
+                original_size=original_size,
+                target_size=target_size,
+                negative_original_size=negative_original_size,
+                negative_target_size=negative_target_size,
             ))
 
         for key in ["outpaint_box_rect", "action"]:
@@ -387,6 +425,15 @@ class ModelMixin:
             StableDiffusionControlNetImg2ImgPipeline,
             StableDiffusionXLImg2ImgPipeline,
             StableDiffusionXLControlNetImg2ImgPipeline
+        )
+
+    @property
+    def pipeline_is_txt2img(self):
+        return type(self.pipe) in (
+            StableDiffusionPipeline,
+            StableDiffusionControlNetPipeline,
+            StableDiffusionXLControlNetPipeline,
+            StableDiffusionXLControlNetInpaintPipeline
         )
 
     def __finalize_pipeline(self, data):
@@ -720,7 +767,11 @@ class ModelMixin:
             generator=self.__generator,
             model_changed=model_changed,
             controlnet_image=self.controlnet_image,
-            generator_request_data=generator_request_data
+            generator_request_data=generator_request_data,
+            prompt_embeds=self.prompt_embeds,
+            negative_prompt_embeds=self.negative_prompt_embeds,
+            pooled_prompt_embeds=self.pooled_prompt_embeds,
+            negative_pooled_prompt_embeds=self.negative_pooled_prompt_embeds,
         )
         self.__generator.manual_seed(self.sd_request.generator_settings.seed)
         np.random.seed(self.seed)
