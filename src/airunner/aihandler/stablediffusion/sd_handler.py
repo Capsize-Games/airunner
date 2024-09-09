@@ -278,14 +278,6 @@ class SDHandler(
             return False
         return torch.cuda.is_available()
 
-    @property
-    def do_load_compel(self) -> bool:
-        return self.pipe and (
-            (
-                self.use_compel and not self.is_sd_xl and not self.is_sd_xl_turbo
-            )
-        )
-
     @staticmethod
     def apply_filters(image, filters):
         for image_filter in filters:
