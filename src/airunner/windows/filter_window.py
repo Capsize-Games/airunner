@@ -93,6 +93,7 @@ class FilterWindow(BaseWindow):
     def load_image_filter_data(self):
         filter_data = self.image_filter_by_name(self.image_filter_model_name)
         self._filter_values[filter_data["name"]] = filter_data
+        self.window_title = filter_data["name"].replace("_", " ").title()
 
     def init(self):
         image_filters = self.settings["image_filters"]
