@@ -249,7 +249,7 @@ class TTSHandler(BaseHandler):
             self.logger.debug(f"Loading {target_model}...")
             target_model = target_model or self.current_model
             if self.current_model is None or self.model is None:
-                self.model = self.load_model()
+                self.load_model()
             if self.vocoder is None:
                 self.vocoder = self.load_vocoder()
             if self.processor is None:
@@ -280,11 +280,10 @@ class TTSHandler(BaseHandler):
         self.initialize()
 
     def load_model(self):
-        self.logger.debug("Loading Model")
         model_class_ = self.model_class_
         if model_class_ is None:
             return
-
+        self.logger.debug(f"Loading model {self.model_path}")
         try:
             self.change_model_status(ModelType.TTS, ModelStatus.LOADING, self.model_path)
             model = model_class_.from_pretrained(
@@ -294,9 +293,9 @@ class TTSHandler(BaseHandler):
                 device_map=self.device
             )
             self.change_model_status(ModelType.TTS, ModelStatus.LOADED, self.model_path)
-            return model
+            self.model = model
         except EnvironmentError as _e:
-            self.logger.error("Failed to load model")
+            self.logger.error(f"Failed to load model {_e}")
             self.change_model_status(ModelType.TTS, ModelStatus.FAILED, self.model_path)
 
     def load_tokenizer(self):
