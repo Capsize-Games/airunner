@@ -1058,14 +1058,6 @@ class MainWindow(
         self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
 
     @Slot()
-    def action_unload_llm(self):
-        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
-
-    @Slot()
-    def action_unload_sd(self):
-        self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
-
-    @Slot()
     def action_clear_memory(self):
         from airunner.utils.clear_memory import clear_memory
         clear_memory()
