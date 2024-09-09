@@ -58,7 +58,7 @@
       <enum>QTabWidget::TabPosition::North</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>4</number>
      </property>
      <widget class="QWidget" name="tab_3">
       <attribute name="title">
@@ -176,7 +176,7 @@
       <attribute name="title">
        <string>Grid</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_6">
+      <layout class="QGridLayout" name="gridLayout">
        <property name="leftMargin">
         <number>10</number>
        </property>
@@ -189,14 +189,17 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <property name="horizontalSpacing">
+       <property name="spacing">
         <number>0</number>
        </property>
-       <property name="verticalSpacing">
-        <number>10</number>
-       </property>
        <item row="0" column="0">
-        <widget class="ActiveGridSettingsWidget" name="active_grid_settings_widget" native="true"/>
+        <widget class="QSplitter" name="grid_settings_splitter">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <widget class="GridPreferencesWidget" name="widget" native="true"/>
+         <widget class="ActiveGridSettingsWidget" name="active_grid_settings_widget" native="true"/>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -273,6 +276,12 @@
    <class>EmbeddingsContainerWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/embeddings/embeddings_container_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>GridPreferencesWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/grid_preferences/grid_preferences_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

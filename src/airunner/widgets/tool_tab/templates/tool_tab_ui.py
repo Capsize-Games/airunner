@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QSplitter
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
+from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
 from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
 from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
@@ -98,15 +99,21 @@ class Ui_tool_tab_widget(object):
         self.tool_tab_widget_container.addTab(self.tab_2, "")
         self.tab_4 = QWidget()
         self.tab_4.setObjectName(u"tab_4")
-        self.gridLayout_6 = QGridLayout(self.tab_4)
-        self.gridLayout_6.setObjectName(u"gridLayout_6")
-        self.gridLayout_6.setHorizontalSpacing(0)
-        self.gridLayout_6.setVerticalSpacing(10)
-        self.gridLayout_6.setContentsMargins(10, 10, 0, 0)
-        self.active_grid_settings_widget = ActiveGridSettingsWidget(self.tab_4)
+        self.gridLayout = QGridLayout(self.tab_4)
+        self.gridLayout.setSpacing(0)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(10, 10, 0, 0)
+        self.grid_settings_splitter = QSplitter(self.tab_4)
+        self.grid_settings_splitter.setObjectName(u"grid_settings_splitter")
+        self.grid_settings_splitter.setOrientation(Qt.Orientation.Vertical)
+        self.widget = GridPreferencesWidget(self.grid_settings_splitter)
+        self.widget.setObjectName(u"widget")
+        self.grid_settings_splitter.addWidget(self.widget)
+        self.active_grid_settings_widget = ActiveGridSettingsWidget(self.grid_settings_splitter)
         self.active_grid_settings_widget.setObjectName(u"active_grid_settings_widget")
+        self.grid_settings_splitter.addWidget(self.active_grid_settings_widget)
 
-        self.gridLayout_6.addWidget(self.active_grid_settings_widget, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.grid_settings_splitter, 0, 0, 1, 1)
 
         self.tool_tab_widget_container.addTab(self.tab_4, "")
         self.tab = QWidget()
@@ -135,7 +142,7 @@ class Ui_tool_tab_widget(object):
 
         self.retranslateUi(tool_tab_widget)
 
-        self.tool_tab_widget_container.setCurrentIndex(0)
+        self.tool_tab_widget_container.setCurrentIndex(4)
 
 
         QMetaObject.connectSlotsByName(tool_tab_widget)
