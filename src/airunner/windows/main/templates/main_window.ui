@@ -1075,8 +1075,6 @@
      <string>Filters</string>
     </property>
     <addaction name="separator"/>
-    <addaction name="actionInvert"/>
-    <addaction name="actionFilm"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="tearOffEnabled">
@@ -1355,6 +1353,9 @@
    <property name="text">
     <string>Invert</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+I</string>
+   </property>
   </action>
   <action name="actionSaturation">
    <property name="text">
@@ -1545,6 +1546,9 @@
   <action name="actionFilm">
    <property name="text">
     <string>Film</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+F</string>
    </property>
   </action>
   <action name="actionDeterministic_generation">
@@ -2286,7 +2290,7 @@
    <slot>action_export_image_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>567</x>
+     <x>693</x>
      <y>44</y>
     </hint>
     <hint type="destinationlabel">
@@ -2302,7 +2306,7 @@
    <slot>action_undo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>484</x>
+     <x>433</x>
      <y>44</y>
     </hint>
     <hint type="destinationlabel">
@@ -2574,7 +2578,7 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>742</x>
+     <x>866</x>
      <y>44</y>
     </hint>
     <hint type="destinationlabel">
@@ -2590,7 +2594,7 @@
    <slot>action_toggle_select(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>769</x>
+     <x>952</x>
      <y>44</y>
     </hint>
     <hint type="destinationlabel">
@@ -2606,7 +2610,7 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>796</x>
+     <x>1039</x>
      <y>44</y>
     </hint>
     <hint type="destinationlabel">
@@ -2622,7 +2626,7 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>823</x>
+     <x>1126</x>
      <y>44</y>
     </hint>
     <hint type="destinationlabel">
@@ -2638,7 +2642,7 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>850</x>
+     <x>1212</x>
      <y>44</y>
     </hint>
     <hint type="destinationlabel">
@@ -2654,7 +2658,7 @@
    <slot>action_center_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>877</x>
+     <x>1299</x>
      <y>44</y>
     </hint>
     <hint type="destinationlabel">
@@ -2671,7 +2675,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>28</x>
-     <y>621</y>
+     <y>659</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2687,7 +2691,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>22</x>
-     <y>653</y>
+     <y>695</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2703,7 +2707,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>16</x>
-     <y>685</y>
+     <y>731</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2719,7 +2723,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>20</x>
-     <y>728</y>
+     <y>767</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2735,7 +2739,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>17</x>
-     <y>575</y>
+     <y>623</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -2783,7 +2787,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>35</x>
-     <y>808</y>
+     <y>806</y>
     </hint>
     <hint type="destinationlabel">
      <x>840</x>
@@ -2886,5 +2890,7 @@
   <slot>action_controlnet_toggled(bool)</slot>
   <slot>action_toggle_llm(bool)</slot>
   <slot>action_stats_triggered()</slot>
+  <slot>action_invert_image()</slot>
+  <slot>action_film_image()</slot>
  </slots>
 </ui>
