@@ -239,6 +239,10 @@ class CustomScene(
         """
         # image = ImageOps.expand(image, border=border_size, fill=border_color)
 
+        if image is None:
+            self.logger.warning("Image is None, unable to add to scene")
+            return
+
         if is_outpaint:
             image, root_point, pivot_point = self.handle_outpaint(
                 outpaint_box_rect,
