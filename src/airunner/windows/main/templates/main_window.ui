@@ -1159,9 +1159,6 @@
     <addaction name="separator"/>
     <addaction name="actionModel_Manager_3"/>
     <addaction name="separator"/>
-    <addaction name="actionUnload_Image_model"/>
-    <addaction name="actionUnload_LLm"/>
-    <addaction name="separator"/>
     <addaction name="actionStats"/>
     <addaction name="separator"/>
     <addaction name="actionClear_Memory"/>
@@ -2440,38 +2437,6 @@
     <hint type="destinationlabel">
      <x>561</x>
      <y>661</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionUnload_LLm</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_unload_llm()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>561</x>
-     <y>451</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionUnload_Image_model</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_unload_sd()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>561</x>
-     <y>451</y>
     </hint>
    </hints>
   </connection>
