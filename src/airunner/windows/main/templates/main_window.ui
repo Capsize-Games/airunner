@@ -1130,23 +1130,14 @@
     <addaction name="menuControlnet"/>
     <addaction name="menuOutpaint"/>
     <addaction name="separator"/>
-    <addaction name="actionGenerate_while_drawing"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
      <string>View</string>
     </property>
-    <widget class="QMenu" name="menuBrowse_Models_Path">
-     <property name="title">
-      <string>Browse Models Paths</string>
-     </property>
-     <addaction name="actionTxt2img_Img2img_Models"/>
-     <addaction name="actionInpaint_Outpaint_Models"/>
-    </widget>
     <addaction name="actionPrompt_Browser"/>
     <addaction name="separator"/>
     <addaction name="actionBrowse_AI_Runner_Path"/>
-    <addaction name="menuBrowse_Models_Path"/>
     <addaction name="separator"/>
     <addaction name="actionBrowse_Images_Path_2"/>
     <addaction name="separator"/>
@@ -1158,9 +1149,6 @@
     <addaction name="actionRun_setup_wizard_2"/>
     <addaction name="separator"/>
     <addaction name="actionModel_Manager_3"/>
-    <addaction name="separator"/>
-    <addaction name="actionUnload_Image_model"/>
-    <addaction name="actionUnload_LLm"/>
     <addaction name="separator"/>
     <addaction name="actionStats"/>
     <addaction name="separator"/>
@@ -2440,38 +2428,6 @@
     <hint type="destinationlabel">
      <x>561</x>
      <y>661</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionUnload_LLm</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_unload_llm()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>561</x>
-     <y>451</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionUnload_Image_model</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_unload_sd()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>561</x>
-     <y>451</y>
     </hint>
    </hints>
   </connection>

@@ -23,7 +23,6 @@ from bs4 import BeautifulSoup
 from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
 from airunner.aihandler.logger import Logger
-from airunner.history import History
 from airunner.settings import (
     STATUS_ERROR_COLOR,
     STATUS_NORMAL_COLOR_LIGHT,
@@ -128,7 +127,6 @@ class MainWindow(
         self.action = GeneratorSection.TXT2IMG.value
         self.progress_bar_started = False
         self.window = None
-        self.history = None
         self.canvas = None
         self.models = None
         self.client = None
@@ -149,7 +147,6 @@ class MainWindow(
         self._generator_settings = None
         self.listening = False
         self.initialized = False
-        self.history = History()
 
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.debug("Starting AI Runnner")
@@ -478,11 +475,11 @@ class MainWindow(
 
     @Slot()
     def action_undo_triggered(self):
-        self.undo()
+        self.emit_signal(SignalCode.UNDO_SIGNAL)
 
     @Slot()
     def action_redo_triggered(self):
-        self.redo()
+        self.emit_signal(SignalCode.REDO_SIGNAL)
 
     @Slot()
     def action_paste_image_triggered(self):
@@ -1027,8 +1024,17 @@ class MainWindow(
         print("center clicked")
 
     def action_reset_settings(self):
-        self.settings = self.default_settings
-        self.restart()
+        reply = QMessageBox.question(
+            self,
+            'Reset Settings',
+            'Are you sure you want to reset all settings to their default values?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            self.settings = self.default_settings
+            self.restart()
 
     def import_controlnet_image(self):
         self.emit_signal(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
@@ -1047,14 +1053,6 @@ class MainWindow(
 
     def action_import_image_triggered(self):
         self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
-
-    @Slot()
-    def action_unload_llm(self):
-        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
-
-    @Slot()
-    def action_unload_sd(self):
-        self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
 
     @Slot()
     def action_clear_memory(self):
