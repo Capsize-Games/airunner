@@ -51,8 +51,7 @@ class BaseAgent(
         self.thread = None
         self.do_interrupt = False
         self.response_worker = create_worker(AgentWorker)
-        # self.__rag_search_worker = create_worker(RagSearchWorker)
-        # self.__rag_search_worker.initialize(agent=self, model=self.model, tokenizer=self.tokenizer)
+        self.load_rag(model=self.model, tokenizer=self.tokenizer)
 
     @property
     def available_actions(self):
