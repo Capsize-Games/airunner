@@ -224,8 +224,6 @@ class HuggingFaceLLM(CustomLLM):
             context_window = model_context_window
 
         tokenizer_kwargs = tokenizer_kwargs or {}
-        if "max_length" not in tokenizer_kwargs:
-            tokenizer_kwargs["max_length"] = context_window
 
         tokenizer = tokenizer or AutoTokenizer.from_pretrained(
             tokenizer_name, **tokenizer_kwargs
