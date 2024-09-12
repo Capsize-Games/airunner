@@ -1,5 +1,4 @@
 import datetime
-import json
 import time
 import traceback
 from typing import AnyStr
@@ -19,6 +18,7 @@ from airunner.enums import (
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.create_worker import create_worker
+from airunner.utils.prepare_llm_generate_kwargs import prepare_llm_generate_kwargs
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.agent_worker import AgentWorker
 
@@ -45,11 +45,11 @@ class BaseAgent(
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history)
         self.prompt = ""
         self.history = []
         self.thread = None
         self.do_interrupt = False
+        self.register(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history)
         self.response_worker = create_worker(AgentWorker)
         self.load_rag(model=self.model, tokenizer=self.tokenizer)
 
