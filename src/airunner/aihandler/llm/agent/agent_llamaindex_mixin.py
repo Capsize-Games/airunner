@@ -29,7 +29,7 @@ class AgentLlamaIndexMixin:
         self.__epub_reader = None
         self.__html_reader = None
         self.__markdown_reader = None
-        self.__embed_model = None
+        self.__embedding = None
         self.__model_name = os.path.expanduser(
             os.path.join(
                 self.settings["path_settings"]["base_path"],
@@ -43,33 +43,18 @@ class AgentLlamaIndexMixin:
         self.__chunk_size = 1000
         self.__chunk_overlap = 512
         self.__target_files = []
-
-        self.register(SignalCode.RAG_RELOAD_INDEX_SIGNAL, self.on_reload_rag_index_signal)
+        self.__rag_model = None
+        self.__rag_tokenizer = None
+        self.__model = None
+        self.__tokenizer = None
+        self.__llm = None
 
     @property
     def target_files(self):
         target_files = self.__target_files or []
         if len(target_files) == 0:
             target_files = self.chatbot["target_files"] or []
-        readme_file = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "..", "..", "..", "..", "..",
-            "README.md"
-        )
-        documentation_file = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "..", "..", "..",
-            "documents",
-            "documentation.md"
-        )
-        # target_files.append(documentation_file)
-        # target_files.append(readme_file)
         return target_files
-
-    def on_reload_rag_index_signal(self, data: dict = None):
-        self.__target_files = data["target_files"] or []
-        self.__load_documents()
-        self.__load_document_index()
 
     @property
     def query_instruction(self):
@@ -92,9 +77,41 @@ class AgentLlamaIndexMixin:
         elif self.__state == AgentState.CHAT:
             return self.__chat_history_index
 
+    @property
+    def llm(self):
+        if self.__llm is None:
+            try:
+                if self.settings["llm_generator_settings"]["use_api"]:
+                    self.__llm = self.__model
+                else:
+                    from airunner.aihandler.llm.huggingface_llm import HuggingFaceLLM
+                    self.__llm = HuggingFaceLLM(model=self.__model, tokenizer=self.__tokenizer)
+            except Exception as e:
+                self.logger.error(f"Error loading LLM: {str(e)}")
+        return self.__llm
+
+    @property
+    def chat_engine(self):
+        return self.__chat_engine
+
+    @property
+    def is_llama_instruct(self):
+        return True
+
     def load_rag(self, model, tokenizer):
-        self.__load_llm(model, tokenizer)
+        self.__model = model
+        self.__tokenizer = tokenizer
+        self.__load_rag()
+
+    def reload_rag(self, data: dict = None):
+        self.logger.debug("Reloading RAG index...")
+        self.__target_files = data["target_files"] if data is not None else self.__target_files
+        self.__load_rag()
+
+    def __load_rag(self):
+        self.__load_rag_tokenizer()
         self.__load_rag_model()
+        self.__load_embeddings()
         self.__load_readers()
         self.__load_file_extractor()
         self.__load_documents()
@@ -104,130 +121,13 @@ class AgentLlamaIndexMixin:
         self.__load_document_index()
         self.__load_retriever()
         self.__load_context_chat_engine()
-
         # self.__load_storage_context()
         # self.__load_transformations()
         # self.__load_index_struct()
 
-    def __load_llm(self, model, tokenizer):
-        # try:
-            if self.settings["llm_generator_settings"]["use_api"]:
-                self.__llm = model
-            else:
-                from llama_index.llms.huggingface import HuggingFaceLLM
-                self.__llm = HuggingFaceLLM(
-                    model=model,
-                    tokenizer=tokenizer,
-                    # generate_kwargs=dict(
-                    #     max_new_tokens=4096,
-                    #     top_k=40,
-                    #     top_p=0.90,
-                    #     temperature=0.5,
-                    #     num_return_sequences=1,
-                    #     num_beams=1,
-                    #     no_repeat_ngram_size=4,
-                    #     early_stopping=True,
-                    #     do_sample=True,
-                    # )
-                )
-        # except Exception as e:
-        #     self.logger.error(f"Error loading LLM: {str(e)}")
-
-    @property
-    def is_llama_instruct(self):
-        return True
-
-    def perform_rag_search(
-        self,
-        prompt,
-        streaming: bool = False,
-        response_mode = None
-    ):
-        from llama_index.core.response_synthesizers import ResponseMode
-        if response_mode is None:
-            response_mode = ResponseMode.COMPACT
-
-        if self.__chat_engine is None:
-            raise RuntimeError(
-                "Chat engine is not initialized. "
-                "Please ensure __load_service_context "
-                "is called before perform_rag_search."
-            )
-
-        self.add_message_to_history(
-            prompt,
-            LLMChatRole.HUMAN
-        )
-
-        if response_mode in (
-            ResponseMode.ACCUMULATE
-        ):
-            streaming = False
-
-        try:
-            engine = self.__chat_engine
-        except AttributeError as e:
-            self.logger.error(f"Error performing RAG search: {str(e)}")
-            if streaming:
-                self.emit_signal(
-                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    dict(
-                        message="",
-                        is_first_message=True,
-                        is_end_of_message=True,
-                        name=self.botname,
-                    )
-                )
-            return
-
-        inputs:str = self.get_rendered_template(LLMActionType.PERFORM_RAG_SEARCH, [])
-
-        response = engine.stream_chat(
-            message=inputs
-        )
-        response_text = ""
-        if streaming:
-            self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
-            is_first_message = True
-            is_end_of_message = False
-            for res in response.response_gen:
-                if response_text:  # Only add a space if response_text is not empty
-                    response_text += " "
-                response_text += res.strip()
-                self.emit_signal(
-                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    dict(
-                        message=res,
-                        is_first_message=is_first_message,
-                        is_end_of_message=is_end_of_message,
-                        name=self.botname,
-                    )
-                )
-                is_first_message = False
-            self.add_message_to_history(
-                response_text,
-                LLMChatRole.ASSISTANT
-            )
-            response_text = ""
-        else:
-            response_text = response.response
-            is_first_message = True
-            self.add_message_to_history(
-                response_text,
-                LLMChatRole.ASSISTANT
-            )
-
-        self.emit_signal(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-            dict(
-                message=response_text,
-                is_first_message=is_first_message,
-                is_end_of_message=True,
-                name=self.botname,
-            )
-        )
-
-        return response
+    def __load_rag_tokenizer(self):
+        self.logger.debug("Loading RAG tokenizer...")
+        pass
 
     def __load_rag_model(self):
         self.logger.debug("Loading RAG model...")
@@ -261,6 +161,7 @@ class AgentLlamaIndexMixin:
                 file_extractor=self.file_extractor,
                 exclude_hidden=False
             ).load_data()
+            self.logger.debug(f"Loaded {len(self.__documents)} documents.")
         except ValueError as e:
             self.logger.error(f"Error loading documents: {str(e)}")
             self.__documents = None
@@ -282,13 +183,12 @@ class AgentLlamaIndexMixin:
     def __load_context_chat_engine(self):
         try:
             self.__chat_engine = ContextChatEngine.from_defaults(
-                retriever=context_retriever,
-                service_context=self.__service_context,
+                retriever=self.__retriever,
                 chat_history=self.history,
-                memory=None,  # Define or use an existing memory buffer if needed
+                memory=None,
                 system_prompt="Search the full text and find all relevant information related to the query.",
-                node_postprocessors=[],  # Add postprocessors if utilized in your setup
-                llm=self.__llm,  # Use the existing LLM setup
+                node_postprocessors=[],
+                llm=self.__llm,
             )
         except Exception as e:
             self.logger.error(f"Error loading chat engine: {str(e)}")
@@ -351,8 +251,7 @@ class AgentLlamaIndexMixin:
         documents = self.__documents or []
         try:
             self.__index = SimpleKeywordTableIndex.from_documents(
-                self.__documents,
-                #service_context=self.__service_context,
+                documents,
                 llm=self.__llm
             )
             self.logger.debug("Index loaded successfully.")
