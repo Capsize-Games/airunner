@@ -1,6 +1,5 @@
 def prepare_llm_generate_kwargs(settings):
     data = settings["generator_settings"]
-    print(data)
 
     min_val = 0.0001
 
