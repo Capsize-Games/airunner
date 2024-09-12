@@ -579,7 +579,6 @@ class BaseAgent(
                 self.bot_mood = streamed_template
 
             elif action == LLMActionType.APPLICATION_COMMAND:
-                print("APPLICATION COMMAND:")
                 index = ''.join(c for c in streamed_template if c.isdigit())
                 print(f"index: {index}")
                 try:
