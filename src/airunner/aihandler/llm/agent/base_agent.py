@@ -182,7 +182,7 @@ class BaseAgent(
 
         system_prompt = []
 
-        if action == LLMActionType.CHAT:
+        if action is LLMActionType.CHAT:
             """
             Build the system prompt for chat template
             """
@@ -198,7 +198,7 @@ class BaseAgent(
             if self.chatbot["use_datetime"]:
                 system_prompt = self.append_date_time_timezone(system_prompt)
 
-        elif action == LLMActionType.GENERATE_IMAGE:
+        elif action is LLMActionType.GENERATE_IMAGE:
             guardrails = self.settings["prompt_templates"]["image"]["guardrails"] if self.settings["prompt_templates"]["image"]["use_guardrails"] else ""
             system_prompt = [
                 guardrails,
@@ -206,7 +206,7 @@ class BaseAgent(
                 self.history_prompt()
             ]
 
-        elif action == LLMActionType.APPLICATION_COMMAND:
+        elif action is LLMActionType.APPLICATION_COMMAND:
             system_instructions = self.settings["prompt_templates"]["application_command"]["system"]
 
             # Create a list of commands that the bot can choose from
@@ -220,7 +220,7 @@ class BaseAgent(
                 system_instructions
             ]
 
-        elif action == LLMActionType.UPDATE_MOOD:
+        elif action is LLMActionType.UPDATE_MOOD:
             system_instructions = self.settings["prompt_templates"]["update_mood"]["system"]
             system_prompt = [
                 guardrails_prompt,
@@ -231,7 +231,7 @@ class BaseAgent(
                 self.history_prompt(),
             ]
 
-        elif action == LLMActionType.PERFORM_RAG_SEARCH:
+        elif action is LLMActionType.PERFORM_RAG_SEARCH:
             system_instructions = self.settings["prompt_templates"]["rag_search"]["system"]
             system_prompt = [
                 guardrails_prompt,
@@ -242,13 +242,13 @@ class BaseAgent(
                 self.history_prompt(),
             ]
 
-        elif action == LLMActionType.QUIT_APPLICATION:
+        elif action is LLMActionType.QUIT_APPLICATION:
             self.emit_signal(SignalCode.QUIT_APPLICATION)
 
-        elif action == LLMActionType.TOGGLE_FULLSCREEN:
+        elif action is LLMActionType.TOGGLE_FULLSCREEN:
             self.emit_signal(SignalCode.TOGGLE_FULLSCREEN_SIGNAL)
 
-        elif action == LLMActionType.TOGGLE_TTS:
+        elif action is LLMActionType.TOGGLE_TTS:
             self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL)
 
         return "\n".join(system_prompt)
