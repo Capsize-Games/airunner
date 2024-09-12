@@ -34,7 +34,7 @@ setup(
         "datasets==2.21.0",
         "sentence_transformers==3.0.1",
         "sounddevice==0.5.0",  # Required for tts and stt
-        "pyttsx3=2.91",  # Required for tts
+        "pyttsx3==2.91",  # Required for tts
         "cryptography==43.0.0",
 
         # Stable Diffusion Dependencies
