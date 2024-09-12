@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-from llama_index_client import BasePydanticReader
+from llama_index.core.readers.base import BasePydanticReader
 from llama_index.core.schema import Document
 
 
