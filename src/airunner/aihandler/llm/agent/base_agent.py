@@ -329,35 +329,8 @@ class BaseAgent(
 
     @property
     def override_parameters(self):
-        data = {}
-        data.update(self.settings["llm_generator_settings"])
-        min_length_penalty = 0.0001
-        length_penalty = data["length_penalty"] / 1000
-        if length_penalty < min_length_penalty:
-            length_penalty = min_length_penalty
-        data["length_penalty"] = length_penalty
-
-        min_repetition_penalty = 0.0001
-        repetition_penalty = data["repetition_penalty"] / 100
-        if repetition_penalty < min_repetition_penalty:
-            repetition_penalty = min_repetition_penalty
-        data["repetition_penalty"] = repetition_penalty
-        return dict(
-            length_penalty=length_penalty,
-            repetition_penalty=repetition_penalty,
-            do_sample=True,#data["do_sample"],
-            early_stopping=data["early_stopping"],
-            eta_cutoff=data["eta_cutoff"],
-            max_new_tokens=data["max_new_tokens"],
-            min_length=data["min_length"],
-            no_repeat_ngram_size=data["ngram_size"],
-            num_return_sequences=data["sequences"],
-            temperature=data["temperature"] / 10000,
-            top_k=data["top_k"],
-            top_p=data["top_p"] / 1000,
-            use_cache=data["use_cache"],
-            num_beams=data["num_beams"],
-        ) if data["override_parameters"] else {}
+        generate_kwargs = prepare_llm_generate_kwargs(self.settings["llm_generator_settings"])
+        return generate_kwargs if self.settings["llm_generator_settings"]["override_parameters"] else {}
 
     @property
     def system_instructions(self):
@@ -365,12 +338,7 @@ class BaseAgent(
 
     @property
     def generator_settings(self):
-        generator_settings = self.chatbot["generator_settings"]
-        generator_settings["temperature"] = generator_settings["temperature"] / 10000
-        generator_settings["top_p"] = generator_settings["top_p"] / 1000
-        generator_settings["repetition_penalty"] = generator_settings["repetition_penalty"] / 10000
-        generator_settings["length_penalty"] = generator_settings["length_penalty"] / 1000
-        return generator_settings
+        return prepare_llm_generate_kwargs(self.chatbot)
 
     def get_model_inputs(
         self,
