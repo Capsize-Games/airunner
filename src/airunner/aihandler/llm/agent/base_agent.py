@@ -605,15 +605,6 @@ class BaseAgent(
             response["role"]
         )
 
-    def extract_json_objects(self, s):
-        from airunner.json_extractor import JSONExtractor
-        extractor = JSONExtractor()
-        try:
-            extractor.decode(s)
-        except json.JSONDecodeError:
-            pass
-        return extractor.json_objects
-
     def add_message_to_history(
         self,
         content: AnyStr,
