@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='airunner',
+    name="airunner",
     version="3.0.0.dev18",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
