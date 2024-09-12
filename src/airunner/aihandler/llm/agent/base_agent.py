@@ -12,8 +12,7 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import (
     SignalCode,
     LLMChatRole,
-    LLMActionType,
-    ImageCategory
+    LLMActionType
 )
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.utils.clear_memory import clear_memory
@@ -340,26 +339,9 @@ class BaseAgent(
     def generator_settings(self):
         return prepare_llm_generate_kwargs(self.chatbot)
 
-    def get_model_inputs(
-        self,
-        action: LLMActionType,
-        **kwargs
-    ):
-        self.rendered_template = self.get_rendered_template(
-            action
-        )
-
-        # Encode the rendered template
-        encoded = self.tokenizer(
-            self.rendered_template,
-            return_tensors="pt"
-        )
-        model_inputs = encoded.to(
-            get_torch_device(
-                self.settings["memory_settings"]["default_gpu"]["llm"]
-            )
-        )
-        return model_inputs
+    @property
+    def device(self):
+        return get_torch_device(self.settings["memory_settings"]["default_gpu"]["llm"])
 
     def run(
         self,
@@ -371,45 +353,23 @@ class BaseAgent(
         self.logger.debug("Running...")
         self.prompt = prompt
         streamer = self.streamer
-        system_instructions = kwargs.get("system_instructions", self.system_instructions)
-
-        return self.do_run(
-            action,
-            **kwargs,
-            system_instructions=system_instructions,
-            use_names=True,
-            streamer=streamer
-        )
-
-    def do_run(
-        self,
-        action: LLMActionType,
-        streamer=None,
-        do_emit_response: bool = True,
-        use_names: bool = True,
-        **kwargs
-    ):
-        if action == LLMActionType.PERFORM_RAG_SEARCH:
-            self.emit_signal(SignalCode.LLM_RAG_SEARCH_SIGNAL, {
-                "message": self.prompt,
-            })
-            return
 
         # Add the user's message to history
         self.add_message_to_history(self.prompt, LLMChatRole.HUMAN)
 
-        model_inputs = self.get_model_inputs(
-            action,
-            use_names=use_names,
-            **kwargs
-        )
+        self.rendered_template = self.get_rendered_template(action)
+
+        model_inputs = self.tokenizer(
+            self.rendered_template,
+            return_tensors="pt"
+        ).to(self.device)
 
         if streamer:
             self.run_with_thread(
                 model_inputs,
                 action=action,
                 streamer=streamer,
-                do_emit_response=do_emit_response,
+                do_emit_response=True,
                 **kwargs
             )
         else:
@@ -420,16 +380,15 @@ class BaseAgent(
                 **data
             )
             response = self.tokenizer.decode(res[0])
-            if do_emit_response:
-                self.emit_signal(
-                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    dict(
-                        message=response,
-                        is_first_message=True,
-                        is_end_of_message=True,
-                        name=self.botname,
-                    )
+            self.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                dict(
+                    message=response,
+                    is_first_message=True,
+                    is_end_of_message=True,
+                    name=self.botname,
                 )
+            )
 
             return response
 
@@ -445,7 +404,7 @@ class BaseAgent(
     def run_with_thread(
         self,
         model_inputs,
-        action,
+        action: LLMActionType,
         **kwargs,
     ):
         # Generate the response
@@ -459,22 +418,24 @@ class BaseAgent(
         streamer = kwargs.get("streamer", self.streamer)
         data["streamer"] = streamer
 
-        try:
-            from transformers import BitsAndBytesConfig
+        if "attention_mask" in data:
+            del data["attention_mask"]
 
-            if "attention_mask" in data:
-                del data["attention_mask"]
-            self.response_worker.add_to_queue({
-                "model": self.model,
-                "kwargs": data,
-                "prompt": self.prompt,
-                "botname": self.botname
-            })
-            self.do_interrupt = False
-        except Exception as e:
-            print("545: An error occurred in model.generate:")
-            print(str(e))
-            print(traceback.format_exc())
+        self.do_interrupt = False
+
+        if action is not LLMActionType.PERFORM_RAG_SEARCH:
+            try:
+                self.response_worker.add_to_queue({
+                    "model": self.model,
+                    "kwargs": data,
+                    "prompt": self.prompt,
+                    "botname": self.botname,
+                })
+            except Exception as e:
+                self.logger.error("545: An error occurred in model.generate:")
+                self.logger.error(str(e))
+                self.logger.error(traceback.format_exc())
+
         # strip all new lines from rendered_template:
         #self.rendered_template = self.rendered_template.replace("\n", " ")
         eos_token = self.tokenizer.eos_token
@@ -486,7 +447,7 @@ class BaseAgent(
         replaced = False
         is_end_of_message = False
         is_first_message = True
-        response = ""
+
         if action == LLMActionType.GENERATE_IMAGE:
             self.emit_signal(
                 SignalCode.LLM_TEXT_STREAMED_SIGNAL,
@@ -498,10 +459,14 @@ class BaseAgent(
                 )
             )
             is_first_message = False
-        if streamer:
+
+        if streamer and action in (
+            LLMActionType.CHAT,
+            LLMActionType.GENERATE_IMAGE,
+            LLMActionType.UPDATE_MOOD
+        ):
             for new_text in streamer:
                 # strip all newlines from new_text
-                #parsed_new_text = new_text.replace("\n", " ")
                 streamed_template += new_text
                 if self.is_mistral:
                     streamed_template = streamed_template.replace(f"{bos_token} [INST]", f"{bos_token}[INST]")
@@ -531,7 +496,11 @@ class BaseAgent(
                         is_end_of_message = True
                     # strip botname from new_text
                     new_text = new_text.replace(f"{self.botname}:", "")
-                    if action == LLMActionType.CHAT or action == LLMActionType.GENERATE_IMAGE:
+                    if action in (
+                        LLMActionType.CHAT,
+                        LLMActionType.PERFORM_RAG_SEARCH,
+                        LLMActionType.GENERATE_IMAGE
+                    ):
                         self.emit_signal(
                             SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                             dict(
@@ -552,6 +521,30 @@ class BaseAgent(
                             )
                         )
                     is_first_message = False
+        elif action is LLMActionType.PERFORM_RAG_SEARCH:
+            streamed_template = ""
+            data = dict(
+                **self.generator_settings,
+                stopping_criteria=[stopping_criteria]
+            )
+            data.update(self.override_parameters)
+            self.llm.generate_kwargs = data
+            response = self.chat_engine.stream_chat(message=self.prompt)
+            is_first_message = True
+            is_end_of_message = False
+            for new_text in response.response_gen:
+                streamed_template += new_text
+
+                self.emit_signal(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    dict(
+                        message=" " +new_text,
+                        is_first_message=is_first_message,
+                        is_end_of_message=is_end_of_message,
+                        name=self.botname,
+                    )
+                )
+                is_first_message = False
 
         if streamed_template is not None:
             if action == LLMActionType.CHAT:
@@ -560,11 +553,12 @@ class BaseAgent(
                     LLMChatRole.ASSISTANT
                 )
 
-                return self.run_with_thread(
-                    model_inputs,
-                    LLMActionType.UPDATE_MOOD,
-                    **kwargs,
-                )
+                if self.current_bot["use_mood"]:
+                    return self.run_with_thread(
+                        model_inputs,
+                        LLMActionType.UPDATE_MOOD,
+                        **kwargs,
+                    )
 
             elif action == LLMActionType.GENERATE_IMAGE:
                 self.emit_signal(
