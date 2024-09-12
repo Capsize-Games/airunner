@@ -81,9 +81,9 @@ class LLMSettingsWidget(
         self.ui.min_length.init(slider_callback=self.callback, current_value=self.generator_settings["min_length"])
         self.ui.length_penalty.init(slider_callback=self.callback, current_value=self.generator_settings["length_penalty"])
         self.ui.num_beams.init(slider_callback=self.callback, current_value=self.generator_settings["num_beams"])
-        self.ui.ngram_size.init(slider_callback=self.callback, current_value=self.chatbot["ngram_size"])
+        self.ui.ngram_size.init(slider_callback=self.callback, current_value=self.generator_settings["ngram_size"])
         self.ui.temperature.init(slider_callback=self.callback, current_value=self.generator_settings["temperature"])
-        self.ui.sequences.init(slider_callback=self.callback, current_value=self.chatbot["sequences"])
+        self.ui.sequences.init(slider_callback=self.callback, current_value=self.generator_settings["num_return_sequences"])
         self.ui.top_k.init(slider_callback=self.callback, current_value=self.generator_settings["top_k"])
 
         self.ui.override_parameters.setChecked(self.settings["llm_generator_settings"]["override_parameters"])
