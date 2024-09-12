@@ -33,7 +33,7 @@ class LLMSettingsWidget(
 
     @property
     def generator_settings(self) -> dict:
-        return self.chatbot["generator_settings"]
+        return self.settings["llm_generator_settings"]["generator_settings"]
 
     @property
     def current_generator(self):

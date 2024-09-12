@@ -20,6 +20,9 @@
    <property name="topMargin">
     <number>0</number>
    </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
    <property name="bottomMargin">
     <number>0</number>
    </property>
@@ -27,372 +30,358 @@
     <number>0</number>
    </property>
    <item row="0" column="0">
-    <widget class="QSplitter" name="splitter">
-     <property name="orientation">
-      <enum>Qt::Orientation::Vertical</enum>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
      </property>
-     <widget class="QScrollArea" name="scrollArea">
-      <property name="widgetResizable">
-       <bool>true</bool>
+     <widget class="QWidget" name="scrollAreaWidgetContents_2">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>720</width>
+        <height>1260</height>
+       </rect>
       </property>
-      <widget class="QWidget" name="scrollAreaWidgetContents_2">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>0</y>
-         <width>697</width>
-         <height>1196</height>
-        </rect>
+      <layout class="QGridLayout" name="gridLayout">
+       <property name="leftMargin">
+        <number>10</number>
        </property>
-       <layout class="QGridLayout" name="gridLayout">
-        <property name="leftMargin">
-         <number>10</number>
-        </property>
-        <property name="topMargin">
-         <number>10</number>
-        </property>
-        <property name="rightMargin">
-         <number>10</number>
-        </property>
-        <property name="bottomMargin">
-         <number>10</number>
-        </property>
-        <property name="verticalSpacing">
-         <number>10</number>
-        </property>
-        <item row="0" column="0">
-         <widget class="QGroupBox" name="groupBox_2">
-          <property name="title">
-           <string>Agent Type</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_8">
-           <item row="0" column="0">
-            <widget class="QComboBox" name="comboBox">
-             <item>
+       <property name="topMargin">
+        <number>10</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <property name="bottomMargin">
+        <number>10</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="title">
+          <string>Agent Type</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_8">
+          <item row="0" column="0">
+           <widget class="QComboBox" name="comboBox">
+            <item>
+             <property name="text">
+              <string>Chatbot</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Tool</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Existing Agents</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="1">
+           <widget class="QPushButton" name="create_new_button">
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Add new agent</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="list-add"/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QComboBox" name="saved_chatbots"/>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="pushButton">
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Delete agent</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="process-stop"/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QGroupBox" name="groupBox_3">
+         <property name="title">
+          <string>Documents</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_9">
+          <item row="1" column="0">
+           <widget class="QPushButton" name="browse_documents_button">
+            <property name="text">
+             <string>Browse</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QScrollArea" name="target_files">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>150</height>
+             </size>
+            </property>
+            <property name="widgetResizable">
+             <bool>true</bool>
+            </property>
+            <widget class="QWidget" name="scrollAreaWidgetContents">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>674</width>
+               <height>148</height>
+              </rect>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_10"/>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QGroupBox" name="names_groupbox">
+         <property name="title">
+          <string>Use names</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_6">
+            <item>
+             <widget class="QLabel" name="label">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
               <property name="text">
-               <string>Chatbot</string>
+               <string>Assistant name</string>
               </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Tool</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QGroupBox" name="groupBox">
-          <property name="title">
-           <string>Existing Agents</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_3">
-           <item row="0" column="1">
-            <widget class="QPushButton" name="create_new_button">
-             <property name="maximumSize">
-              <size>
-               <width>40</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>Add new agent</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="list-add"/>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QComboBox" name="saved_chatbots"/>
-           </item>
-           <item row="0" column="2">
-            <widget class="QPushButton" name="pushButton">
-             <property name="maximumSize">
-              <size>
-               <width>40</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>Delete agent</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="process-stop"/>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QGroupBox" name="groupBox_3">
-          <property name="title">
-           <string>Documents</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_9">
-           <item row="1" column="0">
-            <widget class="QPushButton" name="browse_documents_button">
-             <property name="text">
-              <string>Browse</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QScrollArea" name="target_files">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>150</height>
-              </size>
-             </property>
-             <property name="widgetResizable">
-              <bool>true</bool>
-             </property>
-             <widget class="QWidget" name="scrollAreaWidgetContents">
-              <property name="geometry">
-               <rect>
-                <x>0</x>
-                <y>0</y>
-                <width>651</width>
-                <height>148</height>
-               </rect>
-              </property>
-              <layout class="QGridLayout" name="gridLayout_10"/>
              </widget>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QGroupBox" name="names_groupbox">
-          <property name="title">
-           <string>Use names</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-          <layout class="QHBoxLayout" name="horizontalLayout">
-           <item>
-            <layout class="QVBoxLayout" name="verticalLayout_6">
-             <item>
-              <widget class="QLabel" name="label">
-               <property name="font">
-                <font>
-                 <bold>true</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Assistant name</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="botname">
-               <property name="text">
-                <string>AI Runner</string>
-               </property>
-               <property name="cursorPosition">
-                <number>9</number>
-               </property>
-               <property name="placeholderText">
-                <string>Bot name</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QVBoxLayout" name="verticalLayout_5">
-             <item>
-              <widget class="QLabel" name="label_3">
-               <property name="font">
-                <font>
-                 <bold>true</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>User name</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="username">
-               <property name="text">
-                <string>User</string>
-               </property>
-               <property name="placeholderText">
-                <string>User name</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="4" column="0">
-         <widget class="QGroupBox" name="system_instructions_groupbox">
-          <property name="title">
-           <string>System Instructions</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_3">
-           <item>
-            <widget class="QPlainTextEdit" name="system_instructions">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>150</height>
-              </size>
-             </property>
-             <property name="placeholderText">
-              <string>Instructions for the LLM</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="5" column="0">
-         <widget class="QGroupBox" name="guardrails_groupbox">
-          <property name="title">
-           <string>Guardrails</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_2">
-           <item>
-            <widget class="QPlainTextEdit" name="guardrails_prompt">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>150</height>
-              </size>
-             </property>
-             <property name="placeholderText">
-              <string>The guardrails prompt is used to moderate results.</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="6" column="0">
-         <widget class="QGroupBox" name="personality_groupbox">
-          <property name="title">
-           <string>Bot Personality</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_5">
-           <item row="1" column="0">
-            <widget class="QPlainTextEdit" name="bot_personality">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>75</height>
-              </size>
-             </property>
-             <property name="placeholderText">
-              <string>EXAMPLE: {{ botname }} is very helpful and {{ gender }} loves {{ username }}.</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_2">
-             <property name="text">
-              <string>A brief description of the bot's personality</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="7" column="0">
-         <widget class="QGroupBox" name="mood_groupbox">
-          <property name="title">
-           <string>Bot Mood</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_2">
-           <item row="0" column="0">
-            <widget class="QPlainTextEdit" name="bot_mood">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>75</height>
-              </size>
-             </property>
-             <property name="placeholderText">
-              <string>EXAMPLE: Excited</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-       </layout>
-      </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="botname">
+              <property name="text">
+               <string>AI Runner</string>
+              </property>
+              <property name="cursorPosition">
+               <number>9</number>
+              </property>
+              <property name="placeholderText">
+               <string>Bot name</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_5">
+            <item>
+             <widget class="QLabel" name="label_3">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>User name</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="username">
+              <property name="text">
+               <string>User</string>
+              </property>
+              <property name="placeholderText">
+               <string>User name</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QGroupBox" name="system_instructions_groupbox">
+         <property name="title">
+          <string>System Instructions</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QPlainTextEdit" name="system_instructions">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>150</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>Instructions for the LLM</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QGroupBox" name="guardrails_groupbox">
+         <property name="title">
+          <string>Guardrails</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QPlainTextEdit" name="guardrails_prompt">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>150</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>The guardrails prompt is used to moderate results.</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QGroupBox" name="personality_groupbox">
+         <property name="title">
+          <string>Bot Personality</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_5">
+          <item row="1" column="0">
+           <widget class="QPlainTextEdit" name="bot_personality">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>75</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>EXAMPLE: {{ botname }} is very helpful and {{ gender }} loves {{ username }}.</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>A brief description of the bot's personality</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QGroupBox" name="mood_groupbox">
+         <property name="title">
+          <string>Bot Mood</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <item row="0" column="0">
+           <widget class="QPlainTextEdit" name="bot_mood">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>75</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>EXAMPLE: Excited</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
      </widget>
-     <widget class="LLMSettingsWidget" name="llm_settings_widget" native="true"/>
     </widget>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>LLMSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/llm/llm_settings_widget</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections>
   <connection>
@@ -402,8 +391,8 @@
    <slot>username_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>490</x>
-     <y>390</y>
+     <x>674</x>
+     <y>460</y>
     </hint>
     <hint type="destinationlabel">
      <x>55</x>
@@ -418,8 +407,8 @@
    <slot>botname_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>247</x>
-     <y>390</y>
+     <x>260</x>
+     <y>460</y>
     </hint>
     <hint type="destinationlabel">
      <x>127</x>
@@ -434,8 +423,8 @@
    <slot>bot_personality_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>380</x>
-     <y>886</y>
+     <x>392</x>
+     <y>971</y>
     </hint>
     <hint type="destinationlabel">
      <x>292</x>
@@ -450,8 +439,8 @@
    <slot>bot_mood_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>536</x>
-     <y>951</y>
+     <x>548</x>
+     <y>1100</y>
     </hint>
     <hint type="destinationlabel">
      <x>451</x>
@@ -467,7 +456,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>51</x>
-     <y>403</y>
+     <y>404</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -483,7 +472,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>108</x>
-     <y>838</y>
+     <y>916</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -531,7 +520,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>73</x>
-     <y>925</y>
+     <y>1068</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -563,7 +552,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>100</x>
-     <y>428</y>
+     <y>508</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -594,8 +583,8 @@
    <slot>create_new_chatbot_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>654</x>
-     <y>139</y>
+     <x>629</x>
+     <y>145</y>
     </hint>
     <hint type="destinationlabel">
      <x>479</x>
@@ -610,8 +599,8 @@
    <slot>delete_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>700</x>
-     <y>139</y>
+     <x>675</x>
+     <y>145</y>
     </hint>
     <hint type="destinationlabel">
      <x>480</x>
@@ -626,8 +615,8 @@
    <slot>agent_type_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>700</x>
-     <y>65</y>
+     <x>675</x>
+     <y>67</y>
     </hint>
     <hint type="destinationlabel">
      <x>813</x>
@@ -642,8 +631,8 @@
    <slot>browse_documents()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>443</x>
-     <y>272</y>
+     <x>455</x>
+     <y>381</y>
     </hint>
     <hint type="destinationlabel">
      <x>690</x>

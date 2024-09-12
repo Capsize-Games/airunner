@@ -7,6 +7,7 @@ from airunner.utils.get_current_chatbot import get_current_chatbot
 from airunner.utils.open_file_path import open_file_path
 from airunner.utils.toggle_signals import toggle_signals
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.llm.document_widget import DocumentWidget
 from airunner.widgets.llm.templates.bot_preferences_ui import Ui_bot_preferences
 
 
@@ -206,21 +207,7 @@ class BotPreferencesWidget(BaseWidget):
 
         documents = self.current_chatbot.get("target_files", [])
         for doc in documents:
-            # Create a label with the document name
-            label = QLabel(doc)
-
-            # Create a delete button
-            delete_button = QPushButton("Delete")
-            delete_button.clicked.connect(lambda checked, d=doc: self.delete_document(d))
-
-            # Create a horizontal layout and add the label and button to it
-            h_layout = QHBoxLayout()
-            h_layout.addWidget(label)
-            h_layout.addWidget(delete_button)
-
-            # Create a widget to hold the layout and add it to the scroll area
-            widget = QWidget()
-            widget.setLayout(h_layout)
+            widget = DocumentWidget(doc, self.delete_document)
             layout.addWidget(widget)
 
     def delete_document(self, document):
