@@ -151,9 +151,6 @@ class SDHandler(
         self._generator = None
         self.do_interrupt_image_generation = False
         self.latents_worker = create_worker(LatentsWorker)
-        self.model_status = {}
-        for model_type in ModelType:
-            self.model_status[model_type] = ModelStatus.UNLOADED
 
         self.register(SignalCode.SD_UNLOAD_SIGNAL, self.__on_unload_stablediffusion_signal)
 
@@ -198,9 +195,8 @@ class SDHandler(
         self.unload_scheduler()
 
     def model_status_changed(self, message: dict):
-        model = message["model"]
         status = message["status"]
-        self.model_status[model] = status
+        self.model_status = status
 
     @property
     def is_pipe_loaded(self) -> bool:
