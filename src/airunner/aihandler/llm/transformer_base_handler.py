@@ -125,7 +125,7 @@ class TransformerBaseHandler(BaseHandler):
         )
 
     def load_model(self):
-        self.logger.debug("Loading model")
+        self.logger.debug("transformer_base_handler.load_model Loading model")
         if self.settings["llm_generator_settings"]["use_api"]:
             self.model = Groq(
                 model=self.settings["llm_generator_settings"]["api_model"],
@@ -156,7 +156,6 @@ class TransformerBaseHandler(BaseHandler):
 
         try:
             self.model_status = ModelStatus.LOADING
-            print("loading path", path)
             self.model = self.auto_class_.from_pretrained(
                 path,
                 **params
@@ -211,7 +210,6 @@ class TransformerBaseHandler(BaseHandler):
         Override this function to add custom pre load functionality.
         :return:
         """
-        self.model_status = ModelStatus.LOADING
         self.current_model_path = self.model_path
 
     def load(self):
@@ -220,8 +218,7 @@ class TransformerBaseHandler(BaseHandler):
             ModelStatus.LOADING
         ):
             return
-        self.logger.debug("Loading model")
-        self.model_status = ModelStatus.LOADING
+        self.logger.debug("Loading model from transformer_base_handler.load")
         do_load_model = self.do_load_model
         do_load_tokenizer = self.tokenizer is None
 
@@ -243,7 +240,6 @@ class TransformerBaseHandler(BaseHandler):
         :return:
         """
         self.logger.error("Define post_load here")
-        self.model_status = ModelStatus.LOADING
 
     def generate(self, prompt, action) -> str:
         return self.do_generate(prompt, action)
