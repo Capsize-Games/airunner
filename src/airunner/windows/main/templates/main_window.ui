@@ -648,7 +648,7 @@
            <item row="1" column="0">
             <widget class="CanvasWidget" name="canvas_widget_2" native="true">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+              <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
