@@ -114,17 +114,6 @@ class LLMGenerateWorker(Worker):
             agent_options=self.agent_options
         )
 
-    # def start(self):
-    #     try:
-    #         loop = asyncio.get_event_loop()
-    #     except RuntimeError:
-    #         loop = asyncio.new_event_loop()
-    #
-    #     if loop.is_running():
-    #         loop.create_task(self.start_consuming())
-    #     else:
-    #         asyncio.run(self.start_consuming())
-
     def on_unload_llm_signal(self, message: dict):
         """
         This function will either 
