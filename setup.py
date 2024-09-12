@@ -58,6 +58,8 @@ setup(
         "llama-index-llms-huggingface==0.3.1",
         "llama-index-llms-groq==0.2.0",
         "llama-index-embeddings-mistralai==0.2.0",
+        "EbookLib==0.18",
+        "html2text==2024.2.26"
     ],
     dependency_links=[
     ],
