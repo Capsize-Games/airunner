@@ -346,16 +346,6 @@ class AgentLlamaIndexMixin:
     #         embeddings_dict=self.__index.index_struct.embeddings_dict,
     #     )
 
-    def print_chunks(self):
-        # Assuming self.__service_context is already loaded
-        for document in self.__documents:
-            # Extract the text from the Document object
-            document_text = document.text
-            # Pass the text to the _split method
-            chunks = self.__service_context.node_parser._split(document_text, self.__chunk_size)
-            for chunk in chunks:
-                print(chunk)
-
     def __load_document_index(self):
         self.logger.debug("Loading index...")
         documents = self.__documents or []
