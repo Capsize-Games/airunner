@@ -87,5 +87,9 @@ class MessageWidget(BaseWidget):
 
     def update_message(self, text):
         self.message += text
+
+        # strip double spaces from self.message
+        self.message = self.message.replace("  ", " ")
+
         self.ui.content.setPlainText(self.message)
 
