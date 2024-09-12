@@ -45,12 +45,10 @@ class TokenizerHandler(TransformerBaseHandler):
         if self.chat_template:
             kwargs["chat_template"] = self.chat_template
         try:
-            self.model_status = ModelStatus.LOADING
             self.tokenizer = self.tokenizer_class_.from_pretrained(
                 path,
                 **kwargs,
             )
-            self.model_status = ModelStatus.LOADED
             self.logger.debug("Tokenizer loaded")
         except Exception as e:
             self.logger.error(e)
