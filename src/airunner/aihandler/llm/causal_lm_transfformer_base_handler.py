@@ -58,7 +58,7 @@ class CausalLMTransformerBaseHandler(
     def on_clear_history_signal(self):
         if self.chat_agent is not None:
             self.logger.debug("Clearing chat history")
-            self.chat_agent.history = []
+            self.chat_agent.clear_history()
 
     @property
     def is_mistral(self) -> bool:
