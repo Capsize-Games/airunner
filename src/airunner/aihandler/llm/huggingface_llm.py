@@ -333,7 +333,7 @@ class HuggingFaceLLM(CustomLLM):
 
         tokens = self._model.generate(
             **inputs,
-            max_new_tokens=self.max_new_tokens,
+            # max_new_tokens=self.max_new_tokens,
             stopping_criteria=self._stopping_criteria,
             **self.generate_kwargs,
         )
@@ -369,11 +369,9 @@ class HuggingFaceLLM(CustomLLM):
         )
         generation_kwargs = dict(
             inputs,
-            streamer=streamer,
-            max_new_tokens=self.max_new_tokens,
-            stopping_criteria=self._stopping_criteria,
             **self.generate_kwargs,
         )
+        generation_kwargs["streamer"] = streamer
 
         # generate in background thread
         # NOTE/TODO: token counting doesn't work with streaming
