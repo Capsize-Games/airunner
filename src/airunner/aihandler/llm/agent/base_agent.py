@@ -598,8 +598,6 @@ class BaseAgent(
         return streamed_template
 
     def add_chatbot_response_to_history(self, response: dict):
-        if response["message"] is None:
-            return
         self.add_message_to_history(
             response["message"],
             response["role"]
@@ -610,6 +608,9 @@ class BaseAgent(
         content: AnyStr,
         role: LLMChatRole = LLMChatRole.ASSISTANT
     ):
+        if content is None:
+            return
+
         if role == LLMChatRole.ASSISTANT and content:
             content = content.replace(f"{self.botname}:", "")
             content = content.replace(f"{self.botname}", "")
@@ -620,17 +621,16 @@ class BaseAgent(
 
         # if the last_item is of the same role as the current message, append the content to the last_item
         if not last_item_role_is_current_role and len(last_item.keys()) > 0:
-            self.history.append(last_item)
-
-        if last_item_role_is_current_role:
+            item = last_item
+        elif last_item_role_is_current_role:
             item = {
                 "role": role.value,
                 "content": content
             }
             item["content"] += last_item.get("content", "") + "\n" + content
-            self.history.append(item)
         else:
-            self.history.append({
+            item = {
                 "role": role.value,
                 "content": content
-            })
+            }
+        self.history.append(item)
