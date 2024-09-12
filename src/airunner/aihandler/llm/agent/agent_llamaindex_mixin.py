@@ -21,7 +21,6 @@ class AgentLlamaIndexMixin:
         self.__index = None
         self.__chat_engine = None
         self.__retriever = None
-        self.__service_context = None
         self.__storage_context = None
         self.__transformations = None
         self.__index_struct = None
@@ -101,7 +100,7 @@ class AgentLlamaIndexMixin:
         self.__load_documents()
         self.__load_text_splitter()
         self.__load_prompt_helper()
-        self.__load_service_context()
+        self.__load_settings()
         self.__load_document_index()
         self.__load_retriever()
         self.__load_context_chat_engine()
@@ -281,7 +280,6 @@ class AgentLlamaIndexMixin:
         )
 
     def __load_context_chat_engine(self):
-        context_retriever = self.__retriever  # Your method to retrieve context
         try:
             self.__chat_engine = ContextChatEngine.from_defaults(
                 retriever=context_retriever,
@@ -295,19 +293,12 @@ class AgentLlamaIndexMixin:
         except Exception as e:
             self.logger.error(f"Error loading chat engine: {str(e)}")
 
-    def __load_service_context(self):
-        self.logger.debug("Loading service context with ContextChatEngine...")
-        try:
-            # Update service context to use the newly created chat engine
-            self.__service_context = ServiceContext.from_defaults(
-                llm=self.__llm,
-                embed_model=self.__embed_model,
-                #chat_engine=self.__chat_engine,  # Include the chat engine in the service context
-                text_splitter=self.__text_splitter,
-                prompt_helper=self.__prompt_helper,
-            )
-        except Exception as e:
-            self.logger.error(f"Error loading service context with chat engine: {str(e)}")
+    def __load_settings(self):
+        Settings.llm = self.__llm
+        Settings.embed_model = self.__embedding
+        Settings.node_parser = self.__text_splitter
+        Settings.num_output = 512
+        Settings.context_window = 3900
 
     # def __load_storage_context(self):
     #     from llama_index.core import ServiceContext, StorageContext
@@ -367,6 +358,7 @@ class AgentLlamaIndexMixin:
 
     def __load_document_index(self):
         self.logger.debug("Loading index...")
+        documents = self.__documents or []
         try:
             self.__index = SimpleKeywordTableIndex.from_documents(
                 self.__documents,
