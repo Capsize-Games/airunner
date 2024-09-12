@@ -1,7 +1,18 @@
 import os.path
 
-from airunner.enums import SignalCode, LLMChatRole, AgentState, LLMActionType
-from airunner.settings import BASE_PATH
+from llama_index.core import Settings
+
+from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
+from llama_index.core import SimpleDirectoryReader
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core import PromptHelper
+from llama_index.core.chat_engine import ContextChatEngine
+from llama_index.core import SimpleKeywordTableIndex
+from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
+
+from airunner.enums import AgentState
+from airunner.aihandler.llm.custom_embedding import CustomEmbedding
+from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
 
 
 class AgentLlamaIndexMixin:
@@ -221,15 +232,14 @@ class AgentLlamaIndexMixin:
 
     def __load_rag_model(self):
         self.logger.debug("Loading RAG model...")
-        from airunner.aihandler.llm.custom_embedding import CustomEmbedding
-        #from llama_index.core import Settings
-        #Settings.embed_model = CustomEmbedding(self.__llm)
-        self.__embed_model = CustomEmbedding(self.__llm)
+        pass
+
+    def __load_embeddings(self):
+        self.logger.debug("Loading embeddings...")
+        self.__embedding = CustomEmbedding(self.llm)
 
 
     def __load_readers(self):
-        from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
-        from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
         self.__pdf_reader = PDFReader()
         self.__epub_reader = EpubReader()
         self.__html_reader = HtmlFileReader()
@@ -246,7 +256,6 @@ class AgentLlamaIndexMixin:
 
     def __load_documents(self):
         self.logger.debug("Loading documents...")
-        from llama_index.core import SimpleDirectoryReader
         try:
             self.__documents = SimpleDirectoryReader(
                 input_files=self.target_files,
@@ -258,14 +267,12 @@ class AgentLlamaIndexMixin:
             self.__documents = None
 
     def __load_text_splitter(self):
-        from llama_index.core.node_parser import SentenceSplitter
         self.__text_splitter = SentenceSplitter(
             chunk_size=256,
             chunk_overlap=20
         )
 
     def __load_prompt_helper(self):
-        from llama_index.core import PromptHelper
         self.__prompt_helper = PromptHelper(
             context_window=4096,
             num_output=1024,
@@ -274,7 +281,6 @@ class AgentLlamaIndexMixin:
         )
 
     def __load_context_chat_engine(self):
-        from llama_index.core.chat_engine import ContextChatEngine
         context_retriever = self.__retriever  # Your method to retrieve context
         try:
             self.__chat_engine = ContextChatEngine.from_defaults(
@@ -291,7 +297,6 @@ class AgentLlamaIndexMixin:
 
     def __load_service_context(self):
         self.logger.debug("Loading service context with ContextChatEngine...")
-        from llama_index.core import ServiceContext
         try:
             # Update service context to use the newly created chat engine
             self.__service_context = ServiceContext.from_defaults(
@@ -362,7 +367,6 @@ class AgentLlamaIndexMixin:
 
     def __load_document_index(self):
         self.logger.debug("Loading index...")
-        from llama_index.core import SimpleKeywordTableIndex
         try:
             self.__index = SimpleKeywordTableIndex.from_documents(
                 self.__documents,
@@ -374,7 +378,6 @@ class AgentLlamaIndexMixin:
             self.logger.error(f"Error loading index: {str(e)}")
 
     def __load_retriever(self):
-        from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
         try:
             self.__retriever = KeywordTableSimpleRetriever(
                 index=self.__index,
