@@ -620,7 +620,7 @@ class ModelMixin:
         return pipeline_map.get(operation_type)
 
     def __load_model(self):
-        self.logger.debug("Loading model")
+        self.logger.debug("Loading model from ModelMixin")
         if not self.model_path:
             self.logger.error("Model path is empty")
             return
@@ -789,7 +789,7 @@ class ModelMixin:
         if self.__tokenizer and self.__current_tokenizer_path == self.__tokenizer_path:
             return
         try:
-            self.logger.debug(f"Loading tokenizer from {self.__tokenizer_path}")
+            self.logger.debug(f"ModelMixin: Loading tokenizer from {self.__tokenizer_path}")
             self.__tokenizer = AutoTokenizer.from_pretrained(
                 self.__tokenizer_path,
                 local_files_only=True,
