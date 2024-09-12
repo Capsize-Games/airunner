@@ -67,7 +67,7 @@ class SpeechT5TTSHandler(TTSHandler):
             vocoder = self.vocoder = SpeechT5HifiGan.from_pretrained(
                 self.vocoder_path,
                 local_files_only=True,
-                torch_dtype=torch.float16,
+                torch_dtype=torch.bfloat16,  # Change to bfloat16
                 device_map=self.device
             )
             self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.LOADED, self.vocoder_path)
@@ -85,7 +85,7 @@ class SpeechT5TTSHandler(TTSHandler):
                 self.speaker_embeddings_path
             )
             if self.use_cuda and self.speaker_embeddings is not None:
-                self.speaker_embeddings = self.speaker_embeddings.half().cuda()
+                self.speaker_embeddings = self.speaker_embeddings.to(torch.bfloat16).cuda()  # Change to bfloat16
 
             self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.LOADED, self.speaker_embeddings_path)
 
@@ -112,7 +112,8 @@ class SpeechT5TTSHandler(TTSHandler):
 
         inputs = self.processor(
             text=text,
-            return_tensors="pt"
+            return_tensors="pt",
+            dtype=torch.float16,
         )
         inputs = self.move_inputs_to_device(inputs)
 
