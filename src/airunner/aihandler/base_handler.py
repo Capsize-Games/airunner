@@ -35,6 +35,16 @@ class BaseHandler(
 
     @model_status.setter
     def model_status(self, value: ModelStatus):
+        if self.model_type is ModelType.LLM:
+            import traceback
+            traceback.print_stack()
+
+        if self._model_status is value:
+            return
+
+        if self.model_type is ModelType.LLM:
+            print(f"ModelType.LLM Model status changed to {value}")
+
         self._model_status = value
         self.change_model_status(self.model_type, value)
         if self._requested_action:
