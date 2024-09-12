@@ -111,6 +111,10 @@ class BaseAgent(
         self.thread = None
         clear_memory()
 
+    def clear_history(self):
+        self.history = []
+        self.reload_rag()
+
     def interrupt_process(self):
         self.do_interrupt = True
 
