@@ -35,6 +35,7 @@ class LLMGenerateWorker(Worker):
             (SignalCode.LLM_LOAD_MODEL_SIGNAL, self.on_load_model_signal),
             (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal),
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
+            (SignalCode.RAG_RELOAD_INDEX_SIGNAL, self.on_reload_rag_index_signal),
         ]
         self.thread = None
         self.llm = None
@@ -54,13 +55,19 @@ class LLMGenerateWorker(Worker):
 
         self.llm_generate_worker.error.connect(self.handle_error)
 
+    def on_reload_rag_index_signal(self, data: dict = None):
+        self.llm.chat_agent.reload_rag(data)
+
     def on_unload_llm_signal(self, message):
         if self.thread.isRunning():
-            self.thread.quit()
-            self.thread.wait()
-            self.thread = None
+            self.stop_thread()
         if self.llm:
             self.llm.on_unload_llm_signal(message)
+
+    def stop_thread(self):
+        self.thread.quit()
+        self.thread.wait()
+        self.thread = None
 
     def on_load_llm_signal(self, message: dict):
         if self.thread is not None:
