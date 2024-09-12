@@ -202,6 +202,40 @@ DEFAULT_PATH_SETTINGS = {
 # DEFAULT_CHATBOT is a dictionary that contains the default settings
 # for the chatbot. New chatbots can be created in the GUI.
 ####################################################################
+DEFAULT_LLM_GENERATOR_SETTINGS = dict(
+    top_p=900,
+    min_length=1,
+    max_new_tokens=1000,
+    repetition_penalty=100,
+    do_sample=True,
+    early_stopping=True,
+    num_beams=1,
+    temperature=1000,
+    ngram_size=2,
+    top_k=10,
+    eta_cutoff=10,
+    num_return_sequences=1,
+    decoder_start_token_id=None,
+    use_cache=True,
+    length_penalty=100,
+)
+TOOL_LLM_GENERATOR_SETTINGS = dict(
+    top_p=900,
+    min_length=1,
+    max_new_tokens=2,
+    repetition_penalty=100,
+    do_sample=True,
+    early_stopping=True,
+    num_beams=1,
+    temperature=100,
+    ngram_size=2,
+    top_k=10,
+    eta_cutoff=10,
+    num_return_sequences=1,
+    decoder_start_token_id=None,
+    use_cache=True,
+    length_penalty=100,
+)
 DEFAULT_CHATBOT = {
     "username": "User",
     "botname": "Computer",
@@ -224,8 +258,6 @@ DEFAULT_CHATBOT = {
     "model_version": DEFAULT_LLM_HF_PATH,
     "model_type": "llm",
     "dtype": "4bit",
-    "use_cache": True,
-    "ngram_size": 2,
     "return_result": True,
 
     "target_files": [],
@@ -264,40 +296,10 @@ DEFAULT_CHATBOT = {
         "You will generate responses which are appropriate for your personality and given character.\n"
         "------\n"
     ),
-    "generator_settings": dict(
-        top_p=90,
-        max_length=50,
-        repetition_penalty=100,
-        min_length=10,
-        length_penalty=100,
-        num_beams=1,
-        temperature=1000,
-        top_k=10,
-        do_sample=True,
-        eta_cutoff=10,
-        early_stopping=True,
-        max_new_tokens=1000,
-        use_cache=True
-    ),
+    "generator_settings": DEFAULT_LLM_GENERATOR_SETTINGS,
 }
 AGENT_CHATBOT = DEFAULT_CHATBOT.copy()
-AGENT_CHATBOT["generator_settings"] = {
-    "top_p": 90,
-    "min_length": 1,
-    "max_new_tokens": 2,
-    "repetition_penalty": 100,
-    "do_sample": True,
-    "early_stopping": True,
-    "num_beams": 1,
-    "temperature": 100,
-    "no_repeat_ngram_size": 2,
-    "top_k": 10,
-    "eta_cutoff": 10,
-    "num_return_sequences": 1,
-    "decoder_start_token_id": None,
-    "use_cache": True,
-    "length_penalty": 100,
-}
+AGENT_CHATBOT["generator_settings"] = DEFAULT_LLM_GENERATOR_SETTINGS
 
 
 ####################################################################
@@ -1149,26 +1151,13 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     llm_generator_settings=dict(
         action=LLMActionType.CHAT.value,
         use_tool_filter=False,
-        top_p=90,
-        max_length=50,
-        repetition_penalty=100,
-        min_length=10,
-        length_penalty=100,
-        num_beams=1,
-        ngram_size=0,
-        temperature=1000,
-        sequences=1,
-        top_k=10,
         seed=0,
-        do_sample=True,
-        eta_cutoff=10,
-        early_stopping=True,
         random_seed=False,
         model_version=DEFAULT_LLM_HF_PATH,
         dtype="4bit",
         use_gpu=True,
         message_type="chat",
-        override_parameters=False,
+        override_parameters=True,
         current_chatbot="Chatbot",
         saved_chatbots=dict(
             Chatbot=DEFAULT_CHATBOT,
@@ -1176,11 +1165,10 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         ),
         prompt_template="Mistral 7B Instruct: Default Chatbot",
         batch_size=1,
-        max_new_tokens=1000,
         use_api=False,
         api_key="",
         api_model="",
-        use_cache=True
+        generator_settings=DEFAULT_LLM_GENERATOR_SETTINGS
     ),
     tts_settings=TTS_SETTINGS_DEFAULT,
     stt_settings=dict(
