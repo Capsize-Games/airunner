@@ -3,7 +3,7 @@ from transformers.generation.streamers import TextIteratorStreamer
 
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
-from airunner.enums import SignalCode, ModelStatus
+from airunner.enums import SignalCode, ModelType
 from airunner.enums import LLMActionType
 
 
@@ -11,6 +11,7 @@ class CausalLMTransformerBaseHandler(
     TokenizerHandler
 ):
     auto_class_ = AutoModelForCausalLM
+    model_type = ModelType.LLM
 
     def __init__(self, *args, **kwargs):
         self.agent_class_ = kwargs.pop("agent_class", BaseAgent)
