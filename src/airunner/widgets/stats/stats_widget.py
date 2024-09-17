@@ -70,7 +70,11 @@ class StatsWidget(
             self.ui.memory_stats.item(i, 3).setForeground(Qt.GlobalColor.green)
 
         # Get CPU details
-        cpu_memory = psutil.virtual_memory()
+        try:
+            cpu_memory = psutil.virtual_memory()
+        except Exception as e:
+            cpu_memory = None
+            return
 
         used = cpu_memory.used / (1024.0 ** 3)
         total = cpu_memory.total / (1024.0 ** 3)
