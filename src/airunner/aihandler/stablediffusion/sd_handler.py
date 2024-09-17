@@ -171,11 +171,7 @@ class SDHandler(
             self.__load_image_generator_model_task.cancel_load_model()
             self.logger.info("Cancelled the image generator model loading task.")
         self.current_state = HandlerState.UNLOADED
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.SD,
-            "status": ModelStatus.UNLOADED,
-            "path": ""
-        })
+        self.model_status = self.current_state
 
     @property
     def input_image(self):
