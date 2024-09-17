@@ -76,6 +76,8 @@ class SDHandler(
     SafetyCheckerMixin,
     ModelMixin,
 ):
+    model_type = ModelType.SD
+
     def  __init__(self, *args, **kwargs):
         self._sd_request = None
         self.__current_state = HandlerState.INITIALIZED
