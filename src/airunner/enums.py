@@ -247,15 +247,11 @@ class SignalCode(Enum):
     SD_TOKENIZER_UNLOAD_SIGNAL = "unload_stablediffusion_tokenizer_signal"
     SD_TEXT_ENCODER_LOAD_SIGNAL = "load_stablediffusion_text_encoder_signal"
     SD_TEXT_ENCODER_UNLOAD_SIGNAL = "unload_stablediffusion_text_encoder_signal"
-    SD_SCHEDULER_LOAD_SIGNAL = "load_stablediffusion_scheduler_signal"
-    SD_SCHEDULER_UNLOAD_SIGNAL = "unload_stablediffusion_scheduler_signal"
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
     CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
     CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
     SAFETY_CHECKER_LOAD_SIGNAL = "SAFETY_CHECKER_LOAD_SIGNAL"
     SAFETY_CHECKER_UNLOAD_SIGNAL = "SAFETY_CHECKER_UNLOAD_SIGNAL"
-    SCHEDULER_LOAD_SIGNAL = "SCHEDULER_LOAD_SIGNAL"
-    SCHEDULER_UNLOAD_SIGNAL = "SCHEDULER_UNLOAD_SIGNAL"
 
     HISTORY_CLEAR_SIGNAL = enum.auto()
     UNDO_SIGNAL = enum.auto()
