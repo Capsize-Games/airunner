@@ -46,8 +46,6 @@ class SDWorker(Worker):
             (SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal),
             (SignalCode.CONTROLNET_LOAD_SIGNAL, self.on_load_controlnet_signal),
             (SignalCode.CONTROLNET_UNLOAD_SIGNAL, self.on_unload_controlnet_signal),
-            (SignalCode.SCHEDULER_LOAD_SIGNAL, self.on_scheduler_load_signal),
-            (SignalCode.SCHEDULER_UNLOAD_SIGNAL, self.on_scheduler_unload_signal),
             (SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal),
             (SignalCode.EMBEDDING_SCAN_SIGNAL, self.scan_for_embeddings),
             (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings),
@@ -92,14 +90,6 @@ class SDWorker(Worker):
     def on_add_lora_signal(self, message):
         if self.sd:
             self.sd.on_add_lora_signal(message)
-
-    def on_scheduler_load_signal(self, message):
-        if self.sd:
-            self.sd.on_scheduler_load_signal(message)
-
-    def on_scheduler_unload_signal(self, message):
-        if self.sd:
-            self.sd.on_scheduler_unload_signal(message)
 
     def on_load_controlnet_signal(self):
         if self.sd:
@@ -202,10 +192,7 @@ class SDWorker(Worker):
             self.sd.load_scheduler(force_scheduler_name=data["scheduler"])
 
     def on_model_status_changed_signal(self, message: dict):
-        if self.sd:
-            self.sd.model_status_changed(message)
-
-            if message["model"] == ModelType.SD:
-                if self.__requested_action is ModelAction.CLEAR:
-                    self.on_unload_stablediffusion_signal()
-                self.__requested_action = ModelAction.NONE
+        if self.sd and message["model"] == ModelType.SD:
+            if self.__requested_action is ModelAction.CLEAR:
+                self.on_unload_stablediffusion_signal()
+            self.__requested_action = ModelAction.NONE
