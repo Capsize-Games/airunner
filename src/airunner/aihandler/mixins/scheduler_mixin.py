@@ -44,12 +44,6 @@ class SchedulerMixin:
     def scheduler_section(self):
         return self.sd_request.section
 
-    def on_scheduler_load_signal(self):
-        self.load_scheduler()
-
-    def on_scheduler_unload_signal(self):
-        self.unload_scheduler()
-
     def clear_scheduler(self):
         self.logger.debug("Clearing scheduler")
         self.scheduler_name = ""
