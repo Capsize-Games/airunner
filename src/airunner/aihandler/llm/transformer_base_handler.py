@@ -11,6 +11,7 @@ from airunner.utils.clear_memory import clear_memory
 
 class TransformerBaseHandler(BaseHandler):
     auto_class_ = None
+    model_type = ModelType.LLM
 
     def __init__(self, *args, do_load_on_init: bool = False, **kwargs):
         self.do_quantize_model = kwargs.pop("do_quantize_model", True)
@@ -56,7 +57,6 @@ class TransformerBaseHandler(BaseHandler):
         self._generator = None
         self.template = None
         self.image = None
-        self.model_type = ModelType.LLM
         self.model_class = "llm"
 
         if self.model_path is None:
