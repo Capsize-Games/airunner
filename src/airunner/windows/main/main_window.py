@@ -1092,8 +1092,6 @@ class MainWindow(
             self.update()
             self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
 
-        self.ui.sd_toggle_button.setEnabled(False)
-
     @Slot(bool)
     def action_controlnet_toggled(self, val: bool):
         settings = self.settings
@@ -1103,7 +1101,6 @@ class MainWindow(
         for widget in [self.ui.controlnet_toggle_button, self.ui.enable_controlnet]:
             widget.blockSignals(True)
             widget.setChecked(val)
-            widget.setEnabled(False)
             widget.blockSignals(False)
 
         signal = SignalCode.CONTROLNET_LOAD_SIGNAL if val else SignalCode.CONTROLNET_UNLOAD_SIGNAL
@@ -1116,16 +1113,22 @@ class MainWindow(
         # display in a window
         widget.show()
 
-
     def on_model_status_changed_signal(self, data):
-        if data["status"] in (
-            ModelStatus.LOADED,
-            ModelStatus.FAILED,
-            ModelStatus.READY,
-            ModelStatus.UNLOADED
-        ):
-            if data["model"] is ModelType.SD:
-                print(data["status"])
-                self.ui.sd_toggle_button.setEnabled(True)
-            elif data["model"] is ModelType.CONTROLNET:
-                self.ui.controlnet_toggle_button.setEnabled(True)
+        model = data["model"]
+        status = data["status"]
+        if model is ModelType.SD:
+            self.__set_button_state(self.ui.sd_toggle_button, status)
+        elif model is ModelType.CONTROLNET:
+            self.__set_button_state(self.ui.controlnet_toggle_button, status)
+        elif model is ModelType.LLM:
+            self.__set_button_state(self.ui.llm_button, status)
+
+    def __set_button_state(self, button, status):
+        # button.blockSignals(True)
+        # button.setChecked(status not in (
+        #     ModelStatus.FAILED,
+        #     ModelStatus.UNLOADED
+        # ))
+        button.setEnabled(status is not ModelStatus.LOADING)
+        # button.blockSignals(False)
+        button.repaint()
