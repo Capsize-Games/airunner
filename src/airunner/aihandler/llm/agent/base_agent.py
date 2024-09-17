@@ -418,8 +418,8 @@ class BaseAgent(
         streamer = kwargs.get("streamer", self.streamer)
         data["streamer"] = streamer
 
-        if "attention_mask" in data:
-            del data["attention_mask"]
+        # if "attention_mask" in data:
+        #     del data["attention_mask"]
 
         self.do_interrupt = False
 
