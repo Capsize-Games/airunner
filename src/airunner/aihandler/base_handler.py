@@ -18,6 +18,7 @@ class BaseHandler(
     They are typically instantiated by workers.
     """
     handler_type = HandlerType.TRANSFORMER
+    model_type = None
 
     def __init__(self, *args, **kwargs):
         self.use_gpu = True
@@ -25,7 +26,6 @@ class BaseHandler(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
-        self.model_type = None
         self._requested_action = None
         self._model_status = ModelStatus.UNLOADED
 
