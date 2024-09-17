@@ -7,7 +7,7 @@ import time
 
 import numpy as np
 from PySide6.QtWidgets import QApplication
-from typing import List
+from typing import List, Any
 import torch
 from PIL import Image
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
@@ -76,6 +76,7 @@ class ModelMixin:
         self.negative_prompt_embeds = None
         self.pooled_prompt_embeds = None
         self.negative_pooled_prompt_embeds = None
+
 
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
 
@@ -181,6 +182,9 @@ class ModelMixin:
 
 
     def load_image_generator_model(self):
+        if not self.settings["sd_enabled"]:
+            return
+
         self.logger.info("Loading image generator model")
         self.load_thread = threading.current_thread()
 
@@ -230,7 +234,7 @@ class ModelMixin:
         return self.__generate()
 
     def model_is_loaded(self, model: ModelType) -> bool:
-        return self.model_status[model] == ModelStatus.LOADED
+        return self.model_status is ModelStatus.LOADED
 
     def apply_tokenizer_to_pipe(self):
         self.__change_sd_tokenizer_status(ModelStatus.LOADED)
@@ -709,7 +713,12 @@ class ModelMixin:
             self.controlnet_loaded = self.settings["controlnet_enabled"]
         elif self.pipe and self.pipe.device.type == "cpu":
             self.__change_sd_model_status(ModelStatus.LOADING)
-            self.pipe.to(self.device)
+            try:
+                self.pipe.to(self.device)
+            except Exception as e:
+                self.logger.error(f"Failed to move model to {self.device}: {e}")
+                self.__change_sd_model_status(ModelStatus.FAILED)
+                return
             self.__change_sd_model_status(ModelStatus.LOADED)
 
     def __get_pipeline_action(self, action=None):
