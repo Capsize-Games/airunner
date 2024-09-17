@@ -148,7 +148,7 @@ class FilterWindow(BaseWindow):
 
         self.setWindowTitle(self.window_title)
         # on escape, call the "cancel" button on the QDialogButtonBox
-        self.keyPressEvent = lambda event: self.cancel_filter() if event.key() == 16777216 else None
+        self.keyPressEvent = lambda event: self.reject() if event.key() == 16777216 else None
 
         self.preview_filter()
 
@@ -169,7 +169,9 @@ class FilterWindow(BaseWindow):
     def accept(self):
         self.emit_signal(
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL,
-            self.filter_object()
+            {
+                "filter_object": self.filter_object()
+            }
         )
         super().accept()
 
