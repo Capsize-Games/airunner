@@ -1,3 +1,4 @@
+import gc
 import os
 import random
 
@@ -180,6 +181,7 @@ class TransformerBaseHandler(BaseHandler):
             return False
         elif self.model_status is not ModelStatus.LOADED:
             return False
+        self.model_status = ModelStatus.LOADING
         self._processing_request = False
         model_unloaded = self._unload_model()
         tokenizer_unloaded = self._unload_tokenizer()
@@ -191,17 +193,21 @@ class TransformerBaseHandler(BaseHandler):
         ):
             self.logger.debug("Clearing memory")
             clear_memory()
+        self.model_status = ModelStatus.UNLOADED
 
     def _unload_tokenizer(self):
         self.logger.debug("Unloading tokenizer")
         self.tokenizer = None
-        self.model_status = ModelStatus.UNLOADED
+        clear_memory()
         return True
 
     def _unload_model(self):
         self.logger.debug("Unloading model")
-        self.model = None
-        self.model_status = ModelStatus.UNLOADED
+        if self.model:
+            del self.model
+            self.model = None
+            gc.collect()
+            clear_memory()
         return True
 
     def pre_load(self):
