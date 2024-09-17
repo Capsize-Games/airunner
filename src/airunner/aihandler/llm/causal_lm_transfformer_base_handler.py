@@ -43,7 +43,7 @@ class CausalLMTransformerBaseHandler(
         self.restrict_tools_to_additional: bool = True
         self.return_agent_code: bool = False
         self.batch_size: int = 1
-        self._model_status = ModelStatus.UNLOADED
+        self.model_type = ModelType.LLM
         super().__init__(*args, **kwargs)
 
     def on_load_llm_signal(self):
