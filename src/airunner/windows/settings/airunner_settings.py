@@ -85,6 +85,9 @@ class SettingsWindow(BaseWindow):
         if name == "civitai":
             from airunner.widgets.civitai_preferences.civitai_preferences_widget import CivitAIPreferencesWidget
             return CivitAIPreferencesWidget
+        if name == "export_preferences":
+            from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
+            return ExportPreferencesWidget
 
     def handle_value_change(self, attr_name, value=None, widget=None):
         """
@@ -156,6 +159,16 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "embeddings_settings",
                         "display_name": "Embeddings",
+                        "checkable": False
+                    }
+                ]
+            },
+            {
+                "section": "Image Export Preferences",
+                "files": [
+                    {
+                        "name": "export_preferences",
+                        "display_name": "Export Preferences",
                         "checkable": False
                     }
                 ]
