@@ -153,6 +153,7 @@ class SDHandler(
         self._generator = None
         self.do_interrupt_image_generation = False
         self.latents_worker = create_worker(LatentsWorker)
+        self._loading_thread = None
 
         self.register(SignalCode.SD_UNLOAD_SIGNAL, self.__on_unload_stablediffusion_signal)
 
@@ -234,7 +235,6 @@ class SDHandler(
         except IndexError:
             return None
 
-    _loading_thread = None
     def load_stable_diffusion(self):
         if self._loading_thread is not None:
             self._loading_thread.join()
