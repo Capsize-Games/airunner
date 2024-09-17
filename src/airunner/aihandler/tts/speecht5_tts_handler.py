@@ -119,6 +119,8 @@ class SpeechT5TTSHandler(TTSHandler):
 
         self.logger.debug("Generating speech...")
         start = time.time()
+        self.speaker_embeddings.to(self.device)
+
         try:
             speech = self.model.generate(
                 **inputs,
