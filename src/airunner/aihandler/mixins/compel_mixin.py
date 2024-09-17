@@ -74,11 +74,11 @@ class CompelMixin:
                 text_encoder=text_encoder
             ))
 
-        try:
-            self.compel_proc = Compel(**parameters)
-        except Exception as e:
-            self.logger.error(f"Error creating compel proc: {e}")
-            return None
+            try:
+                self.compel_proc = Compel(**parameters)
+            except Exception as e:
+                self.logger.error(f"Error creating compel proc: {e}")
+                return None
 
         prompt_embeds = None
         negative_prompt_embeds = None
@@ -90,7 +90,7 @@ class CompelMixin:
             try:
                 if self.is_sd_xl:
                     prompt_embeds, pooled_prompt_embeds = self.compel_proc.build_conditioning_tensor(
-                        f'("{prompt}", "{prompt_2}).and()'
+                        f'("{prompt}", "{prompt_2}").and()'
                     )
                 else:
                     prompt_embeds = self.compel_proc.build_conditioning_tensor(prompt)
@@ -101,7 +101,7 @@ class CompelMixin:
             try:
                 if self.is_sd_xl:
                     negative_prompt_embeds, negative_pooled_prompt_embeds = self.compel_proc.build_conditioning_tensor(
-                        f'("{negative_prompt}", "{negative_prompt_2}).and()'
+                        f'("{negative_prompt}", "{negative_prompt_2}").and()'
                     )
                 else:
                     negative_prompt_embeds = self.compel_proc.build_conditioning_tensor(negative_prompt)
