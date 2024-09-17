@@ -35,10 +35,6 @@ class BaseHandler(
 
     @model_status.setter
     def model_status(self, value: ModelStatus):
-        if self.model_type is ModelType.LLM:
-            import traceback
-            traceback.print_stack()
-
         if self._model_status is value:
             return
 
