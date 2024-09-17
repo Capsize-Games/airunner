@@ -550,11 +550,38 @@ class ModelMixin:
                 has_filters
             )
 
+        if self.settings["auto_export_images"]:
+            self.__export_images(images)
+
         return dict(
             images=images,
             data=self.data,
             nsfw_content_detected=any(nsfw_content_detected),
         )
+
+    def __export_images(self, images: List[Any]):
+        extension = self.settings["image_export_type"]
+        filename = "image"
+        i = 1
+        for image in images:
+            filepath = os.path.expanduser(
+                os.path.join(
+                    self.settings["path_settings"]["image_path"],
+                    f"{filename}.{extension}"
+                )
+            )
+            while os.path.exists(filepath):
+                filename = f"image_{i}"
+                filepath = os.path.expanduser(
+                    os.path.join(
+                        self.settings["path_settings"]["image_path"],
+                        f"{filename}.{extension}"
+                    )
+                )
+                if not os.path.exists(filepath):
+                    break
+                i += 1
+            image.save(filepath)
 
     def __load_generator(self, device=None, seed=None):
         if self.__generator is None:
