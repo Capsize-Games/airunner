@@ -34,7 +34,6 @@ class SignalCode(Enum):
     REFRESH_STYLESHEET_SIGNAL = "refresh_stylesheet_signal"
     SD_STATE_CHANGED_SIGNAL = "sd_state_changed_signal"
     NAVIGATE_TO_URL = "navigate_to_url"
-    LLM_RAG_SEARCH_SIGNAL = "llm_rag_search_signal"
     RAG_RELOAD_INDEX_SIGNAL = "rag_reload_index_signal"
     RESET_APPLIED_MEMORY_SETTINGS = "reset_applied_memory_settings"
     ENABLE_BRUSH_TOOL_SIGNAL = "enable_brush_tool_signal"
@@ -248,19 +247,17 @@ class SignalCode(Enum):
     SD_TOKENIZER_UNLOAD_SIGNAL = "unload_stablediffusion_tokenizer_signal"
     SD_TEXT_ENCODER_LOAD_SIGNAL = "load_stablediffusion_text_encoder_signal"
     SD_TEXT_ENCODER_UNLOAD_SIGNAL = "unload_stablediffusion_text_encoder_signal"
-    SD_SCHEDULER_LOAD_SIGNAL = "load_stablediffusion_scheduler_signal"
-    SD_SCHEDULER_UNLOAD_SIGNAL = "unload_stablediffusion_scheduler_signal"
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
     CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
     CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
     SAFETY_CHECKER_LOAD_SIGNAL = "SAFETY_CHECKER_LOAD_SIGNAL"
     SAFETY_CHECKER_UNLOAD_SIGNAL = "SAFETY_CHECKER_UNLOAD_SIGNAL"
-    SCHEDULER_LOAD_SIGNAL = "SCHEDULER_LOAD_SIGNAL"
-    SCHEDULER_UNLOAD_SIGNAL = "SCHEDULER_UNLOAD_SIGNAL"
 
     HISTORY_CLEAR_SIGNAL = enum.auto()
     UNDO_SIGNAL = enum.auto()
     REDO_SIGNAL = enum.auto()
+    LOAD_CONVERSATION = enum.auto()
+    SET_CONVERSATION = enum.auto()
 
 class EngineResponseCode(Enum):
     STATUS = 100

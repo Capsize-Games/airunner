@@ -32,7 +32,7 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="1" column="0">
+   <item row="2" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <property name="spacing">
       <number>0</number>
@@ -174,7 +174,7 @@
         <x>0</x>
         <y>0</y>
         <width>595</width>
-        <height>924</height>
+        <height>877</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -196,19 +196,6 @@
        <property name="verticalSpacing">
         <number>10</number>
        </property>
-       <item row="1" column="0">
-        <widget class="QComboBox" name="action">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>30</height>
-          </size>
-         </property>
-         <property name="sizeAdjustPolicy">
-          <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="0">
         <widget class="QSplitter" name="chat_prompt_splitter">
          <property name="orientation">
@@ -233,7 +220,7 @@
                 <x>0</x>
                 <y>0</y>
                 <width>573</width>
-                <height>440</height>
+                <height>417</height>
                </rect>
               </property>
               <layout class="QGridLayout" name="gridLayout_2">
@@ -289,9 +276,66 @@
          </widget>
         </widget>
        </item>
+       <item row="1" column="0">
+        <widget class="QComboBox" name="action">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="sizeAdjustPolicy">
+          <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </widget>
+   </item>
+   <item row="1" column="0">
+    <layout class="QFormLayout" name="formLayout">
+     <property name="horizontalSpacing">
+      <number>10</number>
+     </property>
+     <property name="verticalSpacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>10</number>
+     </property>
+     <property name="topMargin">
+      <number>10</number>
+     </property>
+     <property name="rightMargin">
+      <number>10</number>
+     </property>
+     <property name="bottomMargin">
+      <number>10</number>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="font">
+        <font>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Chatbot Mood:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="mood_label">
+       <property name="text">
+        <string>TextLabel</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
@@ -305,7 +349,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>464</x>
-     <y>880</y>
+     <y>802</y>
     </hint>
     <hint type="destinationlabel">
      <x>161</x>
@@ -321,7 +365,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>187</x>
-     <y>911</y>
+     <y>877</y>
     </hint>
     <hint type="destinationlabel">
      <x>47</x>
@@ -336,8 +380,8 @@
    <slot>action_button_clicked_send()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>43</x>
-     <y>942</y>
+     <x>526</x>
+     <y>975</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -352,8 +396,8 @@
    <slot>action_button_clicked_clear_conversation()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>464</x>
-     <y>1003</y>
+     <x>586</x>
+     <y>975</y>
     </hint>
     <hint type="destinationlabel">
      <x>473</x>
@@ -368,8 +412,8 @@
    <slot>interrupt_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>464</x>
-     <y>973</y>
+     <x>556</x>
+     <y>975</y>
     </hint>
     <hint type="destinationlabel">
      <x>473</x>
