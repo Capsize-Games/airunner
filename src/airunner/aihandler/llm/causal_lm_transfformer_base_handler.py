@@ -3,7 +3,7 @@ from transformers.generation.streamers import TextIteratorStreamer
 
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 from airunner.aihandler.llm.tokenizer_handler import TokenizerHandler
-from airunner.enums import SignalCode, ModelStatus
+from airunner.enums import SignalCode, ModelType
 from airunner.enums import LLMActionType
 
 
@@ -11,6 +11,7 @@ class CausalLMTransformerBaseHandler(
     TokenizerHandler
 ):
     auto_class_ = AutoModelForCausalLM
+    model_type = ModelType.LLM
 
     def __init__(self, *args, **kwargs):
         self.agent_class_ = kwargs.pop("agent_class", BaseAgent)
@@ -42,7 +43,7 @@ class CausalLMTransformerBaseHandler(
         self.restrict_tools_to_additional: bool = True
         self.return_agent_code: bool = False
         self.batch_size: int = 1
-        self._model_status = ModelStatus.UNLOADED
+        self.model_type = ModelType.LLM
         super().__init__(*args, **kwargs)
 
     def on_load_llm_signal(self):
@@ -58,7 +59,7 @@ class CausalLMTransformerBaseHandler(
     def on_clear_history_signal(self):
         if self.chat_agent is not None:
             self.logger.debug("Clearing chat history")
-            self.chat_agent.history = []
+            self.chat_agent.clear_history()
 
     @property
     def is_mistral(self) -> bool:
@@ -220,6 +221,11 @@ class CausalLMTransformerBaseHandler(
 
     def do_generate(self, prompt, action):
         self.logger.debug("Generating response")
+        current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][
+            self.settings["llm_generator_settings"]["current_chatbot"]
+        ]
+        if action is LLMActionType.CHAT and current_bot["use_mood"]:
+            action = LLMActionType.UPDATE_MOOD
         self.chat_agent.run(
             prompt,
             action

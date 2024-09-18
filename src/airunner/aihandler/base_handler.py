@@ -18,6 +18,7 @@ class BaseHandler(
     They are typically instantiated by workers.
     """
     handler_type = HandlerType.TRANSFORMER
+    model_type = None
 
     def __init__(self, *args, **kwargs):
         self.use_gpu = True
@@ -25,7 +26,6 @@ class BaseHandler(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
-        self.model_type = None
         self._requested_action = None
         self._model_status = ModelStatus.UNLOADED
 
@@ -35,6 +35,12 @@ class BaseHandler(
 
     @model_status.setter
     def model_status(self, value: ModelStatus):
+        if self._model_status is value:
+            return
+
+        if self.model_type is ModelType.LLM:
+            print(f"ModelType.LLM Model status changed to {value}")
+
         self._model_status = value
         self.change_model_status(self.model_type, value)
         if self._requested_action:

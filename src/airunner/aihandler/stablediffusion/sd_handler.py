@@ -76,6 +76,8 @@ class SDHandler(
     SafetyCheckerMixin,
     ModelMixin,
 ):
+    model_type = ModelType.SD
+
     def  __init__(self, *args, **kwargs):
         self._sd_request = None
         self.__current_state = HandlerState.INITIALIZED
@@ -151,9 +153,7 @@ class SDHandler(
         self._generator = None
         self.do_interrupt_image_generation = False
         self.latents_worker = create_worker(LatentsWorker)
-        self.model_status = {}
-        for model_type in ModelType:
-            self.model_status[model_type] = ModelStatus.UNLOADED
+        self._loading_thread = None
 
         self.register(SignalCode.SD_UNLOAD_SIGNAL, self.__on_unload_stablediffusion_signal)
 
@@ -171,11 +171,7 @@ class SDHandler(
             self.__load_image_generator_model_task.cancel_load_model()
             self.logger.info("Cancelled the image generator model loading task.")
         self.current_state = HandlerState.UNLOADED
-        self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-            "model": ModelType.SD,
-            "status": ModelStatus.UNLOADED,
-            "path": ""
-        })
+        self.model_status = self.current_state
 
     @property
     def input_image(self):
@@ -198,9 +194,8 @@ class SDHandler(
         self.unload_scheduler()
 
     def model_status_changed(self, message: dict):
-        model = message["model"]
         status = message["status"]
-        self.model_status[model] = status
+        self.model_status = status
 
     @property
     def is_pipe_loaded(self) -> bool:
@@ -236,7 +231,6 @@ class SDHandler(
         except IndexError:
             return None
 
-    _loading_thread = None
     def load_stable_diffusion(self):
         if self._loading_thread is not None:
             self._loading_thread.join()

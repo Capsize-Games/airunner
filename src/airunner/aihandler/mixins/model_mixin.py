@@ -7,7 +7,7 @@ import time
 
 import numpy as np
 from PySide6.QtWidgets import QApplication
-from typing import List
+from typing import List, Any
 import torch
 from PIL import Image
 from diffusers import StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
@@ -76,6 +76,7 @@ class ModelMixin:
         self.negative_prompt_embeds = None
         self.pooled_prompt_embeds = None
         self.negative_pooled_prompt_embeds = None
+
 
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
 
@@ -181,6 +182,9 @@ class ModelMixin:
 
 
     def load_image_generator_model(self):
+        if not self.settings["sd_enabled"]:
+            return
+
         self.logger.info("Loading image generator model")
         self.load_thread = threading.current_thread()
 
@@ -230,7 +234,7 @@ class ModelMixin:
         return self.__generate()
 
     def model_is_loaded(self, model: ModelType) -> bool:
-        return self.model_status[model] == ModelStatus.LOADED
+        return self.model_status is ModelStatus.LOADED
 
     def apply_tokenizer_to_pipe(self):
         self.__change_sd_tokenizer_status(ModelStatus.LOADED)
@@ -546,11 +550,38 @@ class ModelMixin:
                 has_filters
             )
 
+        if self.settings["auto_export_images"]:
+            self.__export_images(images)
+
         return dict(
             images=images,
             data=self.data,
             nsfw_content_detected=any(nsfw_content_detected),
         )
+
+    def __export_images(self, images: List[Any]):
+        extension = self.settings["image_export_type"]
+        filename = "image"
+        i = 1
+        for image in images:
+            filepath = os.path.expanduser(
+                os.path.join(
+                    self.settings["path_settings"]["image_path"],
+                    f"{filename}.{extension}"
+                )
+            )
+            while os.path.exists(filepath):
+                filename = f"image_{i}"
+                filepath = os.path.expanduser(
+                    os.path.join(
+                        self.settings["path_settings"]["image_path"],
+                        f"{filename}.{extension}"
+                    )
+                )
+                if not os.path.exists(filepath):
+                    break
+                i += 1
+            image.save(filepath)
 
     def __load_generator(self, device=None, seed=None):
         if self.__generator is None:
@@ -620,7 +651,7 @@ class ModelMixin:
         return pipeline_map.get(operation_type)
 
     def __load_model(self):
-        self.logger.debug("Loading model")
+        self.logger.debug("Loading model from ModelMixin")
         if not self.model_path:
             self.logger.error("Model path is empty")
             return
@@ -709,7 +740,12 @@ class ModelMixin:
             self.controlnet_loaded = self.settings["controlnet_enabled"]
         elif self.pipe and self.pipe.device.type == "cpu":
             self.__change_sd_model_status(ModelStatus.LOADING)
-            self.pipe.to(self.device)
+            try:
+                self.pipe.to(self.device)
+            except Exception as e:
+                self.logger.error(f"Failed to move model to {self.device}: {e}")
+                self.__change_sd_model_status(ModelStatus.FAILED)
+                return
             self.__change_sd_model_status(ModelStatus.LOADED)
 
     def __get_pipeline_action(self, action=None):
@@ -789,7 +825,7 @@ class ModelMixin:
         if self.__tokenizer and self.__current_tokenizer_path == self.__tokenizer_path:
             return
         try:
-            self.logger.debug(f"Loading tokenizer from {self.__tokenizer_path}")
+            self.logger.debug(f"ModelMixin: Loading tokenizer from {self.__tokenizer_path}")
             self.__tokenizer = AutoTokenizer.from_pretrained(
                 self.__tokenizer_path,
                 local_files_only=True,

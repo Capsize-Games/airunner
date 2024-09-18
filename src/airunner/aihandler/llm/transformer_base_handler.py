@@ -1,3 +1,4 @@
+import gc
 import os
 import random
 
@@ -11,6 +12,7 @@ from airunner.utils.clear_memory import clear_memory
 
 class TransformerBaseHandler(BaseHandler):
     auto_class_ = None
+    model_type = ModelType.LLM
 
     def __init__(self, *args, do_load_on_init: bool = False, **kwargs):
         self.do_quantize_model = kwargs.pop("do_quantize_model", True)
@@ -56,7 +58,6 @@ class TransformerBaseHandler(BaseHandler):
         self._generator = None
         self.template = None
         self.image = None
-        self.model_type = ModelType.LLM
         self.model_class = "llm"
 
         if self.model_path is None:
@@ -125,7 +126,7 @@ class TransformerBaseHandler(BaseHandler):
         )
 
     def load_model(self):
-        self.logger.debug("Loading model")
+        self.logger.debug("transformer_base_handler.load_model Loading model")
         if self.settings["llm_generator_settings"]["use_api"]:
             self.model = Groq(
                 model=self.settings["llm_generator_settings"]["api_model"],
@@ -156,7 +157,6 @@ class TransformerBaseHandler(BaseHandler):
 
         try:
             self.model_status = ModelStatus.LOADING
-            print("loading path", path)
             self.model = self.auto_class_.from_pretrained(
                 path,
                 **params
@@ -181,6 +181,7 @@ class TransformerBaseHandler(BaseHandler):
             return False
         elif self.model_status is not ModelStatus.LOADED:
             return False
+        self.model_status = ModelStatus.LOADING
         self._processing_request = False
         model_unloaded = self._unload_model()
         tokenizer_unloaded = self._unload_tokenizer()
@@ -192,17 +193,21 @@ class TransformerBaseHandler(BaseHandler):
         ):
             self.logger.debug("Clearing memory")
             clear_memory()
+        self.model_status = ModelStatus.UNLOADED
 
     def _unload_tokenizer(self):
         self.logger.debug("Unloading tokenizer")
         self.tokenizer = None
-        self.model_status = ModelStatus.UNLOADED
+        clear_memory()
         return True
 
     def _unload_model(self):
         self.logger.debug("Unloading model")
-        self.model = None
-        self.model_status = ModelStatus.UNLOADED
+        if self.model:
+            del self.model
+            self.model = None
+            gc.collect()
+            clear_memory()
         return True
 
     def pre_load(self):
@@ -211,7 +216,6 @@ class TransformerBaseHandler(BaseHandler):
         Override this function to add custom pre load functionality.
         :return:
         """
-        self.model_status = ModelStatus.LOADING
         self.current_model_path = self.model_path
 
     def load(self):
@@ -220,8 +224,7 @@ class TransformerBaseHandler(BaseHandler):
             ModelStatus.LOADING
         ):
             return
-        self.logger.debug("Loading model")
-        self.model_status = ModelStatus.LOADING
+        self.logger.debug("Loading model from transformer_base_handler.load")
         do_load_model = self.do_load_model
         do_load_tokenizer = self.tokenizer is None
 
@@ -243,7 +246,6 @@ class TransformerBaseHandler(BaseHandler):
         :return:
         """
         self.logger.error("Define post_load here")
-        self.model_status = ModelStatus.LOADING
 
     def generate(self, prompt, action) -> str:
         return self.do_generate(prompt, action)

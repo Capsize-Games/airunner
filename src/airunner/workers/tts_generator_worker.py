@@ -217,7 +217,7 @@ class TTSGeneratorWorker(Worker):
                             self.tokens = list(remaining_text)
                             break
         if self.do_interrupt:
-            self.on_interrupt_process_signal({})
+            self.on_interrupt_process_signal()
 
     def generate(self, message):
         if self.do_interrupt:

@@ -53,7 +53,10 @@ def get_current_chatbot_property(
             current_bot = current_bot[key]
         return current_bot
     else:
-        return current_bot[property_name]
+        try:
+            return current_bot[property_name]
+        except KeyError:
+            return current_bot["generator_settings"][property_name]
 
 
 def set_current_chatbot_property(
