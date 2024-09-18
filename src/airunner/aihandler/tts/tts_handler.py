@@ -304,8 +304,8 @@ class TTSHandler(BaseHandler):
         try:
             tokenizer = AutoTokenizer.from_pretrained(
                 self.model_path,
-                #device_map=self.device,
-                #torch_dtype=self.torch_dtype,
+                device_map=self.device,
+                torch_dtype=self.torch_dtype,
                 local_files_only=True,
                 trust_remote_code=False
             )
@@ -327,7 +327,9 @@ class TTSHandler(BaseHandler):
                 self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.LOADING, self.processor_path)
                 processor = processor_class_.from_pretrained(
                     self.processor_path,
-                    local_files_only=True
+                    local_files_only=True,
+                    torch_dtype=self.torch_dtype,
+                    device_map=self.device
                 )
                 self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.LOADED, self.processor_path)
                 return processor

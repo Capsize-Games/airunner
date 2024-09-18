@@ -29,7 +29,7 @@ class Ui_generator_form(object):
     def setupUi(self, generator_form):
         if not generator_form.objectName():
             generator_form.setObjectName(u"generator_form")
-        generator_form.resize(955, 946)
+        generator_form.resize(620, 946)
         font = QFont()
         font.setPointSize(8)
         generator_form.setFont(font)
@@ -53,7 +53,7 @@ class Ui_generator_form(object):
         self.stable_diffusion_generator_form.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 951, 870))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 616, 870))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -139,15 +139,6 @@ class Ui_generator_form(object):
         self.gridLayout_2 = QGridLayout(self.layoutWidget)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 9)
-        self.label = QLabel(self.layoutWidget)
-        self.label.setObjectName(u"label")
-        font1 = QFont()
-        font1.setPointSize(8)
-        font1.setBold(True)
-        self.label.setFont(font1)
-
-        self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
-
         self.prompt = QPlainTextEdit(self.layoutWidget)
         self.prompt.setObjectName(u"prompt")
 
@@ -171,6 +162,15 @@ class Ui_generator_form(object):
         self.secondary_prompt.setObjectName(u"secondary_prompt")
 
         self.gridLayout_2.addWidget(self.secondary_prompt, 2, 0, 1, 2)
+
+        self.label = QLabel(self.layoutWidget)
+        self.label.setObjectName(u"label")
+        font1 = QFont()
+        font1.setPointSize(8)
+        font1.setBold(True)
+        self.label.setFont(font1)
+
+        self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
 
         self.generator_form_splitter.addWidget(self.layoutWidget)
         self.layoutWidget1 = QWidget(self.generator_form_splitter)
@@ -301,10 +301,10 @@ class Ui_generator_form(object):
         self.quality_effects.setItemText(2, QCoreApplication.translate("generator_form", u"Upscaled", None))
         self.quality_effects.setItemText(3, QCoreApplication.translate("generator_form", u"Downscaled", None))
 
-        self.label.setText(QCoreApplication.translate("generator_form", u"Prompt", None))
         self.prompt.setPlaceholderText(QCoreApplication.translate("generator_form", u"Enter a prompt...", None))
         self.pushButton.setText(QCoreApplication.translate("generator_form", u"Save Prompts", None))
         self.secondary_prompt.setPlaceholderText(QCoreApplication.translate("generator_form", u"Enter a second prompt...", None))
+        self.label.setText(QCoreApplication.translate("generator_form", u"Prompt", None))
         self.negative_prompt_label.setText(QCoreApplication.translate("generator_form", u"Negative Prompt", None))
         self.negative_prompt.setPlaceholderText(QCoreApplication.translate("generator_form", u"Enter a negative prompt...", None))
         self.secondary_negative_prompt.setPlaceholderText(QCoreApplication.translate("generator_form", u"Enter a second negative prompt...", None))
