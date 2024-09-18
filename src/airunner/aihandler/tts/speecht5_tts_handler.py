@@ -67,7 +67,7 @@ class SpeechT5TTSHandler(TTSHandler):
             vocoder = self.vocoder = SpeechT5HifiGan.from_pretrained(
                 self.vocoder_path,
                 local_files_only=True,
-                torch_dtype=torch.bfloat16,  # Change to bfloat16
+                torch_dtype=self.torch_dtype,
                 device_map=self.device
             )
             self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.LOADED, self.vocoder_path)
@@ -113,13 +113,14 @@ class SpeechT5TTSHandler(TTSHandler):
         inputs = self.processor(
             text=text,
             return_tensors="pt",
-            dtype=torch.float16,
+            torch_dtype=torch.float16  # Ensure inputs are in float16
         )
         inputs = self.move_inputs_to_device(inputs)
 
         self.logger.debug("Generating speech...")
         start = time.time()
-        self.speaker_embeddings.to(self.device)
+        self.speaker_embeddings = self.speaker_embeddings.to(torch.float16).to(self.device)
+        self.vocoder = self.vocoder.to(torch.float16).to(self.device)
 
         try:
             speech = self.model.generate(
@@ -133,11 +134,12 @@ class SpeechT5TTSHandler(TTSHandler):
             self.logger.error(e)
             self.cancel_generated_speech = False
             return None
+
         if not self.cancel_generated_speech:
             self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
             response = speech.cpu().float().numpy()
             self.emit_signal(SignalCode.PROCESS_SPEECH_SIGNAL, {
-                "message": text,#response,
+                "message": text,
                 "role": LLMChatRole.ASSISTANT
             })
             return response
