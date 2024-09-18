@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
     QVBoxLayout, QWidget)
 
 from airunner.widgets.llm.chat_prompt_widget import ChatPromptWidget
+from airunner.widgets.llm.llm_history_widget import LLMHistoryWidget
 import airunner.resources_light_rc
 import airunner.resources_dark_rc
 
@@ -250,14 +251,37 @@ class Ui_generator_form(object):
         self.tab_2 = QWidget()
         self.tab_2.setObjectName(u"tab_2")
         self.gridLayout_5 = QGridLayout(self.tab_2)
+        self.gridLayout_5.setSpacing(0)
         self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.pushButton_2 = QPushButton(self.tab_2)
+        self.pushButton_2.setObjectName(u"pushButton_2")
+
+        self.gridLayout_5.addWidget(self.pushButton_2, 0, 0, 1, 1)
+
         self.chat_prompt_widget = ChatPromptWidget(self.tab_2)
         self.chat_prompt_widget.setObjectName(u"chat_prompt_widget")
 
-        self.gridLayout_5.addWidget(self.chat_prompt_widget, 0, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.chat_prompt_widget, 1, 0, 1, 1)
 
         self.generator_form_tabs.addTab(self.tab_2, "")
+        self.llm_history_widget_tab = QWidget()
+        self.llm_history_widget_tab.setObjectName(u"llm_history_widget_tab")
+        self.gridLayout_6 = QGridLayout(self.llm_history_widget_tab)
+        self.gridLayout_6.setSpacing(0)
+        self.gridLayout_6.setObjectName(u"gridLayout_6")
+        self.gridLayout_6.setContentsMargins(0, 0, 0, 0)
+        self.pushButton_3 = QPushButton(self.llm_history_widget_tab)
+        self.pushButton_3.setObjectName(u"pushButton_3")
+
+        self.gridLayout_6.addWidget(self.pushButton_3, 0, 0, 1, 1)
+
+        self.llm_history_widget = LLMHistoryWidget(self.llm_history_widget_tab)
+        self.llm_history_widget.setObjectName(u"llm_history_widget")
+
+        self.gridLayout_6.addWidget(self.llm_history_widget, 1, 0, 1, 1)
+
+        self.generator_form_tabs.addTab(self.llm_history_widget_tab, "")
 
         self.gridLayout_4.addWidget(self.generator_form_tabs, 0, 0, 1, 1)
 
@@ -282,6 +306,8 @@ class Ui_generator_form(object):
         self.secondary_prompt.textChanged.connect(generator_form.handle_second_prompt_changed)
         self.secondary_negative_prompt.textChanged.connect(generator_form.handle_second_prompt_changed)
         self.quality_effects.textActivated.connect(generator_form.handle_quality_effects_changed)
+        self.pushButton_2.clicked.connect(generator_form.past_conversations_clicked)
+        self.pushButton_3.clicked.connect(generator_form.past_conversations_clicked)
 
         self.generator_form_tabs.setCurrentIndex(0)
 
@@ -317,6 +343,9 @@ class Ui_generator_form(object):
 #endif // QT_CONFIG(tooltip)
         self.interrupt_button.setText("")
         self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.tab), QCoreApplication.translate("generator_form", u"Tab 1", None))
+        self.pushButton_2.setText(QCoreApplication.translate("generator_form", u"Past Conversations", None))
         self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.tab_2), QCoreApplication.translate("generator_form", u"Tab 2", None))
+        self.pushButton_3.setText(QCoreApplication.translate("generator_form", u"Chat Prompt", None))
+        self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.llm_history_widget_tab), QCoreApplication.translate("generator_form", u"Page", None))
     # retranslateUi
 
