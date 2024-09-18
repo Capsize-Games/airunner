@@ -2,8 +2,6 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
 from airunner.enums import SignalCode, LLMActionType, ModelType, ModelStatus
-from airunner.exceptions import PromptTemplateNotFoundExeption
-from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.llm.loading_widget import LoadingWidget
@@ -29,6 +27,7 @@ class ChatPromptWidget(BaseWidget):
         self.action_menu_displayed = None
         self.action_menu_displayed = None
         self.messages_spacer = None
+        self.chat_loaded = False
 
         self.ui.action.blockSignals(True)
         # iterate over each LLMActionType enum and add its value to the llm_tool_name
@@ -39,13 +38,15 @@ class ChatPromptWidget(BaseWidget):
         self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
         self.register(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, self.on_hear_signal)
+        self.register(SignalCode.SET_CONVERSATION, self.on_set_conversation)
+        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.held_message = None
         self._disabled = False
 
     @property
     def current_generator(self):
         return self.settings["current_llm_generator"]
-    
+
     @Slot(str)
     def handle_token_signal(self, val: str):
         if val != "[END]":
@@ -56,6 +57,26 @@ class ChatPromptWidget(BaseWidget):
             self.stop_progress_bar()
             self.generating = False
             self.enable_send_button()
+
+    def on_model_status_changed_signal(self, data):
+        if data["model"] == ModelType.LLM:
+            self.chat_loaded = data["status"] is ModelStatus.LOADED
+
+        if not self.chat_loaded:
+            self.disable_send_button()
+        else:
+            self.enable_send_button()
+
+    def on_set_conversation(self, message):
+        print(message["messages"])
+        for message in message["messages"]:
+            self.add_message_to_conversation(
+                name=message["name"],
+                message=message["content"],
+                is_bot=message["is_bot"],
+                first_message=False,
+                use_loading_widget=False
+            )
 
     def on_hear_signal(self, data: dict):
         transcription = data["transcription"]
@@ -191,7 +212,8 @@ class ChatPromptWidget(BaseWidget):
         # Override the method
         self.ui.prompt.keyPressEvent = self.handle_key_press
 
-        self.disable_send_button()
+        if not self.chat_loaded:
+            self.disable_send_button()
 
         self.ui.conversation.hide()
         self.ui.chat_container.show()
@@ -296,7 +318,8 @@ class ChatPromptWidget(BaseWidget):
         name,
         message,
         is_bot, 
-        first_message=True
+        first_message=True,
+        use_loading_widget=True
     ):
         if not first_message:
             # get the last widget from the scrollAreaWidgetContents.layout()
@@ -314,14 +337,14 @@ class ChatPromptWidget(BaseWidget):
 
         self.remove_spacer()
 
-        if is_bot:
+        if is_bot and use_loading_widget:
             self.remove_loading_widget()
 
         if message != "":
             widget = MessageWidget(name=name, message=message, is_bot=is_bot)
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
 
-        if not is_bot:
+        if not is_bot and use_loading_widget:
             self.add_loading_widget()
 
         self.add_spacer()
