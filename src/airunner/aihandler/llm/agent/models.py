@@ -11,6 +11,7 @@ class Conversation(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
     title = Column(String, nullable=True)  # New column added
+    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
 
 class Message(Base):
     __tablename__ = 'messages'
