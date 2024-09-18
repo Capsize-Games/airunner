@@ -83,5 +83,15 @@ class AgentDatabaseHandler:
         return conversation_id
 
     def get_all_conversations(self):
-        with self.get_db_session() as session:
-            return session.query(Conversation).all()
+        session = self.Session()
+        conversations = session.query(Conversation).all()
+        session.close()
+        return conversations
+
+    def delete_conversation(self, conversation_id):
+        session = self.Session()
+        conversation = session.query(Conversation).filter_by(id=conversation_id).first()
+        if conversation:
+            session.delete(conversation)
+            session.commit()
+        session.close()
