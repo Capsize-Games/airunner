@@ -17,10 +17,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
-    QPushButton, QScrollArea, QSizePolicy, QSplitter,
-    QVBoxLayout, QWidget)
-
-from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
+    QPushButton, QScrollArea, QSizePolicy, QVBoxLayout,
+    QWidget)
 
 class Ui_bot_preferences(object):
     def setupUi(self, bot_preferences):
@@ -30,16 +28,13 @@ class Ui_bot_preferences(object):
         self.gridLayout_4 = QGridLayout(bot_preferences)
         self.gridLayout_4.setSpacing(0)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
-        self.gridLayout_4.setContentsMargins(0, 0, -1, 0)
-        self.splitter = QSplitter(bot_preferences)
-        self.splitter.setObjectName(u"splitter")
-        self.splitter.setOrientation(Qt.Orientation.Vertical)
-        self.scrollArea = QScrollArea(self.splitter)
+        self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.scrollArea = QScrollArea(bot_preferences)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 697, 1196))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 720, 1260))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setVerticalSpacing(10)
@@ -106,7 +101,7 @@ class Ui_bot_preferences(object):
         self.target_files.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 651, 148))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 674, 148))
         self.gridLayout_10 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_10.setObjectName(u"gridLayout_10")
         self.target_files.setWidget(self.scrollAreaWidgetContents)
@@ -229,12 +224,8 @@ class Ui_bot_preferences(object):
         self.gridLayout.addWidget(self.mood_groupbox, 7, 0, 1, 1)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
-        self.splitter.addWidget(self.scrollArea)
-        self.llm_settings_widget = LLMSettingsWidget(self.splitter)
-        self.llm_settings_widget.setObjectName(u"llm_settings_widget")
-        self.splitter.addWidget(self.llm_settings_widget)
 
-        self.gridLayout_4.addWidget(self.splitter, 0, 0, 1, 1)
+        self.gridLayout_4.addWidget(self.scrollArea, 0, 0, 1, 1)
 
 
         self.retranslateUi(bot_preferences)

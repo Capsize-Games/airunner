@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>955</width>
+    <width>620</width>
     <height>946</height>
    </rect>
   </property>
@@ -78,7 +78,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>951</width>
+            <width>616</width>
             <height>870</height>
            </rect>
           </property>
@@ -225,19 +225,6 @@
                <property name="bottomMargin">
                 <number>9</number>
                </property>
-               <item row="0" column="0">
-                <widget class="QLabel" name="label">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Prompt</string>
-                 </property>
-                </widget>
-               </item>
                <item row="1" column="0" colspan="2">
                 <widget class="QPlainTextEdit" name="prompt">
                  <property name="placeholderText">
@@ -273,6 +260,19 @@
                 <widget class="QPlainTextEdit" name="secondary_prompt">
                  <property name="placeholderText">
                   <string>Enter a second prompt...</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0">
+                <widget class="QLabel" name="label">
+                 <property name="font">
+                  <font>
+                   <pointsize>8</pointsize>
+                   <bold>true</bold>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Prompt</string>
                  </property>
                 </widget>
                </item>
@@ -446,8 +446,50 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
+       <property name="spacing">
+        <number>0</number>
+       </property>
        <item row="0" column="0">
+        <widget class="QPushButton" name="pushButton_2">
+         <property name="text">
+          <string>Past Conversations</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
         <widget class="ChatPromptWidget" name="chat_prompt_widget" native="true"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="llm_history_widget_tab">
+      <attribute name="title">
+       <string>Page</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_6">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QPushButton" name="pushButton_3">
+         <property name="text">
+          <string>Chat Prompt</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="LLMHistoryWidget" name="llm_history_widget" native="true"/>
        </item>
       </layout>
      </widget>
@@ -460,6 +502,12 @@
    <class>ChatPromptWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/llm/chat_prompt_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LLMHistoryWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/llm/llm_history_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
@@ -488,7 +536,7 @@
    <slot>action_clicked_button_save_prompts()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>940</x>
+     <x>605</x>
      <y>46</y>
     </hint>
     <hint type="destinationlabel">
@@ -504,7 +552,7 @@
    <slot>handle_interrupt_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>942</x>
+     <x>607</x>
      <y>933</y>
     </hint>
     <hint type="destinationlabel">
@@ -520,7 +568,7 @@
    <slot>handle_generate_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>906</x>
+     <x>571</x>
      <y>933</y>
     </hint>
     <hint type="destinationlabel">
@@ -625,6 +673,38 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>clicked()</signal>
+   <receiver>generator_form</receiver>
+   <slot>past_conversations_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>201</x>
+     <y>42</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>24</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_3</sender>
+   <signal>clicked()</signal>
+   <receiver>generator_form</receiver>
+   <slot>past_conversations_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>170</x>
+     <y>30</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>440</x>
+     <y>-14</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>handle_prompt_changed()</slot>
@@ -644,5 +724,6 @@
   <slot>handle_second_prompt_changed()</slot>
   <slot>handle_second_negative_prompt_changed()</slot>
   <slot>handle_quality_effects_changed(QString)</slot>
+  <slot>past_conversations_clicked()</slot>
  </slots>
 </ui>
