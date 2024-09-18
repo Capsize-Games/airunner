@@ -1,4 +1,4 @@
-from transformers import RagTokenizer, AutoTokenizer
+from transformers import RagTokenizer, AutoTokenizer, RagRetriever
 from airunner.aihandler.llm.transformer_base_handler import TransformerBaseHandler
 from airunner.enums import SignalCode, ModelStatus
 
@@ -8,6 +8,8 @@ class TokenizerHandler(TransformerBaseHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.rag_tokenizer = None
+        self.rag_retriever = None
         self.register(SignalCode.LLM_TOKENIZER_LOAD_SIGNAL, self.on_load_tokenizer_signal)
         self.register(SignalCode.LLM_TOKENIZER_UNLOAD_SIGNAL, self.on_unload_tokenizer_signal)
 
@@ -43,12 +45,10 @@ class TokenizerHandler(TransformerBaseHandler):
         if self.chat_template:
             kwargs["chat_template"] = self.chat_template
         try:
-            self.model_status = ModelStatus.LOADING
             self.tokenizer = self.tokenizer_class_.from_pretrained(
                 path,
                 **kwargs,
             )
-            self.model_status = ModelStatus.LOADED
             self.logger.debug("Tokenizer loaded")
         except Exception as e:
             self.logger.error(e)

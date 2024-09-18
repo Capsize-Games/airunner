@@ -1,4 +1,3 @@
-import threading
 import traceback
 import numpy as np
 from PySide6.QtCore import QObject, Signal, Slot, QThread
@@ -80,6 +79,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal),
             (SignalCode.TTS_REQUEST, self.on_tts_request),
             (SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal),
+            (SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal),
         ]
         for signal in signals:
             self.register(signal[0], signal[1])
@@ -136,6 +136,10 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         from airunner.workers.audio_processor_worker import AudioProcessorWorker
         self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
         self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
+
+    def on_unload_llm_signal(self, message):
+        if self.llm_generate_worker:
+            self.llm_generate_worker.on_unload_llm_signal(message)
 
     def on_llm_request_worker_response_signal(self, message: dict):
         if self.llm_generate_worker:

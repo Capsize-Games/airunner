@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='airunner',
-    version="3.0.0.dev17",
+    name="airunner",
+    version="3.0.0.dev18",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -34,8 +34,8 @@ setup(
         "datasets==2.21.0",
         "sentence_transformers==3.0.1",
         "sounddevice==0.5.0",  # Required for tts and stt
-        "pyttsx3=2.91",  # Required for tts
-        "cryptography==43.0.0",
+        "pyttsx3==2.91",  # Required for tts
+        "cryptography==43.0.1",
 
         # Stable Diffusion Dependencies
         "diffusers==0.30.1",
@@ -52,12 +52,14 @@ setup(
         "facehuggershield==0.1.11",
 
         # Llama index
-        "llama-index==0.11.1",
+        "llama-index==0.11.7",
         "llama-index-readers-file==0.2.0",
         "llama-index-readers-web==0.2.1",
         "llama-index-llms-huggingface==0.3.1",
         "llama-index-llms-groq==0.2.0",
         "llama-index-embeddings-mistralai==0.2.0",
+        "EbookLib==0.18",
+        "html2text==2024.2.26"
     ],
     dependency_links=[
     ],

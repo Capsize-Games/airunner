@@ -15,10 +15,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
-    QHBoxLayout, QPlainTextEdit, QProgressBar, QPushButton,
-    QScrollArea, QSizePolicy, QSplitter, QTextEdit,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QFormLayout, QFrame,
+    QGridLayout, QHBoxLayout, QLabel, QPlainTextEdit,
+    QProgressBar, QPushButton, QScrollArea, QSizePolicy,
+    QSplitter, QTextEdit, QVBoxLayout, QWidget)
 
 class Ui_chat_prompt(object):
     def setupUi(self, chat_prompt):
@@ -83,26 +83,19 @@ class Ui_chat_prompt(object):
         self.horizontalLayout.addWidget(self.clear_conversatiion_button)
 
 
-        self.gridLayout_3.addLayout(self.horizontalLayout, 1, 0, 1, 1)
+        self.gridLayout_3.addLayout(self.horizontalLayout, 2, 0, 1, 1)
 
         self.scrollArea = QScrollArea(chat_prompt)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 595, 924))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 595, 877))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
         self.gridLayout.setContentsMargins(10, 0, 10, 0)
-        self.action = QComboBox(self.scrollAreaWidgetContents_2)
-        self.action.setObjectName(u"action")
-        self.action.setMinimumSize(QSize(0, 30))
-        self.action.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-
-        self.gridLayout.addWidget(self.action, 1, 0, 1, 1)
-
         self.chat_prompt_splitter = QSplitter(self.scrollAreaWidgetContents_2)
         self.chat_prompt_splitter.setObjectName(u"chat_prompt_splitter")
         self.chat_prompt_splitter.setOrientation(Qt.Orientation.Vertical)
@@ -118,7 +111,7 @@ class Ui_chat_prompt(object):
         self.chat_container.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 573, 440))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 573, 417))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
@@ -149,9 +142,38 @@ class Ui_chat_prompt(object):
 
         self.gridLayout.addWidget(self.chat_prompt_splitter, 0, 0, 1, 1)
 
+        self.action = QComboBox(self.scrollAreaWidgetContents_2)
+        self.action.setObjectName(u"action")
+        self.action.setMinimumSize(QSize(0, 30))
+        self.action.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+
+        self.gridLayout.addWidget(self.action, 1, 0, 1, 1)
+
         self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
 
         self.gridLayout_3.addWidget(self.scrollArea, 0, 0, 1, 1)
+
+        self.formLayout = QFormLayout()
+        self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setHorizontalSpacing(10)
+        self.formLayout.setVerticalSpacing(0)
+        self.formLayout.setContentsMargins(10, 10, 10, 10)
+        self.label = QLabel(chat_prompt)
+        self.label.setObjectName(u"label")
+        font1 = QFont()
+        font1.setBold(True)
+        self.label.setFont(font1)
+
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label)
+
+        self.mood_label = QLabel(chat_prompt)
+        self.mood_label.setObjectName(u"mood_label")
+        self.mood_label.setWordWrap(True)
+
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.mood_label)
+
+
+        self.gridLayout_3.addLayout(self.formLayout, 1, 0, 1, 1)
 
 
         self.retranslateUi(chat_prompt)
@@ -178,5 +200,7 @@ class Ui_chat_prompt(object):
         self.clear_conversatiion_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Clear conversation", None))
 #endif // QT_CONFIG(tooltip)
         self.clear_conversatiion_button.setText("")
+        self.label.setText(QCoreApplication.translate("chat_prompt", u"Chatbot Mood:", None))
+        self.mood_label.setText(QCoreApplication.translate("chat_prompt", u"TextLabel", None))
     # retranslateUi
 

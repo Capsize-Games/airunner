@@ -67,7 +67,7 @@ class SpeechT5TTSHandler(TTSHandler):
             vocoder = self.vocoder = SpeechT5HifiGan.from_pretrained(
                 self.vocoder_path,
                 local_files_only=True,
-                torch_dtype=torch.float16,
+                torch_dtype=self.torch_dtype,
                 device_map=self.device
             )
             self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.LOADED, self.vocoder_path)
@@ -85,7 +85,7 @@ class SpeechT5TTSHandler(TTSHandler):
                 self.speaker_embeddings_path
             )
             if self.use_cuda and self.speaker_embeddings is not None:
-                self.speaker_embeddings = self.speaker_embeddings.half().cuda()
+                self.speaker_embeddings = self.speaker_embeddings.to(torch.bfloat16).cuda()  # Change to bfloat16
 
             self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.LOADED, self.speaker_embeddings_path)
 
@@ -112,12 +112,16 @@ class SpeechT5TTSHandler(TTSHandler):
 
         inputs = self.processor(
             text=text,
-            return_tensors="pt"
+            return_tensors="pt",
+            torch_dtype=torch.float16  # Ensure inputs are in float16
         )
         inputs = self.move_inputs_to_device(inputs)
 
         self.logger.debug("Generating speech...")
         start = time.time()
+        self.speaker_embeddings = self.speaker_embeddings.to(torch.float16).to(self.device)
+        self.vocoder = self.vocoder.to(torch.float16).to(self.device)
+
         try:
             speech = self.model.generate(
                 **inputs,
@@ -130,11 +134,12 @@ class SpeechT5TTSHandler(TTSHandler):
             self.logger.error(e)
             self.cancel_generated_speech = False
             return None
+
         if not self.cancel_generated_speech:
             self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
             response = speech.cpu().float().numpy()
             self.emit_signal(SignalCode.PROCESS_SPEECH_SIGNAL, {
-                "message": text,#response,
+                "message": text,
                 "role": LLMChatRole.ASSISTANT
             })
             return response

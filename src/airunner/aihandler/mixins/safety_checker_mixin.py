@@ -64,7 +64,7 @@ class SafetyCheckerMixin:
 
     @property
     def feature_extractor_ready(self) -> bool:
-        return self.model_is_loaded(ModelType.FEATURE_EXTRACTOR)
+        return self.__feature_extractor_model_status is ModelStatus.LOADED
 
     @property
     def safety_checker_ready(self) -> bool:

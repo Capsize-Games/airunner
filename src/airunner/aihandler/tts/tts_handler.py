@@ -55,13 +55,22 @@ class TTSHandler(BaseHandler):
         self.speaker_embeddings = None
         self.dataset = None
         self.sentences = []
-        self.tts_enabled = self.settings["tts_enabled"]
         self.engine = None
         self.do_interrupt = False
         self.cancel_generated_speech = False
         self.paused = False
         self.model_type = ModelType.TTS
         self.model_class = "tts"
+
+    @property
+    def tts_enabled(self):
+        return self.settings["tts_enabled"]
+
+    @tts_enabled.setter
+    def tts_enabled(self, value):
+        settings = self.settings
+        settings["tts_enabled"] = value
+        self.settings = settings
 
     @property
     def cuda_index(self):
@@ -189,17 +198,14 @@ class TTSHandler(BaseHandler):
         self.do_interrupt = False
         self.paused = False
 
-
-    def application_settings_changed_signal(self):
-        tts_enabled = self.settings["tts_enabled"]
-        if tts_enabled != self.tts_enabled:
-            self.tts_enabled = tts_enabled
-            if not self.tts_enabled:
-                self.unload()
-                self.logger.debug("Text to Speech is disabled")
-            else:
-                self.initialize()
-                self.logger.debug("Text to Speech is enabled")
+    #
+    # def application_settings_changed_signal(self):
+    #     if not self.tts_enabled:
+    #         self.unload()
+    #         self.logger.debug("Text to Speech is disabled")
+    #     else:
+    #         self.initialize()
+    #         self.logger.debug("Text to Speech is enabled")
 
     def move_model(self, to_cpu: bool = False):
         if to_cpu and self.do_offload_to_cpu:
@@ -239,12 +245,11 @@ class TTSHandler(BaseHandler):
         self.load(target_model)
 
     def load(self, target_model=None):
-        if self.tts_enabled:
-            self.logger.debug("Text to Speech is disabled")
+        if self.tts_enabled and not self.loaded:
             self.logger.debug(f"Loading {target_model}...")
             target_model = target_model or self.current_model
             if self.current_model is None or self.model is None:
-                self.model = self.load_model()
+                self.load_model()
             if self.vocoder is None:
                 self.vocoder = self.load_vocoder()
             if self.processor is None:
@@ -261,24 +266,24 @@ class TTSHandler(BaseHandler):
             self.loaded = True
 
     def unload(self):
-        self.logger.debug("Unloading")
-        self.loaded = False
-        self.unload_model()
-        self.unload_processor()
-        self.unload_vocoder()
-        self.unload_speaker_embeddings()
-        self.unload_tokenizer()
-        self.unload_dataset()
+        if self.loaded:
+            self.logger.debug("Unloading")
+            self.loaded = False
+            self.unload_model()
+            self.unload_processor()
+            self.unload_vocoder()
+            self.unload_speaker_embeddings()
+            self.unload_tokenizer()
+            self.unload_dataset()
 
     def run(self):
         self.initialize()
 
     def load_model(self):
-        self.logger.debug("Loading Model")
         model_class_ = self.model_class_
         if model_class_ is None:
             return
-
+        self.logger.debug(f"Loading model {self.model_path}")
         try:
             self.change_model_status(ModelType.TTS, ModelStatus.LOADING, self.model_path)
             model = model_class_.from_pretrained(
@@ -288,9 +293,9 @@ class TTSHandler(BaseHandler):
                 device_map=self.device
             )
             self.change_model_status(ModelType.TTS, ModelStatus.LOADED, self.model_path)
-            return model
+            self.model = model
         except EnvironmentError as _e:
-            self.logger.error("Failed to load model")
+            self.logger.error(f"Failed to load model {_e}")
             self.change_model_status(ModelType.TTS, ModelStatus.FAILED, self.model_path)
 
     def load_tokenizer(self):
@@ -299,8 +304,8 @@ class TTSHandler(BaseHandler):
         try:
             tokenizer = AutoTokenizer.from_pretrained(
                 self.model_path,
-                #device_map=self.device,
-                #torch_dtype=self.torch_dtype,
+                device_map=self.device,
+                torch_dtype=self.torch_dtype,
                 local_files_only=True,
                 trust_remote_code=False
             )
@@ -322,7 +327,9 @@ class TTSHandler(BaseHandler):
                 self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.LOADING, self.processor_path)
                 processor = processor_class_.from_pretrained(
                     self.processor_path,
-                    local_files_only=True
+                    local_files_only=True,
+                    torch_dtype=self.torch_dtype,
+                    device_map=self.device
                 )
                 self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.LOADED, self.processor_path)
                 return processor
@@ -466,18 +473,12 @@ class TTSHandler(BaseHandler):
         if use_cuda:
             self.logger.debug("Moving inputs to CUDA")
             try:
-                inputs["input_ids"] = inputs["input_ids"].to(self.device)
-                inputs["attention_mask"] = inputs["attention_mask"].to(self.device)
+                for key in ("input_ids", "attention_mask"):
+                    inputs[key] = inputs[key].to(self.device)
+
                 if "history_prompt" in inputs:
-                    inputs["history_prompt"]["semantic_prompt"] = inputs["history_prompt"]["semantic_prompt"].to(
-                        self.device
-                    )
-                    inputs["history_prompt"]["coarse_prompt"] = inputs["history_prompt"]["coarse_prompt"].to(
-                        self.device
-                    )
-                    inputs["history_prompt"]["fine_prompt"] = inputs["history_prompt"]["fine_prompt"].to(
-                        self.device
-                    )
+                    for key in ("semantic_prompt", "coarse_prompt", "fine_prompt"):
+                        inputs["history_prompt"][key] = inputs["history_prompt"][key].to(self.device)
             except AttributeError as e:
                 self.logger.error("Failed to move inputs to CUDA")
                 self.logger.error(e)

@@ -1,10 +1,11 @@
 import time
 from PIL import Image
 
-from PySide6.QtCore import Signal, QRect
+from PySide6.QtCore import Signal, QRect, Slot
 from PySide6.QtWidgets import QApplication
 
-from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion
+from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion, \
+    ModelStatus, ModelType
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.random_seed import random_seed
@@ -25,6 +26,7 @@ class GeneratorForm(BaseWidget):
         self.current_secondary_prompt_value = None
         self.current_secondary_negative_prompt_value = None
         self.initialized = False
+        self.showing_past_conversations = False
         self.signal_handlers = {
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.SD_GENERATE_IMAGE_SIGNAL: self.on_generate_image_signal,
@@ -35,7 +37,17 @@ class GeneratorForm(BaseWidget):
             SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.handle_generate_image_from_image,
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
+            SignalCode.SET_CONVERSATION: self.past_conversations_clicked,
         }
+
+    @Slot()
+    def past_conversations_clicked(self):
+        self.showing_past_conversations = not self.showing_past_conversations
+        if self.showing_past_conversations:
+            self.ui.generator_form_tabs.setCurrentIndex(2)
+        else:
+            self.ui.generator_form_tabs.setCurrentIndex(1)
+
 
     def toggle_secondary_prompts(self):
         settings = self.settings

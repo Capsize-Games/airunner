@@ -96,6 +96,7 @@ class CustomScene(
             (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.on_paste_image_from_clipboard),
             (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.export_image),
             (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.import_image),
+            (SignalCode.CANVAS_APPLY_FILTER_SIGNAL, self.handle_apply_filter),
             (SignalCode.CANVAS_CANCEL_FILTER_SIGNAL, self.handle_cancel_filter),
             (SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, self.handle_preview_filter),
             (SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, self.on_load_image_from_path),
@@ -213,6 +214,9 @@ class CustomScene(
         if self.settings["resize_on_paste"]:
             image = self.resize_image(image)
         self.add_image_to_scene(image)
+
+    def handle_apply_filter(self, message):
+        self.apply_filter(message)
 
     def handle_cancel_filter(self):
         image = self.cancel_filter()
