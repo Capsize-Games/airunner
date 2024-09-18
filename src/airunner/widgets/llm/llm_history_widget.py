@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy
+from PySide6.QtWidgets import QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QHBoxLayout
 
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
@@ -21,9 +21,14 @@ class LLMHistoryWidget(BaseWidget):
         layout = QVBoxLayout()
 
         for conversation in conversations:
+            h_layout = QHBoxLayout()
             button = QPushButton(conversation.title)
             button.clicked.connect(lambda _, c=conversation: self.on_conversation_click(c))
-            layout.addWidget(button)
+            delete_button = QPushButton("Delete")
+            delete_button.clicked.connect(lambda _, widget=h_layout, c=conversation: self.on_delete_conversation(widget, c))
+            h_layout.addWidget(button)
+            h_layout.addWidget(delete_button)
+            layout.addLayout(h_layout)
 
         # Add a vertical spacer at the end
         spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -35,3 +40,13 @@ class LLMHistoryWidget(BaseWidget):
         self.emit_signal(SignalCode.LOAD_CONVERSATION, {
             "conversation_id": conversation.id
         })
+
+    def on_delete_conversation(self, layout, conversation):
+        self.database_handler.delete_conversation(conversation.id)
+        for i in reversed(range(layout.count())):
+            widget = layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+        parent_layout = self.ui.conversations_scroll_area.layout()
+        if parent_layout:
+            parent_layout.removeItem(layout)
