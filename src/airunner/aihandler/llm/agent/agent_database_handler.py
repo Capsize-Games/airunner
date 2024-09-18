@@ -28,17 +28,21 @@ class AgentDatabaseHandler:
                 {
                     "role": message.role,
                     "content": message.content,
+                    "name": message.name,
+                    "is_bot": message.is_bot,
                     "timestamp": message.timestamp,
                     "conversation_id": message.conversation_id
                 } for message in messages
             ]
 
-    def add_message_to_history(self, content, role, conversation_id):
+    def add_message_to_history(self, content, role, name, is_bot, conversation_id):
         timestamp = datetime.datetime.now()  # Ensure timestamp is a datetime object
         with self.get_db_session() as session:
             message = Message(
                 role=role,
                 content=content,
+                name=name,
+                is_bot=is_bot,
                 timestamp=timestamp,
                 conversation_id=conversation_id
             )
@@ -47,7 +51,10 @@ class AgentDatabaseHandler:
 
     def create_conversation(self):
         with self.get_db_session() as session:
-            conversation = Conversation(timestamp=datetime.datetime.utcnow())
+            conversation = Conversation(
+                timestamp=datetime.datetime.utcnow(),
+                title=""
+            )
             session.add(conversation)
             session.commit()
             return conversation.id
@@ -69,6 +76,12 @@ class AgentDatabaseHandler:
             self.add_message_to_history(
                 content=message["content"],
                 role=message["role"],
+                name=message["name"],
+                is_bot=message["is_bot"],
                 conversation_id=conversation_id
             )
         return conversation_id
+
+    def get_all_conversations(self):
+        with self.get_db_session() as session:
+            return session.query(Conversation).all()
