@@ -3,10 +3,10 @@ def prepare_llm_generate_kwargs(settings):
 
     min_val = 0.0001
 
-    length_penalty = data["length_penalty"] / 1000
-    repetition_penalty = data["repetition_penalty"] / 100
-    top_p = data["top_p"] / 1000
-    temperature = data["temperature"] / 10000
+    length_penalty = data["length_penalty"] / 1000.0
+    repetition_penalty = data["repetition_penalty"] / 100.0
+    top_p = data["top_p"] / 1000.0
+    temperature = data["temperature"] / 10000.0
 
     if length_penalty < min_val:
         length_penalty = min_val
@@ -19,7 +19,7 @@ def prepare_llm_generate_kwargs(settings):
 
     if temperature < min_val:
         temperature = min_val
-    
+
     return dict(
         length_penalty=length_penalty,
         repetition_penalty=repetition_penalty,
