@@ -1,7 +1,7 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
-from airunner.enums import SignalCode, LLMActionType
+from airunner.enums import SignalCode, LLMActionType, ModelType, ModelStatus
 from airunner.exceptions import PromptTemplateNotFoundExeption
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.widgets.base_widget import BaseWidget
@@ -40,6 +40,7 @@ class ChatPromptWidget(BaseWidget):
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
         self.register(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, self.on_hear_signal)
         self.held_message = None
+        self._disabled = False
 
     @property
     def current_generator(self):
@@ -176,7 +177,11 @@ class ChatPromptWidget(BaseWidget):
             self.register(SignalCode.STT_HEAR_SIGNAL, self.on_hear_signal)
             self.register(SignalCode.LLM_TOKEN_SIGNAL, self.on_token_signal)
             self.register(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, self.on_add_bot_message_to_conversation)
+            self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed)
+            self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed)
             self.registered = True
+
+        self.set_chatbot_mood()
 
         # handle return pressed on QPlainTextEdit
         # there is no returnPressed signal for QPlainTextEdit
@@ -186,8 +191,26 @@ class ChatPromptWidget(BaseWidget):
         # Override the method
         self.ui.prompt.keyPressEvent = self.handle_key_press
 
+        self.disable_send_button()
+
         self.ui.conversation.hide()
         self.ui.chat_container.show()
+
+    def on_model_status_changed(self, data):
+        print(data)
+        if data["model"] == ModelType.LLM:
+            if data["status"] is ModelStatus.LOADED:
+                self.enable_send_button()
+            else:
+                self.disable_send_button()
+
+    def set_chatbot_mood(self):
+        chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
+        chatbot_mood = self.settings["llm_generator_settings"]["saved_chatbots"][chatbot_name]["bot_mood"]
+        self.ui.mood_label.setText(chatbot_mood)
+
+    def on_application_settings_changed(self, data: dict):
+        self.set_chatbot_mood()
 
     def llm_action_changed(self, val: str):
         settings = self.settings
@@ -211,16 +234,18 @@ class ChatPromptWidget(BaseWidget):
 
     def disable_send_button(self):
         self.ui.send_button.setEnabled(False)
+        self._disabled = True
 
     def enable_send_button(self):
         self.ui.send_button.setEnabled(True)
+        self._disabled = False
 
     def response_text_changed(self):
         pass
 
     def handle_key_press(self, event):
         if event.key() == Qt.Key.Key_Return:
-            if event.modifiers() != Qt.KeyboardModifier.ShiftModifier:
+            if not self._disabled and event.modifiers() != Qt.KeyboardModifier.ShiftModifier:
                 self.do_generate()
                 return
         # Call the original method

@@ -221,6 +221,11 @@ class CausalLMTransformerBaseHandler(
 
     def do_generate(self, prompt, action):
         self.logger.debug("Generating response")
+        current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][
+            self.settings["llm_generator_settings"]["current_chatbot"]
+        ]
+        if action is LLMActionType.CHAT and current_bot["use_mood"]:
+            action = LLMActionType.UPDATE_MOOD
         self.chat_agent.run(
             prompt,
             action

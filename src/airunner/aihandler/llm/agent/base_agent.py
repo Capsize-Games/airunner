@@ -1,10 +1,12 @@
 import datetime
+import sqlite3
 import time
 import traceback
 from typing import AnyStr
 import torch
 from PySide6.QtCore import QObject
 
+from airunner.aihandler.llm.agent.agent_database_handler import AgentDatabaseHandler
 from airunner.aihandler.llm.agent.agent_llamaindex_mixin import AgentLlamaIndexMixin
 from airunner.aihandler.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
 from airunner.aihandler.logger import Logger
@@ -43,14 +45,17 @@ class BaseAgent(
         self.tools = kwargs.pop("tools", None)
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
+        self.database_handler = AgentDatabaseHandler()
+        self.conversation_id = self.database_handler.create_conversation()  # Create a new conversation
+        self.history = self.database_handler.load_history_from_db(self.conversation_id)  # Load history by conversation ID
         super().__init__(*args, **kwargs)
         self.prompt = ""
-        self.history = []
         self.thread = None
         self.do_interrupt = False
         self.register(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history)
         self.response_worker = create_worker(AgentWorker)
         self.load_rag(model=self.model, tokenizer=self.tokenizer)
+
 
     @property
     def available_actions(self):
@@ -74,7 +79,7 @@ class BaseAgent(
         if self.action == LLMActionType.APPLICATION_COMMAND:
             chatbot_name = "Agent"
         else:
-            chatbot_name = "Chatbot"
+            chatbot_name = self.llm_generator_settings["current_chatbot"]
         return chatbot_name
 
     @property
@@ -98,6 +103,9 @@ class BaseAgent(
     @bot_mood.setter
     def bot_mood(self, value: str):
         self._bot_mood = value
+        settings = self.settings
+        settings["llm_generator_settings"]["saved_chatbots"][self.chatbot_name]["bot_mood"] = value
+        self.settings = settings
 
     @property
     def bot_personality(self) -> str:
@@ -112,6 +120,7 @@ class BaseAgent(
     def clear_history(self):
         self.history = []
         self.reload_rag()
+        self.conversation_id = self.database_handler.create_conversation()
 
     def interrupt_process(self):
         self.do_interrupt = True
@@ -139,26 +148,41 @@ class BaseAgent(
 
     def history_prompt(self) -> str:
         history = ""
+        previous_date = None
         for message in self.history:
+            # Check if the timestamp is a string and convert it to a datetime object if necessary
+            if isinstance(message["timestamp"], str):
+                current_date = datetime.datetime.strptime(message["timestamp"], "%Y-%m-%d %H:%M:%S").date()
+            else:
+                current_date = message["timestamp"].date()
+
+            if previous_date is None or current_date != previous_date:
+                history += f"\n--- {current_date.strftime('%B %d, %Y')} ---\n"
+                previous_date = current_date
+            name = ""
             if message["role"] == LLMChatRole.HUMAN.value:
-                history += f"{self.username}: {message['content']}\n"
+                name = self.username
             elif message["role"] == LLMChatRole.ASSISTANT.value:
-                history += f"{self.botname}: {message['content']}\n"
+                name = self.botname
+            history += f"{name}: {message['content']}\n"
         return (
             "------\n"
             "Chat History:\n"
             f"{history}"
         )
 
-    def append_date_time_timezone(self, system_prompt: list) -> list:
+    def date_time_prompt(self) -> str:
+        if not self.chatbot["use_datetime"]:
+            return ""
         current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
         current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
         current_timezone = time.tzname
-        system_prompt.append("\n======\n")
-        system_prompt.append(
-            f"Use the following information to help you with your response, but do not include it in your response or reference it directly unless asked.")
-        system_prompt.append(f"Date: {current_date}, Time: {current_time}, Timezone: {current_timezone}")
-        return system_prompt
+        prompt = [
+            "\n======\n",
+            f"Use the following information to help you with your response, but do not include it in your response or reference it directly unless asked.",
+            f"Date: {current_date}, Time: {current_time}, Timezone: {current_timezone}",
+        ]
+        return "\n".join(prompt)
 
     def build_system_prompt(
         self,
@@ -193,10 +217,8 @@ class BaseAgent(
                 self.mood(botname, bot_mood, use_mood),
                 self.personality_prompt(bot_personality, use_personality),
                 self.history_prompt(),
+                self.date_time_prompt()
             ]
-
-            if self.chatbot["use_datetime"]:
-                system_prompt = self.append_date_time_timezone(system_prompt)
 
         elif action is LLMActionType.GENERATE_IMAGE:
             guardrails = self.settings["prompt_templates"]["image"]["guardrails"] if self.settings["prompt_templates"]["image"]["use_guardrails"] else ""
@@ -301,10 +323,7 @@ class BaseAgent(
         self,
         action: LLMActionType
     ) -> str:
-        conversation = self.prepare_messages(
-            action
-        )
-
+        conversation = self.prepare_messages(action)
         rendered_template = self.tokenizer.apply_chat_template(
             chat_template=self.chat_template,
             conversation=conversation,
@@ -346,7 +365,7 @@ class BaseAgent(
     def run(
         self,
         prompt: str,
-        action: str,
+        action: LLMActionType,
         **kwargs
     ):
         self.action = action
@@ -355,7 +374,8 @@ class BaseAgent(
         streamer = self.streamer
 
         # Add the user's message to history
-        self.add_message_to_history(self.prompt, LLMChatRole.HUMAN)
+        if action is LLMActionType.CHAT:
+            self.add_message_to_history(self.prompt, LLMChatRole.HUMAN)
 
         self.rendered_template = self.get_rendered_template(action)
 
@@ -364,21 +384,22 @@ class BaseAgent(
             return_tensors="pt"
         ).to(self.device)
 
+        kwargs.update(
+            streamer=streamer,
+            action=action,
+            do_emit_response=True
+        )
+
         if streamer:
             self.run_with_thread(
                 model_inputs,
-                action=action,
-                streamer=streamer,
-                do_emit_response=True,
                 **kwargs
             )
         else:
             self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
             stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
             data = self.prepare_generate_data(model_inputs, stopping_criteria)
-            res = self.model.generate(
-                **data
-            )
+            res = self.model.generate(**data)
             response = self.tokenizer.decode(res[0])
             self.emit_signal(
                 SignalCode.LLM_TEXT_STREAMED_SIGNAL,
@@ -547,20 +568,20 @@ class BaseAgent(
                 is_first_message = False
 
         if streamed_template is not None:
-            if action == LLMActionType.CHAT:
+            if action is LLMActionType.CHAT:
                 self.add_message_to_history(
                     streamed_template,
                     LLMChatRole.ASSISTANT
                 )
+            elif action is LLMActionType.UPDATE_MOOD:
+                self.bot_mood = streamed_template
+                return self.run(
+                    prompt=self.prompt,
+                    action=LLMActionType.CHAT,
+                    **kwargs,
+                )
 
-                if self.current_bot["use_mood"]:
-                    return self.run_with_thread(
-                        model_inputs,
-                        LLMActionType.UPDATE_MOOD,
-                        **kwargs,
-                    )
-
-            elif action == LLMActionType.GENERATE_IMAGE:
+            elif action is LLMActionType.GENERATE_IMAGE:
                 self.emit_signal(
                     SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
                     {
@@ -568,18 +589,12 @@ class BaseAgent(
                         "type": "photo"
                     }
                 )
-
-            elif action == LLMActionType.UPDATE_MOOD:
-                self.bot_mood = streamed_template
-
-            elif action == LLMActionType.APPLICATION_COMMAND:
+            elif action is LLMActionType.APPLICATION_COMMAND:
                 index = ''.join(c for c in streamed_template if c.isdigit())
-                print(f"index: {index}")
                 try:
                     index = int(index)
                 except ValueError:
                     index = 0
-                print("RESPONSE:", index)
                 action = self.available_actions[index]
 
                 if action is not None:
@@ -587,7 +602,6 @@ class BaseAgent(
                         prompt=self.prompt,
                         action=action,
                     )
-
         return streamed_template
 
     def add_chatbot_response_to_history(self, response: dict):
@@ -595,6 +609,9 @@ class BaseAgent(
             response["message"],
             response["role"]
         )
+
+    def get_db_connection(self):
+        return sqlite3.connect('agent_history.db')
 
     def add_message_to_history(
         self,
@@ -604,26 +621,15 @@ class BaseAgent(
         if content is None:
             return
 
-        if role == LLMChatRole.ASSISTANT and content:
+        if role is LLMChatRole.ASSISTANT and content:
             content = content.replace(f"{self.botname}:", "")
             content = content.replace(f"{self.botname}", "")
 
-        last_item = self.history.pop() if len(self.history) > 0 else {}
-        last_item_role = last_item.get("role", None)
-        last_item_role_is_current_role = last_item_role == role.value
+        self.history.append({
+            "role": role.value,
+            "content": content,
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "conversation_id": self.conversation_id  # Use the stored conversation ID
+        })
 
-        # if the last_item is of the same role as the current message, append the content to the last_item
-        if not last_item_role_is_current_role and len(last_item.keys()) > 0:
-            item = last_item
-        elif last_item_role_is_current_role:
-            item = {
-                "role": role.value,
-                "content": content
-            }
-            item["content"] += last_item.get("content", "") + "\n" + content
-        else:
-            item = {
-                "role": role.value,
-                "content": content
-            }
-        self.history.append(item)
+        self.database_handler.add_message_to_history(content, role.value, self.conversation_id)
