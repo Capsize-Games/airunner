@@ -1,9 +1,5 @@
 import os
 import threading
-import time
-from queue import Queue
-
-from PIL import Image
 from controlnet_aux.processor import Processor
 from diffusers.pipelines.controlnet.pipeline_controlnet import StableDiffusionControlNetPipeline
 from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import StableDiffusionControlNetImg2ImgPipeline

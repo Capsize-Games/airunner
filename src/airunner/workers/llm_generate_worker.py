@@ -41,6 +41,8 @@ class LLMGenerateWorker(Worker):
             (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal),
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
             (SignalCode.RAG_RELOAD_INDEX_SIGNAL, self.on_reload_rag_index_signal),
+            (SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history),
+            (SignalCode.LOAD_CONVERSATION, self.on_load_conversation),
         ]
         self.llm = None
         self.do_load_on_init = do_load_on_init
@@ -50,6 +52,12 @@ class LLMGenerateWorker(Worker):
 
         self.thread = None
         self.llm_generate_worker = None
+
+    def add_chatbot_response_to_history(self, message):
+        self.llm.chat_agent.add_chatbot_response_to_history(message)
+
+    def on_load_conversation(self, message):
+        self.llm.chat_agent.on_load_conversation(message)
 
     def on_load_llm_signal(self):
         self.llm_generate_worker.on_load_llm_signal()

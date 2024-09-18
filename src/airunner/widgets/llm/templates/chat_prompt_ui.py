@@ -96,13 +96,6 @@ class Ui_chat_prompt(object):
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
         self.gridLayout.setContentsMargins(10, 0, 10, 0)
-        self.action = QComboBox(self.scrollAreaWidgetContents_2)
-        self.action.setObjectName(u"action")
-        self.action.setMinimumSize(QSize(0, 30))
-        self.action.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-
-        self.gridLayout.addWidget(self.action, 1, 0, 1, 1)
-
         self.chat_prompt_splitter = QSplitter(self.scrollAreaWidgetContents_2)
         self.chat_prompt_splitter.setObjectName(u"chat_prompt_splitter")
         self.chat_prompt_splitter.setOrientation(Qt.Orientation.Vertical)
@@ -149,6 +142,13 @@ class Ui_chat_prompt(object):
 
         self.gridLayout.addWidget(self.chat_prompt_splitter, 0, 0, 1, 1)
 
+        self.action = QComboBox(self.scrollAreaWidgetContents_2)
+        self.action.setObjectName(u"action")
+        self.action.setMinimumSize(QSize(0, 30))
+        self.action.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+
+        self.gridLayout.addWidget(self.action, 1, 0, 1, 1)
+
         self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
 
         self.gridLayout_3.addWidget(self.scrollArea, 0, 0, 1, 1)
@@ -168,6 +168,7 @@ class Ui_chat_prompt(object):
 
         self.mood_label = QLabel(chat_prompt)
         self.mood_label.setObjectName(u"mood_label")
+        self.mood_label.setWordWrap(True)
 
         self.formLayout.setWidget(0, QFormLayout.FieldRole, self.mood_label)
 

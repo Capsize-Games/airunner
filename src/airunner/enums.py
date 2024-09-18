@@ -256,6 +256,8 @@ class SignalCode(Enum):
     HISTORY_CLEAR_SIGNAL = enum.auto()
     UNDO_SIGNAL = enum.auto()
     REDO_SIGNAL = enum.auto()
+    LOAD_CONVERSATION = enum.auto()
+    SET_CONVERSATION = enum.auto()
 
 class EngineResponseCode(Enum):
     STATUS = 100

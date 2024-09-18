@@ -52,10 +52,8 @@ class BaseAgent(
         self.prompt = ""
         self.thread = None
         self.do_interrupt = False
-        self.register(SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history)
         self.response_worker = create_worker(AgentWorker)
         self.load_rag(model=self.model, tokenizer=self.tokenizer)
-
 
     @property
     def available_actions(self):
@@ -621,15 +619,36 @@ class BaseAgent(
         if content is None:
             return
 
+        name = self.username
+        is_bot = False
         if role is LLMChatRole.ASSISTANT and content:
             content = content.replace(f"{self.botname}:", "")
             content = content.replace(f"{self.botname}", "")
+            is_bot = True
+            name = self.botname
 
         self.history.append({
             "role": role.value,
             "content": content,
+            "name": name,
+            "is_bot": is_bot,
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "conversation_id": self.conversation_id  # Use the stored conversation ID
         })
 
-        self.database_handler.add_message_to_history(content, role.value, self.conversation_id)
+        self.database_handler.add_message_to_history(
+            content,
+            role.value,
+            name,
+            is_bot,
+            self.conversation_id
+        )
+
+    def on_load_conversation(self, message):
+        self.history = []
+        self.conversation_id = message["conversation_id"]
+        self.history = self.database_handler.load_history_from_db(self.conversation_id)
+        self.emit_signal(SignalCode.SET_CONVERSATION, {
+            "messages": self.history
+        })
+
