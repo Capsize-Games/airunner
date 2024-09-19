@@ -686,3 +686,7 @@ QSizeGrip {
 QToolBar QAction:checked {
     border: 1px solid rgba(0, 132, 185, 255); /* Adjust the color and thickness as needed */
 }
+
+QTabWidget::pane {
+    border-top: 1px solid rgba(0, 132, 185, 255); /* Adjust the color and thickness as needed */
+}
