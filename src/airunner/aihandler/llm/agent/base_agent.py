@@ -247,10 +247,37 @@ class BaseAgent(
             ]
 
         elif action is LLMActionType.GENERATE_IMAGE:
-            guardrails = self.settings["prompt_templates"]["image"]["guardrails"] if self.settings["prompt_templates"]["image"]["use_guardrails"] else ""
+            #guardrails = self.settings["prompt_templates"]["image"]["guardrails"] if self.settings["prompt_templates"]["image"]["use_guardrails"] else ""
+            # system_prompt = [
+            #     guardrails,
+            #     self.settings["prompt_templates"]["image"]["system"],
+            #     self.history_prompt()
+            # ]
             system_prompt = [
-                guardrails,
-                self.settings["prompt_templates"]["image"]["system"],
+                (
+                    "You are an image generator. "
+                    "You will be provided with a JSON string and it is your goal to replace the PLACEHOLDER "
+                    "text with text appropriate for the given attribute in the JSON string. "
+                    "You will follow all of the rules to generate descriptions for an image. "
+                    "\n------\n"
+                    "RULES:\n"
+                    "When available, use the Additional Context to keep your generated content in line with the existing context.\n"
+                    "You will be given instructions on what type of image to generate and you will do your best to follow those instructions.\n"
+                    "You will only generate a value for the given attribute.\n"
+                    "Never respond in a conversational manner. Never provide additional information, details or information.\n"
+                    "You will only provide the requested information by replacing the PLACEHOLDER.\n"
+                    "Never change the attribute\n"
+                    "You must not change the structure of the data.\n"
+                    "You will only return JSON strings.\n"
+                    "You will not return any other data types.\n"
+                    "You are an artist, so use your imagination and keep things interesting.\n"
+                    "You will not respond in a conversational manner or with additonal notes or information.\n"
+                    f"Only return one JSON block. Do not generate instructions or additional information.\n"
+                    "You must never break the rules.\n"
+                    "Here is a description of the attributes: \n"
+                    "`description`: This should describe the overall subject and look and feel of the image\n"
+                    "`composition`: This should describe the attributes of the image such as color, composition and other details\n"
+                ),
                 self.history_prompt()
             ]
 
@@ -326,7 +353,15 @@ class BaseAgent(
                 "Choose an action from THE LIST of commands for the text above. "
                 "Only return the number of the command."
             )
-        elif action == LLMActionType.GENERATE_IMAGE:
+        elif action is LLMActionType.GENERATE_IMAGE:
+            prompt = (
+                f"Replace the placeholder values in the following JSON:\n"
+                "```json\n"+ json.dumps(dict(
+                    description="PLACEHOLDER",
+                    composition="PLACEHOLDER"
+                )) +"\n```\n"
+            )
+        elif action is LLMActionType.SUMMARIZE:
             prompt = (
                 f"Summarize the conversation history"
             )
@@ -622,7 +657,7 @@ class BaseAgent(
                 self.emit_signal(
                     SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
                     {
-                        "prompt": streamed_template,
+                        "message": streamed_template,
                         "type": "photo"
                     }
                 )
