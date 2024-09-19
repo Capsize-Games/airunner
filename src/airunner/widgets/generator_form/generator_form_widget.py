@@ -265,14 +265,18 @@ class GeneratorForm(BaseWidget):
             return {}
 
     def on_llm_image_prompt_generated_signal(self, data):
-        prompt = data.get("prompt", None)
+        data = self.extract_json_from_message(data["message"])
+        prompt = data.get("description", None)
+        secondary_prompt = data.get("composition", None)
         prompt_type = data.get("type", ImageCategory.PHOTO.value)
-        self.ui.prompt.setPlainText(prompt)
         if prompt_type == "photo":
             negative_prompt = PHOTO_REALISTIC_NEGATIVE_PROMPT
         else:
             negative_prompt = ILLUSTRATION_NEGATIVE_PROMPT
+        self.ui.prompt.setPlainText(prompt)
         self.ui.negative_prompt.setPlainText(negative_prompt)
+        self.ui.secondary_prompt.setPlainText(secondary_prompt)
+        self.ui.secondary_negative_prompt.setPlainText(negative_prompt)
         self.handle_generate_button_clicked()
 
     def get_memory_options(self):

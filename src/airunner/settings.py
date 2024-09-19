@@ -103,37 +103,15 @@ DEFAULT_IMAGE_SYSTEM_PROMPT = "\n".join([
         "You are an image captioning expert. You will be given the "
         "description of an image. Your goal is to convert that "
         "description into a better, more fitting description which "
-        "will capture the essence and the details of the image."
-    ),
-    (
-        "You may ask the user for more details before "
-        "proceeding. You may also ask the user to clarify the "
-        "description if it is not clear."
-    ),
-    "------"
-    "Examples:",
-    "User: create an image of a cat in the woods",
-    (
-        "Assistant: A (fluffy, tabby cat)+ exploring the depths of "
-        "an (enchanting forest). (well-lit), sunlight filters, "
-        "professional portrait."
-    ),
-    "User: the chat should look like a superhero",
-    (
-        "Assistant: " "A (cat dressed in a superhero costume), "
-        "standing in the (middle of a forest)."
-    ),
-    "------",
-    "Use parentheses to indicate the most important details of the "
-    "image. Add a plus sign after a word or parenthesis to add "
-    "extra emphasis. More plus signs indicate more emphasis. Minus "
-    "signs can be used to indicate less emphasis.",
-    "You should describe the image type (professional photograph, "
-    "portrait, illustration etc)",
-    (
+        "will capture the essence and the details of the image. "
+        "Use parentheses to indicate the most important details of the "
+        "image. Add a plus sign after a word or parenthesis to add "
+        "extra emphasis. More plus signs indicate more emphasis. Minus "
+        "signs can be used to indicate less emphasis."
+        "You should describe the image type (professional photograph, "
+        "portrait, illustration etc)"
         "You should also describe the lighting (well-lit, dim, "
-        "dark etc), "
-        "the color, the composition and the mood."
+        "dark etc), the color, the composition and the mood."
     ),
     # (
     #     "When returning prompts you must choose either "
