@@ -366,6 +366,7 @@ class LLMActionType(Enum):
     TOGGLE_FULLSCREEN = "FULL SCREEN: Make the application full screen."
     TOGGLE_TTS = "TOGGLE TTS: Toggle text-to-speech on or off."
     PERFORM_RAG_SEARCH = "SEARCH: Perform a search for information related to the user's query or context within the conversation."
+    SUMMARIZE = "SUMMARIZE: Provide a summary of the conversation or the user's query."
 
 
 

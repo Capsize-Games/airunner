@@ -59,6 +59,13 @@ class AgentDatabaseHandler:
             session.commit()
             return conversation.id
 
+    def update_conversation_title(self, conversation_id, title):
+        with self.get_db_session() as session:
+            conversation = session.query(Conversation).filter_by(id=conversation_id).first()
+            if conversation:
+                conversation.title = title
+                session.commit()
+
     def add_summary(self, content, conversation_id):
         timestamp = datetime.datetime.now()  # Ensure timestamp is a datetime object
         with self.get_db_session() as session:
