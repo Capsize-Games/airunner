@@ -1,4 +1,5 @@
 import datetime
+import json
 import sqlite3
 import time
 import traceback
@@ -47,7 +48,6 @@ class BaseAgent(
         self.is_mistral = kwargs.pop("is_mistral", True)
         self.database_handler = AgentDatabaseHandler()
         self.conversation_id = None
-        self.create_conversation()
         self.history = self.database_handler.load_history_from_db(self.conversation_id)  # Load history by conversation ID
         super().__init__(*args, **kwargs)
         self.prompt = ""
@@ -119,7 +119,10 @@ class BaseAgent(
     def clear_history(self):
         self.history = []
         self.reload_rag()
-        self.create_conversation()
+        self.conversation_id = None
+
+    def update_conversation_title(self, title):
+        self.database_handler.update_conversation_title(self.conversation_id, title)
 
     def create_conversation(self):
         # Get the most recent conversation ID
@@ -134,6 +137,16 @@ class BaseAgent(
 
         # If there are messages or no recent conversation ID, create a new conversation
         self.conversation_id = self.database_handler.create_conversation()
+        self.emit_signal(
+            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
+            {
+                "llm_request": True,
+                "request_data": {
+                    "action": LLMActionType.SUMMARIZE,
+                    "prompt": self.prompt,
+                }
+            }
+        )
 
     def interrupt_process(self):
         self.do_interrupt = True
@@ -255,6 +268,13 @@ class BaseAgent(
                 system_instructions
             ]
 
+        elif action is LLMActionType.SUMMARIZE:
+            system_instructions = self.settings["prompt_templates"]["summarize"]["system"]
+            system_prompt = [
+                system_instructions,
+                self.history_prompt()
+            ]
+
         elif action is LLMActionType.UPDATE_MOOD:
             system_instructions = self.settings["prompt_templates"]["update_mood"]["system"]
             system_prompt = [
@@ -301,22 +321,14 @@ class BaseAgent(
         action
     ) -> list:
         system_prompt = self.build_system_prompt(action)
-        if action == LLMActionType.APPLICATION_COMMAND:
+        if action is LLMActionType.APPLICATION_COMMAND:
             prompt = (
                 "Choose an action from THE LIST of commands for the text above. "
                 "Only return the number of the command."
             )
         elif action == LLMActionType.GENERATE_IMAGE:
             prompt = (
-                "Generate an image based on the user's request.\n"
-                "You will return a JSON string which matches the following data structure:\n"
-                "```json\n{\n"
-                "    \"prompt\": \"[PLACEHOLDER]\",\n"
-                "    \"secondary_prompt\": \"[PLACEHOLDER]\",\n"
-                "    \"negative_prompt\": \"[PLACEHOLDER]\",\n"
-                "    \"secondary_negative_prompt\": \"[PLACEHOLDER]\",\n"
-                "}```\n"
-                f"Replace the [PLACEHOLDER] with the appropriate text basd on {self.username}'s request.\n"
+                f"Summarize the conversation history"
             )
         else:
             prompt = f"Respond to {self.username}"
@@ -386,8 +398,15 @@ class BaseAgent(
         self.prompt = prompt
         streamer = self.streamer
 
+        if self.conversation_id is None:
+            self.create_conversation()
+
         # Add the user's message to history
-        if action is LLMActionType.CHAT:
+        if action in (
+            LLMActionType.CHAT,
+            LLMActionType.PERFORM_RAG_SEARCH,
+            LLMActionType.GENERATE_IMAGE,
+        ):
             self.add_message_to_history(self.prompt, LLMChatRole.HUMAN)
 
         self.rendered_template = self.get_rendered_template(action)
@@ -497,7 +516,8 @@ class BaseAgent(
         if streamer and action in (
             LLMActionType.CHAT,
             LLMActionType.GENERATE_IMAGE,
-            LLMActionType.UPDATE_MOOD
+            LLMActionType.UPDATE_MOOD,
+            LLMActionType.SUMMARIZE
         ):
             for new_text in streamer:
                 # strip all newlines from new_text
@@ -586,6 +606,7 @@ class BaseAgent(
                     streamed_template,
                     LLMChatRole.ASSISTANT
                 )
+
             elif action is LLMActionType.UPDATE_MOOD:
                 self.bot_mood = streamed_template
                 return self.run(
@@ -593,6 +614,9 @@ class BaseAgent(
                     action=LLMActionType.CHAT,
                     **kwargs,
                 )
+
+            elif action is LLMActionType.SUMMARIZE:
+                self.update_conversation_title(streamed_template)
 
             elif action is LLMActionType.GENERATE_IMAGE:
                 self.emit_signal(

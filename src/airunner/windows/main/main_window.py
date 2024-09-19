@@ -83,7 +83,7 @@ class MainWindow(
         ("circle-center-icon", "actionRecenter"),
         ("setting-line-icon", "actionSettings"),
         ("object-selected-icon", "actionToggle_Active_Grid_Area"),
-        ("select-svgrepo-com", "actionToggle_Active_Grid_Area"),
+        ("select-svgrepo-com", "actionToggle_Selection"),
     ]
 
     def __init__(
