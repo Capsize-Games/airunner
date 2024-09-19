@@ -37,17 +37,11 @@ class GeneratorForm(BaseWidget):
             SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.handle_generate_image_from_image,
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
-            SignalCode.SET_CONVERSATION: self.past_conversations_clicked,
+            SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
         }
 
-    @Slot()
-    def past_conversations_clicked(self):
-        self.showing_past_conversations = not self.showing_past_conversations
-        if self.showing_past_conversations:
-            self.ui.generator_form_tabs.setCurrentIndex(2)
-        else:
-            self.ui.generator_form_tabs.setCurrentIndex(1)
-
+    def on_load_conversation(self):
+        self.ui.generator_form_tabs.setCurrentIndex(1)
 
     def toggle_secondary_prompts(self):
         settings = self.settings
@@ -137,7 +131,6 @@ class GeneratorForm(BaseWidget):
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
     def on_application_settings_changed_signal(self):
-        self.activate_ai_mode()
         self.toggle_secondary_prompts()
     
     def on_progress_signal(self, message):
@@ -317,7 +310,6 @@ class GeneratorForm(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.ui.generator_form_tabs.tabBar().hide()
         self.activate_ai_mode()
         self.set_form_values()
         self.toggle_secondary_prompts()
