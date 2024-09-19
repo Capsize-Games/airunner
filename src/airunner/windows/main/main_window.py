@@ -77,14 +77,13 @@ class MainWindow(
     ui_class_ = Ui_MainWindow
     _window_title = f"AI Runner"
     icons = [
-        ("pencil-icon", "toggle_brush_button"),
-        ("eraser-icon", "toggle_eraser_button"),
-        ("frame-grid-icon", "toggle_grid_button"),
-        ("circle-center-icon", "focus_button"),
-        ("artificial-intelligence-ai-chip-icon", "ai_button"),
-        ("setting-line-icon", "settings_button"),
-        ("object-selected-icon", "toggle_active_grid_area_button"),
-        ("select-svgrepo-com", "toggle_select_button"),
+        ("pencil-icon", "actionToggle_Brush"),
+        ("eraser-icon", "actionToggle_Eraser"),
+        ("frame-grid-icon", "actionToggle_Grid"),
+        ("circle-center-icon", "actionRecenter"),
+        ("setting-line-icon", "actionSettings"),
+        ("object-selected-icon", "actionToggle_Active_Grid_Area"),
+        ("select-svgrepo-com", "actionToggle_Active_Grid_Area"),
     ]
 
     def __init__(
@@ -626,7 +625,7 @@ class MainWindow(
             is_fullscreen=self.isFullScreen(),
             llm_splitter=self.ui.tool_tab_widget.ui.llm_splitter.saveState(),
             content_splitter=self.ui.content_splitter.saveState(),
-            canvas_splitter=self.ui.canvas_widget_2.ui.canvas_splitter.saveState(),
+            # canvas_splitter=self.ui.canvas_widget_2.ui.canvas_splitter.saveState(),
             generator_form_splitter=self.ui.generator_widget.ui.generator_form_splitter.saveState(),
             tool_tab_widget_index=self.ui.tool_tab_widget.ui.tool_tab_widget_container.currentIndex(),
             grid_settings_splitter=self.ui.tool_tab_widget.ui.grid_settings_splitter.saveState(),
@@ -652,13 +651,14 @@ class MainWindow(
         else:
             self.showNormal()
 
-        self.ui.ai_button.setChecked(settings["ai_mode"])
-        self.set_button_checked("toggle_grid", settings["grid_settings"]["show_grid"], False)
+        self.ui.actionToggle_Grid.blockSignals(True)
+        self.ui.actionToggle_Grid.setChecked(settings["grid_settings"]["show_grid"])
+        self.ui.actionToggle_Grid.blockSignals(False)
 
         splitters = [
             ("content_splitter", self.ui.content_splitter),
             ("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter),
-            ("canvas_splitter", self.ui.canvas_widget_2.ui.canvas_splitter),
+            # ("canvas_splitter", self.ui.canvas_widget_2.ui.canvas_splitter),
             ("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter),
             ("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter),
         ]
@@ -717,41 +717,19 @@ class MainWindow(
 
     @Slot(bool)
     def action_toggle_brush(self, active: bool):
-        if active:
-            self.ui.toggle_select_button.setChecked(False)
-            self.ui.toggle_active_grid_area_button.setChecked(False)
-            self.ui.toggle_eraser_button.setChecked(False)
-            self.ui.toggle_brush_button.blockSignals(True)
-            self.ui.toggle_brush_button.setChecked(True)
-            self.ui.toggle_brush_button.blockSignals(False)
         self.toggle_tool(CanvasToolName.BRUSH, active)
 
     @Slot(bool)
     def action_toggle_eraser(self, active: bool):
-        if active:
-            self.ui.toggle_select_button.setChecked(False)
-            self.ui.toggle_active_grid_area_button.setChecked(False)
-            self.ui.toggle_brush_button.setChecked(False)
-            self.ui.toggle_eraser_button.blockSignals(True)
-            self.ui.toggle_eraser_button.setChecked(True)
-            self.ui.toggle_eraser_button.blockSignals(False)
         self.toggle_tool(CanvasToolName.ERASER, active)
 
     @Slot(bool)
     def action_toggle_select(self, active: bool):
-        if active:
-            self.ui.toggle_active_grid_area_button.setChecked(False)
-            self.ui.toggle_brush_button.setChecked(False)
-            self.ui.toggle_eraser_button.setChecked(False)
         self.toggle_tool(CanvasToolName.SELECTION, active)
 
     @Slot(bool)
     def action_toggle_active_grid_area(self, active: bool):
-        if active:
-            self.ui.toggle_select_button.setChecked(False)
-            self.ui.toggle_brush_button.setChecked(False)
-            self.ui.toggle_eraser_button.setChecked(False)
-        self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, active)
+        self.initialize_widget_elements()
 
     @Slot(bool)
     def action_toggle_nsfw_filter_triggered(self, val: bool):
@@ -908,19 +886,18 @@ class MainWindow(
     def _initialize_default_buttons(self, settings):
         show_grid = settings["grid_settings"]["show_grid"]
         current_tool = settings["current_tool"]
-        ai_mode = settings["ai_mode"]
 
-        set_widget_state(self.ui.toggle_active_grid_area_button, current_tool is CanvasToolName.ACTIVE_GRID_AREA)
-        set_widget_state(self.ui.toggle_brush_button, current_tool is CanvasToolName.BRUSH)
-        set_widget_state(self.ui.toggle_eraser_button, current_tool is CanvasToolName.ERASER)
-        set_widget_state(self.ui.toggle_grid_button, show_grid is True)
-        set_widget_state(self.ui.ai_button, ai_mode)
+        set_widget_state(self.ui.actionToggle_Active_Grid_Area, current_tool is CanvasToolName.ACTIVE_GRID_AREA)
+        set_widget_state(self.ui.actionToggle_Brush, current_tool is CanvasToolName.BRUSH)
+        set_widget_state(self.ui.actionToggle_Eraser, current_tool is CanvasToolName.ERASER)
+        set_widget_state(self.ui.actionToggle_Grid, show_grid is True)
 
         self.ui.actionSafety_Checker.blockSignals(True)
         self.ui.actionSafety_Checker.setChecked(settings["nsfw_filter"])
         self.ui.actionSafety_Checker.blockSignals(False)
 
     def toggle_tool(self, tool: CanvasToolName, active: bool):
+        self.initialize_widget_elements()
         if not active:
             tool = CanvasToolName.NONE
         settings = self.settings
@@ -994,14 +971,6 @@ class MainWindow(
 
     def new_batch(self, index, image, data):
         self.generator_tab_widget.new_batch(index, image, data)
-
-    def set_button_checked(self, name, val=True, block_signals=True):
-        widget = getattr(self.ui, f"{name}_button")
-        if block_signals:
-            widget.blockSignals(True)
-        widget.setChecked(val)
-        if block_signals:
-            widget.blockSignals(False)
 
     def action_center_clicked(self):
         print("center clicked")
@@ -1105,19 +1074,4 @@ class MainWindow(
     def on_model_status_changed_signal(self, data):
         model = data["model"]
         status = data["status"]
-        if model is ModelType.SD:
-            self.__set_button_state(self.ui.sd_toggle_button, status)
-        elif model is ModelType.CONTROLNET:
-            self.__set_button_state(self.ui.controlnet_toggle_button, status)
-        elif model is ModelType.LLM:
-            self.__set_button_state(self.ui.llm_button, status)
-
-    def __set_button_state(self, button, status):
-        # button.blockSignals(True)
-        # button.setChecked(status not in (
-        #     ModelStatus.FAILED,
-        #     ModelStatus.UNLOADED
-        # ))
-        button.setEnabled(status is not ModelStatus.LOADING)
-        # button.blockSignals(False)
-        button.repaint()
+        self.initialize_widget_elements()
