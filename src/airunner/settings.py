@@ -195,7 +195,14 @@ DEFAULT_PATH_SETTINGS = {
             "text/rag",
             "db"
         )
-    )
+    ),
+    "webpages_path": os.path.expanduser(
+        os.path.join(
+            BASE_PATH,
+            "text/other",
+            "webpages"
+        )
+    ),
 }
 
 ####################################################################
