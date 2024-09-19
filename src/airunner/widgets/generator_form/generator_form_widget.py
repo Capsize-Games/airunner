@@ -1,3 +1,5 @@
+import json
+import re
 import time
 from PIL import Image
 
@@ -243,6 +245,24 @@ class GeneratorForm(BaseWidget):
             })
         else:
             self.do_generate()
+
+    def extract_json_from_message(self, message):
+        # Regular expression to find the JSON block
+        json_pattern = re.compile(r'.*`json\s*({.*?})\s*`.*', re.DOTALL)
+        match = json_pattern.search(message)
+
+        if match:
+            json_block = match.group(1)
+            try:
+                # Convert the JSON block to a dictionary
+                json_dict = json.loads(json_block)
+                return json_dict
+            except json.JSONDecodeError as e:
+                print(f"Error decoding JSON: {e}")
+                return {}
+        else:
+            print("No JSON block found in the message.")
+            return {}
 
     def on_llm_image_prompt_generated_signal(self, data):
         prompt = data.get("prompt", None)

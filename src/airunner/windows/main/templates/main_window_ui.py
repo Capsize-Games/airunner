@@ -480,7 +480,7 @@ class Ui_MainWindow(object):
         self.toolBar_2.setOrientation(Qt.Orientation.Horizontal)
         self.toolBar_2.setIconSize(QSize(18, 18))
         self.toolBar_2.setFloatable(False)
-        MainWindow.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolBar_2)
+        MainWindow.addToolBar(Qt.ToolBarArea.BottomToolBarArea, self.toolBar_2)
 
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
@@ -626,6 +626,7 @@ class Ui_MainWindow(object):
         self.actionToggle_Brush.toggled.connect(MainWindow.action_toggle_brush)
         self.actionToggle_Eraser.toggled.connect(MainWindow.action_toggle_eraser)
         self.actionRecenter.triggered.connect(MainWindow.action_center_clicked)
+        self.actionToggle_LLM.toggled.connect(MainWindow.action_toggle_llm)
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi

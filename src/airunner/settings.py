@@ -1054,6 +1054,13 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         },
         "chatbot": {
             "use_system_datetime_in_system_prompt": False
+        },
+        "summarize": {
+            "system": (
+                "You will be given a text prompt. Your goal is to summarize the text prompt in your own words. "
+                "Keep your summary short and to the point. Do not include any unnecessary information. "
+                "Limit your summary to a single sentence. Do not return more than one sentence. "
+            ),
         }
     },
     llm_templates={
