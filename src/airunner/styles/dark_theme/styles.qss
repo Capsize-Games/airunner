@@ -45,6 +45,10 @@ QComboBox::item:hover {
 QComboBox::down-arrow {
 }
 
+#mode_tab_widget {
+    border-top: 1px solid rgba(0, 132, 185, 255);
+}
+
 #mode_tab_widget QWidget {
     font-size: 10pt;
 }
@@ -672,25 +676,13 @@ QWidget QWidget#header {
     border: none;
 }
 
-QWidget#button_menu,
-QWidget#statusbar,
-QWidget#menubar
-{
-    border-left: 1px solid #333;
-}
-
-QWidget#content_splitter,
-QWidget#statusbar,
-QWidget#menubar
-{
-    border-right: 1px solid #333;
-}
-
-QWidget#statusbar {
-    border-bottom: 1px solid #333;
-}
-
 QSizeGrip {
-    border: 1px solid #333; /* Light grey border */
+    border: 2px solid #333; /* Light grey border */
     background-color: #000; /* Ensure the handle inherits the background color */
+    border-left: 0;
+    border-top: 0;
+}
+
+QToolBar QAction:checked {
+    border: 1px solid rgba(0, 132, 185, 255); /* Adjust the color and thickness as needed */
 }
