@@ -21,18 +21,18 @@ def prepare_llm_generate_kwargs(settings):
         temperature = min_val
 
     return dict(
-        length_penalty=length_penalty,
-        repetition_penalty=repetition_penalty,
+        # length_penalty=length_penalty,
+        # repetition_penalty=repetition_penalty,
         do_sample=data["do_sample"],
         early_stopping=data["early_stopping"],
         eta_cutoff=data["eta_cutoff"],
         max_new_tokens=data["max_new_tokens"],
         min_length=data["min_length"],
-        no_repeat_ngram_size=data["ngram_size"],
+        # no_repeat_ngram_size=data["ngram_size"],
         num_return_sequences=1,
         temperature=temperature,
         top_k=data["top_k"],
         top_p=top_p,
-        use_cache=data["use_cache"],
-        num_beams=data["num_beams"],
+        # use_cache=data["use_cache"],
+        # num_beams=data["num_beams"],
     )
