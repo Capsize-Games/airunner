@@ -419,27 +419,16 @@ class MainWindow(
 
     def initialize_widget_elements(self):
         settings = self.settings
-
-        self.ui.tts_button.blockSignals(True)
-        self.ui.v2t_button.blockSignals(True)
-        self.ui.llm_button.blockSignals(True)
-        self.ui.sd_toggle_button.blockSignals(True)
-        self.ui.sd_toggle_button.blockSignals(True)
-        self.ui.enable_controlnet.blockSignals(True)
-        self.ui.controlnet_toggle_button.blockSignals(True)
-        self.ui.llm_button.setChecked(settings["llm_enabled"])
-        self.ui.tts_button.setChecked(settings["tts_enabled"])
-        self.ui.v2t_button.setChecked(settings["stt_enabled"])
-        self.ui.sd_toggle_button.setChecked(settings["sd_enabled"])
-        self.ui.enable_controlnet.setChecked(settings["controlnet_enabled"])
-        self.ui.controlnet_toggle_button.setChecked(settings["controlnet_enabled"])
-        self.ui.llm_button.blockSignals(False)
-        self.ui.tts_button.blockSignals(False)
-        self.ui.v2t_button.blockSignals(False)
-        self.ui.sd_toggle_button.blockSignals(False)
-        self.ui.enable_controlnet.blockSignals(False)
-        self.ui.sd_toggle_button.blockSignals(False)
-        self.ui.controlnet_toggle_button.blockSignals(False)
+        for item in (
+            (self.ui.actionToggle_LLM, settings["llm_enabled"]),
+            (self.ui.actionToggle_Text_to_Speech, settings["tts_enabled"]),
+            (self.ui.actionToggle_Speech_to_Text, settings["stt_enabled"]),
+            (self.ui.actionToggle_Stable_Diffusion, settings["sd_enabled"]),
+            (self.ui.actionToggle_Controlnet, settings["controlnet_enabled"]),
+        ):
+            item[0].blockSignals(True)
+            item[0].setChecked(item[1])
+            item[0].blockSignals(False)
         self.initialized = True
 
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
