@@ -46,7 +46,8 @@ class BaseAgent(
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
         self.database_handler = AgentDatabaseHandler()
-        self.conversation_id = self.database_handler.create_conversation()  # Create a new conversation
+        self.conversation_id = None
+        self.create_conversation()
         self.history = self.database_handler.load_history_from_db(self.conversation_id)  # Load history by conversation ID
         super().__init__(*args, **kwargs)
         self.prompt = ""
@@ -118,6 +119,20 @@ class BaseAgent(
     def clear_history(self):
         self.history = []
         self.reload_rag()
+        self.create_conversation()
+
+    def create_conversation(self):
+        # Get the most recent conversation ID
+        recent_conversation_id = self.database_handler.get_most_recent_conversation_id()
+
+        # Check if there are messages for the most recent conversation ID
+        if recent_conversation_id is not None:
+            messages = self.database_handler.load_history_from_db(recent_conversation_id)
+            if not messages:
+                self.conversation_id = recent_conversation_id
+                return
+
+        # If there are messages or no recent conversation ID, create a new conversation
         self.conversation_id = self.database_handler.create_conversation()
 
     def interrupt_process(self):
