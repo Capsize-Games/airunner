@@ -100,13 +100,6 @@ class CanvasWidget(
         super().showEvent(event)
         self.do_draw(force_draw=True)
 
-    def initialize_form(self):
-        settings = self.settings
-
-        self.ui.drawing_pad_groupbox.blockSignals(True)
-        self.ui.drawing_pad_groupbox.checked = settings["drawing_pad_settings"]["enabled"]
-        self.ui.drawing_pad_groupbox.blockSignals(False)
-
     def do_draw(
         self,
         force_draw: bool = False
