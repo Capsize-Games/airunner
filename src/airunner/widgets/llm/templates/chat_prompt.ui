@@ -38,16 +38,16 @@
       <number>0</number>
      </property>
      <property name="leftMargin">
-      <number>10</number>
+      <number>0</number>
      </property>
      <property name="topMargin">
-      <number>10</number>
+      <number>0</number>
      </property>
      <property name="rightMargin">
-      <number>10</number>
+      <number>0</number>
      </property>
      <property name="bottomMargin">
-      <number>10</number>
+      <number>0</number>
      </property>
      <item>
       <widget class="QProgressBar" name="progressBar">
@@ -174,12 +174,12 @@
         <x>0</x>
         <y>0</y>
         <width>595</width>
-        <height>877</height>
+        <height>913</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
        <property name="leftMargin">
-        <number>10</number>
+        <number>0</number>
        </property>
        <property name="topMargin">
         <number>0</number>
@@ -219,8 +219,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>573</width>
-                <height>417</height>
+                <width>583</width>
+                <height>435</height>
                </rect>
               </property>
               <layout class="QGridLayout" name="gridLayout_2">
@@ -302,16 +302,16 @@
       <number>0</number>
      </property>
      <property name="leftMargin">
-      <number>10</number>
+      <number>0</number>
      </property>
      <property name="topMargin">
-      <number>10</number>
+      <number>0</number>
      </property>
      <property name="rightMargin">
-      <number>10</number>
+      <number>0</number>
      </property>
      <property name="bottomMargin">
-      <number>10</number>
+      <number>0</number>
      </property>
      <item row="0" column="0">
       <widget class="QLabel" name="label">
