@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QLabel, QScrollArea,
-    QSizePolicy, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QScrollArea, QSizePolicy,
+    QWidget)
 
 class Ui_llm_history_widget(object):
     def setupUi(self, llm_history_widget):
@@ -27,26 +27,22 @@ class Ui_llm_history_widget(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.label = QLabel(llm_history_widget)
-        self.label.setObjectName(u"label")
-
-        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
-
+        self.gridLayout.setContentsMargins(0, 10, 0, 0)
         self.conversations_scroll_area = QScrollArea(llm_history_widget)
         self.conversations_scroll_area.setObjectName(u"conversations_scroll_area")
+        self.conversations_scroll_area.setMinimumSize(QSize(0, 50))
         self.conversations_scroll_area.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 687, 516))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 687, 533))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setHorizontalSpacing(0)
         self.gridLayout_2.setVerticalSpacing(10)
-        self.gridLayout_2.setContentsMargins(10, 10, 10, 10)
+        self.gridLayout_2.setContentsMargins(0, 0, 10, 10)
         self.conversations_scroll_area.setWidget(self.scrollAreaWidgetContents)
 
-        self.gridLayout.addWidget(self.conversations_scroll_area, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.conversations_scroll_area, 0, 0, 1, 1)
 
 
         self.retranslateUi(llm_history_widget)
@@ -56,6 +52,5 @@ class Ui_llm_history_widget(object):
 
     def retranslateUi(self, llm_history_widget):
         llm_history_widget.setWindowTitle(QCoreApplication.translate("llm_history_widget", u"Form", None))
-        self.label.setText(QCoreApplication.translate("llm_history_widget", u"Past Conversations", None))
     # retranslateUi
 
