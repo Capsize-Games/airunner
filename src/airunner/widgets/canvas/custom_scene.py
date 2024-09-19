@@ -5,7 +5,7 @@ from typing import Optional
 import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QSize
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent
@@ -513,6 +513,22 @@ class CustomScene(
             #     img_scene.removeItem(self.item)
             self.image = img
             #self.initialize_image()
+
+            if settings["working_width"] != pil_image.width or settings["working_height"] != pil_image.height:
+                self._do_resize = True
+                self._target_size = QSize(settings["working_width"], settings["working_height"])
+                resized_image = QImage(
+                    settings["working_width"],
+                    settings["working_height"],
+                    QImage.Format.Format_ARGB32
+                )
+                resized_image.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(resized_image)
+                painter.drawImage(0, 0, img)
+                painter.end()
+                self.image = resized_image
+
+
         else:
             self.image = QImage(
                 settings["working_width"],

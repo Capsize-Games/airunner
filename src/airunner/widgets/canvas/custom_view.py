@@ -10,10 +10,8 @@ from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.utils.snap_to_grid import snap_to_grid
 from airunner.widgets.canvas.brush_scene import BrushScene
-from airunner.widgets.canvas.controlnet_scene import ControlnetScene
 from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
-from airunner.widgets.canvas.outpaint_scene import OutpaintScene
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.widgets.canvas.zoom_handler import ZoomHandler
 
@@ -51,6 +49,7 @@ class CustomGraphicsView(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL: self.handle_active_grid_area_moved_signal,
         }
+
         for k, v in signal_handlers.items():
             self.register(k, v)
 
@@ -281,6 +280,12 @@ class CustomGraphicsView(
         # Redraw lines
         self.do_draw()
 
+    def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self.setSceneRect(0, 0, self.viewport().width(), self.viewport().height())
+        self.do_draw()
+
     def showEvent(self, event):
         super().showEvent(event)
 
@@ -298,6 +303,11 @@ class CustomGraphicsView(
 
         self._scene.showEvent(event)
         self.toggle_drag_mode()
+
+        # Ensure the viewport is aligned to the top-left corner
+        self.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self.setSceneRect(0, 0, self.viewport().width(), self.viewport().height())
+
 
     def create_scene(self):
         if self._scene and self._scene.painter:
@@ -380,8 +390,3 @@ class CustomGraphicsView(
         self.settings = settings
         new_event = self.snap_to_grid(event)
         super().mousePressEvent(new_event)
-
-    def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
-        super().resizeEvent(event)
-        #self.toggle_drag_mode()
-        self.do_draw()

@@ -15,8 +15,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QSplitter,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QWidget)
 
 from airunner.widgets.canvas.custom_view import CustomGraphicsView
 
@@ -46,39 +45,12 @@ class Ui_canvas(object):
         self.gridLayout_2.setSpacing(0)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.canvas_splitter = QSplitter(self.central_widget)
-        self.canvas_splitter.setObjectName(u"canvas_splitter")
-        self.canvas_splitter.setOrientation(Qt.Orientation.Horizontal)
-        self.drawing_pad_groupbox = QWidget(self.canvas_splitter)
-        self.drawing_pad_groupbox.setObjectName(u"drawing_pad_groupbox")
-        self.gridLayout_3 = QGridLayout(self.drawing_pad_groupbox)
-        self.gridLayout_3.setSpacing(0)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.drawing_pad = CustomGraphicsView(self.drawing_pad_groupbox)
-        self.drawing_pad.setObjectName(u"drawing_pad")
-        self.drawing_pad.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.drawing_pad.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        self.gridLayout_3.addWidget(self.drawing_pad, 4, 0, 1, 1)
-
-        self.canvas_splitter.addWidget(self.drawing_pad_groupbox)
-        self.widget = QWidget(self.canvas_splitter)
-        self.widget.setObjectName(u"widget")
-        self.gridLayout_4 = QGridLayout(self.widget)
-        self.gridLayout_4.setSpacing(0)
-        self.gridLayout_4.setObjectName(u"gridLayout_4")
-        self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.canvas_container = CustomGraphicsView(self.widget)
+        self.canvas_container = CustomGraphicsView(self.central_widget)
         self.canvas_container.setObjectName(u"canvas_container")
         self.canvas_container.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.canvas_container.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        self.gridLayout_4.addWidget(self.canvas_container, 0, 0, 1, 1)
-
-        self.canvas_splitter.addWidget(self.widget)
-
-        self.gridLayout_2.addWidget(self.canvas_splitter, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.canvas_container, 0, 0, 1, 1)
 
 
         self.gridLayout.addWidget(self.central_widget, 0, 0, 1, 1)
@@ -91,7 +63,6 @@ class Ui_canvas(object):
 
     def retranslateUi(self, canvas):
         canvas.setWindowTitle(QCoreApplication.translate("canvas", u"Form", None))
-        self.drawing_pad.setProperty("canvas_type", QCoreApplication.translate("canvas", u"brush", None))
-        self.canvas_container.setProperty("canvas_type", QCoreApplication.translate("canvas", u"image", None))
+        self.canvas_container.setProperty("canvas_type", QCoreApplication.translate("canvas", u"brush", None))
     # retranslateUi
 

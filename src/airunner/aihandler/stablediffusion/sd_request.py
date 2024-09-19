@@ -189,7 +189,7 @@ class SDRequest(
     def section(self):
         settings = self.settings
         section = GeneratorSection.TXT2IMG
-        if self.drawing_pad_image is not None and settings["drawing_pad_settings"]["enabled"]:
+        if self.drawing_pad_image is not None:
             section = GeneratorSection.IMG2IMG
         if self.outpaint_image is not None and settings["outpaint_settings"]["enabled"]:
             section = GeneratorSection.OUTPAINT
