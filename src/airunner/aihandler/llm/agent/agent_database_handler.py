@@ -95,3 +95,9 @@ class AgentDatabaseHandler:
             session.delete(conversation)
             session.commit()
         session.close()
+
+    def get_most_recent_conversation_id(self):
+        session = self.Session()
+        conversation = session.query(Conversation).order_by(Conversation.timestamp.desc()).first()
+        session.close()
+        return conversation.id if conversation else None

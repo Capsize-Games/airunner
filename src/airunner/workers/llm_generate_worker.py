@@ -57,7 +57,10 @@ class LLMGenerateWorker(Worker):
         self.llm.chat_agent.add_chatbot_response_to_history(message)
 
     def on_load_conversation(self, message):
-        self.llm.chat_agent.on_load_conversation(message)
+        try:
+            self.llm.chat_agent.on_load_conversation(message)
+        except Exception as e:
+            self.logger.error(f"Error in on_load_conversation: {e}")
 
     def on_load_llm_signal(self):
         self.llm_generate_worker.on_load_llm_signal()
