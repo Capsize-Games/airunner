@@ -29,6 +29,13 @@ class BrushScene(CustomScene):
         self._is_erasing = False
         self._do_generate_image = False
 
+    @property
+    def is_brush_or_eraser(self):
+        return self.settings["current_tool"] in (
+            CanvasToolName.BRUSH,
+            CanvasToolName.ERASER
+        )
+
     def register_signals(self):
         signals = [
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
@@ -46,6 +53,7 @@ class BrushScene(CustomScene):
         ]
         for signal, handler in signals:
             self.register(signal, handler)
+        super().register_signals()
 
     def export_image(self):
         image = self.current_active_image()
@@ -75,13 +83,6 @@ class BrushScene(CustomScene):
         if file_path == "":
             return
         self.load_image(file_path)
-
-    @property
-    def is_brush_or_eraser(self):
-        return self.settings["current_tool"] in (
-            CanvasToolName.BRUSH,
-            CanvasToolName.ERASER
-        )
 
     def handle_brush_color_changed(self, data):
         self._brush_color = QColor(data["color"])
