@@ -1,9 +1,6 @@
 import os
 import threading
 from controlnet_aux.processor import Processor
-from diffusers.pipelines.controlnet.pipeline_controlnet import StableDiffusionControlNetPipeline
-from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import StableDiffusionControlNetImg2ImgPipeline
-from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import StableDiffusionControlNetInpaintPipeline
 from diffusers.models.controlnet import ControlNetModel
 from airunner.enums import (
     SignalCode,
@@ -64,6 +61,9 @@ class ControlnetHandlerMixin:
 
     @property
     def controlnet_action_diffuser(self):
+        from diffusers.pipelines.controlnet.pipeline_controlnet import StableDiffusionControlNetPipeline
+        from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import StableDiffusionControlNetImg2ImgPipeline
+        from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import StableDiffusionControlNetInpaintPipeline
         if self.sd_request.is_txt2img:
             return StableDiffusionControlNetPipeline
         elif self.sd_request.is_img2img:
