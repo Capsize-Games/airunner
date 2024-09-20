@@ -729,7 +729,7 @@ class MainWindow(
 
     @Slot(bool)
     def action_toggle_active_grid_area(self, active: bool):
-        self.initialize_widget_elements()
+        self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, active)
 
     @Slot(bool)
     def action_toggle_nsfw_filter_triggered(self, val: bool):
@@ -896,10 +896,33 @@ class MainWindow(
         self.ui.actionSafety_Checker.setChecked(settings["nsfw_filter"])
         self.ui.actionSafety_Checker.blockSignals(False)
 
+    def __toggle_button(self, ui_element, state):
+        ui_element.blockSignals(True)
+        ui_element.setChecked(state)
+        ui_element.blockSignals(False)
+
     def toggle_tool(self, tool: CanvasToolName, active: bool):
         self.initialize_widget_elements()
         if not active:
             tool = CanvasToolName.NONE
+        else:
+            if tool is CanvasToolName.BRUSH:
+                self.__toggle_button(self.ui.actionToggle_Eraser, False)
+                self.__toggle_button(self.ui.actionToggle_Selection, False)
+                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
+            elif tool is CanvasToolName.ERASER:
+                self.__toggle_button(self.ui.actionToggle_Brush, False)
+                self.__toggle_button(self.ui.actionToggle_Selection, False)
+                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
+            elif tool is CanvasToolName.SELECTION:
+                self.__toggle_button(self.ui.actionToggle_Brush, False)
+                self.__toggle_button(self.ui.actionToggle_Eraser, False)
+                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
+            elif tool is CanvasToolName.ACTIVE_GRID_AREA:
+                self.__toggle_button(self.ui.actionToggle_Brush, False)
+                self.__toggle_button(self.ui.actionToggle_Eraser, False)
+                self.__toggle_button(self.ui.actionToggle_Selection, False)
+
         settings = self.settings
         settings["current_tool"] = tool
         self.settings = settings
