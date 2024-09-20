@@ -403,13 +403,14 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionToggle_LLM"/>
-   <addaction name="actionToggle_Text_to_Speech"/>
-   <addaction name="actionToggle_Speech_to_Text"/>
+   <addaction name="actionSettings"/>
+   <addaction name="separator"/>
    <addaction name="actionToggle_Stable_Diffusion"/>
    <addaction name="actionToggle_Controlnet"/>
    <addaction name="separator"/>
-   <addaction name="actionSettings"/>
+   <addaction name="actionToggle_Text_to_Speech"/>
+   <addaction name="actionToggle_Speech_to_Text"/>
+   <addaction name="actionToggle_LLM"/>
   </widget>
   <action name="actionNew">
    <property name="icon">
