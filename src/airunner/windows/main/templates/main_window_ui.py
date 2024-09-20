@@ -306,7 +306,14 @@ class Ui_MainWindow(object):
         self.actionToggle_LLM = QAction(MainWindow)
         self.actionToggle_LLM.setObjectName(u"actionToggle_LLM")
         self.actionToggle_LLM.setCheckable(True)
-        icon7 = QIcon(QIcon.fromTheme(u"applications-internet"))
+        self.actionToggle_LLM.setChecked(False)
+        icon7 = QIcon()
+        iconThemeName = u"applications-internet"
+        if QIcon.hasThemeIcon(iconThemeName):
+            icon7 = QIcon.fromTheme(iconThemeName)
+        else:
+            icon7.addFile(u"applications-internet", QSize(), QIcon.Normal, QIcon.On)
+
         self.actionToggle_LLM.setIcon(icon7)
         self.actionToggle_Text_to_Speech = QAction(MainWindow)
         self.actionToggle_Text_to_Speech.setObjectName(u"actionToggle_Text_to_Speech")
@@ -316,7 +323,13 @@ class Ui_MainWindow(object):
         self.actionToggle_Speech_to_Text = QAction(MainWindow)
         self.actionToggle_Speech_to_Text.setObjectName(u"actionToggle_Speech_to_Text")
         self.actionToggle_Speech_to_Text.setCheckable(True)
-        icon9 = QIcon(QIcon.fromTheme(u"audio-input-microphone"))
+        icon9 = QIcon()
+        iconThemeName = u"audio-input-microphone"
+        if QIcon.hasThemeIcon(iconThemeName):
+            icon9 = QIcon.fromTheme(iconThemeName)
+        else:
+            icon9.addFile(u"audio-input-microphone", QSize(), QIcon.Normal, QIcon.On)
+
         self.actionToggle_Speech_to_Text.setIcon(icon9)
         self.actionToggle_Stable_Diffusion = QAction(MainWindow)
         self.actionToggle_Stable_Diffusion.setObjectName(u"actionToggle_Stable_Diffusion")
@@ -326,6 +339,7 @@ class Ui_MainWindow(object):
         self.actionToggle_Controlnet = QAction(MainWindow)
         self.actionToggle_Controlnet.setObjectName(u"actionToggle_Controlnet")
         self.actionToggle_Controlnet.setCheckable(True)
+        self.actionToggle_Controlnet.setChecked(False)
         icon11 = QIcon(QIcon.fromTheme(u"insert-image"))
         self.actionToggle_Controlnet.setIcon(icon11)
         self.actionExport_3 = QAction(MainWindow)
@@ -475,7 +489,7 @@ class Ui_MainWindow(object):
         MainWindow.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolBar)
         self.toolBar_2 = QToolBar(MainWindow)
         self.toolBar_2.setObjectName(u"toolBar_2")
-        self.toolBar_2.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        self.toolBar_2.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.toolBar_2.setMovable(True)
         self.toolBar_2.setOrientation(Qt.Orientation.Horizontal)
         self.toolBar_2.setIconSize(QSize(18, 18))
