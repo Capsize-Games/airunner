@@ -380,7 +380,7 @@
     <string>toolBar_2</string>
    </property>
    <property name="layoutDirection">
-    <enum>Qt::LayoutDirection::LeftToRight</enum>
+    <enum>Qt::LayoutDirection::RightToLeft</enum>
    </property>
    <property name="movable">
     <bool>true</bool>
@@ -1147,8 +1147,13 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
    <property name="icon">
-    <iconset theme="applications-internet"/>
+    <iconset theme="applications-internet">
+     <normalon>applications-internet</normalon>
+    </iconset>
    </property>
    <property name="text">
     <string>Toggle LLM</string>
@@ -1170,7 +1175,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="audio-input-microphone"/>
+    <iconset theme="audio-input-microphone">
+     <normalon>audio-input-microphone</normalon>
+    </iconset>
    </property>
    <property name="text">
     <string>Toggle Speech to Text</string>
@@ -1190,6 +1197,9 @@
   <action name="actionToggle_Controlnet">
    <property name="checkable">
     <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
    </property>
    <property name="icon">
     <iconset theme="insert-image"/>
