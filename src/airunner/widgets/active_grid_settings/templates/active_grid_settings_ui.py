@@ -73,6 +73,19 @@ class Ui_active_grid_settings_widget(object):
 
         self.horizontalLayout.addWidget(self.width_slider_widget)
 
+        self.size_lock_button = QPushButton(self.groupBox_3)
+        self.size_lock_button.setObjectName(u"size_lock_button")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.size_lock_button.sizePolicy().hasHeightForWidth())
+        self.size_lock_button.setSizePolicy(sizePolicy1)
+        icon = QIcon(QIcon.fromTheme(u"system-lock-screen"))
+        self.size_lock_button.setIcon(icon)
+        self.size_lock_button.setCheckable(True)
+
+        self.horizontalLayout.addWidget(self.size_lock_button)
+
         self.height_slider_widget = SliderWidget(self.groupBox_3)
         self.height_slider_widget.setObjectName(u"height_slider_widget")
         self.height_slider_widget.setMinimumSize(QSize(0, 20))
@@ -119,11 +132,11 @@ class Ui_active_grid_settings_widget(object):
 
         self.border_choose_color_button = QPushButton(self.active_grid_border_groupbox)
         self.border_choose_color_button.setObjectName(u"border_choose_color_button")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.border_choose_color_button.sizePolicy().hasHeightForWidth())
-        self.border_choose_color_button.setSizePolicy(sizePolicy1)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.border_choose_color_button.sizePolicy().hasHeightForWidth())
+        self.border_choose_color_button.setSizePolicy(sizePolicy2)
         self.border_choose_color_button.setCursor(QCursor(Qt.PointingHandCursor))
 
         self.gridLayout_4.addWidget(self.border_choose_color_button, 1, 0, 1, 1)
@@ -158,8 +171,8 @@ class Ui_active_grid_settings_widget(object):
 
         self.fill_choose_color_button = QPushButton(self.active_grid_fill_groupbox)
         self.fill_choose_color_button.setObjectName(u"fill_choose_color_button")
-        sizePolicy1.setHeightForWidth(self.fill_choose_color_button.sizePolicy().hasHeightForWidth())
-        self.fill_choose_color_button.setSizePolicy(sizePolicy1)
+        sizePolicy2.setHeightForWidth(self.fill_choose_color_button.sizePolicy().hasHeightForWidth())
+        self.fill_choose_color_button.setSizePolicy(sizePolicy2)
         self.fill_choose_color_button.setCursor(QCursor(Qt.PointingHandCursor))
 
         self.gridLayout_5.addWidget(self.fill_choose_color_button, 1, 0, 1, 1)
@@ -186,6 +199,7 @@ class Ui_active_grid_settings_widget(object):
 
         self.retranslateUi(active_grid_settings_widget)
         self.active_grid_area_checkbox.clicked["bool"].connect(active_grid_settings_widget.action_clicked_checkbox_toggle_active_grid_area)
+        self.size_lock_button.toggled.connect(active_grid_settings_widget.size_lock_toggled)
 
         QMetaObject.connectSlotsByName(active_grid_settings_widget)
     # setupUi
@@ -194,6 +208,7 @@ class Ui_active_grid_settings_widget(object):
         active_grid_settings_widget.setWindowTitle(QCoreApplication.translate("active_grid_settings_widget", u"Form", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("active_grid_settings_widget", u"Size", None))
         self.width_slider_widget.setProperty("label_text", QCoreApplication.translate("active_grid_settings_widget", u"Width", None))
+        self.size_lock_button.setText("")
         self.height_slider_widget.setProperty("label_text", QCoreApplication.translate("active_grid_settings_widget", u"Height", None))
         self.height_slider_widget.setProperty("settings_property", QCoreApplication.translate("active_grid_settings_widget", u"working_height", None))
         self.active_grid_border_groupbox.setTitle(QCoreApplication.translate("active_grid_settings_widget", u"Border", None))
