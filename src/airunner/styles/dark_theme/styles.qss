@@ -683,10 +683,25 @@ QSizeGrip {
     border-top: 0;
 }
 
-QToolBar QAction:checked {
-    border-top: 1px solid rgba(0, 132, 185, 255);
-}
 
 QTabWidget::pane {
     border-top: 1px solid rgba(0, 132, 185, 255);
+}
+
+QToolButton {
+    padding: 1px;
+}
+
+QToolButton:hover {
+    border: 1px solid rgba(0, 132, 185, 100);
+    background-color: rgba(0, 132, 185, 50);
+}
+
+QToolButton:checked {
+    border: 1px solid rgba(0, 132, 185, 255);
+    background-color: rgba(0, 132, 185, 100);
+}
+
+QPushButton#size_lock_button {
+    margin-top: 10px;
 }
