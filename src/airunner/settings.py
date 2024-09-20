@@ -940,6 +940,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     # End of SettingsMixin overrides
     ####################################################################
 
+    active_grid_size_lock=False,
     installation_path=BASE_PATH,
     current_layer_index=0,
     paths_initialized=False,

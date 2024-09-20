@@ -151,6 +151,25 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="size_lock_button">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="system-lock-screen"/>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="SliderWidget" name="height_slider_widget" native="true">
             <property name="minimumSize">
              <size>
@@ -446,6 +465,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>size_lock_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>active_grid_settings_widget</receiver>
+   <slot>size_lock_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>362</x>
+     <y>65</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>356</x>
+     <y>-15</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>action_clicked_checkbox_toggle_active_grid_border(bool)</slot>
@@ -453,5 +488,6 @@
   <slot>action_clicked_checkbox_toggle_active_grid_area(bool)</slot>
   <slot>action_choose_border_color_clicked()</slot>
   <slot>action_choose_fill_color_clicked()</slot>
+  <slot>size_lock_toggled(bool)</slot>
  </slots>
 </ui>
