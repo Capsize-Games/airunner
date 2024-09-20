@@ -172,36 +172,6 @@ class BrushScene(CustomScene):
             color=QColor(Qt.GlobalColor.transparent)
         )
 
-    def handle_mouse_event(self, event, is_press_event):
-        pass
-
-    def mousePressEvent(self, event):
-        if self.scene_is_active and event.button() == Qt.MouseButton.LeftButton:
-            self.handle_left_mouse_press(event)
-            self.handle_cursor(event)
-            if not self.is_brush_or_eraser:
-                super().mousePressEvent(event)
-            elif self.settings["drawing_pad_settings"]["enable_automatic_drawing"]:
-                self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
-
-    def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
-        if self.scene_is_active and event.button() == Qt.MouseButton.LeftButton:
-            self._is_drawing = False
-            self._is_erasing = False
-            self.last_pos = None
-            self.start_pos = None
-            if type(self.image) is Image:
-                image = ImageQt.ImageQt(self.image.convert("RGBA"))
-            else:
-                image = self.image
-            pil_image = ImageQt.fromqimage(image)
-            self._do_generate_image = True
-            settings = self.settings
-            settings[self.settings_key]["image"] = convert_image_to_base64(pil_image)
-            self.settings = settings
-            self.do_update = False
-
     def handle_settings_changed(self):
         if self._do_generate_image:
             self._do_generate_image = False
@@ -213,8 +183,3 @@ class BrushScene(CustomScene):
                 )
             ):
                 self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
-
-    def mouseMoveEvent(self, event):
-        if self.scene_is_active:
-            self.last_pos = event.scenePos()
-            self.update()

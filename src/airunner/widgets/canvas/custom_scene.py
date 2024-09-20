@@ -647,6 +647,7 @@ class CustomScene(
     def handle_left_mouse_release(self, event) -> bool:
         return self.handle_mouse_event(event, False)
 
+    # Combined mousePressEvent
     def mousePressEvent(self, event):
         if isinstance(event, QGraphicsSceneMouseEvent):
             if event.button() == Qt.MouseButton.RightButton:
@@ -658,6 +659,40 @@ class CustomScene(
         self.last_pos = event.scenePos()
         self.update()
 
+        if self.scene_is_active and event.button() == Qt.MouseButton.LeftButton:
+            self.handle_left_mouse_press(event)
+            self.handle_cursor(event)
+            if not self.is_brush_or_eraser:
+                super().mousePressEvent(event)
+            elif self.settings["drawing_pad_settings"]["enable_automatic_drawing"]:
+                self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
+
+    # Combined mouseReleaseEvent
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.RightButton:
+            self.right_mouse_button_pressed = False
+        elif not self.handle_left_mouse_release(event):
+            super(CustomScene, self).mouseReleaseEvent(event)
+        self.handle_cursor(event)
+
+        super().mouseReleaseEvent(event)
+        if self.scene_is_active and event.button() == Qt.MouseButton.LeftButton:
+            self._is_drawing = False
+            self._is_erasing = False
+            self.last_pos = None
+            self.start_pos = None
+            if type(self.image) is Image:
+                image = ImageQt.ImageQt(self.image.convert("RGBA"))
+            else:
+                image = self.image
+            pil_image = ImageQt.fromqimage(image)
+            self._do_generate_image = True
+            settings = self.settings
+            settings[self.settings_key]["image"] = convert_image_to_base64(pil_image)
+            self.settings = settings
+            self.do_update = False
+
+    # Combined mouseMoveEvent
     def mouseMoveEvent(self, event):
         if self.right_mouse_button_pressed:
             view = self.views()[0]
@@ -671,12 +706,9 @@ class CustomScene(
             self.handle_cursor(event)
             super(CustomScene, self).mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.RightButton:
-            self.right_mouse_button_pressed = False
-        elif not self.handle_left_mouse_release(event):
-            super(CustomScene, self).mouseReleaseEvent(event)
-        self.handle_cursor(event)
+        if self.scene_is_active:
+            self.last_pos = event.scenePos()
+            self.update()
 
     def event(self, event):
         if self.handling_event:
