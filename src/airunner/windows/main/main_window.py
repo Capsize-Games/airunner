@@ -632,7 +632,8 @@ class MainWindow(
             width=self.width(),
             height=self.height(),
             x_pos=self.pos().x(),
-            y_pos=self.pos().y()
+            y_pos=self.pos().y(),
+            mode_tab_widget_index=self.ui.generator_widget.ui.generator_form_tabs.currentIndex(),
         ))
         settings["window_settings"] = window_settings
         self.settings = settings
@@ -676,6 +677,8 @@ class MainWindow(
         x_pos = window_settings["x_pos"] if "x_pos" in window_settings else 0
         y_pos = window_settings["y_pos"] if "y_pos" in window_settings else 0
         self.move(x_pos, y_pos)
+
+        self.ui.generator_widget.ui.generator_form_tabs.setCurrentIndex(window_settings["mode_tab_widget_index"])
     ##### End window properties #####
     #################################
         
