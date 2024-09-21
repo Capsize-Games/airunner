@@ -150,7 +150,7 @@
             </size>
            </property>
            <property name="label_text" stdset="0">
-            <string>Scale</string>
+            <string>Guidance Scale</string>
            </property>
            <property name="current_value" stdset="0">
             <number>0</number>
