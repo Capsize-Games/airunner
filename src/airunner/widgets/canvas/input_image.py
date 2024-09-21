@@ -69,7 +69,8 @@ class InputImage(BaseWidget):
         image = settings[self.property("settings_key")]["image"]
         if image is not None:
             image = convert_base64_to_image(image)
-            self.load_image_from_object(image)
+            if image:
+                self.load_image_from_object(image)
 
     def load_image_from_object(self, image: Image):
         if image is None:
