@@ -3,11 +3,10 @@ from PySide6.QtCore import (
     QObject,
     QRect
 )
-from cryptography.fernet import Fernet
 from airunner.enums import (
     SDMode,
     GeneratorSection,
-    Controlnet, ImageCategory, ImagePreset, StableDiffusionVersion
+    ImagePreset
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import (
