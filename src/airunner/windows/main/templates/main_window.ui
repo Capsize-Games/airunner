@@ -375,7 +375,7 @@
    <addaction name="actionToggle_Grid"/>
    <addaction name="actionRecenter"/>
   </widget>
-  <widget class="QToolBar" name="toolBar_2">
+  <widget class="QToolBar" name="model_toolbar">
    <property name="windowTitle">
     <string>toolBar_2</string>
    </property>
