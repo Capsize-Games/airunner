@@ -1113,7 +1113,14 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         document_outline_width=2,
     ),
     controlnet_settings=dict(
-        image=None
+        image=None,
+        enabled=False,
+        use_grid_image_as_input=False,
+    ),
+    image_to_image_settings=dict(
+        image=None,
+        enabled=False,
+        use_grid_image_as_input=False,
     ),
     outpaint_settings=dict(
         image=None,
