@@ -276,7 +276,7 @@ class Ui_stable_diffusion_settings_widget(object):
     def retranslateUi(self, stable_diffusion_settings_widget):
         stable_diffusion_settings_widget.setWindowTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Form", None))
         self.steps_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Steps", None))
-        self.scale_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Scale", None))
+        self.scale_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Guidance Scale", None))
         self.use_compel.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Use Compel", None))
         self.label_6.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Version", None))
         self.label_3.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Model", None))
