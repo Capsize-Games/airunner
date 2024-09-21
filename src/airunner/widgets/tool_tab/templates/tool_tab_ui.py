@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QSplitter
 
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
+from airunner.widgets.canvas.input_image import InputImage
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
@@ -58,6 +59,33 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_4.addWidget(self.stable_diffusion_widget, 0, 0, 2, 2)
 
         self.tool_tab_widget_container.addTab(self.tab_3, "")
+        self.tab_5 = QWidget()
+        self.tab_5.setObjectName(u"tab_5")
+        self.gridLayout_6 = QGridLayout(self.tab_5)
+        self.gridLayout_6.setSpacing(0)
+        self.gridLayout_6.setObjectName(u"gridLayout_6")
+        self.gridLayout_6.setContentsMargins(0, 0, 0, 0)
+        self.splitter = QSplitter(self.tab_5)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setOrientation(Qt.Orientation.Vertical)
+        self.image_to_image = InputImage(self.splitter)
+        self.image_to_image.setObjectName(u"image_to_image")
+        self.gridLayout_10 = QGridLayout(self.image_to_image)
+        self.gridLayout_10.setSpacing(0)
+        self.gridLayout_10.setObjectName(u"gridLayout_10")
+        self.gridLayout_10.setContentsMargins(10, 10, 10, 10)
+        self.splitter.addWidget(self.image_to_image)
+        self.controlnet_image = InputImage(self.splitter)
+        self.controlnet_image.setObjectName(u"controlnet_image")
+        self.gridLayout_9 = QGridLayout(self.controlnet_image)
+        self.gridLayout_9.setSpacing(0)
+        self.gridLayout_9.setObjectName(u"gridLayout_9")
+        self.gridLayout_9.setContentsMargins(10, 10, 10, 10)
+        self.splitter.addWidget(self.controlnet_image)
+
+        self.gridLayout_6.addWidget(self.splitter, 0, 0, 1, 1)
+
+        self.tool_tab_widget_container.addTab(self.tab_5, "")
         self.tab_6 = QWidget()
         self.tab_6.setObjectName(u"tab_6")
         self.gridLayout_7 = QGridLayout(self.tab_6)
@@ -142,7 +170,7 @@ class Ui_tool_tab_widget(object):
 
         self.retranslateUi(tool_tab_widget)
 
-        self.tool_tab_widget_container.setCurrentIndex(0)
+        self.tool_tab_widget_container.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(tool_tab_widget)
@@ -151,6 +179,9 @@ class Ui_tool_tab_widget(object):
     def retranslateUi(self, tool_tab_widget):
         tool_tab_widget.setWindowTitle(QCoreApplication.translate("tool_tab_widget", u"Form", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("tool_tab_widget", u"Stable Diffusion", None))
+        self.image_to_image.setProperty("settings_key", QCoreApplication.translate("tool_tab_widget", u"image_to_image_settings", None))
+        self.controlnet_image.setProperty("settings_key", QCoreApplication.translate("tool_tab_widget", u"controlnet_settings", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_5), QCoreApplication.translate("tool_tab_widget", u"Input image", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_6), QCoreApplication.translate("tool_tab_widget", u"LoRA", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_7), QCoreApplication.translate("tool_tab_widget", u"Embeddings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("tool_tab_widget", u"Brush", None))
