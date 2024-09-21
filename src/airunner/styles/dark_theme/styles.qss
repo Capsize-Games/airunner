@@ -705,3 +705,7 @@ QToolButton:checked {
 QPushButton#size_lock_button {
     margin-top: 10px;
 }
+
+QGraphicsView#image_container {
+    background-color: #000;
+}
