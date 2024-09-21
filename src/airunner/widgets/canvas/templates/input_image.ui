@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>548</width>
-    <height>496</height>
+    <width>564</width>
+    <height>539</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,26 +29,63 @@
    <property name="spacing">
     <number>10</number>
    </property>
-   <item row="2" column="0">
-    <widget class="QCheckBox" name="enable_checkbox">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Enable </string>
-     </property>
-    </widget>
+   <item row="2" column="0" colspan="2">
+    <widget class="QGraphicsView" name="image_container"/>
    </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="QPushButton" name="import_button">
-     <property name="text">
-      <string>Import</string>
-     </property>
-     <property name="icon">
-      <iconset theme="folder"/>
+   <item row="4" column="0" colspan="2">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QCheckBox" name="use_grid_image_as_input_checkbox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Use grid image as input</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="enable_checkbox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Enable </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="import_button">
+       <property name="text">
+        <string>Import</string>
+       </property>
+       <property name="icon">
+        <iconset theme="folder"/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="delete_button">
+       <property name="text">
+        <string>Delete</string>
+       </property>
+       <property name="icon">
+        <iconset theme="user-trash"/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0" colspan="2">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -56,26 +93,6 @@
     <widget class="QLabel" name="label">
      <property name="text">
       <string>TextLabel</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0" colspan="2">
-    <widget class="QGraphicsView" name="image_container"/>
-   </item>
-   <item row="4" column="0" colspan="2">
-    <widget class="QPushButton" name="delete_button">
-     <property name="text">
-      <string>Delete</string>
-     </property>
-     <property name="icon">
-      <iconset theme="user-trash"/>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
-    <widget class="QCheckBox" name="use_grid_image_as_input_checkbox">
-     <property name="text">
-      <string>Use grid image as input</string>
      </property>
     </widget>
    </item>
