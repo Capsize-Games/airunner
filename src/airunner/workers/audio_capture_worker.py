@@ -18,9 +18,8 @@ class AudioCaptureWorker(Worker):
         super().__init__(prefix)
         self.listening: bool = False
         self.voice_input_start_time: time.time = None
-        stt_settings = self.settings["stt_settings"]
-        self.chunk_duration = stt_settings["chunk_duration"]  # duration of chunks in milliseconds
-        self.fs = stt_settings["fs"]
+        self.chunk_duration = self.stt_settings.chunk_duration  # duration of chunks in milliseconds
+        self.fs = self.stt_settings.fs
         self.register(
             SignalCode.STT_STOP_CAPTURE_SIGNAL,
             self.stop_listening
@@ -34,13 +33,12 @@ class AudioCaptureWorker(Worker):
     def start(self):
         self.logger.debug("Starting audio capture worker")
         running = True
-        if self.settings["stt_enabled"]:
+        if self.application_settings.stt_enabled:
             self.start_listening()
-        stt_settings = self.settings["stt_settings"]
-        chunk_duration = stt_settings["chunk_duration"]
-        fs = self.settings["stt_settings"]["fs"]
-        volume_input_threshold = self.settings["stt_settings"]["volume_input_threshold"]
-        silence_buffer_seconds = self.settings["stt_settings"]["silence_buffer_seconds"]
+        chunk_duration = self.stt_settings.chunk_duration
+        fs = self.stt_settings.fs
+        volume_input_threshold = self.stt_settings.volume_input_threshold
+        silence_buffer_seconds = self.stt_settings.silence_buffer_seconds
         voice_input_start_time = None
         recording = []
         is_receiving_input = False
@@ -81,8 +79,8 @@ class AudioCaptureWorker(Worker):
     def start_listening(self):
         self.logger.debug("Start listening")
         self.listening = True
-        fs = self.settings["stt_settings"]["fs"]
-        channels = self.settings["stt_settings"]["channels"]
+        fs = self.stt_settings.fs
+        channels = self.stt_settings.channels
         if self.stream is None:
             self.stream = sd.InputStream(samplerate=fs, channels=channels)
 

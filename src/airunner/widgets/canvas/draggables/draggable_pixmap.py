@@ -28,9 +28,7 @@ class DraggablePixmap(
 
     @property
     def current_tool(self):
-        settings = self.settings
-        tool = settings["current_tool"]
-        return tool
+        return CanvasToolName(self.application_settings.current_tool)
 
     def mouseMoveEvent(self, event):
         if self.current_tool not in [
@@ -51,7 +49,7 @@ class DraggablePixmap(
 
     def snap_to_grid(self, save=False):
         x, y = snap_to_grid(
-            self.settings,
+            self.grid_settings,
             int(self.x()),
             int(self.y()),
             False
@@ -64,11 +62,8 @@ class DraggablePixmap(
         super().setPos(x, y)
         if save:
             if self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
-                settings = self.settings
-                active_grid_settings = settings["active_grid_settings"]
-                active_grid_settings["pos_x"] = x
-                active_grid_settings["pos_y"] = y
-                self.settings = settings
+                self.update_active_grid_settings("pos_x", x)
+                self.update_active_grid_settings("pos_y", y)
 
     def paint(self, painter: QPainter, option, widget=None):
         painter.drawPixmap(self.pixmap.rect(), self.pixmap)

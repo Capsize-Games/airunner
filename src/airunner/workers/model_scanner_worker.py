@@ -1,8 +1,8 @@
 import os
 
 from airunner.aihandler.logger import Logger
+from airunner.aihandler.models.settings_models import AIModels
 from airunner.enums import SignalCode
-from airunner.models.modeldata import ModelData
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.workers.worker import Worker
 
@@ -27,10 +27,11 @@ class ModelScannerWorker(
         models = []
         model_path = os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["base_path"], "art/models",
+                self.path_settings.base_path, "art/models",
             )
         )
         if not os.path.exists(model_path):
+            self.logger.error(f"Model path does not exist: {model_path}")
             return
         # find all folders inside of model_path, each of those folders is a model version
         with os.scandir(model_path) as dir_object:
@@ -45,17 +46,16 @@ class ModelScannerWorker(
                         action = action_item.name
                         with os.scandir(action_item.path) as file_object:
                             for file_item in file_object:
-                                model = ModelData()
+                                model = AIModels()
+                                model.name = os.path.basename(file_item.path)
                                 model.path = file_item.path
                                 model.branch = "main"
                                 model.version = version
                                 model.category = "stablediffusion"
-                                model.enabled = True
                                 model.pipeline_action = action
-                                model.pipeline_class = self.get_pipeline_classname(
-                                    model.pipeline_action, model.version, model.category
-                                )
-
+                                model.enabled = True
+                                model.model_type = "art"
+                                model.is_default = False
                                 if file_item.is_file():  # ckpt or safetensors file
                                     if file_item.name.endswith(".ckpt") or file_item.name.endswith(".safetensors"):
                                         name = file_item.name.replace(".ckpt", "").replace(".safetensors", "")
@@ -72,14 +72,5 @@ class ModelScannerWorker(
                                         model.name = file_item.name
 
                                 if model:
-                                    models.append({
-                                        'name': model.name,
-                                        'path': model.path,
-                                        'branch': model.branch,
-                                        'version': model.version,
-                                        'category': model.category,
-                                        'pipeline_action': model.pipeline_action,
-                                        'enabled': model.enabled,
-                                        'is_default': False
-                                    })
+                                    models.append(model)
         self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {"models": models})

@@ -1,4 +1,4 @@
-# src/airunner/aihandler/llm/agent/models.py
+# src/airunner/aihandler/llm/agent/agent_models.py
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship

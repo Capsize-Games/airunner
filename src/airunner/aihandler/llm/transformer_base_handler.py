@@ -61,7 +61,7 @@ class TransformerBaseHandler(BaseHandler):
         self.model_class = "llm"
 
         if self.model_path is None:
-            self.model_path = self.get_model_path(self.current_bot["model_version"])
+            self.model_path = self.get_model_path(self.chatbot.model_version)
 
         if do_load_on_init:
             self.load()
@@ -103,11 +103,11 @@ class TransformerBaseHandler(BaseHandler):
         return {
             'local_files_only': True,
             'use_cache': self.use_cache,
-            'trust_remote_code': self.settings["trust_remote_code"]
+            'trust_remote_code': self.application_settings.trust_remote_code
         }
 
     def get_model_path(self, path) -> str:
-        current_llm_generator = self.settings.get("current_llm_generator", "")
+        current_llm_generator = self.application_settings.current_llm_generator
         if current_llm_generator == "causallm":
             local_path = "causallm"
         elif current_llm_generator == "seq2seq":
@@ -118,7 +118,7 @@ class TransformerBaseHandler(BaseHandler):
             local_path = "misc"
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["base_path"],
+                self.path_settings.base_path,
                 "text/models",
                 local_path,
                 path
@@ -127,10 +127,10 @@ class TransformerBaseHandler(BaseHandler):
 
     def load_model(self):
         self.logger.debug("transformer_base_handler.load_model Loading model")
-        if self.settings["llm_generator_settings"]["use_api"]:
+        if self.llm_generator_settings.use_api:
             self.model = Groq(
-                model=self.settings["llm_generator_settings"]["api_model"],
-                api_key=self.settings["llm_generator_settings"]["api_key"],
+                model=self.llm_generator_settings.api_model,
+                api_key=self.llm_generator_settings.api_key,
             )
             self.model_status = ModelStatus.LOADED
         else:
@@ -138,10 +138,10 @@ class TransformerBaseHandler(BaseHandler):
 
     def load_model_local(self):
         params = self.model_params()
-        path = self.get_model_path(self.current_bot["model_version"])
+        path = self.get_model_path(self.chatbot.model_version)
         is_quantized = os.path.exists(path)
         if not is_quantized:
-            path = self.get_model_path(self.current_bot["model_version"])
+            path = self.get_model_path(self.chatbot.model_version)
 
         self.logger.debug(f"Loading model from {path}")
 
@@ -169,7 +169,7 @@ class TransformerBaseHandler(BaseHandler):
 
     def save_quantized_model(self):
         self.logger.debug("Saving quantized model to cache")
-        model_path = self.get_model_path(self.current_bot["model_version"])
+        model_path = self.get_model_path(self.chatbot.model_version)
         self.model.save_pretrained(model_path)
 
     def load_tokenizer(self):
@@ -253,19 +253,10 @@ class TransformerBaseHandler(BaseHandler):
     def do_generate(self, prompt, action) -> str:
         raise NotImplementedError
 
-    @property
-    def parameters(self):
-        current_chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
-        settings = self.settings["llm_generator_settings"]["saved_chatbots"][current_chatbot_name]["generator_settings"]
-        return settings
-
     def process_data(self, data: dict) -> None:
         self.logger.debug("Processing data")
         self.request_data = data.get("request_data", {})
 
-        # current_chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
-        # settings = self.settings["llm_generator_settings"]["saved_chatbots"][current_chatbot_name]["generator_settings"]
-        # self.parameters = self.request_data.get("parameters", settings)
         self.callback = self.request_data.get("callback", None)
         self.use_gpu = self.request_data.get("use_gpu", self.use_gpu)
         self.image = self.request_data.get("image", None)
@@ -309,7 +300,7 @@ class TransformerBaseHandler(BaseHandler):
         self.logger.debug("Handling request")
         self._processing_request = True
         self.process_data(data)
-        self.do_set_seed(self.parameters.get("seed", None))
+        self.do_set_seed(self.chatbot.seed)
         self.load()
         self._processing_request = True
         action = data["request_data"]["action"]

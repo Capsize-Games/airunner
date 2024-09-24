@@ -35,19 +35,13 @@ class SpeechT5PreferencesWidget(BaseWidget):
             element.blockSignals(False)
 
     def language_changed(self, text):
-        settings = self.settings
-        settings["tts_settings"]["language"] = text
-        settings["tts_settings"]["gender"] = self.ui.gender_combobox.currentText()
-        settings["tts_settings"]["voice"] = self.ui.voice_combobox.currentText()
-        self.settings = settings
+        self.update_tts_settings("language", text)
+        self.update_tts_settings("gender", self.ui.gender_combobox.currentText())
+        self.update_tts_settings("voice", self.ui.voice_combobox.currentText())
 
     def voice_changed(self, text):
-        settings = self.settings
-        settings["tts_settings"]["voice"] = text
-        self.settings = settings
+        self.update_tts_settings("voice", text)
 
     def gender_changed(self, text):
-        settings = self.settings
-        settings["tts_settings"]["gender"] = text
-        settings["tts_settings"]["voice"] = self.ui.voice_combobox.currentText()
-        self.settings = settings
+        self.update_tts_settings("gender", text)
+        self.update_tts_settings("voice", self.ui.voice_combobox.currentText())

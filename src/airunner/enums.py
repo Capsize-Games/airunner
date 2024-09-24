@@ -170,7 +170,6 @@ class SignalCode(Enum):
     SD_REQUEST_SIGNAL = "sd_request_signal"
     SD_MERGE_MODELS_SIGNAL = "sd_merge_models_signal"
     SD_CANCEL_SIGNAL = "sd_cancel_signal"
-    SD_UPDATE_SAVED_PROMPT_SIGNAL = "update_saved_stablediffusion_prompt_signal"
     SD_SAVE_PROMPT_SIGNAL = "save_stablediffusion_prompt_signal"
     SD_LOAD_PROMPT_SIGNAL = "load_saved_stablediffuion_prompt_signal"
     SD_ADD_RESPONSE_TO_QUEUE_SIGNAL = "add_sd_response_to_queue_signal"
@@ -357,16 +356,16 @@ class LLMActionType(Enum):
     use_tool_flter flag, the LLM will attempt to determine which action to take
     based on the user's words.
     """
-    DO_NOT_RESPOND = "DO NOT RESPOND: Use this option when the user has asked you to stop responding or if the text does not require a response."
-    CHAT = "RESPOND TO THE USER: Respond to the user's message."
-    GENERATE_IMAGE = "GENERATE IMAGE: Generate an image based on the text."
-    APPLICATION_COMMAND = "APPLICATION COMMAND: Execute an application command."
-    UPDATE_MOOD = "UPDATE MOOD: {{ username }} has made you feel a certain way. Respond with an emotion or feeling so that you can update your current mood."
-    QUIT_APPLICATION = "QUIT: Quit or close the application."
-    TOGGLE_FULLSCREEN = "FULL SCREEN: Make the application full screen."
-    TOGGLE_TTS = "TOGGLE TTS: Toggle text-to-speech on or off."
-    PERFORM_RAG_SEARCH = "SEARCH: Perform a search for information related to the user's query or context within the conversation."
-    SUMMARIZE = "SUMMARIZE: Provide a summary of the conversation or the user's query."
+    DO_NOT_RESPOND = "DO_NOT_RESPOND"
+    CHAT = "CHAT"
+    GENERATE_IMAGE = "GENERATE_IMAGE"
+    APPLICATION_COMMAND = "APPLICATION_COMMAND"
+    UPDATE_MOOD = "UPDATE_MOOD"
+    QUIT_APPLICATION = "QUIT_APPLICATION"
+    TOGGLE_FULLSCREEN = "TOGGLE_FULLSCREEN"
+    TOGGLE_TTS = "TOGGLE_TTS"
+    PERFORM_RAG_SEARCH = "PERFORM_RAG_SEARCH"
+    SUMMARIZE = "SUMMARIZE"
 
 
 
@@ -519,3 +518,17 @@ class ImagePreset(Enum):
     ILLUSTRATION = "Illustration"
     PHOTOGRAPH = "Photograph"
     PAINTING = "Painting"
+
+
+class WorkerType(Enum):
+    LLMRequestWorker = enum.auto()
+    LLMGenerateWorker = enum.auto()
+    SDWorker = enum.auto()
+    TTSGeneratorWorker = enum.auto()
+    TTSVocalizerWorker = enum.auto()
+    AudioCaptureWorker = enum.auto()
+    AudioProcessorWorker = enum.auto()
+    AgentWorker = enum.auto()
+    LatentsWorker = enum.auto()
+    MaskGeneratorWorker = enum.auto()
+    ModelScannerWorker = enum.auto()

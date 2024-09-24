@@ -1,18 +1,17 @@
 import pyttsx3
 from airunner.aihandler.tts.tts_handler import TTSHandler
-from airunner.enums import ModelType, ModelStatus
+from airunner.enums import ModelType, ModelStatus, Gender
 
 
 class EspeakTTSHandler(TTSHandler):
     def do_generate(self, message):
         message = message.replace('"', "'")
-        settings = self.settings["tts_settings"]["espeak"]
-        rate = settings["rate"]
-        pitch = settings["pitch"]
-        volume = settings["volume"]
-        voice = settings["voice"]
-        language = settings["language"]
-        gender = settings["gender"]
+        rate = self.espeak_settings.rate
+        pitch = self.espeak_settings.pitch
+        volume = self.espeak_settings.volume
+        voice = self.espeak_settings.voice
+        language = self.espeak_settings.language
+        gender = Gender(self.espeak_settings.gender)
 
         self.engine.setProperty('rate', float(rate))
         self.engine.setProperty('volume', volume / 100.0)

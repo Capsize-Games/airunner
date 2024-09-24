@@ -9,5 +9,5 @@ class UpdateWindow(BaseWindow):
     def initialize_window(self):
         current_text = self.template.current_version_label.text()
         latest_text = self.template.latest_version_label.text()
-        self.template.current_version_label.setText(f"{current_text} {self.settings['app_version']}")
-        self.template.latest_version_label.setText(f"{latest_text} {self.settings['app_version']}")
+        self.template.current_version_label.setText(f"{current_text} {self.application_settings.app_version}")
+        self.template.latest_version_label.setText(f"{latest_text} {self.application_settings.app_version}")

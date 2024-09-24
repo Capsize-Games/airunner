@@ -17,7 +17,15 @@ def create_airunner_paths(path_settings: dict):
     None
     """
     print("Creating directories...")
-    for k, path in path_settings.items():
+    for attr in (
+        "base_path",
+        "documents_path",
+        "ebook_path",
+        "image_path",
+        "llama_index_path",
+        "webpages_path",
+    ):
+        path = getattr(path_settings, attr)
         # Path sanitization
         path = path.replace('..', '')
 

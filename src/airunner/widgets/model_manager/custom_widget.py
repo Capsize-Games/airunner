@@ -2,7 +2,7 @@ from functools import partial
 
 from PySide6.QtCore import Slot, QTimer
 
-from airunner.enums import SignalCode, StableDiffusionVersion, ImageGenerator, GeneratorSection
+from airunner.enums import SignalCode, StableDiffusionVersion, ImageGenerator, GeneratorSection, WorkerType
 from airunner.utils.create_worker import create_worker
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
@@ -12,7 +12,6 @@ from PySide6 import QtWidgets
 
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
-from airunner.workers.model_scanner_worker import ModelScannerWorker
 
 
 class CustomModelWidget(
@@ -29,7 +28,7 @@ class CustomModelWidget(
         PipelineMixin.__init__(self)
         AIModelMixin.__init__(self)
         self.initialized = False
-        self.model_scanner_worker = create_worker(ModelScannerWorker)
+        self.model_scanner_worker = create_worker(WorkerType.ModelScannerWorker)
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.scan_for_models)
 
     def showEvent(self, event):

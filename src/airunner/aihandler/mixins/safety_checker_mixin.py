@@ -46,7 +46,7 @@ class SafetyCheckerMixin:
 
     @property
     def use_safety_checker(self):
-        return self.settings["nsfw_filter"]
+        return self.application_settings.nsfw_filter
 
     @property
     def safety_checker_model(self):
@@ -110,7 +110,7 @@ class SafetyCheckerMixin:
             self.feature_extractor = AutoFeatureExtractor.from_pretrained(
                 os.path.expanduser(
                     os.path.join(
-                        self.settings["path_settings"]["base_path"],
+                        self.path_settings.base_path,
                         "art/models/SD 1.5/feature_extractor",
                         "openai/clip-vit-large-patch14/"
                     )
@@ -172,7 +172,7 @@ class SafetyCheckerMixin:
             self.safety_checker = StableDiffusionSafetyChecker.from_pretrained(
                 os.path.expanduser(
                     os.path.join(
-                        self.settings["path_settings"]["base_path"],
+                        self.path_settings.base_path,
                         "art/models/SD 1.5/safety_checker",
                         "CompVis/stable-diffusion-safety-checker/"
                     )

@@ -3,14 +3,14 @@ from PySide6.QtWidgets import QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_history_widget_ui import Ui_llm_history_widget
-from airunner.aihandler.llm.agent.agent_database_handler import AgentDatabaseHandler
+from airunner.aihandler.models.agent_db_handler import AgentDBHandler
 
 class LLMHistoryWidget(BaseWidget):
     widget_class_ = Ui_llm_history_widget
 
     def __init__(self, *args, **kwargs):
         super(LLMHistoryWidget, self).__init__(*args, **kwargs)
-        self.database_handler = AgentDatabaseHandler()
+        self.database_handler = AgentDBHandler()
         self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
     def showEvent(self, event):

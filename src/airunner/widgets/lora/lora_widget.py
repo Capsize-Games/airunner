@@ -18,11 +18,11 @@ class LoraWidget(BaseWidget):
         self.icons = [
             ("recycle-bin-line-icon", "delete_button"),
         ]
-        self.lora = kwargs.pop("lora", None)
+        self.current_lora = kwargs.pop("lora", None)
         super().__init__(*args, **kwargs)
-        name = self.lora["name"]
-        enabled = self.lora["enabled"]
-        trigger_word = self.lora.get("trigger_word", "")
+        name = self.current_lora.name
+        enabled = self.current_lora.enabled
+        trigger_word = self.current_lora.trigger_word
 
         # Block signals for batch updates
         self.ui.enabledCheckbox.blockSignals(True)
@@ -37,7 +37,7 @@ class LoraWidget(BaseWidget):
         self.ui.trigger_word_edit.blockSignals(False)
 
         # Defer the creation of trigger word widgets
-        self.create_trigger_word_widgets(self.lora, defer=True)
+        self.create_trigger_word_widgets(self.current_lora, defer=True)
 
     def create_trigger_word_widgets(self, lora, defer=False):
         if defer:
@@ -51,45 +51,29 @@ class LoraWidget(BaseWidget):
             widget = self.ui.enabledCheckbox.layout().itemAt(i).widget()
             if isinstance(widget, LoraTriggerWordWidget):
                 widget.deleteLater()
-        for word in lora.get("trigger_word", "").split(","):
+        for word in lora.trigger_word.split(","):
             if word.strip() == "":
                 continue
             widget = LoraTriggerWordWidget(trigger_word=word)
             self.ui.enabledCheckbox.layout().addWidget(widget)
 
     def action_changed_trigger_words(self, val):
-        self.lora["trigger_word"] = val
-        self.create_trigger_word_widgets(self.lora)
-        self.update_lora()
+        self.current_lora.trigger_word = val
+        self.update_lora([self.current_lora])
+        self.create_trigger_word_widgets(self.current_lora)
 
     def action_toggled_lora_enabled(self, val, emit_signal=True):
         self.ui.enabledCheckbox.setChecked(val)
-        self.lora['enabled'] = val
-        self.update_lora()
+        self.current_lora.enabled = val
+        self.update_lora([self.current_lora])
         if emit_signal:
             self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL, {
-                "lora": [self.lora]
+                "lora": [self.current_lora]
             })
     
     def action_text_changed_trigger_word(self, val):
-        self.lora["trigger_word"] = val
-        self.update_lora()
-
-    def update_lora(self):
-        lora = self.lora
-        settings = self.settings
-        version = lora["version"]
-        if version not in settings["lora"]:
-            settings["lora"][version] = []
-        lora_found = False
-        for index, _lora in enumerate(settings["lora"][version]):
-            if _lora["name"] == lora["name"] and _lora["path"] == lora["path"]:
-                settings["lora"][version][index] = lora
-                lora_found = True
-                break
-        if not lora_found:
-            settings["lora"][version].append(lora)
-        self.settings = settings
+        self.current_lora.trigger_word = val
+        self.update_lora([self.current_lora])
 
     def action_clicked_button_deleted(self):
         self.emit_signal(

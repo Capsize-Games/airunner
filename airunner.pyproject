@@ -59,7 +59,6 @@
         "src/airunner/models/imagedata.py",
         "src/airunner/models/layerdata.py",
         "src/airunner/models/linedata.py",
-        "src/airunner/models/modeldata.py",
         "src/airunner/process_qss.py",
         "src/airunner/resources_dark.qrc",
         "src/airunner/resources_dark_rc.py",

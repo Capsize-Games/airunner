@@ -22,7 +22,7 @@ class WhisperHandler(STTHandler):
     def load_model(self):
         self.logger.debug(f"Loading model")
 
-        file_path = os.path.join(self.settings["path_settings"][f"stt_model_path"], DEFAULT_STT_HF_PATH)
+        file_path = os.path.join(self.path_settings.stt_model_path, DEFAULT_STT_HF_PATH)
         file_path = os.path.expanduser(file_path)
         file_path = os.path.abspath(file_path)
         self.change_model_status(ModelType.STT, ModelStatus.LOADING, file_path)
@@ -43,7 +43,7 @@ class WhisperHandler(STTHandler):
 
     def load_processor(self):
         self.logger.debug(f"Loading processor")
-        file_path = os.path.join(self.settings["path_settings"][f"stt_model_path"], DEFAULT_STT_HF_PATH)
+        file_path = os.path.join(self.path_settings.stt_model_path, DEFAULT_STT_HF_PATH)
         file_path = os.path.expanduser(file_path)
         file_path = os.path.abspath(file_path)
         self.change_model_status(ModelType.STT_PROCESSOR, ModelStatus.LOADING, file_path)
@@ -64,7 +64,7 @@ class WhisperHandler(STTHandler):
 
     def load_feature_extractor(self):
         self.logger.debug(f"Loading feature extractor")
-        file_path = os.path.join(self.settings["path_settings"][f"stt_model_path"], DEFAULT_STT_HF_PATH)
+        file_path = os.path.join(self.path_settings.stt_model_path, DEFAULT_STT_HF_PATH)
         file_path = os.path.expanduser(file_path)
         file_path = os.path.abspath(file_path)
         self.change_model_status(ModelType.STT_FEATURE_EXTRACTOR, ModelStatus.LOADING, file_path)

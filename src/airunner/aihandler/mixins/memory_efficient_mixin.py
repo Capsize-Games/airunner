@@ -9,8 +9,8 @@ class MemoryEfficientMixin:
     def __init__(self):
         self.settings_flags = {
             'torch_compile_applied': False,
-            'last_channels_applied': None,
             'vae_slicing_applied': None,
+            'last_channels_applied': None,
             'attention_slicing_applied': None,
             'tiled_vae_applied': None,
             'accelerated_transformers_applied': None,
@@ -22,11 +22,11 @@ class MemoryEfficientMixin:
             'enable_model_cpu_offload': None,
             'use_tome_sd': None,
         }
-        torch.backends.cuda.matmul.allow_tf32 = self.settings["memory_settings"]["use_tf32"]
+        torch.backends.cuda.matmul.allow_tf32 = self.memory_settings.use_tf32
 
     @property
     def do_remove_tome_sd(self):
-        return not self.settings["memory_settings"]["use_tome_sd"] and self.settings_flags['tome_sd_applied']
+        return not self.memory_settings.use_tome_sd and self.settings_flags['tome_sd_applied']
 
     def make_stable_diffusion_memory_efficient(self):
         if not self.pipe:
@@ -47,87 +47,91 @@ class MemoryEfficientMixin:
         self.__move_pipe_to_cpu()
 
     def __apply_all_memory_settings(self):
-        self.__apply_setting("last_channels_applied", self.__apply_last_channels)
-        self.__apply_setting("vae_slicing_applied", self.__apply_vae_slicing)
-        self.__apply_setting("attention_slicing_applied", self.__apply_attention_slicing)
-        self.__apply_setting("tiled_vae_applied", self.__apply_tiled_vae)
-        self.__apply_setting("accelerated_transformers_applied", self.__apply_accelerated_transformers)
-        self.__apply_setting("cpu_offload_applied", self.__apply_cpu_offload)
-        self.__apply_setting("model_cpu_offload_applied", self.__apply_model_offload)
-        self.__apply_setting("tome_sd_applied", self.__apply_tome)
+        self.__apply_setting("last_channels_applied", "use_last_channels", self.__apply_last_channels)
+        self.__apply_setting("vae_slicing_applied", "use_enable_vae_slicing", self.__apply_vae_slicing)
+        self.__apply_setting("attention_slicing_applied", "use_attention_slicing", self.__apply_attention_slicing)
+        self.__apply_setting("tiled_vae_applied", "use_tiled_vae", self.__apply_tiled_vae)
+        self.__apply_setting("accelerated_transformers_applied", "use_accelerated_transformers", self.__apply_accelerated_transformers)
+        self.__apply_setting("cpu_offload_applied", "use_enable_sequential_cpu_offload", self.__apply_cpu_offload)
+        self.__apply_setting("model_cpu_offload_applied", "enable_model_cpu_offload", self.__apply_model_offload)
+        self.__apply_setting("tome_sd_applied", "tome_sd_ratio", self.__apply_tome)
 
-    def __apply_setting(self, setting_name, apply_func):
-        if self.settings_flags[setting_name] != self.settings["memory_settings"].get(setting_name):
-            apply_func()
-            self.settings_flags[setting_name] = self.settings["memory_settings"].get(setting_name)
+    def __apply_setting(self, setting_name, attribute_name, apply_func):
+        attr_val = getattr(self.memory_settings, attribute_name)
+        if self.settings_flags[setting_name] != attr_val:
+            apply_func(attr_val)
+            self.settings_flags[setting_name] = attr_val
 
-    def __apply_last_channels(self):
-        use_last_channels = self.settings["memory_settings"]["use_last_channels"]
-        self.logger.debug(f"{'Enabling' if use_last_channels else 'Disabling'} torch.channels_last")
-        self.pipe.unet.to(memory_format=torch.channels_last if use_last_channels else torch.contiguous_format)
+    def __apply_last_channels(self, attr_val):
+        self.logger.debug(f"{'Enabling' if attr_val else 'Disabling'} torch.channels_last")
+        self.pipe.unet.to(memory_format=torch.channels_last if attr_val else torch.contiguous_format)
 
-    def __apply_vae_slicing(self):
-        use_vae_slicing = self.settings["memory_settings"]["use_enable_vae_slicing"]
+    def __apply_vae_slicing(self, attr_val):
         if self.sd_request.section not in ["img2img", "outpaint", "controlnet"]:
             try:
-                self.logger.debug(f"{'Enabling' if use_vae_slicing else 'Disabling'} vae slicing")
-                if use_vae_slicing:
+                if attr_val:
+                    self.logger.debug("Enabling vae slicing")
                     self.pipe.enable_vae_slicing()
                 else:
+                    self.logger.debug("Disabling vae slicing")
                     self.pipe.disable_vae_slicing()
-            except AttributeError:
-                pass
+            except AttributeError as e:
+                self.logger.error("Failed to apply vae slicing")
+                self.logger.error(e)
+        else:
+            self.logger.debug(f"Not applying vae slicing for {self.sd_request.section}")
 
-    def __apply_attention_slicing(self):
-        use_attention_slicing = self.settings["memory_settings"]["use_attention_slicing"]
+    def __apply_attention_slicing(self, attr_val):
         try:
-            self.logger.debug(f"{'Enabling' if use_attention_slicing else 'Disabling'} attention slicing")
-            if use_attention_slicing:
+            if attr_val:
+                self.logger.debug("Enabling attention slicing")
                 self.pipe.enable_attention_slicing(1)
             else:
+                self.logger.debug("Disabling attention slicing")
                 self.pipe.disable_attention_slicing()
         except AttributeError as e:
             self.logger.warning(f"Failed to apply attention slicing: {e}")
 
-    def __apply_tiled_vae(self):
-        use_tiled_vae = self.settings["memory_settings"]["use_tiled_vae"]
-        self.logger.debug(f"{'Applying' if use_tiled_vae else 'Not applying'} tiled vae")
+    def __apply_tiled_vae(self, attr_val):
         try:
-            if use_tiled_vae:
+            if attr_val:
+                self.logger.debug("Enabling tiled vae")
                 self.pipe.vae.enable_tiling()
+            else:
+                self.logger.debug("Disabling tiled vae")
+                self.pipe.vae.disable_tiling()
         except AttributeError:
             self.logger.warning("Tiled vae not supported for this model")
 
-    def __apply_accelerated_transformers(self):
-        use_accelerated_transformers = self.settings["memory_settings"]["use_accelerated_transformers"]
+    def __apply_accelerated_transformers(self, attr_val):
         from diffusers.models.attention_processor import AttnProcessor, AttnProcessor2_0
-        self.logger.debug(f"{'Enabling' if use_accelerated_transformers else 'Disabling'} accelerated transformers")
-        self.pipe.unet.set_attn_processor(AttnProcessor2_0() if use_accelerated_transformers else AttnProcessor())
+        self.logger.debug(f"{'Enabling' if attr_val else 'Disabling'} accelerated transformers")
+        self.pipe.unet.set_attn_processor(AttnProcessor2_0() if attr_val else AttnProcessor())
 
-    def __apply_cpu_offload(self):
-        use_enable_sequential_cpu_offload = self.settings["memory_settings"]["use_enable_sequential_cpu_offload"]
-        enable_model_cpu_offload = self.settings["memory_settings"]["enable_model_cpu_offload"]
-        self.logger.debug(f"{'Enabling' if use_enable_sequential_cpu_offload else 'Disabling'} sequential cpu offload")
-        if use_enable_sequential_cpu_offload and not enable_model_cpu_offload:
+    def __apply_cpu_offload(self, attr_val):
+        if attr_val and not self.memory_settings.enable_model_cpu_offload:
             self.__move_stable_diffusion_to_cpu()
             try:
+                self.logger.debug("Enabling sequential cpu offload")
                 self.pipe.enable_sequential_cpu_offload()
             except NotImplementedError as e:
                 self.logger.warning(f"Error applying sequential cpu offload: {e}")
                 self.__move_stable_diffusion_to_cuda()
+        else:
+            self.logger.debug("Sequential cpu offload disabled")
 
-    def __apply_model_offload(self):
-        enable_model_cpu_offload = self.settings["memory_settings"]["enable_model_cpu_offload"]
-        use_enable_sequential_cpu_offload = self.settings["memory_settings"]["use_enable_sequential_cpu_offload"]
-        if enable_model_cpu_offload and not use_enable_sequential_cpu_offload:
+    def __apply_model_offload(self, attr_val):
+        if attr_val and not self.memory_settings.use_enable_sequential_cpu_offload:
             self.logger.debug("Enabling model cpu offload")
             self.__move_stable_diffusion_to_cpu()
             self.pipe.enable_model_cpu_offload()
+        else:
+            self.logger.debug("Model cpu offload disabled")
 
-    def __apply_tome(self):
-        tome_sd_ratio = self.settings["memory_settings"]["tome_sd_ratio"] / 1000
+    def __apply_tome(self, attr_val):
+        tome_sd_ratio = self.memory_settings.tome_sd_ratio / 1000
         self.logger.debug(f"Applying ToMe SD weight merging with ratio {tome_sd_ratio}")
-        if self.settings_flags['use_tome_sd']:
+        if attr_val:
             self.__remove_tome_sd()
             self.__apply_tome_sd(tome_sd_ratio)
         else:

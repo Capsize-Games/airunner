@@ -21,7 +21,7 @@ class PathWidget(BaseWidget):
 
     @property
     def path(self):
-        return self.settings["path_settings"][self.path_name]
+        return getattr(self.path_settings, self.path_name)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -29,7 +29,7 @@ class PathWidget(BaseWidget):
         self.ui.description_label.setText(self.description)
         path = self.path
         if self.path_name == "hf_cache" and path == "":
-            path = self.settings["path_settings"]["hf_cache_path"]
+            path = self.path_settings.hf_cache_path
         obj = getattr(self.ui, f"path")
         obj.setText(path)
 
@@ -39,7 +39,7 @@ class PathWidget(BaseWidget):
     def action_button_clicked(self):
         path = self.path
         if not os.path.exists(path):
-            path = self.settings["path_settings"]["model_base_path"]
+            path = self.path_settings.model_base_path
         if not os.path.exists(path):
             path = os.path.expanduser("~")
         path = QFileDialog.getExistingDirectory(
@@ -53,7 +53,7 @@ class PathWidget(BaseWidget):
 
         home = os.path.expanduser("~")
 
-        base_path = self.settings["path_settings"]["base_path"]
+        base_path = self.path_settings.base_path
         if base_path == "":
             base_path = os.path.join(home, "airunner")
 
@@ -64,6 +64,4 @@ class PathWidget(BaseWidget):
 
     def set_path(self, path):
         self.ui.path.setText(path)
-        path_settings = self.settings["path_settings"]
-        path_settings[self.path_name] = path
-        self.settings["path_settings"] = path_settings
+        self.update_path_settings(self.path_name, path)

@@ -42,13 +42,11 @@ class ActiveGridArea(DraggablePixmap):
 
     @property
     def rect(self):
-        settings = self.settings
-        active_grid_settings = settings["active_grid_settings"]
         return QRect(
-            active_grid_settings["pos_x"],
-            active_grid_settings["pos_y"],
-            self.settings["working_width"],
-            self.settings["working_height"]
+            self.active_grid_settings.pos_x,
+            self.active_grid_settings.pos_y,
+            self.application_settings.working_width,
+            self.application_settings.working_height
         )
 
     def update_position(self):
@@ -58,13 +56,10 @@ class ActiveGridArea(DraggablePixmap):
         )
 
     def render_fill(self):
-        settings = self.settings
-        active_grid_settings = settings["active_grid_settings"]
-
         self._current_width = self.rect.width()
         self._current_height = self.rect.height()
-        self._do_render_fill = active_grid_settings["render_fill"]
-        self._active_grid_settings_enabled = active_grid_settings["enabled"]
+        self._do_render_fill = self.active_grid_settings.render_fill
+        self._active_grid_settings_enabled = self.active_grid_settings.enabled
 
         width = abs(self.rect.width())
         height = abs(self.rect.height())
@@ -80,12 +75,11 @@ class ActiveGridArea(DraggablePixmap):
         self.setPixmap(pixmap)
 
     def get_fill_color(self) -> QColor:
-        settings = self.settings
-        render_fill = settings["active_grid_settings"]["render_fill"]
+        render_fill = self.active_grid_settings.render_fill
         if render_fill:
-            fill_color = settings["active_grid_settings"]["fill_color"]
+            fill_color = self.active_grid_settings.fill_color
             fill_color = QColor(fill_color)
-            fill_opacity = settings["active_grid_settings"]["fill_opacity"]
+            fill_opacity = self.active_grid_settings.fill_opacity
             fill_opacity = max(1, fill_opacity)
             fill_color.setAlpha(fill_opacity)
         else:
@@ -105,11 +99,9 @@ class ActiveGridArea(DraggablePixmap):
         if painter is None:
             painter = QPainter(self.pixmap)
 
-        settings = self.settings
-
-        if settings["active_grid_settings"]["enabled"]:
-            render_border = settings["active_grid_settings"]["render_border"]
-            line_width = settings["grid_settings"]["line_width"]
+        if self.active_grid_settings.enabled:
+            render_border = self.active_grid_settings.render_border
+            line_width = self.grid_settings.line_width
 
             self._draggable_rect = QRect(
                 0,
@@ -117,8 +109,8 @@ class ActiveGridArea(DraggablePixmap):
                 abs(self.rect.width()),
                 abs(self.rect.height())
             )
-            border_color = QColor(settings["active_grid_settings"]["border_color"])
-            border_color.setAlpha(settings["active_grid_settings"]["border_opacity"])
+            border_color = QColor(self.active_grid_settings.border_color)
+            border_color.setAlpha(self.active_grid_settings.border_opacity)
             self._border_pen = QPen(
                 border_color,
                 line_width
@@ -157,7 +149,7 @@ class ActiveGridArea(DraggablePixmap):
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
-        if self.mouse_press_pos and self.settings["current_tool"] == CanvasToolName.ACTIVE_GRID_AREA and (
+        if self.mouse_press_pos and self.current_tool is CanvasToolName.ACTIVE_GRID_AREA and (
             self.mouse_press_pos.x() != event.pos().x() or
             self.mouse_press_pos.y() != event.pos().y()
         ):

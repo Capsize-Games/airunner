@@ -27,7 +27,7 @@ class DownloadCivitAI(
         # if model_id == id/name split and get the id
         if "/" in model_id:
             model_id = model_id.split("/")[0]
-        url = f"https://civitai.com/api/v1/models/{model_id}?token={self.settings['civit_ai_api_key']}"
+        url = f"https://civitai.com/api/v1/models/{model_id}?token={self.application_settings.civit_ai_api_key}"
         headers = {
             "Content-Type": "application/json",
             #"Authorization": f"Bearer {api_token}"

@@ -14,20 +14,16 @@ class EmbeddingTriggerWordWidget(BaseWidget):
         self.ui.trigger_word.setText(self.trigger_word)
 
     def action_click_button_to_prompt(self):
-        val = f"{self.settings['generator_settings']['prompt']} {self.trigger_word}"
-        settings = self.settings
-        settings["generator_settings"]["prompt"] = val
-        self.settings = settings
+        val = f"{self.generator_settings.prompt} {self.trigger_word}"
+        self.update_generator_settings("prompt", val)
         self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
 
     def action_click_button_to_negative_prompt(self):
-        val = f"{self.settings['generator_settings']['negative_prompt']} {self.trigger_word}"
-        settings = self.settings
-        settings["generator_settings"]["negative_prompt"] = val
-        self.settings = settings
+        val = f"{self.generator_settings.negative_prompt} {self.trigger_word}"
+        self.update_generator_settings("negative_prompt", val)
         self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
 
     def action_click_button_copy(self):
         # copy embedding name to clipboard
         clipboard = QApplication.clipboard()
-        clipboard.setText(self.embedding["name"])
+        clipboard.setText(self.embedding.name)

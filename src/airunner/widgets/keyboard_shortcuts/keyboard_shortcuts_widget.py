@@ -87,9 +87,7 @@ class KeyboardShortcutsWidget(BaseWidget):
         return text
 
     def save_shortcuts(self):
-        settings = self.settings
-        settings["shortcut_key_settings"] = self.shortcuts
-        self.settings = settings
+        print("TODO: save_shortcuts")
 
     def clear_shortcut_setting(self, key=""):
         for k, v in self.shortcuts.items():
