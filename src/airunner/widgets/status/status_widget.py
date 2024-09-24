@@ -24,8 +24,7 @@ class StatusWidget(BaseWidget):
         self.safety_checker_status = ModelStatus.UNLOADED
         self.feature_extractor_status = ModelStatus.UNLOADED
 
-        settings = self.settings
-        if settings["nsfw_filter"] and settings["sd_enabled"]:
+        if self.application_settings.nsfw_filter and self.application_settings.sd_enabled:
             self.safety_checker_status = ModelStatus.LOADING
             self.feature_extractor_status = ModelStatus.LOADING
 
@@ -34,34 +33,33 @@ class StatusWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.set_sd_status_text(self.settings)
+        self.set_sd_status_text()
 
-        settings = self.settings
-        if settings["sd_enabled"]:
+        if self.application_settings.sd_enabled:
             self.on_model_status_changed_signal({
                 "model": ModelType.SD,
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-        if settings["controlnet_enabled"]:
+        if self.application_settings.controlnet_enabled:
             self.on_model_status_changed_signal({
                 "model": ModelType.CONTROLNET,
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-        if settings["llm_enabled"]:
+        if self.application_settings.llm_enabled:
             self.on_model_status_changed_signal({
                 "model": ModelType.LLM,
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-        if settings["tts_enabled"]:
+        if self.application_settings.tts_enabled:
             self.on_model_status_changed_signal({
                 "model": ModelType.TTS,
                 "status": ModelStatus.LOADING,
                 "path": ""
             })
-        if settings["stt_enabled"]:
+        if self.application_settings.stt_enabled:
             self.on_model_status_changed_signal({
                 "model": ModelType.STT,
                 "status": ModelStatus.LOADING,
@@ -110,9 +108,8 @@ class StatusWidget(BaseWidget):
             getattr(self.ui, element_name).setStyleSheet(styles)
             getattr(self.ui, element_name).setToolTip(tool_tip)
 
-    def set_sd_status_text(self, settings=None):
-        settings = settings or self.settings
-        self.ui.sd_status.setText(settings["generator_settings"]["version"])
+    def set_sd_status_text(self):
+        self.ui.sd_status.setText(self.generator_settings.version)
 
     def on_model_status_changed_signal(self, data):
         self.update_model_status(data)

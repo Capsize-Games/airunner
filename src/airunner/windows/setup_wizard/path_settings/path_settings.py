@@ -17,7 +17,7 @@ class PathSettings(BaseWizard):
 
     @Slot()
     def browse_files(self):
-        base_path = str(self.settings["path_settings"]["base_path"])
+        base_path = str(self.path_settings.base_path)
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.Directory)
         file_dialog.setOption(QFileDialog.ShowDirsOnly)
@@ -29,13 +29,10 @@ class PathSettings(BaseWizard):
             self.ui.base_path.setText(selected_path[0])
 
     def save_settings(self):
-        settings = self.settings
-        settings["path_settings"]["base_path"] = self.ui.base_path.text()
+        self.update_path_settings("base_path", self.ui.base_path.text())
 
         """
         Create the airunner paths
         """
-        create_airunner_paths(self.settings["path_settings"])
-
-        settings["paths_initialized"] = True
-        self.settings = settings
+        create_airunner_paths(self.path_settings)
+        self.update_application_settings("paths_initialized", True)

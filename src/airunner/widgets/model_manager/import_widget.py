@@ -1,6 +1,7 @@
 import os
 from urllib.parse import urlparse
 
+from airunner.aihandler.models.settings_models import Lora, AIModels
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
@@ -97,20 +98,20 @@ class ImportWidget(
             trained_words = [trained_words]
         trained_words = ",".join(trained_words)
         if model_type == "Checkpoint":
-            self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {
-                'name': name,
-                'path': file_path,
-                'branch': "main",
-                'version': diffuser_model_version,
-                'category': category,
-                'pipeline_action': pipeline_action,
-                'enabled': True,
-                'is_default': False
-            })
+            model = AIModels()
+            model.name = name
+            model.path = file_path
+            model.branch = "main"
+            model.version = diffuser_model_version
+            model.category = category
+            model.pipeline_action = pipeline_action
+            model.enabled = True
+            model.model_type = "art"
+            model.is_default = False
+            self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {"models": [model]})
         elif model_type == "LORA":
             name = file["name"].replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-            settings = self.settings
-            settings["lora"][diffuser_model_version].append(dict(
+            new_lora = Lora(
                 name=name,
                 path=file_path,
                 scale=1,
@@ -118,8 +119,8 @@ class ImportWidget(
                 loaded=False,
                 trigger_word=trained_words,
                 version=model_version["baseModel"]
-            ))
-            self.settings = settings
+            )
+            self.create_lora(new_lora)
         elif model_type == "TextualInversion":
             # name = file_path.split("/")[-1].split(".")[0]
             # embedding_exists = session.query(Embedding).filter_by(
@@ -163,9 +164,7 @@ class ImportWidget(
         self.ui.download_progress_bar.setValue(current_size)
         if current_size >= total_size:
             self.reset_form()
-            self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL, {
-                "models": self.current_model_data
-            })
+            self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL)
             self.show_items_in_scrollarea()
 
     def reset_form(self):
@@ -265,7 +264,7 @@ class ImportWidget(
         self.set_model_form_data()
     
     def download_path(self, file, version, pipeline_action, model_type):
-        base_path = self.settings["path_settings"]["base_path"]
+        base_path = self.path_settings.base_path
         if model_type == "LORA":
             action = "lora"
         elif model_type == "Checkpoint":
@@ -303,7 +302,7 @@ class ImportWidget(
         model_version_name = model_version["name"]
 
         categories = self.ai_model_categories()
-        actions = [pipeline["pipeline_action"] for pipeline in self.settings["pipelines"]]
+        actions = [pipeline.pipeline_action for pipeline in self.pipelines]
         category = "stablediffusion"
         pipeline_action = "txt2img"
         if "inpaint" in model_version_name:

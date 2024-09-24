@@ -1,7 +1,8 @@
+import threading
 import traceback
 import numpy as np
 from PySide6.QtCore import QObject, Signal, Slot, QThread
-from airunner.enums import SignalCode, EngineResponseCode
+from airunner.enums import SignalCode, EngineResponseCode, WorkerType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.aihandler.logger import Logger
@@ -102,40 +103,30 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         if not disable_tts:
             self.register_tts_workers()
 
-        # if not disable_stt:
-        #     self.register_stt_workers()
-        #
+        if not disable_stt:
+            self.register_stt_workers()
+
 
     def register_sd_workers(self):
-        from airunner.workers.sd_worker import SDWorker
-        self.sd_worker = create_worker(SDWorker)
+        self.sd_worker = create_worker(WorkerType.SDWorker)
         self.sd_state = "loaded"
 
     def register_llm_workers(self, agent_class, do_load_llm_on_init, agent_options):
-        from airunner.workers.llm_request_worker import LLMRequestWorker
-        from airunner.workers.llm_generate_worker import LLMGenerateWorker
-        if agent_class is None:
-            from airunner.aihandler.llm.agent.base_agent import BaseAgent
-            agent_class = BaseAgent
-        self.llm_request_worker = create_worker(LLMRequestWorker)
+        self.llm_request_worker = create_worker(WorkerType.LLMRequestWorker)
         self.llm_generate_worker = create_worker(
-            LLMGenerateWorker,
+            WorkerType.LLMGenerateWorker,
             do_load_on_init=do_load_llm_on_init,
             agent_class=agent_class,
             agent_options=agent_options
         )
 
     def register_tts_workers(self):
-        from airunner.workers.tts_generator_worker import TTSGeneratorWorker
-        from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
-        self.tts_generator_worker = create_worker(TTSGeneratorWorker)
-        self.tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
+        self.tts_generator_worker = create_worker(WorkerType.TTSGeneratorWorker)
+        self.tts_vocalizer_worker = create_worker(WorkerType.TTSVocalizerWorker)
 
     def register_stt_workers(self):
-        from airunner.workers.audio_capture_worker import AudioCaptureWorker
-        from airunner.workers.audio_processor_worker import AudioProcessorWorker
-        self.stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-        self.stt_audio_processor_worker = create_worker(AudioProcessorWorker)
+        self.stt_audio_capture_worker = create_worker(WorkerType.AudioCaptureWorker)
+        self.stt_audio_processor_worker = create_worker(WorkerType.AudioProcessorWorker)
 
     def on_unload_llm_signal(self, message):
         if self.llm_generate_worker:
@@ -221,7 +212,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_llm_text_streamed_signal(self, data: dict):
         try:
-            if self.settings["tts_enabled"]:
+            if self.application_settings.tts_enabled:
                 self.do_tts_request(data["message"], data["is_end_of_message"])
         except TypeError as e:
             self.logger.error(f"Error in on_llm_text_streamed_signal: {e}")
@@ -245,9 +236,9 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         return message
     
     def do_tts_request(self, message: str, is_end_of_message: bool=False):
-        if self.settings["tts_enabled"]:
+        if self.application_settings.tts_enabled:
             self.emit_signal(SignalCode.TTS_REQUEST, {
                 'message': message.replace("</s>", "") + ("." if is_end_of_message else ""),
-                'tts_settings': self.settings["tts_settings"],
+                'tts_settings': self.tts_settings,
                 'is_end_of_message': is_end_of_message,
             })
