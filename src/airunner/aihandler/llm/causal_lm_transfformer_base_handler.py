@@ -13,8 +13,8 @@ class CausalLMTransformerBaseHandler(
     auto_class_ = AutoModelForCausalLM
     model_type = ModelType.LLM
 
-    def __init__(self, *args, **kwargs):
-        self.agent_class_ = kwargs.pop("agent_class", BaseAgent)
+    def __init__(self, agent_class: BaseAgent, *args, **kwargs):
+        self.agent_class_ = agent_class if agent_class is not None else BaseAgent
         self.agent_options = kwargs.pop("agent_options", {})
         self.streamer = None
         self.chat_engine = None
@@ -124,24 +124,20 @@ class CausalLMTransformerBaseHandler(
 
     def process_data(self, data):
         super().process_data(data)
-
-        current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][
-            self.settings["llm_generator_settings"]["current_chatbot"]]
-
-        self._username = current_bot["username"]
-        self._botname = current_bot["botname"]
-        self.bot_mood = current_bot["bot_mood"]
-        self.bot_personality = current_bot["bot_personality"]
-        self.use_personality = current_bot["use_personality"]
-        self.use_mood = current_bot["use_mood"]
-        self.use_guardrails = current_bot["use_guardrails"]
-        self.use_system_instructions = current_bot["use_system_instructions"]
-        self.assign_names = current_bot["assign_names"]
-        self.prompt_template = current_bot["prompt_template"]
-        self.guardrails_prompt = current_bot["guardrails_prompt"]
-        self.system_instructions = current_bot["system_instructions"]
-        self.batch_size = self.settings["llm_generator_settings"]["batch_size"]
-        action = self.settings["llm_generator_settings"]["action"]
+        self._username = self.chatbot.username
+        self._botname = self.chatbot.botname
+        self.bot_mood = self.chatbot.bot_mood
+        self.bot_personality = self.chatbot.bot_personality
+        self.use_personality = self.chatbot.use_personality
+        self.use_mood = self.chatbot.use_mood
+        self.use_guardrails = self.chatbot.use_guardrails
+        self.use_system_instructions = self.chatbot.use_system_instructions
+        self.assign_names = self.chatbot.assign_names
+        self.prompt_template = self.chatbot.prompt_template
+        self.guardrails_prompt = self.chatbot.guardrails_prompt
+        self.system_instructions = self.chatbot.system_instructions
+        self.batch_size = self.llm_generator_settings.batch_size
+        action = self.llm_generator_settings.action
         for action_type in LLMActionType:
             if action_type.value == action:
                 self.action = action_type
@@ -221,10 +217,10 @@ class CausalLMTransformerBaseHandler(
 
     def do_generate(self, prompt, action):
         self.logger.debug("Generating response")
-        current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][
-            self.settings["llm_generator_settings"]["current_chatbot"]
-        ]
-        if action is LLMActionType.CHAT and current_bot["use_mood"]:
+        if action is LLMActionType.CHAT and self.chatbot.use_mood:
+            print("*" * 100)
+            print("UPDATE MOOD")
+            print("*" * 100)
             action = LLMActionType.UPDATE_MOOD
         self.chat_agent.run(
             prompt,

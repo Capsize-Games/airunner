@@ -114,7 +114,7 @@ class LLMGenerateWorker(Worker):
     def start_worker_thread(self):
         from airunner.aihandler.llm.causal_lm_transfformer_base_handler import CausalLMTransformerBaseHandler
 
-        if self.settings["llm_enabled"]:
+        if self.application_settings.llm_enabled:
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                     "model": ModelType.LLM,
@@ -123,8 +123,8 @@ class LLMGenerateWorker(Worker):
                 }
             )
         self.llm = CausalLMTransformerBaseHandler(
-            do_load_on_init=self.do_load_on_init,
             agent_class=self.agent_class,
+            do_load_on_init=self.do_load_on_init,
             agent_options=self.agent_options
         )
 

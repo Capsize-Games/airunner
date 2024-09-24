@@ -1,3 +1,4 @@
+from airunner.aihandler.models.settings_models import Embedding
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_trigger_word_widget import EmbeddingTriggerWordWidget
@@ -13,11 +14,11 @@ class EmbeddingWidget(BaseWidget):
     widget_class_ = Ui_embedding
 
     def __init__(self, *args, **kwargs):
-        self.embedding = kwargs.pop("embedding")
+        self.embedding: Embedding = kwargs.pop("embedding")
         super().__init__(*args, **kwargs)
-        name = self.embedding["name"]
-        enabled = self.embedding["active"]
-        trigger_word = self.embedding["trigger_word"]
+        name = self.embedding.name
+        enabled = self.embedding.active
+        trigger_word = self.embedding.trigger_word
         self.ui.enabledCheckbox.blockSignals(True)
         self.ui.trigger_word_edit.blockSignals(True)
         self.ui.enabledCheckbox.setChecked(enabled)
@@ -27,15 +28,8 @@ class EmbeddingWidget(BaseWidget):
         self.ui.trigger_word_edit.blockSignals(False)
         self.create_trigger_word_widgets(self.embedding)
 
-    def update_embedding(self, embedding: dict):
-        settings = self.settings
-        embeddings = self.settings["embeddings"][self.settings["generator_settings"]["version"]]
-        for index, _embedding in enumerate(embeddings):
-            if _embedding["name"] == embedding["name"] and _embedding["path"] == embedding["path"]:
-                settings["embeddings"][self.settings["generator_settings"]["version"]][index] = embedding
-                print("updatting embedding")
-                self.settings = settings
-                return
+    def update_embedding(self, embedding: Embedding):
+        self.update_embedding(embedding)
 
     def action_toggled_embedding(self, val, emit_signal=True):
         self.ui.enabledCheckbox.setChecked(val)
@@ -43,19 +37,19 @@ class EmbeddingWidget(BaseWidget):
         if emit_signal:
             self.update_embedding(self.embedding)
 
-    def create_trigger_word_widgets(self, embedding):
+    def create_trigger_word_widgets(self, embedding: Embedding):
         for i in reversed(range(self.ui.enabledCheckbox.layout().count())):
             widget = self.ui.enabledCheckbox.layout().itemAt(i).widget()
             if isinstance(widget, EmbeddingTriggerWordWidget):
                 widget.deleteLater()
-        for word in embedding["trigger_word"].split(","):
+        for word in embedding.trigger_word.split(","):
             if word.strip() == "":
                 continue
             widget = EmbeddingTriggerWordWidget(trigger_word=word)
             self.ui.enabledCheckbox.layout().addWidget(widget)
 
     def action_changed_trigger_word(self, val):
-        self.embedding["trigger_word"] = val
+        self.embedding.trigger_word = val
         self.create_trigger_word_widgets(self.embedding)
         self.update_embedding(self.embedding)
 

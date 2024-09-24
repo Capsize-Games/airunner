@@ -13,7 +13,7 @@ class AgentWorker(Worker):
                 print("Model output contains NaN values.")
                 return None
         try:
-            if self.settings["llm_generator_settings"]["use_api"]:
+            if self.llm_generator_settings.use_api:
                 res = message["model"].stream_complete(
                     prompt=message["prompt"],
                     # do_sample=True,
