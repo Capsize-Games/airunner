@@ -29,11 +29,12 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         self.items = {}
         self.current_index = 0
         self.paused = False
-        self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
         self.register(SignalCode.QUIT_APPLICATION, self.stop)
         self.register_signals()
 
-        if hasattr(self, "start_worker_thread"):
+        if hasattr(self, "start_worker_process"):
+            self.start_worker_process()
+        elif hasattr(self, "start_worker_thread"):
             threading.Thread(target=self.start_worker_thread).start()
 
     def register_signals(self):

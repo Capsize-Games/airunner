@@ -32,7 +32,7 @@ class AgentLlamaIndexMixin:
         self.__embedding = None
         self.__model_name = os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["base_path"],
+                self.path_settings.base_path,
                 "text/models",
                 "sentence_transformers/sentence-t5-large"
             )
@@ -53,7 +53,8 @@ class AgentLlamaIndexMixin:
     def target_files(self):
         target_files = self.__target_files or []
         if len(target_files) == 0:
-            target_files = self.chatbot["target_files"] or []
+            target_files = []#self.chatbot.target_files or []
+            print("TODO: load target files")
         return target_files
 
     @property
@@ -81,7 +82,7 @@ class AgentLlamaIndexMixin:
     def llm(self):
         if self.__llm is None:
             try:
-                if self.settings["llm_generator_settings"]["use_api"]:
+                if self.llm_generator_settings.use_api:
                     self.__llm = self.__model
                 else:
                     from airunner.aihandler.llm.huggingface_llm import HuggingFaceLLM

@@ -143,7 +143,7 @@
              <number>64</number>
             </property>
             <property name="settings_property" stdset="0">
-             <string notr="true">working_width</string>
+             <string notr="true">application_settings.working_width</string>
             </property>
             <property name="display_as_float" stdset="0">
              <bool>false</bool>
@@ -208,7 +208,7 @@
              <string>Height</string>
             </property>
             <property name="settings_property" stdset="0">
-             <string>working_height</string>
+             <string>application_settings.working_height</string>
             </property>
             <property name="display_as_float" stdset="0">
              <bool>false</bool>

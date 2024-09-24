@@ -6,7 +6,6 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QFileDialog
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.settings import VALID_IMAGE_FILES
-from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 from airunner.widgets.canvas.custom_scene import CustomScene
 
 
@@ -15,12 +14,11 @@ class BrushScene(CustomScene):
 
     def __init__(self, canvas_type: str):
         super().__init__(canvas_type)
-        brush_settings = self.settings["brush_settings"]
-        brush_color = brush_settings["primary_color"]
+        brush_color = self.brush_settings.primary_color
         self._brush_color = QColor(brush_color)
         self.pen = QPen(
             self._brush_color,
-            brush_settings["size"],
+            self.brush_settings.size,
             Qt.PenStyle.SolidLine,
             Qt.PenCapStyle.RoundCap
         )
@@ -31,7 +29,7 @@ class BrushScene(CustomScene):
 
     @property
     def is_brush_or_eraser(self):
-        return self.settings["current_tool"] in (
+        return self.current_tool in (
             CanvasToolName.BRUSH,
             CanvasToolName.ERASER
         )
@@ -95,10 +93,9 @@ class BrushScene(CustomScene):
             self.painter.drawImage(0, 0, self.image)
 
             if self.last_pos:
-                settings = self.settings
-                if settings["current_tool"] is CanvasToolName.BRUSH:
+                if self.current_tool is CanvasToolName.BRUSH:
                     self.draw_at(self.painter)
-                elif settings["current_tool"] is CanvasToolName.ERASER:
+                elif self.current_tool is CanvasToolName.ERASER:
                     self.erase_at(self.painter)
         super().drawBackground(painter, rect)
 
@@ -108,7 +105,7 @@ class BrushScene(CustomScene):
             self._is_erasing = erasing
 
             # set the size of the pen
-            self.pen.setWidth(self.settings["brush_settings"]["size"])
+            self.pen.setWidth(self.brush_settings.size)
 
             if drawing:
                 composition_mode = QPainter.CompositionMode.CompositionMode_SourceOver
@@ -176,10 +173,10 @@ class BrushScene(CustomScene):
         if self._do_generate_image:
             self._do_generate_image = False
             if (
-                self.settings["drawing_pad_settings"]["enable_automatic_drawing"] and
+                self.drawing_pad_settings.enable_automatic_drawing and
                 (
-                    self.settings["current_tool"] is CanvasToolName.BRUSH or
-                    self.settings["current_tool"] is CanvasToolName.ERASER
+                    self.current_tool is CanvasToolName.BRUSH or
+                    self.current_tool is CanvasToolName.ERASER
                 )
             ):
                 self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
