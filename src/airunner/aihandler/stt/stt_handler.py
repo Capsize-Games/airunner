@@ -42,8 +42,8 @@ class STTHandler(BaseHandler):
         self.register(SignalCode.STT_PROCESSOR_LOAD_SIGNAL, self.on_stt_processor_load_signal)
         self.register(SignalCode.STT_FEATURE_EXTRACTOR_LOAD_SIGNAL, self.on_stt_feature_extractor_load_signal)
 
-        if self.settings["stt_enabled"]:
-            self.load_model()
+        if self.application_settings.stt_enabled:
+            self.load()
 
     def on_stop_listenening(self):
         self.unload()
@@ -139,15 +139,15 @@ class STTHandler(BaseHandler):
             self.logger.error(e)
             return
 
-        try:
-            inputs = self.feature_extractor(inputs, sampling_rate=self.fs, return_tensors="pt")
-            if torch.isnan(inputs.input_features).any():
-                self.logger.error("NaN values found after feature extraction.")
-                return
-        except Exception as e:
-            self.logger.error("Failed to extract features from inputs.")
-            self.logger.error(e)
+        # try:
+        inputs = self.feature_extractor(inputs, sampling_rate=self.fs, return_tensors="pt")
+        if torch.isnan(inputs.input_features).any():
+            self.logger.error("NaN values found after feature extraction.")
             return
+        # except Exception as e:
+        #     self.logger.error("Failed to extract features from inputs.")
+        #     self.logger.error(e)
+        #     return
 
         try:
             if self.use_cuda:

@@ -17,7 +17,7 @@ from airunner.enums import (
     EngineResponseCode,
     ModelStatus,
     ModelType,
-    HandlerState
+    HandlerState, WorkerType
 )
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
@@ -25,13 +25,11 @@ from airunner.aihandler.mixins.lora_mixin import LoraMixin
 from airunner.aihandler.mixins.memory_efficient_mixin import MemoryEfficientMixin
 from airunner.aihandler.mixins.scheduler_mixin import SchedulerMixin
 from airunner.exceptions import InterruptedException, PipeNotLoadedException
-from airunner.windows.main.controlnet_model_mixin import ControlnetModelMixin
 from airunner.windows.main.embedding_mixin import EmbeddingMixin as EmbeddingDataMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.utils.create_worker import create_worker
 from airunner.utils.get_torch_device import get_torch_device
-from airunner.workers.latents_worker import LatentsWorker
 
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -70,7 +68,6 @@ class SDHandler(
     # Data Mixins
     EmbeddingDataMixin,
     PipelineMixin,
-    ControlnetModelMixin,
     AIModelMixin,
     ControlnetHandlerMixin,
     SafetyCheckerMixin,
@@ -85,7 +82,6 @@ class SDHandler(
         EmbeddingMixin.__init__(self)
         SafetyCheckerMixin.__init__(self)
         EmbeddingDataMixin.__init__(self)
-        ControlnetModelMixin.__init__(self)
         AIModelMixin.__init__(self)
         LoraMixin.__init__(self)
         CompelMixin.__init__(self)
@@ -152,7 +148,7 @@ class SDHandler(
         self.do_generate = False
         self._generator = None
         self.do_interrupt_image_generation = False
-        self.latents_worker = create_worker(LatentsWorker)
+        self.latents_worker = create_worker(WorkerType.LatentsWorker)
         self._loading_thread = None
 
         self.register(SignalCode.SD_UNLOAD_SIGNAL, self.__on_unload_stablediffusion_signal)
@@ -210,19 +206,20 @@ class SDHandler(
     def __cuda_error_message(self) -> str:
         return (
             f"VRAM too low for "
-            f"{self.settings['working_width']}x{self.settings['working_height']} "
+            f"{self.application_settings.working_width}x{self.application_settings.working_height} "
             f"resolution. Potential solutions: try again, use a different model, "
             f"restart the application, use a smaller size, upgrade your GPU."
         )
 
     @property
     def data_type(self):
-        if self.sd_request.memory_settings.use_enable_sequential_cpu_offload:
-            return torch.float32
-        elif self.sd_request.memory_settings.enable_model_cpu_offload:
-            return torch.float16
-        data_type = torch.float16 if self.cuda_is_available else torch.float
-        return data_type
+        # if self.sd_request.memory_settings.use_enable_sequential_cpu_offload:
+        #     return torch.float32
+        # elif self.sd_request.memory_settings.enable_model_cpu_offload:
+        #     return torch.float16
+        # data_type = torch.float16 if self.cuda_is_available else torch.float
+        # return data_type
+        return torch.float16
 
     @property
     def inpaint_vae_model(self):
@@ -239,12 +236,10 @@ class SDHandler(
 
     def __load_stable_diffusion(self):
         self.logger.info("Loading stable diffusion")
-        settings = self.settings
-
-        if settings["nsfw_filter"]:
+        if self.application_settings.nsfw_filter:
             self.load_safety_checker()
 
-        if settings["controlnet_enabled"]:
+        if self.application_settings.controlnet_enabled:
             self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
 
         if not self.scheduler:
@@ -257,7 +252,7 @@ class SDHandler(
 
     @property
     def device(self):
-        return get_torch_device(self.settings["memory_settings"]["default_gpu"]["sd"])
+        return get_torch_device(self.memory_settings.default_gpu_sd)
 
     @property
     def do_load(self):
@@ -268,7 +263,7 @@ class SDHandler(
 
     @property
     def cuda_is_available(self) -> bool:
-        if self.settings["memory_settings"]["enable_model_cpu_offload"]:
+        if self.memory_settings.enable_model_cpu_offload:
             return False
         return torch.cuda.is_available()
 
@@ -314,7 +309,7 @@ class SDHandler(
     def __run(self, message: dict):
         try:
             response = self.generate(
-                self.settings,
+                self.generator_settings,
                 message
             )
         except PipeNotLoadedException as e:

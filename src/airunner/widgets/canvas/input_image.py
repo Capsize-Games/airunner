@@ -15,31 +15,59 @@ from airunner.widgets.canvas.templates.input_image_ui import Ui_input_image
 class InputImage(BaseWidget):
     widget_class_ = Ui_input_image
 
+    @property
+    def settings_key(self):
+        return self.property("settings_key")
+
+    @property
+    def current_settings(self):
+        settings = None
+        if self.settings_key == "controlnet_settings":
+            settings = self.controlnet_settings
+        elif self.settings_key == "image_to_image_settings":
+            settings = self.image_to_image_settings
+        elif self.settings_key == "outpaint_settings":
+            settings = self.outpaint_settings
+        elif self.settings_key == "brush":
+            settings = self.drawing_pad_settings
+
+        if not settings:
+            raise ValueError(f"Settings not found for key: {self.settings_key}")
+
+        return settings
+
+    def update_current_settings(self, key, value):
+        if self.settings_key == "controlnet_settings":
+            self.update_controlnet_settings(key, value)
+        elif self.settings_key == "image_to_image_settings":
+            self.update_image_to_image_settings(key, value)
+        elif self.settings_key == "outpaint_settings":
+            self.update_outpaint_settings(key, value)
+        elif self.settings_key == "brush":
+            self.update_drawing_pad_settings(key, value)
+
     def showEvent(self, event):
         settings_key = self.property("settings_key")
         self.ui.label.setText(
             "Controlnet" if settings_key == "controlnet_settings" else "Image to Image"
         )
+
         self.ui.enable_checkbox.blockSignals(True)
         self.ui.use_grid_image_as_input_checkbox.blockSignals(True)
-        self.ui.enable_checkbox.setChecked(self.settings[settings_key]["enabled"])
+        self.ui.enable_checkbox.setChecked(self.current_settings.enabled)
         self.ui.use_grid_image_as_input_checkbox.setChecked(
-            self.settings[settings_key]["use_grid_image_as_input"])
+            self.current_settings.use_grid_image_as_input)
         self.ui.enable_checkbox.blockSignals(False)
         self.ui.use_grid_image_as_input_checkbox.blockSignals(False)
         self.load_image_from_settings()
 
     @Slot(bool)
     def enabled_toggled(self, val):
-        settings = self.settings
-        settings[self.property("settings_key")]["enabled"] = val
-        self.settings = settings
+        self.update_current_settings("enabled", val)
 
     @Slot(bool)
     def use_grid_image_as_input_toggled(self, val):
-        settings = self.settings
-        settings[self.property("settings_key")]["use_grid_image_as_input"] = val
-        self.settings = settings
+        self.update_current_settings("use_grid_image_as_input", val)
 
     @Slot()
     def import_clicked(self):
@@ -65,8 +93,7 @@ class InputImage(BaseWidget):
         self.load_image_from_object(image)
 
     def load_image_from_settings(self):
-        settings = self.settings
-        image = settings[self.property("settings_key")]["image"]
+        image = self.current_settings.image
         if image is not None:
             image = convert_base64_to_image(image)
             if image:
@@ -94,12 +121,8 @@ class InputImage(BaseWidget):
         # Update settings with base64 image
         settings_key = self.property("settings_key")
         base64_image = convert_image_to_base64(image)
-        settings = self.settings
-        settings[settings_key]["image"] = base64_image
-        self.settings = settings
+        self.update_current_settings("image", base64_image)
 
     def delete_image(self):
-        settings = self.settings
-        settings[self.property("settings_key")]["image"] = None
-        self.settings = settings
+        self.update_current_settings("image", None)
         self.ui.image_container.setScene(None)

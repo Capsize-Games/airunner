@@ -11,7 +11,6 @@ class BarkPreferencesWidget(BaseWidget):
         self.voices = BARK_VOICES
 
     def initialize_form(self):
-        settings = self.settings
         elements = [
             self.ui.language_combobox,
             self.ui.gender_combobox,
@@ -21,9 +20,9 @@ class BarkPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(True)
 
-        language = settings["tts_settings"]["bark"]["language"]
-        gender = settings["tts_settings"]["bark"]["gender"]
-        voice = settings["tts_settings"]["bark"]["voice"]
+        language = self.bark_settings.language
+        gender = self.bark_settings.gender
+        voice = self.bark_settings.voice
 
         self.ui.voice_combobox.clear()
         self.ui.language_combobox.addItems(self.voices.keys())
@@ -36,19 +35,14 @@ class BarkPreferencesWidget(BaseWidget):
             element.blockSignals(False)
 
     def language_changed(self, text):
-        settings = self.settings
-        settings["tts_settings"]["bark"]["language"] = text
-        settings["tts_settings"]["bark"]["gender"] = self.ui.gender_combobox.currentText()
-        settings["tts_settings"]["bark"]["voice"] = self.ui.voice_combobox.currentText()
-        self.settings = settings
+        self.update_bark_settings("language", text)
+        self.update_bark_settings("gender", self.ui.gender_combobox.currentText())
+        self.update_bark_settings("voice", self.ui.voice_combobox.currentText())
+
 
     def voice_changed(self, text):
-        settings = self.settings
-        settings["tts_settings"]["bark"]["voice"] = text
-        self.settings = settings
+        self.update_bark_settings("voice", text)
 
     def gender_changed(self, text):
-        settings = self.settings
-        settings["tts_settings"]["bark"]["gender"] = text
-        settings["tts_settings"]["bark"]["voice"] = self.ui.voice_combobox.currentText()
-        self.settings = settings
+        self.update_bark_settings("gender", text)
+        self.update_bark_settings("voice", self.ui.voice_combobox.currentText())

@@ -7,7 +7,7 @@ from typing import AnyStr
 import torch
 from PySide6.QtCore import QObject
 
-from airunner.aihandler.llm.agent.agent_database_handler import AgentDatabaseHandler
+from airunner.aihandler.models.agent_db_handler import AgentDBHandler
 from airunner.aihandler.llm.agent.agent_llamaindex_mixin import AgentLlamaIndexMixin
 from airunner.aihandler.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
 from airunner.aihandler.logger import Logger
@@ -15,14 +15,13 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import (
     SignalCode,
     LLMChatRole,
-    LLMActionType
+    LLMActionType, WorkerType
 )
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.create_worker import create_worker
 from airunner.utils.prepare_llm_generate_kwargs import prepare_llm_generate_kwargs
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.workers.agent_worker import AgentWorker
 
 
 class BaseAgent(
@@ -38,7 +37,6 @@ class BaseAgent(
         self.model = kwargs.pop("model", None)
         AgentLlamaIndexMixin.__init__(self)
         self._chatbot = None
-        self._bot_mood = None
         self.action = LLMActionType.CHAT
         self.rendered_template = None
         self.tokenizer = kwargs.pop("tokenizer", None)
@@ -46,14 +44,14 @@ class BaseAgent(
         self.tools = kwargs.pop("tools", None)
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
-        self.database_handler = AgentDatabaseHandler()
+        self.database_handler = AgentDBHandler()
         self.conversation_id = None
         self.history = self.database_handler.load_history_from_db(self.conversation_id)  # Load history by conversation ID
         super().__init__(*args, **kwargs)
         self.prompt = ""
         self.thread = None
         self.do_interrupt = False
-        self.response_worker = create_worker(AgentWorker)
+        self.response_worker = create_worker(WorkerType.AgentWorker)
         self.load_rag(model=self.model, tokenizer=self.tokenizer)
 
     @property
@@ -70,45 +68,24 @@ class BaseAgent(
         }
 
     @property
-    def llm_generator_settings(self):
-        return self.settings["llm_generator_settings"]
-
-    @property
-    def chatbot_name(self) -> str:
-        if self.action == LLMActionType.APPLICATION_COMMAND:
-            chatbot_name = "Agent"
-        else:
-            chatbot_name = self.llm_generator_settings["current_chatbot"]
-        return chatbot_name
-
-    @property
-    def chatbot(self) -> dict:
-        if self._chatbot and self.action != LLMActionType.APPLICATION_COMMAND:
-            return self._chatbot
-        return self.llm_generator_settings["saved_chatbots"][self.chatbot_name]
-
-    @property
     def username(self) -> str:
-        return self.chatbot["username"]
+        return self.chatbot.username
 
     @property
     def botname(self) -> str:
-        return self.chatbot["botname"]
+        return self.chatbot.botname
 
     @property
     def bot_mood(self) -> str:
-        return self.chatbot["bot_mood"] if self._bot_mood is None else self._bot_mood
+        return self.chatbot.bot_mood
 
     @bot_mood.setter
     def bot_mood(self, value: str):
-        self._bot_mood = value
-        settings = self.settings
-        settings["llm_generator_settings"]["saved_chatbots"][self.chatbot_name]["bot_mood"] = value
-        self.settings = settings
+        self.update_chatbot("bot_mood", value)
 
     @property
     def bot_personality(self) -> str:
-        return self.chatbot["bot_personality"]
+        return self.chatbot.bot_personality
 
     def unload(self):
         self.model = None
@@ -198,7 +175,7 @@ class BaseAgent(
         )
 
     def date_time_prompt(self) -> str:
-        if not self.chatbot["use_datetime"]:
+        if not self.chatbot.use_datetime:
             return ""
         current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
         current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
@@ -216,19 +193,19 @@ class BaseAgent(
     ):
         system_instructions = ""
         guardrails_prompt = ""
-        use_mood = self.chatbot["use_mood"]
-        use_personality = self.chatbot["use_personality"]
-        use_names = self.chatbot["assign_names"]
-        use_system_instructions = self.chatbot["use_system_instructions"]
-        use_guardrails = self.chatbot["use_guardrails"]
+        use_mood = self.chatbot.use_mood
+        use_personality = self.chatbot.use_personality
+        use_names = self.chatbot.assign_names
+        use_system_instructions = self.chatbot.use_system_instructions
+        use_guardrails = self.chatbot.use_guardrails
         bot_mood = self.bot_mood
-        bot_personality = self.chatbot["bot_personality"]
-        username = self.chatbot["username"]
-        botname = self.chatbot["botname"]
+        bot_personality = self.chatbot.bot_personality
+        username = self.chatbot.username
+        botname = self.chatbot.botname
         if use_system_instructions:
-            system_instructions = self.chatbot["system_instructions"]
+            system_instructions = self.chatbot.system_instructions
         if use_guardrails:
-            guardrails_prompt = self.chatbot["guardrails_prompt"]
+            guardrails_prompt = self.chatbot.guardrails_prompt
 
         system_prompt = []
 
@@ -247,10 +224,10 @@ class BaseAgent(
             ]
 
         elif action is LLMActionType.GENERATE_IMAGE:
-            #guardrails = self.settings["prompt_templates"]["image"]["guardrails"] if self.settings["prompt_templates"]["image"]["use_guardrails"] else ""
+            prompt_template = self.get_prompt_template_by_name("image")
             # system_prompt = [
-            #     guardrails,
-            #     self.settings["prompt_templates"]["image"]["system"],
+            #     prompt_template.guardrails,
+            #     prompt_template.system,
             #     self.history_prompt()
             # ]
             system_prompt = [
@@ -282,7 +259,8 @@ class BaseAgent(
             ]
 
         elif action is LLMActionType.APPLICATION_COMMAND:
-            system_instructions = self.settings["prompt_templates"]["application_command"]["system"]
+            prompt_template = self.get_prompt_template_by_name("application_command")
+            system_instructions = prompt_template.system
 
             # Create a list of commands that the bot can choose from
             for index, action in self.available_actions.items():
@@ -296,14 +274,16 @@ class BaseAgent(
             ]
 
         elif action is LLMActionType.SUMMARIZE:
-            system_instructions = self.settings["prompt_templates"]["summarize"]["system"]
+            prompt_template = self.get_prompt_template_by_name("summarize")
+            system_instructions = prompt_template.system
             system_prompt = [
                 system_instructions,
                 self.history_prompt()
             ]
 
         elif action is LLMActionType.UPDATE_MOOD:
-            system_instructions = self.settings["prompt_templates"]["update_mood"]["system"]
+            prompt_template = self.get_prompt_template_by_name("update_mood")
+            system_instructions = prompt_template.system
             system_prompt = [
                 guardrails_prompt,
                 system_instructions,
@@ -314,7 +294,8 @@ class BaseAgent(
             ]
 
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            system_instructions = self.settings["prompt_templates"]["rag_search"]["system"]
+            prompt_template = self.get_prompt_template_by_name("rag_search")
+            system_instructions = prompt_template.system
             system_prompt = [
                 guardrails_prompt,
                 system_instructions,
@@ -389,6 +370,7 @@ class BaseAgent(
             conversation=conversation,
             tokenize=False
         )
+        print(rendered_template)
 
         # HACK: current version of transformers does not allow us to pass
         # variables to the chat template function, so we apply those here
@@ -407,12 +389,12 @@ class BaseAgent(
 
     @property
     def override_parameters(self):
-        generate_kwargs = prepare_llm_generate_kwargs(self.settings["llm_generator_settings"])
-        return generate_kwargs if self.settings["llm_generator_settings"]["override_parameters"] else {}
+        generate_kwargs = prepare_llm_generate_kwargs(self.llm_generator_settings)
+        return generate_kwargs if self.llm_generator_settings.override_parameters else {}
 
     @property
     def system_instructions(self):
-        return self.chatbot["system_instructions"]
+        return self.chatbot.system_instructions
 
     @property
     def generator_settings(self):
@@ -420,7 +402,7 @@ class BaseAgent(
 
     @property
     def device(self):
-        return get_torch_device(self.settings["memory_settings"]["default_gpu"]["llm"])
+        return get_torch_device(self.memory_settings.default_gpu_llm)
 
     def run(
         self,
@@ -644,6 +626,9 @@ class BaseAgent(
 
             elif action is LLMActionType.UPDATE_MOOD:
                 self.bot_mood = streamed_template
+                print("*" * 100)
+                print("MOOD UPDATED TO ", self.bot_mood)
+                print("*" * 100)
                 return self.run(
                     prompt=self.prompt,
                     action=LLMActionType.CHAT,
@@ -683,7 +668,7 @@ class BaseAgent(
         )
 
     def get_db_connection(self):
-        return sqlite3.connect('agent_history.db')
+        return sqlite3.connect('airunner.db')
 
     def add_message_to_history(
         self,

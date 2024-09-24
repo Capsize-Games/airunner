@@ -30,7 +30,7 @@ class TokenizerHandler(TransformerBaseHandler):
         if self.tokenizer is not None:
             return
 
-        path = self.get_model_path(self.current_bot["model_version"])
+        path = self.get_model_path(self.chatbot.model_version)
 
         self.logger.debug(f"Loading tokenizer from {path}")
         kwargs = {

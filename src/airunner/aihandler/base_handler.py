@@ -62,11 +62,11 @@ class BaseHandler(
     def device(self):
         if not self.model_type:
             raise ValueError("model_type not set")
-        return get_torch_device(self.settings["memory_settings"]["default_gpu"][self.model_class])
+        return get_torch_device(getattr(self.memory_settings, f"default_gpu_{self.model_class}"))
 
     @property
     def llm_dtype(self):
-        return self.settings["llm_generator_settings"]["dtype"]
+        return self.llm_generator_settings.dtype
 
     @property
     def use_cuda(self):
@@ -74,7 +74,7 @@ class BaseHandler(
             self.llm_dtype == "32bit" or not self.use_gpu
         ):
             return False
-        return self.settings["use_cuda"] and torch.cuda.is_available()
+        return self.application_settings.use_cuda and torch.cuda.is_available()
 
     @property
     def cuda_index(self):

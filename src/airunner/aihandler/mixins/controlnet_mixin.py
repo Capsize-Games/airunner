@@ -46,9 +46,9 @@ class ControlnetHandlerMixin:
 
     @property
     def controlnet_type(self):
-        controlnet = self.sd_request.generator_settings.controlnet_image_settings.controlnet
+        controlnet = self.controlnet_image_settings.controlnet
         controlnet_item = self.controlnet_model_by_name(controlnet)
-        controlnet_type = controlnet_item["name"]
+        controlnet_type = controlnet_item.name
         return controlnet_type
 
     @property
@@ -76,7 +76,7 @@ class ControlnetHandlerMixin:
 
     @property
     def controlnet_image(self):
-        if self.settings["controlnet_enabled"] and (
+        if self.application_settings.controlnet_enabled and (
             self._controlnet_image is None or
             self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
         ):
@@ -85,7 +85,7 @@ class ControlnetHandlerMixin:
 
     @property
     def controlnet_model(self):
-        controlnet_name = self.settings["generator_settings"]["controlnet_image_settings"]["controlnet"]
+        controlnet_name = self.controlnet_image_settings.controlnet
         controlnet_model = self.controlnet_model_by_name(controlnet_name)
         return controlnet_model
 
@@ -94,11 +94,11 @@ class ControlnetHandlerMixin:
         controlnet_model = self.controlnet_model
         path = os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["base_path"],
+                self.path_settings.base_path,
                 "art/models",
-                self.settings["generator_settings"]["version"],
+                self.generator_settings.version,
                 "controlnet",
-                controlnet_model["path"]
+                controlnet_model.path
             )
         )
         return path
@@ -149,14 +149,14 @@ class ControlnetHandlerMixin:
         self.__change_controlnet_model_status(ModelStatus.LOADING)
 
         path = self.controlnet_path
-        is_sd_xl = self.settings["generator_settings"]["version"] == StableDiffusionVersion.SDXL1_0.value
+        is_sd_xl = self.generator_settings.version == StableDiffusionVersion.SDXL1_0.value
 
         if is_sd_xl:
             path = os.path.expanduser(
                 os.path.join(
-                    self.settings["path_settings"]["base_path"],
+                    self.path_settings.base_path,
                     "art/models",
-                    self.settings["generator_settings"]["version"],
+                    self.generator_settings.version,
                     "controlnet",
                     "diffusers/controlnet-canny-sdxl-1.0"
                 )
@@ -209,8 +209,8 @@ class ControlnetHandlerMixin:
 
                 if image is None:
                     image = image.resize((
-                        self.settings["working_width"],
-                        self.settings["working_height"]
+                        self.application_settings.working_width,
+                        self.application_settings.working_height
                     ))
                 return image
             else:
@@ -220,7 +220,7 @@ class ControlnetHandlerMixin:
 
     def __change_controlnet_model_status(self, status):
         self.__controlnet_model_status = status
-        self.change_model_status(ModelType.CONTROLNET, status, self.controlnet_model["path"])
+        self.change_model_status(ModelType.CONTROLNET, status, self.controlnet_model.path)
         if status is ModelStatus.LOADED:
             self.make_controlnet_memory_efficient()
         elif status in (ModelStatus.UNLOADED, ModelStatus.FAILED):

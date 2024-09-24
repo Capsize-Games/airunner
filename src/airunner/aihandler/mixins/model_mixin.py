@@ -20,6 +20,7 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img impo
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
 from transformers import AutoTokenizer
 
+from airunner.aihandler.models.settings_models import GeneratorSettings
 from airunner.enums import (
     SignalCode,
     SDMode,
@@ -98,7 +99,7 @@ class ModelMixin:
 
     @property
     def enable_controlnet(self):
-        return self.settings["controlnet_enabled"]
+        return self.application_settings.controlnet_enabled
 
     @property
     def is_single_file(self) -> bool:
@@ -120,23 +121,22 @@ class ModelMixin:
 
     @property
     def model_path(self):
-        generator_settings = self.settings["generator_settings"]
-        model_name = generator_settings["model"]
-        version = generator_settings["version"]
-        section = generator_settings["section"]
-        for model in self.settings["ai_models"]:
+        model_name = self.generator_settings.model
+        version = self.generator_settings.version
+        section = self.generator_settings.section
+        for model in self.ai_models:
             if (
-                model["name"] == model_name and
-                model["version"] == version and
-                model["pipeline_action"] == section
+                model.name == model_name and
+                model.version == version and
+                model.pipeline_action == section
             ):
                 return os.path.expanduser(
                     os.path.join(
-                        self.settings["path_settings"]["base_path"],
+                        self.path_settings.base_path,
                         "art/models",
                         version,
                         section,
-                        model["path"]
+                        model.path
                     )
                 )
 
@@ -144,7 +144,7 @@ class ModelMixin:
     def __tokenizer_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["base_path"],
+                self.path_settings.base_path,
                 "art/models",
                 "SD 1.5",
                 "feature_extractor",
@@ -182,7 +182,7 @@ class ModelMixin:
 
 
     def load_image_generator_model(self):
-        if not self.settings["sd_enabled"]:
+        if not self.application_settings.sd_enabled:
             return
 
         self.logger.info("Loading image generator model")
@@ -193,12 +193,12 @@ class ModelMixin:
             self.__unload_tokenizer()
             self.unload_image_generator_model()
 
-        self.model_version = self.settings["generator_settings"]["version"]
+        self.model_version = self.generator_settings.version
         self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
         self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
 
         try:
-            self.__load_generator(torch.device(self.device), self.settings["generator_settings"]["seed"])
+            self.__load_generator(torch.device(self.device), self.generator_settings.seed)
             self.__load_tokenizer()
             self.__prepare_model()
             self.__load_model()
@@ -215,7 +215,7 @@ class ModelMixin:
     def use_compel(self):
         return (
             not self.sd_request.memory_settings.use_enable_sequential_cpu_offload
-            and self.settings["generator_settings"]['use_compel']
+            and self.generator_settings.use_compel
         )
 
     def generate(
@@ -254,11 +254,10 @@ class ModelMixin:
         return {}
 
     def reload_prompts(self):
-        settings = self.settings
         if (
-            settings["generator_settings"]["image_preset"] != self.image_preset
+            self.generator_settings.image_preset != self.image_preset
         ):
-            self.image_preset = settings["generator_settings"]["image_preset"]
+            self.image_preset = self.generator_settings.image_preset
 
         self.latents = None
         self.latents_set = False
@@ -291,7 +290,7 @@ class ModelMixin:
                 negative_prompt_2=self.sd_request.generator_settings.second_negative_prompt,
                 device=self.device,
                 num_images_per_prompt=1,
-                clip_skip=self.settings["generator_settings"]["clip_skip"],
+                clip_skip=self.generator_settings.clip_skip,
             )
             self.data = self.sd_request.initialize_prompt_embeds(
                 prompt_embeds=self.prompt_embeds,
@@ -325,16 +324,16 @@ class ModelMixin:
                     del data[key]
 
         if self.is_sd_xl:
-            generate_size = (self.settings["working_width"], self.settings["working_height"])
-            quality_effects = self.settings["generator_settings"]["quality_effects"]
+            generate_size = (self.application_settings.working_width, self.application_settings.working_height)
+            quality_effects = self.generator_settings.quality_effects
 
             do_upscale = quality_effects == "Upscaled"
             do_downscale = quality_effects == "Downscaled"
             use_sizes = quality_effects != ""
-            original_size = None
-            target_size = None
-            negative_original_size = None
-            negative_target_size = None
+            original_size = []
+            target_size = []
+            negative_original_size = []
+            negative_target_size = []
 
             if do_upscale:
                 original_size = generate_size
@@ -363,13 +362,13 @@ class ModelMixin:
                     negative_prompt_2=self.sd_request.generator_settings.second_negative_prompt,
                 ))
 
-            data.update(dict(
-                crops_coords_top_left=self.settings["generator_settings"]["crops_coord_top_left"],
-                original_size=original_size,
-                target_size=target_size,
-                negative_original_size=negative_original_size,
-                negative_target_size=negative_target_size,
-            ))
+            # data.update(dict(
+            #     crops_coords_top_left=tuple(self.generator_settings.crops_coord_top_left),
+            #     original_size=tuple(original_size),
+            #     target_size=tuple(target_size),
+            #     negative_original_size=tuple(negative_original_size),
+            #     negative_target_size=tuple(negative_target_size),
+            # ))
 
         for key in ["outpaint_box_rect", "action"]:
             if key in data:
@@ -403,6 +402,8 @@ class ModelMixin:
         self.__finalize_pipeline(data)
 
         self.current_state = HandlerState.GENERATING
+
+        print(data)
 
         # Generate the image
         results = self.pipe(**data)
@@ -454,8 +455,8 @@ class ModelMixin:
         if (
             model_changed or
             not self.pipe_finalized or
-            (not self.settings["controlnet_enabled"] and self.pipeline_is_controlnet) or
-            (self.settings["controlnet_enabled"] and not self.pipeline_is_controlnet) or
+            (not self.application_settings.controlnet_enabled and self.pipeline_is_controlnet) or
+            (self.application_settings.controlnet_enabled and not self.pipeline_is_controlnet) or
             (self.pipe and self.pipeline_is_img2img and ("image" not in data or data["image"] is None))
         ):
             # Swap the pipeline if the request is different from the current pipeline
@@ -497,6 +498,7 @@ class ModelMixin:
         self.emit_signal(SignalCode.LOG_STATUS_SIGNAL, "Generating image")
 
         images = None
+        nsfw_content_detected = False
         try:
             images, nsfw_content_detected = self.__call_pipe()
         except SafetyCheckerNotLoadedException:
@@ -550,7 +552,7 @@ class ModelMixin:
                 has_filters
             )
 
-        if self.settings["auto_export_images"]:
+        if self.application_settings.auto_export_images:
             self.__export_images(images)
 
         return dict(
@@ -560,13 +562,13 @@ class ModelMixin:
         )
 
     def __export_images(self, images: List[Any]):
-        extension = self.settings["image_export_type"]
+        extension = self.application_settings.image_export_type
         filename = "image"
         i = 1
         for image in images:
             filepath = os.path.expanduser(
                 os.path.join(
-                    self.settings["path_settings"]["image_path"],
+                    self.path_settings.image_path,
                     f"{filename}.{extension}"
                 )
             )
@@ -574,7 +576,7 @@ class ModelMixin:
                 filename = f"image_{i}"
                 filepath = os.path.expanduser(
                     os.path.join(
-                        self.settings["path_settings"]["image_path"],
+                        self.path_settings.image_path,
                         f"{filename}.{extension}"
                     )
                 )
@@ -587,7 +589,7 @@ class ModelMixin:
         if self.__generator is None:
             device = self.device if not device else device
             if seed is None:
-                seed = int(self.settings["generator_settings"]["seed"])
+                seed = int(self.generator_settings.seed)
             self.__generator = torch.Generator(device=device).manual_seed(seed)
         return self.__generator
 
@@ -595,7 +597,7 @@ class ModelMixin:
         threading.Thread(target=self.__unload_model_thread).start()
 
     def __unload_model_thread(self):
-        if self.pipe.device.type == "cpu":
+        if not self.pipe or self.pipe.device.type == "cpu":
             return
         self.logger.debug("Unloading model")
         self.__change_sd_model_status(ModelStatus.LOADING)
@@ -669,7 +671,7 @@ class ModelMixin:
 
             self.logger.debug(f"Loading model `{self.model_path}` for {self.sd_request.section}")
 
-            pipeline_class_ = self.__pipeline_class(self.settings["controlnet_enabled"])
+            pipeline_class_ = self.__pipeline_class(self.application_settings.controlnet_enabled)
 
             data = dict(
                 torch_dtype=self.data_type,
@@ -684,7 +686,7 @@ class ModelMixin:
                 dict(
                     safety_checker=safety_checker,
                     feature_extractor=feature_extractor,
-                    requires_safety_checker=self.settings["nsfw_filter"],
+                    requires_safety_checker=self.application_settings.nsfw_filter,
                 )
             )
 
@@ -737,7 +739,7 @@ class ModelMixin:
 
             self.current_model = self.model_path
             self.current_model = old_model_path
-            self.controlnet_loaded = self.settings["controlnet_enabled"]
+            self.controlnet_loaded = self.application_settings.controlnet_enabled
         elif self.pipe and self.pipe.device.type == "cpu":
             self.__change_sd_model_status(ModelStatus.LOADING)
             try:
@@ -763,14 +765,14 @@ class ModelMixin:
 
     def __load_generator_arguments(
         self,
-        settings: dict,
+        generator_settings: GeneratorSettings,
         generator_request_data: dict
     ):
         """
         Here we are loading the arguments for the Stable Diffusion generator.
         :return:
         """
-        requested_model = settings["generator_settings"]["model"]
+        requested_model = generator_settings.model
         model = self.sd_request.generator_settings.model
 
         model_changed = (
@@ -785,9 +787,7 @@ class ModelMixin:
             self.unload_controlnet()
 
         # Set a reference to pipeline
-        settings = self.settings
-        settings["controlnet_settings"]["image"] = convert_image_to_base64(self.controlnet_image)
-        self.settings = settings
+        self.update_controlnet_settings("image", convert_image_to_base64(self.controlnet_image))
 
 
         self.data = self.sd_request(

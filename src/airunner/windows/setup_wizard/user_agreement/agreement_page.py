@@ -11,8 +11,5 @@ class AgreementPage(BaseWizard):
 
     @Slot(bool)
     def agreement_clicked(self, val):
-        self.agreed = val
-        settings = self.settings
-        settings["agreements"][self.setting_key] = val
-        self.settings = settings
+        self.update_application_settings(self.setting_key, val)
 

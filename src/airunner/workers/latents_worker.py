@@ -23,7 +23,7 @@ class LatentsWorker(Worker):
         latents = latents[0].detach().cpu().numpy().astype(np.uint8)  # convert to uint8
         latents = latents.transpose(1, 2, 0)
         image = Image.fromarray(latents)
-        image = image.resize((self.settings["working_width"], self.settings["working_height"]))
+        image = image.resize((self.application_settings.working_width, self.application_settings.working_height))
         image = image.convert("RGBA")
         self.emit_signal(
             SignalCode.SD_IMAGE_GENERATED_SIGNAL,

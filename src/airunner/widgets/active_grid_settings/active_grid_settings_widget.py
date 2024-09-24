@@ -10,20 +10,18 @@ class ActiveGridSettingsWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        settings = self.settings
-        self.ui.width_slider_widget.setProperty("current_value", self.settings["is_maximized"])
-        self.ui.height_slider_widget.setProperty("current_value", self.settings["working_height"])
+        self.ui.width_slider_widget.setProperty("current_value", self.application_settings.is_maximized)
+        self.ui.height_slider_widget.setProperty("current_value", self.application_settings.working_height)
         self.ui.width_slider_widget.initialize()
         self.ui.height_slider_widget.initialize()
         self.ui.border_opacity_slider_widget.setProperty(
             "current_value",
-            settings["active_grid_settings"]["border_opacity"]
+            self.active_grid_settings.border_opacity
         )
         self.ui.fill_opacity_slider_widget.setProperty(
             "current_value",
-            settings["active_grid_settings"]["fill_opacity"]
+            self.active_grid_settings.fill_opacity
         )
-
 
         self.ui.border_opacity_slider_widget.initialize()
         self.ui.fill_opacity_slider_widget.initialize()
@@ -31,10 +29,10 @@ class ActiveGridSettingsWidget(BaseWidget):
         self.ui.active_grid_fill_groupbox.blockSignals(True)
         self.ui.active_grid_area_checkbox.blockSignals(True)
         self.ui.size_lock_button.blockSignals(True)
-        self.ui.active_grid_border_groupbox.setChecked(settings["active_grid_settings"]["render_border"])
-        self.ui.active_grid_fill_groupbox.setChecked(settings["active_grid_settings"]["render_fill"])
-        self.ui.active_grid_area_checkbox.setChecked(settings["active_grid_settings"]["enabled"])
-        self.ui.size_lock_button.setChecked(settings["active_grid_size_lock"])
+        self.ui.active_grid_border_groupbox.setChecked(self.active_grid_settings.render_border)
+        self.ui.active_grid_fill_groupbox.setChecked(self.active_grid_settings.render_fill)
+        self.ui.active_grid_area_checkbox.setChecked(self.active_grid_settings.enabled)
+        self.ui.size_lock_button.setChecked(self.application_settings.active_grid_size_lock)
         self.ui.active_grid_area_checkbox.blockSignals(False)
         self.ui.active_grid_border_groupbox.blockSignals(False)
         self.ui.active_grid_fill_groupbox.blockSignals(False)
@@ -42,10 +40,10 @@ class ActiveGridSettingsWidget(BaseWidget):
 
         # set background color of buttons
         self.ui.border_choose_color_button.setStyleSheet(
-            f"background-color: {settings['active_grid_settings']['border_color']}"
+            f"background-color: {self.active_grid_settings.border_color}"
         )
         self.ui.fill_choose_color_button.setStyleSheet(
-            f"background-color: {settings['active_grid_settings']['fill_color']}"
+            f"background-color: {self.active_grid_settings.fill_color}"
         )
 
         self.signal_handlers = {
@@ -53,22 +51,17 @@ class ActiveGridSettingsWidget(BaseWidget):
             SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED: self.update_size
         }
 
-        self.current_active_grid_width = self.settings["working_width"]
-        self.current_active_grid_height = self.settings["working_height"]
-
+        self.current_active_grid_width = self.application_settings.working_width
+        self.current_active_grid_height = self.application_settings.working_height
 
     @Slot(bool)
     def size_lock_toggled(self, val):
-        print("size lock toggled")
-        settings = self.settings
-        settings["active_grid_size_lock"] = val
-        self.settings = settings
+        self.update_application_settings("active_grid_size_lock", val)
 
     def update_size(self, message: dict):
-        settings = self.settings
-        width = settings["working_width"]
-        height = settings["working_height"]
-        if settings["active_grid_size_lock"]:
+        width = self.application_settings.working_width
+        height = self.application_settings.working_height
+        if self.application_settings.active_grid_size_lock:
             if width != self.current_active_grid_width:
                 height = width
             elif height != self.current_active_grid_height:
@@ -82,14 +75,11 @@ class ActiveGridSettingsWidget(BaseWidget):
             self.ui.height_slider_widget.set_slider_and_spinbox_values(height)
             self.ui.width_slider_widget.blockSignals(False)
             self.ui.height_slider_widget.blockSignals(False)
-            settings["working_width"] = width
-            settings["working_height"] = height
-            self.settings = settings
+            self.update_application_settings("working_width", width)
+            self.update_application_settings("working_height", height)
 
     def update_active_grid_settings(self, setting_key, checked):
-        settings = self.settings
-        settings["active_grid_settings"][setting_key] = checked
-        self.settings = settings
+        self.update_active_grid_settings(setting_key, checked)
 
     def action_clicked_checkbox_toggle_active_grid_border(self, checked):
         self.update_active_grid_settings("render_border", checked)
@@ -103,13 +93,9 @@ class ActiveGridSettingsWidget(BaseWidget):
     def action_choose_border_color_clicked(self):
         color = QColorDialog.getColor()
         if color.isValid():
-            settings = self.settings
-            settings["active_grid_settings"]["border_color"] = color.name()
-            self.settings = settings
+            self.update_active_grid_settings("border_color", color.name())
 
     def action_choose_fill_color_clicked(self):
         color = QColorDialog.getColor()
         if color.isValid():
-            settings = self.settings
-            settings["active_grid_settings"]["fill_color"] = color.name()
-            self.settings = settings
+            self.update_active_grid_settings("fill_color", color.name())

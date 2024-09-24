@@ -14,7 +14,6 @@ from airunner.settings import (
 class SchedulerMixin:
     def __init__(self):
         self.scheduler_name: str = DEFAULT_SCHEDULER
-        self.schedulers: dict = SCHEDULER_CLASSES
         self.registered_schedulers: dict = {}
         self.current_scheduler_name: str = ""
         self.do_change_scheduler: bool = False
@@ -55,9 +54,9 @@ class SchedulerMixin:
     def __scheduler_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["base_path"],
+                self.path_settings.base_path,
                 "art/models",
-                self.settings["generator_settings"]["version"],
+                self.generator_settings.version,
                 "txt2img",
                 "scheduler",
                 "scheduler_config.json"
@@ -71,15 +70,15 @@ class SchedulerMixin:
     def load_scheduler(self, force_scheduler_name=None, config=None):
         if self.__scheduler_status is ModelStatus.LOADING:
             return
-        scheduler_name = force_scheduler_name if force_scheduler_name else self.settings["generator_settings"]["scheduler"]
+        scheduler_name = force_scheduler_name if force_scheduler_name else self.generator_settings.scheduler
         kwargs = {
             "subfolder": "scheduler",
             "local_files_only": True,
         }
-        for scheduler in self.settings["schedulers"]:
-            if scheduler["display_name"] == scheduler_name:
-                scheduler_name = Scheduler[scheduler["name"]]
-                scheduler_class_name = SCHEDULER_CLASSES[scheduler_name]
+        for scheduler in self.schedulers:
+            if scheduler.display_name == scheduler_name:
+                scheduler_name = scheduler.display_name
+                scheduler_class_name = scheduler.name
                 scheduler_class = getattr(diffusers, scheduler_class_name)
                 try:
                     self.__change_scheduler_model_status(ModelStatus.LOADING)

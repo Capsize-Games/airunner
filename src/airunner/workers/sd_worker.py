@@ -129,7 +129,7 @@ class SDWorker(Worker):
             self.sd.on_tokenizer_unload_signal(data)
 
     def start_worker_thread(self):
-        if self.settings["sd_enabled"]:
+        if self.application_settings.sd_enabled:
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                     "model": ModelType.SD,
@@ -139,7 +139,7 @@ class SDWorker(Worker):
             )
         from airunner.aihandler.stablediffusion.sd_handler import SDHandler
         self.sd = SDHandler()
-        if self.settings["sd_enabled"]:
+        if self.application_settings.sd_enabled:
             self.sd.load_stable_diffusion()
 
     def handle_message(self, message):

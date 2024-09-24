@@ -68,7 +68,7 @@ class Ui_active_grid_settings_widget(object):
         self.width_slider_widget.setProperty("slider_page_step", 64)
         self.width_slider_widget.setProperty("spinbox_single_step", 64)
         self.width_slider_widget.setProperty("spinbox_page_step", 64)
-        self.width_slider_widget.setProperty("settings_property", u"working_width")
+        self.width_slider_widget.setProperty("settings_property", u"application_settings.working_width")
         self.width_slider_widget.setProperty("display_as_float", False)
 
         self.horizontalLayout.addWidget(self.width_slider_widget)
@@ -212,7 +212,7 @@ class Ui_active_grid_settings_widget(object):
         self.width_slider_widget.setProperty("label_text", QCoreApplication.translate("active_grid_settings_widget", u"Width", None))
         self.size_lock_button.setText("")
         self.height_slider_widget.setProperty("label_text", QCoreApplication.translate("active_grid_settings_widget", u"Height", None))
-        self.height_slider_widget.setProperty("settings_property", QCoreApplication.translate("active_grid_settings_widget", u"working_height", None))
+        self.height_slider_widget.setProperty("settings_property", QCoreApplication.translate("active_grid_settings_widget", u"application_settings.working_height", None))
         self.active_grid_border_groupbox.setTitle(QCoreApplication.translate("active_grid_settings_widget", u"Border", None))
         self.border_opacity_slider_widget.setProperty("label_text", QCoreApplication.translate("active_grid_settings_widget", u"Border Opacity", None))
         self.border_opacity_slider_widget.setProperty("settings_property", QCoreApplication.translate("active_grid_settings_widget", u"active_grid_settings.border_opacity", None))
