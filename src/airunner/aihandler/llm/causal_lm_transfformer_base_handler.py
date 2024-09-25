@@ -191,14 +191,14 @@ class CausalLMTransformerBaseHandler(
         self.logger.debug("Loading LLM text streamer")
         self.streamer = TextIteratorStreamer(self.tokenizer)
 
-    def unload(self, do_clear_memory = False):
+    def unload(self):
         self.logger.debug("Unloading LLM")
         self.unload_streamer()
         self.unload_llm_with_tools()
         self.unload_agent_executor()
         self.unload_embed_model()
         self.unload_agent()
-        super().unload(do_clear_memory=True)
+        super().unload()
 
     def unload_streamer(self):
         self.logger.debug("Unloading streamer")
