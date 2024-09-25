@@ -20,7 +20,7 @@ class CompelMixin:
         self.negative_prompt_embeds = None
         self.pooled_prompt_embeds = None
         self.negative_pooled_prompt_embeds = None
-        clear_memory()
+        clear_memory(self.memory_settings.default_gpu_sd)
 
     def unload_prompts(self):
         if self.prompt_embeds is not None:
