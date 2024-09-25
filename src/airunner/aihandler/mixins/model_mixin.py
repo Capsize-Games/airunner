@@ -602,6 +602,8 @@ class ModelMixin:
         self.logger.debug("Unloading model")
         self.__change_sd_model_status(ModelStatus.LOADING)
         self.pipe.to("cpu")
+        self.pipe = None
+        clear_memory()
         self.__change_sd_model_status(ModelStatus.UNLOADED)
 
     def __change_sd_model_status(self, status: ModelStatus):
