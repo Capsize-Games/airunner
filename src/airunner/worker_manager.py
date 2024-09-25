@@ -80,7 +80,15 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal),
             (SignalCode.TTS_REQUEST, self.on_tts_request),
             (SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal),
-            (SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal),
+
+            (SignalCode.LLM_UNLOAD_SIGNAL, self.llm_on_unload_signal),
+            (SignalCode.LLM_LOAD_SIGNAL, self.llm_on_load_signal),
+            (SignalCode.LLM_LOAD_MODEL_SIGNAL, self.llm_on_load_model_signal),
+            (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.llm_on_clear_history_signal),
+            (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.llm_on_interrupt_process_signal),
+            (SignalCode.RAG_RELOAD_INDEX_SIGNAL, self.llm_on_reload_rag_index_signal),
+            (SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.llm_add_chatbot_response_to_history),
+            (SignalCode.LOAD_CONVERSATION, self.llm_on_load_conversation),
         ]
         for signal in signals:
             self.register(signal[0], signal[1])
@@ -106,6 +114,64 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         if not disable_stt:
             self.register_stt_workers()
 
+    def llm_on_unload_signal(self, message):
+        self.logger.debug("Unloading LLM")
+
+        # Ensure all tensors and objects are deleted
+        if self.llm_generate_worker:
+            self.llm_generate_worker.on_unload_llm_signal(message)
+            del self.llm_generate_worker
+            self.llm_generate_worker = None
+
+        gc.collect()
+
+        if torch.cuda.is_available():
+            with torch.no_grad():
+                try:
+                    for device_id in range(torch.cuda.device_count()):
+                        torch.cuda.set_device(device_id)
+                        self.logger.debug(
+                            f"Device {device_id} before empty_cache: {torch.cuda.memory_allocated(device_id)} bytes")
+                        torch.cuda.empty_cache()
+                        self.logger.debug(
+                            f"Device {device_id} after empty_cache: {torch.cuda.memory_allocated(device_id)} bytes")
+                        self.logger.debug(f"Device {device_id} memory summary: {torch.cuda.memory_summary(device_id)}")
+                        torch.cuda.reset_max_memory_allocated(device=device_id)
+                        torch.cuda.reset_max_memory_cached(device=device_id)
+                        torch.cuda.synchronize(device=device_id)
+                except RuntimeError:
+                    self.logger.error("Failed to clear CUDA memory")
+
+            # Force garbage collection multiple times
+            for _ in range(3):
+                gc.collect()
+
+            for device_id in range(torch.cuda.device_count()):
+                cuda.select_device(device_id)
+                cuda.close()
+
+            gc.collect()
+
+    def llm_on_load_signal(self):
+        self.llm_generate_worker.on_load_llm_signal()
+
+    def llm_on_load_model_signal(self):
+        self.llm_generate_worker.on_load_model_signal()
+
+    def llm_on_clear_history_signal(self):
+        self.llm_generate_worker.on_clear_history_signal()
+
+    def llm_on_interrupt_process_signal(self):
+        self.llm_generate_worker.on_interrupt_process_signal()
+
+    def llm_on_reload_rag_index_signal(self, data: dict = None):
+        self.llm_generate_worker.on_reload_rag_index_signal(data)
+
+    def llm_add_chatbot_response_to_history(self, message):
+        self.llm_generate_worker.add_chatbot_response_to_history(message)
+
+    def llm_on_load_conversation(self, message):
+        self.llm_generate_worker.on_load_conversation(message)
 
     def register_sd_workers(self):
         self.sd_worker = create_worker(WorkerType.SDWorker)
