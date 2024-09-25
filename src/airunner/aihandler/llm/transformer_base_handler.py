@@ -219,11 +219,7 @@ class TransformerBaseHandler(BaseHandler):
 
     def _unload_model(self):
         self.logger.debug("Unloading model")
-        if self.model:
-            del self.model
-            self.model = None
-            gc.collect()
-            clear_memory()
+        self.model = None
         return True
 
     def pre_load(self):
