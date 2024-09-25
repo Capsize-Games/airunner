@@ -179,6 +179,7 @@ class CausalLMTransformerBaseHandler(
         if self.chat_agent is not None:
             self.logger.debug("Unloading chat agent")
             self.chat_agent.unload()
+            del self.chat_agent
             self.chat_agent = None
             do_clear_memory = True
         return do_clear_memory
