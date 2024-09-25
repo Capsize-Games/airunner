@@ -205,16 +205,9 @@ class TransformerBaseHandler(BaseHandler):
             return False
         self.model_status = ModelStatus.LOADING
         self._processing_request = False
-        model_unloaded = self._unload_model()
-        tokenizer_unloaded = self._unload_tokenizer()
+        self._unload_model()
+        self._unload_tokenizer()
         self.image = None
-        if (
-            do_clear_memory or
-            model_unloaded or
-            tokenizer_unloaded
-        ):
-            self.logger.debug("Clearing memory")
-            clear_memory()
         self.model_status = ModelStatus.UNLOADED
 
     def _unload_tokenizer(self):
