@@ -263,12 +263,6 @@ class TransformerBaseHandler(BaseHandler):
         self.model_path = self.request_data.get("model_path", self.model_path)
         self.template = self.request_data.get("template", "")
 
-    def move_to_cpu(self):
-        if self.model:
-            self.logger.debug("Moving model to CPU")
-            self.model.to("cpu")
-        self.tokenizer = None
-
     def move_to_device(self, device=None):
         if not self.model:
             return
