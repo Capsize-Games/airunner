@@ -100,6 +100,8 @@ class SafetyCheckerMixin:
     def __unload_safety_checker_model(self):
         if self.pipe is not None:
             self.pipe.safety_checker = None
+        self.safety_checker.to("cpu")
+        del self.safety_checker = None
         self.safety_checker = None
         self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED)
         clear_memory()
