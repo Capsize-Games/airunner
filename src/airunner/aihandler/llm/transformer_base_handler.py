@@ -212,6 +212,7 @@ class TransformerBaseHandler(BaseHandler):
 
     def _unload_tokenizer(self):
         self.logger.debug("Unloading tokenizer")
+        del self.tokenizer
         self.tokenizer = None
         clear_memory()
         return True
