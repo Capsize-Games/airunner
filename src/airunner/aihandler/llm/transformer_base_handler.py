@@ -6,7 +6,7 @@ import torch
 from llama_index.llms.groq import Groq
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType, ModelAction
+from airunner.enums import ModelType, ModelStatus, LLMActionType, ModelAction
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -74,22 +74,13 @@ class TransformerBaseHandler(BaseHandler):
     def model(self, value):
         if value is None and self.__model is not None:
             self.__model.quantization_method = None
-            import psutil
-            cpu_memory = psutil.virtual_memory()
-            print(f"Used CPU memory: {cpu_memory.used / (1024 ** 3)} GB")
             self.__model.to("cpu")
-            print("moved to cpu")
-            # print total cpu usage
-            cpu_memory = psutil.virtual_memory()
-            print(f"Used CPU memory: {cpu_memory.used / (1024 ** 3)} GB")
             del self.__model
             gc.collect()
             self.__model = None
             gc.collect()
-            print("running garbage collection")
-            for _ in range(50):
+            for _ in range(3):
                 gc.collect()
-            print(f"Used CPU memory: {cpu_memory.used / (1024 ** 3)} GB")
         self.__model = value
 
     @property
