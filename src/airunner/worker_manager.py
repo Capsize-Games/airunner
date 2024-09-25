@@ -1,9 +1,8 @@
 import gc
-import threading
 import traceback
 import numpy as np
 import torch
-from PySide6.QtCore import QObject, Signal, Slot, QThread
+from PySide6.QtCore import QObject, Signal
 from numba import cuda
 
 from airunner.enums import SignalCode, EngineResponseCode, WorkerType
@@ -12,24 +11,6 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.aihandler.logger import Logger
 from airunner.utils.create_worker import create_worker
 
-
-class LLMRequestWorker(QObject):
-    finished = Signal()
-    error = Signal(str)
-
-    def __init__(self, llm_generate_worker, message):
-        super().__init__()
-        self.llm_generate_worker = llm_generate_worker
-        self.message = message
-
-    @Slot()
-    def run(self):
-        try:
-            self.llm_generate_worker.on_llm_request_worker_response_signal(self.message)
-        except Exception as e:
-            self.error.emit(str(e))
-        finally:
-            self.finished.emit()
 
 
 class Message:
@@ -62,7 +43,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__()
-
         self.llm_loaded: bool = False
         self.sd_loaded: bool = False
         self.message = ""
@@ -93,6 +73,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             (SignalCode.RAG_RELOAD_INDEX_SIGNAL, self.llm_on_reload_rag_index_signal),
             (SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.llm_add_chatbot_response_to_history),
             (SignalCode.LOAD_CONVERSATION, self.llm_on_load_conversation),
+            (SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, self.on_llm_request_signal)
         ]
         for signal in signals:
             self.register(signal[0], signal[1])
@@ -117,6 +98,9 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
         if not disable_stt:
             self.register_stt_workers()
+
+    def on_llm_request_signal(self, message: dict):
+        self.llm_generate_worker.add_to_queue(message)
 
     def llm_on_unload_signal(self, message):
         self.logger.debug("Unloading LLM")
@@ -182,7 +166,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.sd_state = "loaded"
 
     def register_llm_workers(self, agent_class, do_load_llm_on_init, agent_options):
-        self.llm_request_worker = create_worker(WorkerType.LLMRequestWorker)
         self.llm_generate_worker = create_worker(
             WorkerType.LLMGenerateWorker,
             do_load_on_init=do_load_llm_on_init,
@@ -198,24 +181,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.stt_audio_capture_worker = create_worker(WorkerType.AudioCaptureWorker)
         self.stt_audio_processor_worker = create_worker(WorkerType.AudioProcessorWorker)
 
-    def on_unload_llm_signal(self, message):
-        if self.llm_generate_worker:
-            self.llm_generate_worker.on_unload_llm_signal(message)
-
     def on_llm_request_worker_response_signal(self, message: dict):
-        if self.llm_generate_worker:
-            self.thread = QThread()
-            self.worker = LLMRequestWorker(self.llm_generate_worker, message)
-            self.worker.moveToThread(self.thread)
-
-            self.thread.started.connect(self.worker.run)
-            self.worker.finished.connect(self.thread.quit)
-            self.worker.finished.connect(self.worker.deleteLater)
-            self.thread.finished.connect(self.thread.deleteLater)
-
-            self.worker.error.connect(self.handle_error)
-
-            self.thread.start()
+        self.llm_generate_worker.on_llm_request_worker_response_signal(message)
 
     def handle_error(self, error_message):
         print(f"Error: {error_message}")

@@ -137,7 +137,6 @@ class LLMGenerateWorker(Worker):
         self.thread.finished.connect(self.thread.deleteLater)
         self.llm_generate_worker.error.connect(self.handle_error)
 
-
     def run(self):
         if self.queue_type == QueueType.NONE:
             return
@@ -145,6 +144,7 @@ class LLMGenerateWorker(Worker):
         self.running = True
         while self.running:
             self.preprocess()
+
             try:
                 msg = self.get_item_from_queue()
                 if msg is not None:

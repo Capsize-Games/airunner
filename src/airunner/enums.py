@@ -521,7 +521,6 @@ class ImagePreset(Enum):
 
 
 class WorkerType(Enum):
-    LLMRequestWorker = enum.auto()
     LLMGenerateWorker = enum.auto()
     SDWorker = enum.auto()
     TTSGeneratorWorker = enum.auto()
