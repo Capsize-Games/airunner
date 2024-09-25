@@ -34,16 +34,16 @@ class LLMLoaderWorker(QObject):
 
 class LLMGenerateWorker(Worker):
     def __init__(self, prefix=None, do_load_on_init=False, agent_class=None, agent_options=None):
-        self.signals = [
-            #(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal),
-            (SignalCode.LLM_LOAD_SIGNAL, self.on_load_llm_signal),
-            (SignalCode.LLM_LOAD_MODEL_SIGNAL, self.on_load_model_signal),
-            (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal),
-            (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
-            (SignalCode.RAG_RELOAD_INDEX_SIGNAL, self.on_reload_rag_index_signal),
-            (SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history),
-            (SignalCode.LOAD_CONVERSATION, self.on_load_conversation),
-        ]
+        # self.signals = [
+        #     #(SignalCode.LLM_UNLOAD_SIGNAL, self.on_unload_llm_signal),
+        #     (SignalCode.LLM_LOAD_SIGNAL, self.on_load_llm_signal),
+        #     (SignalCode.LLM_LOAD_MODEL_SIGNAL, self.on_load_model_signal),
+        #     (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_history_signal),
+        #     (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
+        #     (SignalCode.RAG_RELOAD_INDEX_SIGNAL, self.on_reload_rag_index_signal),
+        #     (SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.add_chatbot_response_to_history),
+        #     (SignalCode.LOAD_CONVERSATION, self.on_load_conversation),
+        # ]
         self.llm = None
         self.do_load_on_init = do_load_on_init
         self.agent_class = agent_class
