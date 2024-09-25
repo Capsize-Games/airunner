@@ -35,12 +35,12 @@ class Signal(QObject):
             self.callback(data)
 
 
-SIGNALS = {}
-
 class SignalMediator(metaclass=SingletonMeta):
     """
     This class is responsible for mediating signals between classes.
     """
+
+    signals = {}
 
     def register(
         self,
@@ -54,9 +54,9 @@ class SignalMediator(metaclass=SingletonMeta):
         :param slot_function: The function to call when the signal is received.
         """
         # Create a new Signal instance for this signal name
-        if code not in SIGNALS:
-            SIGNALS[code] = []
-        SIGNALS[code].append(Signal(callback=slot_function))
+        if code not in self.signals:
+            self.signals[code] = []
+        self.signals[code].append(Signal(callback=slot_function))
 
     def emit_signal(
         self,
@@ -70,6 +70,6 @@ class SignalMediator(metaclass=SingletonMeta):
         :return:
         """
         data = {} if data is None else data
-        if code in SIGNALS:
-            for signal in SIGNALS[code]:
+        if code in self.signals:
+            for signal in self.signals[code]:
                 signal.signal.emit(data)
