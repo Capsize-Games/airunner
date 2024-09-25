@@ -118,6 +118,10 @@ class Ui_input_image(object):
 
 
         self.retranslateUi(input_image)
+        self.use_grid_image_as_input_checkbox.toggled.connect(input_image.use_grid_image_as_input_toggled)
+        self.enable_checkbox.toggled.connect(input_image.enabled_toggled)
+        self.import_button.clicked.connect(input_image.import_clicked)
+        self.delete_button.clicked.connect(input_image.delete_clicked)
 
         QMetaObject.connectSlotsByName(input_image)
     # setupUi

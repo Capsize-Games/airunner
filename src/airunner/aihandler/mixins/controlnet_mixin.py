@@ -77,8 +77,8 @@ class ControlnetHandlerMixin:
     @property
     def controlnet_image(self):
         if self.application_settings.controlnet_enabled and (
-            self._controlnet_image is None or
-            self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
+            self._controlnet_image is None #or
+            #self.sd_mode in RELOAD_CONTROLNET_IMAGE_CONSTS
         ):
             self._controlnet_image = self.__preprocess_for_controlnet(self.sd_request.drawing_pad_image)
         return self._controlnet_image
@@ -158,7 +158,7 @@ class ControlnetHandlerMixin:
                     "art/models",
                     self.generator_settings.version,
                     "controlnet",
-                    "diffusers/controlnet-canny-sdxl-1.0"
+                    "diffusers/controlnet-canny-sdxl-1.0-small"
                 )
             )
 

@@ -67,19 +67,16 @@ class MemoryEfficientMixin:
         self.pipe.unet.to(memory_format=torch.channels_last if attr_val else torch.contiguous_format)
 
     def __apply_vae_slicing(self, attr_val):
-        if self.sd_request.section not in ["img2img", "outpaint", "controlnet"]:
-            try:
-                if attr_val:
-                    self.logger.debug("Enabling vae slicing")
-                    self.pipe.enable_vae_slicing()
-                else:
-                    self.logger.debug("Disabling vae slicing")
-                    self.pipe.disable_vae_slicing()
-            except AttributeError as e:
-                self.logger.error("Failed to apply vae slicing")
-                self.logger.error(e)
-        else:
-            self.logger.debug(f"Not applying vae slicing for {self.sd_request.section}")
+        try:
+            if attr_val:
+                self.logger.debug("Enabling vae slicing")
+                self.pipe.enable_vae_slicing()
+            else:
+                self.logger.debug("Disabling vae slicing")
+                self.pipe.disable_vae_slicing()
+        except AttributeError as e:
+            self.logger.error("Failed to apply vae slicing")
+            self.logger.error(e)
 
     def __apply_attention_slicing(self, attr_val):
         try:
@@ -123,7 +120,7 @@ class MemoryEfficientMixin:
     def __apply_model_offload(self, attr_val):
         if attr_val and not self.memory_settings.use_enable_sequential_cpu_offload:
             self.logger.debug("Enabling model cpu offload")
-            self.__move_stable_diffusion_to_cpu()
+            #self.__move_stable_diffusion_to_cpu()
             self.pipe.enable_model_cpu_offload()
         else:
             self.logger.debug("Model cpu offload disabled")
