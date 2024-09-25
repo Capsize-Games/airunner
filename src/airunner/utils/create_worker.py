@@ -1,7 +1,6 @@
 from PySide6.QtCore import QThread
 
 from airunner.enums import WorkerType
-from airunner.workers.llm_request_worker import LLMRequestWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.sd_worker import SDWorker
 from airunner.workers.tts_generator_worker import TTSGeneratorWorker
@@ -18,9 +17,7 @@ THREADS = []
 
 
 def create_worker(worker_class_, **kwargs):
-    if worker_class_ is WorkerType.LLMRequestWorker:
-        worker_class_ = LLMRequestWorker
-    elif worker_class_ is WorkerType.LLMGenerateWorker:
+    if worker_class_ is WorkerType.LLMGenerateWorker:
         worker_class_ = LLMGenerateWorker
     elif worker_class_ is WorkerType.SDWorker:
         worker_class_ = SDWorker
