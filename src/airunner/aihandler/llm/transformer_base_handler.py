@@ -20,7 +20,7 @@ class TransformerBaseHandler(BaseHandler):
         super().__init__(*args, **kwargs)
         self.callback = None
         self.request_data = kwargs.get("request_data", {})
-        self.model = None
+        self.__model = None
         self.vocoder = None
         self.temperature = kwargs.get("temperature", 0.7)
         #self.max_length = kwargs.get("max_length", 1000)
@@ -67,9 +67,33 @@ class TransformerBaseHandler(BaseHandler):
             self.load()
 
         self.register(SignalCode.LLM_UNLOAD_MODEL_SIGNAL, self.on_unload_model_signal)
+    @property
+    def model(self):
+        return self.__model
 
     def on_unload_model_signal(self, message: dict):
         self.unload_model()
+    @model.setter
+    def model(self, value):
+        if value is None and self.__model is not None:
+            self.__model.quantization_method = None
+            import psutil
+            cpu_memory = psutil.virtual_memory()
+            print(f"Used CPU memory: {cpu_memory.used / (1024 ** 3)} GB")
+            self.__model.to("cpu")
+            print("moved to cpu")
+            # print total cpu usage
+            cpu_memory = psutil.virtual_memory()
+            print(f"Used CPU memory: {cpu_memory.used / (1024 ** 3)} GB")
+            del self.__model
+            gc.collect()
+            self.__model = None
+            gc.collect()
+            print("running garbage collection")
+            for _ in range(50):
+                gc.collect()
+            print(f"Used CPU memory: {cpu_memory.used / (1024 ** 3)} GB")
+        self.__model = value
 
     @property
     def do_load_model(self):
