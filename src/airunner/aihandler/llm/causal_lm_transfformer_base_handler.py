@@ -46,11 +46,8 @@ class CausalLMTransformerBaseHandler(
         self.model_type = ModelType.LLM
         super().__init__(*args, **kwargs)
 
-    def on_load_llm_signal(self):
-        self.load()
-
     def on_load_model_signal(self):
-        self.load_model()
+        self.load()
 
     def on_interrupt_process_signal(self):
         if self.chat_agent is not None:

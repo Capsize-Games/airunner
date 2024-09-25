@@ -71,19 +71,6 @@
        <property name="verticalSpacing">
         <number>10</number>
        </property>
-       <item row="11" column="1">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>394</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
        <item row="6" column="0" colspan="2">
         <layout class="QHBoxLayout" name="horizontalLayout_5">
          <property name="spacing">
@@ -172,69 +159,6 @@
            </property>
            <property name="settings_property" stdset="0">
             <string notr="true">generator_settings.scale</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="8" column="0" colspan="2">
-        <widget class="QCheckBox" name="use_compel">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Use Compel</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0" colspan="2">
-        <layout class="QVBoxLayout" name="verticalLayout_7">
-         <item>
-          <widget class="QLabel" name="label_6">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Version</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="version"/>
-         </item>
-        </layout>
-       </item>
-       <item row="2" column="0" colspan="2">
-        <layout class="QVBoxLayout" name="model_layout">
-         <property name="spacing">
-          <number>10</number>
-         </property>
-         <item>
-          <widget class="QLabel" name="label_3">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Model</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="model">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
            </property>
           </widget>
          </item>
@@ -369,34 +293,6 @@
          </item>
         </layout>
        </item>
-       <item row="4" column="0" colspan="2">
-        <widget class="SeedWidget" name="seed_widget" native="true">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="generator_section" stdset="0">
-          <string/>
-         </property>
-         <property name="generator_name" stdset="0">
-          <string/>
-         </property>
-         <property name="property_name" stdset="0">
-          <string>generator_settings.random_seed</string>
-         </property>
-        </widget>
-       </item>
-       <item row="10" column="0" colspan="2">
-        <widget class="ControlnetSettingsWidget" name="controlnet_settings_widget" native="true"/>
-       </item>
        <item row="7" column="0" colspan="2">
         <widget class="SliderWidget" name="clip_skip_slider_widget" native="true">
          <property name="sizePolicy">
@@ -443,6 +339,94 @@
          </property>
         </widget>
        </item>
+       <item row="0" column="0" colspan="2">
+        <layout class="QVBoxLayout" name="verticalLayout_7">
+         <item>
+          <widget class="QLabel" name="label_6">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Version</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="version"/>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <layout class="QVBoxLayout" name="model_layout">
+         <property name="spacing">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Model</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="model">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="8" column="0" colspan="2">
+        <widget class="QCheckBox" name="use_compel">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Use Compel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="2">
+        <widget class="SeedWidget" name="seed_widget" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="generator_section" stdset="0">
+          <string/>
+         </property>
+         <property name="generator_name" stdset="0">
+          <string/>
+         </property>
+         <property name="property_name" stdset="0">
+          <string>generator_settings.random_seed</string>
+         </property>
+        </widget>
+       </item>
        <item row="1" column="0" colspan="2">
         <layout class="QVBoxLayout" name="verticalLayout_4">
          <item>
@@ -470,12 +454,18 @@
          </item>
         </layout>
        </item>
-       <item row="9" column="0" colspan="2">
-        <widget class="Line" name="line_2">
+       <item row="9" column="1">
+        <spacer name="verticalSpacer">
          <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
-        </widget>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>394</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>
@@ -506,12 +496,6 @@
    <class>SeedWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/seed/seed_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ControlnetSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/controlnet/controlnet_settings_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -97,7 +97,7 @@ class SpeechT5TTSHandler(TTSHandler):
     def unload_speaker_embeddings(self):
         self.speaker_embeddings = None
         self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.UNLOADED, "")
-        clear_memory()
+        clear_memory(self.memory_settings.default_gpu_tts)
 
     def do_generate(self, message):
         self.logger.debug("Generating TTS with T5")

@@ -6,34 +6,78 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>564</width>
-    <height>539</height>
+    <width>656</width>
+    <height>1097</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <property name="leftMargin">
-    <number>10</number>
-   </property>
-   <property name="topMargin">
-    <number>10</number>
-   </property>
-   <property name="rightMargin">
-    <number>10</number>
-   </property>
-   <property name="bottomMargin">
-    <number>10</number>
-   </property>
-   <property name="spacing">
-    <number>10</number>
-   </property>
-   <item row="2" column="0" colspan="2">
-    <widget class="QGraphicsView" name="image_container"/>
+   <item row="4" column="0">
+    <widget class="ControlnetSettingsWidget" name="controlnet_settings" native="true"/>
    </item>
-   <item row="4" column="0" colspan="2">
+   <item row="5" column="0">
+    <widget class="SliderWidget" name="strength_slider_widget" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="label_text" stdset="0">
+      <string>Strength</string>
+     </property>
+     <property name="slider_maximum" stdset="0">
+      <number>100</number>
+     </property>
+     <property name="current_value" stdset="0">
+      <number>0</number>
+     </property>
+     <property name="spinbox_maximum" stdset="0">
+      <double>1.000000000000000</double>
+     </property>
+     <property name="display_as_float" stdset="0">
+      <bool>true</bool>
+     </property>
+     <property name="spinbox_single_step" stdset="0">
+      <double>0.010000000000000</double>
+     </property>
+     <property name="spinbox_page_step" stdset="0">
+      <double>0.100000000000000</double>
+     </property>
+     <property name="settings_property" stdset="0">
+      <string>generator_settings.strength</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QGraphicsView" name="image_container">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>512</width>
+       <height>512</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
      <item>
       <widget class="QCheckBox" name="use_grid_image_as_input_checkbox">
        <property name="sizePolicy">
@@ -82,89 +126,51 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="0" colspan="2">
+   <item row="1" column="0">
     <widget class="Line" name="line">
      <property name="orientation">
       <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
-   <item row="0" column="0" colspan="2">
+   <item row="0" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
       <string>TextLabel</string>
      </property>
     </widget>
    </item>
+   <item row="3" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ControlnetSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/controlnet/controlnet_settings_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
- <connections>
-  <connection>
-   <sender>import_button</sender>
-   <signal>clicked()</signal>
-   <receiver>input_image</receiver>
-   <slot>import_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>173</x>
-     <y>323</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>119</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>delete_button</sender>
-   <signal>clicked()</signal>
-   <receiver>input_image</receiver>
-   <slot>delete_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>399</x>
-     <y>346</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>input_image</receiver>
-   <slot>enabled_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>43</x>
-     <y>274</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>32</x>
-     <y>256</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>use_grid_image_as_input_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>input_image</receiver>
-   <slot>use_grid_image_as_input_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>142</x>
-     <y>279</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>354</x>
-     <y>259</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>import_clicked()</slot>
   <slot>delete_clicked()</slot>
