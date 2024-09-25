@@ -66,13 +66,10 @@ class TransformerBaseHandler(BaseHandler):
         if do_load_on_init:
             self.load()
 
-        self.register(SignalCode.LLM_UNLOAD_MODEL_SIGNAL, self.on_unload_model_signal)
     @property
     def model(self):
         return self.__model
 
-    def on_unload_model_signal(self, message: dict):
-        self.unload_model()
     @model.setter
     def model(self, value):
         if value is None and self.__model is not None:
@@ -181,10 +178,11 @@ class TransformerBaseHandler(BaseHandler):
 
         try:
             self.model_status = ModelStatus.LOADING
-            self.model = self.auto_class_.from_pretrained(
-                path,
-                **params
-            )
+            with torch.no_grad():
+                self.model = self.auto_class_.from_pretrained(
+                    path,
+                    **params
+                )
             self.model_status = ModelStatus.LOADED
         except Exception as e:
             self.model_status = ModelStatus.FAILED
@@ -199,7 +197,7 @@ class TransformerBaseHandler(BaseHandler):
     def load_tokenizer(self):
         pass
 
-    def unload(self, do_clear_memory: bool = False):
+    def unload(self):
         if self.model_status is ModelStatus.LOADING:
             self._requested_action = ModelAction.CLEAR
             return False
