@@ -202,18 +202,22 @@ class CausalLMTransformerBaseHandler(
 
     def unload_streamer(self):
         self.logger.debug("Unloading streamer")
+        del self.streamer
         self.streamer = None
 
     def unload_llm_with_tools(self):
         self.logger.debug("Unloading LLM with tools")
+        del self.llm_with_tools
         self.llm_with_tools = None
 
     def unload_agent_executor(self):
         self.logger.debug("Unloading agent executor")
+        del self.agent_executor
         self.agent_executor = None
 
     def unload_embed_model(self):
         self.logger.debug("Unloading embed model")
+        del self.embed_model
         self.embed_model = None
 
     def do_generate(self, prompt, action):
