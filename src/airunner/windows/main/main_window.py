@@ -251,21 +251,16 @@ class MainWindow(
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
-        self.handle_key_press(event.key)
 
-    def handle_key_press(self, key):
+        print(event.key)
+
         for v in self.shortcut_keys:
-            if v.key == key:
+            if v.key == event.key:
+                print("KEY MATCHES")
                 for signal in SignalCode:
                     if signal.value == v.signal:
                         self.emit_signal(signal)
                         break
-
-    def key_matches(self, key_name, keyboard_key):
-        for shortcutkey in self.shortcut_keys:
-            if shortcutkey.name == key_name:
-                return shortcutkey.key == keyboard_key.value
-        return False
 
     def key_text(self, key_name):
         for shortcutkey in self.shortcut_keys:
@@ -976,11 +971,6 @@ class MainWindow(
 
     def action_import_image_triggered(self):
         self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
-
-    @Slot()
-    def action_clear_memory(self):
-        from airunner.utils.clear_memory import clear_memory
-        clear_memory()
 
     @Slot(bool)
     def action_outpaint_toggled(self, val: bool):

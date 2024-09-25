@@ -76,11 +76,8 @@ class TransformerBaseHandler(BaseHandler):
             self.__model.quantization_method = None
             self.__model.to("cpu")
             del self.__model
-            gc.collect()
             self.__model = None
-            gc.collect()
-            for _ in range(3):
-                gc.collect()
+            clear_memory(self.memory_settings.default_gpu_llm)
         self.__model = value
 
     @property
@@ -205,7 +202,7 @@ class TransformerBaseHandler(BaseHandler):
         self.logger.debug("Unloading tokenizer")
         del self.tokenizer
         self.tokenizer = None
-        clear_memory()
+        clear_memory(self.memory_settings.default_gpu_llm)
         return True
 
     def _unload_model(self):

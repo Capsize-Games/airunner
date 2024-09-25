@@ -98,6 +98,8 @@ class ControlnetSettings(Base):
     image = Column(String, nullable=True)
     enabled = Column(Boolean, default=False)
     use_grid_image_as_input = Column(Boolean, default=False)
+    strength = Column(Integer, default=50)
+    conditioning_scale = Column(Integer, default=100)
 
 
 class ImageToImageSettings(Base):

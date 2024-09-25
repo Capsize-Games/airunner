@@ -485,17 +485,17 @@ class TTSHandler(BaseHandler):
     def unload_model(self):
         self.model = None
         self.current_model = None
-        clear_memory()
+        clear_memory(self.memory_settings.default_gpu_tts)
         self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED, "")
 
     def unload_processor(self):
         self.processor = None
-        clear_memory()
+        clear_memory(self.memory_settings.default_gpu_tts)
         self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.UNLOADED, "")
 
     def unload_vocoder(self):
         self.vocoder = None
-        clear_memory()
+        clear_memory(self.memory_settings.default_gpu_tts)
         self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.UNLOADED, "")
 
     def load_speaker_embeddings(self):
@@ -506,7 +506,7 @@ class TTSHandler(BaseHandler):
 
     def unload_tokenizer(self):
         self.tokenizer = None
-        clear_memory()
+        clear_memory(self.memory_settings.default_gpu_tts)
         self.change_model_status(ModelType.TTS_TOKENIZER, ModelStatus.UNLOADED, "")
 
     def unload_dataset(self):

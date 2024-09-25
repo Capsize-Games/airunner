@@ -52,6 +52,13 @@ class InputImage(BaseWidget):
             "Controlnet" if settings_key == "controlnet_settings" else "Image to Image"
         )
 
+        if settings_key == "controlnet_settings":
+            self.ui.strength_slider_widget.hide()
+            self.ui.controlnet_settings.show()
+        else:
+            self.ui.strength_slider_widget.show()
+            self.ui.controlnet_settings.hide()
+
         self.ui.enable_checkbox.blockSignals(True)
         self.ui.use_grid_image_as_input_checkbox.blockSignals(True)
         self.ui.enable_checkbox.setChecked(self.current_settings.enabled)

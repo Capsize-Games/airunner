@@ -41,28 +41,6 @@ class GeneratorForm(BaseWidget):
             SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
         }
 
-    def on_load_conversation(self):
-        self.ui.generator_form_tabs.setCurrentIndex(1)
-
-    def toggle_secondary_prompts(self):
-        if self.generator_settings.version != StableDiffusionVersion.SDXL1_0.value:
-            if self.generator_settings.version == StableDiffusionVersion.SDXL_TURBO.value:
-                self.ui.negative_prompt_label.hide()
-                self.ui.negative_prompt.hide()
-            else:
-                self.ui.negative_prompt_label.show()
-                self.ui.negative_prompt.show()
-            self.ui.croops_coord_top_left_groupbox.hide()
-            self.ui.secondary_prompt.hide()
-            self.ui.secondary_negative_prompt.hide()
-        else:
-            self.ui.croops_coord_top_left_groupbox.show()
-            self.ui.negative_prompt_label.show()
-            self.ui.negative_prompt.show()
-            self.ui.secondary_prompt.show()
-            self.ui.secondary_negative_prompt.show()
-
-
     @property
     def is_txt2img(self):
         return self.generator_section == GeneratorSection.TXT2IMG.value
@@ -99,6 +77,57 @@ class GeneratorForm(BaseWidget):
 
         return rect
 
+    def on_application_settings_changed_signal(self, _data):
+        self.toggle_secondary_prompts()
+
+    def on_generate_image_signal(self, _data):
+        self.handle_generate_button_clicked()
+
+    def on_stop_image_generator_progress_bar_signal(self, _data):
+        self.stop_progress_bar()
+
+    def on_progress_signal(self, message):
+        self.handle_progress_bar(message)
+
+    def on_llm_image_prompt_generated_signal(self, data):
+        data = self.extract_json_from_message(data["message"])
+        prompt = data.get("description", None)
+        secondary_prompt = data.get("composition", None)
+        prompt_type = data.get("type", ImageCategory.PHOTO.value)
+        if prompt_type == "photo":
+            negative_prompt = PHOTO_REALISTIC_NEGATIVE_PROMPT
+        else:
+            negative_prompt = ILLUSTRATION_NEGATIVE_PROMPT
+        self.ui.prompt.setPlainText(prompt)
+        self.ui.negative_prompt.setPlainText(negative_prompt)
+        self.ui.secondary_prompt.setPlainText(secondary_prompt)
+        self.ui.secondary_negative_prompt.setPlainText(negative_prompt)
+        self.handle_generate_button_clicked()
+
+    def handle_generate_image_from_image(self, image):
+        pass
+
+    def on_load_conversation(self, _data):
+        self.ui.generator_form_tabs.setCurrentIndex(1)
+
+    def toggle_secondary_prompts(self):
+        if self.generator_settings.version != StableDiffusionVersion.SDXL1_0.value:
+            if self.generator_settings.version == StableDiffusionVersion.SDXL_TURBO.value:
+                self.ui.negative_prompt_label.hide()
+                self.ui.negative_prompt.hide()
+            else:
+                self.ui.negative_prompt_label.show()
+                self.ui.negative_prompt.show()
+            self.ui.croops_coord_top_left_groupbox.hide()
+            self.ui.secondary_prompt.hide()
+            self.ui.secondary_negative_prompt.hide()
+        else:
+            self.ui.croops_coord_top_left_groupbox.show()
+            self.ui.negative_prompt_label.show()
+            self.ui.negative_prompt.show()
+            self.ui.secondary_prompt.show()
+            self.ui.secondary_negative_prompt.show()
+
     def on_load_saved_stablediffuion_prompt_signal(self, data: dict):
         saved_prompt = data.get("saved_prompt")
         self.update_generator_settings("prompt", saved_prompt.prompt)
@@ -110,20 +139,11 @@ class GeneratorForm(BaseWidget):
     def handle_image_presets_changed(self, val):
         self.update_generator_settings("image_preset", val)
 
-    def handle_generate_image_from_image(self, image):
-        pass
-
-    def do_generate_image_from_image_signal_handler(self, res):
+    def do_generate_image_from_image_signal_handler(self, _data):
         self.do_generate()
 
     def do_generate(self):
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
-
-    def on_application_settings_changed_signal(self):
-        self.toggle_secondary_prompts()
-    
-    def on_progress_signal(self, message):
-        self.handle_progress_bar(message)
 
     def activate_ai_mode(self):
         ai_mode = self.application_settings.ai_mode
@@ -143,9 +163,6 @@ class GeneratorForm(BaseWidget):
 
     def handle_second_negative_prompt_changed(self):
         pass
-
-    def on_generate_image_signal(self):
-        self.handle_generate_button_clicked()
 
     def handle_generate_button_clicked(self):
         self.save_prompt_to_settings()
@@ -245,21 +262,6 @@ class GeneratorForm(BaseWidget):
             print("No JSON block found in the message.")
             return {}
 
-    def on_llm_image_prompt_generated_signal(self, data):
-        data = self.extract_json_from_message(data["message"])
-        prompt = data.get("description", None)
-        secondary_prompt = data.get("composition", None)
-        prompt_type = data.get("type", ImageCategory.PHOTO.value)
-        if prompt_type == "photo":
-            negative_prompt = PHOTO_REALISTIC_NEGATIVE_PROMPT
-        else:
-            negative_prompt = ILLUSTRATION_NEGATIVE_PROMPT
-        self.ui.prompt.setPlainText(prompt)
-        self.ui.negative_prompt.setPlainText(negative_prompt)
-        self.ui.secondary_prompt.setPlainText(secondary_prompt)
-        self.ui.secondary_negative_prompt.setPlainText(negative_prompt)
-        self.handle_generate_button_clicked()
-
     def get_memory_options(self):
         return {
             "use_last_channels": self.memory_settings.use_last_channels,
@@ -316,7 +318,7 @@ class GeneratorForm(BaseWidget):
         self.toggle_secondary_prompts()
         self.initialized = True
 
-    def set_form_values(self):
+    def set_form_values(self, _data=None):
         self.ui.prompt.blockSignals(True)
         self.ui.negative_prompt.blockSignals(True)
         self.ui.secondary_prompt.blockSignals(True)
@@ -354,9 +356,6 @@ class GeneratorForm(BaseWidget):
     def clear_prompts(self):
         self.ui.prompt.setPlainText("")
         self.ui.negative_prompt.setPlainText("")
-
-    def on_stop_image_generator_progress_bar_signal(self):
-        self.stop_progress_bar()
 
     def stop_progress_bar(self):
         progressbar = self.ui.progress_bar

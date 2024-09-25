@@ -151,8 +151,6 @@ class SDHandler(
         self.latents_worker = create_worker(WorkerType.LatentsWorker)
         self._loading_thread = None
 
-        self.register(SignalCode.SD_UNLOAD_SIGNAL, self.__on_unload_stablediffusion_signal)
-
     @property
     def current_state(self):
         return self.__current_state
@@ -161,13 +159,6 @@ class SDHandler(
     def current_state(self, value):
         self.__current_state = value
         self.emit_signal(SignalCode.SD_STATE_CHANGED_SIGNAL, value)
-
-    def __on_unload_stablediffusion_signal(self, __message):
-        if self.__load_image_generator_model_task.isRunning():
-            self.__load_image_generator_model_task.cancel_load_model()
-            self.logger.info("Cancelled the image generator model loading task.")
-        self.current_state = HandlerState.UNLOADED
-        self.model_status = self.current_state
 
     @property
     def input_image(self):
