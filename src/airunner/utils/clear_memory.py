@@ -2,22 +2,19 @@ import gc
 import torch
 from numba import cuda
 
-def clear_memory():
+def clear_memory(device=0):
     """
     Clear the GPU ram.
     """
     if torch.cuda.is_available():
-        with torch.no_grad():
-            try:
-                torch.cuda.empty_cache()
-                torch.cuda.synchronize()
-            except RuntimeError:
-                print("Failed to clear memory")
-            gc.collect()
-            try:
-                torch.cuda.empty_cache()
-            except RuntimeError:
-                print("Failed to clear CPU memory")
-    cuda.select_device(0)
+        try:
+            torch.cuda.set_device(device)
+            torch.cuda.empty_cache()
+            torch.cuda.reset_max_memory_allocated(device=device)
+            torch.cuda.reset_max_memory_cached(device=device)
+            torch.cuda.synchronize(device=device)
+        except RuntimeError:
+            print("Failed to clear memory")
+    cuda.select_device(device)
     cuda.close()
     gc.collect()
