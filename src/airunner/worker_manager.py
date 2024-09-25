@@ -1,7 +1,11 @@
+import gc
 import threading
 import traceback
 import numpy as np
+import torch
 from PySide6.QtCore import QObject, Signal, Slot, QThread
+from numba import cuda
+
 from airunner.enums import SignalCode, EngineResponseCode, WorkerType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
