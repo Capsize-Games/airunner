@@ -324,8 +324,6 @@
     <addaction name="separator"/>
     <addaction name="actionStats"/>
     <addaction name="separator"/>
-    <addaction name="actionClear_Memory"/>
-    <addaction name="separator"/>
     <addaction name="actionSafety_Checker"/>
     <addaction name="separator"/>
     <addaction name="actionToggle_LLM"/>
@@ -1745,22 +1743,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionClear_Memory</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_clear_memory()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>561</x>
-     <y>451</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionSafety_Checker</sender>
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
@@ -2134,7 +2116,6 @@
   <slot>export_drawingpad_image()</slot>
   <slot>action_unload_llm()</slot>
   <slot>action_unload_sd()</slot>
-  <slot>action_clear_memory()</slot>
   <slot>action_outpaint_toggled(bool)</slot>
   <slot>action_outpaint_export()</slot>
   <slot>action_outpaint_import()</slot>
