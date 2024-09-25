@@ -88,10 +88,11 @@ class BaseAgent(
         return self.chatbot.bot_personality
 
     def unload(self):
+        del self.model
+        del self.tokenizer
         self.model = None
         self.tokenizer = None
         self.thread = None
-        clear_memory()
 
     def clear_history(self):
         self.history = []
