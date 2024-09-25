@@ -32,104 +32,104 @@ class ControlnetImageSettings:
         self.controlnet_image_base64 = data.get("controlnet_image_base64", DEFAULT_GENERATOR_SETTINGS["controlnet_image_settings"]["controlnet_image_base64"])
 
 
-class GeneratorSettings:
-    @property
-    def image_preset(self):
-        return self.generator_settings.get("image_preset", "")
-
-    @property
-    def prompt(self):
-        prompt = ""
-        if self.image_preset != "":
-            preset_enum = ImagePreset(self.image_preset)
-            if preset_enum is ImagePreset.ILLUSTRATION:
-                prompt = "A beautiful illustration of a"
-            elif preset_enum is ImagePreset.PHOTOGRAPH:
-                prompt = "A beautiful photograph of a"
-            elif preset_enum is ImagePreset.PAINTING:
-                prompt = "A beautiful painting of a"
-        return f"{prompt} {self._prompt}"
-
-    @prompt.setter
-    def prompt(self, value):
-        self._prompt = value
-
-    @property
-    def negative_prompt(self):
-        negative_prompt = ""
-        if self.image_preset != "":
-            preset_enum = ImagePreset(self.image_preset)
-            if preset_enum is ImagePreset.ILLUSTRATION:
-                negative_prompt = "photograph, realistic, photo realistic, ultra realistic, cgi"
-            elif preset_enum is ImagePreset.PHOTOGRAPH:
-                negative_prompt = "illustration, drawing, painting, digital art"
-            elif preset_enum is ImagePreset.PAINTING:
-                negative_prompt = "photograph, photo, cgi, video footage, video game footage"
-        return f"{negative_prompt} {self._negative_prompt}"
-
-    @negative_prompt.setter
-    def negative_prompt(self, value):
-        self._negative_prompt = value
-
-    @property
-    def second_prompt(self):
-        second_prompt = self.generator_settings.get("second_prompt", "")
-        prompt = ""
-        if self.image_preset != "":
-            preset_enum = ImagePreset(self.image_preset)
-            if preset_enum is ImagePreset.ILLUSTRATION:
-                prompt = "A beautiful illustration of a"
-            elif preset_enum is ImagePreset.PHOTOGRAPH:
-                prompt = "A beautiful photograph of a"
-            elif preset_enum is ImagePreset.PAINTING:
-                prompt = "A beautiful painting of a"
-        return f"{prompt} {second_prompt}"
-
-    @property
-    def second_negative_prompt(self):
-        second_negative_prompt = self.generator_settings.get("second_negative_prompt", "")
-        negative_prompt = ""
-        if self.image_preset != "":
-            preset_enum = ImagePreset(self.image_preset)
-            if preset_enum is ImagePreset.ILLUSTRATION:
-                negative_prompt = "photograph, realistic, photo realistic, ultra realistic, cgi"
-            elif preset_enum is ImagePreset.PHOTOGRAPH:
-                negative_prompt = "illustration, drawing, painting, digital art"
-            elif preset_enum is ImagePreset.PAINTING:
-                negative_prompt = "illustration, drawing, photograph, photo, realistic, photo realistic, ultra realistic, cgi"
-        return f"{negative_prompt} {second_negative_prompt}"
-
-    def __init__(self, settings: dict):
-        generator_settings = settings["generator_settings"]
-        self.generator_settings = generator_settings
-
-        self._prompt = ""
-        self._negative_prompt = ""
-
-
-        self.prompt = generator_settings.get("prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt"])
-        self.negative_prompt = generator_settings.get("negative_prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["negative_prompt"])
-        self.steps = generator_settings.get("steps", STABLEDIFFUSION_GENERATOR_SETTINGS["steps"])
-        self.ddim_eta = generator_settings.get("ddim_eta", STABLEDIFFUSION_GENERATOR_SETTINGS["ddim_eta"])
-        self.height = generator_settings.get("height", settings.working_height)
-        self.width = generator_settings.get("width", settings.working_width)
-        self.scale = generator_settings.get("scale", STABLEDIFFUSION_GENERATOR_SETTINGS["scale"]) / 100.0
-        self.seed = generator_settings.get("seed", STABLEDIFFUSION_GENERATOR_SETTINGS["seed"])
-        self.random_seed = generator_settings.get("random_seed", STABLEDIFFUSION_GENERATOR_SETTINGS["random_seed"])
-        self.model = generator_settings.get("model", STABLEDIFFUSION_GENERATOR_SETTINGS["model"])
-        self.scheduler = generator_settings.get("scheduler", STABLEDIFFUSION_GENERATOR_SETTINGS["scheduler"])
-        self.prompt_triggers = generator_settings.get("prompt_triggers", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt_triggers"])
-        self.strength = generator_settings.get("strength", STABLEDIFFUSION_GENERATOR_SETTINGS["strength"]) / 100.0
-        self.n_samples = generator_settings.get("n_samples", STABLEDIFFUSION_GENERATOR_SETTINGS["n_samples"])
-        self.enable_controlnet = settings["controlnet_enabled"]
-        self.clip_skip = generator_settings.get("clip_skip", STABLEDIFFUSION_GENERATOR_SETTINGS["clip_skip"])
-        self.variation = generator_settings.get("variation", STABLEDIFFUSION_GENERATOR_SETTINGS["variation"])
-        self.use_prompt_builder = generator_settings.get("use_prompt_builder", STABLEDIFFUSION_GENERATOR_SETTINGS["use_prompt_builder"])
-        self.version = generator_settings.get("version", STABLEDIFFUSION_GENERATOR_SETTINGS["version"])
-        self.is_preset = generator_settings.get("is_preset", STABLEDIFFUSION_GENERATOR_SETTINGS["is_preset"])
-        self.input_image = generator_settings.get("input_image", STABLEDIFFUSION_GENERATOR_SETTINGS["input_image"])
-        self.generator_name = generator_settings.get("generator_name", DEFAULT_GENERATOR_SETTINGS["generator_name"])
-        self.controlnet_image_settings = ControlnetImageSettings()
+# class GeneratorSettings:
+#     @property
+#     def image_preset(self):
+#         return self.generator_settings.get("image_preset", "")
+#
+#     @property
+#     def prompt(self):
+#         prompt = ""
+#         if self.image_preset != "":
+#             preset_enum = ImagePreset(self.image_preset)
+#             if preset_enum is ImagePreset.ILLUSTRATION:
+#                 prompt = "A beautiful illustration of a"
+#             elif preset_enum is ImagePreset.PHOTOGRAPH:
+#                 prompt = "A beautiful photograph of a"
+#             elif preset_enum is ImagePreset.PAINTING:
+#                 prompt = "A beautiful painting of a"
+#         return f"{prompt} {self._prompt}"
+#
+#     @prompt.setter
+#     def prompt(self, value):
+#         self._prompt = value
+#
+#     @property
+#     def negative_prompt(self):
+#         negative_prompt = ""
+#         if self.image_preset != "":
+#             preset_enum = ImagePreset(self.image_preset)
+#             if preset_enum is ImagePreset.ILLUSTRATION:
+#                 negative_prompt = "photograph, realistic, photo realistic, ultra realistic, cgi"
+#             elif preset_enum is ImagePreset.PHOTOGRAPH:
+#                 negative_prompt = "illustration, drawing, painting, digital art"
+#             elif preset_enum is ImagePreset.PAINTING:
+#                 negative_prompt = "photograph, photo, cgi, video footage, video game footage"
+#         return f"{negative_prompt} {self._negative_prompt}"
+#
+#     @negative_prompt.setter
+#     def negative_prompt(self, value):
+#         self._negative_prompt = value
+#
+#     @property
+#     def second_prompt(self):
+#         second_prompt = self.generator_settings.get("second_prompt", "")
+#         prompt = ""
+#         if self.image_preset != "":
+#             preset_enum = ImagePreset(self.image_preset)
+#             if preset_enum is ImagePreset.ILLUSTRATION:
+#                 prompt = "A beautiful illustration of a"
+#             elif preset_enum is ImagePreset.PHOTOGRAPH:
+#                 prompt = "A beautiful photograph of a"
+#             elif preset_enum is ImagePreset.PAINTING:
+#                 prompt = "A beautiful painting of a"
+#         return f"{prompt} {second_prompt}"
+#
+#     @property
+#     def second_negative_prompt(self):
+#         second_negative_prompt = self.generator_settings.get("second_negative_prompt", "")
+#         negative_prompt = ""
+#         if self.image_preset != "":
+#             preset_enum = ImagePreset(self.image_preset)
+#             if preset_enum is ImagePreset.ILLUSTRATION:
+#                 negative_prompt = "photograph, realistic, photo realistic, ultra realistic, cgi"
+#             elif preset_enum is ImagePreset.PHOTOGRAPH:
+#                 negative_prompt = "illustration, drawing, painting, digital art"
+#             elif preset_enum is ImagePreset.PAINTING:
+#                 negative_prompt = "illustration, drawing, photograph, photo, realistic, photo realistic, ultra realistic, cgi"
+#         return f"{negative_prompt} {second_negative_prompt}"
+#
+#     def __init__(self, settings: dict):
+#         generator_settings = settings["generator_settings"]
+#         self.generator_settings = generator_settings
+#
+#         self._prompt = ""
+#         self._negative_prompt = ""
+#
+#
+#         self.prompt = generator_settings.get("prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt"])
+#         self.negative_prompt = generator_settings.get("negative_prompt", STABLEDIFFUSION_GENERATOR_SETTINGS["negative_prompt"])
+#         self.steps = generator_settings.get("steps", STABLEDIFFUSION_GENERATOR_SETTINGS["steps"])
+#         self.ddim_eta = generator_settings.get("ddim_eta", STABLEDIFFUSION_GENERATOR_SETTINGS["ddim_eta"])
+#         self.height = generator_settings.get("height", settings.working_height)
+#         self.width = generator_settings.get("width", settings.working_width)
+#         self.scale = generator_settings.get("scale", STABLEDIFFUSION_GENERATOR_SETTINGS["scale"]) / 100.0
+#         self.seed = generator_settings.get("seed", STABLEDIFFUSION_GENERATOR_SETTINGS["seed"])
+#         self.random_seed = generator_settings.get("random_seed", STABLEDIFFUSION_GENERATOR_SETTINGS["random_seed"])
+#         self.model = generator_settings.get("model", STABLEDIFFUSION_GENERATOR_SETTINGS["model"])
+#         self.scheduler = generator_settings.get("scheduler", STABLEDIFFUSION_GENERATOR_SETTINGS["scheduler"])
+#         self.prompt_triggers = generator_settings.get("prompt_triggers", STABLEDIFFUSION_GENERATOR_SETTINGS["prompt_triggers"])
+#         self.strength = generator_settings.get("strength", STABLEDIFFUSION_GENERATOR_SETTINGS["strength"]) / 100.0
+#         self.n_samples = generator_settings.get("n_samples", STABLEDIFFUSION_GENERATOR_SETTINGS["n_samples"])
+#         self.enable_controlnet = settings["controlnet_enabled"]
+#         self.clip_skip = generator_settings.get("clip_skip", STABLEDIFFUSION_GENERATOR_SETTINGS["clip_skip"])
+#         self.variation = generator_settings.get("variation", STABLEDIFFUSION_GENERATOR_SETTINGS["variation"])
+#         self.use_prompt_builder = generator_settings.get("use_prompt_builder", STABLEDIFFUSION_GENERATOR_SETTINGS["use_prompt_builder"])
+#         self.version = generator_settings.get("version", STABLEDIFFUSION_GENERATOR_SETTINGS["version"])
+#         self.is_preset = generator_settings.get("is_preset", STABLEDIFFUSION_GENERATOR_SETTINGS["is_preset"])
+#         self.input_image = generator_settings.get("input_image", STABLEDIFFUSION_GENERATOR_SETTINGS["input_image"])
+#         self.generator_name = generator_settings.get("generator_name", DEFAULT_GENERATOR_SETTINGS["generator_name"])
+#         self.controlnet_image_settings = ControlnetImageSettings()
 
 class MemorySettings:
     def __init__(self, **data):
@@ -170,7 +170,10 @@ class SDRequest(
     @property
     def drawing_pad_image(self):
         base_64_image = self.image_to_image_settings.image
-        return convert_base64_to_image(base_64_image)
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
 
     @property
     def image(self):
@@ -179,7 +182,10 @@ class SDRequest(
     @property
     def outpaint_image(self):
         base_64_image = self.outpaint_settings.image
-        return convert_base64_to_image(base_64_image)
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
 
     @property
     def section(self):
@@ -377,12 +383,12 @@ class SDRequest(
         if not self.application_settings.controlnet_enabled:
             if self.is_txt2img:
                 extra_args.update({
-                    "guidance_scale": self.generator_settings.scale,
+                    "guidance_scale": self.generator_settings.scale / 100.0,
                 })
             elif self.is_img2img:
                 extra_args.update({
-                    "strength": self.brush_settings.strength / 100,
-                    "guidance_scale": self.generator_settings.scale,
+                    "strength": self.generator_settings.strength / 100.0,
+                    "guidance_scale": self.generator_settings.scale / 100.0,
                 })
         if self.is_outpaint:
             if image is None:
@@ -418,9 +424,9 @@ class SDRequest(
                 "guess_mode": None,
                 "control_guidance_start": 0.0,
                 "control_guidance_end": 1.0,
-                "strength": self.brush_settings.strength / 100,
-                "guidance_scale": self.generator_settings.scale,
-                "controlnet_conditioning_scale": self.brush_settings.conditioning_scale / 100,
+                "strength": self.generator_settings.strength / 100.0,
+                "guidance_scale": self.generator_settings.scale / 100.0,
+                "controlnet_conditioning_scale": self.controlnet_settings.conditioning_scale / 100.0,
                 "controlnet": [
                     self.generator_settings.controlnet_image_settings.controlnet
                 ],

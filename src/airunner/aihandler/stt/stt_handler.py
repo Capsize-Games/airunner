@@ -95,17 +95,17 @@ class STTHandler(BaseHandler):
 
     def unload_model(self):
         self.model = None
-        clear_memory()
+        clear_memory(self.memory_settings.default_gpu_stt)
         self.change_model_status(ModelType.STT, ModelStatus.UNLOADED, "")
 
     def unload_processor(self):
         self.processor = None
-        clear_memory()
+        clear_memory(self.memory_settings.default_gpu_stt)
         self.change_model_status(ModelType.STT_PROCESSOR, ModelStatus.UNLOADED, "")
 
     def unload_feature_extractor(self):
         self.feature_extractor = None
-        clear_memory()
+        clear_memory(self.memory_settings.default_gpu_stt)
         self.change_model_status(ModelType.STT_FEATURE_EXTRACTOR, ModelStatus.UNLOADED, "")
 
 

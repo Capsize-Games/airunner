@@ -1,5 +1,6 @@
 import base64
 import ctypes
+import gc
 import io
 import os
 import threading
@@ -30,7 +31,6 @@ from airunner.enums import (
 )
 from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException, \
     ThreadInterruptException
-from airunner.utils.clear_memory import clear_memory
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 
 SKIP_RELOAD_CONSTS = (
@@ -152,6 +152,23 @@ class ModelMixin:
             )
         )
 
+    def clear_memory(self):
+        """
+        Clear the GPU ram.
+        """
+        if torch.cuda.is_available():
+            try:
+                torch.cuda.set_device(self.memory_settings.default_gpu_sd)
+                torch.cuda.empty_cache()
+                # torch.cuda.reset_max_memory_allocated(device=device)
+                # torch.cuda.reset_max_memory_cached(device=device)
+                # torch.cuda.synchronize(device=device)
+            except RuntimeError:
+                print("Failed to clear memory")
+        # cuda.select_device(device)
+        # cuda.close()
+        gc.collect()
+
     @staticmethod
     def __is_pytorch_error(e) -> bool:
         return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
@@ -161,7 +178,7 @@ class ModelMixin:
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
         self.__unload_model()
         self.__do_reset_applied_memory_settings()
-        clear_memory()
+        self.clear_memory(self.memory_settings.default_gpu_sd)
 
     def cancel_load(self):
         self.cancel_load_flag = True
@@ -208,7 +225,7 @@ class ModelMixin:
             self.logger.info("Model loading was interrupted.")
             self.__unload_model()
             self.__do_reset_applied_memory_settings()
-            clear_memory()
+            self.clear_memory(self.memory_settings.default_gpu_sd)
             return
 
     @property
@@ -481,7 +498,7 @@ class ModelMixin:
                 self.pipe = __pipeline_class.from_pipe(self.pipe, controlnet=self.controlnet)
             else:
                 self.pipe = __pipeline_class.from_pipe(self.pipe)
-            clear_memory()
+            self.clear_memory(self.memory_settings.default_gpu_sd)
             self.make_stable_diffusion_memory_efficient()
             self.make_controlnet_memory_efficient()
 
@@ -503,6 +520,8 @@ class ModelMixin:
             images, nsfw_content_detected = self.__call_pipe()
         except SafetyCheckerNotLoadedException:
             self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Safety checker is not loaded")
+
+        self.clear_memory()
 
         if images is not None:
             return self.__image_handler(
@@ -603,7 +622,7 @@ class ModelMixin:
         self.__change_sd_model_status(ModelStatus.LOADING)
         self.pipe.to("cpu")
         self.pipe = None
-        clear_memory()
+        self.clear_memory(self.memory_settings.default_gpu_sd)
         self.__change_sd_model_status(ModelStatus.UNLOADED)
 
     def __change_sd_model_status(self, status: ModelStatus):
@@ -611,7 +630,7 @@ class ModelMixin:
             return
         self.__sd_model_status = status
         if status in (ModelStatus.FAILED, ModelStatus.UNLOADED):
-            clear_memory()
+            self.clear_memory(self.memory_settings.default_gpu_sd)
         elif status == ModelStatus.LOADED:
             self.make_stable_diffusion_memory_efficient()
         self.change_model_status(ModelType.SD, status, self.model_path)
@@ -818,7 +837,7 @@ class ModelMixin:
     def __unload_tokenizer(self):
         self.__tokenizer = None
         self.__change_sd_tokenizer_status(ModelStatus.UNLOADED)
-        clear_memory()
+        self.clear_memory(self.memory_settings.default_gpu_sd)
 
     def __load_tokenizer(self):
         if self.is_sd_xl:
