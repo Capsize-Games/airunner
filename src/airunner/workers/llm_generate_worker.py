@@ -8,10 +8,9 @@ from PySide6.QtCore import QThread
 
 
 class LLMGenerateWorker(Worker):
-    def __init__(self, prefix=None, do_load_on_init=False, agent_class=None, agent_options=None):
+    def __init__(self, prefix=None, do_load_on_init=False, agent_options=None):
         self.llm = None
         self.do_load_on_init = do_load_on_init
-        self.agent_class = agent_class
         self.agent_options = agent_options
         super().__init__(prefix=prefix)
 
@@ -63,7 +62,6 @@ class LLMGenerateWorker(Worker):
     def load_llm(self, do_load_on_init: bool = False):
         from airunner.aihandler.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
         self.llm = CausalLMTransformerBaseHandler(
-            agent_class=self.agent_class,
             do_load_on_init=do_load_on_init,
             agent_options=self.agent_options
         )
