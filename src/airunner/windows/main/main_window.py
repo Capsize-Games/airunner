@@ -562,11 +562,19 @@ class MainWindow(
 
     @Slot(bool)
     def tts_button_toggled(self, val):
+        self.ui.actionToggle_Text_to_Speech.blockSignals(True)
+        self.ui.actionToggle_Text_to_Speech.setChecked(val)
+        self.ui.actionToggle_Text_to_Speech.blockSignals(False)
+        QApplication.processEvents()
         self.update_application_settings("tts_enabled", val)
         self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL if val else SignalCode.TTS_DISABLE_SIGNAL)
 
     @Slot(bool)
     def v2t_button_toggled(self, val):
+        self.ui.actionToggle_Speech_to_Text.blockSignals(True)
+        self.ui.actionToggle_Speech_to_Text.setChecked(val)
+        self.ui.actionToggle_Speech_to_Text.blockSignals(False)
+        QApplication.processEvents()
         self.update_application_settings("stt_enabled", val)
         if not val:
             self.emit_signal(SignalCode.STT_STOP_CAPTURE_SIGNAL)
@@ -638,26 +646,26 @@ class MainWindow(
         )
     ##### End window properties #####
     #################################
-        
+
     ###### Window handlers ######
     def cell_size_changed(self, val):
         self.update_grid_settings("cell_size", val)
 
     def line_width_changed(self, val):
         self.update_grid_settings("line_width", val)
-    
+
     def line_color_changed(self, val):
         self.update_grid_settings("line_color", val)
-    
+
     def snap_to_grid_changed(self, val):
         self.update_grid_settings("snap_to_grid", val)
-    
+
     def canvas_color_changed(self, val):
         self.update_grid_settings("canvas_color", val)
 
     def action_ai_toggled(self, val):
         self.update_application_settings("ai_mode", val)
-    
+
     def action_toggle_grid(self, val):
         self.update_grid_settings("show_grid", val)
 
@@ -991,6 +999,10 @@ class MainWindow(
 
     @Slot(bool)
     def action_toggle_llm(self, val):
+        self.ui.actionToggle_LLM.blockSignals(True)
+        self.ui.actionToggle_LLM.setChecked(val)
+        self.ui.actionToggle_LLM.blockSignals(False)
+        QApplication.processEvents()
         self.update_application_settings("llm_enabled", val)
         if val:
             self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
@@ -999,6 +1011,10 @@ class MainWindow(
 
     @Slot(bool)
     def action_image_generator_toggled(self, val: bool):
+        self.ui.actionToggle_Stable_Diffusion.blockSignals(True)
+        self.ui.actionToggle_Stable_Diffusion.setChecked(val)
+        self.ui.actionToggle_Stable_Diffusion.blockSignals(False)
+        QApplication.processEvents()
         self.update_application_settings("sd_enabled", val)
         if val:
             self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
@@ -1008,8 +1024,11 @@ class MainWindow(
 
     @Slot(bool)
     def action_controlnet_toggled(self, val: bool):
+        self.ui.actionToggle_Controlnet.blockSignals(True)
+        self.ui.actionToggle_Controlnet.setChecked(val)
+        self.ui.actionToggle_Controlnet.blockSignals(False)
+        QApplication.processEvents()
         self.update_application_settings("controlnet_enabled", val)
-
         for widget in [self.ui.actionToggle_Controlnet, self.ui.enable_controlnet]:
             widget.blockSignals(True)
             widget.setChecked(val)
