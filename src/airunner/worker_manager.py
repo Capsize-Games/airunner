@@ -264,7 +264,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     
     def do_tts_request(self, message: str, is_end_of_message: bool=False):
         if self.application_settings.tts_enabled:
-            self.emit_signal(SignalCode.TTS_REQUEST, {
+            self.tts_generator_worker.add_to_queue({
                 'message': message.replace("</s>", "") + ("." if is_end_of_message else ""),
                 'tts_settings': self.tts_settings,
                 'is_end_of_message': is_end_of_message,
