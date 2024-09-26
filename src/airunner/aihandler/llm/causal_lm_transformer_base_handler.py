@@ -425,14 +425,6 @@ class CausalLMTransformerBaseHandler(
 
     def load_agent(self):
         self.logger.debug("Loading agent")
-        # query_engine_tool = QueryEngineTool(
-        #     query_engine=self.query_engine,
-        #     metadata=ToolMetadata(
-        #         name="help_agent",
-        #         description="Agent that can return help results about the application."
-        #     )
-        # )
-        self.logger.debug("Loading local agent")
         self.chat_agent = self.agent_class_(
             model=self.model,
             tokenizer=self.tokenizer,
