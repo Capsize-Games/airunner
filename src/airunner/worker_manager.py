@@ -56,8 +56,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             (SignalCode.ENGINE_CANCEL_SIGNAL, self.on_engine_cancel_signal),
             (SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL, self.on_engine_stop_processing_queue_signal),
             (SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL, self.on_engine_start_processing_queue_signal),
-            (SignalCode.LOG_ERROR_SIGNAL, self.on_error_signal),
-            (SignalCode.LOG_WARNING_SIGNAL, self.on_warning_signal),
             (SignalCode.LOG_STATUS_SIGNAL, self.on_status_signal),
             (SignalCode.LLM_RESPONSE_SIGNAL, self.on_llm_response_signal),
             (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal),
@@ -249,15 +247,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         """
         print("HEARD", message)
 
-    def handle_generate_caption(self, message):
-        pass
-
-    def on_caption_generated_signal(self, message: dict):
-        print("TODO: caption generated signal", message)
-
-    def handle_text_generated(self, message, code):
-        print("TODO: handle text generated no stream")
-
     def on_AudioCaptureWorker_response_signal(self, message: dict):
         item: np.ndarray = message["item"]
         self.logger.debug("Heard signal")
@@ -268,16 +257,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_llm_response_signal(self, message: dict):
         self.do_response(message)
-    
-    def EngineRequestWorker_handle_default(self, message: dict):
-        self.logger.error(f"Unknown code: {message['code']}")
-
-    def on_error_signal(self, message: dict):
-        traceback.print_stack()
-        self.logger.error(message)
-
-    def on_warning_signal(self, message: dict):
-        self.logger.warning(message)
 
     def on_status_signal(self, message: dict):
         self.logger.debug(message)
@@ -298,14 +277,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         Unload the Stable Diffusion model from memory.
         """
         self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
-
-    def parse_message(self, message):
-        if message:
-            if message.startswith("\""):
-                message = message[1:]
-            if message.endswith("\""):
-                message = message[:-1]
-        return message
     
     def do_tts_request(self, message: str, is_end_of_message: bool=False):
         if self.application_settings.tts_enabled:
