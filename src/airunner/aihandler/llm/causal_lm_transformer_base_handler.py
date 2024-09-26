@@ -262,7 +262,7 @@ class CausalLMTransformerBaseHandler(
     def pre_load(self):
         """
         This function is called at the start of the load function.
-        Override this function to add custom pre load functionality.
+        Override this function to add custom preload functionality.
         :return:
         """
         self.current_model_path = self.model_path
