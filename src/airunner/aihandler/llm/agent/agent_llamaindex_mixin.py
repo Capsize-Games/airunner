@@ -122,9 +122,6 @@ class AgentLlamaIndexMixin:
         self.__load_document_index()
         self.__load_retriever()
         self.__load_context_chat_engine()
-        # self.__load_storage_context()
-        # self.__load_transformations()
-        # self.__load_index_struct()
 
     def __load_rag_tokenizer(self):
         self.logger.debug("Loading RAG tokenizer...")
@@ -200,52 +197,6 @@ class AgentLlamaIndexMixin:
         Settings.node_parser = self.__text_splitter
         Settings.num_output = 512
         Settings.context_window = 3900
-
-    # def __load_storage_context(self):
-    #     from llama_index.core import ServiceContext, StorageContext
-    #     self.logger.debug("Loading storage context...")
-    #     path = os.path.expanduser(self.settings["path_settings"]["storage_path"])
-    #     if not os.path.exists(path):
-    #         os.makedirs(path, exist_ok=True)
-    #     self.__storage_context = StorageContext.from_defaults(
-    #         docstore=self.__documents,
-    #         index_store=self.__index,
-    #         vector_store=None,
-    #         image_store=None,
-    #         vector_stores={},
-    #         graph_store=None,
-    #         persist_dir=path
-    #     )
-
-    # def __load_transformations(self):
-    #     from llama_index.core.schema import TransformComponent
-    #     self.logger.debug("Loading transformations...")
-    #     self.__transformations = [
-    #         TransformComponent(
-    #             name="lowercase",
-    #             function=lambda x: x.lower(),
-    #             description="Lowercase all text",
-    #         ),
-    #         TransformComponent(
-    #             name="remove_punctuation",
-    #             function=lambda x: x.translate(str.maketrans("", "", string.punctuation)),
-    #             description="Remove all punctuation",
-    #         ),
-    #         TransformComponent(
-    #             name="remove_whitespace",
-    #             function=lambda x: x.strip(),
-    #             description="Remove all whitespace",
-    #         ),
-    #     ]
-
-    # def __load_index_struct(self):
-    #     from llama_index.core.data_structs import IndexDict
-    #     self.logger.debug("Loading index struct...")
-    #     self.__index_struct = IndexDict(
-    #         nodes_dict=self.__index.index_struct.nodes_dict,
-    #         doc_id_dict=self.__index.index_struct.doc_id_dict,
-    #         embeddings_dict=self.__index.index_struct.embeddings_dict,
-    #     )
 
     def __load_document_index(self):
         self.logger.debug("Loading index...")
