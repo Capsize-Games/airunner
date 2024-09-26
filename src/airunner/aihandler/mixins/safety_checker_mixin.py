@@ -7,9 +7,8 @@ from PIL import (
 )
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
-from airunner.enums import SignalCode, ModelStatus, ModelType
-from airunner.settings import SD_FEATURE_EXTRACTOR_PATH, BASE_PATH
-from airunner.utils.clear_memory import clear_memory
+from airunner.enums import ModelStatus, ModelType
+from airunner.settings import SD_FEATURE_EXTRACTOR_PATH
 
 
 class SafetyCheckerMixin:
@@ -85,14 +84,10 @@ class SafetyCheckerMixin:
         self.__unload_safety_checker_model()
         self.__unload_feature_extractor_model()
 
-    def unload_feature_extractor(self):
-        self.feature_extractor = None
-        self.clear_memory()
-        self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.UNLOADED)
-
     def __unload_feature_extractor_model(self):
         if self.pipe is not None:
             self.pipe.feature_extractor = None
+        del self.feature_extractor
         self.feature_extractor = None
         self.clear_memory()
         self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.UNLOADED)
@@ -100,11 +95,10 @@ class SafetyCheckerMixin:
     def __unload_safety_checker_model(self):
         if self.pipe is not None:
             self.pipe.safety_checker = None
-        self.safety_checker.to("cpu")
         del self.safety_checker
         self.safety_checker = None
-        self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED)
         self.clear_memory()
+        self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED)
 
     def __load_feature_extractor_model(self):
         self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING)
@@ -168,7 +162,6 @@ class SafetyCheckerMixin:
 
     def __load_safety_checker_model(self):
         self.logger.debug(f"Initializing safety checker")
-        safety_checker = None
         self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING)
         try:
             self.safety_checker = StableDiffusionSafetyChecker.from_pretrained(
