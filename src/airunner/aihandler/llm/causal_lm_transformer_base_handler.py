@@ -293,9 +293,9 @@ class CausalLMTransformerBaseHandler(
         if do_load_streamer:
             self.load_streamer()
 
-        do_load_agent = self.chat_agent is None
-        if do_load_agent:
-            self.load_agent()
+        if self.chat_agent is None:
+            #self.load_agent()
+            pass
 
     def load_model(self):
         self.logger.debug("transformer_base_handler.load_model Loading model")
