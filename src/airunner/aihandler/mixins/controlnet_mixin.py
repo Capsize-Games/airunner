@@ -3,12 +3,12 @@ import threading
 from controlnet_aux.processor import Processor
 from diffusers.models.controlnet import ControlNetModel
 from airunner.enums import (
-    SignalCode,
     SDMode,
     ModelType,
-    ModelStatus, StableDiffusionVersion, HandlerState, ModelAction
+    ModelStatus,
+    HandlerState,
+    ModelAction
 )
-from airunner.utils.clear_memory import clear_memory
 
 RELOAD_CONTROLNET_IMAGE_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -24,7 +24,6 @@ class ControlnetHandlerMixin:
         self.controlnet_loaded = False
         self.downloading_controlnet = False
         self.__controlnet_model_status = ModelStatus.UNLOADED
-        self.__controlnet_processor_status = ModelStatus.UNLOADED
         self.__requested_action = ModelAction.NONE
         self.__requested_action_lock = threading.Lock()
 
@@ -39,9 +38,8 @@ class ControlnetHandlerMixin:
     @property
     def __controlnet_ready(self):
         return self.__controlnet_model_status in (
-            ModelStatus.READY, ModelStatus.LOADED
-        ) and self.__controlnet_processor_status in (
-            ModelStatus.READY, ModelStatus.LOADED
+            ModelStatus.READY,
+            ModelStatus.LOADED
         )
 
     @property
@@ -92,76 +90,25 @@ class ControlnetHandlerMixin:
     @property
     def controlnet_path(self):
         controlnet_model = self.controlnet_model
-        path = os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "art/models",
-                self.generator_settings.version,
-                "controlnet",
-                controlnet_model.path
-            )
-        )
-        return path
+        version: str = self.generator_settings.version
+        path: str = "diffusers/controlnet-canny-sdxl-1.0-small" if self.is_sd_xl else controlnet_model.path
+        return os.path.expanduser(os.path.join(
+            self.path_settings.base_path,
+            "art/models",
+            version,
+            "controlnet",
+            path
+        ))
 
     def load_controlnet(self):
-        self.__load_controlnet_model()
-        self.__load_controlnet_processor()
-        self.apply_controlnet_to_pipe()
-
-    def unload_controlnet(self):
-        threading.Thread(target=self.__unload_controlnet_thread).start()
-
-    def __unload_controlnet_thread(self):
-        if self.current_state is HandlerState.LOADING:
-            self.__requested_action = ModelAction.CLEAR
-            return
-        self.logger.debug("Clearing controlnet")
-        self.__unload_controlnet_processor()
-        self.__unload_controlnet_model()
-        self.controlnet_loaded = False
-
-    def __stop_controlnet_queue_watcher(self):
-        self.running = False
-        self._controlnet_queue_watcher_thread.join()
-
-    def apply_controlnet_to_pipe(self):
-        if self.pipe and self.__controlnet_ready:
-            self.__apply_controlnet_to_pipe()
-            self.__apply_controlnet_processor_to_pipe()
-            self.__change_controlnet_model_status(ModelStatus.LOADED)
-            self.__requested_action = ModelAction.NONE
-        else:
-            self.__requested_action = ModelAction.APPLY_TO_PIPE
-            return
-
-    def __load_controlnet_model(self):
         if self.__controlnet_model_status in (
-            ModelStatus.LOADED, ModelStatus.READY, ModelStatus.LOADING
+            ModelStatus.LOADED,
+            ModelStatus.READY,
+            ModelStatus.LOADING
         ):
             return
-        elif self.__controlnet_model_status is ModelStatus.UNLOADED:
-            if self.controlnet:
-                self.__change_controlnet_model_status(ModelStatus.LOADING)
-                self.controlnet.to(self.device)
-                self.__change_controlnet_model_status(ModelStatus.LOADED)
-                return
         self.logger.debug(f"Loading controlnet {self.controlnet_type} to {self.device}")
         self.__change_controlnet_model_status(ModelStatus.LOADING)
-
-        path = self.controlnet_path
-        is_sd_xl = self.generator_settings.version == StableDiffusionVersion.SDXL1_0.value
-
-        if is_sd_xl:
-            path = os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "art/models",
-                    self.generator_settings.version,
-                    "controlnet",
-                    "diffusers/controlnet-canny-sdxl-1.0-small"
-                )
-            )
-
         try:
             params = dict(
                 torch_dtype=self.data_type,
@@ -170,32 +117,54 @@ class ControlnetHandlerMixin:
                 use_safetensors=True,
                 use_fp16=True
             )
-            if is_sd_xl:
+            if self.is_sd_xl:
                 params["variant"] = "fp16"
-            self.controlnet = ControlNetModel.from_pretrained(path, **params)
-            self.__change_controlnet_model_status(ModelStatus.LOADED)
-
+            self.controlnet = ControlNetModel.from_pretrained(self.controlnet_path, **params)
         except Exception as e:
             self.logger.error(f"Error loading controlnet {e}")
             self.__change_controlnet_model_status(ModelStatus.FAILED)
             return None
-
-    def __load_controlnet_processor(self):
-        if self.__controlnet_processor_status in (
-            ModelStatus.LOADED, ModelStatus.READY, ModelStatus.LOADING
-        ):
-            return
-
         self.logger.debug("Loading controlnet processor")
-
-        self.__change_controlnet_processor_status(ModelStatus.LOADING)
         try:
             self.processor = Processor(self.controlnet_type)
-            self.__change_controlnet_processor_status(ModelStatus.LOADED)
         except Exception as e:
             self.logger.error(e)
-            self.__change_controlnet_processor_status(ModelStatus.FAILED)
+            self.__change_controlnet_model_status(ModelStatus.FAILED)
+            return None
         self.logger.debug("Processor loaded")
+        self.apply_controlnet_to_pipe()
+        self.__change_controlnet_model_status(ModelStatus.LOADED)
+
+    def unload_controlnet(self):
+        if self.current_state is HandlerState.LOADING:
+            self.__requested_action = ModelAction.CLEAR
+            return
+        self.logger.debug("Clearing controlnet")
+        self.__change_controlnet_model_status(ModelStatus.LOADING)
+        if self.pipe and hasattr(self.pipe, "controlnet"):
+            del self.pipe.controlnet
+            self.pipe.controlnet = None
+        if self.pipe and hasattr(self.pipe, "processor"):
+            del self.pipe.processor
+            self.pipe.processor = None
+        del self.controlnet
+        del self.processor
+        self.controlnet = None
+        self.processor = None
+        self.clear_memory()
+        self.__change_controlnet_model_status(ModelStatus.UNLOADED)
+
+        self.controlnet_loaded = False
+
+    def apply_controlnet_to_pipe(self):
+        if self.pipe and self.__controlnet_ready:
+            self.pipe.controlnet = self.controlnet
+            self.pipe.processor = self.processor
+            self.__change_controlnet_model_status(ModelStatus.LOADED)
+            self.__requested_action = ModelAction.NONE
+        else:
+            self.__requested_action = ModelAction.APPLY_TO_PIPE
+            return
 
     def __preprocess_for_controlnet(self, image):
         if self.processor is not None:
@@ -225,31 +194,3 @@ class ControlnetHandlerMixin:
             self.make_controlnet_memory_efficient()
         elif status in (ModelStatus.UNLOADED, ModelStatus.FAILED):
             self.clear_memory()
-
-    def __change_controlnet_processor_status(self, status):
-        self.__controlnet_processor_status = status
-        self.change_model_status(ModelType.CONTROLNET_PROCESSOR, status, self.controlnet_type)
-
-    def __unload_controlnet_model(self):
-        if not self.controlnet:
-            return
-        self.__change_controlnet_model_status(ModelStatus.LOADING)
-        if self.pipe:
-            self.pipe.controlnet = None
-        self.controlnet.to("cpu")
-        self.clear_memory()
-        self.__change_controlnet_model_status(ModelStatus.UNLOADED)
-
-    def __apply_controlnet_to_pipe(self):
-        self.pipe.controlnet = self.controlnet
-
-    def __apply_controlnet_processor_to_pipe(self):
-        self.pipe.processor = self.processor
-        self.__change_controlnet_processor_status(ModelStatus.LOADED)
-
-    def __unload_controlnet_processor(self):
-        self.processor = None
-        if self.pipe:
-            self.pipe.processor = None
-        self.__change_controlnet_processor_status(ModelStatus.UNLOADED)
-        self.clear_memory()
