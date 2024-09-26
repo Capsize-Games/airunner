@@ -125,7 +125,7 @@ class SafetyCheckerMixin:
             self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED)
         except Exception as e:
             print(e)
-            self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Unable to load feature extractor")
+            self.logger.error("Unable to load feature extractor")
             self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED)
 
     def check_and_mark_nsfw_images(self, images) -> bool:
@@ -187,5 +187,5 @@ class SafetyCheckerMixin:
             self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED)
         except Exception as e:
             print(e)
-            self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Unable to load safety checker")
+            self.logger.error("Unable to load safety checker")
             self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED)
