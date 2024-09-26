@@ -539,7 +539,7 @@ class ModelMixin:
         try:
             images, nsfw_content_detected = self.__call_pipe()
         except SafetyCheckerNotLoadedException:
-            self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, "Safety checker is not loaded")
+            self.logger.error("Safety checker is not loaded")
 
         self.clear_memory()
 
