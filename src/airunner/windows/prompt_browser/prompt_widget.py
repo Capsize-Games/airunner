@@ -9,10 +9,18 @@ class PromptWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         self.saved_prompt = kwargs.pop("saved_prompt")
         super().__init__(*args, **kwargs)
+        self.ui.prompt.blockSignals(True)
+        self.ui.negative_prompt.blockSignals(True)
+        self.ui.secondary_prompt.blockSignals(True)
+        self.ui.secondary_negative_prompt.blockSignals(True)
         self.ui.prompt.setPlainText(self.saved_prompt.prompt)
         self.ui.negative_prompt.setPlainText(self.saved_prompt.negative_prompt)
         self.ui.secondary_prompt.setPlainText(self.saved_prompt.secondary_prompt)
         self.ui.secondary_negative_prompt.setPlainText(self.saved_prompt.secondary_negative_prompt)
+        self.ui.prompt.blockSignals(False)
+        self.ui.negative_prompt.blockSignals(False)
+        self.ui.secondary_prompt.blockSignals(False)
+        self.ui.secondary_negative_prompt.blockSignals(False)
 
     def action_text_changed_prompt(self):
         self.save_prompt()
