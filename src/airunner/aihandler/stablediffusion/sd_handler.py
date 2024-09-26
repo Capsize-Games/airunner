@@ -17,7 +17,7 @@ from airunner.enums import (
     EngineResponseCode,
     ModelStatus,
     ModelType,
-    HandlerState, WorkerType
+    HandlerState, WorkerType, StableDiffusionVersion
 )
 from airunner.aihandler.mixins.compel_mixin import CompelMixin
 from airunner.aihandler.mixins.embedding_mixin import EmbeddingMixin
@@ -125,9 +125,6 @@ class SDHandler(
         self.use_tiled_vae = False
         self.use_accelerated_transformers = False
         self.use_torch_compile = False
-        self.is_sd_xl = False
-        self.is_sd_xl_turbo = False
-        self.is_turbo = False
         self.filters = None
         self.original_model_data = None
         self.denoise_strength = None
@@ -150,6 +147,14 @@ class SDHandler(
         self.do_interrupt_image_generation = False
         self.latents_worker = create_worker(WorkerType.LatentsWorker)
         self._loading_thread = None
+
+    @property
+    def is_sd_xl(self) -> bool:
+        return self.generator_settings.version == StableDiffusionVersion.SDXL1_0.value
+
+    @property
+    def is_sd_xl_turbo(self) -> bool:
+        return self.generator_settings.version == StableDiffusionVersion.SDXL_TURBO.value
 
     @property
     def current_state(self):

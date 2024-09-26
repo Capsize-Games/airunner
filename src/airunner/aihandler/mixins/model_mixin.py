@@ -1,6 +1,5 @@
 import base64
 import ctypes
-import gc
 import io
 import os
 import threading
@@ -32,6 +31,7 @@ from airunner.enums import (
 )
 from airunner.exceptions import PipeNotLoadedException, SafetyCheckerNotLoadedException, InterruptedException, \
     ThreadInterruptException
+from airunner.utils.clear_memory import clear_memory
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 
 SKIP_RELOAD_CONSTS = (
@@ -53,9 +53,6 @@ CONTROLNET_PIPELINES_SDXL = (
 class ModelMixin:
     def __init__(self, *args, **kwargs):
         self.model_version = ""
-        self.is_sd_xl_turbo = False
-        self.is_sd_xl = False
-        self.is_turbo = False
         self.do_generate = False
 
         self.data = None
@@ -85,23 +82,9 @@ class ModelMixin:
         self.__loaded_prompt_2 = None
         self.__loaded_negative_prompt_2 = None
 
-        self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
-
     @property
     def sd_model_status(self):
         return self.__sd_model_status
-
-    def action_quit_triggered(self):
-        pass
-
-    def on_unload_stablediffusion_signal(self):
-        self.unload_image_generator_model()
-
-    def on_tokenizer_load_signal(self):
-        self.__load_tokenizer()
-
-    def on_tokenizer_unload_signal(self):
-        self.__unload_tokenizer()
 
     @property
     def enable_controlnet(self):
@@ -158,34 +141,47 @@ class ModelMixin:
             )
         )
 
+    @property
+    def use_compel(self):
+        return (
+                not self.sd_request.memory_settings.use_enable_sequential_cpu_offload
+                and self.generator_settings.use_compel
+        )
+
+    @property
+    def pipeline_is_controlnet(self):
+        return type(self.pipe) in (
+            StableDiffusionControlNetPipeline,
+            StableDiffusionControlNetImg2ImgPipeline,
+            StableDiffusionControlNetInpaintPipeline,
+            StableDiffusionXLControlNetPipeline,
+            StableDiffusionXLControlNetImg2ImgPipeline,
+            StableDiffusionXLControlNetInpaintPipeline
+        )
+
+    @property
+    def pipeline_is_img2img(self):
+        return type(self.pipe) in (
+            StableDiffusionImg2ImgPipeline,
+            StableDiffusionControlNetImg2ImgPipeline,
+            StableDiffusionXLImg2ImgPipeline,
+            StableDiffusionXLControlNetImg2ImgPipeline
+        )
+
+    @property
+    def pipeline_is_txt2img(self):
+        return type(self.pipe) in (
+            StableDiffusionPipeline,
+            StableDiffusionControlNetPipeline,
+            StableDiffusionXLControlNetPipeline,
+            StableDiffusionXLControlNetInpaintPipeline
+        )
+
     def clear_memory(self):
         """
         Clear the GPU ram.
         """
-        if torch.cuda.is_available():
-            device = self.memory_settings.default_gpu_sd
-            try:
-                torch.cuda.set_device(device)
-                torch.cuda.empty_cache()
-                torch.cuda.reset_max_memory_allocated(device=device)
-                torch.cuda.reset_max_memory_cached(device=device)
-                torch.cuda.synchronize(device=device)
-            except RuntimeError:
-                print("Failed to clear memory")
-        # cuda.select_device(device)
-        # cuda.close()
-        gc.collect()
-
-    @staticmethod
-    def __is_pytorch_error(e) -> bool:
-        return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
-        self.cancel_load_flag = False
-
-    def unload_image_generator_model(self):
-        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
-        self.__unload_model()
-        self.__do_reset_applied_memory_settings()
-        self.clear_memory()
+        clear_memory(self.memory_settings.default_gpu_sd)
 
     def cancel_load(self):
         self.cancel_load_flag = True
@@ -204,7 +200,6 @@ class ModelMixin:
             ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
             raise SystemError("PyThreadState_SetAsyncExc failed")
 
-
     def load_image_generator_model(self):
         if not self.application_settings.sd_enabled:
             return
@@ -214,34 +209,23 @@ class ModelMixin:
 
         # Unload the pipeline if it is already loaded
         if self.pipe:
-            self.__unload_tokenizer()
-            self.unload_image_generator_model()
+            self.sd_unload()
 
         self.model_version = self.generator_settings.version
-        self.is_sd_xl_turbo = self.model_version == StableDiffusionVersion.SDXL_TURBO.value
-        self.is_sd_xl = self.model_version == StableDiffusionVersion.SDXL1_0.value or self.is_sd_xl_turbo
 
         try:
             self.__load_generator(torch.device(self.device), self.generator_settings.seed)
-            self.__load_tokenizer()
+            self.sd_load_tokenizer()
             self.__prepare_model()
             self.__load_model()
             self.__load_deep_cache()
             self.__move_model_to_device()
             self.load_scheduler()
+            self.__change_sd_model_status(ModelStatus.LOADED)
         except ThreadInterruptException:
             self.logger.info("Model loading was interrupted.")
-            self.__unload_model()
-            self.__do_reset_applied_memory_settings()
-            self.clear_memory()
+            self.sd_unload()
             return
-
-    @property
-    def use_compel(self):
-        return (
-            not self.sd_request.memory_settings.use_enable_sequential_cpu_offload
-            and self.generator_settings.use_compel
-        )
 
     def generate(
         self,
@@ -264,20 +248,6 @@ class ModelMixin:
 
     def apply_tokenizer_to_pipe(self):
         self.__change_sd_tokenizer_status(ModelStatus.LOADED)
-
-    def __move_model_to_device(self):
-        if self.pipe:
-            self.pipe.to(self.data_type)
-
-    def __callback(self, step: int, _time_step, latents):
-        self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
-            "step": step,
-            "total": self.sd_request.generator_settings.steps
-        })
-        if self.latents_set is False:
-            self.latents = latents
-        QApplication.processEvents()
-        return {}
 
     def reload_prompts(self):
         if (
@@ -336,6 +306,191 @@ class ModelMixin:
         self.__loaded_negative_prompt = self.sd_request.generator_settings.negative_prompt
         self.__loaded_prompt_2 = self.sd_request.generator_settings.second_prompt
         self.__loaded_negative_prompt_2 = self.sd_request.generator_settings.second_negative_prompt
+
+    def sd_load_tokenizer(self):
+        if self.is_sd_xl:
+            return
+
+        if self.__tokenizer and self.__current_tokenizer_path == self.__tokenizer_path:
+            return
+        try:
+            self.logger.debug(f"ModelMixin: Loading tokenizer from {self.__tokenizer_path}")
+            self.__tokenizer = AutoTokenizer.from_pretrained(
+                self.__tokenizer_path,
+                local_files_only=True,
+                torch_dtype=self.data_type
+            )
+            self.__current_tokenizer_path = self.__tokenizer_path
+            self.__change_sd_tokenizer_status(ModelStatus.READY)
+        except Exception as e:
+            self.logger.error(f"Failed to load tokenizer")
+            self.logger.error(e)
+            self.__change_sd_tokenizer_status(ModelStatus.FAILED)
+
+    def sd_unload(self):
+        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
+        self.__change_sd_model_status(ModelStatus.LOADING)
+        self.__change_sd_tokenizer_status(ModelStatus.LOADING)
+        self.unload_controlnet()
+        self.unload_safety_checker()
+        del self.__generator
+        del self.__tokenizer
+        del self.helper
+        del self.pipe
+        del self.scheduler
+        del self.processor
+        self.pipe = None
+        self.__generator = None
+        self.__tokenizer = None
+        self.helper = None
+        self.scheduler = None
+        self.processor = None
+        self.clear_memory()
+        self.emit_signal(SignalCode.RESET_APPLIED_MEMORY_SETTINGS)
+        self.__change_sd_model_status(ModelStatus.UNLOADED)
+        self.__change_sd_tokenizer_status(ModelStatus.UNLOADED)
+
+    @staticmethod
+    def __is_pytorch_error(e) -> bool:
+        return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
+        self.cancel_load_flag = False
+
+    @staticmethod
+    def __convert_image_to_base64(image):
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format='PNG')
+        img_byte_arr = img_byte_arr.getvalue()
+        return base64.encodebytes(img_byte_arr).decode('ascii')
+
+    def __load_generator(self, device=None, seed=None):
+        if self.__generator is None:
+            device = self.device if not device else device
+            if seed is None:
+                seed = int(self.generator_settings.seed)
+            self.__generator = torch.Generator(device=device).manual_seed(seed)
+        return self.__generator
+
+    def __load_model(self):
+        self.logger.debug("Loading model from ModelMixin")
+        if not self.model_path:
+            self.logger.error("Model path is empty")
+            return
+        self.torch_compile_applied = False
+        self.lora_loaded = False
+        self.embeds_loaded = False
+
+        if self.pipe is None or self.reload_model:
+            self.__change_sd_model_status(ModelStatus.LOADING)
+
+            self.logger.debug(
+                f"Loading model from scratch {self.reload_model} for {self.sd_request.section}")
+
+            self.reset_applied_memory_settings()
+
+            self.logger.debug(f"Loading model `{self.model_path}` for {self.sd_request.section}")
+
+            pipeline_class_ = self.__pipeline_class(self.application_settings.controlnet_enabled)
+
+            data = dict(
+                torch_dtype=self.data_type,
+                use_safetensors=True,
+                local_files_only=True,
+            )
+
+            safety_checker = self.safety_checker if self.safety_checker_ready else None
+            feature_extractor = self.feature_extractor if self.feature_extractor_ready else None
+
+            data.update(
+                dict(
+                    safety_checker=safety_checker,
+                    feature_extractor=feature_extractor,
+                    requires_safety_checker=self.application_settings.nsfw_filter,
+                )
+            )
+
+            if self.is_sd_xl:
+                data.update(
+                    dict(
+                        variant="fp16"
+                    )
+                )
+
+            if self.enable_controlnet:
+                data["controlnet"] = self.controlnet
+
+            if self.is_single_file:
+                try:
+                    self.pipe = pipeline_class_.from_single_file(
+                        self.model_path,
+                        config=os.path.dirname(self.model_path),
+                        add_watermarker=False,
+                        **data
+                    )
+                except FileNotFoundError as e:
+                    self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+                    self.__change_sd_model_status(ModelStatus.FAILED)
+                    return
+            else:
+                if self.enable_controlnet:
+                    data["controlnet"] = self.controlnet
+
+                try:
+                    self.pipe = pipeline_class_.from_pretrained(
+                        self.model_path,
+                        **data
+                    )
+                except (FileNotFoundError, OSError) as e:
+                    self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+                    self.__change_sd_model_status(ModelStatus.FAILED)
+                    return
+
+            if not self.is_sd_xl:
+                self.apply_tokenizer_to_pipe()
+
+            if self.pipe is None:
+                self.__change_sd_model_status(ModelStatus.FAILED)
+                return
+
+            self.make_stable_diffusion_memory_efficient()
+
+            self.__change_sd_model_status(ModelStatus.LOADED)
+
+            old_model_path = self.current_model
+
+            self.current_model = self.model_path
+            self.current_model = old_model_path
+            self.controlnet_loaded = self.application_settings.controlnet_enabled
+        elif self.pipe and self.pipe.device.type == "cpu":
+            self.__change_sd_model_status(ModelStatus.LOADING)
+            try:
+                self.pipe.to(self.device)
+            except Exception as e:
+                self.logger.error(f"Failed to move model to {self.device}: {e}")
+                self.__change_sd_model_status(ModelStatus.FAILED)
+                return
+            self.__change_sd_model_status(ModelStatus.LOADED)
+
+    def __load_deep_cache(self):
+        self.helper = DeepCacheSDHelper(pipe=self.pipe)
+        self.helper.set_params(
+            cache_interval=3,
+            cache_branch_id=0
+        )
+        self.helper.enable()
+
+    def __move_model_to_device(self):
+        if self.pipe:
+            self.pipe.to(self.data_type)
+
+    def __callback(self, step: int, _time_step, latents):
+        self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
+            "step": step,
+            "total": self.sd_request.generator_settings.steps
+        })
+        if self.latents_set is False:
+            self.latents = latents
+        QApplication.processEvents()
+        return {}
 
     def __prepare_data(self):
         data = self.data.copy()
@@ -449,35 +604,6 @@ class ModelMixin:
         # Check if NSFW content is detected and return the results
         return self.check_and_mark_nsfw_images(images)
 
-    @property
-    def pipeline_is_controlnet(self):
-        return type(self.pipe) in (
-            StableDiffusionControlNetPipeline,
-            StableDiffusionControlNetImg2ImgPipeline,
-            StableDiffusionControlNetInpaintPipeline,
-            StableDiffusionXLControlNetPipeline,
-            StableDiffusionXLControlNetImg2ImgPipeline,
-            StableDiffusionXLControlNetInpaintPipeline
-        )
-
-    @property
-    def pipeline_is_img2img(self):
-        return type(self.pipe) in (
-            StableDiffusionImg2ImgPipeline,
-            StableDiffusionControlNetImg2ImgPipeline,
-            StableDiffusionXLImg2ImgPipeline,
-            StableDiffusionXLControlNetImg2ImgPipeline
-        )
-
-    @property
-    def pipeline_is_txt2img(self):
-        return type(self.pipe) in (
-            StableDiffusionPipeline,
-            StableDiffusionControlNetPipeline,
-            StableDiffusionXLControlNetPipeline,
-            StableDiffusionXLControlNetInpaintPipeline
-        )
-
     def __finalize_pipeline(self, data):
         # Ensure controlnet is applied to the pipeline.
         model_changed = self.sd_request.model_changed
@@ -506,7 +632,6 @@ class ModelMixin:
             self.load_learned_embed_in_clip()
 
             self.pipe_finalized = True
-
 
     def __pipe_swap(self, data):
         enable_controlnet = self.enable_controlnet
@@ -554,13 +679,6 @@ class ModelMixin:
                 data=self.data,
                 nsfw_content_detected=False,
             )
-
-    @staticmethod
-    def __convert_image_to_base64(image):
-        img_byte_arr = io.BytesIO()
-        image.save(img_byte_arr, format='PNG')
-        img_byte_arr = img_byte_arr.getvalue()
-        return base64.encodebytes(img_byte_arr).decode('ascii')
 
     def __apply_filters_to_image(self, image):
         return self.apply_filters(image, self.filters)
@@ -624,33 +742,10 @@ class ModelMixin:
                 i += 1
             image.save(filepath)
 
-    def __load_generator(self, device=None, seed=None):
-        if self.__generator is None:
-            device = self.device if not device else device
-            if seed is None:
-                seed = int(self.generator_settings.seed)
-            self.__generator = torch.Generator(device=device).manual_seed(seed)
-        return self.__generator
-
-    def __unload_model(self):
-        threading.Thread(target=self.__unload_model_thread).start()
-
-    def __unload_model_thread(self):
-        if not self.pipe or self.pipe.device.type == "cpu":
-            return
-        self.logger.debug("Unloading model")
-        self.__change_sd_model_status(ModelStatus.LOADING)
-        self.pipe.to("cpu")
-        self.pipe = None
-        self.clear_memory()
-        self.__change_sd_model_status(ModelStatus.UNLOADED)
-
     def __change_sd_model_status(self, status: ModelStatus):
         if self.__sd_model_status is status:
             return
         self.__sd_model_status = status
-        if status in (ModelStatus.FAILED, ModelStatus.UNLOADED):
-            self.clear_memory()
         self.change_model_status(ModelType.SD, status, self.model_path)
 
     def __change_sd_tokenizer_status(self, status: ModelStatus):
@@ -659,9 +754,6 @@ class ModelMixin:
 
     def __handle_model_changed(self):
         self.reload_model = True
-
-    def __do_reset_applied_memory_settings(self):
-        self.emit_signal(SignalCode.RESET_APPLIED_MEMORY_SETTINGS)
 
     def __pipeline_class(self, enable_controlnet):
         operation_type = self.sd_request.section
@@ -690,114 +782,6 @@ class ModelMixin:
             )
 
         return pipeline_map.get(operation_type)
-
-    def __load_model(self):
-        self.logger.debug("Loading model from ModelMixin")
-        if not self.model_path:
-            self.logger.error("Model path is empty")
-            return
-        self.torch_compile_applied = False
-        self.lora_loaded = False
-        self.embeds_loaded = False
-
-        if self.pipe is None or self.reload_model:
-            self.__change_sd_model_status(ModelStatus.LOADING)
-
-            self.logger.debug(
-                f"Loading model from scratch {self.reload_model} for {self.sd_request.section}")
-
-            self.reset_applied_memory_settings()
-
-            self.logger.debug(f"Loading model `{self.model_path}` for {self.sd_request.section}")
-
-            pipeline_class_ = self.__pipeline_class(self.application_settings.controlnet_enabled)
-
-            data = dict(
-                torch_dtype=self.data_type,
-                use_safetensors=True,
-                local_files_only=True,
-            )
-
-            safety_checker = self.safety_checker if self.safety_checker_ready else None
-            feature_extractor = self.feature_extractor if self.feature_extractor_ready else None
-
-            data.update(
-                dict(
-                    safety_checker=safety_checker,
-                    feature_extractor=feature_extractor,
-                    requires_safety_checker=self.application_settings.nsfw_filter,
-                )
-            )
-
-            if self.is_sd_xl:
-                data.update(
-                    dict(
-                        variant="fp16"
-                    )
-                )
-
-            if self.enable_controlnet:
-                data["controlnet"] = self.controlnet
-
-            if self.is_single_file:
-                try:
-                    self.pipe = pipeline_class_.from_single_file(
-                        self.model_path,
-                        config=os.path.dirname(self.model_path),
-                        add_watermarker=False,
-                        **data
-                    )
-                except FileNotFoundError as e:
-                    self.logger.error(f"Failed to load model from {self.model_path}: {e}")
-                    self.__change_sd_model_status(ModelStatus.FAILED)
-                    return
-            else:
-                if self.enable_controlnet:
-                    data["controlnet"] = self.controlnet
-
-                try:
-                    self.pipe = pipeline_class_.from_pretrained(
-                        self.model_path,
-                        **data
-                    )
-                except (FileNotFoundError, OSError) as e:
-                    self.logger.error(f"Failed to load model from {self.model_path}: {e}")
-                    self.__change_sd_model_status(ModelStatus.FAILED)
-                    return
-
-            if not self.is_sd_xl:
-                self.apply_tokenizer_to_pipe()
-
-            if self.pipe is None:
-                self.__change_sd_model_status(ModelStatus.FAILED)
-                return
-
-            self.make_stable_diffusion_memory_efficient()
-
-            self.__change_sd_model_status(ModelStatus.LOADED)
-
-            old_model_path = self.current_model
-
-            self.current_model = self.model_path
-            self.current_model = old_model_path
-            self.controlnet_loaded = self.application_settings.controlnet_enabled
-        elif self.pipe and self.pipe.device.type == "cpu":
-            self.__change_sd_model_status(ModelStatus.LOADING)
-            try:
-                self.pipe.to(self.device)
-            except Exception as e:
-                self.logger.error(f"Failed to move model to {self.device}: {e}")
-                self.__change_sd_model_status(ModelStatus.FAILED)
-                return
-            self.__change_sd_model_status(ModelStatus.LOADED)
-
-    def __load_deep_cache(self):
-        self.helper = DeepCacheSDHelper(pipe=self.pipe)
-        self.helper.set_params(
-            cache_interval=3,
-            cache_branch_id=0
-        )
-        self.helper.enable()
 
     def __get_pipeline_action(self, action=None):
         action = self.sd_request.section if not action else action
@@ -861,28 +845,3 @@ class ModelMixin:
         self.__generator.manual_seed(self.sd_request.generator_settings.seed)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
-
-    def __unload_tokenizer(self):
-        self.__tokenizer = None
-        self.__change_sd_tokenizer_status(ModelStatus.UNLOADED)
-        self.clear_memory()
-
-    def __load_tokenizer(self):
-        if self.is_sd_xl:
-            return
-
-        if self.__tokenizer and self.__current_tokenizer_path == self.__tokenizer_path:
-            return
-        try:
-            self.logger.debug(f"ModelMixin: Loading tokenizer from {self.__tokenizer_path}")
-            self.__tokenizer = AutoTokenizer.from_pretrained(
-                self.__tokenizer_path,
-                local_files_only=True,
-                torch_dtype=self.data_type
-            )
-            self.__current_tokenizer_path = self.__tokenizer_path
-            self.__change_sd_tokenizer_status(ModelStatus.READY)
-        except Exception as e:
-            self.logger.error(f"Failed to load tokenizer")
-            self.logger.error(e)
-            self.__change_sd_tokenizer_status(ModelStatus.FAILED)
