@@ -162,8 +162,6 @@ class CausalLMTransformerBaseHandler(
     @model.setter
     def model(self, value):
         if value is None and self.__model is not None:
-            self.__model.quantization_method = None
-            self.__model.to("cpu")
             del self.__model
             self.__model = None
             clear_memory(self.memory_settings.default_gpu_llm)
@@ -294,8 +292,7 @@ class CausalLMTransformerBaseHandler(
             self.load_streamer()
 
         if self.chat_agent is None:
-            #self.load_agent()
-            pass
+            self.load_agent()
 
     def load_model(self):
         self.logger.debug("transformer_base_handler.load_model Loading model")
@@ -453,7 +450,6 @@ class CausalLMTransformerBaseHandler(
         self.unload_llm_with_tools()
         self.unload_agent_executor()
         self.unload_embed_model()
-        self.unload_agent()
         if self.model_status is ModelStatus.LOADING:
             self._requested_action = ModelAction.CLEAR
             return False
@@ -463,6 +459,7 @@ class CausalLMTransformerBaseHandler(
         self._processing_request = False
         self._unload_model()
         self._unload_tokenizer()
+        self.unload_agent()
         self.image = None
         self.model_status = ModelStatus.UNLOADED
 
