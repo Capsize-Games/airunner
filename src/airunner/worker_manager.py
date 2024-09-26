@@ -132,6 +132,10 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     @llm_generate_worker.setter
     def llm_generate_worker(self, value):
+        if value is None:
+            del self._llm_generate_worker
+        gc.collect()
+
         self._llm_generate_worker = value
 
 
@@ -145,10 +149,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         # Ensure all tensors and objects are deleted
         if self.llm_generate_worker:
             self.llm_generate_worker.on_unload_llm_signal(message)
-            del self.llm_generate_worker
             self.llm_generate_worker = None
-
-        gc.collect()
 
         if torch.cuda.is_available():
             with torch.no_grad():
