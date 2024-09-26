@@ -355,6 +355,9 @@
      <height>18</height>
     </size>
    </property>
+   <property name="floatable">
+    <bool>false</bool>
+   </property>
    <attribute name="toolBarArea">
     <enum>TopToolBarArea</enum>
    </attribute>
@@ -819,7 +822,7 @@
   <action name="actionUndo_2">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</normaloff>../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</normaloff>../../../../../../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</iconset>
    </property>
    <property name="text">
     <string>Undo</string>
@@ -831,7 +834,7 @@
   <action name="actionRedo_2">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</normaloff>../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</normaloff>../../../../../../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</iconset>
    </property>
    <property name="text">
     <string>Redo</string>
@@ -1151,7 +1154,7 @@
    </property>
    <property name="icon">
     <iconset theme="applications-internet">
-     <normalon>applications-internet</normalon>
+     <normalon>../../../../../../../.designer/backup/applications-internet</normalon>
     </iconset>
    </property>
    <property name="text">
@@ -1175,7 +1178,7 @@
    </property>
    <property name="icon">
     <iconset theme="audio-input-microphone">
-     <normalon>audio-input-microphone</normalon>
+     <normalon>../../../../../../../.designer/backup/audio-input-microphone</normalon>
     </iconset>
    </property>
    <property name="text">
