@@ -9,6 +9,7 @@ from airunner.aihandler.models.settings_models import ApplicationSettings, LLMGe
     ImageToImageSettings, OutpaintSettings, PathSettings, CanvasSettings, MemorySettings, Chatbot, \
     AIModels, Schedulers, Lora, ShortcutKeys, SavedPrompt, SpeechT5Settings, TTSSettings, BarkSettings, EspeakSettings, \
     MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel
+from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.enums import SignalCode
 from airunner.settings import DEFAULT_APPLICATION_SETTINGS
 
@@ -18,6 +19,7 @@ class SettingsMixin:
         logging.debug("Initializing SettingsMixin instance")
         self.db_handler = SettingsDBHandler()
         self.default_settings = DEFAULT_APPLICATION_SETTINGS
+        self._generator_settings = None
 
     @property
     def stt_settings(self) -> STTSettings:

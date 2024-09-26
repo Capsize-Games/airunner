@@ -3,15 +3,83 @@ import re
 import time
 from PIL import Image
 
-from PySide6.QtCore import Signal, QRect
+from PySide6.QtCore import Signal, QRect, QThread, QObject
 from PySide6.QtWidgets import QApplication
 
 from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion
+from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.random_seed import random_seed
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
+from airunner.windows.main.settings_mixin import SettingsMixin
+
+
+class SaveGeneratorSettingsWorker(
+    QObject,
+    MediatorMixin,
+    SettingsMixin
+):
+    def __init__(self, parent):
+        MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
+        super().__init__()
+        self.parent = parent
+        self.current_prompt_value = None
+        self.current_negative_prompt_value = None
+        self.current_secondary_prompt_value = None
+        self.current_secondary_negative_prompt_value = None
+        self.crops_coord_top_left_x = 0
+        self.crops_coord_top_left_y = 0
+
+
+    def run(self):
+        do_update_settings = False
+        while True:
+            value = self.parent.ui.prompt.toPlainText()
+            if value != self.current_prompt_value:
+                self.current_prompt_value = value
+                do_update_settings = True
+
+            value = self.parent.ui.negative_prompt.toPlainText()
+            if value != self.current_negative_prompt_value:
+                self.current_negative_prompt_value = value
+                do_update_settings = True
+
+            value = self.parent.ui.secondary_prompt.toPlainText()
+            if value != self.current_secondary_prompt_value:
+                self.current_secondary_prompt_value = value
+                do_update_settings = True
+
+            value = self.parent.ui.secondary_negative_prompt.toPlainText()
+            if value != self.current_secondary_negative_prompt_value:
+                self.current_secondary_negative_prompt_value = value
+                do_update_settings = True
+
+            x = self.parent.ui.crops_coord_top_left_x.text()
+            y = self.parent.ui.crops_coord_top_left_y.text()
+            x = int(x) if x != '' else 0
+            y = int(y) if y != '' else 0
+
+            if self.crops_coord_top_left_x != x:
+                self.crops_coord_top_left_x = x
+                do_update_settings = True
+            if self.crops_coord_top_left_y != y:
+                self.crops_coord_top_left_y = y
+                do_update_settings = True
+
+            if do_update_settings:
+                do_update_settings = False
+                self.generator_settings.prompt = self.current_prompt_value
+                self.generator_settings.negative_prompt = self.current_negative_prompt_value
+                self.generator_settings.second_prompt = self.current_secondary_prompt_value
+                self.generator_settings.second_negative_prompt = self.current_secondary_negative_prompt_value
+                self.generator_settings.crops_coord_top_left = (
+                self.crops_coord_top_left_x, self.crops_coord_top_left_y)
+                self.save_generator_settings()
+
+            time.sleep(0.1)
 
 
 class GeneratorForm(BaseWidget):
@@ -22,10 +90,6 @@ class GeneratorForm(BaseWidget):
         super().__init__(*args, **kwargs)
         self.seed_override = None
         self.parent = None
-        self.current_prompt_value = None
-        self.current_negative_prompt_value = None
-        self.current_secondary_prompt_value = None
-        self.current_secondary_negative_prompt_value = None
         self.initialized = False
         self.showing_past_conversations = False
         self.signal_handlers = {
@@ -40,6 +104,10 @@ class GeneratorForm(BaseWidget):
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
             SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
         }
+        self.thread = QThread()
+        self.worker = SaveGeneratorSettingsWorker(parent=self)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
 
     @property
     def is_txt2img(self):
@@ -150,7 +218,12 @@ class GeneratorForm(BaseWidget):
         self.ui.generator_form_tabs.setCurrentIndex(1 if ai_mode is True else 0)
 
     def action_clicked_button_save_prompts(self):
-        self.emit_signal(SignalCode.SD_SAVE_PROMPT_SIGNAL)
+        self.emit_signal(SignalCode.SD_SAVE_PROMPT_SIGNAL, {
+            "prompt": self.ui.prompt.toPlainText(),
+            "negative_prompt": self.ui.negative_prompt.toPlainText(),
+            "secondary_prompt": self.ui.secondary_prompt.toPlainText(),
+            "secondary_negative_prompt": self.ui.secondary_negative_prompt.toPlainText(),
+        })
 
     def handle_prompt_changed(self):
         pass
@@ -165,36 +238,8 @@ class GeneratorForm(BaseWidget):
         pass
 
     def handle_generate_button_clicked(self):
-        self.save_prompt_to_settings()
         self.start_progress_bar()
         self.generate()
-
-    def save_prompt_to_settings(self):
-        value = self.ui.prompt.toPlainText()
-        self.current_prompt_value = value
-        self.update_generator_settings("prompt", value)
-
-        value = self.ui.negative_prompt.toPlainText()
-        self.current_negative_prompt_value = value
-        self.update_generator_settings("negative_prompt", value)
-
-        value = self.ui.secondary_prompt.toPlainText()
-        self.current_secondary_prompt_value = value
-        self.update_generator_settings("second_prompt", value)
-
-        value = self.ui.secondary_negative_prompt.toPlainText()
-        self.current_secondary_negative_prompt_value = value
-        self.update_generator_settings("second_negative_prompt", value)
-
-        def get_integer_value(widget):
-            try:
-                return int(widget.text())
-            except ValueError:
-                return 0
-
-        x = get_integer_value(self.ui.crops_coord_top_left_x)
-        y = get_integer_value(self.ui.crops_coord_top_left_y)
-        self.update_generator_settings("crops_coord_top_left", (x, y))
 
     def handle_interrupt_button_clicked(self):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
@@ -317,6 +362,7 @@ class GeneratorForm(BaseWidget):
         self.set_form_values()
         self.toggle_secondary_prompts()
         self.initialized = True
+        self.thread.start()
 
     def set_form_values(self, _data=None):
         self.ui.prompt.blockSignals(True)
@@ -352,10 +398,11 @@ class GeneratorForm(BaseWidget):
         self.ui.image_presets.blockSignals(False)
         self.ui.quality_effects.blockSignals(False)
 
-
     def clear_prompts(self):
         self.ui.prompt.setPlainText("")
         self.ui.negative_prompt.setPlainText("")
+        self.ui.secondary_prompt.setPlainText("")
+        self.ui.secondary_negative_prompt.setPlainText("")
 
     def stop_progress_bar(self):
         progressbar = self.ui.progress_bar

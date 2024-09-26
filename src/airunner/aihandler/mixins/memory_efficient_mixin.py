@@ -155,7 +155,7 @@ class MemoryEfficientMixin:
             return
         if not str(self.pipe.device).startswith("cuda"):
             self.logger.debug(f"Moving pipe to cuda (currently {self.pipe.device})")
-            clear_memory(self.memory_settings.default_gpu_sd)
+            self.clear_memory()
             try:
                 self.pipe.to(self.device, self.data_type)
             except Exception as e:

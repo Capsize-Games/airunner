@@ -2,7 +2,8 @@ from typing import List
 
 from airunner.aihandler.models.database_handler import DatabaseHandler
 from airunner.aihandler.models.settings_models import Chatbot, AIModels, Schedulers, Lora, PathSettings, SavedPrompt, \
-    Embedding, TranslationSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, ShortcutKeys
+    Embedding, TranslationSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, ShortcutKeys, \
+    GeneratorSettings
 
 
 class SettingsDBHandler(DatabaseHandler):
@@ -33,6 +34,22 @@ class SettingsDBHandler(DatabaseHandler):
             if setting:
                 setattr(setting, name, value)
                 session.commit()
+        finally:
+            session.close()
+
+    def save_generator_settings(self, generator_settings: GeneratorSettings):
+        session = self.get_db_session()
+        try:
+            query = session.query(GeneratorSettings).filter_by(
+                id=generator_settings.id
+            ).first()
+            if query:
+                for key in generator_settings.__dict__.keys():
+                    if key != "_sa_instance_state":
+                        setattr(query, key, getattr(generator_settings, key))
+            else:
+                session.add(generator_settings)
+            session.commit()
         finally:
             session.close()
 
