@@ -1,3 +1,5 @@
+import os
+
 import psutil
 import torch
 from PySide6.QtCore import Qt, QTimer
@@ -53,7 +55,6 @@ class StatsWidget(
                 total_mem = 0
                 device_name = "N/A"
 
-
             # truncate to 2 decimal places
             total_mem = round(total_mem, 2)
             allocated_mem = round(allocated_mem, 2)
@@ -69,16 +70,17 @@ class StatsWidget(
             self.ui.memory_stats.item(i, 2).setForeground(Qt.GlobalColor.yellow)
             self.ui.memory_stats.item(i, 3).setForeground(Qt.GlobalColor.green)
 
-        # Get CPU details
+        # Get memory details for the current process
         try:
-            cpu_memory = psutil.virtual_memory()
+            process = psutil.Process(os.getpid())
+            memory_info = process.memory_info()
         except Exception as e:
-            cpu_memory = None
+            memory_info = None
             return
 
-        used = cpu_memory.used / (1024.0 ** 3)
-        total = cpu_memory.total / (1024.0 ** 3)
-        available = cpu_memory.available / (1024.0 ** 3)
+        used = memory_info.rss / (1024.0 ** 3)  # Resident Set Size
+        total = psutil.virtual_memory().total / (1024.0 ** 3)
+        available = total - used
 
         # truncate to 2 decimal places
         used = round(used, 2)
@@ -91,9 +93,9 @@ class StatsWidget(
         self.ui.memory_stats.setItem(row_count - 1, 3, QTableWidgetItem(f"{available}GB"))
 
         # Set colors
-        self.ui.memory_stats.item(row_count - 1, 1).setForeground(Qt.red)
-        self.ui.memory_stats.item(row_count - 1, 2).setForeground(Qt.yellow)
-        self.ui.memory_stats.item(row_count - 1, 3).setForeground(Qt.green)
+        self.ui.memory_stats.item(row_count - 1, 1).setForeground(Qt.GlobalColor.red)
+        self.ui.memory_stats.item(row_count - 1, 2).setForeground(Qt.GlobalColor.yellow)
+        self.ui.memory_stats.item(row_count - 1, 3).setForeground(Qt.GlobalColor.green)
 
         QApplication.processEvents()
 

@@ -10,6 +10,7 @@ from llama_index.core.chat_engine import ContextChatEngine
 from llama_index.core import SimpleKeywordTableIndex
 from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
 
+from airunner.aihandler.llm.huggingface_llm import HuggingFaceLLM
 from airunner.enums import AgentState
 from airunner.aihandler.llm.custom_embedding import CustomEmbedding
 from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
@@ -85,7 +86,6 @@ class AgentLlamaIndexMixin:
                 if self.llm_generator_settings.use_api:
                     self.__llm = self.__model
                 else:
-                    from airunner.aihandler.llm.huggingface_llm import HuggingFaceLLM
                     self.__llm = HuggingFaceLLM(model=self.__model, tokenizer=self.__tokenizer)
             except Exception as e:
                 self.logger.error(f"Error loading LLM: {str(e)}")
@@ -103,6 +103,11 @@ class AgentLlamaIndexMixin:
         self.__model = model
         self.__tokenizer = tokenizer
         self.__load_rag()
+
+    def unload_rag(self):
+        self.__llm.unload()
+        del self.__llm
+        self.__llm = None
 
     def reload_rag(self, data: dict = None):
         self.logger.debug("Reloading RAG index...")
