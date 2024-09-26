@@ -443,9 +443,6 @@ class CausalLMTransformerBaseHandler(
             do_clear_memory = True
         return do_clear_memory
 
-    def on_llm_process_stt_audio_signal(self):
-        print("TODO: on_llm_process_stt_audio_signal")
-
     def load_streamer(self):
         self.logger.debug("Loading LLM text streamer")
         self.streamer = TextIteratorStreamer(self.tokenizer)
