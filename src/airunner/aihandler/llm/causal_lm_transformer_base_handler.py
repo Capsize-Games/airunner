@@ -334,7 +334,7 @@ class CausalLMTransformerBaseHandler(
             'trust_remote_code': self.application_settings.trust_remote_code
         }
 
-    def get_model_path(self, path) -> str:
+    def get_model_path(self, path:str) -> str:
         current_llm_generator = self.application_settings.current_llm_generator
         if current_llm_generator == "causallm":
             local_path = "causallm"
@@ -344,14 +344,12 @@ class CausalLMTransformerBaseHandler(
             local_path = "visualqa"
         else:
             local_path = "misc"
-        return os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "text/models",
-                local_path,
-                path
-            )
-        )
+        return os.path.expanduser(os.path.join(
+            self.path_settings.base_path,
+            "text/models",
+            local_path,
+            path
+        ))
 
     def load_model_local(self):
         params = self.model_params()
