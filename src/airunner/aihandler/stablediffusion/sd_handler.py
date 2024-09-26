@@ -338,5 +338,4 @@ class SDHandler(
         ):
             message = f"This model does not support {self.sd_request.section}"
         traceback.print_exc()
-        self.logger.error(error)
-        self.emit_signal(SignalCode.LOG_ERROR_SIGNAL, message)
+        self.logger.error(message)
