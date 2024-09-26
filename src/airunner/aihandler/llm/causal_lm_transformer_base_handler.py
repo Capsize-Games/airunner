@@ -194,7 +194,7 @@ class CausalLMTransformerBaseHandler(
         self.load_tokenizer()
 
     def on_unload_tokenizer_signal(self):
-        self.unload_tokenizer()
+        self._unload_tokenizer()
 
     def on_load_model_signal(self):
         self.load()
