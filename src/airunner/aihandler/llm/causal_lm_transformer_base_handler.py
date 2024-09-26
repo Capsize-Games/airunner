@@ -61,7 +61,6 @@ class CausalLMTransformerBaseHandler(
         self.__model = None
         self.vocoder = None
         self.temperature = kwargs.get("temperature", 0.7)
-        # self.max_length = kwargs.get("max_length", 1000)
         self.max_new_tokens = 30
         self.min_length = kwargs.get("min_length", 0)
         self.num_beams = kwargs.get("num_beams", 1)
@@ -522,8 +521,6 @@ class CausalLMTransformerBaseHandler(
         self.logger.debug("Setting seed")
         seed = self.seed if seed is None else seed
         self.seed = seed
-        # _set_seed(self.seed)
-        # set model and token seed
         torch.manual_seed(self.seed)
         torch.cuda.manual_seed(self.seed)
         torch.cuda.manual_seed_all(self.seed)
