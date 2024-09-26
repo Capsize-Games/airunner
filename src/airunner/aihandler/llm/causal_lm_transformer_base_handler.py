@@ -368,11 +368,8 @@ class CausalLMTransformerBaseHandler(
             config = self.quantization_config()
             if config:
                 params["quantization_config"] = config
-            params["torch_dtype"] = torch.bfloat16
-            params["device_map"] = self.device
-        else:
-            params["torch_dtype"] = torch.bfloat16
-            params["device_map"] = self.device
+        params["torch_dtype"] = torch.bfloat16
+        params["device_map"] = self.device
 
         try:
             self.model_status = ModelStatus.LOADING
