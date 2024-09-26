@@ -22,8 +22,7 @@ class CausalLMTransformerBaseHandler(
     tokenizer_class_ = AutoTokenizer
     model_type = ModelType.LLM
 
-    def __init__(self, agent_class: BaseAgent, do_load_on_init: bool = False, *args, **kwargs):
-        self.agent_class_ = agent_class if agent_class is not None else BaseAgent
+    def __init__(self, do_load_on_init: bool = False, *args, **kwargs):
         self.agent_options = kwargs.pop("agent_options", {})
         self.streamer = None
         self.chat_engine = None
@@ -424,7 +423,7 @@ class CausalLMTransformerBaseHandler(
 
     def load_agent(self):
         self.logger.debug("Loading agent")
-        self.chat_agent = self.agent_class_(
+        self.chat_agent = BaseAgent(
             model=self.model,
             tokenizer=self.tokenizer,
             streamer=self.streamer,
