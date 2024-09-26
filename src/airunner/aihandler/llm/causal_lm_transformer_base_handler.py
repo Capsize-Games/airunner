@@ -491,10 +491,10 @@ class CausalLMTransformerBaseHandler(
         del self.embed_model
         self.embed_model = None
 
-    def generate(self, prompt, action) -> str:
+    def generate(self, prompt: str, action: LLMActionType):
         return self.do_generate(prompt, action)
 
-    def do_generate(self, prompt, action):
+    def do_generate(self, prompt: str, action: LLMActionType):
         self.logger.debug("Generating response")
         if action is LLMActionType.CHAT and self.chatbot.use_mood:
             action = LLMActionType.UPDATE_MOOD
@@ -536,7 +536,7 @@ class CausalLMTransformerBaseHandler(
         if self.tokenizer:
             self.tokenizer.seed = self.seed
 
-    def handle_request(self, data: dict) -> str:
+    def handle_request(self, data: dict):
         self.logger.debug("Handling request")
         self._processing_request = True
         self.process_data(data)
@@ -546,8 +546,7 @@ class CausalLMTransformerBaseHandler(
         action = data["request_data"]["action"]
         if type(action) is str:
             action = LLMActionType(action)
-        result = self.generate(
+        self.generate(
             data["request_data"]["prompt"],
             action
         )
-        return result
