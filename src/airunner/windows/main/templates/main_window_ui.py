@@ -178,12 +178,12 @@ class Ui_MainWindow(object):
         self.actionUndo_2 = QAction(MainWindow)
         self.actionUndo_2.setObjectName(u"actionUndo_2")
         icon4 = QIcon()
-        icon4.addFile(u"../../../../../../../../../../../../../../.designer/src/icons/007-undo.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon4.addFile(u"../../../../../../../../../../../../../../../../../../../.designer/src/icons/007-undo.png", QSize(), QIcon.Normal, QIcon.Off)
         self.actionUndo_2.setIcon(icon4)
         self.actionRedo_2 = QAction(MainWindow)
         self.actionRedo_2.setObjectName(u"actionRedo_2")
         icon5 = QIcon()
-        icon5.addFile(u"../../../../../../../../../../../../../../.designer/src/icons/008-redo.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon5.addFile(u"../../../../../../../../../../../../../../../../../../../.designer/src/icons/008-redo.png", QSize(), QIcon.Normal, QIcon.Off)
         self.actionRedo_2.setIcon(icon5)
         self.actionCut = QAction(MainWindow)
         self.actionCut.setObjectName(u"actionCut")
@@ -312,7 +312,7 @@ class Ui_MainWindow(object):
         if QIcon.hasThemeIcon(iconThemeName):
             icon7 = QIcon.fromTheme(iconThemeName)
         else:
-            icon7.addFile(u"applications-internet", QSize(), QIcon.Normal, QIcon.On)
+            icon7.addFile(u"../../../../../../../.designer/backup/applications-internet", QSize(), QIcon.Normal, QIcon.On)
 
         self.actionToggle_LLM.setIcon(icon7)
         self.actionToggle_Text_to_Speech = QAction(MainWindow)
@@ -328,7 +328,7 @@ class Ui_MainWindow(object):
         if QIcon.hasThemeIcon(iconThemeName):
             icon9 = QIcon.fromTheme(iconThemeName)
         else:
-            icon9.addFile(u"audio-input-microphone", QSize(), QIcon.Normal, QIcon.On)
+            icon9.addFile(u"../../../../../../../.designer/backup/audio-input-microphone", QSize(), QIcon.Normal, QIcon.On)
 
         self.actionToggle_Speech_to_Text.setIcon(icon9)
         self.actionToggle_Stable_Diffusion = QAction(MainWindow)
@@ -486,6 +486,7 @@ class Ui_MainWindow(object):
         self.toolBar.setObjectName(u"toolBar")
         self.toolBar.setMovable(True)
         self.toolBar.setIconSize(QSize(18, 18))
+        self.toolBar.setFloatable(False)
         MainWindow.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolBar)
         self.model_toolbar = QToolBar(MainWindow)
         self.model_toolbar.setObjectName(u"model_toolbar")
