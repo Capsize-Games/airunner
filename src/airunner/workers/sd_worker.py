@@ -94,17 +94,13 @@ class SDWorker(Worker):
             ModelStatus.FAILED,
             ModelStatus.READY,
         ):
-            self.sd.on_unload_stablediffusion_signal()
+            self.sd.sd_unload()
         elif self.sd and self.sd.sd_model_status is ModelStatus.LOADING:
             self.__requested_action = ModelAction.CLEAR
 
     def on_tokenizer_load_signal(self, data: dict = None):
         if self.sd:
-            self.sd.on_tokenizer_load_signal(data)
-
-    def on_tokenizer_unload_signal(self, data: dict = None):
-        if self.sd:
-            self.sd.on_tokenizer_unload_signal(data)
+            self.sd.sd_load_tokenizer(data)
 
     def start_worker_thread(self):
         if self.application_settings.sd_enabled:
