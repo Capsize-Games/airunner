@@ -88,6 +88,7 @@ class BaseAgent(
         return self.chatbot.bot_personality
 
     def unload(self):
+        self.unload_rag()
         del self.model
         del self.tokenizer
         self.model = None
