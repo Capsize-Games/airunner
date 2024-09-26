@@ -251,12 +251,8 @@ class MainWindow(
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
-
-        print(event.key)
-
         for v in self.shortcut_keys:
-            if v.key == event.key:
-                print("KEY MATCHES")
+            if v.key == event.key():
                 for signal in SignalCode:
                     if signal.value == v.signal:
                         self.emit_signal(signal)
@@ -823,6 +819,7 @@ class MainWindow(
 
     def display_filter_window(self, filter_name):
         from airunner.windows.filter_window import FilterWindow
+        print("opening filter window with ", filter_name)
         FilterWindow(filter_name)
 
     @property
