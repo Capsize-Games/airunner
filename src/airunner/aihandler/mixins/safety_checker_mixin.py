@@ -87,14 +87,14 @@ class SafetyCheckerMixin:
 
     def unload_feature_extractor(self):
         self.feature_extractor = None
-        clear_memory(self.memory_settings.default_gpu_sd)
+        self.clear_memory()
         self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.UNLOADED)
 
     def __unload_feature_extractor_model(self):
         if self.pipe is not None:
             self.pipe.feature_extractor = None
         self.feature_extractor = None
-        clear_memory(self.memory_settings.default_gpu_sd)
+        self.clear_memory()
         self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.UNLOADED)
 
     def __unload_safety_checker_model(self):
@@ -104,7 +104,7 @@ class SafetyCheckerMixin:
         del self.safety_checker
         self.safety_checker = None
         self.__change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED)
-        clear_memory(self.memory_settings.default_gpu_sd)
+        self.clear_memory()
 
     def __load_feature_extractor_model(self):
         self.__change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING)
