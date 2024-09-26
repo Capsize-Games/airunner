@@ -198,11 +198,18 @@ class GeneratorForm(BaseWidget):
 
     def on_load_saved_stablediffuion_prompt_signal(self, data: dict):
         saved_prompt = data.get("saved_prompt")
-        self.update_generator_settings("prompt", saved_prompt.prompt)
-        self.update_generator_settings("negative_prompt", saved_prompt.negative_prompt)
-        self.update_generator_settings("secondary_prompt", saved_prompt.secondary_prompt)
-        self.update_generator_settings("secondary_negative_prompt", saved_prompt.secondary_negative_prompt)
-        self.set_form_values()
+        self.ui.prompt.blockSignals(True)
+        self.ui.negative_prompt.blockSignals(True)
+        self.ui.secondary_prompt.blockSignals(True)
+        self.ui.secondary_negative_prompt.blockSignals(True)
+        self.ui.prompt.setPlainText(saved_prompt.prompt)
+        self.ui.negative_prompt.setPlainText(saved_prompt.negative_prompt)
+        self.ui.secondary_prompt.setPlainText(saved_prompt.secondary_prompt)
+        self.ui.secondary_negative_prompt.setPlainText(saved_prompt.secondary_negative_prompt)
+        self.ui.prompt.blockSignals(False)
+        self.ui.negative_prompt.blockSignals(False)
+        self.ui.secondary_prompt.blockSignals(False)
+        self.ui.secondary_negative_prompt.blockSignals(False)
 
     def handle_image_presets_changed(self, val):
         self.update_generator_settings("image_preset", val)
