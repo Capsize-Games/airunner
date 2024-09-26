@@ -495,7 +495,8 @@ class Lora(Base):
 
 class SavedPrompt(Base):
     __tablename__ = "saved_prompts"
-    prompt = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    prompt = Column(String, nullable=True)
     secondary_prompt = Column(String, nullable=True)
     negative_prompt = Column(String, nullable=True)
     secondary_negative_prompt = Column(String, nullable=True)

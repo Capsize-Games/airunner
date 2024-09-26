@@ -224,7 +224,7 @@ class ControlnetHandlerMixin:
         if status is ModelStatus.LOADED:
             self.make_controlnet_memory_efficient()
         elif status in (ModelStatus.UNLOADED, ModelStatus.FAILED):
-            clear_memory(self.memory_settings.default_gpu_sd)
+            self.clear_memory()
 
     def __change_controlnet_processor_status(self, status):
         self.__controlnet_processor_status = status
@@ -237,7 +237,7 @@ class ControlnetHandlerMixin:
         if self.pipe:
             self.pipe.controlnet = None
         self.controlnet.to("cpu")
-        clear_memory(self.memory_settings.default_gpu_sd)
+        self.clear_memory()
         self.__change_controlnet_model_status(ModelStatus.UNLOADED)
 
     def __apply_controlnet_to_pipe(self):
@@ -252,4 +252,4 @@ class ControlnetHandlerMixin:
         if self.pipe:
             self.pipe.processor = None
         self.__change_controlnet_processor_status(ModelStatus.UNLOADED)
-        clear_memory(self.memory_settings.default_gpu_sd)
+        self.clear_memory()
