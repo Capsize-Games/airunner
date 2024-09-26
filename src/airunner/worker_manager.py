@@ -35,7 +35,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         disable_tts: bool = False,
         disable_stt: bool = False,
         do_load_llm_on_init: bool = False,
-        agent_class=None,
         agent_options: dict = None,
         **kwargs
     ):
@@ -100,7 +99,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.stt_audio_capture_worker = None
         self.stt_audio_processor_worker = None
 
-        self.agent_class = agent_class
         self.do_load_llm_on_init = do_load_llm_on_init
         self.agent_options = agent_options
 
@@ -108,7 +106,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             self.register_sd_workers()
 
         if not disable_llm:
-            self.register_llm_workers(self.agent_class, self.do_load_llm_on_init, self.agent_options)
+            self.register_llm_workers(self.do_load_llm_on_init, self.agent_options)
 
         if not disable_tts:
             self.register_tts_workers()
@@ -119,7 +117,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     @property
     def llm_generate_worker(self):
         if self._llm_generate_worker is None:
-            self.register_llm_workers(self.agent_class, True, self.agent_options)
+            self.register_llm_workers(True, self.agent_options)
         return self._llm_generate_worker
 
     @llm_generate_worker.setter
@@ -192,11 +190,10 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.sd_worker = create_worker(WorkerType.SDWorker)
         self.sd_state = "loaded"
 
-    def register_llm_workers(self, agent_class, do_load_llm_on_init, agent_options):
+    def register_llm_workers(self, do_load_llm_on_init, agent_options):
         self.llm_generate_worker = create_worker(
             WorkerType.LLMGenerateWorker,
             do_load_on_init=do_load_llm_on_init,
-            agent_class=agent_class,
             agent_options=agent_options
         )
 
