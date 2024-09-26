@@ -518,9 +518,6 @@ class CausalLMTransformerBaseHandler(
             is_end_of_message=True
         )
 
-    def load_chat_engine(self):
-        self.chat_engine = self.index.as_chat_engine()
-
     def do_set_seed(self, seed=None):
         self.logger.debug("Setting seed")
         seed = self.seed if seed is None else seed
