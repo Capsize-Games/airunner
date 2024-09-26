@@ -49,7 +49,7 @@ class LLMGenerateWorker(Worker):
             self.llm.on_interrupt_process_signal()
 
     def start_worker_thread(self):
-        from airunner.aihandler.llm.causal_lm_transfformer_base_handler import CausalLMTransformerBaseHandler
+        from airunner.aihandler.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
 
         if self.application_settings.llm_enabled:
             self.emit_signal(
