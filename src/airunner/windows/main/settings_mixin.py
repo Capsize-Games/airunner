@@ -35,7 +35,9 @@ class SettingsMixin:
 
     @property
     def generator_settings(self) -> GeneratorSettings:
-        return self.db_handler.load_settings_from_db(GeneratorSettings)
+        if self._generator_settings is None:
+            self._generator_settings = self.db_handler.load_settings_from_db(GeneratorSettings)
+        return self._generator_settings
 
     @property
     def controlnet_settings(self) -> ControlnetSettings:
@@ -148,6 +150,10 @@ class SettingsMixin:
     @property
     def pipelines(self) -> List[PipelineModel]:
         return self.db_handler.load_pipelines()
+
+    @property
+    def image_filters(self):
+        return imagefilter_bootstrap_data
 
     #######################################
     ### LORA ###
@@ -285,13 +291,10 @@ class SettingsMixin:
         self.db_handler.update_setting(EspeakSettings, column_name, val)
         self.__settings_updated()
 
-    def update_generator_settings(self, column_name, val):
-        self.db_handler.update_setting(GeneratorSettings, column_name, val)
-        self.__settings_updated()
-
     def update_tts_settings(self, column_name, val):
         self.db_handler.update_setting(SpeechT5Settings, column_name, val)
         self.__settings_updated()
+
 
     #######################################
     ### CONTROLNET ###
@@ -414,3 +417,14 @@ class SettingsMixin:
             if match:
                 results.append(item)
         return results
+
+    #######################################
+    ### GENERATOR SETTINGS ###
+    #######################################
+    def update_generator_settings(self, column_name, val):
+        self.db_handler.update_setting(GeneratorSettings, column_name, val)
+        self.__settings_updated()
+
+    def save_generator_settings(self):
+        self.db_handler.save_generator_settings(self.generator_settings)
+        self.__settings_updated()
