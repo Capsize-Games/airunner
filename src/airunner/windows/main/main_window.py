@@ -264,12 +264,12 @@ class MainWindow(
                 return shortcutkey.text
         return ""
 
-    def on_save_stablediffusion_prompt_signal(self):
+    def on_save_stablediffusion_prompt_signal(self, data: dict):
         self.create_saved_prompt({
-            'prompt': self.generator_settings.prompt,
-            'negative_prompt': self.generator_settings.negative_prompt,
-            'secondary_prompt': self.generator_settings.secondary_prompt,
-            'secondary_negative_prompt': self.generator_settings.secondary_negative_prompt,
+            'prompt': data["prompt"],
+            'negative_prompt': data["negative_prompt"],
+            'secondary_prompt': data["secondary_prompt"],
+            'secondary_negative_prompt': data["secondary_negative_prompt"],
         })
 
     def set_path_settings(self, key, val):
@@ -850,21 +850,25 @@ class MainWindow(
             tool = CanvasToolName.NONE
         else:
             if tool is CanvasToolName.BRUSH:
+                self.__toggle_button(self.ui.actionToggle_Brush, True)
                 self.__toggle_button(self.ui.actionToggle_Eraser, False)
                 self.__toggle_button(self.ui.actionToggle_Selection, False)
                 self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
             elif tool is CanvasToolName.ERASER:
                 self.__toggle_button(self.ui.actionToggle_Brush, False)
+                self.__toggle_button(self.ui.actionToggle_Eraser, True)
                 self.__toggle_button(self.ui.actionToggle_Selection, False)
                 self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
             elif tool is CanvasToolName.SELECTION:
                 self.__toggle_button(self.ui.actionToggle_Brush, False)
                 self.__toggle_button(self.ui.actionToggle_Eraser, False)
+                self.__toggle_button(self.ui.actionToggle_Selection, True)
                 self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
             elif tool is CanvasToolName.ACTIVE_GRID_AREA:
                 self.__toggle_button(self.ui.actionToggle_Brush, False)
                 self.__toggle_button(self.ui.actionToggle_Eraser, False)
                 self.__toggle_button(self.ui.actionToggle_Selection, False)
+                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, True)
         self.update_application_settings("current_tool", tool.value)
         self.emit_signal(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, {
             "tool": tool

@@ -7,6 +7,7 @@ import threading
 import time
 
 import numpy as np
+from DeepCache import DeepCacheSDHelper
 from PySide6.QtWidgets import QApplication
 from typing import List, Any
 import torch
@@ -77,7 +78,12 @@ class ModelMixin:
         self.negative_prompt_embeds = None
         self.pooled_prompt_embeds = None
         self.negative_pooled_prompt_embeds = None
+        self.helper = None
 
+        self.__loaded_prompt = None
+        self.__loaded_negative_prompt = None
+        self.__loaded_prompt_2 = None
+        self.__loaded_negative_prompt_2 = None
 
         self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
 
@@ -157,12 +163,13 @@ class ModelMixin:
         Clear the GPU ram.
         """
         if torch.cuda.is_available():
+            device = self.memory_settings.default_gpu_sd
             try:
-                torch.cuda.set_device(self.memory_settings.default_gpu_sd)
+                torch.cuda.set_device(device)
                 torch.cuda.empty_cache()
-                # torch.cuda.reset_max_memory_allocated(device=device)
-                # torch.cuda.reset_max_memory_cached(device=device)
-                # torch.cuda.synchronize(device=device)
+                torch.cuda.reset_max_memory_allocated(device=device)
+                torch.cuda.reset_max_memory_cached(device=device)
+                torch.cuda.synchronize(device=device)
             except RuntimeError:
                 print("Failed to clear memory")
         # cuda.select_device(device)
@@ -172,13 +179,13 @@ class ModelMixin:
     @staticmethod
     def __is_pytorch_error(e) -> bool:
         return "PYTORCH_CUDA_ALLOC_CONF" in str(e)
-        self.cancel_load_flag = Falsed
+        self.cancel_load_flag = False
 
     def unload_image_generator_model(self):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
         self.__unload_model()
         self.__do_reset_applied_memory_settings()
-        self.clear_memory(self.memory_settings.default_gpu_sd)
+        self.clear_memory()
 
     def cancel_load(self):
         self.cancel_load_flag = True
@@ -219,13 +226,14 @@ class ModelMixin:
             self.__load_tokenizer()
             self.__prepare_model()
             self.__load_model()
+            self.__load_deep_cache()
             self.__move_model_to_device()
             self.load_scheduler()
         except ThreadInterruptException:
             self.logger.info("Model loading was interrupted.")
             self.__unload_model()
             self.__do_reset_applied_memory_settings()
-            self.clear_memory(self.memory_settings.default_gpu_sd)
+            self.clear_memory()
             return
 
     @property
@@ -248,6 +256,7 @@ class ModelMixin:
             time.sleep(0.1)
         self.__load_generator_arguments(settings, generator_request_data)
         self.do_generate = False
+        self.clear_memory()
         return self.__generate()
 
     def model_is_loaded(self, model: ModelType) -> bool:
@@ -323,13 +332,24 @@ class ModelMixin:
             except KeyError:
                 pass
 
+        self.__loaded_prompt = self.sd_request.generator_settings.prompt
+        self.__loaded_negative_prompt = self.sd_request.generator_settings.negative_prompt
+        self.__loaded_prompt_2 = self.sd_request.generator_settings.second_prompt
+        self.__loaded_negative_prompt_2 = self.sd_request.generator_settings.second_negative_prompt
+
     def __prepare_data(self):
         data = self.data.copy()
 
         if self.pipeline_is_txt2img and "image" in data:
             del data["image"]
 
-        self.reload_prompts()
+        if (
+            self.__loaded_prompt != self.sd_request.generator_settings.prompt or
+            self.__loaded_negative_prompt != self.sd_request.generator_settings.negative_prompt or
+            self.__loaded_prompt_2 != self.sd_request.generator_settings.second_prompt or
+            self.__loaded_negative_prompt_2 != self.sd_request.generator_settings.second_negative_prompt
+        ):
+            self.reload_prompts()
 
         if self.prompt_embeds is not None:
             data.update(dict(
@@ -379,13 +399,13 @@ class ModelMixin:
                     negative_prompt_2=self.sd_request.generator_settings.second_negative_prompt,
                 ))
 
-            # data.update(dict(
-            #     crops_coords_top_left=tuple(self.generator_settings.crops_coord_top_left),
-            #     original_size=tuple(original_size),
-            #     target_size=tuple(target_size),
-            #     negative_original_size=tuple(negative_original_size),
-            #     negative_target_size=tuple(negative_target_size),
-            # ))
+            data.update(dict(
+                crops_coords_top_left=tuple(self.generator_settings.crops_coord_top_left),
+                original_size=tuple(original_size),
+                target_size=tuple(target_size),
+                negative_original_size=tuple(negative_original_size),
+                negative_target_size=tuple(negative_target_size),
+            ))
 
         for key in ["outpaint_box_rect", "action"]:
             if key in data:
@@ -498,7 +518,7 @@ class ModelMixin:
                 self.pipe = __pipeline_class.from_pipe(self.pipe, controlnet=self.controlnet)
             else:
                 self.pipe = __pipeline_class.from_pipe(self.pipe)
-            self.clear_memory(self.memory_settings.default_gpu_sd)
+            self.clear_memory()
             self.make_stable_diffusion_memory_efficient()
             self.make_controlnet_memory_efficient()
 
@@ -622,7 +642,7 @@ class ModelMixin:
         self.__change_sd_model_status(ModelStatus.LOADING)
         self.pipe.to("cpu")
         self.pipe = None
-        self.clear_memory(self.memory_settings.default_gpu_sd)
+        self.clear_memory()
         self.__change_sd_model_status(ModelStatus.UNLOADED)
 
     def __change_sd_model_status(self, status: ModelStatus):
@@ -630,9 +650,7 @@ class ModelMixin:
             return
         self.__sd_model_status = status
         if status in (ModelStatus.FAILED, ModelStatus.UNLOADED):
-            self.clear_memory(self.memory_settings.default_gpu_sd)
-        elif status == ModelStatus.LOADED:
-            self.make_stable_diffusion_memory_efficient()
+            self.clear_memory()
         self.change_model_status(ModelType.SD, status, self.model_path)
 
     def __change_sd_tokenizer_status(self, status: ModelStatus):
@@ -754,6 +772,8 @@ class ModelMixin:
                 self.__change_sd_model_status(ModelStatus.FAILED)
                 return
 
+            self.make_stable_diffusion_memory_efficient()
+
             self.__change_sd_model_status(ModelStatus.LOADED)
 
             old_model_path = self.current_model
@@ -770,6 +790,14 @@ class ModelMixin:
                 self.__change_sd_model_status(ModelStatus.FAILED)
                 return
             self.__change_sd_model_status(ModelStatus.LOADED)
+
+    def __load_deep_cache(self):
+        self.helper = DeepCacheSDHelper(pipe=self.pipe)
+        self.helper.set_params(
+            cache_interval=3,
+            cache_branch_id=0
+        )
+        self.helper.enable()
 
     def __get_pipeline_action(self, action=None):
         action = self.sd_request.section if not action else action
@@ -837,7 +865,7 @@ class ModelMixin:
     def __unload_tokenizer(self):
         self.__tokenizer = None
         self.__change_sd_tokenizer_status(ModelStatus.UNLOADED)
-        self.clear_memory(self.memory_settings.default_gpu_sd)
+        self.clear_memory()
 
     def __load_tokenizer(self):
         if self.is_sd_xl:
