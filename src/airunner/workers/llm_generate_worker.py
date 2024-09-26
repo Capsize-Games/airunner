@@ -1,7 +1,5 @@
 import queue
 
-from PySide6.QtCore import QObject, Signal, Slot
-
 from airunner.enums import QueueType, SignalCode, ModelType, ModelStatus
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.utils.clear_memory import clear_memory
