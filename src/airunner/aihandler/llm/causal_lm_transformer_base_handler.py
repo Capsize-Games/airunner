@@ -208,6 +208,11 @@ class CausalLMTransformerBaseHandler(
             self.logger.debug("Clearing chat history")
             self.chat_agent.clear_history()
 
+    def _unload_model(self):
+        self.logger.debug("Unloading model")
+        self.model = None
+        return True
+
     def _unload_tokenizer(self):
         self.logger.debug("Unloading tokenizer")
         del self.tokenizer
