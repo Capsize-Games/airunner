@@ -53,14 +53,11 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.is_capturing_image = False
         signals = [
             (SignalCode.STT_HEAR_SIGNAL, self.on_hear_signal),
-            (SignalCode.ENGINE_CANCEL_SIGNAL, self.on_engine_cancel_signal),
             (SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL, self.on_engine_stop_processing_queue_signal),
             (SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL, self.on_engine_start_processing_queue_signal),
             (SignalCode.LOG_STATUS_SIGNAL, self.on_status_signal),
-            (SignalCode.LLM_RESPONSE_SIGNAL, self.on_llm_response_signal),
             (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal),
             (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal),
-            (SignalCode.TTS_REQUEST, self.on_tts_request),
             (SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal),
 
             (SignalCode.LLM_UNLOAD_SIGNAL, self.llm_on_unload_signal),
@@ -74,21 +71,19 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
             (SignalCode.RESET_APPLIED_MEMORY_SETTINGS, self.sd_on_reset_applied_memory_settings),
             (SignalCode.SD_CANCEL_SIGNAL, self.sd_on_sd_cancel_signal),
-            (SignalCode.SD_MOVE_TO_CPU_SIGNAL, self.sd_on_move_to_cpu),
+
             (SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL, self.sd_on_start_auto_image_generation_signal),
             (SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL, self.sd_on_stop_auto_image_generation_signal),
             (SignalCode.DO_GENERATE_SIGNAL, self.sd_on_do_generate_signal),
             (SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL, self.sd_on_interrupt_image_generation_signal),
             (SignalCode.CHANGE_SCHEDULER_SIGNAL, self.sd_on_change_scheduler_signal),
             (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.sd_on_model_status_changed_signal),
-            (SignalCode.SD_TOKENIZER_LOAD_SIGNAL, self.sd_on_tokenizer_load_signal),
-            (SignalCode.SD_TOKENIZER_UNLOAD_SIGNAL, self.sd_on_tokenizer_unload_signal),
+
             (SignalCode.SD_LOAD_SIGNAL, self.sd_on_load_stablediffusion_signal),
             (SignalCode.SD_UNLOAD_SIGNAL, self.sd_on_unload_stablediffusion_signal),
             (SignalCode.CONTROLNET_LOAD_SIGNAL, self.sd_on_load_controlnet_signal),
             (SignalCode.CONTROLNET_UNLOAD_SIGNAL, self.sd_on_unload_controlnet_signal),
             (SignalCode.LORA_UPDATE_SIGNAL, self.sd_on_update_lora_signal),
-            (SignalCode.EMBEDDING_SCAN_SIGNAL, self.sd_scan_for_embeddings),
             (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.sd_delete_missing_embeddings),
             (SignalCode.SD_STATE_CHANGED_SIGNAL, self.sd_handle_sd_state_changed_signal),
             (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.sd_on_load_safety_checker),
@@ -230,10 +225,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             'message': response
         })
 
-    def on_engine_cancel_signal(self):
-        self.logger.debug("Canceling")
-        self.emit_signal(SignalCode.SD_CANCEL_SIGNAL)
-
     def on_engine_stop_processing_queue_signal(self):
         self.do_process_queue = False
 
@@ -251,12 +242,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         item: np.ndarray = message["item"]
         self.logger.debug("Heard signal")
         self.stt_audio_processor_worker.add_to_queue(item)
-
-    def on_tts_request(self, data: dict):
-        self.tts_generator_worker.add_to_queue(data)
-
-    def on_llm_response_signal(self, message: dict):
-        self.do_response(message)
 
     def on_status_signal(self, message: dict):
         self.logger.debug(message)
@@ -295,9 +280,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def sd_on_sd_cancel_signal(self, data):
         self.sd_worker.on_sd_cancel_signal(data)
 
-    def sd_on_move_to_cpu(self, data):
-        self.sd_worker.on_move_to_cpu(data)
-
     def sd_on_start_auto_image_generation_signal(self, data):
         self.sd_worker.on_start_auto_image_generation_signal(data)
 
@@ -316,12 +298,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def sd_on_model_status_changed_signal(self, data):
         self.sd_worker.on_model_status_changed_signal(data)
 
-    def sd_on_tokenizer_load_signal(self, data):
-        self.sd_worker.on_tokenizer_load_signal(data)
-
-    def sd_on_tokenizer_unload_signal(self, data):
-        self.sd_worker.on_tokenizer_unload_signal(data)
-
     def sd_on_load_stablediffusion_signal(self, data):
         self.sd_worker.on_load_stablediffusion_signal(data)
 
@@ -336,9 +312,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def sd_on_update_lora_signal(self, data):
         self.sd_worker.on_update_lora_signal(data)
-
-    def sd_scan_for_embeddings(self, data):
-        self.sd_worker.scan_for_embeddings(data)
 
     def sd_delete_missing_embeddings(self, data):
         self.sd_worker.delete_missing_embeddings(data)

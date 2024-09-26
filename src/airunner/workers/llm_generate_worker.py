@@ -46,9 +46,10 @@ class LLMGenerateWorker(Worker):
         if self.llm:
             self.llm.on_interrupt_process_signal()
 
-    def start_worker_thread(self):
-        from airunner.aihandler.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
+    def on_llm_request_worker_response_signal(self, message: dict):
+        self.add_to_queue(message)
 
+    def start_worker_thread(self):
         if self.application_settings.llm_enabled:
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
@@ -57,11 +58,24 @@ class LLMGenerateWorker(Worker):
                     "path": ""
                 }
             )
+        self.load_llm(do_load_on_init=self.do_load_on_init)
+
+    def load_llm(self, do_load_on_init: bool = False):
+        from airunner.aihandler.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
         self.llm = CausalLMTransformerBaseHandler(
             agent_class=self.agent_class,
-            do_load_on_init=self.do_load_on_init,
+            do_load_on_init=do_load_on_init,
             agent_options=self.agent_options
         )
+
+    def unload_llm(self):
+        self.logger.debug("Unloading LLM")
+        if self.llm:
+            self.llm.unload()
+            del self.llm
+            self.llm = None
+            clear_memory(clear_memory(self.memory_settings.default_gpu_llm))
+            self.load_llm()
 
     def run(self):
         if self.queue_type == QueueType.NONE:
@@ -84,12 +98,6 @@ class LLMGenerateWorker(Worker):
                 self.logger.debug("Resumed")
             QThread.msleep(SLEEP_TIME_IN_MS)
 
-    def llm_load_signal(self, data: dict):
-        print("llm_load_signal called from nats with", data)
-
-    def on_llm_request_worker_response_signal(self, message: dict):
-        self.add_to_queue(message)
-
     def handle_message(self, message):
         if self.llm:
             # try:
@@ -97,11 +105,3 @@ class LLMGenerateWorker(Worker):
             # except Exception as e:
             #     self.logger.error(f"Error in handle_message: {e}")
             #     self.logger.error(f"Message: {message}")
-
-    def unload_llm(self):
-        self.logger.debug("Unloading LLM")
-        if self.llm:
-            self.llm.unload()
-            del self.llm
-            self.llm = None
-            clear_memory(clear_memory(self.memory_settings.default_gpu_llm))
