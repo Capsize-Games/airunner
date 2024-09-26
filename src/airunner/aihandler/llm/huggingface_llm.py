@@ -296,6 +296,14 @@ class HuggingFaceLLM(CustomLLM):
             is_chat_model=self.is_chat_model,
         )
 
+    def unload(self):
+        del self._model
+        del self._tokenizer
+        del self._stopping_criteria
+        self._model = None
+        self._tokenizer = None
+        self._stopping_criteria = None
+
     def _tokenizer_messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
         """Use the tokenizer to convert messages to prompt. Fallback to generic."""
         if hasattr(self._tokenizer, "apply_chat_template"):
