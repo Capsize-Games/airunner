@@ -1,5 +1,4 @@
 import gc
-import traceback
 import numpy as np
 import torch
 from PySide6.QtCore import QObject, Signal
