@@ -5,6 +5,8 @@ from airunner.aihandler.logger import Logger
 
 
 def convert_image_to_base64(image: Image) -> str:
+    if image is None:
+        raise ValueError("Image is None")
     img_byte_arr = io.BytesIO()
     try:
         image.save(img_byte_arr, format='PNG')

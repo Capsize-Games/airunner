@@ -47,7 +47,6 @@ class BrushScene(CustomScene):
             (SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.handle_brush_color_changed),
             (SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL, self.export_image),
-            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.handle_settings_changed)
         ]
         for signal, handler in signals:
             self.register(signal, handler)
@@ -168,15 +167,3 @@ class BrushScene(CustomScene):
             painter=painter,
             color=QColor(Qt.GlobalColor.transparent)
         )
-
-    def handle_settings_changed(self):
-        if self._do_generate_image:
-            self._do_generate_image = False
-            if (
-                self.drawing_pad_settings.enable_automatic_drawing and
-                (
-                    self.current_tool is CanvasToolName.BRUSH or
-                    self.current_tool is CanvasToolName.ERASER
-                )
-            ):
-                self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
