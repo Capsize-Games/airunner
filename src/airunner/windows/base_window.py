@@ -44,9 +44,8 @@ class BaseWindow(
         """
         Sets the stylesheet for the application based on the current theme
         """
-        settings = self.settings
-        if settings["override_system_theme"]:
-            theme_name = DARK_THEME_NAME if settings["dark_mode_enabled"] else LIGHT_THEME_NAME
+        if self.application_settings.override_system_theme:
+            theme_name = DARK_THEME_NAME if self.application_settings.dark_mode_enabled else LIGHT_THEME_NAME
             here = os.path.dirname(os.path.realpath(__file__))
             with open(os.path.join(here, "..", "styles", theme_name, "styles.qss"), "r") as f:
                 stylesheet = f.read()

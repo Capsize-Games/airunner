@@ -1,6 +1,8 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
+
+from airunner.aihandler.models.settings_models import Chatbot
 from airunner.enums import SignalCode, LLMActionType, ModelType, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.custom_scene import CustomScene
@@ -42,10 +44,6 @@ class ChatPromptWidget(BaseWidget):
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.held_message = None
         self._disabled = False
-
-    @property
-    def current_generator(self):
-        return self.settings["current_llm_generator"]
 
     @Slot(str)
     def handle_token_signal(self, val: str):
@@ -136,22 +134,8 @@ class ChatPromptWidget(BaseWidget):
         return
 
     @property
-    def llm_generator_settings(self):
-        return self.settings["llm_generator_settings"]
-
-    @property
     def action(self) -> str:
-        return self.llm_generator_settings["action"]
-
-    @property
-    def chatbot_name(self) -> str:
-        if self.action == LLMActionType.APPLICATION_COMMAND:
-            chatbot_name = "Agent"
-        elif self.action == LLMActionType.CHAT:
-            chatbot_name = "Chatbot"
-        else:
-            chatbot_name = self.llm_generator_settings["current_chatbot"]
-        return chatbot_name
+        return self.llm_generator_settings.action
 
     def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="causallm"):
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
@@ -167,9 +151,8 @@ class ChatPromptWidget(BaseWidget):
             return
         self.generating = True
 
-        current_bot = self.settings["llm_generator_settings"]["saved_chatbots"][self.settings["llm_generator_settings"]["current_chatbot"]]
         self.add_message_to_conversation(
-            name=current_bot["username"],
+            name=self.chatbot.username,
             message=self.prompt,
             is_bot=False
         )
@@ -219,7 +202,6 @@ class ChatPromptWidget(BaseWidget):
         self.ui.chat_container.show()
 
     def on_model_status_changed(self, data):
-        print(data)
         if data["model"] == ModelType.LLM:
             if data["status"] is ModelStatus.LOADED:
                 self.enable_send_button()
@@ -227,17 +209,13 @@ class ChatPromptWidget(BaseWidget):
                 self.disable_send_button()
 
     def set_chatbot_mood(self):
-        chatbot_name = self.settings["llm_generator_settings"]["current_chatbot"]
-        chatbot_mood = self.settings["llm_generator_settings"]["saved_chatbots"][chatbot_name]["bot_mood"]
-        self.ui.mood_label.setText(chatbot_mood)
+        self.ui.mood_label.setText(self.chatbot.bot_mood)
 
     def on_application_settings_changed(self, data: dict):
         self.set_chatbot_mood()
 
     def llm_action_changed(self, val: str):
-        settings = self.settings
-        settings["llm_generator_settings"]["action"] = val
-        self.settings = settings
+        self.update_llm_generator_settings("action", val)
 
     def prompt_text_changed(self):
         self.prompt = self.ui.prompt.toPlainText()
@@ -362,9 +340,7 @@ class ChatPromptWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
     def message_type_text_changed(self, val):
-        settings = self.settings
-        settings["llm_generator_settings"]["message_type"] = val
-        self.settings = settings
+        self.update_llm_generator_settings("message_type", val)
 
     def action_button_clicked_generate_characters(self):
         pass

@@ -22,8 +22,9 @@ class MemoryPreferencesWidget(BaseWidget):
         }
 
         for ui_element, setting in ui_elements.items():
+            val = getattr(self.memory_settings, setting)
             getattr(self.ui, ui_element).blockSignals(True)
-            getattr(self.ui, ui_element).setChecked(self.settings["memory_settings"][setting] is True)
+            getattr(self.ui, ui_element).setChecked(val is True)
             getattr(self.ui, ui_element).blockSignals(False)
 
         import torch
@@ -38,10 +39,10 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.llm_combobox.addItems(available_devices)
         self.ui.tts_combobox.addItems(available_devices)
         self.ui.stt_combobox.addItems(available_devices)
-        self.ui.sd_combobox.setCurrentText(available_devices[self.settings["memory_settings"]["default_gpu"]["sd"]])
-        self.ui.llm_combobox.setCurrentText(available_devices[self.settings["memory_settings"]["default_gpu"]["llm"]])
-        self.ui.tts_combobox.setCurrentText(available_devices[self.settings["memory_settings"]["default_gpu"]["tts"]])
-        self.ui.stt_combobox.setCurrentText(available_devices[self.settings["memory_settings"]["default_gpu"]["stt"]])
+        self.ui.sd_combobox.setCurrentText(available_devices[self.memory_settings.default_gpu_sd])
+        self.ui.llm_combobox.setCurrentText(available_devices[self.memory_settings.default_gpu_llm])
+        self.ui.tts_combobox.setCurrentText(available_devices[self.memory_settings.default_gpu_tts])
+        self.ui.stt_combobox.setCurrentText(available_devices[self.memory_settings.default_gpu_stt])
         self.ui.sd_combobox.blockSignals(False)
         self.ui.llm_combobox.blockSignals(False)
         self.ui.tts_combobox.blockSignals(False)
@@ -53,32 +54,22 @@ class MemoryPreferencesWidget(BaseWidget):
 
     @Slot(str)
     def action_changed_sd_combobox(self, val: str):
-        settings = self.settings
-        settings["memory_settings"]["default_gpu"]["sd"] = self.available_devices.index(val)
-        self.settings = settings
+        self.update_memory_settings("default_gpu_sd", self.available_devices.index(val))
 
     @Slot(str)
     def action_changed_llm_combobox(self, val: str):
-        settings = self.settings
-        settings["memory_settings"]["default_gpu"]["llm"] = self.available_devices.index(val)
-        self.settings = settings
+        self.update_memory_settings("default_gpu_llm", self.available_devices.index(val))
 
     @Slot(str)
     def action_changed_tts_combobox(self, val: str):
-        settings = self.settings
-        settings["memory_settings"]["default_gpu"]["tts"] = self.available_devices.index(val)
-        self.settings = settings
+        self.update_memory_settings("default_gpu_tts", self.available_devices.index(val))
 
     @Slot(str)
     def action_changed_stt_combobox(self, val: str):
-        settings = self.settings
-        settings["memory_settings"]["default_gpu"]["stt"] = self.available_devices.index(val)
-        self.settings = settings
+        self.update_memory_settings("default_gpu_stt", self.available_devices.index(val))
 
     def action_toggled_setting(self, setting_name, val):
-        settings = self.settings
-        settings["memory_settings"][setting_name] = val
-        self.settings = settings
+        self.update_memory_settings(setting_name, val)
 
     def action_toggled_tome(self, val):
         self.action_toggled_setting("use_tome_sd", val)
@@ -120,11 +111,7 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.tome_sd_ratio.ui.slider.setValue(600)
 
     def action_toggled_use_tome(self, val):
-        settings = self.settings
-        settings["memory_settings"]["use_tome_sd"] = val
-        self.settings = settings
+        self.update_memory_settings("use_tome_sd", val)
 
     def tome_sd_ratio_value_change(self, prop, val):
-        settings = self.settings
-        settings["memory_settings"]["tome_sd_ratio"] = val
-        self.settings = self.settings
+        self.update_memory_settings("tome_sd_ratio", val)

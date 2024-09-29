@@ -11,6 +11,4 @@ class FinalPage(BaseWizard):
         self.setLayout(layout)
 
     def save_settings(self):
-        settings = self.settings
-        settings["run_setup_wizard"] = False
-        self.settings = settings
+        self.update_application_settings("run_setup_wizard", False)

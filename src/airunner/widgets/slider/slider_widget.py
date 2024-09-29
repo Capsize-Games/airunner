@@ -12,6 +12,15 @@ class SliderWidget(BaseWidget):
     divide_by = 1.0
     is_loading = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.settings_property = None
+        self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
+        self.register(SignalCode.WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
+        self.ui.slider.sliderReleased.connect(self.handle_slider_release)  # Connect valueChanged signal
+        self.ui.slider_spinbox.valueChanged.connect(self.handle_spinbox_change)  # Connect valueChanged signal
+        self._callback = None
+
     @property
     def slider_single_step(self):
         return self.ui.slider.singleStep()
@@ -92,14 +101,6 @@ class SliderWidget(BaseWidget):
     @spinbox_minimum.setter
     def spinbox_minimum(self, val):
         self.ui.slider_spinbox.setMinimum(val)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.settings_property = None
-        self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
-        self.register(SignalCode.WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
-        self.ui.slider.sliderReleased.connect(self.handle_slider_release)
-        self._callback = None
 
     def on_main_window_loaded_signal(self):
         try:
@@ -187,21 +188,23 @@ class SliderWidget(BaseWidget):
 
     def get_settings_value(self, settings_property):
         keys = settings_property.split(".")
-        data = self.settings
 
-        for key in keys:
-            if isinstance(data, dict) and key in data:
-                data = data[key]
-            else:
-                return None
+        if len(keys) == 1:
+            keys = ["application_settings", keys[0]]
 
-        return data
+        obj = getattr(self, keys[0])
+
+        if keys[0] == "llm_generator_settings":
+            return getattr(obj, keys[2])
+
+        return getattr(obj, keys[1])
 
     def set_settings_value(self, settings_property: str, val: Any):
         if settings_property is None:
             return
         keys = settings_property.split(".")
-        self.settings = self._update_dict_recursively(self.settings, keys, val)
+        print(keys)
+        self.update_settings_by_name(keys[0], keys[1], val)
 
     def _update_dict_recursively(self, data: dict, keys: List[str], val: Any) -> dict:
         if len(keys) == 1:

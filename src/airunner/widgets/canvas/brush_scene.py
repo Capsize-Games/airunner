@@ -6,7 +6,6 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QFileDialog
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.settings import VALID_IMAGE_FILES
-from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 from airunner.widgets.canvas.custom_scene import CustomScene
 
 
@@ -15,12 +14,11 @@ class BrushScene(CustomScene):
 
     def __init__(self, canvas_type: str):
         super().__init__(canvas_type)
-        brush_settings = self.settings["brush_settings"]
-        brush_color = brush_settings["primary_color"]
+        brush_color = self.brush_settings.primary_color
         self._brush_color = QColor(brush_color)
         self.pen = QPen(
             self._brush_color,
-            brush_settings["size"],
+            self.brush_settings.size,
             Qt.PenStyle.SolidLine,
             Qt.PenCapStyle.RoundCap
         )
@@ -28,6 +26,13 @@ class BrushScene(CustomScene):
         self._is_drawing = False
         self._is_erasing = False
         self._do_generate_image = False
+
+    @property
+    def is_brush_or_eraser(self):
+        return self.current_tool in (
+            CanvasToolName.BRUSH,
+            CanvasToolName.ERASER
+        )
 
     def register_signals(self):
         signals = [
@@ -42,10 +47,10 @@ class BrushScene(CustomScene):
             (SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.handle_brush_color_changed),
             (SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL, self.import_image),
             (SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL, self.export_image),
-            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.handle_settings_changed)
         ]
         for signal, handler in signals:
             self.register(signal, handler)
+        super().register_signals()
 
     def export_image(self):
         image = self.current_active_image()
@@ -74,14 +79,7 @@ class BrushScene(CustomScene):
         )
         if file_path == "":
             return
-        self.load_image(file_path)
-
-    @property
-    def is_brush_or_eraser(self):
-        return self.settings["current_tool"] in (
-            CanvasToolName.BRUSH,
-            CanvasToolName.ERASER
-        )
+        self.handle_load_image(file_path)
 
     def handle_brush_color_changed(self, data):
         self._brush_color = QColor(data["color"])
@@ -94,10 +92,9 @@ class BrushScene(CustomScene):
             self.painter.drawImage(0, 0, self.image)
 
             if self.last_pos:
-                settings = self.settings
-                if settings["current_tool"] is CanvasToolName.BRUSH:
+                if self.current_tool is CanvasToolName.BRUSH:
                     self.draw_at(self.painter)
-                elif settings["current_tool"] is CanvasToolName.ERASER:
+                elif self.current_tool is CanvasToolName.ERASER:
                     self.erase_at(self.painter)
         super().drawBackground(painter, rect)
 
@@ -107,7 +104,7 @@ class BrushScene(CustomScene):
             self._is_erasing = erasing
 
             # set the size of the pen
-            self.pen.setWidth(self.settings["brush_settings"]["size"])
+            self.pen.setWidth(self.brush_settings.size)
 
             if drawing:
                 composition_mode = QPainter.CompositionMode.CompositionMode_SourceOver
@@ -170,50 +167,3 @@ class BrushScene(CustomScene):
             painter=painter,
             color=QColor(Qt.GlobalColor.transparent)
         )
-
-    def handle_mouse_event(self, event, is_press_event):
-        pass
-
-    def mousePressEvent(self, event):
-        if self.scene_is_active and event.button() == Qt.MouseButton.LeftButton:
-            self.handle_left_mouse_press(event)
-            self.handle_cursor(event)
-            if not self.is_brush_or_eraser:
-                super().mousePressEvent(event)
-            elif self.settings["drawing_pad_settings"]["enable_automatic_drawing"]:
-                self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
-
-    def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
-        if self.scene_is_active and event.button() == Qt.MouseButton.LeftButton:
-            self._is_drawing = False
-            self._is_erasing = False
-            self.last_pos = None
-            self.start_pos = None
-            if type(self.image) is Image:
-                image = ImageQt.ImageQt(self.image.convert("RGBA"))
-            else:
-                image = self.image
-            pil_image = ImageQt.fromqimage(image)
-            self._do_generate_image = True
-            settings = self.settings
-            settings[self.settings_key]["image"] = convert_image_to_base64(pil_image)
-            self.settings = settings
-            self.do_update = False
-
-    def handle_settings_changed(self):
-        if self._do_generate_image:
-            self._do_generate_image = False
-            if (
-                self.settings["drawing_pad_settings"]["enable_automatic_drawing"] and
-                (
-                    self.settings["current_tool"] is CanvasToolName.BRUSH or
-                    self.settings["current_tool"] is CanvasToolName.ERASER
-                )
-            ):
-                self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
-
-    def mouseMoveEvent(self, event):
-        if self.scene_is_active:
-            self.last_pos = event.scenePos()
-            self.update()

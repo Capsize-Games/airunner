@@ -15,19 +15,19 @@ class TranslationPreferencesWidget(BaseWidget):
         self.initialize_voice_combobox()
         self.initialize_translation_model_combobox()
         self.ui.translate_groupbox.blockSignals(True)
-        self.ui.translate_groupbox.setChecked(self.settings["translation_settings"]["enabled"])
+        self.ui.translate_groupbox.setChecked(self.translation_settings.enabled)
         self.ui.translate_groupbox.blockSignals(False)
 
     def initialize_language_combobox(self):
         self.ui.language_combobox.blockSignals(True)
         self.ui.language_combobox.clear()
         self.ui.language_combobox.addItems(TRANSLATION_LANGUAGES)
-        self.ui.language_combobox.setCurrentText(self.settings["translation_settings"]["language"])
+        self.ui.language_combobox.setCurrentText(self.translation_settings.language)
         self.ui.language_combobox.blockSignals(False)
 
     def initialize_voice_combobox(self):
-        current_language = self.settings["translation_settings"]["language"]
-        gender = self.settings["translation_settings"]["gender"]
+        current_language = self.translation_settings.language
+        gender = self.translation_settings.gender
         self.ui.voice_combobox.blockSignals(True)
         self.ui.male_radio_button.blockSignals(True)
         self.ui.female_radio_button.blockSignals(True)
@@ -37,7 +37,7 @@ class TranslationPreferencesWidget(BaseWidget):
         self.ui.voice_combobox.addItems(voices)
         self.ui.male_radio_button.setChecked(gender == MALE.value)
         self.ui.female_radio_button.setChecked(gender == FEMALE.value)
-        self.ui.voice_combobox.setCurrentText(self.settings["translation_settings"]["voice"])
+        self.ui.voice_combobox.setCurrentText(self.translation_settings.voice)
         self.ui.voice_combobox.blockSignals(False)
         self.ui.male_radio_button.blockSignals(False)
         self.ui.female_radio_button.blockSignals(False)
@@ -47,41 +47,29 @@ class TranslationPreferencesWidget(BaseWidget):
         self.ui.translation_model_combobox.clear()
         self.ui.translation_model_combobox.addItems(TRANSLATION_MODELS)
         for language in Language:
-            if language.value == self.settings["translation_settings"]["language"]:
-                self.ui.translation_model_combobox.setCurrentText(self.settings["translation_settings"]["translation_model"])
+            if language.value == self.translation_settings.language:
+                self.ui.translation_model_combobox.setCurrentText(self.translation_settings.translation_model)
                 break
-        self.ui.translation_model_combobox.setCurrentText(self.settings["translation_settings"]["translation_model"])
+        self.ui.translation_model_combobox.setCurrentText(self.translation_settings.translation_model)
         self.ui.translation_model_combobox.blockSignals(False)
 
     def language_text_changed(self, val):
-        settings = self.settings
-        settings["translation_settings"]["language"] = val
-        self.settings = settings
+        self.update_translation_settings("language", val)
         self.initialize_voice_combobox()
 
     def voice_text_changed(self, val):
-        settings = self.settings
-        settings["translation_settings"]["voice"] = val
-        self.settings = settings
+        self.update_translation_settings("voice", val)
 
     def translation_model_changed(self, val):
-        settings = self.settings
-        settings["translation_settings"]["translation_model"] = val
-        self.settings = settings
+        self.update_translation_settings("translation_model", val)
 
     def toggle_translation(self, val):
-        settings = self.settings
-        settings["translation_settings"]["enabled"] = val
-        self.settings = settings
+        self.update_translation_settings("enabled", val)
 
     def male_clicked(self):
-        settings = self.settings
-        settings["translation_settings"]["gender"] = MALE
-        self.settings = settings
         self.initialize_voice_combobox()
+        self.update_translation_settings("gender", MALE.value)
 
     def female_clicked(self):
-        settings = self.settings
-        settings["translation_settings"]["gender"] = FEMALE
-        self.settings = settings
+        self.update_translation_settings("gender", FEMALE.value)
         self.initialize_voice_combobox()

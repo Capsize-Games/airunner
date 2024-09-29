@@ -36,9 +36,6 @@ class CanvasWidget(
         self.active_grid_area_position = QPoint(0, 0)
         self.current_image_index = 0
         self.draggable_pixmaps_in_scene = {}
-        self.grid_settings: dict = {}
-        self.active_grid_settings: dict = {}
-        self.canvas_settings: dict = {}
         self.drag_pos: QPoint = Optional[None]
         self._grid_settings = {}
         self._canvas_settings = {}
@@ -55,11 +52,11 @@ class CanvasWidget(
 
     @property
     def image_pivot_point(self):
-        settings = self.settings
+        settings = self.application_settings
         try:
             return QPoint(
-                settings["pivot_point_x"],
-                settings["pivot_point_y"]
+                settings.pivot_point_x,
+                settings.pivot_point_y
             )
         except Exception as e:
             self.logger.error(e)
@@ -67,24 +64,24 @@ class CanvasWidget(
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
-        settings = self.settings
-        settings["pivot_point_x"] = value.x()
-        settings["pivot_point_y"] = value.y()
-        self.settings = settings
+        settings = self.application_settings
+        settings.pivot_point_x = value.x()
+        settings.pivot_point_y = value.y()
+        self.update_application_settings("pivot_point_x", value.x())
+        self.update_application_settings("pivot_point_y", value.y())
 
     def on_canvas_update_cursor_signal(self, message: dict):
-        settings = self.settings
         event = message["event"]
-        if settings["current_tool"] in (
+        if self.current_tool in (
             CanvasToolName.BRUSH,
             CanvasToolName.ERASER
         ):
             cursor = CircleCursor(
                 Qt.GlobalColor.white,
                 Qt.GlobalColor.transparent,
-                settings["brush_settings"]["size"],
+                self.brush_settings.size,
             )
-        elif settings["current_tool"] is CanvasToolName.ACTIVE_GRID_AREA:
+        elif self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
             if event.buttons() == Qt.MouseButton.LeftButton:
                 cursor = Qt.CursorShape.ClosedHandCursor
             else:
@@ -99,13 +96,6 @@ class CanvasWidget(
     def showEvent(self, event):
         super().showEvent(event)
         self.do_draw(force_draw=True)
-
-    def initialize_form(self):
-        settings = self.settings
-
-        self.ui.drawing_pad_groupbox.blockSignals(True)
-        self.ui.drawing_pad_groupbox.checked = settings["drawing_pad_settings"]["enabled"]
-        self.ui.drawing_pad_groupbox.blockSignals(False)
 
     def do_draw(
         self,
