@@ -180,10 +180,6 @@ class MainWindow(
 
         self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, { "main_window": self })
 
-    @property
-    def window_settings(self):
-        return self.__application_settings
-
     def download_url(self, url, save_path):
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -370,14 +366,11 @@ class MainWindow(
     def initialize_ui(self):
         self.logger.debug("Loading UI")
         self.ui.setupUi(self)
-
-        self.logger.debug("Restoring state")
         self.restore_state()
         from airunner.widgets.status.status_widget import StatusWidget
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
-
         self.set_stylesheet()
         self.initialize_widget_elements()
 
@@ -587,29 +580,24 @@ class MainWindow(
         self.quitting = True
         self.logger.debug("Saving window state")
 
-        self.update_window_settings("is_maximized", self.isMaximized())
-        self.update_window_settings("is_fullscreen", self.isFullScreen())
-        self.update_window_settings("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter.saveState())
-        self.update_window_settings("content_splitter", self.ui.content_splitter.saveState())
-        self.update_window_settings("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter.saveState())
-        self.update_window_settings("tool_tab_widget_index", self.ui.tool_tab_widget.ui.tool_tab_widget_container.currentIndex())
-        self.update_window_settings("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter.saveState())
-        self.update_window_settings("width", self.width())
-        self.update_window_settings("height", self.height())
-        self.update_window_settings("x_pos", self.pos().x())
-        self.update_window_settings("y_pos", self.pos().y())
-        self.update_window_settings("mode_tab_widget_index", self.ui.generator_widget.ui.generator_form_tabs.currentIndex())
-
-    def update_window_settings(self, key, val):
-        self.__application_settings.setValue(key, val)
-        self.__application_settings.sync()
+        self.save_window_settings("is_maximized", self.isMaximized())
+        self.save_window_settings("is_fullscreen", self.isFullScreen())
+        self.save_window_settings("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter.saveState())
+        self.save_window_settings("content_splitter", self.ui.content_splitter.saveState())
+        self.save_window_settings("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter.saveState())
+        self.save_window_settings("tool_tab_widget_index", self.ui.tool_tab_widget.ui.tool_tab_widget_container.currentIndex())
+        self.save_window_settings("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter.saveState())
+        self.save_window_settings("width", self.width())
+        self.save_window_settings("height", self.height())
+        self.save_window_settings("x_pos", self.pos().x())
+        self.save_window_settings("y_pos", self.pos().y())
+        self.save_window_settings("mode_tab_widget_index", self.ui.generator_widget.ui.generator_form_tabs.currentIndex())
 
     def restore_state(self):
         self.logger.debug("Restoring state")
-
-        if self.window_settings.value("is_maximized", defaultValue=False):
+        if self.window_settings is not None and self.window_settings.is_maximized:
             self.showMaximized()
-        elif self.window_settings.value("is_fullscreen", defaultValue=False):
+        elif self.window_settings is not None and self.window_settings.is_fullscreen:
             self.showFullScreen()
         else:
             self.showNormal()
@@ -618,32 +606,40 @@ class MainWindow(
         self.ui.actionToggle_Grid.setChecked(self.grid_settings.show_grid)
         self.ui.actionToggle_Grid.blockSignals(False)
 
-        splitters = [
-            ("content_splitter", self.ui.content_splitter),
-            ("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter),
-            # ("canvas_splitter", self.ui.canvas_widget_2.ui.canvas_splitter),
-            ("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter),
-            ("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter),
-        ]
-        for splitter_name, splitter in splitters:
-            splitter_state = self.window_settings.value(splitter_name, defaultValue=None)
-            if splitter_state is not None:
-                splitter.blockSignals(True)
-                splitter.restoreState(splitter_state)
-                splitter.blockSignals(False)
+        if self.window_settings is not None:
+            splitters = [
+                ("content_splitter", self.ui.content_splitter),
+                ("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter),
+                # ("canvas_splitter", self.ui.canvas_widget_2.ui.canvas_splitter),
+                ("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter),
+                ("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter),
+            ]
+            for splitter_name, splitter in splitters:
+                splitter_state = getattr(self.window_settings, splitter_name)
+                if splitter_state is not None:
+                    splitter.blockSignals(True)
+                    splitter.restoreState(splitter_state)
+                    splitter.blockSignals(False)
 
         self.setMinimumSize(100, 100)  # Set a reasonable minimum size
-        width = int(self.window_settings.value("width", defaultValue=800))
-        height = int(self.window_settings.value("height", defaultValue=600))
-        self.resize(width, height)
 
-        x_pos = int(self.window_settings.value("x_pos", defaultValue=0))
-        y_pos = int(self.window_settings.value("y_pos", defaultValue=0))
+        if self.window_settings is not None:
+            width = int(self.window_settings.width)
+            height = int(self.window_settings.height)
+            x_pos = int(self.window_settings.x_pos)
+            y_pos = int(self.window_settings.y_pos)
+            self.ui.generator_widget.ui.generator_form_tabs.setCurrentIndex(
+                int(self.window_settings.mode_tab_widget_index)
+            )
+        else:
+            width = 800
+            height = 600
+            x_pos = 0
+            y_pos = 0
+
+        self.resize(width, height)
         self.move(x_pos, y_pos)
 
-        self.ui.generator_widget.ui.generator_form_tabs.setCurrentIndex(
-            int(self.window_settings.value("mode_tab_widget_index", defaultValue=0))
-        )
     ##### End window properties #####
     #################################
 

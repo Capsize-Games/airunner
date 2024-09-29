@@ -257,35 +257,9 @@
     <property name="title">
      <string>Canvas</string>
     </property>
-    <widget class="QMenu" name="menuCanvas_Image">
-     <property name="title">
-      <string>Main</string>
-     </property>
-     <addaction name="actionImport"/>
-     <addaction name="actionExport"/>
-    </widget>
-    <widget class="QMenu" name="menuDrawingpad">
-     <property name="title">
-      <string>Input</string>
-     </property>
-     <addaction name="drawingpad_import"/>
-     <addaction name="drawingpad_export"/>
-     <addaction name="separator"/>
-     <addaction name="actionOverlay_input_image"/>
-    </widget>
-    <widget class="QMenu" name="menuControlnet">
-     <property name="title">
-      <string>Controlnet</string>
-     </property>
-     <addaction name="controlnet_import"/>
-     <addaction name="controlnet_export"/>
-     <addaction name="separator"/>
-     <addaction name="enable_controlnet"/>
-    </widget>
     <addaction name="separator"/>
-    <addaction name="menuCanvas_Image"/>
-    <addaction name="menuDrawingpad"/>
-    <addaction name="menuControlnet"/>
+    <addaction name="actionImport"/>
+    <addaction name="actionExport"/>
     <addaction name="separator"/>
     <addaction name="actionToggle_Active_Grid_Area"/>
     <addaction name="actionToggle_Selection"/>
