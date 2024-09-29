@@ -77,7 +77,6 @@ class SDWorker(Worker):
             self.sd.unload_controlnet()
 
     def on_load_stablediffusion_signal(self, data: dict = None):
-        print("LOAD")
         if self.sd:
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
@@ -94,7 +93,7 @@ class SDWorker(Worker):
             ModelStatus.FAILED,
             ModelStatus.READY,
         ):
-            self.sd.sd_unload()
+            self.sd.unload_stable_diffusion()
         elif self.sd and self.sd.sd_model_status is ModelStatus.LOADING:
             self.__requested_action = ModelAction.CLEAR
 
@@ -126,10 +125,6 @@ class SDWorker(Worker):
 
     def on_sd_cancel_signal(self, _data=None):
         print("on_sd_cancel_signal")
-
-    def on_move_to_cpu(self, _data=None):
-        if self.sd:
-            self.sd.move_pipe_to_cpu()
 
     def on_start_auto_image_generation_signal(self, _data=None):
         # self.sd_mode = SDMode.DRAWING
