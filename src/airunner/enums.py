@@ -486,6 +486,7 @@ class ModelType(Enum):
 
 
 class HandlerState(Enum):
+    UNINITIALIZED = "Uninitialized"
     INITIALIZED = "Initialized"
     LOADING = "Loading"
     READY = "Ready"

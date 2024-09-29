@@ -26,6 +26,8 @@ setup(
         "torchaudio==2.4.0",
         "torchvision==0.19.0",
         "optimum==1.21.4",
+        "numpy==1.26.4",
+        "pillow=10.4.0",
 
         # LLM Dependencies
         "transformers==4.43.4",

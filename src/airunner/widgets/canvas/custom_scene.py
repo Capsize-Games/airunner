@@ -82,9 +82,7 @@ class CustomScene(
             settings = self.image_to_image_settings
         elif self.settings_key == "outpaint_settings":
             settings = self.outpaint_settings
-        elif self.settings_key == "brush":
-            settings = self.drawing_pad_settings
-        elif self.settings_key == "drawing_pad_settings":
+        elif self.settings_key in ["brush", "drawing_pad_settings"]:
             settings = self.drawing_pad_settings
         if not settings:
             raise ValueError(f"Settings not found for key: {self.settings_key}")
@@ -97,7 +95,7 @@ class CustomScene(
             self.update_image_to_image_settings(key, value)
         elif self.settings_key == "outpaint_settings":
             self.update_outpaint_settings(key, value)
-        elif self.settings_key == "brush":
+        elif self.settings_key in ["brush", "drawing_pad_settings"]:
             self.update_drawing_pad_settings(key, value)
 
     def showEvent(self, event):
@@ -712,9 +710,17 @@ class CustomScene(
             else:
                 image = self.image
             pil_image = ImageQt.fromqimage(image)
-            self._do_generate_image = True
-            self.update_current_settings("image", convert_image_to_base64(pil_image))
+            base_64_image = convert_image_to_base64(pil_image)
+            self.update_current_settings("image", base_64_image)
             self.do_update = False
+            if (
+                self.drawing_pad_settings.enable_automatic_drawing and
+                (
+                    self.current_tool is CanvasToolName.BRUSH or
+                    self.current_tool is CanvasToolName.ERASER
+                )
+            ):
+                self.emit_signal(SignalCode.SD_GENERATE_IMAGE_SIGNAL)
 
     # Combined mouseMoveEvent
     def mouseMoveEvent(self, event):
