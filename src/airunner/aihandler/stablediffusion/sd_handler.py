@@ -44,6 +44,7 @@ class SDHandler(BaseHandler):
         self.sd_model_status:ModelStatus = ModelStatus.UNLOADED
         self._current_model:str = ""
         self._controlnet:ControlNetModel = None
+        self._controlnet_processor:Processor = None
         self._safety_checker:StableDiffusionSafetyChecker = None
         self._feature_extractor:CLIPFeatureExtractor = None
         self._memory_settings_flags:dict = {
@@ -231,6 +232,19 @@ class SDHandler(BaseHandler):
         Public method to unload the safety checker model.
         """
         self._unload_safety_checker()
+
+    def load_controlnet(self):
+        """
+        Public method to load the controlnet model.
+        """
+        print("load_controlnet")
+        self._load_controlnet()
+
+    def unload_controlnet(self):
+        """
+        Public method to unload the controlnet model.
+        """
+        self._unload_controlnet()
 
     def load_stable_diffusion(self):
         if self._pipe is not None:
@@ -475,36 +489,37 @@ class SDHandler(BaseHandler):
         return self._generator
 
     def _load_controlnet(self):
+        print("_load_controlnet")
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
+
         try:
             self._load_controlnet_model()
         except Exception as e:
             self.logger.error(f"Error loading controlnet {e}")
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
+            return
+
         try:
             self._load_controlnet_processor()
         except Exception as e:
             self.logger.error(f"Error loading controlnet processor {e}")
-        if (
-            self._controlnet is not None
-            and self.processor is not None
-            and self._pipe
-        ):
-            self._pipe.__controlnet = self._controlnet
-            self._pipe.processor = self.processor
-            self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
-        else:
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
+            return
+
+        self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
 
     def _load_controlnet_model(self):
-        self.logger.debug(f"Loading controlnet {self.controlnet_type} to {self._device}")
+        if self._controlnet is not None:
+            return
+        self.logger.debug(f"Loading controlnet model")
         name = self.controlnet_type
-        model = self.controlnet_model_by_name(name)
-        if not model:
+        controlnet_model = self.controlnet_model_by_name(name)
+        if not controlnet_model:
             raise ValueError(f"Unable to find controlnet model {name}")
-        controlnet_model = model.path
+        controlnet_model_path = controlnet_model.path
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
         version: str = self.generator_settings.version
-        path: str = "diffusers/controlnet-canny-sdxl-1.0-small" if self.is_sd_xl else controlnet_model.path
+        path: str = "diffusers/controlnet-canny-sdxl-1.0-small" if self.is_sd_xl else controlnet_model_path
         controlnet_path = os.path.expanduser(os.path.join(
             self.path_settings.base_path,
             "art/models",
@@ -522,8 +537,10 @@ class SDHandler(BaseHandler):
         )
 
     def _load_controlnet_processor(self):
+        if self._controlnet_processor is not None:
+            return
         self.logger.debug("Loading controlnet processor")
-        self.processor = Processor(self.controlnet_type)
+        self._controlnet_processor = Processor(self.controlnet_type)
 
     def _load_scheduler(self):
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
@@ -764,6 +781,14 @@ class SDHandler(BaseHandler):
             self.logger.error("Something went wrong with Stable Diffusion loading")
             self.unload_stable_diffusion()
 
+        if (
+            self._controlnet is not None
+            and self._controlnet_processor is not None
+            and self._pipe
+        ):
+            self._pipe.__controlnet = self._controlnet
+            self._pipe.processor = self._controlnet_processor
+
     def _apply_memory_setting(self, setting_name, attribute_name, apply_func):
         attr_val = getattr(self.memory_settings, attribute_name)
         if self._memory_settings_flags[setting_name] != attr_val:
@@ -863,6 +888,8 @@ class SDHandler(BaseHandler):
         if self._pipe is not None and hasattr(self._pipe, "safety_checker"):
             del self._pipe.safety_checker
             self._pipe.safety_checker = None
+        if self._safety_checker:
+            self._safety_checker.to("cpu")
         del self._safety_checker
         self._safety_checker = None
 
@@ -901,8 +928,8 @@ class SDHandler(BaseHandler):
         if self._pipe and hasattr(self._pipe, "processor"):
             del self._pipe.processor
             self._pipe.processor = None
-        del self.processor
-        self.processor = None
+        del self._controlnet_processor
+        self._controlnet_processor = None
 
     def _unload_lora(self):
         self.logger.debug("Unloading lora")
