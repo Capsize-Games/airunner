@@ -585,6 +585,10 @@ class SDHandler(BaseHandler):
             local_files_only=True,
             device=self._device,
         )
+
+        if self.enable_controlnet:
+            data["controlnet"] = self._controlnet
+
         pipeline_class_ = self._pipeline_class
         if self.is_single_file:
             try:
