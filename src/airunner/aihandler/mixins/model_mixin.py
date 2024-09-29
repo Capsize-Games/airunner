@@ -607,8 +607,6 @@ class ModelMixin:
 
         self.current_state = HandlerState.GENERATING
 
-        print(data)
-
         # Generate the image
         results = self.pipe(**data)
         images = results.get("images", [])
