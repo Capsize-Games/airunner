@@ -62,7 +62,12 @@ class BaseHandler(
     def device(self):
         if not self.model_type:
             raise ValueError("model_type not set")
-        return get_torch_device(getattr(self.memory_settings, f"default_gpu_{self.model_class}"))
+        return get_torch_device(
+            getattr(
+                self.memory_settings,
+                f"default_gpu_{self.model_type}"
+            )
+        )
 
     @property
     def llm_dtype(self):

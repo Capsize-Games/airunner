@@ -11,6 +11,7 @@ from airunner.aihandler.models.settings_models import ApplicationSettings, LLMGe
     MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.enums import SignalCode
+from airunner.utils.convert_base64_to_image import convert_base64_to_image
 
 
 class SettingsMixin:
@@ -149,6 +150,30 @@ class SettingsMixin:
     @property
     def image_filters(self):
         return imagefilter_bootstrap_data
+
+    @property
+    def controlnet_image(self):
+        base_64_image = self.controlnet_image_settings.imported_image_base64
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
+
+    @property
+    def outpaint_image(self):
+        base_64_image = self.outpaint_settings.image
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
+
+    @property
+    def outpaint_mask(self):
+        base_64_image = self.outpaint_settings.mask
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
 
     #######################################
     ### LORA ###
