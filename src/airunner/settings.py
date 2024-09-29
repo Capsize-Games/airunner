@@ -103,37 +103,15 @@ DEFAULT_IMAGE_SYSTEM_PROMPT = "\n".join([
         "You are an image captioning expert. You will be given the "
         "description of an image. Your goal is to convert that "
         "description into a better, more fitting description which "
-        "will capture the essence and the details of the image."
-    ),
-    (
-        "You may ask the user for more details before "
-        "proceeding. You may also ask the user to clarify the "
-        "description if it is not clear."
-    ),
-    "------"
-    "Examples:",
-    "User: create an image of a cat in the woods",
-    (
-        "Assistant: A (fluffy, tabby cat)+ exploring the depths of "
-        "an (enchanting forest). (well-lit), sunlight filters, "
-        "professional portrait."
-    ),
-    "User: the chat should look like a superhero",
-    (
-        "Assistant: " "A (cat dressed in a superhero costume), "
-        "standing in the (middle of a forest)."
-    ),
-    "------",
-    "Use parentheses to indicate the most important details of the "
-    "image. Add a plus sign after a word or parenthesis to add "
-    "extra emphasis. More plus signs indicate more emphasis. Minus "
-    "signs can be used to indicate less emphasis.",
-    "You should describe the image type (professional photograph, "
-    "portrait, illustration etc)",
-    (
+        "will capture the essence and the details of the image. "
+        "Use parentheses to indicate the most important details of the "
+        "image. Add a plus sign after a word or parenthesis to add "
+        "extra emphasis. More plus signs indicate more emphasis. Minus "
+        "signs can be used to indicate less emphasis."
+        "You should describe the image type (professional photograph, "
+        "portrait, illustration etc)"
         "You should also describe the lighting (well-lit, dim, "
-        "dark etc), "
-        "the color, the composition and the mood."
+        "dark etc), the color, the composition and the mood."
     ),
     # (
     #     "When returning prompts you must choose either "
@@ -195,7 +173,14 @@ DEFAULT_PATH_SETTINGS = {
             "text/rag",
             "db"
         )
-    )
+    ),
+    "webpages_path": os.path.expanduser(
+        os.path.join(
+            BASE_PATH,
+            "text/other",
+            "webpages"
+        )
+    ),
 }
 
 ####################################################################
@@ -218,6 +203,8 @@ DEFAULT_LLM_GENERATOR_SETTINGS = dict(
     decoder_start_token_id=None,
     use_cache=True,
     length_penalty=100,
+    seed=0,
+    random_seed=False,
 )
 TOOL_LLM_GENERATOR_SETTINGS = dict(
     top_p=900,
@@ -672,25 +659,76 @@ AVAILABLE_ACTIONS = [
     "controlnet",
     "safety_checker",
 ]
-SCHEDULER_CLASSES = {
-    Scheduler.EULER_ANCESTRAL: "EulerAncestralDiscreteScheduler",
-    Scheduler.EULER: "EulerDiscreteScheduler",
-    Scheduler.LMS: "LMSDiscreteScheduler",
-    Scheduler.HEUN: "HeunDiscreteScheduler",
-    Scheduler.DPM2: "DPMSolverSinglestepScheduler",
-    Scheduler.DPM_PP_2M: "DPMSolverMultistepScheduler",
-    Scheduler.DPM2_K: "KDPM2DiscreteScheduler",
-    Scheduler.DPM2_A_K: "KDPM2AncestralDiscreteScheduler",
-    Scheduler.DPM_PP_2M_K: "DPMSolverMultistepScheduler",
-    Scheduler.DPM_PP_2M_SDE_K: "DPMSolverMultistepScheduler",
-    Scheduler.DDIM: "DDIMScheduler",
-    Scheduler.UNIPC: "UniPCMultistepScheduler",
-    Scheduler.DDPM: "DDPMScheduler",
-    Scheduler.DEIS: "DEISMultistepScheduler",
-    Scheduler.DPM_2M_SDE_K: "DPMSolverMultistepScheduler",
-    Scheduler.PLMS: "PNDMScheduler",
-    Scheduler.DPM: "DPMSolverMultistepScheduler",
-}
+SCHEDULER_CLASSES = [
+    dict(
+        display_name=Scheduler.EULER_ANCESTRAL.value,
+        name="EulerAncestralDiscreteScheduler",
+    ),
+    dict(
+        display_name=Scheduler.EULER.value,
+        name="EulerDiscreteScheduler",
+    ),
+    dict(
+        display_name=Scheduler.LMS.value,
+        name="LMSDiscreteScheduler",
+    ),
+    dict(
+        display_name=Scheduler.HEUN.value,
+        name="HeunDiscreteScheduler",
+    ),
+    dict(
+        display_name=Scheduler.DPM2.value,
+        name="DPMSolverSinglestepScheduler",
+    ),
+    dict(
+        display_name=Scheduler.DPM_PP_2M.value,
+        name="DPMSolverMultistepScheduler",
+    ),
+    dict(
+        display_name=Scheduler.DPM2_K.value,
+        name="KDPM2DiscreteScheduler",
+    ),
+    dict(
+        display_name=Scheduler.DPM2_A_K.value,
+        name="KDPM2AncestralDiscreteScheduler",
+    ),
+    dict(
+        display_name=Scheduler.DPM_PP_2M_K.value,
+        name="DPMSolverMultistepScheduler",
+    ),
+    dict(
+        display_name=Scheduler.DPM_PP_2M_SDE_K.value,
+        name="DPMSolverMultistepScheduler",
+    ),
+    dict(
+        display_name=Scheduler.DDIM.value,
+        name="DDIMScheduler",
+    ),
+    dict(
+        display_name=Scheduler.UNIPC.value,
+        name="UniPCMultistepScheduler",
+    ),
+    dict(
+        display_name=Scheduler.DDPM.value,
+        name="DDPMScheduler",
+    ),
+    dict(
+        display_name=Scheduler.DEIS.value,
+        name="DEISMultistepScheduler",
+    ),
+    dict(
+        display_name=Scheduler.DPM_2M_SDE_K.value,
+        name="DPMSolverMultistepScheduler",
+    ),
+    dict(
+        display_name=Scheduler.PLMS.value,
+        name="PNDMScheduler",
+    ),
+    dict(
+        display_name=Scheduler.DPM.value,
+        name="DPMSolverMultistepScheduler",
+    ),
+]
 MIN_SEED = 0
 MAX_SEED = 4294967295
 SCHEDULERS = [e.value for e in Scheduler]
@@ -818,71 +856,80 @@ End of system feature flags
 """
 
 SLEEP_TIME_IN_MS = 50
-DEFAULT_SHORTCUTS = {
-    "Generate Image": {
+DEFAULT_SHORTCUTS = [
+    {
+        "display_name": "Generate Image",
         "text": "F1",
         "key": QtCore.Qt.Key.Key_F1.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
         "signal": SignalCode.SD_GENERATE_IMAGE_SIGNAL.value
     },
-    "Brush Tool": {
+    {
+        "display_name": "Brush Tool",
         "text": "B",
         "key": QtCore.Qt.Key.Key_B.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Brush tool key. Responsible for selecting the brush tool.",
         "signal": SignalCode.ENABLE_BRUSH_TOOL_SIGNAL.value
     },
-    "Eraser Tool": {
+    {
+        "display_name": "Eraser Tool",
         "text": "E",
         "key": QtCore.Qt.Key.Key_E.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Eraser tool key. Responsible for selecting the eraser tool.",
         "signal": SignalCode.ENABLE_ERASER_TOOL_SIGNAL.value
     },
-    "Move Tool": {
+    {
+        "display_name": "Move Tool",
         "text": "V",
         "key": QtCore.Qt.Key.Key_V.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Move tool key. Responsible for selecting the move tool.",
         "signal": SignalCode.ENABLE_MOVE_TOOL_SIGNAL.value
     },
-    "Select Tool": {
+    {
+        "display_name": "Select Tool",
         "text": "S",
         "key": QtCore.Qt.Key.Key_S.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Select tool key. Responsible for selecting the select tool.",
         "signal": SignalCode.ENABLE_SELECTION_TOOL_SIGNAL.value
     },
-    "Interrupt": {
+    {
+        "display_name": "Interrupt",
         "text": "Shift+Ctrl+I",
         "key": QtCore.Qt.Key.Key_I.value,
         "modifiers": QtCore.Qt.KeyboardModifier.ShiftModifier.value | QtCore.Qt.KeyboardModifier.ControlModifier.value,
         "description": "Interrupt key. Responsible for interrupting the current process.",
         "signal": SignalCode.INTERRUPT_PROCESS_SIGNAL.value
     },
-    "Navigate": {
+    {
+        "display_name": "Navigate",
         "text": "Shift+Ctrl+P",
         "key": QtCore.Qt.Key.Key_P.value,
         "modifiers": QtCore.Qt.KeyboardModifier.ShiftModifier.value | QtCore.Qt.KeyboardModifier.ControlModifier.value,
         "description": "URL key. Responsible for navigating to a URL.",
         "signal": SignalCode.NAVIGATE_TO_URL.value
     },
-    "Quit": {
+    {
+        "display_name": "Quit",
         "text": "Ctrl+Q",
         "key": QtCore.Qt.Key.Key_Q.value,
         "modifiers": QtCore.Qt.KeyboardModifier.ControlModifier.value,
         "description": "Quit key. Responsible for quitting the application.",
         "signal": SignalCode.QUIT_APPLICATION.value
     },
-    "Refresh Stylesheet": {
+    {
+        "display_name": "Refresh Stylesheet",
         "text": "F5",
         "key": QtCore.Qt.Key.Key_F5.value,
         "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
         "description": "Refresh the stylesheet. Useful when creating a template.",
         "signal": SignalCode.REFRESH_STYLESHEET_SIGNAL.value
     },
-}
+]
 
 
 ####################################################################
@@ -891,7 +938,7 @@ DEFAULT_SHORTCUTS = {
 # These settings can be changed in the GUI or here.
 ####################################################################
 TTS_SETTINGS_DEFAULT = {
-    "tts_model": TTSModel.SPEECHT5,
+    "tts_model": TTSModel.SPEECHT5.value,
     "use_cuda": True,
     "use_sentence_chunks": True,
     "use_word_chunks": False,
@@ -955,6 +1002,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     # End of SettingsMixin overrides
     ####################################################################
 
+    active_grid_size_lock=False,
     installation_path=BASE_PATH,
     current_layer_index=0,
     paths_initialized=False,
@@ -968,7 +1016,7 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     app_version="",
     allow_online_mode=True,
     current_version_stablediffusion=SD_DEFAULT_VERSION,
-    current_tool=CanvasToolName.BRUSH,
+    current_tool=CanvasToolName.BRUSH.value,
     image_export_type="png",
     auto_export_images=True,
     show_active_image_area=True,
@@ -989,26 +1037,16 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     autoload_sd=True,
     autoload_llm=False,
     show_nsfw_warning=True,
-    font_settings={
-        "chat": {
-            "font_family": "Arial",
-            "font_size": 16,
-        },
-        "primary": {
-            "font_family": "Arial",
-            "font_size": 12,
-        }
-    },
-    prompt_templates={
-        "image": {
-            "use_guardrails": True,
+    prompt_templates=[
+        {
             "template_name": "image",
+            "use_guardrails": True,
             "guardrails": DEFAULT_IMAGE_LLM_GUARDRAILS,
             "system": DEFAULT_IMAGE_SYSTEM_PROMPT,
         },
-        "application_command": {
-            "use_guardrails": False,
+        {
             "template_name": "application_command",
+            "use_guardrails": False,
             "guardrails": "",
             "system": (
                 "You will be given some text. Your goal is to determine if the text has a request, goal, need "
@@ -1023,9 +1061,9 @@ DEFAULT_APPLICATION_SETTINGS = dict(
                 "THE LIST of commands you may choose from:\n"
             ),
         },
-        "update_mood": {
-            "use_guardrails": False,
+        {
             "template_name": "update_mood",
+            "use_guardrails": False,
             "guardrails": "",
             "system": (
                 "Examine the following chat history and determine how it makes you feel. You will respond with an emotion and only an emotion.\n"
@@ -1034,9 +1072,9 @@ DEFAULT_APPLICATION_SETTINGS = dict(
                 "You are not a computer or a bot, you are a human with emotions. You must respond with an emotion that you feel.\n"
             ),
         },
-        "rag_search": {
-            "use_guardrails": False,
+        {
             "template_name": "rag_search",
+            "use_guardrails": False,
             "guardrails": "",
             "system": (
                 "You will be given a prompt. Your goal is to use the prompt to search for information in the ebooks. "
@@ -1045,10 +1083,19 @@ DEFAULT_APPLICATION_SETTINGS = dict(
                 "Here is the prompt you will use to search for information:"
             ),
         },
-        "chatbot": {
+        {
+            "template_name": "chatbot",
             "use_system_datetime_in_system_prompt": False
+        },
+        {
+            "template_name": "summarize",
+            "system": (
+                "You will be given a text prompt. Your goal is to summarize the text prompt in your own words. "
+                "Keep your summary short and to the point. Do not include any unnecessary information. "
+                "Limit your summary to a single sentence. Do not return more than one sentence. "
+            ),
         }
-    },
+    ],
     llm_templates={
         "Mistral 7B Instruct: Default Chatbot": dict(
             name="Mistral 7B Instruct: Default Chatbot",
@@ -1120,7 +1167,14 @@ DEFAULT_APPLICATION_SETTINGS = dict(
         document_outline_width=2,
     ),
     controlnet_settings=dict(
-        image=None
+        image=None,
+        enabled=False,
+        use_grid_image_as_input=False,
+    ),
+    image_to_image_settings=dict(
+        image=None,
+        enabled=False,
+        use_grid_image_as_input=False,
     ),
     outpaint_settings=dict(
         image=None,
@@ -1247,11 +1301,13 @@ DEFAULT_APPLICATION_SETTINGS = dict(
     ],
     translation_settings=dict(
         language="English",
-        gender=MALE,
+        gender=MALE.value,
         voice="",
         translation_model="",
         enabled=False,
     ),
+
+
     saved_prompts=[],
     presets=[],
     lora=[],
