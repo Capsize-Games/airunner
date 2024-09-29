@@ -522,10 +522,22 @@ class ModelMixin:
             do_upscale = quality_effects == "Upscaled"
             do_downscale = quality_effects == "Downscaled"
             use_sizes = quality_effects != ""
-            original_size = []
-            target_size = []
-            negative_original_size = []
-            negative_target_size = []
+            original_size = [
+                self.generator_settings.original_size["width"],
+                self.generator_settings.original_size["height"]
+            ]
+            target_size = [
+                self.generator_settings.target_size["width"],
+                self.generator_settings.target_size["height"]
+            ]
+            negative_original_size = [
+                self.generator_settings.negative_target_size["width"],
+                self.generator_settings.negative_target_size["height"]
+            ]
+            negative_target_size = [
+                self.generator_settings.negative_target_size["width"],
+                self.generator_settings.negative_target_size["height"]
+            ]
 
             if do_upscale:
                 original_size = generate_size
