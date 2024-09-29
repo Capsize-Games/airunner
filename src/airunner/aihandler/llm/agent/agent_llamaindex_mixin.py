@@ -10,6 +10,7 @@ from llama_index.core.chat_engine import ContextChatEngine
 from llama_index.core import SimpleKeywordTableIndex
 from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
 
+from airunner.aihandler.llm.huggingface_llm import HuggingFaceLLM
 from airunner.enums import AgentState
 from airunner.aihandler.llm.custom_embedding import CustomEmbedding
 from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
@@ -32,7 +33,7 @@ class AgentLlamaIndexMixin:
         self.__embedding = None
         self.__model_name = os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["base_path"],
+                self.path_settings.base_path,
                 "text/models",
                 "sentence_transformers/sentence-t5-large"
             )
@@ -53,7 +54,8 @@ class AgentLlamaIndexMixin:
     def target_files(self):
         target_files = self.__target_files or []
         if len(target_files) == 0:
-            target_files = self.chatbot["target_files"] or []
+            target_files = []#self.chatbot.target_files or []
+            print("TODO: load target files")
         return target_files
 
     @property
@@ -81,10 +83,9 @@ class AgentLlamaIndexMixin:
     def llm(self):
         if self.__llm is None:
             try:
-                if self.settings["llm_generator_settings"]["use_api"]:
+                if self.llm_generator_settings.use_api:
                     self.__llm = self.__model
                 else:
-                    from airunner.aihandler.llm.huggingface_llm import HuggingFaceLLM
                     self.__llm = HuggingFaceLLM(model=self.__model, tokenizer=self.__tokenizer)
             except Exception as e:
                 self.logger.error(f"Error loading LLM: {str(e)}")
@@ -102,6 +103,11 @@ class AgentLlamaIndexMixin:
         self.__model = model
         self.__tokenizer = tokenizer
         self.__load_rag()
+
+    def unload_rag(self):
+        self.__llm.unload()
+        del self.__llm
+        self.__llm = None
 
     def reload_rag(self, data: dict = None):
         self.logger.debug("Reloading RAG index...")
@@ -121,9 +127,6 @@ class AgentLlamaIndexMixin:
         self.__load_document_index()
         self.__load_retriever()
         self.__load_context_chat_engine()
-        # self.__load_storage_context()
-        # self.__load_transformations()
-        # self.__load_index_struct()
 
     def __load_rag_tokenizer(self):
         self.logger.debug("Loading RAG tokenizer...")
@@ -199,52 +202,6 @@ class AgentLlamaIndexMixin:
         Settings.node_parser = self.__text_splitter
         Settings.num_output = 512
         Settings.context_window = 3900
-
-    # def __load_storage_context(self):
-    #     from llama_index.core import ServiceContext, StorageContext
-    #     self.logger.debug("Loading storage context...")
-    #     path = os.path.expanduser(self.settings["path_settings"]["storage_path"])
-    #     if not os.path.exists(path):
-    #         os.makedirs(path, exist_ok=True)
-    #     self.__storage_context = StorageContext.from_defaults(
-    #         docstore=self.__documents,
-    #         index_store=self.__index,
-    #         vector_store=None,
-    #         image_store=None,
-    #         vector_stores={},
-    #         graph_store=None,
-    #         persist_dir=path
-    #     )
-
-    # def __load_transformations(self):
-    #     from llama_index.core.schema import TransformComponent
-    #     self.logger.debug("Loading transformations...")
-    #     self.__transformations = [
-    #         TransformComponent(
-    #             name="lowercase",
-    #             function=lambda x: x.lower(),
-    #             description="Lowercase all text",
-    #         ),
-    #         TransformComponent(
-    #             name="remove_punctuation",
-    #             function=lambda x: x.translate(str.maketrans("", "", string.punctuation)),
-    #             description="Remove all punctuation",
-    #         ),
-    #         TransformComponent(
-    #             name="remove_whitespace",
-    #             function=lambda x: x.strip(),
-    #             description="Remove all whitespace",
-    #         ),
-    #     ]
-
-    # def __load_index_struct(self):
-    #     from llama_index.core.data_structs import IndexDict
-    #     self.logger.debug("Loading index struct...")
-    #     self.__index_struct = IndexDict(
-    #         nodes_dict=self.__index.index_struct.nodes_dict,
-    #         doc_id_dict=self.__index.index_struct.doc_id_dict,
-    #         embeddings_dict=self.__index.index_struct.embeddings_dict,
-    #     )
 
     def __load_document_index(self):
         self.logger.debug("Loading index...")

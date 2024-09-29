@@ -119,7 +119,7 @@ class Logger(
         # Format the record
         formatted_message = self.formatter.format(record)
 
-        self.emit_signal(SignalCode.LOG_LOGGED_SIGNAL, {
-            "message": formatted_message,
-            "level": level_name
-        })
+        # self.emit_signal(SignalCode.LOG_LOGGED_SIGNAL, {
+        #     "message": formatted_message,
+        #     "level": level_name
+        # })

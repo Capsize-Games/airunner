@@ -1,4 +1,5 @@
 import datetime
+import json
 import sqlite3
 import time
 import traceback
@@ -6,7 +7,7 @@ from typing import AnyStr
 import torch
 from PySide6.QtCore import QObject
 
-from airunner.aihandler.llm.agent.agent_database_handler import AgentDatabaseHandler
+from airunner.aihandler.models.agent_db_handler import AgentDBHandler
 from airunner.aihandler.llm.agent.agent_llamaindex_mixin import AgentLlamaIndexMixin
 from airunner.aihandler.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
 from airunner.aihandler.logger import Logger
@@ -14,14 +15,13 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import (
     SignalCode,
     LLMChatRole,
-    LLMActionType
+    LLMActionType, WorkerType
 )
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.create_worker import create_worker
 from airunner.utils.prepare_llm_generate_kwargs import prepare_llm_generate_kwargs
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.workers.agent_worker import AgentWorker
 
 
 class BaseAgent(
@@ -37,7 +37,6 @@ class BaseAgent(
         self.model = kwargs.pop("model", None)
         AgentLlamaIndexMixin.__init__(self)
         self._chatbot = None
-        self._bot_mood = None
         self.action = LLMActionType.CHAT
         self.rendered_template = None
         self.tokenizer = kwargs.pop("tokenizer", None)
@@ -45,14 +44,14 @@ class BaseAgent(
         self.tools = kwargs.pop("tools", None)
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
-        self.database_handler = AgentDatabaseHandler()
-        self.conversation_id = self.database_handler.create_conversation()  # Create a new conversation
+        self.database_handler = AgentDBHandler()
+        self.conversation_id = None
         self.history = self.database_handler.load_history_from_db(self.conversation_id)  # Load history by conversation ID
         super().__init__(*args, **kwargs)
         self.prompt = ""
         self.thread = None
         self.do_interrupt = False
-        self.response_worker = create_worker(AgentWorker)
+        self.response_worker = create_worker(WorkerType.AgentWorker)
         self.load_rag(model=self.model, tokenizer=self.tokenizer)
 
     @property
@@ -69,56 +68,64 @@ class BaseAgent(
         }
 
     @property
-    def llm_generator_settings(self):
-        return self.settings["llm_generator_settings"]
-
-    @property
-    def chatbot_name(self) -> str:
-        if self.action == LLMActionType.APPLICATION_COMMAND:
-            chatbot_name = "Agent"
-        else:
-            chatbot_name = self.llm_generator_settings["current_chatbot"]
-        return chatbot_name
-
-    @property
-    def chatbot(self) -> dict:
-        if self._chatbot and self.action != LLMActionType.APPLICATION_COMMAND:
-            return self._chatbot
-        return self.llm_generator_settings["saved_chatbots"][self.chatbot_name]
-
-    @property
     def username(self) -> str:
-        return self.chatbot["username"]
+        return self.chatbot.username
 
     @property
     def botname(self) -> str:
-        return self.chatbot["botname"]
+        return self.chatbot.botname
 
     @property
     def bot_mood(self) -> str:
-        return self.chatbot["bot_mood"] if self._bot_mood is None else self._bot_mood
+        return self.chatbot.bot_mood
 
     @bot_mood.setter
     def bot_mood(self, value: str):
-        self._bot_mood = value
-        settings = self.settings
-        settings["llm_generator_settings"]["saved_chatbots"][self.chatbot_name]["bot_mood"] = value
-        self.settings = settings
+        self.update_chatbot("bot_mood", value)
 
     @property
     def bot_personality(self) -> str:
-        return self.chatbot["bot_personality"]
+        return self.chatbot.bot_personality
 
     def unload(self):
+        self.unload_rag()
+        del self.model
+        del self.tokenizer
         self.model = None
         self.tokenizer = None
         self.thread = None
-        clear_memory()
 
     def clear_history(self):
         self.history = []
         self.reload_rag()
+        self.conversation_id = None
+
+    def update_conversation_title(self, title):
+        self.database_handler.update_conversation_title(self.conversation_id, title)
+
+    def create_conversation(self):
+        # Get the most recent conversation ID
+        recent_conversation_id = self.database_handler.get_most_recent_conversation_id()
+
+        # Check if there are messages for the most recent conversation ID
+        if recent_conversation_id is not None:
+            messages = self.database_handler.load_history_from_db(recent_conversation_id)
+            if not messages:
+                self.conversation_id = recent_conversation_id
+                return
+
+        # If there are messages or no recent conversation ID, create a new conversation
         self.conversation_id = self.database_handler.create_conversation()
+        self.emit_signal(
+            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
+            {
+                "llm_request": True,
+                "request_data": {
+                    "action": LLMActionType.SUMMARIZE,
+                    "prompt": self.prompt,
+                }
+            }
+        )
 
     def interrupt_process(self):
         self.do_interrupt = True
@@ -170,7 +177,7 @@ class BaseAgent(
         )
 
     def date_time_prompt(self) -> str:
-        if not self.chatbot["use_datetime"]:
+        if not self.chatbot.use_datetime:
             return ""
         current_date = datetime.datetime.now().strftime("%A %b %d, %Y")
         current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
@@ -188,19 +195,19 @@ class BaseAgent(
     ):
         system_instructions = ""
         guardrails_prompt = ""
-        use_mood = self.chatbot["use_mood"]
-        use_personality = self.chatbot["use_personality"]
-        use_names = self.chatbot["assign_names"]
-        use_system_instructions = self.chatbot["use_system_instructions"]
-        use_guardrails = self.chatbot["use_guardrails"]
+        use_mood = self.chatbot.use_mood
+        use_personality = self.chatbot.use_personality
+        use_names = self.chatbot.assign_names
+        use_system_instructions = self.chatbot.use_system_instructions
+        use_guardrails = self.chatbot.use_guardrails
         bot_mood = self.bot_mood
-        bot_personality = self.chatbot["bot_personality"]
-        username = self.chatbot["username"]
-        botname = self.chatbot["botname"]
+        bot_personality = self.chatbot.bot_personality
+        username = self.chatbot.username
+        botname = self.chatbot.botname
         if use_system_instructions:
-            system_instructions = self.chatbot["system_instructions"]
+            system_instructions = self.chatbot.system_instructions
         if use_guardrails:
-            guardrails_prompt = self.chatbot["guardrails_prompt"]
+            guardrails_prompt = self.chatbot.guardrails_prompt
 
         system_prompt = []
 
@@ -219,15 +226,43 @@ class BaseAgent(
             ]
 
         elif action is LLMActionType.GENERATE_IMAGE:
-            guardrails = self.settings["prompt_templates"]["image"]["guardrails"] if self.settings["prompt_templates"]["image"]["use_guardrails"] else ""
+            prompt_template = self.get_prompt_template_by_name("image")
+            # system_prompt = [
+            #     prompt_template.guardrails,
+            #     prompt_template.system,
+            #     self.history_prompt()
+            # ]
             system_prompt = [
-                guardrails,
-                self.settings["prompt_templates"]["image"]["system"],
+                (
+                    "You are an image generator. "
+                    "You will be provided with a JSON string and it is your goal to replace the PLACEHOLDER "
+                    "text with text appropriate for the given attribute in the JSON string. "
+                    "You will follow all of the rules to generate descriptions for an image. "
+                    "\n------\n"
+                    "RULES:\n"
+                    "When available, use the Additional Context to keep your generated content in line with the existing context.\n"
+                    "You will be given instructions on what type of image to generate and you will do your best to follow those instructions.\n"
+                    "You will only generate a value for the given attribute.\n"
+                    "Never respond in a conversational manner. Never provide additional information, details or information.\n"
+                    "You will only provide the requested information by replacing the PLACEHOLDER.\n"
+                    "Never change the attribute\n"
+                    "You must not change the structure of the data.\n"
+                    "You will only return JSON strings.\n"
+                    "You will not return any other data types.\n"
+                    "You are an artist, so use your imagination and keep things interesting.\n"
+                    "You will not respond in a conversational manner or with additonal notes or information.\n"
+                    f"Only return one JSON block. Do not generate instructions or additional information.\n"
+                    "You must never break the rules.\n"
+                    "Here is a description of the attributes: \n"
+                    "`description`: This should describe the overall subject and look and feel of the image\n"
+                    "`composition`: This should describe the attributes of the image such as color, composition and other details\n"
+                ),
                 self.history_prompt()
             ]
 
         elif action is LLMActionType.APPLICATION_COMMAND:
-            system_instructions = self.settings["prompt_templates"]["application_command"]["system"]
+            prompt_template = self.get_prompt_template_by_name("application_command")
+            system_instructions = prompt_template.system
 
             # Create a list of commands that the bot can choose from
             for index, action in self.available_actions.items():
@@ -240,8 +275,17 @@ class BaseAgent(
                 system_instructions
             ]
 
+        elif action is LLMActionType.SUMMARIZE:
+            prompt_template = self.get_prompt_template_by_name("summarize")
+            system_instructions = prompt_template.system
+            system_prompt = [
+                system_instructions,
+                self.history_prompt()
+            ]
+
         elif action is LLMActionType.UPDATE_MOOD:
-            system_instructions = self.settings["prompt_templates"]["update_mood"]["system"]
+            prompt_template = self.get_prompt_template_by_name("update_mood")
+            system_instructions = prompt_template.system
             system_prompt = [
                 guardrails_prompt,
                 system_instructions,
@@ -252,7 +296,8 @@ class BaseAgent(
             ]
 
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            system_instructions = self.settings["prompt_templates"]["rag_search"]["system"]
+            prompt_template = self.get_prompt_template_by_name("rag_search")
+            system_instructions = prompt_template.system
             system_prompt = [
                 guardrails_prompt,
                 system_instructions,
@@ -286,22 +331,22 @@ class BaseAgent(
         action
     ) -> list:
         system_prompt = self.build_system_prompt(action)
-        if action == LLMActionType.APPLICATION_COMMAND:
+        if action is LLMActionType.APPLICATION_COMMAND:
             prompt = (
                 "Choose an action from THE LIST of commands for the text above. "
                 "Only return the number of the command."
             )
-        elif action == LLMActionType.GENERATE_IMAGE:
+        elif action is LLMActionType.GENERATE_IMAGE:
             prompt = (
-                "Generate an image based on the user's request.\n"
-                "You will return a JSON string which matches the following data structure:\n"
-                "```json\n{\n"
-                "    \"prompt\": \"[PLACEHOLDER]\",\n"
-                "    \"secondary_prompt\": \"[PLACEHOLDER]\",\n"
-                "    \"negative_prompt\": \"[PLACEHOLDER]\",\n"
-                "    \"secondary_negative_prompt\": \"[PLACEHOLDER]\",\n"
-                "}```\n"
-                f"Replace the [PLACEHOLDER] with the appropriate text basd on {self.username}'s request.\n"
+                f"Replace the placeholder values in the following JSON:\n"
+                "```json\n"+ json.dumps(dict(
+                    description="PLACEHOLDER",
+                    composition="PLACEHOLDER"
+                )) +"\n```\n"
+            )
+        elif action is LLMActionType.SUMMARIZE:
+            prompt = (
+                f"Summarize the conversation history"
             )
         else:
             prompt = f"Respond to {self.username}"
@@ -327,6 +372,7 @@ class BaseAgent(
             conversation=conversation,
             tokenize=False
         )
+        print(rendered_template)
 
         # HACK: current version of transformers does not allow us to pass
         # variables to the chat template function, so we apply those here
@@ -345,12 +391,12 @@ class BaseAgent(
 
     @property
     def override_parameters(self):
-        generate_kwargs = prepare_llm_generate_kwargs(self.settings["llm_generator_settings"])
-        return generate_kwargs if self.settings["llm_generator_settings"]["override_parameters"] else {}
+        generate_kwargs = prepare_llm_generate_kwargs(self.llm_generator_settings)
+        return generate_kwargs if self.llm_generator_settings.override_parameters else {}
 
     @property
     def system_instructions(self):
-        return self.chatbot["system_instructions"]
+        return self.chatbot.system_instructions
 
     @property
     def generator_settings(self):
@@ -358,7 +404,7 @@ class BaseAgent(
 
     @property
     def device(self):
-        return get_torch_device(self.settings["memory_settings"]["default_gpu"]["llm"])
+        return get_torch_device(self.memory_settings.default_gpu_llm)
 
     def run(
         self,
@@ -371,8 +417,15 @@ class BaseAgent(
         self.prompt = prompt
         streamer = self.streamer
 
+        if self.conversation_id is None:
+            self.create_conversation()
+
         # Add the user's message to history
-        if action is LLMActionType.CHAT:
+        if action in (
+            LLMActionType.CHAT,
+            LLMActionType.PERFORM_RAG_SEARCH,
+            LLMActionType.GENERATE_IMAGE,
+        ):
             self.add_message_to_history(self.prompt, LLMChatRole.HUMAN)
 
         self.rendered_template = self.get_rendered_template(action)
@@ -482,7 +535,8 @@ class BaseAgent(
         if streamer and action in (
             LLMActionType.CHAT,
             LLMActionType.GENERATE_IMAGE,
-            LLMActionType.UPDATE_MOOD
+            LLMActionType.UPDATE_MOOD,
+            LLMActionType.SUMMARIZE
         ):
             for new_text in streamer:
                 # strip all newlines from new_text
@@ -571,19 +625,26 @@ class BaseAgent(
                     streamed_template,
                     LLMChatRole.ASSISTANT
                 )
+
             elif action is LLMActionType.UPDATE_MOOD:
                 self.bot_mood = streamed_template
+                print("*" * 100)
+                print("MOOD UPDATED TO ", self.bot_mood)
+                print("*" * 100)
                 return self.run(
                     prompt=self.prompt,
                     action=LLMActionType.CHAT,
                     **kwargs,
                 )
 
+            elif action is LLMActionType.SUMMARIZE:
+                self.update_conversation_title(streamed_template)
+
             elif action is LLMActionType.GENERATE_IMAGE:
                 self.emit_signal(
                     SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
                     {
-                        "prompt": streamed_template,
+                        "message": streamed_template,
                         "type": "photo"
                     }
                 )
@@ -609,7 +670,7 @@ class BaseAgent(
         )
 
     def get_db_connection(self):
-        return sqlite3.connect('agent_history.db')
+        return sqlite3.connect('airunner.db')
 
     def add_message_to_history(
         self,

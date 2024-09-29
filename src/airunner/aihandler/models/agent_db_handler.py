@@ -1,26 +1,10 @@
 import os
 import datetime
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from .models import Base, Conversation, Message, Summary
+from airunner.aihandler.models.agent_models import Base, Conversation, Message, Summary
+from airunner.aihandler.models.database_handler import DatabaseHandler
 
-class AgentDatabaseHandler:
-    def __init__(self, db_path=os.path.expanduser(
-        os.path.join(
-            "~/.airunner",
-            "data",
-            "agent_history.db"
-        )
-    )):
-        self.db_path = db_path
-        self.engine = create_engine(f'sqlite:///{self.db_path}')
-        Base.metadata.create_all(self.engine)
-        self.Session = sessionmaker(bind=self.engine)
-        self.conversation_id = None
 
-    def get_db_session(self):
-        return self.Session()
-
+class AgentDBHandler(DatabaseHandler):
     def load_history_from_db(self, conversation_id):
         with self.get_db_session() as session:
             messages = session.query(Message).filter_by(conversation_id=conversation_id).order_by(Message.timestamp).all()
@@ -59,6 +43,13 @@ class AgentDatabaseHandler:
             session.commit()
             return conversation.id
 
+    def update_conversation_title(self, conversation_id, title):
+        with self.get_db_session() as session:
+            conversation = session.query(Conversation).filter_by(id=conversation_id).first()
+            if conversation:
+                conversation.title = title
+                session.commit()
+
     def add_summary(self, content, conversation_id):
         timestamp = datetime.datetime.now()  # Ensure timestamp is a datetime object
         with self.get_db_session() as session:
@@ -95,3 +86,9 @@ class AgentDatabaseHandler:
             session.delete(conversation)
             session.commit()
         session.close()
+
+    def get_most_recent_conversation_id(self):
+        session = self.Session()
+        conversation = session.query(Conversation).order_by(Conversation.timestamp.desc()).first()
+        session.close()
+        return conversation.id if conversation else None

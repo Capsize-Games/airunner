@@ -5,7 +5,7 @@ from typing import Optional
 import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QSize
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent
@@ -65,6 +65,39 @@ class CustomScene(
 
         self.register(SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal)
 
+    @property
+    def current_tool(self):
+        return CanvasToolName(self.application_settings.current_tool)
+
+    @property
+    def settings_key(self):
+        return self.property("settings_key")
+
+    @property
+    def current_settings(self):
+        settings = None
+        if self.settings_key == "controlnet_settings":
+            settings = self.controlnet_settings
+        elif self.settings_key == "image_to_image_settings":
+            settings = self.image_to_image_settings
+        elif self.settings_key == "outpaint_settings":
+            settings = self.outpaint_settings
+        elif self.settings_key in ["brush", "drawing_pad_settings"]:
+            settings = self.drawing_pad_settings
+        if not settings:
+            raise ValueError(f"Settings not found for key: {self.settings_key}")
+        return settings
+
+    def update_current_settings(self, key, value):
+        if self.settings_key == "controlnet_settings":
+            self.update_controlnet_settings(key, value)
+        elif self.settings_key == "image_to_image_settings":
+            self.update_image_to_image_settings(key, value)
+        elif self.settings_key == "outpaint_settings":
+            self.update_outpaint_settings(key, value)
+        elif self.settings_key in ["brush", "drawing_pad_settings"]:
+            self.update_drawing_pad_settings(key, value)
+
     def showEvent(self, event):
         self.set_image()
         self.set_item()
@@ -85,7 +118,7 @@ class CustomScene(
 
     @property
     def scene_is_active(self):
-        return self.canvas_type == self.settings["canvas_settings"]["active_canvas"]
+        return self.canvas_type == self.canvas_settings.active_canvas
 
     def register_signals(self):
         signals = [
@@ -170,16 +203,14 @@ class CustomScene(
             image = self.paste_image_from_clipboard()
             #self.delete_image()
 
-            settings = self.settings
-            if settings["resize_on_paste"]:
+            if self.application_settings.resize_on_paste:
                 image = self.resize_image(image)
             image = convert_image_to_base64(image)
-            settings[self.settings_key]["image"] = image
-            self.settings = settings
+            self.update_current_settings("image", image)
             self.refresh_image()
 
     def create_image(self, image):
-        if self.settings["resize_on_paste"]:
+        if self.application_settings.resize_on_paste:
             image = self.resize_image(image)
         if image is not None:
             self.add_image_to_scene(image)
@@ -187,8 +218,11 @@ class CustomScene(
     def resize_image(self, image: Image) -> Image:
         if image is None:
             return
-        settings = self.settings
-        max_size = (settings["working_width"], settings["working_height"])
+
+        max_size = (
+            self.application_settings.working_width,
+            self.application_settings.working_height
+        )
         image.thumbnail(max_size, PIL.Image.Resampling.BICUBIC)
         return image
 
@@ -211,7 +245,7 @@ class CustomScene(
 
     def handle_load_image(self, image_path: str):
         image = self.load_image(image_path)
-        if self.settings["resize_on_paste"]:
+        if self.application_settings.resize_on_paste:
             image = self.resize_image(image)
         self.add_image_to_scene(image)
 
@@ -262,16 +296,14 @@ class CustomScene(
             )
         self.set_current_active_image(image)
         base64_image = convert_image_to_base64(image)
-        settings = self.settings
-        settings[self.settings_key]["image"] = base64_image
-        self.settings = settings
+        self.update_current_settings("image", base64_image)
         q_image = ImageQt.ImageQt(image)
         self.item.setPixmap(QPixmap.fromImage(q_image))
         self.item.setZValue(0)
         self.update()
 
     def current_active_image(self) -> Image:
-        base_64_image = self.settings[self.settings_key]["image"]
+        base_64_image = self.current_settings.image
         try:
             return convert_base64_to_image(base_64_image)
         except PIL.UnidentifiedImageError:
@@ -344,9 +376,7 @@ class CustomScene(
         except Exception as e:
             self.logger.error(e)
         if base_64_image is not None:
-            settings = self.settings
-            settings[self.settings_key]["image"] = base_64_image
-            self.settings = settings
+            self.update_current_settings("image", base_64_image)
 
         # Save the current viewport position
         view = self.views()[0]
@@ -385,9 +415,7 @@ class CustomScene(
         self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
 
     def on_canvas_clear_signal(self):
-        settings = self.settings
-        settings[self.settings_key]["image"] = None
-        self.settings = settings
+        self.update_current_settings("image", None)
         self.delete_image()
 
     def on_canvas_copy_image_signal(self):
@@ -479,19 +507,16 @@ class CustomScene(
 
         if self.painter and self.painter.isActive():
             self.painter.end()
-        settings = self.settings
-        settings[self.settings_key]["image"] = None
-        self.settings = settings
+        self.update_current_settings("image", None)
         self.image = None
         self.set_image()
         self.set_item()
         self.initialize_image()
 
     def set_image(self, pil_image: Image = None):
-        settings = self.settings
         base64image = None
         if not pil_image:
-            base64image = settings[self.settings_key]["image"]
+            base64image = self.current_settings.image
 
         if base64image is not None:
             try:
@@ -513,10 +538,28 @@ class CustomScene(
             #     img_scene.removeItem(self.item)
             self.image = img
             #self.initialize_image()
+
+            working_width = self.application_settings.working_width
+            working_height = self.application_settings.working_height
+            if working_width != pil_image.width or working_height != pil_image.height:
+                self._do_resize = True
+                self._target_size = QSize(working_width, working_height)
+                resized_image = QImage(
+                    working_width,
+                    working_height,
+                    QImage.Format.Format_ARGB32
+                )
+                resized_image.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(resized_image)
+                painter.drawImage(0, 0, img)
+                painter.end()
+                self.image = resized_image
+
+
         else:
             self.image = QImage(
-                settings["working_width"],
-                settings["working_height"],
+                self.application_settings.working_width,
+                self.application_settings.working_height,
                 QImage.Format.Format_ARGB32
             )
             self.image.fill(Qt.GlobalColor.transparent)
@@ -582,9 +625,8 @@ class CustomScene(
 
         # Check if the Ctrl key is pressed
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            settings = self.settings
-            zoom_in_factor = settings["grid_settings"]["zoom_in_step"]
-            zoom_out_factor = -settings["grid_settings"]["zoom_out_step"]
+            zoom_in_factor = self.grid_settings.zoom_in_step
+            zoom_out_factor = -self.grid_settings.zoom_out_step
 
             if event.delta() > 0:
                 zoom_factor = zoom_in_factor
@@ -592,25 +634,23 @@ class CustomScene(
                 zoom_factor = zoom_out_factor
 
             # Update zoom level
-            zoom_level = settings["grid_settings"]["zoom_level"]
+            zoom_level = self.grid_settings.zoom_level
             zoom_level += zoom_factor
             if zoom_level < 0.1:
                 zoom_level = 0.1
-            settings["grid_settings"]["zoom_level"] = zoom_level
-            self.settings = settings
+            self.update_grid_settings("zoom_level", zoom_level)
 
             self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
     def handle_mouse_event(self, event, is_press_event) -> bool:
         if isinstance(event, QMouseEvent) and event.button() == Qt.MouseButton.LeftButton:
-            settings = self.settings
             view = self.views()[0]
             pos = view.mapFromScene(event.scenePos())
             if (
-                settings["grid_settings"]["snap_to_grid"] and
-                settings["current_tool"] == CanvasToolName.SELECTION
+                self.grid_settings.snap_to_grid and
+                self.current_tool is CanvasToolName.SELECTION
             ):
-                x, y = snap_to_grid(settings, pos.x(), pos.y(), False)
+                x, y = snap_to_grid(self.grid_settings, pos.x(), pos.y(), False)
                 pos = QPoint(x, y)
                 if is_press_event:
                     self.selection_stop_pos = None
@@ -631,6 +671,7 @@ class CustomScene(
     def handle_left_mouse_release(self, event) -> bool:
         return self.handle_mouse_event(event, False)
 
+    # Combined mousePressEvent
     def mousePressEvent(self, event):
         if isinstance(event, QGraphicsSceneMouseEvent):
             if event.button() == Qt.MouseButton.RightButton:
@@ -642,6 +683,46 @@ class CustomScene(
         self.last_pos = event.scenePos()
         self.update()
 
+        if self.scene_is_active and event.button() == Qt.MouseButton.LeftButton:
+            self.handle_left_mouse_press(event)
+            self.handle_cursor(event)
+            if not self.is_brush_or_eraser:
+                super().mousePressEvent(event)
+            elif self.drawing_pad_settings.enable_automatic_drawing:
+                self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
+
+    # Combined mouseReleaseEvent
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.RightButton:
+            self.right_mouse_button_pressed = False
+        elif not self.handle_left_mouse_release(event):
+            super(CustomScene, self).mouseReleaseEvent(event)
+        self.handle_cursor(event)
+
+        super().mouseReleaseEvent(event)
+        if self.scene_is_active and event.button() == Qt.MouseButton.LeftButton:
+            self._is_drawing = False
+            self._is_erasing = False
+            self.last_pos = None
+            self.start_pos = None
+            if type(self.image) is Image:
+                image = ImageQt.ImageQt(self.image.convert("RGBA"))
+            else:
+                image = self.image
+            pil_image = ImageQt.fromqimage(image)
+            base_64_image = convert_image_to_base64(pil_image)
+            self.update_current_settings("image", base_64_image)
+            self.do_update = False
+            if (
+                self.drawing_pad_settings.enable_automatic_drawing and
+                (
+                    self.current_tool is CanvasToolName.BRUSH or
+                    self.current_tool is CanvasToolName.ERASER
+                )
+            ):
+                self.emit_signal(SignalCode.SD_GENERATE_IMAGE_SIGNAL)
+
+    # Combined mouseMoveEvent
     def mouseMoveEvent(self, event):
         if self.right_mouse_button_pressed:
             view = self.views()[0]
@@ -655,12 +736,9 @@ class CustomScene(
             self.handle_cursor(event)
             super(CustomScene, self).mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.RightButton:
-            self.right_mouse_button_pressed = False
-        elif not self.handle_left_mouse_release(event):
-            super(CustomScene, self).mouseReleaseEvent(event)
-        self.handle_cursor(event)
+        if self.scene_is_active:
+            self.last_pos = event.scenePos()
+            self.update()
 
     def event(self, event):
         if self.handling_event:

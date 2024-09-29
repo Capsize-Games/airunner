@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.0.0.dev18",
+    version="3.0.0.dev19",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -26,6 +26,8 @@ setup(
         "torchaudio==2.4.0",
         "torchvision==0.19.0",
         "optimum==1.21.4",
+        "numpy==1.26.4",
+        "pillow=10.4.0",
 
         # LLM Dependencies
         "transformers==4.43.4",

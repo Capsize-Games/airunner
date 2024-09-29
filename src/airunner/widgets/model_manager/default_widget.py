@@ -102,17 +102,17 @@ class DefaultModelWidget(
     def toggle_all_state_change(self, val: int):
         if val == 0:
             # disable all by setting AIModel.enabled to False where is_default=True
-            for item in self.ai_model_get_all():
-                item["enabled"] = False
-                self.ai_model_update(item)
+            for item in self.ai_models:
+                item.enabled = False
+                self.update_ai_model(item)
             self.show_items_in_scrollarea()
         elif val == 1:
             # self.ui.toggle_all is a checkbox with tri-state enabled, how can we set it to checked?
             self.ui.toggle_all.setCheckState(QtCore.Qt.CheckState.Checked)
         elif val == 2:
-            for item in self.ai_model_get_all():
-                item["enabled"] = True
-                self.ai_model_update(item)
+            for item in self.ai_models:
+                item.enabled = True
+                self.update_ai_model(item)
             self.show_items_in_scrollarea()
 
     def search_text_changed(self, val):

@@ -1,7 +1,6 @@
 import os
 import time
 import torch
-from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 from airunner.aihandler.tts.tts_handler import TTSHandler
 from airunner.enums import SignalCode, LLMChatRole, ModelType, ModelStatus
 from airunner.utils.clear_memory import clear_memory
@@ -9,21 +8,21 @@ from airunner.utils.clear_memory import clear_memory
 
 class SpeechT5TTSHandler(TTSHandler):
     target_model = "t5"
-    model_class_ = SpeechT5ForTextToSpeech
-    processor_class_ = SpeechT5Processor
 
-    @property
-    def tts_settings(self):
-        return self.settings["tts_settings"]["speecht5"]
+    def __init__(self, *args, **kwargs):
+        from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech
+        self.model_class_ = SpeechT5ForTextToSpeech
+        self.processor_class_ = SpeechT5Processor
+        super().__init__(*args, **kwargs)
 
     @property
     def processor_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["base_path"],
+                self.path_settings.base_path,
                 "text/models",
                 "tts",
-                self.settings["tts_settings"]["speecht5"]["processor_path"]
+                self.speech_t5_settings.processor_path
             )
         )
 
@@ -31,10 +30,10 @@ class SpeechT5TTSHandler(TTSHandler):
     def model_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["base_path"],
+                self.path_settings.base_path,
                 "text/models",
                 "tts",
-                self.settings["tts_settings"]["speecht5"]["model_path"],
+                self.speech_t5_settings.model_path,
             )
         )
 
@@ -42,10 +41,10 @@ class SpeechT5TTSHandler(TTSHandler):
     def vocoder_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["base_path"],
+                self.path_settings.base_path,
                 "text/models",
                 "tts",
-                self.settings["tts_settings"]["speecht5"]["vocoder_path"],
+                self.speech_t5_settings.vocoder_path,
             )
         )
 
@@ -53,7 +52,7 @@ class SpeechT5TTSHandler(TTSHandler):
     def speaker_embeddings_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.settings["path_settings"]["base_path"],
+                self.path_settings.base_path,
                 "text/models",
                 "tts",
                 "speaker_embeddings"
@@ -62,6 +61,7 @@ class SpeechT5TTSHandler(TTSHandler):
 
     def load_vocoder(self):
         self.logger.debug(f"Loading Vocoder {self.vocoder_path}")
+        from transformers import SpeechT5HifiGan
         try:
             self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.LOADING, self.vocoder_path)
             vocoder = self.vocoder = SpeechT5HifiGan.from_pretrained(
@@ -97,7 +97,7 @@ class SpeechT5TTSHandler(TTSHandler):
     def unload_speaker_embeddings(self):
         self.speaker_embeddings = None
         self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.UNLOADED, "")
-        clear_memory()
+        clear_memory(self.memory_settings.default_gpu_tts)
 
     def do_generate(self, message):
         self.logger.debug("Generating TTS with T5")

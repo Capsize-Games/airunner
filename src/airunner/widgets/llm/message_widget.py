@@ -50,10 +50,12 @@ class MessageWidget(BaseWidget):
         self.set_chat_font()
 
     def set_chat_font(self):
-        if self.font_family != self.settings["font_settings"]["chat"]["font_family"] or self.font_size != \
-                self.settings["font_settings"]["chat"]["font_size"]:
-            self.font_family = self.settings["font_settings"]["chat"]["font_family"]
-            self.font_size = self.settings["font_settings"]["chat"]["font_size"]
+        font_setting = self.get_font_setting_by_name("chat")
+        font_family = font_setting.font_family
+        font_size = font_setting.font_size
+        if self.font_family != font_family or self.font_size != font_size:
+            self.font_family = font_family
+            self.font_size = font_size
             # Check if the font family is available
             if self.font_family in QFontDatabase().families():
                 font = QFont(self.font_family, self.font_size)

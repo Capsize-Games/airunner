@@ -99,34 +99,36 @@ class SettingsWindow(BaseWindow):
         :param widget: the widget that triggered the callback
         :return:
         """
-        print("handle_value_change")
+        print("TODO: handle_value_change")
         if attr_name is None:
             return
 
-        keys = attr_name.split(".")
-        if len(keys) > 0:
-            settings = self.settings
+        # keys = attr_name.split(".")
+        # if len(keys) > 0:
+        #     settings = self.settings
+        #
+        #     object_key = "settings"
+        #     if len(keys) == 1:
+        #         property_key = keys[0]
+        #     elif len(keys) == 2:
+        #         object_key = keys[0]
+        #         property_key = keys[1]
+        #     elif len(keys) == 3:
+        #         object_key = keys[0]
+        #         property_key = keys[1]
+        #         sub_property_key = keys[2]
+        #
+        #     if object_key != "settings":
+        #         if len(keys) == 3:
+        #             settings[object_key][property_key][sub_property_key] = value
+        #         else:
+        #             settings[object_key][property_key] = value
+        #         self.update_settings(object_key, settings[object_key])
+        #     else:
+        #         settings[property_key] = value
+        #         self.update_settings(property_key, settings[property_key])
+        print("HANDLE VALUE CHANGE", attr_name, value, widget)
 
-            object_key = "settings"
-            if len(keys) == 1:
-                property_key = keys[0]
-            elif len(keys) == 2:
-                object_key = keys[0]
-                property_key = keys[1]
-            elif len(keys) == 3:
-                object_key = keys[0]
-                property_key = keys[1]
-                sub_property_key = keys[2]
-
-            if object_key != "settings":
-                if len(keys) == 3:
-                    settings[object_key][property_key][sub_property_key] = value
-                else:
-                    settings[object_key][property_key] = value
-            else:
-                settings[property_key] = value
-
-            self.settings = settings
 
     def get_callback_for_slider(self, callback_name):
         return getattr(self, callback_name)
@@ -326,19 +328,18 @@ class SettingsWindow(BaseWindow):
         file_item.setCheckable(checkable)
         if checkable:
             checked = False
-            settings = self.settings
             if name == "resize_on_import":
-                checked = settings["resize_on_paste"]
+                checked = self.application_settings.resize_on_paste
             elif name == "image_to_new_layer":
-                checked = settings["image_to_new_layer"] is True
+                checked = self.application_settings.image_to_new_layer is True
             elif name == "dark_mode":
-                checked = settings["dark_mode_enabled"]
+                checked = self.application_settings.dark_mode_enabled
             elif name == "override_system_theme":
-                checked = settings["override_system_theme"]
+                checked = self.application_settings.override_system_theme
             elif name == "check_for_updates":
-                checked = settings["latest_version_check"]
+                checked = self.application_settings.latest_version_check
             elif name == "allow_online_mode":
-                checked = settings["allow_online_mode"]
+                checked = self.application_settings.allow_online_mode
 
             file_item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
         # prevent file_item from being edited
@@ -359,30 +360,27 @@ class SettingsWindow(BaseWindow):
         display_name = item.data(Qt.ItemDataRole.DisplayRole)
         description = item.data(Qt.ItemDataRole.ToolTipRole)
 
-        settings = self.settings
-
         if name == "resize_on_import":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["resize_on_paste"] = checked
+            self.update_application_settings("resize_on_paste", checked)
         elif name == "image_to_new_layer":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["image_to_new_layer"] = checked
+            self.update_application_settings("image_to_new_layer", checked)
         elif name == "dark_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["dark_mode_enabled"] = checked
+            self.update_application_settings("dark_mode_enabled", checked)
         elif name == "override_system_theme":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["override_system_theme"] = checked
+            self.update_application_settings("override_system_theme", checked)
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["latest_version_check"] = checked
+            self.update_application_settings("latest_version_check", checked)
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["allow_online_mode"] = checked
+            self.update_application_settings("allow_online_mode", checked)
         elif name == "reset_settings":
             self.emit_signal(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
-        
-        self.settings = settings
+
         self.show_content(section, display_name, name, description)
         self.set_stylesheet()
 

@@ -10,11 +10,11 @@ class BarkTTSHandler(TTSHandler):
 
     @property
     def processor_path(self):
-        return self.settings["tts_settings"]["bark"]["processor_path"]
+        return self.bark_settings.processor_path
 
     @property
     def model_path(self):
-        return self.settings["tts_settings"]["bark"]["model_path"]
+        return self.bark_settings.model_path
 
     def load_model(self):
         super().load_model()
@@ -25,10 +25,9 @@ class BarkTTSHandler(TTSHandler):
     def do_generate(self, message):
         self.logger.debug("Generating TTS with Bark...")
         self.logger.debug("Processing inputs...")
-        settings = self.settings["tts_settings"]["bark"]
         inputs = self.processor(
             text=message,
-            voice_preset=settings["voice"]
+            voice_preset=self.bark_settings.voice
         )
         inputs = self.move_inputs_to_device(inputs)
 
@@ -36,9 +35,9 @@ class BarkTTSHandler(TTSHandler):
         start = time.time()
         params = {
             **inputs,
-            'fine_temperature': settings["fine_temperature"] / 100.0,
-            'coarse_temperature': settings["coarse_temperature"] / 100.0,
-            'semantic_temperature': settings["semantic_temperature"] / 100.0,
+            'fine_temperature': self.bark_settings.fine_temperature / 100.0,
+            'coarse_temperature': self.bark_settings.coarse_temperature / 100.0,
+            'semantic_temperature': self.bark_settings.semantic_temperature / 100.0,
         }
 
         speech = self.model.generate(**params)

@@ -25,22 +25,21 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.image_type_dropdown.blockSignals(True)
         self.ui.image_path.blockSignals(True)
         # initialize values:
-        metadata_settings = self.settings["metadata_settings"]
-        self.ui.metadata_prompt.setChecked(metadata_settings["image_export_metadata_prompt"] is True)
-        self.ui.metadata_negative_prompt.setChecked(metadata_settings["image_export_metadata_negative_prompt"] is True)
-        self.ui.metadata_scale.setChecked(metadata_settings["image_export_metadata_scale"] is True)
-        self.ui.metadata_seed.setChecked(metadata_settings["image_export_metadata_seed"] is True)
-        self.ui.metadata_steps.setChecked(metadata_settings["image_export_metadata_steps"] is True)
-        self.ui.metadata_ddim_eta.setChecked(metadata_settings["image_export_metadata_ddim_eta"] is True)
-        self.ui.metadata_iterations.setChecked(metadata_settings["image_export_metadata_iterations"] is True)
-        self.ui.metadata_samples.setChecked(metadata_settings["image_export_metadata_samples"] is True)
-        self.ui.metadata_model.setChecked(metadata_settings["image_export_metadata_model"] is True)
-        self.ui.metadata_model_branch.setChecked(metadata_settings["image_export_metadata_model_branch"] is True)
-        self.ui.metadata_scheduler.setChecked(metadata_settings["image_export_metadata_scheduler"] is True)
-        self.ui.export_metadata.setChecked(metadata_settings["export_metadata"] is True)
-        self.ui.actionAuto_export_images.setChecked(self.settings["auto_export_images"] is True)
-        self.ui.image_type_dropdown.setCurrentText(self.settings["image_export_type"])
-        self.ui.image_path.setText(self.settings["path_settings"]["image_path"])
+        self.ui.metadata_prompt.setChecked(self.metadata_settings.image_export_metadata_prompt is True)
+        self.ui.metadata_negative_prompt.setChecked(self.metadata_settings.image_export_metadata_negative_prompt is True)
+        self.ui.metadata_scale.setChecked(self.metadata_settings.image_export_metadata_scale is True)
+        self.ui.metadata_seed.setChecked(self.metadata_settings.image_export_metadata_seed is True)
+        self.ui.metadata_steps.setChecked(self.metadata_settings.image_export_metadata_steps is True)
+        self.ui.metadata_ddim_eta.setChecked(self.metadata_settings.image_export_metadata_ddim_eta is True)
+        self.ui.metadata_iterations.setChecked(self.metadata_settings.image_export_metadata_iterations is True)
+        self.ui.metadata_samples.setChecked(self.metadata_settings.image_export_metadata_samples is True)
+        self.ui.metadata_model.setChecked(self.metadata_settings.image_export_metadata_model is True)
+        self.ui.metadata_model_branch.setChecked(self.metadata_settings.image_export_metadata_model_branch is True)
+        self.ui.metadata_scheduler.setChecked(self.metadata_settings.image_export_metadata_scheduler is True)
+        self.ui.export_metadata.setChecked(self.metadata_settings.export_metadata is True)
+        self.ui.actionAuto_export_images.setChecked(self.application_settings.auto_export_images is True)
+        self.ui.image_type_dropdown.setCurrentText(self.application_settings.image_export_type)
+        self.ui.image_path.setText(self.path_settings.image_path)
         image_types = [
             "png",
             "jpg",
@@ -49,7 +48,7 @@ class ExportPreferencesWidget(BaseWidget):
             "tiff",
         ]
         self.ui.image_type_dropdown.addItems(image_types)
-        self.ui.image_type_dropdown.setCurrentText(self.settings["image_export_type"])
+        self.ui.image_type_dropdown.setCurrentText(self.application_settings.image_export_type)
 
         self.ui.metadata_prompt.blockSignals(False)
         self.ui.metadata_negative_prompt.blockSignals(False)
@@ -68,81 +67,53 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.image_path.blockSignals(False)
 
     def action_toggled_steps(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["image_export_metadata_steps"] = val
-        self.settings = settings
+        self.update_metadata_settings("image_export_metadata_steps", val)
 
     def action_toggled_seed(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["image_export_metadata_seed"] = val
-        self.settings = settings
+        self.update_metadata_settings("image_export_metadata_seed", val)
 
     def action_toggled_scheduler(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["image_export_metadata_scheduler"] = val
-        self.settings = settings
+        self.update_metadata_settings("image_export_metadata_scheduler", val)
 
     def action_toggled_scale(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["image_export_metadata_scale"] = val
-        self.settings = settings
+        self.update_metadata_settings("image_export_metadata_scale", val)
 
     def action_toggled_samples(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["image_export_metadata_samples"] = val
-        self.settings = settings
+        self.update_metadata_settings("image_export_metadata_samples", val)
 
     def action_toggled_prompt(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["image_export_metadata_prompt"] = val
-        self.settings = settings
+        self.update_metadata_settings("image_export_metadata_prompt", val)
 
     def action_toggled_negative_prompt(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["image_export_metadata_negative_prompt"] = val
-        self.settings = settings
+        self.update_metadata_settings("image_export_metadata_negative_prompt", val)
 
     def action_toggled_model_branch(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["image_export_metadata_model_branch"] = val
-        self.settings = settings
+        self.update_metadata_settings("image_export_metadata_model_branch", val)
 
     def action_toggled_model(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["image_export_metadata_model"] = val
-        self.settings = settings
+        self.update_metadata_settings("image_export_metadata_model", val)
 
     def action_toggled_iterations(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["image_export_metadata_iterations"] = val
-        self.settings = settings
+        self.update_metadata_settings("image_export_metadata_iterations", val)
 
     def action_toggled_ddim(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["image_export_metadata_ddim_eta"] = val
-        self.settings = settings
+        self.update_metadata_settings("image_export_metadata_ddim_eta", val)
 
     def action_toggled_export_metadata(self, val):
-        settings = self.settings
-        settings["metadata_settings"]["export_metadata"] = val
-        self.settings = settings
+        self.update_metadata_settings("export_metadata", val)
 
     def action_toggle_automatically_export_images(self, val):
-        settings = self.settings
-        settings["auto_export_images"] = val
-        self.settings = settings
+        self.update_application_settings("auto_export_images", val)
 
     def action_image_type_text_changed(self, val):
-        settings = self.settings
-        settings["image_export_type"] = val
-        self.settings = settings
+        self.update_application_settings("image_export_type", val)
 
     def image_export_path_text_edited(self, val):
-        self.settings["path_settings"]["image_path"] = val
+        self.update_application_settings("path_settings", val)
 
     def action_clicked_button_browse(self):
         path = QFileDialog.getExistingDirectory(None, "Select Directory")
         if path:
             self.ui.image_path.setText(path)
-            self.settings["path_settings"]["embeddings_model_path"] = path
+            self.update_path_settings("embeddings_model_path", path)
 
