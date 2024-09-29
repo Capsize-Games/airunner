@@ -222,9 +222,6 @@
      <string>Edit</string>
     </property>
     <addaction name="separator"/>
-    <addaction name="actionUndo"/>
-    <addaction name="actionRedo"/>
-    <addaction name="separator"/>
     <addaction name="actionCut"/>
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
@@ -331,8 +328,6 @@
    </attribute>
    <addaction name="actionNew"/>
    <addaction name="actionExport_3"/>
-   <addaction name="actionUndo"/>
-   <addaction name="actionRedo"/>
    <addaction name="separator"/>
    <addaction name="actionToggle_Active_Grid_Area"/>
    <addaction name="actionToggle_Selection"/>
