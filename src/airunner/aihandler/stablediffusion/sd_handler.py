@@ -1,6 +1,5 @@
 import os
-from types import NoneType
-from typing import Any, List, Optional
+from typing import Any, List
 
 import diffusers
 import numpy as np
@@ -30,7 +29,6 @@ from airunner.enums import (
 from airunner.exceptions import PipeNotLoadedException
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils.clear_memory import clear_memory
-from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 from airunner.utils.get_torch_device import get_torch_device
 
 SKIP_RELOAD_CONSTS = (
