@@ -27,7 +27,7 @@ class FileSystemOperations(
             raise PermissionError(f"Access to {path} is not allowed")
 
     def read_stylesheet(self):
-        theme_name = DARK_THEME_NAME if self.settings["dark_mode_enabled"] else LIGHT_THEME_NAME
+        theme_name = DARK_THEME_NAME if self.application_settings.dark_mode_enabled else LIGHT_THEME_NAME
         here = Path(os.path.dirname(os.path.realpath(__file__)))
         path = str(here / ".." / ".." / "styles" / theme_name / "styles.qss")
 

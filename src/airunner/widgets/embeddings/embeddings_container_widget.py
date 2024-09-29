@@ -1,9 +1,7 @@
-import os
-
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode
-from airunner.utils.models.scan_path_for_items import scan_path_for_items
+from airunner.utils.models.scan_path_for_items import scan_path_for_embeddings
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
@@ -66,7 +64,7 @@ class EmbeddingsContainerWidget(
 
     def add_embedding(self, embedding):
         embedding_widget = EmbeddingWidget(embedding=embedding)
-        self.register_embedding_widget(embedding["name"], embedding_widget)
+        self.register_embedding_widget(embedding.name, embedding_widget)
         self.ui.scrollAreaWidgetContents.layout().addWidget(embedding_widget)
 
     def action_clicked_button_scan_for_embeddings(self):
@@ -77,14 +75,7 @@ class EmbeddingsContainerWidget(
 
     def scan_for_embeddings(self):
         self.clear_embedding_widgets()
-        settings = self.settings
-        settings["embeddings"] = scan_path_for_items(
-            base_path=self.settings["path_settings"]["base_path"],
-            current_items=self.settings["embeddings"],
-            scan_type="embeddings"
-        )
-        self.settings = settings
-        self.save_settings()
+        scan_path_for_embeddings(self.path_settings.base_path)
         self.load_embeddings()
 
     def toggle_all_toggled(self, val):
@@ -93,15 +84,15 @@ class EmbeddingsContainerWidget(
             for i in range(self.ui.scrollAreaWidgetContents.layout().count())
             if isinstance(self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget(), EmbeddingWidget)
         ]
-        settings = self.settings
         for embedding_widget in embedding_widgets:
             embedding_widget.ui.enabledCheckbox.blockSignals(True)
             embedding_widget.action_toggled_embedding(val, False)
             embedding_widget.ui.enabledCheckbox.blockSignals(False)
         QApplication.processEvents()
-        for index, _embedding in enumerate(self.settings["embeddings"][self.settings["generator_settings"]["version"]]):
-            settings["embeddings"][self.settings["generator_settings"]["version"]][index]["active"] = val
-        self.settings = settings
+        embeddings = self.get_embeddings_by_version(self.generator_settings.version)
+        for index, _embedding in enumerate(embeddings):
+            embeddings[index]["active"] = val
+        self.update_embeddings(embeddings)
 
     def search_text_changed(self, val):
         self.search_filter = val

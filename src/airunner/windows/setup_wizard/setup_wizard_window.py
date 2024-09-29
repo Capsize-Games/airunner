@@ -26,12 +26,10 @@ class SetupWizard(
         super(SetupWizard, self).__init__(*args)
 
         # Reset agreements
-        settings = self.settings
-        settings["agreements"]["user"] = False
-        settings["agreements"]["stable_diffusion"] = False
-        settings["agreements"]["airunner"] = False
-        settings["agreements"]["llama_license"] = False
-        self.settings = settings
+        self.update_application_settings("stable_diffusion_agreement_checked", False)
+        self.update_application_settings("airunner_agreement_checked", False)
+        self.update_application_settings("llama_license_agreement_checked", False)
+        self.update_application_settings("user_agreement_checked", False)
 
         self.setup_settings = dict(
             age_restriction_agreed=False,
@@ -166,14 +164,14 @@ class SetupWizard(
 
                 # User agreement conditional
                 elif current_id == self.user_agreement_id:
-                    if self.settings["agreements"]["user"]:
+                    if self.application_settings.user_agreement_checked:
                         return self.page_order[current_index + 1]
                     else:
                         return self.page_order[current_index]
 
                 # AI Runner license conditional
                 elif current_id == self.airunner_license_id:
-                    if self.settings["agreements"]["airunner"]:
+                    if self.application_settings.airunner_agreement_checked:
                         return self.page_order[current_index + 1]
                     else:
                         return self.page_order[current_index]
@@ -208,7 +206,7 @@ class SetupWizard(
 
                 # Stable Diffusion license conditional
                 elif current_id == self.stable_diffusion_license_id:
-                    if self.settings["agreements"]["stable_diffusion"]:
+                    if self.application_settings.stable_diffusion_agreement_checked:
                         return self.page_order[current_index + 1]
                     else:
                         return self.page_order[current_index]
@@ -218,14 +216,14 @@ class SetupWizard(
                     return self.page_order[current_index + 1]
 
                 elif current_id == self.llama_license_id:
-                    if self.settings["agreements"]["llama_license"]:
+                    if self.application_settings.llama_license_agreement_checked:
                         return self.page_order[current_index + 1]
                     else:
                         return self.page_order[current_index]
 
                 # AI Runner license conditional
                 elif current_id == self.airunner_license_id:
-                    if self.settings["agreements"]["airunner"]:
+                    if self.application_settings.airunner_agreement_checked:
                         return self.page_order[current_index + 1]
                     else:
                         return self.page_order[current_index]

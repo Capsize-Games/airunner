@@ -143,10 +143,29 @@
              <number>64</number>
             </property>
             <property name="settings_property" stdset="0">
-             <string notr="true">working_width</string>
+             <string notr="true">application_settings.working_width</string>
             </property>
             <property name="display_as_float" stdset="0">
              <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="size_lock_button">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="system-lock-screen"/>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -189,7 +208,7 @@
              <string>Height</string>
             </property>
             <property name="settings_property" stdset="0">
-             <string>working_height</string>
+             <string>application_settings.working_height</string>
             </property>
             <property name="display_as_float" stdset="0">
              <bool>false</bool>
@@ -222,7 +241,7 @@
          <property name="checked">
           <bool>false</bool>
          </property>
-         <layout class="QGridLayout" name="gridLayout_4">
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
           <property name="leftMargin">
            <number>0</number>
           </property>
@@ -235,7 +254,7 @@
           <property name="bottomMargin">
            <number>0</number>
           </property>
-          <item row="0" column="0">
+          <item>
            <widget class="SliderWidget" name="border_opacity_slider_widget" native="true">
             <property name="spinbox_single_step" stdset="0">
              <double>0.010000000000000</double>
@@ -275,10 +294,10 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item>
            <widget class="QPushButton" name="border_choose_color_button">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
@@ -287,7 +306,7 @@
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="text">
-             <string/>
+             <string>Color</string>
             </property>
            </widget>
           </item>
@@ -317,7 +336,7 @@
          <property name="checked">
           <bool>false</bool>
          </property>
-         <layout class="QGridLayout" name="gridLayout_5">
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
           <property name="leftMargin">
            <number>0</number>
           </property>
@@ -330,7 +349,7 @@
           <property name="bottomMargin">
            <number>0</number>
           </property>
-          <item row="0" column="0">
+          <item>
            <widget class="SliderWidget" name="fill_opacity_slider_widget" native="true">
             <property name="spinbox_single_step" stdset="0">
              <double>0.010000000000000</double>
@@ -370,10 +389,10 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item>
            <widget class="QPushButton" name="fill_choose_color_button">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
@@ -382,7 +401,7 @@
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="text">
-             <string/>
+             <string>Color</string>
             </property>
            </widget>
           </item>
@@ -446,6 +465,54 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>size_lock_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>active_grid_settings_widget</receiver>
+   <slot>size_lock_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>362</x>
+     <y>65</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>356</x>
+     <y>-15</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>border_choose_color_button</sender>
+   <signal>clicked()</signal>
+   <receiver>active_grid_settings_widget</receiver>
+   <slot>action_choose_border_color_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>710</x>
+     <y>122</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>94</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fill_choose_color_button</sender>
+   <signal>clicked()</signal>
+   <receiver>active_grid_settings_widget</receiver>
+   <slot>action_choose_fill_color_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>710</x>
+     <y>178</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>188</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>action_clicked_checkbox_toggle_active_grid_border(bool)</slot>
@@ -453,5 +520,6 @@
   <slot>action_clicked_checkbox_toggle_active_grid_area(bool)</slot>
   <slot>action_choose_border_color_clicked()</slot>
   <slot>action_choose_fill_color_clicked()</slot>
+  <slot>size_lock_toggled(bool)</slot>
  </slots>
 </ui>

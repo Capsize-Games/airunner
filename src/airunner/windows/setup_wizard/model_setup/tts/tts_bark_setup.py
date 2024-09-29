@@ -7,21 +7,20 @@ class TTSBarkSetup(DownloadWizardPage):
     class_name_ = Ui_bark_setup
 
     def start_download(self):
-        settings = self.settings
         self.models_to_download = [
             {
                 "model": {
-                    "path": settings["tts_settings"]["bark"]["processor_path"]
+                    "path": self.bark_settings.processor_path
                 },
             },
             {
                 "model": {
-                    "path": settings["tts_settings"]["bark"]["voice"]
+                    "path": self.bark_settings.voice
                 },
             },
             {
                 "model": {
-                    "path": settings["tts_settings"]["bark"]["model_path"]
+                    "path": self.bark_settings.model_path
                 },
             }
         ]

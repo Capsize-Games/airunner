@@ -12,10 +12,8 @@ class CivitAIPreferencesWidget(BaseWidget):
 
         self.ui.api_key.blockSignals(True)
         self.ui.api_key.setEchoMode(QLineEdit.EchoMode.Password)  # Set echo mode to Password
-        self.ui.api_key.setText(self.settings.get('civitai_api_key', ''))
+        self.ui.api_key.setText(self.application_settings.civit_ai_api_key)
         self.ui.api_key.blockSignals(False)
 
     def on_text_changed(self, text):
-        settings = self.settings
-        settings['civitai_api_key'] = text
-        self.settings = settings
+        self.update_application_settings('civitai_api_key', text)

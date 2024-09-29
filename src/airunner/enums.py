@@ -116,11 +116,9 @@ class SignalCode(Enum):
     EMBEDDING_LOAD_FAILED_SIGNAL = "embedding_load_failed_signal"
     EMBEDDING_UPDATE_SIGNAL = "update_embedding_signal"
     EMBEDDING_ADD_SIGNAL = "add_embedding_signal"
-    EMBEDDING_SCAN_SIGNAL = "scan_for_embeddings_signal"
     EMBEDDING_DELETE_MISSING_SIGNAL = "delete_missing_embeddings_signal"
     EMBEDDING_GET_ALL_SIGNAL = "get_all_embeddings"
     EMBEDDING_GET_ALL_RESULTS_SIGNAL = "get_all_embeddings_results"
-    ENGINE_CANCEL_SIGNAL = "engine_cancel_signal"
     ENGINE_STOP_PROCESSING_QUEUE_SIGNAL = "engine_stop_processing_queue_signal"
     ENGINE_START_PROCESSING_QUEUE_SIGNAL = "engine_start_processing_queue_signal"
     ENGINE_DO_RESPONSE_SIGNAL = "engine_do_response_signal"
@@ -146,7 +144,6 @@ class SignalCode(Enum):
     LLM_IMAGE_PROMPT_GENERATED_SIGNAL = "llm_image_prompt_generated_signal"
     # TODO: combine clear history signals - we have two by mistake
     LLM_CLEAR_HISTORY_SIGNAL = "llm_clear_history_signal"
-    LLM_RESPONSE_SIGNAL = "llm_response_signal"
     LLM_TEXT_STREAMED_SIGNAL = "llm_text_streamed_signal"
     LLM_REQUEST_WORKER_RESPONSE_SIGNAL = "LLMRequestWorker_response_signal"
     LLM_REQUEST_SIGNAL = "llm_request_signal"
@@ -154,8 +151,6 @@ class SignalCode(Enum):
     LLM_TOKEN_SIGNAL = "llm_token_signal"
     LLM_RESPOND_TO_USER_SIGNAL = "llm_respond_to_user_signal"
     LLM_PROCESS_STT_AUDIO_SIGNAL = "llm_process_stt_audio"
-    LOG_ERROR_SIGNAL = "error_signal"
-    LOG_WARNING_SIGNAL = "warning_signal"
     LOG_STATUS_SIGNAL = "status_signal"
     LORA_ADD_SIGNAL = "add_lora_signal"
     LORA_UPDATE_SIGNAL = "update_lora_signal"
@@ -170,11 +165,9 @@ class SignalCode(Enum):
     SD_REQUEST_SIGNAL = "sd_request_signal"
     SD_MERGE_MODELS_SIGNAL = "sd_merge_models_signal"
     SD_CANCEL_SIGNAL = "sd_cancel_signal"
-    SD_UPDATE_SAVED_PROMPT_SIGNAL = "update_saved_stablediffusion_prompt_signal"
     SD_SAVE_PROMPT_SIGNAL = "save_stablediffusion_prompt_signal"
     SD_LOAD_PROMPT_SIGNAL = "load_saved_stablediffuion_prompt_signal"
     SD_ADD_RESPONSE_TO_QUEUE_SIGNAL = "add_sd_response_to_queue_signal"
-    SD_MOVE_TO_CPU_SIGNAL = "move_to_cpu_signal"
     SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL = "ImageDataWorker_response_signal"
     SD_GENERATE_IMAGE_SIGNAL = "generate_image_signal"
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
@@ -186,7 +179,6 @@ class SignalCode(Enum):
     STT_START_CAPTURE_SIGNAL = "stt_start_capture"
     STT_STOP_CAPTURE_SIGNAL = "stt_stop_capture"
     UNBLOCK_TTS_GENERATOR_SIGNAL = "unblock_tts_generator_signal"
-    TTS_REQUEST = "tts_request"
     TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = "TTSGeneratorWorker_add_to_stream_signal"
     TTS_ENABLE_SIGNAL = "tts_enable_signal"
     TTS_DISABLE_SIGNAL = "tts_disable_signal"
@@ -243,8 +235,6 @@ class SignalCode(Enum):
     SD_VAE_UNLOAD_SIGNAL = "unload_stablediffusion_vae_signal"
     SD_UNET_LOAD_SIGNAL = "load_stablediffusion_unet_signal"
     SD_UNET_UNLOAD_SIGNAL = "unload_stablediffusion_unet_signal"
-    SD_TOKENIZER_LOAD_SIGNAL = "load_stablediffusion_tokenizer_signal"
-    SD_TOKENIZER_UNLOAD_SIGNAL = "unload_stablediffusion_tokenizer_signal"
     SD_TEXT_ENCODER_LOAD_SIGNAL = "load_stablediffusion_text_encoder_signal"
     SD_TEXT_ENCODER_UNLOAD_SIGNAL = "unload_stablediffusion_text_encoder_signal"
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
@@ -357,15 +347,16 @@ class LLMActionType(Enum):
     use_tool_flter flag, the LLM will attempt to determine which action to take
     based on the user's words.
     """
-    DO_NOT_RESPOND = "DO NOT RESPOND: Use this option when the user has asked you to stop responding or if the text does not require a response."
-    CHAT = "RESPOND TO THE USER: Respond to the user's message."
-    GENERATE_IMAGE = "GENERATE IMAGE: Generate an image based on the text."
-    APPLICATION_COMMAND = "APPLICATION COMMAND: Execute an application command."
-    UPDATE_MOOD = "UPDATE MOOD: {{ username }} has made you feel a certain way. Respond with an emotion or feeling so that you can update your current mood."
-    QUIT_APPLICATION = "QUIT: Quit or close the application."
-    TOGGLE_FULLSCREEN = "FULL SCREEN: Make the application full screen."
-    TOGGLE_TTS = "TOGGLE TTS: Toggle text-to-speech on or off."
-    PERFORM_RAG_SEARCH = "SEARCH: Perform a search for information related to the user's query or context within the conversation."
+    DO_NOT_RESPOND = "DO_NOT_RESPOND"
+    CHAT = "CHAT"
+    GENERATE_IMAGE = "GENERATE_IMAGE"
+    APPLICATION_COMMAND = "APPLICATION_COMMAND"
+    UPDATE_MOOD = "UPDATE_MOOD"
+    QUIT_APPLICATION = "QUIT_APPLICATION"
+    TOGGLE_FULLSCREEN = "TOGGLE_FULLSCREEN"
+    TOGGLE_TTS = "TOGGLE_TTS"
+    PERFORM_RAG_SEARCH = "PERFORM_RAG_SEARCH"
+    SUMMARIZE = "SUMMARIZE"
 
 
 
@@ -495,6 +486,7 @@ class ModelType(Enum):
 
 
 class HandlerState(Enum):
+    UNINITIALIZED = "Uninitialized"
     INITIALIZED = "Initialized"
     LOADING = "Loading"
     READY = "Ready"
@@ -518,3 +510,16 @@ class ImagePreset(Enum):
     ILLUSTRATION = "Illustration"
     PHOTOGRAPH = "Photograph"
     PAINTING = "Painting"
+
+
+class WorkerType(Enum):
+    LLMGenerateWorker = enum.auto()
+    SDWorker = enum.auto()
+    TTSGeneratorWorker = enum.auto()
+    TTSVocalizerWorker = enum.auto()
+    AudioCaptureWorker = enum.auto()
+    AudioProcessorWorker = enum.auto()
+    AgentWorker = enum.auto()
+    LatentsWorker = enum.auto()
+    MaskGeneratorWorker = enum.auto()
+    ModelScannerWorker = enum.auto()
