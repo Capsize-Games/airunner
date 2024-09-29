@@ -297,6 +297,11 @@ class SDHandler(BaseHandler):
             })
             self._current_state = HandlerState.READY
 
+    def change_model_status(self, model: ModelType, status: ModelStatus, path: str = ""):
+        if model is ModelType.SD:
+            self.sd_model_status = status
+        super().change_model_status(model, status, path)
+
     def _generate(self):
         self.logger.debug("Generating image")
         model = self.generator_settings.model
@@ -309,7 +314,8 @@ class SDHandler(BaseHandler):
         self._load_prompt_embeds()
         clear_memory()
         args = self._prepare_data()
-        results = self._pipe(**args)
+        with torch.no_grad():
+            results = self._pipe(**args)
         images = results.get("images", [])
         images, nsfw_content_detected = self._check_and_mark_nsfw_images(images)
         if images is not None:
@@ -335,11 +341,6 @@ class SDHandler(BaseHandler):
                 data=args,
                 nsfw_content_detected=False
             )
-
-    def change_model_status(self, model: ModelType, status: ModelStatus, path: str = ""):
-        if model is ModelType.SD:
-            self.sd_model_status = status
-        super().change_model_status(model, status, path)
 
     def _export_images(self, images: List[Any]):
         extension = self.application_settings.image_export_type
