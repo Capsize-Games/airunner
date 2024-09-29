@@ -3,7 +3,7 @@ import re
 import time
 from PIL import Image
 
-from PySide6.QtCore import Signal, QRect, QThread, QObject
+from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot
 from PySide6.QtWidgets import QApplication
 
 from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion
@@ -71,13 +71,13 @@ class SaveGeneratorSettingsWorker(
 
             if do_update_settings:
                 do_update_settings = False
-                self.generator_settings.prompt = self.current_prompt_value
-                self.generator_settings.negative_prompt = self.current_negative_prompt_value
-                self.generator_settings.second_prompt = self.current_secondary_prompt_value
-                self.generator_settings.second_negative_prompt = self.current_secondary_negative_prompt_value
-                self.generator_settings.crops_coord_top_left = (
-                self.crops_coord_top_left_x, self.crops_coord_top_left_y)
-                self.save_generator_settings()
+                generator_settings = self.generator_settings
+                generator_settings.prompt = self.current_prompt_value
+                generator_settings.negative_prompt = self.current_negative_prompt_value
+                generator_settings.second_prompt = self.current_secondary_prompt_value
+                generator_settings.second_negative_prompt = self.current_secondary_negative_prompt_value
+                generator_settings.crops_coord_top_left = (self.crops_coord_top_left_x, self.crops_coord_top_left_y)
+                self.save_generator_settings(generator_settings)
 
             time.sleep(0.1)
 
@@ -248,6 +248,7 @@ class GeneratorForm(BaseWidget):
         self.start_progress_bar()
         self.generate()
 
+    @Slot()
     def handle_interrupt_button_clicked(self):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
