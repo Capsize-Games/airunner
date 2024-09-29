@@ -80,7 +80,7 @@ class BrushScene(CustomScene):
         )
         if file_path == "":
             return
-        self.load_image(file_path)
+        self.handle_load_image(file_path)
 
     def handle_brush_color_changed(self, data):
         self._brush_color = QColor(data["color"])
