@@ -198,7 +198,7 @@ class AgentLlamaIndexMixin:
 
     def __load_settings(self):
         Settings.llm = self.__llm
-        Settings.embed_model = self.__embedding
+        Settings._embed_model = self.__embedding
         Settings.node_parser = self.__text_splitter
         Settings.num_output = 512
         Settings.context_window = 3900
