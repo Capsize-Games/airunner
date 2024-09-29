@@ -3,7 +3,7 @@ from typing import List
 from airunner.aihandler.models.database_handler import DatabaseHandler
 from airunner.aihandler.models.settings_models import Chatbot, AIModels, Schedulers, Lora, PathSettings, SavedPrompt, \
     Embedding, TranslationSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, ShortcutKeys, \
-    GeneratorSettings
+    GeneratorSettings, WindowSettings
 
 
 class SettingsDBHandler(DatabaseHandler):
@@ -457,5 +457,28 @@ class SettingsDBHandler(DatabaseHandler):
         session = self.get_db_session()
         try:
             return session.query(ShortcutKeys).all()
+        finally:
+            session.close()
+
+
+    def load_window_settings(self) -> WindowSettings:
+        session = self.get_db_session()
+        try:
+            return session.query(WindowSettings).first()
+        finally:
+            session.close()
+
+
+    def save_window_settings(self, window_settings: WindowSettings):
+        session = self.get_db_session()
+        try:
+            query = session.query(WindowSettings).first()
+            if query:
+                for key in window_settings.__dict__.keys():
+                    if key != "_sa_instance_state":
+                        setattr(query, key, getattr(window_settings, key))
+            else:
+                session.add(window_settings)
+            session.commit()
         finally:
             session.close()

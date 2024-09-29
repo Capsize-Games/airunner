@@ -258,8 +258,6 @@ class SettingsMixin:
             self.update_grid_settings(column_name, val)
         elif setting_name == "active_grid_settings":
             self.update_active_grid_settings(column_name, val)
-        elif setting_name == "window_settings":
-            self.update_window_settings(column_name, val)
         elif setting_name == "path_settings":
             self.update_path_settings(column_name, val)
         elif setting_name == "canvas_settings":
@@ -424,3 +422,17 @@ class SettingsMixin:
     def save_generator_settings(self, generator_settings):
         self.db_handler.save_generator_settings(generator_settings)
         self.__settings_updated()
+
+
+    #######################################
+    ### WINDOW SETTINGS ###
+    #######################################
+    @property
+    def window_settings(self):
+        return self.db_handler.load_window_settings()
+
+
+    def save_window_settings(self, column_name, val):
+        window_settings = self.window_settings
+        setattr(window_settings, column_name, val)
+        self.db_handler.save_window_settings(window_settings)
