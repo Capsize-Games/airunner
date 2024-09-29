@@ -11,15 +11,12 @@ from airunner.aihandler.models.settings_models import ApplicationSettings, LLMGe
     MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.enums import SignalCode
-from airunner.settings import DEFAULT_APPLICATION_SETTINGS
 
 
 class SettingsMixin:
     def __init__(self):
         logging.debug("Initializing SettingsMixin instance")
         self.db_handler = SettingsDBHandler()
-        self.default_settings = DEFAULT_APPLICATION_SETTINGS
-        self._generator_settings = None
 
     @property
     def stt_settings(self) -> STTSettings:
@@ -35,9 +32,7 @@ class SettingsMixin:
 
     @property
     def generator_settings(self) -> GeneratorSettings:
-        if self._generator_settings is None:
-            self._generator_settings = self.db_handler.load_settings_from_db(GeneratorSettings)
-        return self._generator_settings
+        return self.db_handler.load_settings_from_db(GeneratorSettings)
 
     @property
     def controlnet_settings(self) -> ControlnetSettings:
@@ -422,9 +417,10 @@ class SettingsMixin:
     ### GENERATOR SETTINGS ###
     #######################################
     def update_generator_settings(self, column_name, val):
-        self.db_handler.update_setting(GeneratorSettings, column_name, val)
-        self.__settings_updated()
+        generator_settings = self.generator_settings
+        setattr(generator_settings, column_name, val)
+        self.save_generator_settings(generator_settings)
 
-    def save_generator_settings(self):
-        self.db_handler.save_generator_settings(self.generator_settings)
+    def save_generator_settings(self, generator_settings):
+        self.db_handler.save_generator_settings(generator_settings)
         self.__settings_updated()
