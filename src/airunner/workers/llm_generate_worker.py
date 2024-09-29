@@ -15,16 +15,16 @@ class LLMGenerateWorker(Worker):
         super().__init__(prefix=prefix)
 
     def add_chatbot_response_to_history(self, message):
-        self.llm.chat_agent.add_chatbot_response_to_history(message)
+        self.llm.add_chatbot_response_to_history(message)
 
     def on_load_conversation(self, message):
         try:
-            self.llm.chat_agent.on_load_conversation(message)
+            self.llm.load_conversation(message)
         except Exception as e:
             self.logger.error(f"Error in on_load_conversation: {e}")
 
     def on_reload_rag_index_signal(self, data: dict = None):
-        self.llm.chat_agent.reload_rag(data)
+        self.llm.reload_rag(data)
 
     def on_unload_llm_signal(self, _message):
         if self.llm:
@@ -35,15 +35,15 @@ class LLMGenerateWorker(Worker):
 
     def on_load_model_signal(self):
         if self.llm:
-            self.llm.on_load_model_signal()
+            self.llm.load_llm()
 
     def on_clear_history_signal(self):
         if self.llm:
-            self.llm.on_clear_history_signal()
+            self.llm.clear_history()
 
     def on_interrupt_process_signal(self):
         if self.llm:
-            self.llm.on_interrupt_process_signal()
+            self.llm.do_interrupt()
 
     def on_llm_request_worker_response_signal(self, message: dict):
         self.add_to_queue(message)
