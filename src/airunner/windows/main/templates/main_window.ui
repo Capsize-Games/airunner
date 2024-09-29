@@ -282,19 +282,10 @@
      <addaction name="separator"/>
      <addaction name="enable_controlnet"/>
     </widget>
-    <widget class="QMenu" name="menuOutpaint">
-     <property name="title">
-      <string>Outpaint</string>
-     </property>
-     <addaction name="outpaint_import"/>
-     <addaction name="outpaint_export"/>
-     <addaction name="outpaint_enabled"/>
-    </widget>
     <addaction name="separator"/>
     <addaction name="menuCanvas_Image"/>
     <addaction name="menuDrawingpad"/>
     <addaction name="menuControlnet"/>
-    <addaction name="menuOutpaint"/>
     <addaction name="separator"/>
     <addaction name="actionToggle_Active_Grid_Area"/>
     <addaction name="actionToggle_Selection"/>
