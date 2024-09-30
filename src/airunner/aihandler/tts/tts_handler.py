@@ -12,7 +12,7 @@ class TTSHandler(BaseHandler):
     """
     Generates speech from given text. 
     Responsible for managing the model, processor, vocoder, and speaker embeddings.
-    Generates using either the SpeechT5 or Bark model.
+    Generates using either the SpeechT5 model.
 
     Use from a worker to avoid blocking the main thread.
     """

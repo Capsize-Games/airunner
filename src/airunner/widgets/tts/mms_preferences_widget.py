@@ -1,4 +1,3 @@
-from airunner.settings import BARK_VOICES
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.tts.templates.speecht5_preferences_ui import Ui_speecht5_preferences
 
@@ -8,7 +7,6 @@ class SpeechT5PreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.voices = BARK_VOICES
 
     def initialize_form(self):
         elements = [
@@ -21,7 +19,6 @@ class SpeechT5PreferencesWidget(BaseWidget):
             element.blockSignals(True)
 
         self.ui.voice_combobox.clear()
-        self.ui.language_combobox.addItems(self.voices.keys())
 
         for element in elements:
             element.blockSignals(False)
