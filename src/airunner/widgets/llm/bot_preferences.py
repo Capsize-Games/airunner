@@ -1,6 +1,7 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QLabel, QPushButton, QHBoxLayout, QWidget
 
+from airunner.aihandler.models.settings_models import TargetFiles
 from airunner.enums import SignalCode
 from airunner.utils.open_file_path import open_file_path
 from airunner.utils.toggle_signals import toggle_signals
@@ -153,12 +154,8 @@ class BotPreferencesWidget(BaseWidget):
             self.logger.error(f"Invalid file path: {file_path}")
             return
 
-        documents = self.chatbot.get("target_files", [])
-        documents.append(file_path[0])
-        self.update_chatbot("target_files", documents)
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
-            "target_files": documents
-        })
+        self.add_chatbot_document_to_chatbot(self.chatbot, file_path[0])
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
         self.load_documents()
 
     def load_documents(self):
@@ -169,17 +166,14 @@ class BotPreferencesWidget(BaseWidget):
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
 
-        documents = self.chatbot.target_files
-        for doc in documents:
-            widget = DocumentWidget(doc, self.delete_document)
+        for target_file in self.chatbot.target_files:
+            widget = DocumentWidget(target_file, self.delete_document)
             layout.addWidget(widget)
 
-    def delete_document(self, document):
-        documents = self.chatbot.get("target_files", [])
-        if document in documents:
-            documents.remove(document)
-            self.update_chatbot("target_files", documents)
-            self.load_documents()  # Refresh the document list
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
-            "target_files": documents
-        })
+    def delete_document(self, target_file:TargetFiles):
+        session = self.db_handler.get_db_session()
+        session.delete(target_file)
+        session.commit()
+        session.close()
+        self.load_documents()
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)

@@ -8,7 +8,7 @@ from airunner.aihandler.models.settings_models import ApplicationSettings, LLMGe
     ControlnetSettings, ControlnetImageSettings, BrushSettings, DrawingPadSettings, GridSettings, ActiveGridSettings, \
     ImageToImageSettings, OutpaintSettings, PathSettings, CanvasSettings, MemorySettings, Chatbot, \
     AIModels, Schedulers, Lora, ShortcutKeys, SavedPrompt, SpeechT5Settings, TTSSettings, EspeakSettings, \
-    MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel
+    MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, TargetFiles
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.enums import SignalCode
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
@@ -237,6 +237,17 @@ class SettingsMixin:
 
     def create_chatbot(self, chatbot_name):
         self.db_handler.create_chatbot(chatbot_name)
+
+    def add_chatbot_document_to_chatbot(self, chatbot, file_path):
+        session = self.db_handler.get_db_session()
+        try:
+            document = session.query(TargetFiles).filter_by(chatbot_id=chatbot.id, file_path=file_path).first()
+            if document is None:
+                document = TargetFiles(file_path=file_path, chatbot_id=chatbot.id)
+            session.merge(document)  # Use merge instead of add
+            session.commit()
+        finally:
+            session.close()
 
     #######################################
     ### SAVED PROMPTS ###
