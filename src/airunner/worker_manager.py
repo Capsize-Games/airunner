@@ -171,8 +171,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def llm_on_interrupt_process_signal(self):
         self.llm_generate_worker.on_interrupt_process_signal()
 
-    def llm_on_reload_rag_index_signal(self, data: dict = None):
-        self.llm_generate_worker.on_reload_rag_index_signal(data)
+    def llm_on_reload_rag_index_signal(self):
+        self.llm_generate_worker.on_reload_rag_index_signal()
 
     def llm_add_chatbot_response_to_history(self, message):
         self.llm_generate_worker.add_chatbot_response_to_history(message)
