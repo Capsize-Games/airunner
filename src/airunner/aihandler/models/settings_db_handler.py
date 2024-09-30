@@ -472,3 +472,9 @@ class SettingsDBHandler(DatabaseHandler):
             session.commit()
         finally:
             session.close()
+
+    def save_object(self, database_object):
+        session = self.get_db_session()
+        session.add(database_object)
+        session.commit()
+        session.close()

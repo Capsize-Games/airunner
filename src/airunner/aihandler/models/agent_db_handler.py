@@ -81,11 +81,16 @@ class AgentDBHandler(DatabaseHandler):
 
     def delete_conversation(self, conversation_id):
         session = self.Session()
-        conversation = session.query(Conversation).filter_by(id=conversation_id).first()
-        if conversation:
-            session.delete(conversation)
+        try:
+            session.query(Message).filter_by(conversation_id=conversation_id).delete()
+            session.query(Summary).filter_by(conversation_id=conversation_id).delete()
+            session.query(Conversation).filter_by(id=conversation_id).delete()
             session.commit()
-        session.close()
+        except Exception as e:
+            session.rollback()
+            print(f"Error deleting conversation: {e}")
+        finally:
+            session.close()
 
     def get_most_recent_conversation_id(self):
         session = self.Session()

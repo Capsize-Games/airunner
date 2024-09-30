@@ -23,8 +23,9 @@ class LLMGenerateWorker(Worker):
         except Exception as e:
             self.logger.error(f"Error in on_load_conversation: {e}")
 
-    def on_reload_rag_index_signal(self, data: dict = None):
-        self.llm.reload_rag(data)
+    def on_reload_rag_index_signal(self):
+        if self.llm:
+            self.llm.reload_rag()
 
     def on_unload_llm_signal(self, _message):
         if self.llm:
