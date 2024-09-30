@@ -105,14 +105,6 @@ DEFAULT_PATH_SETTINGS = {
         )
     ),
 }
-TRANSLATION_LANGUAGES = [
-    "English",
-    "Spanish",
-]
-TRANSLATION_MODELS = {
-    "English": None,
-    "Spanish": None,
-}
 MALE = Gender.MALE
 FEMALE = Gender.FEMALE
 PHOTO_REALISTIC_NEGATIVE_PROMPT = (

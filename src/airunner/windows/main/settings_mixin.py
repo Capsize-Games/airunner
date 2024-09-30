@@ -120,10 +120,6 @@ class SettingsMixin:
         return self.db_handler.load_embeddings()
 
     @property
-    def translation_settings(self):
-        return self.db_handler.load_translation_settings()
-
-    @property
     def prompt_templates(self) -> List[PromptTemplate]:
         return self.db_handler.load_prompt_templates()
 
@@ -382,13 +378,6 @@ class SettingsMixin:
 
     def update_ai_model(self, model: AIModels):
         self.db_handler.update_ai_model(model)
-        self.__settings_updated()
-
-    #######################################
-    ### TRANSLATION SETTINGS ###
-    #######################################
-    def update_translation_settings(self, column_name, val):
-        self.db_handler.update_translation_settings(column_name, val)
         self.__settings_updated()
 
     #######################################

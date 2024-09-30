@@ -287,16 +287,6 @@ class Schedulers(Base):
     display_name = Column(String, nullable=True)
 
 
-class TranslationSettings(Base):
-    __tablename__ = 'translation_settings'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    language = Column(String, default="English")
-    gender = Column(String, default=Gender.MALE.value)
-    voice = Column(String, default="")
-    translation_model = Column(String, default="")
-    enabled = Column(Boolean, default=False)
-
-
 class BrushSettings(Base):
     __tablename__ = 'brush_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
