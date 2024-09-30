@@ -129,7 +129,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self._llm_generate_worker = value
 
 
-
     def on_llm_request_signal(self, message: dict):
         self.llm_generate_worker.add_to_queue(message)
 
@@ -146,12 +145,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
                 try:
                     for device_id in range(torch.cuda.device_count()):
                         torch.cuda.set_device(device_id)
-                        self.logger.debug(
-                            f"Device {device_id} before empty_cache: {torch.cuda.memory_allocated(device_id)} bytes")
                         torch.cuda.empty_cache()
-                        self.logger.debug(
-                            f"Device {device_id} after empty_cache: {torch.cuda.memory_allocated(device_id)} bytes")
-                        self.logger.debug(f"Device {device_id} memory summary: {torch.cuda.memory_summary(device_id)}")
                         torch.cuda.reset_max_memory_allocated(device=device_id)
                         torch.cuda.reset_max_memory_cached(device=device_id)
                         torch.cuda.synchronize(device=device_id)
