@@ -2,7 +2,6 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QLabel, QPushButton, QHBoxLayout, QWidget
 
 from airunner.enums import SignalCode
-from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils.open_file_path import open_file_path
 from airunner.utils.toggle_signals import toggle_signals
 from airunner.widgets.base_widget import BaseWidget
@@ -88,7 +87,7 @@ class BotPreferencesWidget(BaseWidget):
 
         # If the user clicked "OK" and entered a name
         if ok and chatbot_name:
-            self.create_chatbot(chatbot_name, DEFAULT_CHATBOT)
+            self.create_chatbot(chatbot_name)
             self.update_llm_generator_settings("current_chatbot", chatbot_name)
             self.load_saved_chatbots()
 
