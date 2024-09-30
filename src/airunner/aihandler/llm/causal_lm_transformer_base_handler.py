@@ -26,6 +26,7 @@ class CausalLMTransformerBaseHandler(
         self.model_type = "llm"
         self.model_class = "llm"
         self.agent_options = kwargs.pop("agent_options", {})
+        self._model = None
         self._streamer = None
         self._chat_engine = None
         self._chat_agent = None
@@ -65,7 +66,6 @@ class CausalLMTransformerBaseHandler(
         self._do_push_to_hub = kwargs.get("do_push_to_hub", False)
         self._llm_int8_enable_fp32_cpu_offload = kwargs.get("llm_int8_enable_fp32_cpu_offload", True)
         self._generator_name = kwargs.get("generator_name", "")
-        self._default_model_path = kwargs.get("default_model_path", "")
         self._return_result = kwargs.get("return_result", True)
         self._skip_special_tokens = kwargs.get("skip_special_tokens", True)
         self._processing_request = kwargs.get("_processing_request", False)
@@ -75,10 +75,13 @@ class CausalLMTransformerBaseHandler(
         self._eos_token_id = kwargs.get("eos_token_id", None)
         self._no_repeat_ngram_size = kwargs.get("no_repeat_ngram_size", 1)
         self._decoder_start_token_id = kwargs.get("decoder_start_token_id", None)
-        self.tokenizer = None
+        self._tokenizer = None
         self._generator = None
 
         super().__init__(*args, **kwargs)
+
+        print("CAUSAL_LM_TRANSFORMER_BASE_HANDLER")
+        print("do_load_on_init", do_load_on_init)
 
         if do_load_on_init:
             self.load()
@@ -132,10 +135,6 @@ class CausalLMTransformerBaseHandler(
         return "Assistant"
 
     @property
-    def model(self):
-        return self.__model
-
-    @property
     def _quantization_config(self):
         config = None
         if self.llm_dtype == "8bit":
@@ -154,7 +153,7 @@ class CausalLMTransformerBaseHandler(
             config = GPTQConfig(
                 bits=2,
                 dataset="c4",
-                tokenizer=self.tokenizer
+                tokenizer=self._tokenizer
             )
         return config
 
@@ -162,16 +161,28 @@ class CausalLMTransformerBaseHandler(
     def use_cache(self):
         if self.llm_generator_settings.override_parameters:
             return self.llm_generator_settings.use_cache
-        else:
-            return self.chatbot.use_cache
+        return self.chatbot.use_cache
 
-    @model.setter
-    def model(self, value):
-        if value is None and self.__model is not None:
-            del self.__model
-            self.__model = None
-            clear_memory(self.memory_settings.default_gpu_llm)
-        self.__model = value
+    @property
+    def model_path(self):
+        model_version:str = self.chatbot.model_version
+        if self.llm_generator_settings.override_parameters:
+            model_version = self.llm_generator_settings.model_version
+        current_llm_generator = self.application_settings.current_llm_generator
+        local_path:str = "misc"
+        if current_llm_generator == "causallm":
+            local_path = "causallm"
+        elif current_llm_generator == "seq2seq":
+            local_path = "seq2seq"
+        elif current_llm_generator == "visualqa":
+            local_path = "visualqa"
+        base:str = self.path_settings.base_path
+        return os.path.expanduser(os.path.join(
+            base,
+            "text/models",
+            local_path,
+            model_version
+        ))
 
     @staticmethod
     def load_tools() -> dict:
@@ -186,14 +197,22 @@ class CausalLMTransformerBaseHandler(
             # LLMToolName.WRITE_FILE.value: WriteFileTool(),
         }
 
-    def load_llm(self):
+    def load(self):
+        self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
+        self._current_model_path = self.model_path
         self._load_tokenizer()
         self._load_model()
         self._load_streamer()
         self._load_agent()
 
-    def unload_llm(self):
+        if self._model and self._tokenizer and self._streamer and self._chat_agent:
+            self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
+        else:
+            self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+
+    def unload(self):
         self.logger.debug("Unloading LLM")
+        self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
         self._unload_streamer()
         self._unload_llm_with_tools()
         self._unload_agent_executor()
@@ -201,7 +220,7 @@ class CausalLMTransformerBaseHandler(
         self._unload_model()
         self._unload_tokenizer()
         self._unload_agent()
-        self.model_status = ModelStatus.UNLOADED
+        self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
 
     def handle_request(self, data:dict):
         self.logger.debug("Handling request")
@@ -249,10 +268,10 @@ class CausalLMTransformerBaseHandler(
         self._chat_agent.reload_rag(data)
 
     def _load_tokenizer(self):
-        if self.tokenizer is not None:
+        if self._tokenizer is not None:
             return
 
-        path = self._get_model_path(self.chatbot.model_version)
+        path = self.model_path
 
         self.logger.debug(f"Loading tokenizer from {path}")
         kwargs = {
@@ -266,30 +285,28 @@ class CausalLMTransformerBaseHandler(
         if self.chat_template:
             kwargs["chat_template"] = self.chat_template
         try:
-            self.tokenizer = self.tokenizer_class_.from_pretrained(
+            self._tokenizer = self.tokenizer_class_.from_pretrained(
                 path,
                 **kwargs,
             )
             self.logger.debug("Tokenizer loaded")
         except Exception as e:
             self.logger.error(e)
-            self.model_status = ModelStatus.FAILED
 
-        if self.tokenizer:
-            self.tokenizer.use_default_system_prompt = False
+        if self._tokenizer:
+            self._tokenizer.use_default_system_prompt = False
         else:
             self.logger.error("Tokenizer failed to load")
 
     def _load_model(self):
-        if self.model is not None:
+        if self._model is not None:
             return
         self.logger.debug("transformer_base_handler.load_model Loading model")
         if self.llm_generator_settings.use_api:
-            self.model = Groq(
+            self._model = Groq(
                 model=self.llm_generator_settings.api_model,
                 api_key=self.llm_generator_settings.api_key,
             )
-            self.model_status = ModelStatus.LOADED
         else:
             self._load_model_local()
 
@@ -297,15 +314,15 @@ class CausalLMTransformerBaseHandler(
         if self._streamer is not None:
             return
         self.logger.debug("Loading LLM text streamer")
-        self._streamer = TextIteratorStreamer(self.tokenizer)
+        self._streamer = TextIteratorStreamer(self._tokenizer)
 
     def _load_agent(self):
         if self._chat_agent is not None:
             return
         self.logger.debug("Loading agent")
         self._chat_agent = BaseAgent(
-            model=self.model,
-            tokenizer=self.tokenizer,
+            model=self._model,
+            tokenizer=self._tokenizer,
             streamer=self._streamer,
             tools=self._tools,
             chat_template=self.chat_template,
@@ -334,13 +351,13 @@ class CausalLMTransformerBaseHandler(
 
     def _unload_model(self):
         self.logger.debug("Unloading model")
-        self.model = None
+        self._model = None
         return True
 
     def _unload_tokenizer(self):
         self.logger.debug("Unloading tokenizer")
-        del self.tokenizer
-        self.tokenizer = None
+        del self._tokenizer
+        self._tokenizer = None
         clear_memory(self.memory_settings.default_gpu_llm)
         return True
 
@@ -355,60 +372,39 @@ class CausalLMTransformerBaseHandler(
             do_clear_memory = True
         return do_clear_memory
 
-    def _get_model_path(self, path:str) -> str:
-        current_llm_generator = self.application_settings.current_llm_generator
-        if current_llm_generator == "causallm":
-            local_path = "causallm"
-        elif current_llm_generator == "seq2seq":
-            local_path = "seq2seq"
-        elif current_llm_generator == "visualqa":
-            local_path = "visualqa"
-        else:
-            local_path = "misc"
-        return os.path.expanduser(os.path.join(
-            self.path_settings.base_path,
-            "text/models",
-            local_path,
-            path
-        ))
-
     def _load_model_local(self):
+        self.logger.debug("Loading local LLM model")
+        path = self.model_path
+        is_quantized = os.path.exists(path)
+        if not is_quantized:
+            path = self.model_path
         params = dict(
             local_files_only=True,
             use_cache=self.use_cache,
-            trust_remote_code=False
+            trust_remote_code=False,
+            torch_dtype=self.torch_dtype,
+            device_map=self.device,
         )
-        path = self._get_model_path(self.chatbot.model_version)
-        is_quantized = os.path.exists(path)
-        if not is_quantized:
-            path = self._get_model_path(self.chatbot.model_version)
-        self.logger.debug(f"Loading model from {path}")
         if self._do_quantize_model and self.use_cuda:
             config = self._quantization_config
             if config:
                 params["quantization_config"] = config
-        params["torch_dtype"] = torch.bfloat16
-        params["device_map"] = self.device
         try:
-            self.model_status = ModelStatus.LOADING
             with torch.no_grad():
-                self.model = self.auto_class_.from_pretrained(
+                self._model = self.auto_class_.from_pretrained(
                     path,
                     **params
                 )
-            self.model_status = ModelStatus.LOADED
         except Exception as e:
-            self.model_status = ModelStatus.FAILED
             self.logger.error(f"Error loading model: {e}")
-            self.model = None
+            self._model = None
 
     def _do_generate(self, prompt: str, action: LLMActionType):
-        model_path = self._get_model_path(self.chatbot.model_version)
-        if self._current_model_path != model_path:
-            self._current_model_path = model_path
-            self.unload_llm()
-            self.load_llm()
         self.logger.debug("Generating response")
+        model_path = self.model_path
+        if self._current_model_path != model_path:
+            self.unload()
+            self.load()
         if action is LLMActionType.CHAT and self.chatbot.use_mood:
             action = LLMActionType.UPDATE_MOOD
         self._chat_agent.run(
@@ -418,6 +414,7 @@ class CausalLMTransformerBaseHandler(
         self._send_final_message()
 
     def _emit_streamed_text_signal(self, **kwargs):
+        self.logger.debug("Emitting streamed text signal")
         kwargs["name"] = self.botname
         self.emit_signal(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL,
@@ -425,6 +422,7 @@ class CausalLMTransformerBaseHandler(
         )
 
     def _send_final_message(self):
+        self.logger.debug("Sending final message")
         self._emit_streamed_text_signal(
             message="",
             is_first_message=False,
@@ -441,10 +439,13 @@ class CausalLMTransformerBaseHandler(
         random.seed(self.seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-        if self.tokenizer:
-            self.tokenizer.seed = self.seed
+        if self._tokenizer:
+            self._tokenizer.seed = self.seed
 
     def _save_quantized_model(self):
         self.logger.debug("Saving quantized model to cache")
-        model_path = self._get_model_path(self.chatbot.model_version)
-        self.model.save_pretrained(model_path)
+        self._model.save_pretrained(self.model_path)
+
+    def _clear_memory(self):
+        self.logger.debug("Clearing memory")
+        clear_memory(self.memory_settings.default_gpu_llm)
