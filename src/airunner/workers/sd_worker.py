@@ -154,7 +154,7 @@ class SDWorker(Worker):
 
     def on_interrupt_image_generation_signal(self, _data=None):
         if self.sd:
-            self.sd.interrupt_image_generation_signal()
+            self.sd.interrupt_image_generation()
 
     def on_change_scheduler_signal(self, data: dict):
         if self.sd:
