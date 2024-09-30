@@ -253,21 +253,6 @@ imagefilter_bootstrap_data = {
         'filter_class': 'Invert',
         'image_filter_values': {}
     },
-    'dither': {
-        'display_name': 'Dither',
-        'auto_apply': False,
-        'name': 'dither',
-        'filter_class': 'Dither',
-        'image_filter_values': {
-            'threshold': {
-                'name': 'threshold',
-                'value': '1.0',
-                'value_type': 'float',
-                'min_value': None,
-                'max_value': None
-            },
-        }
-    },
     'rgb_noise': {
         'display_name': 'RGB Noise Filter',
         'auto_apply': False,
