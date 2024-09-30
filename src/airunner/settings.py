@@ -34,10 +34,6 @@ APPLICATION_NAME = "AI Runner"
 LOG_LEVEL = logging.DEBUG
 DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.3"
 DEFAULT_STT_HF_PATH = "openai/whisper-tiny"
-DEFAULT_BARK_MODEL_PATHS = {
-    "processor": "suno/bark-small",
-    "model": "suno/bark-small",
-}
 DEFAULT_IMAGE_SYSTEM_PROMPT = "\n".join([
     (
         "You are an image captioning expert. You will be given the "
