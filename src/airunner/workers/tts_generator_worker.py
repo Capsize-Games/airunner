@@ -128,9 +128,6 @@ class TTSGeneratorWorker(Worker):
         elif tts_model == TTSModel.SPEECHT5.value:
             from airunner.aihandler.tts.speecht5_tts_handler import SpeechT5TTSHandler
             tts_handler_class_ = SpeechT5TTSHandler
-        elif tts_model == TTSModel.BARK.value:
-            from airunner.aihandler.tts.bark_tts_handler import BarkTTSHandler
-            tts_handler_class_ = BarkTTSHandler
         self.tts = tts_handler_class_()
         self.tts.run()
 
@@ -195,11 +192,7 @@ class TTSGeneratorWorker(Worker):
             self.tokens = []
         else:
             # Split text at punctuation
-            if self.tts.target_model == "bark":
-                punctuation = ["\n"]
-            else:
-                punctuation = [".", "?", "!", ";", ":", "\n", ","]
-
+            punctuation = [".", "?", "!", ";", ":", "\n", ","]
             for p in punctuation:
                 if self.do_interrupt:
                     return
