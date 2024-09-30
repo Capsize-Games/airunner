@@ -200,10 +200,10 @@ class SettingsDBHandler(DatabaseHandler):
         finally:
             session.close()
 
-    def create_chatbot(self, chatbot_name, data: dict):
+    def create_chatbot(self, chatbot_name):
         session = self.get_db_session()
         try:
-            new_chatbot = Chatbot(name=chatbot_name, **data)
+            new_chatbot = Chatbot(name=chatbot_name)
             session.add(new_chatbot)
             session.commit()
         finally:
