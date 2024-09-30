@@ -243,8 +243,8 @@ class SettingsMixin:
     def delete_chatbot_by_name(self, chatbot_name):
         self.db_handler.delete_chatbot_by_name(chatbot_name)
 
-    def create_chatbot(self, chatbot_name, data: dict):
-        self.db_handler.create_chatbot(chatbot_name, data)
+    def create_chatbot(self, chatbot_name):
+        self.db_handler.create_chatbot(chatbot_name)
 
     #######################################
     ### SAVED PROMPTS ###
