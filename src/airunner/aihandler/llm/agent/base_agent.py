@@ -372,7 +372,6 @@ class BaseAgent(
             conversation=conversation,
             tokenize=False
         )
-        print(rendered_template)
 
         # HACK: current version of transformers does not allow us to pass
         # variables to the chat template function, so we apply those here
@@ -628,9 +627,6 @@ class BaseAgent(
 
             elif action is LLMActionType.UPDATE_MOOD:
                 self.bot_mood = streamed_template
-                print("*" * 100)
-                print("MOOD UPDATED TO ", self.bot_mood)
-                print("*" * 100)
                 return self.run(
                     prompt=self.prompt,
                     action=LLMActionType.CHAT,
