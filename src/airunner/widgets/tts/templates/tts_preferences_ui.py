@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
     QGridLayout, QGroupBox, QScrollArea, QSizePolicy,
     QSpacerItem, QWidget)
 
-from airunner.widgets.tts.bark_preferences_widget import BarkPreferencesWidget
 from airunner.widgets.tts.espeak_preferences_widget import ESpeakPreferencesWidget
 from airunner.widgets.tts.speecht5_preferences_widget import SpeechT5PreferencesWidget
 
@@ -40,17 +39,24 @@ class Ui_tts_preferences(object):
         self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 510, 574))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout.addItem(self.verticalSpacer, 5, 0, 1, 1)
+
+        self.espeak_preferences = ESpeakPreferencesWidget(self.scrollAreaWidgetContents)
+        self.espeak_preferences.setObjectName(u"espeak_preferences")
+
+        self.gridLayout.addWidget(self.espeak_preferences, 3, 0, 1, 1)
+
+        self.speecht5_preferences = SpeechT5PreferencesWidget(self.scrollAreaWidgetContents)
+        self.speecht5_preferences.setObjectName(u"speecht5_preferences")
+
+        self.gridLayout.addWidget(self.speecht5_preferences, 4, 0, 1, 1)
+
         self.enable_tts = QCheckBox(self.scrollAreaWidgetContents)
         self.enable_tts.setObjectName(u"enable_tts")
 
         self.gridLayout.addWidget(self.enable_tts, 0, 0, 1, 1)
-
-        self.line = QFrame(self.scrollAreaWidgetContents)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.Shape.HLine)
-        self.line.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.gridLayout.addWidget(self.line, 1, 0, 1, 1)
 
         self.groupBox_7 = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_7.setObjectName(u"groupBox_7")
@@ -64,24 +70,12 @@ class Ui_tts_preferences(object):
 
         self.gridLayout.addWidget(self.groupBox_7, 2, 0, 1, 1)
 
-        self.bark_preferences = BarkPreferencesWidget(self.scrollAreaWidgetContents)
-        self.bark_preferences.setObjectName(u"bark_preferences")
+        self.line = QFrame(self.scrollAreaWidgetContents)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
-        self.gridLayout.addWidget(self.bark_preferences, 3, 0, 1, 1)
-
-        self.espeak_preferences = ESpeakPreferencesWidget(self.scrollAreaWidgetContents)
-        self.espeak_preferences.setObjectName(u"espeak_preferences")
-
-        self.gridLayout.addWidget(self.espeak_preferences, 4, 0, 1, 1)
-
-        self.speecht5_preferences = SpeechT5PreferencesWidget(self.scrollAreaWidgetContents)
-        self.speecht5_preferences.setObjectName(u"speecht5_preferences")
-
-        self.gridLayout.addWidget(self.speecht5_preferences, 5, 0, 1, 1)
-
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.gridLayout.addItem(self.verticalSpacer, 6, 0, 1, 1)
+        self.gridLayout.addWidget(self.line, 1, 0, 1, 1)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 

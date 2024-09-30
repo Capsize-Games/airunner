@@ -1,11 +1,11 @@
 import os
 
-from sqlalchemy import Column, Integer, String, JSON, Boolean, TupleType, Float, Text, ForeignKey, LargeBinary
+from sqlalchemy import Column, Integer, String, JSON, Boolean, Float, Text, ForeignKey, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 from airunner.enums import Gender, ImageGenerator, GeneratorSection, CanvasToolName, Mode
-from airunner.settings import SD_DEFAULT_VAE_PATH, DEFAULT_SCHEDULER, DEFAULT_BARK_MODEL_PATHS, \
+from airunner.settings import SD_DEFAULT_VAE_PATH, DEFAULT_SCHEDULER, \
     DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, BASE_PATH
 
 Base = declarative_base()
@@ -255,19 +255,6 @@ class SpeechT5Settings(Base):
     processor_path = Column(String, default="microsoft/speecht5_tts")
     vocoder_path = Column(String, default="microsoft/speecht5_hifigan")
     model_path = Column(String, default="microsoft/speecht5_tts")
-
-
-class BarkSettings(Base):
-    __tablename__ = 'bark_settings'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    language = Column(String, default="English")
-    voice = Column(String, default="v2/en_speaker_6")
-    gender = Column(String, default="Male")
-    fine_temperature = Column(Integer, default=80)
-    coarse_temperature = Column(Integer, default=40)
-    semantic_temperature = Column(Integer, default=80)
-    processor_path = Column(String, default=DEFAULT_BARK_MODEL_PATHS["processor"])
-    model_path = Column(String, default=DEFAULT_BARK_MODEL_PATHS["model"])
 
 
 class EspeakSettings(Base):

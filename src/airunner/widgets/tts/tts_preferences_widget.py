@@ -23,7 +23,6 @@ class TTSPreferencesWidget(BaseWidget):
         models = ["Bark", "SpeechT5", "Espeak"]
         self.ui.model_combobox.addItems(models)
         self.ui.model_combobox.setCurrentText(tts_model)
-        self.ui.bark_preferences.setVisible(tts_model == "Bark")
         self.ui.speecht5_preferences.setVisible(tts_model == "SpeechT5")
         self.ui.espeak_preferences.setVisible(tts_model == "Espeak")
 
