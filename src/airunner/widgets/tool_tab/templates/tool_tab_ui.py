@@ -31,7 +31,7 @@ class Ui_tool_tab_widget(object):
     def setupUi(self, tool_tab_widget):
         if not tool_tab_widget.objectName():
             tool_tab_widget.setObjectName(u"tool_tab_widget")
-        tool_tab_widget.resize(641, 868)
+        tool_tab_widget.resize(680, 868)
         self.gridLayout_3 = QGridLayout(tool_tab_widget)
         self.gridLayout_3.setSpacing(0)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
@@ -182,7 +182,7 @@ class Ui_tool_tab_widget(object):
 
         self.retranslateUi(tool_tab_widget)
 
-        self.tool_tab_widget_container.setCurrentIndex(1)
+        self.tool_tab_widget_container.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(tool_tab_widget)
