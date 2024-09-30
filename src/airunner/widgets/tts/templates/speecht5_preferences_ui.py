@@ -31,12 +31,12 @@ class Ui_speecht5_preferences(object):
 
         self.gridLayout_7.addItem(self.verticalSpacer, 10, 0, 1, 1)
 
-        self.use_bark = QGroupBox(speecht5_preferences)
-        self.use_bark.setObjectName(u"use_bark")
-        self.use_bark.setCheckable(False)
-        self.gridLayout_8 = QGridLayout(self.use_bark)
+        self.preferences_groupbox = QGroupBox(speecht5_preferences)
+        self.preferences_groupbox.setObjectName(u"preferences_groupbox")
+        self.preferences_groupbox.setCheckable(False)
+        self.gridLayout_8 = QGridLayout(self.preferences_groupbox)
         self.gridLayout_8.setObjectName(u"gridLayout_8")
-        self.groupBox_6 = QGroupBox(self.use_bark)
+        self.groupBox_6 = QGroupBox(self.preferences_groupbox)
         self.groupBox_6.setObjectName(u"groupBox_6")
         self.gridLayout_2 = QGridLayout(self.groupBox_6)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
@@ -57,7 +57,7 @@ class Ui_speecht5_preferences(object):
 
         self.gridLayout_8.addWidget(self.groupBox_6, 5, 0, 1, 1)
 
-        self.groupBox_4 = QGroupBox(self.use_bark)
+        self.groupBox_4 = QGroupBox(self.preferences_groupbox)
         self.groupBox_4.setObjectName(u"groupBox_4")
         self.gridLayout_5 = QGridLayout(self.groupBox_4)
         self.gridLayout_5.setObjectName(u"gridLayout_5")
@@ -78,7 +78,7 @@ class Ui_speecht5_preferences(object):
 
         self.gridLayout_8.addWidget(self.groupBox_4, 4, 0, 1, 1)
 
-        self.groupBox_2 = QGroupBox(self.use_bark)
+        self.groupBox_2 = QGroupBox(self.preferences_groupbox)
         self.groupBox_2.setObjectName(u"groupBox_2")
         self.gridLayout_3 = QGridLayout(self.groupBox_2)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
@@ -92,7 +92,7 @@ class Ui_speecht5_preferences(object):
 
         self.gridLayout_8.addWidget(self.groupBox_2, 1, 0, 1, 1)
 
-        self.groupBox = QGroupBox(self.use_bark)
+        self.groupBox = QGroupBox(self.preferences_groupbox)
         self.groupBox.setObjectName(u"groupBox")
         self.gridLayout = QGridLayout(self.groupBox)
         self.gridLayout.setObjectName(u"gridLayout")
@@ -104,7 +104,7 @@ class Ui_speecht5_preferences(object):
 
         self.gridLayout_8.addWidget(self.groupBox, 2, 0, 1, 1)
 
-        self.label_3 = QLabel(self.use_bark)
+        self.label_3 = QLabel(self.preferences_groupbox)
         self.label_3.setObjectName(u"label_3")
         font = QFont()
         font.setPointSize(9)
@@ -112,7 +112,7 @@ class Ui_speecht5_preferences(object):
 
         self.gridLayout_8.addWidget(self.label_3, 0, 0, 1, 1)
 
-        self.groupBox_5 = QGroupBox(self.use_bark)
+        self.groupBox_5 = QGroupBox(self.preferences_groupbox)
         self.groupBox_5.setObjectName(u"groupBox_5")
         self.gridLayout_6 = QGridLayout(self.groupBox_5)
         self.gridLayout_6.setObjectName(u"gridLayout_6")
@@ -133,7 +133,7 @@ class Ui_speecht5_preferences(object):
 
         self.gridLayout_8.addWidget(self.groupBox_5, 6, 0, 1, 1)
 
-        self.groupBox_3 = QGroupBox(self.use_bark)
+        self.groupBox_3 = QGroupBox(self.preferences_groupbox)
         self.groupBox_3.setObjectName(u"groupBox_3")
         self.groupBox_3.setCheckable(True)
         self.gridLayout_4 = QGridLayout(self.groupBox_3)
@@ -153,7 +153,7 @@ class Ui_speecht5_preferences(object):
         self.gridLayout_8.addWidget(self.groupBox_3, 3, 0, 1, 1)
 
 
-        self.gridLayout_7.addWidget(self.use_bark, 0, 0, 1, 1)
+        self.gridLayout_7.addWidget(self.preferences_groupbox, 0, 0, 1, 1)
 
 
         self.retranslateUi(speecht5_preferences)
@@ -166,7 +166,7 @@ class Ui_speecht5_preferences(object):
 
     def retranslateUi(self, speecht5_preferences):
         speecht5_preferences.setWindowTitle(QCoreApplication.translate("speecht5_preferences", u"Form", None))
-        self.use_bark.setTitle(QCoreApplication.translate("speecht5_preferences", u"SpeechT5", None))
+        self.preferences_groupbox.setTitle(QCoreApplication.translate("speecht5_preferences", u"SpeechT5", None))
         self.groupBox_6.setTitle(QCoreApplication.translate("speecht5_preferences", u"Pitch", None))
         self.semantic_temperature.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"tts_settings.spd.pitch", None))
         self.semantic_temperature.setProperty("slider_callback", QCoreApplication.translate("speecht5_preferences", u"handle_value_change", None))

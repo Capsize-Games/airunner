@@ -304,7 +304,6 @@
   <slot>language_changed(QString)</slot>
   <slot>gender_changed(QString)</slot>
   <slot>voice_changed(QString)</slot>
-  <slot>use_bark_changed(bool)</slot>
   <slot>enable_tts_changed(bool)</slot>
   <slot>model_changed(QString)</slot>
  </slots>
