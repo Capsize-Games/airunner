@@ -55,7 +55,6 @@ class AgentLlamaIndexMixin:
         target_files = self.__target_files or []
         if len(target_files) == 0:
             target_files = []#self.chatbot.target_files or []
-            print("TODO: load target files")
         return target_files
 
     @property
