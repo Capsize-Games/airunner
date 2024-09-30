@@ -778,20 +778,24 @@ class SDHandler(BaseHandler):
 
     def _finalize_load_stable_diffusion(self):
         safety_checker_ready = True
+        tokenizer_ready = True
         if self.use_safety_checker:
             safety_checker_ready = (
                 self._safety_checker is not None and
                 self._feature_extractor is not None
             )
+        if not self.is_sd_xl:
+            tokenizer_ready = self._tokenizer is not None
         if (
             self._pipe is not None
-            and self._tokenizer is not None
+            and tokenizer_ready
             and safety_checker_ready
         ):
             self._current_state = HandlerState.READY
             self.change_model_status(ModelType.SD, ModelStatus.LOADED)
         else:
             self.logger.error("Something went wrong with Stable Diffusion loading")
+            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             self.unload_stable_diffusion()
 
         if (
