@@ -69,10 +69,6 @@ class SettingsWindow(BaseWindow):
         if name == "hf_api_key":
             from airunner.widgets.api_token.api_token_widget import APITokenWidget
             return APITokenWidget
-        if name == "translation_preferences":
-            from airunner.widgets.translation_preferences.translation_preferences_widget import \
-                TranslationPreferencesWidget
-            return TranslationPreferencesWidget
         if name == "tts_preferences":
             from airunner.widgets.tts.tts_preferences_widget import TTSPreferencesWidget
             return TTSPreferencesWidget
@@ -206,7 +202,7 @@ class SettingsWindow(BaseWindow):
                 ]
             },
             {
-                "section": "LLM, TTS, Translation, Chatbot",
+                "section": "LLM, TTS, Chatbot",
                 "files": [
                     {
                         "name": "bot_preferences",
@@ -216,12 +212,6 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "tts_preferences",
                         "display_name": "Text-to-Speech",
-                        "checkable": False
-                    },
-                    {
-                        "name": "translation_preferences",
-                        "display_name": "Translation Preferences",
-                        "description": "Set your preferred translation and override the TTS voice settings.",
                         "checkable": False
                     },
                 ]
