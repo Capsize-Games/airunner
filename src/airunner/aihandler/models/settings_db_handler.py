@@ -2,7 +2,7 @@ from typing import List
 
 from airunner.aihandler.models.database_handler import DatabaseHandler
 from airunner.aihandler.models.settings_models import Chatbot, AIModels, Schedulers, Lora, PathSettings, SavedPrompt, \
-    Embedding, TranslationSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, ShortcutKeys, \
+    Embedding, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, ShortcutKeys, \
     GeneratorSettings, WindowSettings
 
 
@@ -397,30 +397,6 @@ class SettingsDBHandler(DatabaseHandler):
         try:
             session.add(embedding)
             session.commit()
-        finally:
-            session.close()
-
-    #######################################
-    ### TRANSLATION SETTINGS ###
-    #######################################
-    def update_translation_settings(self, translation_settings):
-        session = self.get_db_session()
-        try:
-            for key, value in translation_settings.items():
-                setting = session.query(TranslationSettings).filter_by(name=key).first()
-                if setting:
-                    setting.value = value
-                else:
-                    new_setting = TranslationSettings(name=key, value=value)
-                    session.add(new_setting)
-            session.commit()
-        finally:
-            session.close()
-
-    def load_translation_settings(self) -> List[TranslationSettings]:
-        session = self.get_db_session()
-        try:
-            return session.query(TranslationSettings).all()
         finally:
             session.close()
 
