@@ -1097,7 +1097,7 @@ class SDHandler(BaseHandler):
             width=int(self.application_settings.working_width),
             height=int(self.application_settings.working_height),
             clip_skip=int(self.generator_settings.clip_skip),
-            num_infrence_steps=int(self.generator_settings.steps),
+            num_inference_steps=int(self.generator_settings.steps),
             callback=self._callback,
             callback_steps=1,
             generator=self._generator
