@@ -1,5 +1,6 @@
 import random
 import os
+from typing import List
 
 import torch
 
@@ -10,6 +11,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
 
 from airunner.aihandler.base_handler import BaseHandler
+from airunner.aihandler.models.settings_models import TargetFiles
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType, ModelAction
 from airunner.utils.clear_memory import clear_memory
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
@@ -79,9 +81,6 @@ class CausalLMTransformerBaseHandler(
         self._generator = None
 
         super().__init__(*args, **kwargs)
-
-        print("CAUSAL_LM_TRANSFORMER_BASE_HANDLER")
-        print("do_load_on_init", do_load_on_init)
 
         if do_load_on_init:
             self.load()
@@ -261,11 +260,11 @@ class CausalLMTransformerBaseHandler(
         """
         self._chat_agent.on_load_conversation(message)
 
-    def reload_rag(self, data):
+    def reload_rag(self):
         """
         Public method to reload the RAG model
         """
-        self._chat_agent.reload_rag(data)
+        self._chat_agent.reload_rag()
 
     def _load_tokenizer(self):
         if self._tokenizer is not None:
