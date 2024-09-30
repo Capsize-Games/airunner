@@ -7,7 +7,7 @@ from airunner.aihandler.models.settings_db_handler import SettingsDBHandler
 from airunner.aihandler.models.settings_models import ApplicationSettings, LLMGeneratorSettings, GeneratorSettings, \
     ControlnetSettings, ControlnetImageSettings, BrushSettings, DrawingPadSettings, GridSettings, ActiveGridSettings, \
     ImageToImageSettings, OutpaintSettings, PathSettings, CanvasSettings, MemorySettings, Chatbot, \
-    AIModels, Schedulers, Lora, ShortcutKeys, SavedPrompt, SpeechT5Settings, TTSSettings, BarkSettings, EspeakSettings, \
+    AIModels, Schedulers, Lora, ShortcutKeys, SavedPrompt, SpeechT5Settings, TTSSettings, EspeakSettings, \
     MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.enums import SignalCode
@@ -106,10 +106,6 @@ class SettingsMixin:
     @property
     def tts_settings(self) -> TTSSettings:
         return self.db_handler.load_settings_from_db(TTSSettings)
-
-    @property
-    def bark_settings(self) -> BarkSettings:
-        return self.db_handler.load_settings_from_db(BarkSettings)
 
     @property
     def espeak_settings(self) -> EspeakSettings:
@@ -301,10 +297,6 @@ class SettingsMixin:
     #######################################
     ### TTS Settings ###
     #######################################
-    def update_bark_settings(self, column_name, val):
-        self.db_handler.update_setting(BarkSettings, column_name, val)
-        self.__settings_updated()
-
     def update_espeak_settings(self, column_name, val):
         self.db_handler.update_setting(EspeakSettings, column_name, val)
         self.__settings_updated()
