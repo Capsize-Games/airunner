@@ -1,5 +1,5 @@
 from airunner.enums import Language
-from airunner.settings import TRANSLATION_LANGUAGES, BARK_VOICES, TRANSLATION_MODELS, MALE, FEMALE
+from airunner.settings import TRANSLATION_LANGUAGES, TRANSLATION_MODELS, MALE, FEMALE
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.translation_preferences.templates.translation_preferences_widget_ui import \
     Ui_translation_preferences
@@ -32,9 +32,6 @@ class TranslationPreferencesWidget(BaseWidget):
         self.ui.male_radio_button.blockSignals(True)
         self.ui.female_radio_button.blockSignals(True)
         self.ui.voice_combobox.clear()
-        available_voices = BARK_VOICES[current_language]
-        voices = available_voices[gender] if gender in available_voices else available_voices[MALE.value]
-        self.ui.voice_combobox.addItems(voices)
         self.ui.male_radio_button.setChecked(gender == MALE.value)
         self.ui.female_radio_button.setChecked(gender == FEMALE.value)
         self.ui.voice_combobox.setCurrentText(self.translation_settings.voice)

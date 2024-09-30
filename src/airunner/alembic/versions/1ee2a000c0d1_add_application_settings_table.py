@@ -42,8 +42,6 @@ def upgrade():
                     *settings_models.TTSSettings.__table__.columns)
     op.create_table(settings_models.SpeechT5Settings.__tablename__,
                     *settings_models.SpeechT5Settings.__table__.columns)
-    op.create_table(settings_models.BarkSettings.__tablename__,
-                    *settings_models.BarkSettings.__table__.columns)
     op.create_table(settings_models.EspeakSettings.__tablename__,
                     *settings_models.EspeakSettings.__table__.columns)
     op.create_table(settings_models.STTSettings.__tablename__,
@@ -99,7 +97,6 @@ def upgrade():
     set_default_values(settings_models.ControlnetImageSettings)
     set_default_values(settings_models.TTSSettings)
     set_default_values(settings_models.SpeechT5Settings)
-    set_default_values(settings_models.BarkSettings)
     set_default_values(settings_models.EspeakSettings)
     set_default_values(settings_models.STTSettings)
     set_default_values(settings_models.Schedulers)
@@ -194,10 +191,6 @@ def downgrade():
         pass
     try:
         op.drop_table('translation_settings')
-    except sqlalchemy.exc.OperationalError:
-        pass
-    try:
-        op.drop_table('bark_settings')
     except sqlalchemy.exc.OperationalError:
         pass
     try:
