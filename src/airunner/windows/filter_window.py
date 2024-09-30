@@ -77,10 +77,13 @@ class FilterWindow(BaseWindow):
         return self._filter
 
     def image_filter_by_name(self, name):
-        data = self.settings["image_filters"]
+        data = self.image_filters
         return [filter_data for filter_name, filter_data in data.items() if filter_name == name][0]
 
     def update_value(self, settings_property, value):
+        if settings_property is None:
+            self.logger.warning("settings_property is None, unable to update filter value")
+            return
         settings_property = settings_property.replace('image_filters.', '')
         keys = settings_property.split(".")
         data = self._filter_values
@@ -96,7 +99,7 @@ class FilterWindow(BaseWindow):
         self.window_title = filter_data["name"].replace("_", " ").title()
 
     def init(self):
-        image_filters = self.settings["image_filters"]
+        image_filters = self.image_filters
         image_filter = None
         for filter_name, filter_data in image_filters.items():
             if filter_data['name'] == self.image_filter_model_name:
