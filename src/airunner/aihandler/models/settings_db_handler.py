@@ -23,9 +23,12 @@ class SettingsDBHandler(DatabaseHandler):
     def load_settings_from_db(self, model_class_):
         session = self.get_db_session()
         try:
-            return session.query(model_class_).first()
+            settings = session.query(model_class_).first()
+            if settings is None:
+                settings = self.create_new_settings(model_class_)
         finally:
             session.close()
+        return settings
 
     def update_setting(self, model_class_, name, value):
         session = self.get_db_session()
@@ -56,6 +59,17 @@ class SettingsDBHandler(DatabaseHandler):
     def reset_settings(self):
         print("TODO")
         pass
+
+    def create_new_settings(self, model_class_):
+        session = self.get_db_session()
+        try:
+            new_settings = model_class_()
+            session.add(new_settings)
+            session.commit()
+            session.refresh(new_settings)
+        finally:
+            session.close()
+        return new_settings
 
     #######################################
     ### SAVED PROMPTS ###
