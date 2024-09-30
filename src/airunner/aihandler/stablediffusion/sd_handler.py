@@ -5,6 +5,7 @@ import diffusers
 import numpy as np
 import tomesd
 import torch
+from DeepCache import DeepCacheSDHelper
 from PIL import (
     ImageDraw,
     ImageFont
@@ -80,6 +81,7 @@ class SDHandler(BaseHandler):
         self._disabled_lora: List = []
         self._loaded_embeddings: List = []
         self._current_state: HandlerState = HandlerState.UNINITIALIZED
+        self._deep_cache_helper: DeepCacheSDHelper = None
 
     @property
     def is_single_file(self) -> bool:
@@ -237,7 +239,6 @@ class SDHandler(BaseHandler):
         """
         Public method to load the controlnet model.
         """
-        print("load_controlnet")
         self._load_controlnet()
 
     def unload_controlnet(self):
@@ -259,6 +260,7 @@ class SDHandler(BaseHandler):
         self._load_lora()
         self._load_embeddings()
         self._load_compel()
+        self._load_deep_cache()
         self._make_memory_efficient()
         self._finalize_load_stable_diffusion()
 
@@ -272,6 +274,7 @@ class SDHandler(BaseHandler):
         self._unload_compel()
         self._unload_tokenizer()
         self._unload_generator()
+        self._unload_deep_cache()
         self._unload_pipe()
         self._clear_memory_efficient_settings()
         clear_memory()
@@ -429,8 +432,7 @@ class SDHandler(BaseHandler):
             )
             self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED)
         except Exception as e:
-            print(e)
-            self.logger.error("Unable to load safety checker")
+            self.logger.error(f"Unable to load safety checker: {e}")
             self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED)
 
     def _load_feature_extractor(self):
@@ -453,8 +455,7 @@ class SDHandler(BaseHandler):
             )
             self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED)
         except Exception as e:
-            print(e)
-            self.logger.error("Unable to load feature extractor")
+            self.logger.error(f"Unable to load feature extractor {e}")
             self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED)
 
     def _load_tokenizer(self):
@@ -490,7 +491,6 @@ class SDHandler(BaseHandler):
         return self._generator
 
     def _load_controlnet(self):
-        print("_load_controlnet")
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
 
         try:
@@ -726,6 +726,14 @@ class SDHandler(BaseHandler):
                 self._unload_compel()
         else:
             self._unload_compel()
+
+    def _load_deep_cache(self):
+        self._deep_cache_helper = DeepCacheSDHelper(pipe=self._pipe)
+        self._deep_cache_helper.set_params(
+            cache_interval=3,
+            cache_branch_id=0
+        )
+        self._deep_cache_helper.enable()
 
     def _load_textual_inversion_manager(self):
         self._textual_inversion_manager = DiffusersTextualInversionManager(self._pipe)
@@ -988,6 +996,12 @@ class SDHandler(BaseHandler):
         self._negative_prompt_embeds = None
         self._pooled_prompt_embeds = None
         self._negative_pooled_prompt_embeds = None
+
+    def _unload_deep_cache(self):
+        if self._deep_cache_helper is not None:
+            self._deep_cache_helper.disable()
+        del self._deep_cache_helper
+        self._deep_cache_helper = None
 
     def _unload_pipe(self):
         self.logger.debug("Unloading pipe")
