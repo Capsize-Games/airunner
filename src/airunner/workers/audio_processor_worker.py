@@ -17,8 +17,16 @@ class AudioProcessorWorker(Worker):
         super().__init__(prefix=prefix)
         self.stt = WhisperHandler()
 
+    def on_load_signal(self):
+        self.stt.load()
+        self.emit_signal(SignalCode.STT_START_CAPTURE_SIGNAL)
+
+    def on_unload_signal(self):
+        self.emit_signal(SignalCode.STT_STOP_CAPTURE_SIGNAL)
+        self.stt.unload()
+
     def handle_message(self, audio_data):
-        self.emit_signal(SignalCode.STT_PROCESS_AUDIO_SIGNAL, {
+        self.stt.on_process_audio({
             "message": audio_data
         })
     

@@ -87,6 +87,11 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             (SignalCode.SD_STATE_CHANGED_SIGNAL, self.sd_handle_sd_state_changed_signal),
             (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.sd_on_load_safety_checker),
             (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.sd_on_unload_safety_checker),
+            (SignalCode.STT_LOAD_SIGNAL, self.on_stt_load_signal),
+            (SignalCode.STT_UNLOAD_SIGNAL, self.on_stt_unload_signal),
+            (SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal),
+            (SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal),
+            (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_stt_process_audio_signal)
         ]
         for signal in signals:
             self.register(signal[0], signal[1])
@@ -200,6 +205,23 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.stt_audio_capture_worker = create_worker(WorkerType.AudioCaptureWorker)
         self.stt_audio_processor_worker = create_worker(WorkerType.AudioProcessorWorker)
 
+    def on_stt_load_signal(self):
+        self.stt_audio_processor_worker.on_load_signal()
+        self.emit_signal(SignalCode.STT_START_CAPTURE_SIGNAL)
+
+    def on_stt_unload_signal(self):
+        self.emit_signal(SignalCode.STT_STOP_CAPTURE_SIGNAL)
+        self.stt_audio_processor_worker.on_unload_signal()
+
+    def on_stt_start_capture_signal(self):
+        self.stt_audio_capture_worker.on_start_capture_signal()
+
+    def on_stt_stop_capture_signal(self):
+        self.stt_audio_capture_worker.on_stop_capture_signal()
+
+    def on_stt_process_audio_signal(self, message):
+        self.stt_audio_processor_worker.add_to_queue(message)
+
     def on_llm_request_worker_response_signal(self, message: dict):
         self.llm_generate_worker.on_llm_request_worker_response_signal(message)
 
@@ -232,7 +254,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def on_AudioCaptureWorker_response_signal(self, message: dict):
         item: np.ndarray = message["item"]
         self.logger.debug("Heard signal")
-        self.stt_audio_processor_worker.add_to_queue(item)
+        self.stt_audio_capture_worker.add_to_queue(item)
 
     def on_status_signal(self, message: dict):
         self.logger.debug(message)

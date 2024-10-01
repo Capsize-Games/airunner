@@ -85,7 +85,7 @@ StartAudioCaptureTool = create_application_control_tool_class(
         "Enable microphone. No input, returns nothing."
     ),
     LLMToolName.STT_START_CAPTURE.value,
-    SignalCode.STT_START_CAPTURE_SIGNAL
+    SignalCode.STT_LOAD_SIGNAL
 )
 
 StopAudioCaptureTool = create_application_control_tool_class(
@@ -93,7 +93,7 @@ StopAudioCaptureTool = create_application_control_tool_class(
         "Disable microphone. No input, returns nothing."
     ),
     LLMToolName.STT_STOP_CAPTURE.value,
-    SignalCode.STT_STOP_CAPTURE_SIGNAL
+    SignalCode.STT_UNLOAD_SIGNAL
 )
 
 StartSpeakersTool = create_application_control_tool_class(
