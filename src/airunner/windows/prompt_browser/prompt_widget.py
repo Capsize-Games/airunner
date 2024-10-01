@@ -34,6 +34,10 @@ class PromptWidget(BaseWidget):
         })
 
     def action_clicked_button_delete(self):
+        session = self.db_handler.get_db_session()
+        session.delete(self.saved_prompt)
+        session.commit()
+        session.close()
         self.deleteLater()
 
     def save_prompt(self):
