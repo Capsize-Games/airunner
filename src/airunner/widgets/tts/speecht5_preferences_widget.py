@@ -9,28 +9,6 @@ class SpeechT5PreferencesWidget(BaseWidget):
         super().__init__(*args, **kwargs)
 
     def initialize_form(self):
-        elements = [
-            self.ui.gender_combobox,
-            self.ui.voice_combobox,
-        ]
-
-        for element in elements:
-            element.blockSignals(True)
-
-        # gender = self.settings["tts_settings"]["gender"]
-        # voice = self.settings["tts_settings"]["voice"]
-
-        self.ui.voice_combobox.clear()
-        # self.ui.gender_combobox.setCurrentText(gender)
-        # self.ui.voice_combobox.addItems(self.voices[language][gender])
-        # self.ui.voice_combobox.setCurrentText(voice)
-
-        for element in elements:
-            element.blockSignals(False)
-
-    def voice_changed(self, text):
-        self.update_tts_settings("voice", text)
-
-    def gender_changed(self, text):
-        self.update_tts_settings("gender", text)
-        self.update_tts_settings("voice", self.ui.voice_combobox.currentText())
+        self.ui.rate.init(current_value=self.speech_t5_settings.rate)
+        self.ui.volume.init(current_value=self.speech_t5_settings.volume)
+        self.ui.pitch.init(current_value=self.speech_t5_settings.pitch)

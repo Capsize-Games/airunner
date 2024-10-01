@@ -76,7 +76,10 @@ class SaveGeneratorSettingsWorker(
                 generator_settings.negative_prompt = self.current_negative_prompt_value
                 generator_settings.second_prompt = self.current_secondary_prompt_value
                 generator_settings.second_negative_prompt = self.current_secondary_negative_prompt_value
-                generator_settings.crops_coord_top_left = (self.crops_coord_top_left_x, self.crops_coord_top_left_y)
+                generator_settings.crops_coord_top_left = dict(
+                    x=self.crops_coord_top_left_x,
+                    y=self.crops_coord_top_left_y
+                )
                 self.save_generator_settings(generator_settings)
 
             time.sleep(0.1)
@@ -386,8 +389,8 @@ class GeneratorForm(BaseWidget):
         self.ui.negative_prompt.setPlainText(self.generator_settings.negative_prompt)
         self.ui.secondary_prompt.setPlainText(self.generator_settings.second_prompt)
         self.ui.secondary_negative_prompt.setPlainText(self.generator_settings.second_negative_prompt)
-        self.ui.crops_coord_top_left_x.setText(str(self.generator_settings.crops_coord_top_left[0]))
-        self.ui.crops_coord_top_left_y.setText(str(self.generator_settings.crops_coord_top_left[0]))
+        self.ui.crops_coord_top_left_x.setText(str(self.generator_settings.crops_coord_top_left["x"]))
+        self.ui.crops_coord_top_left_y.setText(str(self.generator_settings.crops_coord_top_left["y"]))
 
         image_presets = [""] + [preset.value for preset in ImagePreset]
         self.ui.image_presets.addItems(image_presets)
