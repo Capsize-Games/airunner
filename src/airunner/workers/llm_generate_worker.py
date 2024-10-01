@@ -36,7 +36,7 @@ class LLMGenerateWorker(Worker):
 
     def on_load_model_signal(self):
         if self.llm:
-            self.llm.load_llm()
+            self.llm.load()
 
     def on_clear_history_signal(self):
         if self.llm:
