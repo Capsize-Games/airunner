@@ -1,12 +1,12 @@
 from PySide6.QtCore import QThread
 
 from airunner.enums import WorkerType
+from airunner.workers.audio_processor_worker import AudioProcessorWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.sd_worker import SDWorker
 from airunner.workers.tts_generator_worker import TTSGeneratorWorker
 from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
-from airunner.workers.audio_processor_worker import AudioProcessorWorker
 from airunner.workers.agent_worker import AgentWorker
 from airunner.workers.latents_worker import LatentsWorker
 from airunner.workers.mask_generator_worker import MaskGeneratorWorker
