@@ -27,7 +27,7 @@ from airunner.enums import (
     SDMode, StableDiffusionVersion, GeneratorSection, ModelStatus, ModelType, SignalCode, HandlerState,
     EngineResponseCode
 )
-from airunner.exceptions import PipeNotLoadedException
+from airunner.exceptions import PipeNotLoadedException, InterruptedException
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.get_torch_device import get_torch_device
@@ -82,6 +82,7 @@ class SDHandler(BaseHandler):
         self._loaded_embeddings: List = []
         self._current_state: HandlerState = HandlerState.UNINITIALIZED
         self._deep_cache_helper: DeepCacheSDHelper = None
+        self.do_interrupt_image_generation = False
 
     @property
     def is_single_file(self) -> bool:
@@ -292,7 +293,7 @@ class SDHandler(BaseHandler):
                 self.logger.warning(e)
                 response = None
             except Exception as e:
-                self.logger.error(f"Error generating image: {e}")
+                self.logger.error(f"Generating image: {e}")
                 response = None
             self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
                 'code': EngineResponseCode.IMAGE_GENERATED,
@@ -311,6 +312,10 @@ class SDHandler(BaseHandler):
     def load_embeddings(self):
         self._load_embeddings()
 
+    def interrupt_image_generation(self):
+        if self._current_state == HandlerState.GENERATING:
+            self.do_interrupt_image_generation = True
+
     def _generate(self):
         self.logger.debug("Generating image")
         model = self.generator_settings.model
@@ -323,6 +328,7 @@ class SDHandler(BaseHandler):
         self._load_prompt_embeds()
         clear_memory()
         args = self._prepare_data()
+        self._current_state = HandlerState.GENERATING
         with torch.no_grad():
             results = self._pipe(**args)
         images = results.get("images", [])
@@ -1112,7 +1118,8 @@ class SDHandler(BaseHandler):
             num_inference_steps=int(self.generator_settings.steps),
             callback=self._callback,
             callback_steps=1,
-            generator=self._generator
+            generator=self._generator,
+            callback_on_step_end=self.__interrupt_callback,
         )
 
         if self.generator_settings.use_compel:
@@ -1207,3 +1214,9 @@ class SDHandler(BaseHandler):
             self._latents = latents
         QApplication.processEvents()
         return {}
+
+    def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
+        if self.do_interrupt_image_generation:
+            self.do_interrupt_image_generation = False
+            raise InterruptedException()
+        return callback_kwargs
