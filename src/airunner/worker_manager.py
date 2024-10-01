@@ -82,6 +82,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             (SignalCode.CONTROLNET_LOAD_SIGNAL, self.sd_on_load_controlnet_signal),
             (SignalCode.CONTROLNET_UNLOAD_SIGNAL, self.sd_on_unload_controlnet_signal),
             (SignalCode.LORA_UPDATE_SIGNAL, self.sd_on_update_lora_signal),
+            (SignalCode.EMBEDDING_UPDATE_SIGNAL, self.sd_on_update_embeddings_signal),
             (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.sd_delete_missing_embeddings),
             (SignalCode.SD_STATE_CHANGED_SIGNAL, self.sd_handle_sd_state_changed_signal),
             (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.sd_on_load_safety_checker),
@@ -300,8 +301,11 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     def sd_on_unload_controlnet_signal(self, data):
         self.sd_worker.on_unload_controlnet_signal(data)
 
-    def sd_on_update_lora_signal(self, data):
-        self.sd_worker.on_update_lora_signal(data)
+    def sd_on_update_lora_signal(self):
+        self.sd_worker.on_update_lora_signal()
+
+    def sd_on_update_embeddings_signal(self):
+        self.sd_worker.on_update_embeddings_signal()
 
     def sd_delete_missing_embeddings(self, data):
         self.sd_worker.delete_missing_embeddings(data)

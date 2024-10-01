@@ -60,9 +60,13 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.get_embeddings(message)
 
-    def on_update_lora_signal(self, message):
+    def on_update_lora_signal(self):
         if self.sd:
-            self.sd.on_update_lora_signal(message)
+            self.sd.load_lora()
+
+    def on_update_embeddings_signal(self):
+        if self.sd:
+            self.sd.load_embeddings()
 
     def on_add_lora_signal(self, message):
         if self.sd:

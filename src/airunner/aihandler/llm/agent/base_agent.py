@@ -123,7 +123,9 @@ class BaseAgent(
 
     @bot_mood.setter
     def bot_mood(self, value: str):
-        self.update_chatbot("bot_mood", value)
+        chatbot = self.chatbot
+        chatbot.bot_mood = value
+        self.db_handler.save_object(chatbot)
 
     @property
     def bot_personality(self) -> str:
