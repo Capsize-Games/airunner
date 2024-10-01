@@ -27,6 +27,8 @@ class BrushScene(CustomScene):
         self._is_erasing = False
         self._do_generate_image = False
 
+        self.register(SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.handle_brush_color_changed)
+
     @property
     def is_brush_or_eraser(self):
         return self.current_tool in (
