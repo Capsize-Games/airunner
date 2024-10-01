@@ -173,3 +173,12 @@ class LLMSettingsWidget(
     def set_tab(self, tab_name):
         index = self.ui.tabWidget.indexOf(self.ui.tabWidget.findChild(QWidget, tab_name))
         self.ui.tabWidget.setCurrentIndex(index)
+
+    def update_chatbot(self, key, val):
+        chatbot = self.chatbot
+        try:
+            setattr(chatbot, key, val)
+        except TypeError:
+            self.logger.error(f"Attribute {key} does not exist in Chatbot")
+            return
+        self.db_handler.save_object(chatbot)

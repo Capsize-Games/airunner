@@ -36,9 +36,7 @@ class LoraContainerWidget(BaseWidget):
         for lora in self.lora:
             lora.enabled = val
             self.update_lora(lora)
-        self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL, {
-            "lora": self.lora
-        })
+        self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL)
 
     def showEvent(self, event):
         if not self.initialized:

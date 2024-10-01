@@ -209,22 +209,6 @@ class SettingsDBHandler(DatabaseHandler):
         finally:
             session.close()
 
-    def update_chatbot(self, chatbot: Chatbot):
-        session = self.get_db_session()
-        try:
-            query = session.query(Chatbot).filter_by(
-                name=chatbot.name
-            ).first()
-            if query:
-                for key in chatbot.__dict__.keys():
-                    if key != "_sa_instance_state":
-                        setattr(query, key, getattr(chatbot, key))
-            else:
-                session.add(chatbot)
-            session.commit()
-        finally:
-            session.close()
-
     def reset_path_settings(self):
         session = self.get_db_session()
         try:

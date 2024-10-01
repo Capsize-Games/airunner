@@ -240,33 +240,6 @@ class SettingsWindow(BaseWindow):
                 ]
             },
             {
-                "section": "Font Settings",
-                "files": [
-                    {
-                        "name": "font_settings",
-                        "display_name": "Fonts",
-                        "checkable": False,
-                        "description": "Change the default font settings for various sections of the application."
-                    },
-                ]
-            },
-            {
-                "section": "Huggingface.co settings",
-                "files": [
-                    {
-                        "name": "allow_online_mode",
-                        "display_name": "Allow online connection",
-                        "checkable": True,
-                        "description": "Allow online connection to Huggingface.co to download missing models. If disabled, you will only be able to use models that are already downloaded. Requires a restart."
-                    },
-                    {
-                        "name": "hf_api_key",
-                        "display_name": "API Key",
-                        "checkable": False
-                    },
-                ]
-            },
-            {
                 "section": "Civitai.com settings",
                 "files": [
                     {

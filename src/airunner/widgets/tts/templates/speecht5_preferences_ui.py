@@ -36,6 +36,20 @@ class Ui_speecht5_preferences(object):
         self.preferences_groupbox.setCheckable(False)
         self.gridLayout_8 = QGridLayout(self.preferences_groupbox)
         self.gridLayout_8.setObjectName(u"gridLayout_8")
+        self.groupBox_2 = QGroupBox(self.preferences_groupbox)
+        self.groupBox_2.setObjectName(u"groupBox_2")
+        self.gridLayout_3 = QGridLayout(self.groupBox_2)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gender_combobox = QComboBox(self.groupBox_2)
+        self.gender_combobox.addItem("")
+        self.gender_combobox.addItem("")
+        self.gender_combobox.setObjectName(u"gender_combobox")
+
+        self.gridLayout_3.addWidget(self.gender_combobox, 0, 0, 1, 1)
+
+
+        self.gridLayout_8.addWidget(self.groupBox_2, 1, 0, 1, 1)
+
         self.groupBox_6 = QGroupBox(self.preferences_groupbox)
         self.groupBox_6.setObjectName(u"groupBox_6")
         self.gridLayout_2 = QGridLayout(self.groupBox_6)
@@ -55,42 +69,7 @@ class Ui_speecht5_preferences(object):
         self.gridLayout_2.addWidget(self.semantic_temperature, 0, 0, 1, 1)
 
 
-        self.gridLayout_8.addWidget(self.groupBox_6, 5, 0, 1, 1)
-
-        self.groupBox_4 = QGroupBox(self.preferences_groupbox)
-        self.groupBox_4.setObjectName(u"groupBox_4")
-        self.gridLayout_5 = QGridLayout(self.groupBox_4)
-        self.gridLayout_5.setObjectName(u"gridLayout_5")
-        self.semantic_temperature_2 = SliderWidget(self.groupBox_4)
-        self.semantic_temperature_2.setObjectName(u"semantic_temperature_2")
-        self.semantic_temperature_2.setProperty("slider_minimum", 1)
-        self.semantic_temperature_2.setProperty("slider_maximum", 100)
-        self.semantic_temperature_2.setProperty("spinbox_minimum", 0.000000000000000)
-        self.semantic_temperature_2.setProperty("spinbox_maximum", 1.000000000000000)
-        self.semantic_temperature_2.setProperty("display_as_float", True)
-        self.semantic_temperature_2.setProperty("slider_single_step", 1)
-        self.semantic_temperature_2.setProperty("slider_page_step", 10)
-        self.semantic_temperature_2.setProperty("spinbox_single_step", 0.010000000000000)
-        self.semantic_temperature_2.setProperty("spinbox_page_step", 0.100000000000000)
-
-        self.gridLayout_5.addWidget(self.semantic_temperature_2, 0, 0, 1, 1)
-
-
-        self.gridLayout_8.addWidget(self.groupBox_4, 4, 0, 1, 1)
-
-        self.groupBox_2 = QGroupBox(self.preferences_groupbox)
-        self.groupBox_2.setObjectName(u"groupBox_2")
-        self.gridLayout_3 = QGridLayout(self.groupBox_2)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.gender_combobox = QComboBox(self.groupBox_2)
-        self.gender_combobox.addItem("")
-        self.gender_combobox.addItem("")
-        self.gender_combobox.setObjectName(u"gender_combobox")
-
-        self.gridLayout_3.addWidget(self.gender_combobox, 0, 0, 1, 1)
-
-
-        self.gridLayout_8.addWidget(self.groupBox_2, 1, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.groupBox_6, 4, 0, 1, 1)
 
         self.groupBox = QGroupBox(self.preferences_groupbox)
         self.groupBox.setObjectName(u"groupBox")
@@ -131,33 +110,34 @@ class Ui_speecht5_preferences(object):
         self.gridLayout_6.addWidget(self.semantic_temperature_3, 0, 0, 1, 1)
 
 
-        self.gridLayout_8.addWidget(self.groupBox_5, 6, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.groupBox_5, 5, 0, 1, 1)
 
-        self.groupBox_3 = QGroupBox(self.preferences_groupbox)
-        self.groupBox_3.setObjectName(u"groupBox_3")
-        self.groupBox_3.setCheckable(True)
-        self.gridLayout_4 = QGridLayout(self.groupBox_3)
-        self.gridLayout_4.setObjectName(u"gridLayout_4")
-        self.language_combobox = QComboBox(self.groupBox_3)
-        self.language_combobox.setObjectName(u"language_combobox")
+        self.groupBox_4 = QGroupBox(self.preferences_groupbox)
+        self.groupBox_4.setObjectName(u"groupBox_4")
+        self.gridLayout_5 = QGridLayout(self.groupBox_4)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.semantic_temperature_2 = SliderWidget(self.groupBox_4)
+        self.semantic_temperature_2.setObjectName(u"semantic_temperature_2")
+        self.semantic_temperature_2.setProperty("slider_minimum", 1)
+        self.semantic_temperature_2.setProperty("slider_maximum", 100)
+        self.semantic_temperature_2.setProperty("spinbox_minimum", 0.000000000000000)
+        self.semantic_temperature_2.setProperty("spinbox_maximum", 1.000000000000000)
+        self.semantic_temperature_2.setProperty("display_as_float", True)
+        self.semantic_temperature_2.setProperty("slider_single_step", 1)
+        self.semantic_temperature_2.setProperty("slider_page_step", 10)
+        self.semantic_temperature_2.setProperty("spinbox_single_step", 0.010000000000000)
+        self.semantic_temperature_2.setProperty("spinbox_page_step", 0.100000000000000)
 
-        self.gridLayout_4.addWidget(self.language_combobox, 1, 0, 1, 1)
-
-        self.label = QLabel(self.groupBox_3)
-        self.label.setObjectName(u"label")
-        self.label.setFont(font)
-
-        self.gridLayout_4.addWidget(self.label, 0, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.semantic_temperature_2, 0, 0, 1, 1)
 
 
-        self.gridLayout_8.addWidget(self.groupBox_3, 3, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.groupBox_4, 3, 0, 1, 1)
 
 
         self.gridLayout_7.addWidget(self.preferences_groupbox, 0, 0, 1, 1)
 
 
         self.retranslateUi(speecht5_preferences)
-        self.language_combobox.currentTextChanged.connect(speecht5_preferences.language_changed)
         self.voice_combobox.currentTextChanged.connect(speecht5_preferences.voice_changed)
         self.gender_combobox.currentTextChanged.connect(speecht5_preferences.gender_changed)
 
@@ -167,22 +147,20 @@ class Ui_speecht5_preferences(object):
     def retranslateUi(self, speecht5_preferences):
         speecht5_preferences.setWindowTitle(QCoreApplication.translate("speecht5_preferences", u"Form", None))
         self.preferences_groupbox.setTitle(QCoreApplication.translate("speecht5_preferences", u"SpeechT5", None))
-        self.groupBox_6.setTitle(QCoreApplication.translate("speecht5_preferences", u"Pitch", None))
-        self.semantic_temperature.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"tts_settings.spd.pitch", None))
-        self.semantic_temperature.setProperty("slider_callback", QCoreApplication.translate("speecht5_preferences", u"handle_value_change", None))
-        self.groupBox_4.setTitle(QCoreApplication.translate("speecht5_preferences", u"Rate", None))
-        self.semantic_temperature_2.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"tts_settings.spd.rate", None))
-        self.semantic_temperature_2.setProperty("slider_callback", QCoreApplication.translate("speecht5_preferences", u"handle_value_change", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("speecht5_preferences", u"Gender", None))
         self.gender_combobox.setItemText(0, QCoreApplication.translate("speecht5_preferences", u"Male", None))
         self.gender_combobox.setItemText(1, QCoreApplication.translate("speecht5_preferences", u"Female", None))
 
+        self.groupBox_6.setTitle(QCoreApplication.translate("speecht5_preferences", u"Pitch", None))
+        self.semantic_temperature.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"tts_settings.spd.pitch", None))
+        self.semantic_temperature.setProperty("slider_callback", QCoreApplication.translate("speecht5_preferences", u"handle_value_change", None))
         self.groupBox.setTitle(QCoreApplication.translate("speecht5_preferences", u"Voice", None))
         self.label_3.setText(QCoreApplication.translate("speecht5_preferences", u"Robotic, fast, no VRAM usage", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("speecht5_preferences", u"Volume", None))
         self.semantic_temperature_3.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"tts_settings.spd.volume", None))
         self.semantic_temperature_3.setProperty("slider_callback", QCoreApplication.translate("speecht5_preferences", u"handle_value_change", None))
-        self.groupBox_3.setTitle(QCoreApplication.translate("speecht5_preferences", u"Language", None))
-        self.label.setText(QCoreApplication.translate("speecht5_preferences", u"Override the system language", None))
+        self.groupBox_4.setTitle(QCoreApplication.translate("speecht5_preferences", u"Rate", None))
+        self.semantic_temperature_2.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"tts_settings.spd.rate", None))
+        self.semantic_temperature_2.setProperty("slider_callback", QCoreApplication.translate("speecht5_preferences", u"handle_value_change", None))
     # retranslateUi
 
