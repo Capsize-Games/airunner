@@ -17,97 +17,30 @@ class STTHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.lock = threading.Lock()
-        self.model_path = ""
-        self.model = None
-        self.model = None
-        self.processor = None
-        self.feature_extractor = None
-        self.model = None
         self.is_on_gpu = False
         self.model_type = ModelType.STT
         self.model_class = "stt"
-
-        self.register(SignalCode.STT_PROCESS_AUDIO_SIGNAL, self.on_process_audio)
-        # self.register(SignalCode.PROCESS_SPEECH_SIGNAL, self.process_given_speech)
         self.fs = 16000
-
-        self.register(SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stop_listenening)
-        self.register(SignalCode.STT_START_CAPTURE_SIGNAL, self.on_start_listening)
-
-        self.register(SignalCode.STT_UNLOAD_SIGNAL, self.on_stt_unload_signal)
-        self.register(SignalCode.STT_PROCESSOR_UNLOAD_SIGNAL, self.on_stt_processor_unload_signal)
-        self.register(SignalCode.STT_FEATURE_EXTRACTOR_UNLOAD_SIGNAL, self.on_stt_feature_extractor_unload_signal)
-
-        self.register(SignalCode.STT_LOAD_SIGNAL, self.on_stt_load_signal)
-        self.register(SignalCode.STT_PROCESSOR_LOAD_SIGNAL, self.on_stt_processor_load_signal)
-        self.register(SignalCode.STT_FEATURE_EXTRACTOR_LOAD_SIGNAL, self.on_stt_feature_extractor_load_signal)
-
         if self.application_settings.stt_enabled:
             self.load()
 
-    def on_stop_listenening(self):
-        self.unload()
-
-    def on_start_listening(self):
-        self.load()
-
-    def on_stt_load_signal(self):
-        self.load_model()
-
-    def on_stt_processor_load_signal(self):
-        self.load_processor()
-
-    def on_stt_feature_extractor_load_signal(self):
-        self.load_feature_extractor()
-
-    def on_stt_unload_signal(self):
-        self.unload_model()
-
-    def on_stt_processor_unload_signal(self):
-        self.unload_processor()
-
-    def on_stt_feature_extractor_unload_signal(self):
-        self.unload_feature_extractor()
-
-    def on_stt_start_capture_signal(self, data: dict):
-        self.load()
-
-    def on_stt_stop_capture_signal(self, data: dict):
-        self.unload()
-
     def load(self):
-        self.logger.debug("Loading model")
-        self.model = self.load_model()
-        self.processor = self.load_processor()
-        self.feature_extractor = self.load_feature_extractor()
-        return (
-            self.model is not None and
-            self.processor is not None and
-            self.feature_extractor is not None
-        )
+        self.logger.debug("Loading speech-to-text")
 
     def unload(self):
-        self.logger.debug("Unloading model")
-        self.is_on_gpu = False
-        self.unload_model()
-        self.unload_processor()
-        self.unload_feature_extractor()
+        self.logger.debug("Unloading speech-to-text")
 
     def unload_model(self):
         self.model = None
-        clear_memory(self.memory_settings.default_gpu_stt)
-        self.change_model_status(ModelType.STT, ModelStatus.UNLOADED, "")
+        clear_memory(self.device)
 
     def unload_processor(self):
         self.processor = None
-        clear_memory(self.memory_settings.default_gpu_stt)
-        self.change_model_status(ModelType.STT_PROCESSOR, ModelStatus.UNLOADED, "")
+        clear_memory(self.device)
 
     def unload_feature_extractor(self):
         self.feature_extractor = None
-        clear_memory(self.memory_settings.default_gpu_stt)
-        self.change_model_status(ModelType.STT_FEATURE_EXTRACTOR, ModelStatus.UNLOADED, "")
-
+        clear_memory(self.device)
 
     @property
     def use_cuda(self):
@@ -115,7 +48,7 @@ class STTHandler(BaseHandler):
 
     def on_process_audio(self, data: dict):
         with self.lock:
-            audio_data = data["message"]
+            audio_data = data["message"]["item"]
             # Convert the byte string to a float32 array
             inputs = np.frombuffer(audio_data, dtype=np.int16)
             inputs = inputs.astype(np.float32) / 32767.0
@@ -181,15 +114,6 @@ class STTHandler(BaseHandler):
             return
 
         return transcription
-
-    def load_model(self):
-        pass
-
-    def load_processor(self):
-        pass
-
-    def load_feature_extractor(self):
-        pass
 
     def move_to_gpu(self):
         if not self.is_on_gpu:
