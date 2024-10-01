@@ -3,7 +3,10 @@ from typing import List
 from airunner.aihandler.models.database_handler import DatabaseHandler
 from airunner.aihandler.models.settings_models import Chatbot, AIModels, Schedulers, Lora, PathSettings, SavedPrompt, \
     Embedding, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, ShortcutKeys, \
-    GeneratorSettings, WindowSettings
+    GeneratorSettings, WindowSettings, ApplicationSettings, ActiveGridSettings, CanvasSettings, ControlnetSettings, \
+    ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings, ControlnetImageSettings, \
+    LLMGeneratorSettings, TTSSettings, SpeechT5Settings, EspeakSettings, STTSettings, BrushSettings, GridSettings, \
+    MemorySettings
 
 
 class SettingsDBHandler(DatabaseHandler):
@@ -57,8 +60,32 @@ class SettingsDBHandler(DatabaseHandler):
             session.close()
 
     def reset_settings(self):
-        print("TODO")
-        pass
+        session = self.get_db_session()
+        try:
+            # Delete all entries from the model class
+            session.query(ApplicationSettings).delete()
+            session.query(ActiveGridSettings).delete()
+            session.query(CanvasSettings).delete()
+            session.query(ControlnetSettings).delete()
+            session.query(ImageToImageSettings).delete()
+            session.query(OutpaintSettings).delete()
+            session.query(DrawingPadSettings).delete()
+            session.query(MetadataSettings).delete()
+            session.query(GeneratorSettings).delete()
+            session.query(ControlnetImageSettings).delete()
+            session.query(LLMGeneratorSettings).delete()
+            session.query(TTSSettings).delete()
+            session.query(SpeechT5Settings).delete()
+            session.query(EspeakSettings).delete()
+            session.query(STTSettings).delete()
+            session.query(BrushSettings).delete()
+            session.query(GridSettings).delete()
+            session.query(PathSettings).delete()
+            session.query(MemorySettings).delete()
+            # Commit the changes
+            session.commit()
+        finally:
+            session
 
     def create_new_settings(self, model_class_):
         session = self.get_db_session()
