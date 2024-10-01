@@ -177,3 +177,12 @@ class BotPreferencesWidget(BaseWidget):
         session.close()
         self.load_documents()
         self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+
+    def update_chatbot(self, key, val):
+        chatbot = self.chatbot
+        try:
+            setattr(chatbot, key, val)
+        except TypeError:
+            self.logger.error(f"Attribute {key} does not exist in Chatbot")
+            return
+        self.db_handler.save_object(chatbot)

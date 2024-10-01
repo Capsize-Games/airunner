@@ -305,6 +305,12 @@ class SDHandler(BaseHandler):
             self.sd_model_status = status
         super().change_model_status(model, status, path)
 
+    def load_lora(self):
+        self._load_lora()
+
+    def load_embeddings(self):
+        self._load_embeddings()
+
     def _generate(self):
         self.logger.debug("Generating image")
         model = self.generator_settings.model
@@ -694,11 +700,13 @@ class SDHandler(BaseHandler):
             self._pipe.unload_lora_weights()
 
     def _load_embeddings(self):
+        if not self._pipe:
+            return
         self.logger.debug("Loading embeddings")
         available_embeddings = self.get_embeddings_by_version(self.generator_settings.version)
         for embedding in available_embeddings:
             path = os.path.expanduser(embedding.path)
-            if embedding.active:
+            if embedding.active and embedding not in self._loaded_embeddings:
                 if os.path.exists(path):
                     token = embedding.name
                     try:
