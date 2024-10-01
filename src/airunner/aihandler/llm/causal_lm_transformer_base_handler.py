@@ -25,7 +25,7 @@ class CausalLMTransformerBaseHandler(
     model_type = ModelType.LLM
 
     def __init__(self, do_load_on_init: bool = False, *args, **kwargs):
-        self.model_type = "llm"
+        self.model_type = ModelType.LLM
         self.model_class = "llm"
         self.agent_options = kwargs.pop("agent_options", {})
         self._model = None
@@ -239,7 +239,8 @@ class CausalLMTransformerBaseHandler(
         """
         Public method to interrupt the chat process
         """
-        self._chat_agent.interrupt_process()
+        if self._chat_agent:
+            self._chat_agent.interrupt_process()
 
     def clear_history(self):
         """

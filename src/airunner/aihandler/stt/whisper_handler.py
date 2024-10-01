@@ -12,73 +12,94 @@ class WhisperHandler(STTHandler):
     """
     Handler for the Whisper model from OpenAI.
     """
-    def stop_capture(self, data: dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model = None
+        self.processor = None
+        self.feature_extractor = None
+
+    @property
+    def model_path(self) -> str:
+        path: str = self.path_settings.stt_model_path
+        file_path = os.path.expanduser(os.path.join(path, DEFAULT_STT_HF_PATH))
+        return os.path.abspath(file_path)
+
+    def on_stt_load_signal(self):
+        self.load()
+
+    def on_stt_unload_signal(self):
         self.unload()
-        super().stop_capture(data)
 
     def update_status(self, code: SignalCode, status: ModelStatus):
         pass
 
-    def load_model(self):
-        self.logger.debug(f"Loading model")
+    def load(self):
+        super().load()
+        self.change_model_status(ModelType.STT, ModelStatus.LOADING)
+        self._load_model()
+        self._load_processor()
+        self._load_feature_extractor()
+        if (
+            self.model is not None and
+            self.processor is not None and
+            self.feature_extractor is not None
+        ):
+            self.change_model_status(ModelType.STT, ModelStatus.LOADED)
+            return True
+        self.change_model_status(ModelType.STT, ModelStatus.FAILED)
+        return False
 
-        file_path = os.path.join(self.path_settings.stt_model_path, DEFAULT_STT_HF_PATH)
-        file_path = os.path.expanduser(file_path)
-        file_path = os.path.abspath(file_path)
-        self.change_model_status(ModelType.STT, ModelStatus.LOADING, file_path)
+    def unload(self):
+        super().unload()
+        self.change_model_status(ModelType.STT, ModelStatus.LOADING)
+        self.is_on_gpu = False
+        self.unload_model()
+        self.unload_processor()
+        self.unload_feature_extractor()
+        self.change_model_status(ModelType.STT, ModelStatus.UNLOADED)
+
+    def _load_model(self):
+        model_path = self.model_path
+        self.logger.debug(f"Loading model from {model_path}")
         try:
-            val = WhisperForConditionalGeneration.from_pretrained(
-                file_path,
+            self.model = WhisperForConditionalGeneration.from_pretrained(
+                model_path,
                 local_files_only=True,
                 torch_dtype=torch.bfloat16,
-                device_map=self.device
+                device_map=self.device,
+                use_safetensors=True
             )
-            self.change_model_status(ModelType.STT, ModelStatus.LOADED, file_path)
-            return val
         except Exception as e:
             self.logger.error(f"Failed to load model")
             self.logger.error(e)
-            self.change_model_status(ModelType.STT, ModelStatus.FAILED, file_path)
             return None
 
-    def load_processor(self):
-        self.logger.debug(f"Loading processor")
-        file_path = os.path.join(self.path_settings.stt_model_path, DEFAULT_STT_HF_PATH)
-        file_path = os.path.expanduser(file_path)
-        file_path = os.path.abspath(file_path)
-        self.change_model_status(ModelType.STT_PROCESSOR, ModelStatus.LOADING, file_path)
+    def _load_processor(self):
+        model_path = self.model_path
+        self.logger.debug(f"Loading processor from {model_path}")
         try:
-            val = WhisperProcessor.from_pretrained(
-                file_path,
+            self.processor = WhisperProcessor.from_pretrained(
+                model_path,
                 local_files_only=True,
                 torch_dtype=torch.bfloat16,
                 device_map=self.device
             )
-            self.change_model_status(ModelType.STT_PROCESSOR, ModelStatus.LOADED, file_path)
-            return val
         except Exception as e:
             self.logger.error(f"Failed to load processor")
             self.logger.error(e)
-            self.change_model_status(ModelType.STT_PROCESSOR, ModelStatus.FAILED, file_path)
             return None
 
-    def load_feature_extractor(self):
-        self.logger.debug(f"Loading feature extractor")
-        file_path = os.path.join(self.path_settings.stt_model_path, DEFAULT_STT_HF_PATH)
-        file_path = os.path.expanduser(file_path)
-        file_path = os.path.abspath(file_path)
-        self.change_model_status(ModelType.STT_FEATURE_EXTRACTOR, ModelStatus.LOADING, file_path)
+    def _load_feature_extractor(self):
+        model_path = self.model_path
+        self.logger.debug(f"Loading feature extractor {model_path}")
         try:
-            val = WhisperFeatureExtractor.from_pretrained(
-                file_path,
+            self.feature_extractor = WhisperFeatureExtractor.from_pretrained(
+                model_path,
                 local_files_only=True,
                 torch_dtype=torch.bfloat16,
                 device_map=self.device
             )
-            self.change_model_status(ModelType.STT_FEATURE_EXTRACTOR, ModelStatus.LOADED, file_path)
-            return val
         except Exception as e:
             self.logger.error(f"Failed to load feature extractor")
             self.logger.error(e)
-            self.change_model_status(ModelType.STT_FEATURE_EXTRACTOR, ModelStatus.FAILED, file_path)
             return None

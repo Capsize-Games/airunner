@@ -23,6 +23,13 @@ class StatusWidget(BaseWidget):
 
         self.safety_checker_status = ModelStatus.UNLOADED
         self.feature_extractor_status = ModelStatus.UNLOADED
+        self._model_status = {
+            ModelType.SD: ModelStatus.LOADING if self.application_settings.sd_enabled else ModelStatus.UNLOADED,
+            ModelType.CONTROLNET: ModelStatus.LOADING if self.application_settings.controlnet_enabled else ModelStatus.UNLOADED,
+            ModelType.LLM: ModelStatus.LOADING if self.application_settings.llm_enabled else ModelStatus.UNLOADED,
+            ModelType.TTS: ModelStatus.LOADING if self.application_settings.tts_enabled else ModelStatus.UNLOADED,
+            ModelType.STT: ModelStatus.LOADING if self.application_settings.stt_enabled else ModelStatus.UNLOADED,
+        }
 
         if self.application_settings.nsfw_filter and self.application_settings.sd_enabled:
             self.safety_checker_status = ModelStatus.LOADING
@@ -38,35 +45,36 @@ class StatusWidget(BaseWidget):
         if self.application_settings.sd_enabled:
             self.on_model_status_changed_signal({
                 "model": ModelType.SD,
-                "status": ModelStatus.LOADING,
+                "status": self._model_status[ModelType.SD],
                 "path": ""
             })
         if self.application_settings.controlnet_enabled:
             self.on_model_status_changed_signal({
                 "model": ModelType.CONTROLNET,
-                "status": ModelStatus.LOADING,
+                "status": self._model_status[ModelType.CONTROLNET],
                 "path": ""
             })
         if self.application_settings.llm_enabled:
             self.on_model_status_changed_signal({
                 "model": ModelType.LLM,
-                "status": ModelStatus.LOADING,
+                "status": self._model_status[ModelType.LLM],
                 "path": ""
             })
         if self.application_settings.tts_enabled:
             self.on_model_status_changed_signal({
                 "model": ModelType.TTS,
-                "status": ModelStatus.LOADING,
+                "status": self._model_status[ModelType.TTS],
                 "path": ""
             })
         if self.application_settings.stt_enabled:
             self.on_model_status_changed_signal({
                 "model": ModelType.STT,
-                "status": ModelStatus.LOADING,
+                "status": self._model_status[ModelType.STT],
                 "path": ""
             })
 
     def update_model_status(self, data):
+        self._model_status[data["model"]] = data["status"]
         if data["status"] is ModelStatus.LOADING:
             color = StatusColors.LOADING
         elif data["status"] is ModelStatus.LOADED:
@@ -112,8 +120,8 @@ class StatusWidget(BaseWidget):
         self.ui.sd_status.setText(self.generator_settings.version)
 
     def on_model_status_changed_signal(self, data):
-        self.update_model_status(data)
         model = data["model"]
+        self.update_model_status(data)
         if model == ModelType.SAFETY_CHECKER:
             self.safety_checker_status = data["status"]
             self.update_safety_checker_status()

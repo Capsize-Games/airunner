@@ -1,8 +1,11 @@
+import queue
 import time
 
 import sounddevice as sd
 import numpy as np
 from PySide6.QtCore import QThread, Slot
+
+from airunner.aihandler.stt.whisper_handler import WhisperHandler
 from airunner.enums import SignalCode, ModelStatus
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
@@ -20,21 +23,18 @@ class AudioCaptureWorker(Worker):
         self.voice_input_start_time: time.time = None
         self.chunk_duration = self.stt_settings.chunk_duration  # duration of chunks in milliseconds
         self.fs = self.stt_settings.fs
-        self.register(
-            SignalCode.STT_STOP_CAPTURE_SIGNAL,
-            self.stop_listening
-        )
-        self.register(
-            SignalCode.STT_START_CAPTURE_SIGNAL,
-            self.start_listening
-        )
         self.stream = None
+        self._audio_process_queue = queue.Queue()
+
+    def on_start_capture_signal(self):
+        self._start_listening()
+
+    def on_stop_capture_signal(self):
+        self._stop_listening()
 
     def start(self):
         self.logger.debug("Starting audio capture worker")
         running = True
-        if self.application_settings.stt_enabled:
-            self.start_listening()
         chunk_duration = self.stt_settings.chunk_duration
         fs = self.stt_settings.fs
         volume_input_threshold = self.stt_settings.volume_input_threshold
@@ -73,10 +73,7 @@ class AudioCaptureWorker(Worker):
             while not self.listening and running:
                 QThread.msleep(SLEEP_TIME_IN_MS)
 
-    def handle_message(self, message):
-        pass
-
-    def start_listening(self):
+    def _start_listening(self):
         self.logger.debug("Start listening")
         self.listening = True
         fs = self.stt_settings.fs
@@ -89,7 +86,7 @@ class AudioCaptureWorker(Worker):
         except Exception as e:
             self.logger.error(e)
 
-    def stop_listening(self):
+    def _stop_listening(self):
         self.logger.debug("Stop listening")
         self.listening = False
         try:

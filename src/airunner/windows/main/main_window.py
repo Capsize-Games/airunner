@@ -570,9 +570,9 @@ class MainWindow(
         QApplication.processEvents()
         self.update_application_settings("stt_enabled", val)
         if not val:
-            self.emit_signal(SignalCode.STT_STOP_CAPTURE_SIGNAL)
+            self.emit_signal(SignalCode.STT_UNLOAD_SIGNAL)
         else:
-            self.emit_signal(SignalCode.STT_START_CAPTURE_SIGNAL)
+            self.emit_signal(SignalCode.STT_LOAD_SIGNAL)
 
     def save_state(self):
         if self.quitting:
