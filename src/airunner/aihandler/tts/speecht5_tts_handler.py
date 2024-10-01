@@ -16,35 +16,38 @@ class SpeechT5TTSHandler(TTSHandler):
         super().__init__(*args, **kwargs)
 
     @property
-    def processor_path(self):
+    def processor_path(self) -> str:
+        path:str = self.speech_t5_settings.processor_path
         return os.path.expanduser(
             os.path.join(
                 self.path_settings.base_path,
                 "text/models",
                 "tts",
-                self.speech_t5_settings.processor_path
+                path
             )
         )
 
     @property
-    def model_path(self):
+    def model_path(self) -> str:
+        path:str = self.speech_t5_settings.model_path
         return os.path.expanduser(
             os.path.join(
                 self.path_settings.base_path,
                 "text/models",
                 "tts",
-                self.speech_t5_settings.model_path,
+                path
             )
         )
 
     @property
-    def vocoder_path(self):
+    def vocoder_path(self) -> str:
+        path:str = self.speech_t5_settings.vocoder_path
         return os.path.expanduser(
             os.path.join(
                 self.path_settings.base_path,
                 "text/models",
                 "tts",
-                self.speech_t5_settings.vocoder_path,
+                path
             )
         )
 
@@ -63,23 +66,23 @@ class SpeechT5TTSHandler(TTSHandler):
         self.logger.debug(f"Loading Vocoder {self.vocoder_path}")
         from transformers import SpeechT5HifiGan
         try:
-            self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.LOADING, self.vocoder_path)
+            self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.LOADING)
             vocoder = self.vocoder = SpeechT5HifiGan.from_pretrained(
                 self.vocoder_path,
                 local_files_only=True,
                 torch_dtype=self.torch_dtype,
                 device_map=self.device
             )
-            self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.LOADED, self.vocoder_path)
+            self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.LOADED)
             return vocoder
         except Exception as e:
-            self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.FAILED, self.vocoder_path)
+            self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.FAILED)
             return None
 
     def load_speaker_embeddings(self):
         self.logger.debug("Loading speaker embeddings...")
 
-        self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.LOADING, self.speaker_embeddings_path)
+        self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.LOADING)
         try:
             self.speaker_embeddings = torch.load(
                 self.speaker_embeddings_path
@@ -87,16 +90,16 @@ class SpeechT5TTSHandler(TTSHandler):
             if self.use_cuda and self.speaker_embeddings is not None:
                 self.speaker_embeddings = self.speaker_embeddings.to(torch.bfloat16).cuda()  # Change to bfloat16
 
-            self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.LOADED, self.speaker_embeddings_path)
+            self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.LOADED)
 
         except Exception as e:
             self.logger.error("Failed to load speaker embeddings")
             self.logger.error(e)
-            self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.FAILED, self.speaker_embeddings_path)
+            self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.FAILED)
 
     def unload_speaker_embeddings(self):
         self.speaker_embeddings = None
-        self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.UNLOADED, "")
+        self.change_model_status(ModelType.TTS_SPEAKER_EMBEDDINGS, ModelStatus.UNLOADED)
         clear_memory(self.memory_settings.default_gpu_tts)
 
     def do_generate(self, message):
