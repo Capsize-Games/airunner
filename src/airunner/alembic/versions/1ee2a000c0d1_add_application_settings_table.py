@@ -48,8 +48,6 @@ def upgrade():
                     *settings_models.STTSettings.__table__.columns)
     op.create_table(settings_models.Schedulers.__tablename__,
                     *settings_models.Schedulers.__table__.columns)
-    op.create_table(settings_models.TranslationSettings.__tablename__,
-                    *settings_models.TranslationSettings.__table__.columns)
     op.create_table(settings_models.LLMGeneratorSettings.__tablename__,
                     *settings_models.LLMGeneratorSettings.__table__.columns)
     op.create_table(settings_models.BrushSettings.__tablename__,
@@ -100,7 +98,6 @@ def upgrade():
     set_default_values(settings_models.EspeakSettings)
     set_default_values(settings_models.STTSettings)
     set_default_values(settings_models.Schedulers)
-    set_default_values(settings_models.TranslationSettings)
     set_default_values(settings_models.LLMGeneratorSettings)
     set_default_values(settings_models.BrushSettings)
     set_default_values(settings_models.GridSettings)

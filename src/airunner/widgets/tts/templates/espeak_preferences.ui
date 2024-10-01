@@ -51,6 +51,24 @@
       <bool>false</bool>
      </property>
      <layout class="QGridLayout" name="gridLayout_8">
+      <property name="leftMargin">
+       <number>10</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
+       <number>10</number>
+      </property>
+      <property name="horizontalSpacing">
+       <number>0</number>
+      </property>
+      <property name="verticalSpacing">
+       <number>10</number>
+      </property>
       <item row="5" column="0">
        <widget class="SliderWidget" name="pitch" native="true">
         <property name="slider_minimum" stdset="0">
@@ -69,7 +87,7 @@
          <bool>true</bool>
         </property>
         <property name="settings_property" stdset="0">
-         <string>pitch</string>
+         <string>espeak_settings.pitch</string>
         </property>
         <property name="slider_single_step" stdset="0">
          <number>1</number>
@@ -106,7 +124,7 @@
          <bool>true</bool>
         </property>
         <property name="settings_property" stdset="0">
-         <string>volume</string>
+         <string>espeak_settings.volume</string>
         </property>
         <property name="slider_single_step" stdset="0">
          <number>1</number>
@@ -205,7 +223,7 @@
          <bool>true</bool>
         </property>
         <property name="settings_property" stdset="0">
-         <string>rate</string>
+         <string>espeak_settings.rate</string>
         </property>
         <property name="slider_single_step" stdset="0">
          <number>1</number>
@@ -258,8 +276,8 @@
    <slot>language_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>233</x>
-     <y>467</y>
+     <x>257</x>
+     <y>278</y>
     </hint>
     <hint type="destinationlabel">
      <x>63</x>
@@ -274,8 +292,8 @@
    <slot>voice_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>325</x>
-     <y>192</y>
+     <x>349</x>
+     <y>183</y>
     </hint>
     <hint type="destinationlabel">
      <x>326</x>
@@ -290,8 +308,8 @@
    <slot>gender_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>352</x>
-     <y>117</y>
+     <x>376</x>
+     <y>108</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
