@@ -106,6 +106,7 @@ class GeneratorForm(BaseWidget):
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
             SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
+            SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated,
         }
         self.thread = QThread()
         self.worker = SaveGeneratorSettingsWorker(parent=self)
@@ -151,6 +152,9 @@ class GeneratorForm(BaseWidget):
     def on_application_settings_changed_signal(self, _data):
         self.toggle_secondary_prompts()
 
+    def on_bot_mood_updated(self):
+        self._set_chatbot_mood()
+
     def on_generate_image_signal(self, _data):
         self.handle_generate_button_clicked()
 
@@ -174,6 +178,9 @@ class GeneratorForm(BaseWidget):
         self.ui.secondary_prompt.setPlainText(secondary_prompt)
         self.ui.secondary_negative_prompt.setPlainText(negative_prompt)
         self.handle_generate_button_clicked()
+
+    def _set_chatbot_mood(self):
+        self.ui.mood_label.setText(self.chatbot.bot_mood)
 
     def handle_generate_image_from_image(self, image):
         pass
@@ -374,6 +381,7 @@ class GeneratorForm(BaseWidget):
         self.toggle_secondary_prompts()
         self.initialized = True
         self.thread.start()
+        self._set_chatbot_mood()
 
     def set_form_values(self, _data=None):
         self.ui.prompt.blockSignals(True)
