@@ -111,11 +111,13 @@ class SliderWidget(BaseWidget):
     def init(self, **kwargs):
         self.is_loading = True
         self._callback = kwargs.get("slider_callback", None)
+        if self._callback is None:
+            self._callback = self.property("slider_callback") or None
         slider_minimum = kwargs.get("slider_minimum", self.property("slider_minimum") or 0)
         slider_maximum = kwargs.get("slider_maximum", self.property("slider_maximum") or 100)
         spinbox_minimum = kwargs.get("spinbox_minimum", self.property("spinbox_minimum") or 0.0)
         spinbox_maximum = kwargs.get("spinbox_maximum", self.property("spinbox_maximum") or 100.0)
-        current_value = kwargs.get("current_value", self.property("current_value") or None)
+        current_value = None
         settings_property = kwargs.get("settings_property", self.property("settings_property") or None)
         label_text = kwargs.get("label_text", self.property("label_text") or "")
         display_as_float = kwargs.get("display_as_float", self.property("display_as_float") or False)
@@ -203,7 +205,6 @@ class SliderWidget(BaseWidget):
         if settings_property is None:
             return
         keys = settings_property.split(".")
-        print(keys)
         self.update_settings_by_name(keys[0], keys[1], val)
 
     def _update_dict_recursively(self, data: dict, keys: List[str], val: Any) -> dict:
@@ -222,9 +223,7 @@ class SliderWidget(BaseWidget):
         if val is None:
             val = 0
 
-        single_step = self.ui.slider.singleStep()
-        adjusted_value = val
-        normalized = adjusted_value / self.slider_maximum
+        normalized = val / self.slider_maximum
         spinbox_val = normalized * self.spinbox_maximum
         spinbox_val = round(spinbox_val, 2)
 
