@@ -201,10 +201,6 @@ class SettingsMixin:
         self.db_handler.update_embeddings(embeddings)
         self.__settings_updated()
 
-    def update_embedding(self, embedding: Embedding):
-        self.db_handler.update_embeddings([embedding])
-        self.__settings_updated()
-
     #######################################
     ### CHATBOT ###
     #######################################
@@ -214,23 +210,14 @@ class SettingsMixin:
             self.llm_generator_settings.current_chatbot
         )
 
-    def update_chatbot(self, key, val):
-        chatbot = self.chatbot
-        try:
-            setattr(chatbot, key, val)
-        except TypeError:
-            self.logger.error(f"Attribute {key} does not exist in Chatbot")
-            return
-        self.db_handler.update_chatbot(chatbot)
-        self.__settings_updated()
-
     def get_chatbot_by_name(self, chatbot_name) -> Chatbot:
+        chatbot = None
         session = self.db_handler.get_db_session()
         try:
             chatbot = session.query(Chatbot).filter_by(name=chatbot_name).options(joinedload(Chatbot.target_files)).first()
-            return chatbot
         finally:
             session.close()
+        return chatbot
 
     def delete_chatbot_by_name(self, chatbot_name):
         self.db_handler.delete_chatbot_by_name(chatbot_name)

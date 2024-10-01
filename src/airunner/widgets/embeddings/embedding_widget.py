@@ -29,11 +29,12 @@ class EmbeddingWidget(BaseWidget):
         self.create_trigger_word_widgets(self.embedding)
 
     def update_embedding(self, embedding: Embedding):
-        self.update_embedding(embedding)
+        self.db_handler.save_object(embedding)
+        self.emit_signal(SignalCode.EMBEDDING_UPDATE_SIGNAL)
 
     def action_toggled_embedding(self, val, emit_signal=True):
         self.ui.enabledCheckbox.setChecked(val)
-        self.embedding['active'] = val
+        self.embedding.active = val
         if emit_signal:
             self.update_embedding(self.embedding)
 
