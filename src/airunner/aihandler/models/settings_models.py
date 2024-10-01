@@ -255,6 +255,9 @@ class SpeechT5Settings(Base):
     processor_path = Column(String, default="microsoft/speecht5_tts")
     vocoder_path = Column(String, default="microsoft/speecht5_hifigan")
     model_path = Column(String, default="microsoft/speecht5_tts")
+    rate = Column(Integer, default=100)
+    pitch = Column(Integer, default=100)
+    volume = Column(Integer, default=100)
 
 
 class EspeakSettings(Base):

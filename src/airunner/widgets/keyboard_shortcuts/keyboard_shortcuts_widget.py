@@ -23,20 +23,20 @@ class KeyboardShortcutsWidget(BaseWidget):
         self.initialize_ui()
 
     def initialize_ui(self):
-        for key, value in self.shortcuts.items():
-            self.add_widget(key, value)
+        for index, value in enumerate(self.shortcuts):
+            self.add_widget(index, value)
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
-    def add_widget(self, key, value):
+    def add_widget(self, index, value):
         widget = QWidget()
         ui = Ui_keyboard_shortcut_widget()
         ui.setupUi(widget)
-        ui.label.setText(key)
+        ui.label.setText(value["display_name"])
         ui.line_edit.setText(value["text"])
-        ui.line_edit.mousePressEvent = lambda event: self.set_shortcut(key, ui.line_edit)
-        ui.line_edit.keyPressEvent = lambda event: self.get_shortcut(key, ui.line_edit, event)
+        ui.line_edit.mousePressEvent = lambda event: self.set_shortcut(index, ui.line_edit)
+        ui.line_edit.keyPressEvent = lambda event: self.get_shortcut(index, ui.line_edit, event)
         self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
-        self.shortcuts[key]["widget"] = ui
+        self.shortcuts[index]["widget"] = ui
         return widget
 
     def set_shortcut(self, key, line_edit):

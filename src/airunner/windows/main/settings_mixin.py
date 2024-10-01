@@ -296,6 +296,10 @@ class SettingsMixin:
         self.__settings_updated()
 
     def update_tts_settings(self, column_name, val):
+        self.db_handler.update_setting(TTSSettings, column_name, val)
+        self.__settings_updated()
+
+    def update_speech_t5_settings(self, column_name, val):
         self.db_handler.update_setting(SpeechT5Settings, column_name, val)
         self.__settings_updated()
 
