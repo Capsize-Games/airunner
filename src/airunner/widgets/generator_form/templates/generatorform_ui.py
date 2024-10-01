@@ -278,6 +278,35 @@ class Ui_generator_form(object):
         self.gridLayout_6.addWidget(self.llm_history_widget, 0, 0, 1, 1)
 
         self.generator_form_tabs.addTab(self.llm_history_widget_tab, "")
+        self.chatbot_mood_tab = QWidget()
+        self.chatbot_mood_tab.setObjectName(u"chatbot_mood_tab")
+        self.gridLayout_8 = QGridLayout(self.chatbot_mood_tab)
+        self.gridLayout_8.setSpacing(0)
+        self.gridLayout_8.setObjectName(u"gridLayout_8")
+        self.gridLayout_8.setContentsMargins(0, 0, 0, 0)
+        self.scrollArea = QScrollArea(self.chatbot_mood_tab)
+        self.scrollArea.setObjectName(u"scrollArea")
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents_2 = QWidget()
+        self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 614, 918))
+        self.gridLayout_9 = QGridLayout(self.scrollAreaWidgetContents_2)
+        self.gridLayout_9.setObjectName(u"gridLayout_9")
+        self.mood_label = QLabel(self.scrollAreaWidgetContents_2)
+        self.mood_label.setObjectName(u"mood_label")
+        self.mood_label.setWordWrap(True)
+
+        self.gridLayout_9.addWidget(self.mood_label, 0, 0, 1, 1)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout_9.addItem(self.verticalSpacer, 1, 0, 1, 1)
+
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
+
+        self.gridLayout_8.addWidget(self.scrollArea, 0, 0, 1, 1)
+
+        self.generator_form_tabs.addTab(self.chatbot_mood_tab, "")
 
         self.gridLayout_4.addWidget(self.generator_form_tabs, 0, 0, 1, 1)
 
@@ -339,5 +368,7 @@ class Ui_generator_form(object):
         self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.tab), QCoreApplication.translate("generator_form", u"AI Art", None))
         self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.tab_2), QCoreApplication.translate("generator_form", u"Chat", None))
         self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.llm_history_widget_tab), QCoreApplication.translate("generator_form", u"Chat History", None))
+        self.mood_label.setText(QCoreApplication.translate("generator_form", u"TextLabel", None))
+        self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.chatbot_mood_tab), QCoreApplication.translate("generator_form", u"Chatbot mood", None))
     # retranslateUi
 

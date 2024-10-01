@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>597</width>
-    <height>986</height>
+    <height>691</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -32,7 +32,7 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="3" column="0">
+   <item row="2" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <property name="spacing">
       <number>0</number>
@@ -163,19 +163,6 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="0">
-    <widget class="QComboBox" name="action">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>30</height>
-      </size>
-     </property>
-     <property name="sizeAdjustPolicy">
-      <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
-     </property>
-    </widget>
-   </item>
    <item row="0" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="widgetResizable">
@@ -187,7 +174,7 @@
         <x>0</x>
         <y>0</y>
         <width>595</width>
-        <height>873</height>
+        <height>607</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -233,7 +220,7 @@
                 <x>0</x>
                 <y>0</y>
                 <width>593</width>
-                <height>435</height>
+                <height>301</height>
                </rect>
               </property>
               <layout class="QGridLayout" name="gridLayout_2">
@@ -293,49 +280,18 @@
      </widget>
     </widget>
    </item>
-   <item row="2" column="0">
-    <layout class="QFormLayout" name="formLayout">
-     <property name="horizontalSpacing">
-      <number>10</number>
+   <item row="1" column="0">
+    <widget class="QComboBox" name="action">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>30</height>
+      </size>
      </property>
-     <property name="verticalSpacing">
-      <number>0</number>
+     <property name="sizeAdjustPolicy">
+      <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
      </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label">
-       <property name="font">
-        <font>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Chatbot Mood:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QLabel" name="mood_label">
-       <property name="text">
-        <string>TextLabel</string>
-       </property>
-       <property name="wordWrap">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    </widget>
    </item>
   </layout>
  </widget>

@@ -181,11 +181,8 @@ class ChatPromptWidget(BaseWidget):
             self.register(SignalCode.STT_HEAR_SIGNAL, self.on_hear_signal)
             self.register(SignalCode.LLM_TOKEN_SIGNAL, self.on_token_signal)
             self.register(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, self.on_add_bot_message_to_conversation)
-            self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed)
             self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed)
             self.registered = True
-
-        self.set_chatbot_mood()
 
         # handle return pressed on QPlainTextEdit
         # there is no returnPressed signal for QPlainTextEdit
@@ -207,12 +204,6 @@ class ChatPromptWidget(BaseWidget):
                 self.enable_send_button()
             else:
                 self.disable_send_button()
-
-    def set_chatbot_mood(self):
-        self.ui.mood_label.setText(self.chatbot.bot_mood)
-
-    def on_application_settings_changed(self, data: dict):
-        self.set_chatbot_mood()
 
     def llm_action_changed(self, val: str):
         self.update_llm_generator_settings("action", val)
