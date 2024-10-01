@@ -84,11 +84,11 @@ class TTSHandler(BaseHandler):
     
     @property
     def vocoder_path(self):
-        pass
+        return ""
     
     @property
     def speaker_embeddings_dataset_path(self):
-        pass
+        return ""
 
     @property
     def word_chunks(self):
@@ -283,18 +283,18 @@ class TTSHandler(BaseHandler):
             return
         self.logger.debug(f"Loading model {self.model_path}")
         try:
-            self.change_model_status(ModelType.TTS, ModelStatus.LOADING, self.model_path)
+            self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
             model = model_class_.from_pretrained(
                 self.model_path,
                 local_files_only=True,
                 torch_dtype=self.torch_dtype,
                 device_map=self.device
             )
-            self.change_model_status(ModelType.TTS, ModelStatus.LOADED, self.model_path)
+            self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
             self.model = model
         except EnvironmentError as _e:
             self.logger.error(f"Failed to load model {_e}")
-            self.change_model_status(ModelType.TTS, ModelStatus.FAILED, self.model_path)
+            self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
 
     def load_tokenizer(self):
         self.logger.debug("Loading tokenizer")
@@ -307,12 +307,12 @@ class TTSHandler(BaseHandler):
                 local_files_only=True,
                 trust_remote_code=False
             )
-            self.change_model_status(ModelType.TTS_TOKENIZER, ModelStatus.LOADED, self.model_path)
+            self.change_model_status(ModelType.TTS_TOKENIZER, ModelStatus.LOADED)
             return tokenizer
         except Exception as e:
             self.logger.error("Failed to load tokenizer")
             self.logger.error(e)
-            self.change_model_status(ModelType.TTS_TOKENIZER, ModelStatus.FAILED, self.model_path)
+            self.change_model_status(ModelType.TTS_TOKENIZER, ModelStatus.FAILED)
     
     def load_vocoder(self):
         pass
@@ -322,19 +322,19 @@ class TTSHandler(BaseHandler):
         processor_class_ = self.processor_class_
         if processor_class_:
             try:
-                self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.LOADING, self.processor_path)
+                self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.LOADING)
                 processor = processor_class_.from_pretrained(
                     self.processor_path,
                     local_files_only=True,
                     torch_dtype=self.torch_dtype,
                     device_map=self.device
                 )
-                self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.LOADED, self.processor_path)
+                self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.LOADED)
                 return processor
             except Exception as e:
                 self.logger.error("Failed to load processor")
                 self.logger.error(e)
-                self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.FAILED, self.processor_path)
+                self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.FAILED)
 
     def load_dataset(self):
         """
@@ -486,17 +486,17 @@ class TTSHandler(BaseHandler):
         self.model = None
         self.current_model = None
         clear_memory(self.memory_settings.default_gpu_tts)
-        self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED, "")
+        self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED)
 
     def unload_processor(self):
         self.processor = None
         clear_memory(self.memory_settings.default_gpu_tts)
-        self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.UNLOADED, "")
+        self.change_model_status(ModelType.TTS_PROCESSOR, ModelStatus.UNLOADED)
 
     def unload_vocoder(self):
         self.vocoder = None
         clear_memory(self.memory_settings.default_gpu_tts)
-        self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.UNLOADED, "")
+        self.change_model_status(ModelType.TTS_VOCODER, ModelStatus.UNLOADED)
 
     def load_speaker_embeddings(self):
         pass
@@ -507,7 +507,7 @@ class TTSHandler(BaseHandler):
     def unload_tokenizer(self):
         self.tokenizer = None
         clear_memory(self.memory_settings.default_gpu_tts)
-        self.change_model_status(ModelType.TTS_TOKENIZER, ModelStatus.UNLOADED, "")
+        self.change_model_status(ModelType.TTS_TOKENIZER, ModelStatus.UNLOADED)
 
     def unload_dataset(self):
         pass
