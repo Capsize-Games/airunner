@@ -1,4 +1,3 @@
-from PIL import ImageQt, Image
 from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QPainterPath
 from PySide6.QtGui import QPen, QPixmap, QPainter
