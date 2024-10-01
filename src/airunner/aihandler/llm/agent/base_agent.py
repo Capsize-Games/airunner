@@ -861,6 +861,8 @@ class BaseAgent(
             self.logger.error(f"Error loading document reader: {str(e)}")
 
     def __load_documents(self):
+        if not self.__document_reader:
+            return
         self.logger.debug("Loading documents...")
         self.__documents = self.__document_reader.load_data()
 
