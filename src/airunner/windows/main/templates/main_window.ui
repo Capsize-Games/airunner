@@ -201,7 +201,7 @@
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="tearOffEnabled">
-     <bool>true</bool>
+     <bool>false</bool>
     </property>
     <property name="title">
      <string>File</string>
@@ -211,6 +211,7 @@
     </property>
     <addaction name="actionNew"/>
     <addaction name="separator"/>
+    <addaction name="actionImport"/>
     <addaction name="actionExport_3"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
@@ -255,8 +256,6 @@
      <string>Canvas</string>
     </property>
     <addaction name="separator"/>
-    <addaction name="actionImport"/>
-    <addaction name="actionExport"/>
     <addaction name="separator"/>
     <addaction name="actionToggle_Active_Grid_Area"/>
     <addaction name="actionToggle_Selection"/>
@@ -307,6 +306,9 @@
   <widget class="QToolBar" name="toolBar">
    <property name="windowTitle">
     <string>toolBar</string>
+   </property>
+   <property name="toolTip">
+    <string>Export Image</string>
    </property>
    <property name="movable">
     <bool>true</bool>
@@ -385,6 +387,9 @@
    </property>
   </action>
   <action name="actionImport">
+   <property name="icon">
+    <iconset theme="document-open"/>
+   </property>
    <property name="text">
     <string>Import image</string>
    </property>
@@ -1175,7 +1180,7 @@
     <iconset theme="document-save"/>
    </property>
    <property name="text">
-    <string>Export</string>
+    <string>Export Image</string>
    </property>
   </action>
   <action name="actionToggle_Active_Grid_Area">
@@ -1982,6 +1987,22 @@
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
    <slot>action_toggle_llm(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>414</x>
+     <y>367</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExport_3</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_export_image_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
