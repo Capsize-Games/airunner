@@ -135,10 +135,10 @@ LIGHT_THEME_NAME = "light_theme"
 VALID_IMAGE_FILES = "Image Files (*.png *.jpg *.jpeg)"
 ESPEAK_SETTINGS = {
     "voices": {
-        "male": [
+        "Male": [
             "m1", "m2", "m3",
         ],
-        "female": [
+        "Female": [
             "f1", "f2", "f3",
         ],
     },
