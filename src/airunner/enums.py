@@ -248,6 +248,7 @@ class SignalCode(Enum):
     REDO_SIGNAL = enum.auto()
     LOAD_CONVERSATION = enum.auto()
     SET_CONVERSATION = enum.auto()
+    BOT_MOOD_UPDATED = enum.auto()
 
 class EngineResponseCode(Enum):
     STATUS = 100
