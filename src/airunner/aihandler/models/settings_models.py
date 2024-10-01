@@ -263,7 +263,7 @@ class SpeechT5Settings(Base):
 class EspeakSettings(Base):
     __tablename__ = 'espeak_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    gender = Column(String, default="male")
+    gender = Column(String, default="Male")
     voice = Column(String, default="male1")
     language = Column(String, default="en-US")
     rate = Column(Integer, default=100)
