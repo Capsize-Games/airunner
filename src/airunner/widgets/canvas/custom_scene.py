@@ -199,15 +199,14 @@ class CustomScene(
         })
 
     def on_paste_image_from_clipboard(self):
-        if self.scene_is_active:
-            image = self.paste_image_from_clipboard()
-            #self.delete_image()
+        image = self.paste_image_from_clipboard()
+        #self.delete_image()
 
-            if self.application_settings.resize_on_paste:
-                image = self.resize_image(image)
-            image = convert_image_to_base64(image)
-            self.update_current_settings("image", image)
-            self.refresh_image()
+        if self.application_settings.resize_on_paste:
+            image = self.resize_image(image)
+        image = convert_image_to_base64(image)
+        self.update_current_settings("image", image)
+        self.refresh_image()
 
     def create_image(self, image):
         if self.application_settings.resize_on_paste:
@@ -419,12 +418,10 @@ class CustomScene(
         self.delete_image()
 
     def on_canvas_copy_image_signal(self):
-        if self.scene_is_active:
-            self.copy_image(self.current_active_image())
+        self.copy_image(self.current_active_image())
 
     def on_canvas_cut_image_signal(self):
-        if self.scene_is_active:
-            self.cut_image(self.current_active_image())
+        self.cut_image(self.current_active_image())
 
     def on_canvas_rotate_90_clockwise_signal(self):
         self.rotate_90_clockwise()
@@ -463,6 +460,7 @@ class CustomScene(
         self.history_set_image(data)
 
     def rotate_image(self, angle):
+        print("ROTATE_IMAGE", angle)
         self.__add_image_to_undo()
         image = self.current_active_image()
         if image is not None:
