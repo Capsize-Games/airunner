@@ -210,7 +210,7 @@ class LLMGeneratorSettings(Base):
     use_gpu = Column(Boolean, default=True)
     message_type = Column(String, default="chat")
     override_parameters = Column(Boolean, default=True)
-    current_chatbot = Column(String, default="Chatbot")
+    current_chatbot = Column(Integer, default=0)
     prompt_template = Column(String, default="Mistral 7B Instruct: Default Chatbot")
     batch_size = Column(Integer, default=1)
     use_api = Column(Boolean, default=False)

@@ -1,7 +1,7 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QLabel, QPushButton, QHBoxLayout, QWidget
 
-from airunner.aihandler.models.settings_models import TargetFiles
+from airunner.aihandler.models.settings_models import TargetFiles, Chatbot
 from airunner.enums import SignalCode
 from airunner.utils.open_file_path import open_file_path
 from airunner.utils.toggle_signals import toggle_signals
@@ -93,9 +93,12 @@ class BotPreferencesWidget(BaseWidget):
             self.load_saved_chatbots()
 
     def saved_chatbots_changed(self, val):
-        self.chatbot.name = val
+        session = self.db_handler.get_db_session()
+        chatbot = session.query(Chatbot).filter(Chatbot.name == val).first()
+        chatbot_id = chatbot.id
+        session.close()
+        self.update_llm_generator_settings("current_chatbot", chatbot_id)
         self.load_form_elements()
-        self.ui.llm_settings_widget.initialize_form()
 
     def load_saved_chatbots(self):
         names = [chatbot.name for chatbot in self.chatbots]
