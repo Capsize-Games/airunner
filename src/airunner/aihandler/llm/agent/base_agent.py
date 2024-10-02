@@ -97,14 +97,12 @@ class BaseAgent(
     @property
     def available_actions(self):
         return {
-            0: LLMActionType.DO_NOT_RESPOND,
-            1: LLMActionType.QUIT_APPLICATION,
-            2: LLMActionType.TOGGLE_FULLSCREEN,
-            3: LLMActionType.TOGGLE_TTS,
-            4: LLMActionType.UPDATE_MOOD,
-            5: LLMActionType.GENERATE_IMAGE,
-            6: LLMActionType.PERFORM_RAG_SEARCH,
-            7: LLMActionType.CHAT,
+            0: LLMActionType.QUIT_APPLICATION,
+            1: LLMActionType.TOGGLE_FULLSCREEN,
+            2: LLMActionType.TOGGLE_TTS,
+            3: LLMActionType.GENERATE_IMAGE,
+            4: LLMActionType.PERFORM_RAG_SEARCH,
+            5: LLMActionType.CHAT,
         }
 
     @property
@@ -304,8 +302,10 @@ class BaseAgent(
             system_prompt = [
                 self.names_prompt(use_names, botname, username),
                 self.mood(botname, bot_mood, use_mood),
-                self.history_prompt(),
-                system_instructions
+                system_instructions,
+                "------\n",
+                "Chat History:\n",
+                f"{self.username}: {self.prompt}\n",
             ]
 
         elif action is LLMActionType.SUMMARIZE:
@@ -345,9 +345,6 @@ class BaseAgent(
 
         elif action is LLMActionType.TOGGLE_FULLSCREEN:
             self.emit_signal(SignalCode.TOGGLE_FULLSCREEN_SIGNAL)
-
-        elif action is LLMActionType.TOGGLE_TTS:
-            self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL)
 
         return "\n".join(system_prompt)
 
@@ -492,6 +489,11 @@ class BaseAgent(
         **kwargs
     ):
         self.action = action
+
+        if action is LLMActionType.TOGGLE_TTS:
+            self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL)
+            return
+
         self.logger.debug("Running...")
         self.prompt = prompt
         streamer = self.streamer
@@ -508,6 +510,8 @@ class BaseAgent(
             self.add_message_to_history(self.prompt, LLMChatRole.HUMAN)
 
         self.rendered_template = self.get_rendered_template(action)
+
+        print(self.rendered_template)
 
         model_inputs = self.tokenizer(
             self.rendered_template,
@@ -615,7 +619,8 @@ class BaseAgent(
             LLMActionType.CHAT,
             LLMActionType.GENERATE_IMAGE,
             LLMActionType.UPDATE_MOOD,
-            LLMActionType.SUMMARIZE
+            LLMActionType.SUMMARIZE,
+            LLMActionType.APPLICATION_COMMAND
         ):
             for new_text in streamer:
                 # strip all newlines from new_text
@@ -725,12 +730,18 @@ class BaseAgent(
                     }
                 )
             elif action is LLMActionType.APPLICATION_COMMAND:
+                print("LLMActionType.APPLICATION_COMMAND", action)
+                print(streamed_template)
                 index = ''.join(c for c in streamed_template if c.isdigit())
                 try:
                     index = int(index)
                 except ValueError:
                     index = 0
-                action = self.available_actions[index]
+
+                try:
+                    action = self.available_actions[index]
+                except KeyError:
+                    action = LLMActionType.CHAT
 
                 if action is not None:
                     return self.run(
@@ -830,7 +841,6 @@ class BaseAgent(
     def __load_embeddings(self):
         self.logger.debug("Loading embeddings...")
         self.__embedding = CustomEmbedding(self.llm)
-
 
     def __load_readers(self):
         self.__pdf_reader = PDFReader()

@@ -334,15 +334,15 @@ class LLMActionType(Enum):
     use_tool_flter flag, the LLM will attempt to determine which action to take
     based on the user's words.
     """
-    DO_NOT_RESPOND = "DO_NOT_RESPOND"
-    CHAT = "CHAT"
-    GENERATE_IMAGE = "GENERATE_IMAGE"
+    # DO_NOT_RESPOND = "DO NOTHING: Choose this action if none of the other actions apply to the user's request."
+    CHAT = "RESPOND: Choose this action if you want to respond to the user."
+    GENERATE_IMAGE = "GENERATE IMAGE: Choose this action if you want to generate an image."
     APPLICATION_COMMAND = "APPLICATION_COMMAND"
     UPDATE_MOOD = "UPDATE_MOOD"
-    QUIT_APPLICATION = "QUIT_APPLICATION"
-    TOGGLE_FULLSCREEN = "TOGGLE_FULLSCREEN"
-    TOGGLE_TTS = "TOGGLE_TTS"
-    PERFORM_RAG_SEARCH = "PERFORM_RAG_SEARCH"
+    QUIT_APPLICATION = "QUIT APPLICATION: If the users requests that you quit the application, choose this action."
+    TOGGLE_FULLSCREEN = "TOGGLE FULLSCREEN: If the user requests to toggle fullscreen mode, choose this action."
+    TOGGLE_TTS = "TOGGLE TEXT-TO-SPEECH: If the user requests that you turn on or off or toggle text-to-speech, choose this action."
+    PERFORM_RAG_SEARCH = "SEARCH: If the user requests that you search for information, choose this action."
     SUMMARIZE = "SUMMARIZE"
 
 
