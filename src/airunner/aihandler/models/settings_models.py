@@ -543,3 +543,4 @@ class WindowSettings(Base):
     x_pos = Column(Integer, default=0)
     y_pos = Column(Integer, default=0)
     mode_tab_widget_index = Column(Integer, default=0)
+

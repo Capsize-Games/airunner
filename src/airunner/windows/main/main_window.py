@@ -11,7 +11,7 @@ from PySide6.QtCore import (
     Slot,
     Signal, QProcess, QSettings
 )
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -23,17 +23,21 @@ from bs4 import BeautifulSoup
 from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
 from airunner.aihandler.logger import Logger
+from airunner.aihandler.models.settings_models import ShortcutKeys
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
 from airunner.settings import (
     STATUS_ERROR_COLOR,
     STATUS_NORMAL_COLOR_LIGHT,
     STATUS_NORMAL_COLOR_DARK,
-    NSFW_CONTENT_DETECTED_MESSAGE, DEFAULT_PATH_SETTINGS, ORGANIZATION, APPLICATION_NAME
+    NSFW_CONTENT_DETECTED_MESSAGE,
+    ORGANIZATION,
+    APPLICATION_NAME
 )
 from airunner.enums import (
     SignalCode,
     CanvasToolName,
-    GeneratorSection, StatusColors, ModelStatus, ModelType, LLMAction
+    GeneratorSection,
+    LLMAction
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
@@ -321,6 +325,7 @@ class MainWindow(
         self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal)
         self.register(SignalCode.REFRESH_STYLESHEET_SIGNAL, self.refresh_stylesheet)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
+        self.register(SignalCode.KEYBOARD_SHORTCUTS_UPDATED, self.on_keyboard_shortcuts_updated)
 
     def on_reset_paths_signal(self):
         self.reset_path_settings()
@@ -802,6 +807,45 @@ class MainWindow(
             )
         self._initialize_worker_manager()
         self.logger.debug("Showing window")
+        self._set_keyboard_shortcuts()
+
+    def on_keyboard_shortcuts_updated(self):
+        self._set_keyboard_shortcuts()
+
+    def _set_keyboard_shortcuts(self):
+        session = self.db_handler.get_db_session()
+        quit_key = session.query(ShortcutKeys).filter_by(display_name="Quit").first()
+        brush_key = session.query(ShortcutKeys).filter_by(display_name="Brush").first()
+        eraser_key = session.query(ShortcutKeys).filter_by(display_name="Eraser").first()
+        move_tool_key = session.query(ShortcutKeys).filter_by(display_name="Move Tool").first()
+        select_tool_key = session.query(ShortcutKeys).filter_by(display_name="Select Tool").first()
+
+        if quit_key is not None:
+            key_sequence = QKeySequence(quit_key.key | quit_key.modifiers)
+            self.ui.actionQuit.setShortcut(key_sequence)
+            self.ui.actionQuit.setToolTip(f"{quit_key.display_name} ({quit_key.text})")
+
+        if brush_key is not None:
+            key_sequence = QKeySequence(brush_key.key | brush_key.modifiers)
+            self.ui.actionToggle_Brush.setShortcut(key_sequence)
+            self.ui.actionToggle_Brush.setToolTip(f"{brush_key.display_name} ({brush_key.text})")
+
+        if eraser_key is not None:
+            key_sequence = QKeySequence(eraser_key.key | eraser_key.modifiers)
+            self.ui.actionToggle_Eraser.setShortcut(key_sequence)
+            self.ui.actionToggle_Eraser.setToolTip(f"{eraser_key.display_name} ({eraser_key.text})")
+
+        if move_tool_key is not None:
+            key_sequence = QKeySequence(move_tool_key.key | move_tool_key.modifiers)
+            self.ui.actionToggle_Active_Grid_Area.setShortcut(key_sequence)
+            self.ui.actionToggle_Active_Grid_Area.setToolTip(f"{move_tool_key.display_name} ({move_tool_key.text})")
+
+        if select_tool_key is not None:
+            key_sequence = QKeySequence(select_tool_key.key | select_tool_key.modifiers)
+            self.ui.actionToggle_Selection.setShortcut(key_sequence)
+            self.ui.actionToggle_Selection.setToolTip(f"{select_tool_key.display_name} ({select_tool_key.text})")
+
+        session.close()
 
     def _initialize_worker_manager(self):
         self.logger.debug("Initializing worker manager")
