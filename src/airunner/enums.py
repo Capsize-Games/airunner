@@ -232,6 +232,8 @@ class SignalCode(Enum):
     SET_CONVERSATION = enum.auto()
     BOT_MOOD_UPDATED = enum.auto()
 
+    KEYBOARD_SHORTCUTS_UPDATED = enum.auto()
+
 class EngineResponseCode(Enum):
     STATUS = 100
     ERROR = 200

@@ -6,6 +6,7 @@ from PIL import Image
 from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot
 from PySide6.QtWidgets import QApplication
 
+from airunner.aihandler.models.settings_models import ShortcutKeys
 from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
@@ -107,6 +108,7 @@ class GeneratorForm(BaseWidget):
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
             SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
             SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated,
+            SignalCode.KEYBOARD_SHORTCUTS_UPDATED: self.on_keyboard_shortcuts_updated,
         }
         self.thread = QThread()
         self.worker = SaveGeneratorSettingsWorker(parent=self)
@@ -148,6 +150,9 @@ class GeneratorForm(BaseWidget):
         rect.translate(-self.canvas_settings.pos_x, -self.canvas_settings.pos_y)
 
         return rect
+
+    def on_keyboard_shortcuts_updated(self):
+        self._set_keyboard_shortcuts()
 
     def on_application_settings_changed_signal(self, _data):
         self.toggle_secondary_prompts()
@@ -432,3 +437,15 @@ class GeneratorForm(BaseWidget):
 
         # set text of progressbar to "complete"
         progressbar.setFormat("Complete")
+
+    def _set_keyboard_shortcuts(self):
+        session = self.db_handler.get_db_session()
+        generate_image_key = session.query(ShortcutKeys).filter_by(display_name="Generate Image").first()
+        interrupt_key = session.query(ShortcutKeys).filter_by(display_name="Interrupt").first()
+        if generate_image_key:
+            self.ui.generate_button.setShortcut(generate_image_key.key)
+            self.ui.generate_button.setToolTip(f"{generate_image_key.display_name} ({generate_image_key.text})")
+        if interrupt_key:
+            self.ui.interrupt_button.setShortcut(interrupt_key.key)
+            self.ui.interrupt_button.setToolTip(f"{interrupt_key.display_name} ({interrupt_key.text})")
+        session.close()
