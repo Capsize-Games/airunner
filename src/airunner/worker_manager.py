@@ -67,26 +67,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             (SignalCode.LOAD_CONVERSATION, self.llm_on_load_conversation),
             (SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, self.on_llm_request_signal),
 
-            (SignalCode.RESET_APPLIED_MEMORY_SETTINGS, self.sd_on_reset_applied_memory_settings),
-            (SignalCode.SD_CANCEL_SIGNAL, self.sd_on_sd_cancel_signal),
-
-            (SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL, self.sd_on_start_auto_image_generation_signal),
-            (SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL, self.sd_on_stop_auto_image_generation_signal),
-            (SignalCode.DO_GENERATE_SIGNAL, self.sd_on_do_generate_signal),
-            (SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL, self.sd_on_interrupt_image_generation_signal),
-            (SignalCode.CHANGE_SCHEDULER_SIGNAL, self.sd_on_change_scheduler_signal),
-            (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.sd_on_model_status_changed_signal),
-
-            (SignalCode.SD_LOAD_SIGNAL, self.sd_on_load_stablediffusion_signal),
-            (SignalCode.SD_UNLOAD_SIGNAL, self.sd_on_unload_stablediffusion_signal),
-            (SignalCode.CONTROLNET_LOAD_SIGNAL, self.sd_on_load_controlnet_signal),
-            (SignalCode.CONTROLNET_UNLOAD_SIGNAL, self.sd_on_unload_controlnet_signal),
-            (SignalCode.LORA_UPDATE_SIGNAL, self.sd_on_update_lora_signal),
-            (SignalCode.EMBEDDING_UPDATE_SIGNAL, self.sd_on_update_embeddings_signal),
-            (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.sd_delete_missing_embeddings),
-            (SignalCode.SD_STATE_CHANGED_SIGNAL, self.sd_handle_sd_state_changed_signal),
-            (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.sd_on_load_safety_checker),
-            (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.sd_on_unload_safety_checker),
             (SignalCode.STT_LOAD_SIGNAL, self.on_stt_load_signal),
             (SignalCode.STT_UNLOAD_SIGNAL, self.on_stt_unload_signal),
             (SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal),
@@ -196,8 +176,10 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.llm_generate_worker.on_load_conversation(message)
 
     def register_sd_workers(self):
-        self.sd_worker = create_worker(WorkerType.SDWorker)
-        self.sd_state = "loaded"
+        # self.sd_worker = create_worker(WorkerType.SDWorker)
+        # self.sd_state = "loaded"
+        from airunner.workers.sd_worker import SDWorker
+        self.sd_worker = SDWorker()
 
     def register_llm_workers(self, do_load_llm_on_init, agent_options):
         self.llm_generate_worker = create_worker(
@@ -310,60 +292,3 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
                 'tts_settings': self.tts_settings,
                 'is_end_of_message': is_end_of_message,
             })
-
-    ####################################################################################################################
-    ### SD Worker Signals
-    ####################################################################################################################
-    def sd_on_reset_applied_memory_settings(self, data):
-        self.sd_worker.on_reset_applied_memory_settings(data)
-
-    def sd_on_sd_cancel_signal(self, data):
-        self.sd_worker.on_sd_cancel_signal(data)
-
-    def sd_on_start_auto_image_generation_signal(self, data):
-        self.sd_worker.on_start_auto_image_generation_signal(data)
-
-    def sd_on_stop_auto_image_generation_signal(self, data):
-        self.sd_worker.on_stop_auto_image_generation_signal(data)
-
-    def sd_on_do_generate_signal(self, data):
-        self.sd_worker.on_do_generate_signal(data)
-
-    def sd_on_interrupt_image_generation_signal(self, data):
-        self.sd_worker.on_interrupt_image_generation_signal(data)
-
-    def sd_on_change_scheduler_signal(self, data):
-        self.sd_worker.on_change_scheduler_signal(data)
-
-    def sd_on_model_status_changed_signal(self, data):
-        self.sd_worker.on_model_status_changed_signal(data)
-
-    def sd_on_load_stablediffusion_signal(self, data):
-        self.sd_worker.on_load_stablediffusion_signal(data)
-
-    def sd_on_unload_stablediffusion_signal(self, data):
-        self.sd_worker.on_unload_stablediffusion_signal(data)
-
-    def sd_on_load_controlnet_signal(self, data):
-        self.sd_worker.on_load_controlnet_signal(data)
-
-    def sd_on_unload_controlnet_signal(self, data):
-        self.sd_worker.on_unload_controlnet_signal(data)
-
-    def sd_on_update_lora_signal(self):
-        self.sd_worker.on_update_lora_signal()
-
-    def sd_on_update_embeddings_signal(self):
-        self.sd_worker.on_update_embeddings_signal()
-
-    def sd_delete_missing_embeddings(self, data):
-        self.sd_worker.delete_missing_embeddings(data)
-
-    def sd_handle_sd_state_changed_signal(self, data):
-        self.sd_worker.handle_sd_state_changed_signal(data)
-
-    def sd_on_load_safety_checker(self, data):
-        self.sd_worker.on_load_safety_checker(data)
-
-    def sd_on_unload_safety_checker(self, data):
-        self.sd_worker.on_unload_safety_checker(data)
