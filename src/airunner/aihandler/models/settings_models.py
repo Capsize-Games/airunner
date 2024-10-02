@@ -1,12 +1,15 @@
 import os
 
-from sqlalchemy import Column, Integer, String, JSON, Boolean, Float, Text, ForeignKey, LargeBinary
+from sqlalchemy import create_engine, Column, Integer, String, JSON, Boolean, Float, Text, ForeignKey, LargeBinary, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-from airunner.enums import Gender, ImageGenerator, GeneratorSection, CanvasToolName, Mode
+from airunner.enums import ImageGenerator, GeneratorSection, CanvasToolName, Mode
 from airunner.settings import SD_DEFAULT_VAE_PATH, DEFAULT_SCHEDULER, \
     DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, BASE_PATH
+
+
+import datetime
 
 Base = declarative_base()
 
@@ -326,6 +329,7 @@ class PathSettings(Base):
     stt_model_path = Column(String, default=os.path.expanduser(os.path.join(BASE_PATH, "text/models/stt", "models")))
     tts_model_path = Column(String, default=os.path.expanduser(os.path.join(BASE_PATH, "text/models/tts", "models")))
 
+
 class MemorySettings(Base):
     __tablename__ = 'memory_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -415,6 +419,7 @@ class Chatbot(Base):
 
     target_files = relationship("TargetFiles", back_populates="chatbot")
     target_directories = relationship("TargetDirectories", back_populates="chatbot")
+    messages = relationship("Message", back_populates="chatbot")
 
 
 class TargetFiles(Base):
@@ -544,3 +549,39 @@ class WindowSettings(Base):
     y_pos = Column(Integer, default=0)
     mode_tab_widget_index = Column(Integer, default=0)
 
+
+class Conversation(Base):
+    __tablename__ = 'conversations'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    title = Column(String, nullable=True)  # New column added
+    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+
+
+class Message(Base):
+    __tablename__ = 'messages'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    role = Column(String, nullable=False)
+    content = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+    conversation = relationship("Conversation", back_populates="messages")
+    name = Column(String, nullable=True)  # New column added
+    is_bot = Column(Boolean, default=False)  # New column added
+    chatbot_id = Column(Integer, ForeignKey('chatbots.id'))
+
+    chatbot = relationship("Chatbot", back_populates="messages")
+
+
+class Summary(Base):
+    __tablename__ = 'summaries'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    content = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+    conversation = relationship("Conversation", back_populates="summaries")
+
+
+Conversation.messages = relationship("Message", order_by=Message.id, back_populates="conversation")
+Conversation.summaries = relationship("Summary", order_by=Summary.id, back_populates="conversation")
+Message.chatbot = relationship("Chatbot", back_populates="messages")

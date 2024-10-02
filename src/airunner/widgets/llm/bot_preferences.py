@@ -99,6 +99,7 @@ class BotPreferencesWidget(BaseWidget):
         session.close()
         self.update_llm_generator_settings("current_chatbot", chatbot_id)
         self.load_form_elements()
+        self.emit_signal(SignalCode.CHATBOT_CHANGED)
 
     def load_saved_chatbots(self):
         names = [chatbot.name for chatbot in self.chatbots]

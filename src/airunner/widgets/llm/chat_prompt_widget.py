@@ -1,8 +1,8 @@
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, QTimer
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
 
-from airunner.aihandler.models.settings_models import Chatbot
+from airunner.aihandler.models.settings_models import Chatbot, Conversation
 from airunner.enums import SignalCode, LLMActionType, ModelType, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.custom_scene import CustomScene
@@ -30,6 +30,7 @@ class ChatPromptWidget(BaseWidget):
         self.action_menu_displayed = None
         self.messages_spacer = None
         self.chat_loaded = False
+        self.conversation_id = None
 
         self.ui.action.blockSignals(True)
         # iterate over each LLMActionType enum and add its value to the llm_tool_name
@@ -42,6 +43,8 @@ class ChatPromptWidget(BaseWidget):
         self.register(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, self.on_hear_signal)
         self.register(SignalCode.SET_CONVERSATION, self.on_set_conversation)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
+        self.register(SignalCode.CHATBOT_CHANGED, self.on_chatbot_changed)
+        self.register(SignalCode.CONVERSATION_DELETED, self.on_conversation_deleted)
         self.held_message = None
         self._disabled = False
 
@@ -65,14 +68,27 @@ class ChatPromptWidget(BaseWidget):
         else:
             self.enable_send_button()
 
+    def on_chatbot_changed(self):
+        self._clear_conversation()
+
+    def on_conversation_deleted(self, data):
+        if self.conversation_id == data["conversation_id"]:
+            self.conversation_id = None
+            self._clear_conversation()
+
     def on_set_conversation(self, message):
-        print(message["messages"])
-        for message in message["messages"]:
+        self._clear_conversation_widgets()
+        if len(message["messages"]) > 0:
+            self.conversation_id = message["messages"][0]["conversation_id"]
+        QTimer.singleShot(0, lambda: self._set_conversation_widgets(message["messages"]))
+
+    def _set_conversation_widgets(self, messages):
+        for message in messages:
             self.add_message_to_conversation(
                 name=message["name"],
                 message=message["content"],
                 is_bot=message["is_bot"],
-                first_message=False,
+                first_message=True,
                 use_loading_widget=False
             )
 
@@ -117,10 +133,23 @@ class ChatPromptWidget(BaseWidget):
 
     @Slot()
     def action_button_clicked_clear_conversation(self):
+        self._clear_conversation()
+
+    def _clear_conversation(self):
         self.conversation_history = []
+        self._clear_conversation_widgets()
+        self._create_conversation()
+
+    def _create_conversation(self):
+        conversation_id = self.db_handler.create_conversation()
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
+            "conversation_id": conversation_id
+        })
+        self.conversation_id = conversation_id
+
+    def _clear_conversation_widgets(self):
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
             widget.deleteLater()
-        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
     
     @Slot(bool)
     def action_button_clicked_send(self):
@@ -138,6 +167,8 @@ class ChatPromptWidget(BaseWidget):
         return self.llm_generator_settings.action
 
     def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="causallm"):
+        if self.conversation_id is None:
+            self._create_conversation()
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
         if prompt is None or prompt == "":
             self.logger.warning("Prompt is empty")

@@ -21,7 +21,6 @@ from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
 from airunner.aihandler.llm.huggingface_llm import HuggingFaceLLM
 from airunner.aihandler.llm.custom_embedding import CustomEmbedding
 from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
-from airunner.aihandler.models.agent_db_handler import AgentDBHandler
 from airunner.aihandler.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
@@ -86,9 +85,8 @@ class BaseAgent(
         self.tools = kwargs.pop("tools", None)
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
-        self.database_handler = AgentDBHandler()
         self.conversation_id = None
-        self.history = self.database_handler.load_history_from_db(self.conversation_id)  # Load history by conversation ID
+        self.history = self.db_handler.load_history_from_db(self.conversation_id)  # Load history by conversation ID
         super().__init__(*args, **kwargs)
         self.prompt = ""
         self.thread = None
@@ -146,21 +144,21 @@ class BaseAgent(
         self.conversation_id = None
 
     def update_conversation_title(self, title):
-        self.database_handler.update_conversation_title(self.conversation_id, title)
+        self.db_handler.update_conversation_title(self.conversation_id, title)
 
     def create_conversation(self):
         # Get the most recent conversation ID
-        recent_conversation_id = self.database_handler.get_most_recent_conversation_id()
+        recent_conversation_id = self.db_handler.get_most_recent_conversation_id()
 
         # Check if there are messages for the most recent conversation ID
         if recent_conversation_id is not None:
-            messages = self.database_handler.load_history_from_db(recent_conversation_id)
+            messages = self.db_handler.load_history_from_db(recent_conversation_id)
             if not messages:
                 self.conversation_id = recent_conversation_id
                 return
 
         # If there are messages or no recent conversation ID, create a new conversation
-        self.conversation_id = self.database_handler.create_conversation()
+        self.conversation_id = self.db_handler.create_conversation()
 
     def interrupt_process(self):
         self.do_interrupt = True
@@ -775,7 +773,7 @@ class BaseAgent(
             "conversation_id": self.conversation_id  # Use the stored conversation ID
         })
 
-        self.database_handler.add_message_to_history(
+        self.db_handler.add_message_to_history(
             content,
             role.value,
             name,
@@ -786,7 +784,7 @@ class BaseAgent(
     def on_load_conversation(self, message):
         self.history = []
         self.conversation_id = message["conversation_id"]
-        self.history = self.database_handler.load_history_from_db(self.conversation_id)
+        self.history = self.db_handler.load_history_from_db(self.conversation_id)
         self.emit_signal(SignalCode.SET_CONVERSATION, {
             "messages": self.history
         })
