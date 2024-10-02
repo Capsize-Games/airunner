@@ -91,7 +91,12 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             (SignalCode.STT_UNLOAD_SIGNAL, self.on_stt_unload_signal),
             (SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal),
             (SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal),
-            (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_stt_process_audio_signal)
+            (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_stt_process_audio_signal),
+            (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
+            (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
+            (SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal),
+            (SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal),
+            (SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, self.on_TTSGeneratorWorker_add_to_stream_signal),
         ]
         for signal in signals:
             self.register(signal[0], signal[1])
@@ -134,6 +139,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
         self._llm_generate_worker = value
 
+    def on_TTSGeneratorWorker_add_to_stream_signal(self, response: dict):
+        self.tts_vocalizer_worker.on_TTSGeneratorWorker_add_to_stream_signal(response)
 
     def on_llm_request_signal(self, message: dict):
         self.llm_generate_worker.add_to_queue(message)
@@ -176,6 +183,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def llm_on_interrupt_process_signal(self):
         self.llm_generate_worker.on_interrupt_process_signal()
+        if self.tts_vocalizer_worker:
+            self.tts_vocalizer_worker.on_interrupt_process_signal()
 
     def llm_on_reload_rag_index_signal(self):
         self.llm_generate_worker.on_reload_rag_index_signal()
@@ -218,6 +227,24 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_stt_stop_capture_signal(self):
         self.stt_audio_capture_worker.on_stop_capture_signal()
+
+    def on_interrupt_process_signal(self):
+        if self.tts_generator_worker:
+            self.tts_generator_worker.on_interrupt_process_signal()
+
+    def on_unblock_tts_generator_signal(self):
+        if self.tts_generator_worker:
+            self.tts_generator_worker.on_unblock_tts_generator_signal()
+        if self.tts_vocalizer_worker:
+            self.tts_vocalizer_worker.on_unblock_tts_generator_signal()
+
+    def on_enable_tts_signal(self):
+        if self.tts_generator_worker:
+            self.tts_generator_worker.on_enable_tts_signal()
+
+    def on_disable_tts_signal(self):
+        if self.tts_generator_worker:
+            self.tts_generator_worker.on_disable_tts_signal()
 
     def on_stt_process_audio_signal(self, message):
         self.stt_audio_processor_worker.add_to_queue(message)

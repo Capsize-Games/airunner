@@ -26,9 +26,6 @@ class TTSVocalizerWorker(Worker):
         self.started = False
         self.do_interrupt = False
         self.accept_message = True
-        self.register(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, self.on_TTSGeneratorWorker_add_to_stream_signal)
-        self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
-        self.register(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal)
 
     def on_interrupt_process_signal(self):
         self.stream.abort()
