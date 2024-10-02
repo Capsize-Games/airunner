@@ -18,6 +18,7 @@ class AudioProcessorWorker(Worker):
         self.stt = WhisperHandler()
 
     def on_load_signal(self):
+        print("on load tts")
         self.stt.load()
         self.emit_signal(SignalCode.STT_START_CAPTURE_SIGNAL)
 

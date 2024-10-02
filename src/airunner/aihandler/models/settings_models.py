@@ -243,8 +243,6 @@ class TTSSettings(Base):
     cuda_index = Column(Integer, default=0)
     word_chunks = Column(Integer, default=1)
     sentence_chunks = Column(Integer, default=1)
-    play_queue_buffer_length = Column(Integer, default=1)
-    enable_cpu_offload = Column(Boolean, default=True)
     model = Column(String, default="SpeechT5")
 
 
