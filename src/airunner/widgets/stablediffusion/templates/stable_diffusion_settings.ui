@@ -38,7 +38,7 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="1" column="0">
+   <item row="2" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="widgetResizable">
       <bool>true</bool>
@@ -49,7 +49,7 @@
         <x>0</x>
         <y>0</y>
         <width>409</width>
-        <height>935</height>
+        <height>922</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -480,6 +480,13 @@
      </property>
      <property name="text">
       <string>Stable Diffusion</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>

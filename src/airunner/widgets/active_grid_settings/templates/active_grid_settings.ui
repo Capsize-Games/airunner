@@ -32,7 +32,7 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="1" column="0">
+   <item row="3" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="frameShape">
       <enum>QFrame::Shape::NoFrame</enum>
@@ -49,7 +49,7 @@
         <x>0</x>
         <y>0</y>
         <width>724</width>
-        <height>336</height>
+        <height>296</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_3">
@@ -426,14 +426,33 @@
     </widget>
    </item>
    <item row="0" column="0">
-    <widget class="QCheckBox" name="active_grid_area_checkbox">
+    <widget class="QLabel" name="label">
      <property name="font">
       <font>
        <bold>true</bold>
       </font>
      </property>
      <property name="text">
-      <string>Active Grid Area</string>
+      <string>Active Grid Settings</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QCheckBox" name="active_grid_area_checkbox">
+     <property name="font">
+      <font>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Enable Active Grid Area</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>

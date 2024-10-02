@@ -15,9 +15,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QGridLayout, QGroupBox,
-    QHBoxLayout, QLabel, QScrollArea, QSizePolicy,
-    QSpacerItem, QToolButton, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGridLayout,
+    QGroupBox, QHBoxLayout, QLabel, QScrollArea,
+    QSizePolicy, QSpacerItem, QToolButton, QWidget)
 
 from airunner.widgets.slider.slider_widget import SliderWidget
 
@@ -36,7 +36,7 @@ class Ui_brush_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 1002, 593))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 1002, 580))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -104,7 +104,7 @@ class Ui_brush_widget(object):
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
-        self.gridLayout_2.addWidget(self.scrollArea, 1, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.scrollArea, 2, 0, 1, 1)
 
         self.label = QLabel(brush_widget)
         self.label.setObjectName(u"label")
@@ -119,6 +119,13 @@ class Ui_brush_widget(object):
         self.label.setFont(font1)
 
         self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
+
+        self.line = QFrame(brush_widget)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.gridLayout_2.addWidget(self.line, 1, 0, 1, 1)
 
 
         self.retranslateUi(brush_widget)

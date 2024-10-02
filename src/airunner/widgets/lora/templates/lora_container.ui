@@ -32,7 +32,19 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="1" column="0">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Lora</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <property name="spacing">
       <number>10</number>
@@ -67,21 +79,14 @@
      </item>
     </layout>
    </item>
-   <item row="3" column="0">
+   <item row="4" column="0">
     <widget class="QPushButton" name="pushButton">
      <property name="text">
       <string>Scan for LoRA</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>Lora</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
+   <item row="3" column="0">
     <widget class="QScrollArea" name="lora_scroll_area">
      <property name="font">
       <font>
@@ -103,7 +108,7 @@
         <x>0</x>
         <y>0</y>
         <width>583</width>
-        <height>732</height>
+        <height>719</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
@@ -127,6 +132,13 @@
        </property>
       </layout>
      </widget>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
     </widget>
    </item>
   </layout>
