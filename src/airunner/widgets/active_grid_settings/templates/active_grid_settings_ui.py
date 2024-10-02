@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGridLayout,
-    QGroupBox, QHBoxLayout, QPushButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QWidget)
+    QGroupBox, QHBoxLayout, QLabel, QPushButton,
+    QScrollArea, QSizePolicy, QSpacerItem, QWidget)
 
 from airunner.widgets.slider.slider_widget import SliderWidget
 
@@ -38,7 +38,7 @@ class Ui_active_grid_settings_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 724, 336))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 724, 296))
         self.gridLayout_3 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setHorizontalSpacing(0)
@@ -186,15 +186,30 @@ class Ui_active_grid_settings_widget(object):
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
-        self.gridLayout.addWidget(self.scrollArea, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.scrollArea, 3, 0, 1, 1)
+
+        self.label = QLabel(active_grid_settings_widget)
+        self.label.setObjectName(u"label")
+        font = QFont()
+        font.setBold(True)
+        self.label.setFont(font)
+
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
 
         self.active_grid_area_checkbox = QCheckBox(active_grid_settings_widget)
         self.active_grid_area_checkbox.setObjectName(u"active_grid_area_checkbox")
-        font = QFont()
-        font.setBold(True)
-        self.active_grid_area_checkbox.setFont(font)
+        font1 = QFont()
+        font1.setBold(False)
+        self.active_grid_area_checkbox.setFont(font1)
 
-        self.gridLayout.addWidget(self.active_grid_area_checkbox, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.active_grid_area_checkbox, 2, 0, 1, 1)
+
+        self.line = QFrame(active_grid_settings_widget)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.gridLayout.addWidget(self.line, 1, 0, 1, 1)
 
 
         self.retranslateUi(active_grid_settings_widget)
@@ -221,6 +236,7 @@ class Ui_active_grid_settings_widget(object):
         self.fill_opacity_slider_widget.setProperty("label_text", QCoreApplication.translate("active_grid_settings_widget", u"Fill Opacity", None))
         self.fill_opacity_slider_widget.setProperty("settings_property", QCoreApplication.translate("active_grid_settings_widget", u"active_grid_settings.fill_opacity", None))
         self.fill_choose_color_button.setText(QCoreApplication.translate("active_grid_settings_widget", u"Color", None))
-        self.active_grid_area_checkbox.setText(QCoreApplication.translate("active_grid_settings_widget", u"Active Grid Area", None))
+        self.label.setText(QCoreApplication.translate("active_grid_settings_widget", u"Active Grid Settings", None))
+        self.active_grid_area_checkbox.setText(QCoreApplication.translate("active_grid_settings_widget", u"Enable Active Grid Area", None))
     # retranslateUi
 
