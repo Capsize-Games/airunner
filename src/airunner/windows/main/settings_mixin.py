@@ -206,15 +206,17 @@ class SettingsMixin:
     #######################################
     @property
     def chatbot(self) -> Chatbot:
-        return self.get_chatbot_by_name(
+        return self.get_chatbot_by_id(
             self.llm_generator_settings.current_chatbot
         )
 
-    def get_chatbot_by_name(self, chatbot_name) -> Chatbot:
+    def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
         chatbot = None
         session = self.db_handler.get_db_session()
         try:
-            chatbot = session.query(Chatbot).filter_by(name=chatbot_name).options(joinedload(Chatbot.target_files)).first()
+            chatbot = session.query(Chatbot).filter_by(id=chatbot_id).options(joinedload(Chatbot.target_files)).first()
+            if chatbot is None:
+                chatbot = session.query(Chatbot).options(joinedload(Chatbot.target_files)).first()
         finally:
             session.close()
         return chatbot
