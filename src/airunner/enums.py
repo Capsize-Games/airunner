@@ -231,6 +231,8 @@ class SignalCode(Enum):
     LOAD_CONVERSATION = enum.auto()
     SET_CONVERSATION = enum.auto()
     BOT_MOOD_UPDATED = enum.auto()
+    CHATBOT_CHANGED = enum.auto()
+    CONVERSATION_DELETED = enum.auto()
 
     KEYBOARD_SHORTCUTS_UPDATED = enum.auto()
 
