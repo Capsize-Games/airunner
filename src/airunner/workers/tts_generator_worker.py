@@ -21,7 +21,17 @@ class TTSGeneratorWorker(Worker):
             (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
             (SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal),
             (SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal),
+            (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.do_tts_request),
         ), **kwargs)
+
+    def do_tts_request(self, data):
+        message = data.get("message", "")
+        is_end_of_message = data.get("is_end_of_message", False)
+        self.add_to_queue({
+            'message': message.replace("</s>", "") + ("." if is_end_of_message else ""),
+            'tts_settings': self.tts_settings,
+            'is_end_of_message': is_end_of_message,
+        })
 
     def on_interrupt_process_signal(self):
         self.play_queue = []
