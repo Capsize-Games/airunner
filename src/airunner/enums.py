@@ -49,7 +49,6 @@ class SignalCode(Enum):
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
     WINDOW_LOADED_SIGNAL = "window_loaded_signal"
     APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"
-    APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION = "add_bot_message_to_conversation"
     APPLICATION_MODELS_CHANGED_SIGNAL = "models_changed_signal"
     APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL = "clear_status_message_signal"
     APPLICATION_RESET_SETTINGS_SIGNAL = "reset_settings_signal"

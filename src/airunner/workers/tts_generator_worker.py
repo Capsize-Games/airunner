@@ -1,7 +1,7 @@
 import queue
 import threading
 
-from airunner.enums import SignalCode, TTSModel
+from airunner.enums import SignalCode, TTSModel, ModelStatus
 from airunner.workers.worker import Worker
 
 
@@ -21,10 +21,16 @@ class TTSGeneratorWorker(Worker):
             (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
             (SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal),
             (SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal),
-            (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.do_tts_request),
+            (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal),
         ), **kwargs)
 
-    def do_tts_request(self, data):
+    def on_llm_text_streamed_signal(self, data):
+        if not self.application_settings.tts_enabled:
+            return
+
+        if self.tts.model_status is not ModelStatus.LOADED:
+            self.tts.load()
+
         message = data.get("message", "")
         is_end_of_message = data.get("is_end_of_message", False)
         self.add_to_queue({
@@ -57,12 +63,6 @@ class TTSGeneratorWorker(Worker):
         if self.tts:
             thread = threading.Thread(target=self._unload_tts)
             thread.start()
-
-    def _load_tts(self):
-        self.tts.load()
-
-    def _unload_tts(self):
-        self.tts.unload()
 
     def start_worker_thread(self):
         tts_model = self.tts_settings.model.lower()
@@ -100,7 +100,7 @@ class TTSGeneratorWorker(Worker):
         text = "".join(self.tokens)
 
         if finalize:
-            self.generate(text)
+            self._generate(text)
             self.play_queue_started = True
             self.tokens = []
         else:
@@ -114,7 +114,7 @@ class TTSGeneratorWorker(Worker):
                     split_text = text.split(p, 1)  # Split at the first occurrence of punctuation
                     if len(split_text) > 1:
                         sentence = split_text[0]
-                        self.generate(sentence)
+                        self._generate(sentence)
                         self.play_queue_started = True
 
                         # Convert the remaining string back to a list of tokens
@@ -125,7 +125,13 @@ class TTSGeneratorWorker(Worker):
         if self.do_interrupt:
             self.on_interrupt_process_signal()
 
-    def generate(self, message):
+    def _load_tts(self):
+        self.tts.load()
+
+    def _unload_tts(self):
+        self.tts.unload()
+
+    def _generate(self, message):
         if self.do_interrupt:
             return
         self.logger.debug("Generating TTS...")
