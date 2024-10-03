@@ -176,8 +176,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self.llm_generate_worker.on_load_conversation(message)
 
     def register_sd_workers(self):
-        # self.sd_worker = create_worker(WorkerType.SDWorker)
-        # self.sd_state = "loaded"
         from airunner.workers.sd_worker import SDWorker
         self.sd_worker = SDWorker()
 
