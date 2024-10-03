@@ -128,7 +128,6 @@ class StatusWidget(BaseWidget):
         self.ui.sd_status.setText(self.generator_settings.version)
 
     def on_model_status_changed_signal(self, data):
-        print("ON MODEL STATUS CHANGED SIGNAL", data)
         self.update_model_status(data)
 
     def on_status_info_signal(self, message):

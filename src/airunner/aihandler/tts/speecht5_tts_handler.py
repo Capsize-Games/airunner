@@ -16,6 +16,7 @@ class SpeechT5TTSHandler(TTSHandler):
     target_model = "t5"
 
     def __init__(self, *args, **kwargs):
+        self._model_status = None
         from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech
         self._model_class_ = SpeechT5ForTextToSpeech
         self._processor_class_ = SpeechT5Processor
@@ -32,7 +33,6 @@ class SpeechT5TTSHandler(TTSHandler):
         self._processor = None
         self._text_queue = Queue()
         self._input_text = ""
-        self._loaded = False
         self._corpus = []
         self._speaker_embeddings = None
         self._dataset = None
@@ -90,73 +90,51 @@ class SpeechT5TTSHandler(TTSHandler):
         )
 
     def generate(self, message):
-        if self.tts_enabled:
-            if self._do_interrupt or self._paused:
-                return None
+        if self._do_interrupt or self._paused:
+            return None
 
-            try:
-                return self._do_generate(message)
-            except torch.cuda.OutOfMemoryError:
-                self.logger.error("Out of memory")
-                return None
-
-    def offload_to_cpu(self):
-        """
-        Move the model, vocoder, processor and speaker_embeddings to the CPU
-        """
-        self.logger.debug("Moving TTS to CPU")
-        if self._model:
-            self._model = self._model.cpu()
-        if self._vocoder:
-            self._vocoder = self._vocoder.cpu()
-        if self._speaker_embeddings:
-            self._speaker_embeddings = self._speaker_embeddings.cpu()
-
-    def move_to_device(self, device=None):
-        """
-        Move the model, vocoder, processor and speaker_embeddings to the GPU
-        """
-        self.logger.debug("Moving TTS to device")
-        if self.use_cuda:
-            if self._model:
-                self._model = self._model.to(self.device)
-            if self._vocoder:
-                self._vocoder = self._vocoder.to(self.device)
-            if self._speaker_embeddings:
-                self._speaker_embeddings = self._speaker_embeddings.to(self.device)
+        try:
+            return self._do_generate(message)
+        except torch.cuda.OutOfMemoryError:
+            self.logger.error("Out of memory")
+            return None
 
     def load(self, target_model=None):
-        if self._loaded:
+        if self._model_status is ModelStatus.LOADING:
+            return
+        if self._model_status in (
+            ModelStatus.LOADED,
+            ModelStatus.READY,
+            ModelStatus.FAILED
+        ):
             self.unload()
+        self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
+        self.logger.debug(f"Loading TTS")
+        self._load_model()
+        self._load_vocoder()
+        self._load_processor()
+        self._load_speaker_embeddings()
+        self._load_tokenizer()
+        self._load_corpus()
+        self._current_model = self._current_model
 
-        if self.tts_enabled and not self._loaded:
-            self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
-            self.logger.debug(f"Loading TTS")
-            self._load_model()
-            self._load_vocoder()
-            self._load_processor()
-            self._load_speaker_embeddings()
-            self._load_tokenizer()
-            self._load_corpus()
-            self._current_model = self._current_model
-            self._loaded = True
-
-            if (
-                self._model is not None
-                and self._vocoder is not None
-                and self._processor is not None
-                and self._speaker_embeddings is not None
-                and self._tokenizer is not None
-                and self._corpus is not None
-            ):
-                self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
-            else:
-                self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
+        if (
+            self._model is not None
+            and self._vocoder is not None
+            and self._processor is not None
+            and self._speaker_embeddings is not None
+            and self._tokenizer is not None
+            and self._corpus is not None
+        ):
+            self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
+        else:
+            self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
 
     def unload(self):
+        if self._model_status is ModelStatus.LOADING:
+            return
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self.logger.debug("Unloading")
-        self._loaded = False
         self._unload_model()
         self._unload_processor()
         self._unload_vocoder()
@@ -380,3 +358,7 @@ class SpeechT5TTSHandler(TTSHandler):
         self._cancel_generated_speech = False
         self._paused = True
         self._text_queue = Queue()
+
+    def change_model_status(self, model: ModelType, status: ModelStatus):
+        self._model_status = status
+        super().change_model_status(model, status)

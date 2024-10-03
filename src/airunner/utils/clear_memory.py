@@ -32,5 +32,3 @@ def clear_memory(device=0):
         except RuntimeError:
             print("Failed to clear memory")
     gc.collect()
-    print_gpu_memory_usage()
-    print_cpu_memory_usage()
