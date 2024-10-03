@@ -17,6 +17,7 @@ class WhisperHandler(STTHandler):
         self.model = None
         self.processor = None
         self.feature_extractor = None
+        self._model_status = ModelStatus.UNLOADED
 
     @property
     def model_path(self) -> str:
@@ -34,6 +35,9 @@ class WhisperHandler(STTHandler):
         pass
 
     def load(self):
+        if self._model_status is ModelStatus.LOADING:
+            return True
+        self.unload()
         super().load()
         self.change_model_status(ModelType.STT, ModelStatus.LOADING)
         self._load_model()
@@ -50,6 +54,8 @@ class WhisperHandler(STTHandler):
         return False
 
     def unload(self):
+        if self._model_status is ModelStatus.LOADING:
+            return True
         super().unload()
         self.change_model_status(ModelType.STT, ModelStatus.LOADING)
         self.is_on_gpu = False
@@ -103,3 +109,7 @@ class WhisperHandler(STTHandler):
             self.logger.error(f"Failed to load feature extractor")
             self.logger.error(e)
             return None
+
+    def change_model_status(self, model: ModelType, status: ModelStatus):
+        self._model_status = status
+        super().change_model_status(model, status)
