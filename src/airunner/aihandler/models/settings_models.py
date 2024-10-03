@@ -19,7 +19,6 @@ class ApplicationSettings(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     use_cuda = Column(Boolean, default=True)
     sd_enabled = Column(Boolean, default=False)
-    controlnet_enabled = Column(Boolean, default=False)
     llm_enabled = Column(Boolean, default=False)
     tts_enabled = Column(Boolean, default=False)
     stt_enabled = Column(Boolean, default=False)
