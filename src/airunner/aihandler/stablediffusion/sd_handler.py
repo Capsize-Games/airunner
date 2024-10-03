@@ -425,16 +425,6 @@ class SDHandler(BaseHandler):
             })
             self._current_state = HandlerState.READY
 
-    def change_model_status(self, model: ModelType, status: ModelStatus):
-        super().change_model_status(model, status)
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": model,
-                "status": status,
-                "path": ""
-            }
-        )
-
     def load_lora(self):
         self._load_lora()
 
