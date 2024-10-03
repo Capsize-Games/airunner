@@ -18,7 +18,7 @@ class AudioCaptureWorker(Worker):
     """
 
     def __init__(self, prefix):
-        super().__init__(prefix)
+        super().__init__(prefix=prefix)
         self.listening: bool = False
         self.voice_input_start_time: time.time = None
         self.chunk_duration = self.stt_settings.chunk_duration  # duration of chunks in milliseconds
