@@ -209,7 +209,6 @@ class ChatPromptWidget(BaseWidget):
     def showEvent(self, event):
         super().showEvent(event)
         if not self.registered:
-            self.register(SignalCode.STT_HEAR_SIGNAL, self.on_hear_signal)
             self.register(SignalCode.LLM_TOKEN_SIGNAL, self.on_token_signal)
             self.register(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, self.on_add_bot_message_to_conversation)
             self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed)
