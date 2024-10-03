@@ -21,6 +21,7 @@ class BaseHandler(
     model_type = None
 
     def __init__(self, *args, **kwargs):
+        self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
         self.use_gpu = True
         self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
@@ -39,6 +40,10 @@ class BaseHandler(
 
     def unload(self):
         pass
+
+    @property
+    def model_status(self):
+        return self._model_status
 
     @property
     def device(self):
@@ -81,6 +86,7 @@ class BaseHandler(
         return torch.float16 if self.use_cuda else torch.float32
 
     def change_model_status(self, model: ModelType, status: ModelStatus):
+        self._model_status[model] = status
         self.emit_signal(
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
                 "model": model,
