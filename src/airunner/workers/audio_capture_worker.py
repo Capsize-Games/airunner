@@ -4,10 +4,9 @@ import time
 
 import sounddevice as sd
 import numpy as np
-from PySide6.QtCore import QThread, Slot
+from PySide6.QtCore import QThread
 
-from airunner.aihandler.stt.whisper_handler import WhisperHandler
-from airunner.enums import SignalCode, ModelStatus
+from airunner.enums import SignalCode
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
