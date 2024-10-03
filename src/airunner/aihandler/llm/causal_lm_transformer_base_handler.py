@@ -76,6 +76,7 @@ class CausalLMTransformerBaseHandler(
         self._decoder_start_token_id = kwargs.get("decoder_start_token_id", None)
         self._tokenizer = None
         self._generator = None
+        self._model_status = ModelStatus.UNLOADED
 
         super().__init__(*args, **kwargs)
 
@@ -181,19 +182,23 @@ class CausalLMTransformerBaseHandler(
         ))
 
     def load(self):
+        if self._model_status is ModelStatus.LOADING:
+            return
+        self.unload()
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
         self._current_model_path = self.model_path
         self._load_tokenizer()
         self._load_model()
         self._load_streamer()
         self._load_agent()
-
         if self._model and self._tokenizer and self._streamer and self._chat_agent:
             self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
         else:
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
 
     def unload(self):
+        if self._model_status is ModelStatus.LOADING:
+            return
         self.logger.debug("Unloading LLM")
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
         self._unload_streamer()
@@ -254,9 +259,7 @@ class CausalLMTransformerBaseHandler(
     def _load_tokenizer(self):
         if self._tokenizer is not None:
             return
-
         path = self.model_path
-
         self.logger.debug(f"Loading tokenizer from {path}")
         kwargs = {
             "local_files_only": True,
@@ -432,3 +435,7 @@ class CausalLMTransformerBaseHandler(
     def _clear_memory(self):
         self.logger.debug("Clearing memory")
         clear_memory(self.memory_settings.default_gpu_llm)
+
+    def change_model_status(self, model: ModelType, status: ModelStatus):
+        self._model_status = status
+        super().change_model_status(model, status)
