@@ -157,7 +157,7 @@ class SDHandler(BaseHandler):
 
     @property
     def enable_controlnet(self):
-        return self.application_settings.controlnet_enabled
+        return self.controlnet_settings.enabled
 
     @property
     def data_type(self):
@@ -200,7 +200,7 @@ class SDHandler(BaseHandler):
 
     @property
     def controlnet_enabled(self) -> bool:
-        return self.application_settings.controlnet_enabled
+        return self.controlnet_settings.enabled
 
     @property
     def _device(self):
@@ -257,8 +257,6 @@ class SDHandler(BaseHandler):
         """
         Public method to load the controlnet model.
         """
-        if self._controlnet_status is ModelStatus.LOADING:
-            return
         self._load_controlnet()
 
     def unload_controlnet(self):
@@ -452,9 +450,10 @@ class SDHandler(BaseHandler):
         return images, has_nsfw_concepts
 
     def _load_safety_checker(self):
-        if self.application_settings.nsfw_filter:
-            self._load_safety_checker_model()
-            self._load_feature_extractor()
+        if not self.application_settings.nsfw_filter or self._safety_checker_status is ModelStatus.LOADING:
+            return
+        self._load_safety_checker_model()
+        self._load_feature_extractor()
 
     def _load_safety_checker_model(self):
         self.logger.debug("Loading safety checker")
@@ -535,6 +534,8 @@ class SDHandler(BaseHandler):
         return self._generator
 
     def _load_controlnet(self):
+        if not self.controlnet_settings.enabled or self._controlnet_status is ModelStatus.LOADING:
+            return
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
 
         try:
@@ -1201,7 +1202,7 @@ class SDHandler(BaseHandler):
             if args["num_inference_steps"] < MIN_NUM_INFERENCE_STEPS_IMG2IMG:
                 args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
 
-        if not self.application_settings.controlnet_enabled:
+        if not self.controlnet_settings.enabled:
             if self.is_txt2img:
                 args.update(dict(
                     guidance_scale=self.generator_settings.scale / 100.0

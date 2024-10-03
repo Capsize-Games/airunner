@@ -1,46 +1,24 @@
 # src/airunner/alembic/env.py
+import os
 
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool, MetaData
 from alembic import context
 
+config = context.config
+db_path = os.path.expanduser("~/.airunner/data/airunner.db")
+config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+
 # Import your models here
-from airunner.aihandler.models.settings_models import Conversation, Message, Summary
 from airunner.aihandler.models.settings_models import (
-    ApplicationSettings,
-    ActiveGridSettings,
-    CanvasSettings,
-    ControlnetSettings,
-    ImageToImageSettings,
-    OutpaintSettings,
-    DrawingPadSettings,
-    MetadataSettings,
-    GeneratorSettings,
-    ControlnetImageSettings,
-    LLMGeneratorSettings,
-    TTSSettings,
-    SpeechT5Settings,
-    EspeakSettings,
-    STTSettings,
-    Schedulers,
-    BrushSettings,
-    GridSettings,
-    PathSettings,
-    MemorySettings,
-    Chatbot,
-    TargetFiles,
-    TargetDirectories,
-    AIModels,
-    ShortcutKeys,
-    Lora,
-    SavedPrompt,
-    Embedding,
-    PromptTemplate,
-    ControlnetModel,
-    FontSetting,
-    PipelineModel,
-    WindowSettings,
+    Conversation, Message, Summary,
+    ApplicationSettings, ActiveGridSettings, CanvasSettings, ControlnetSettings,
+    ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings,
+    GeneratorSettings, ControlnetImageSettings, LLMGeneratorSettings, TTSSettings,
+    SpeechT5Settings, EspeakSettings, STTSettings, Schedulers, BrushSettings,
+    GridSettings, PathSettings, MemorySettings, Chatbot, TargetFiles, TargetDirectories,
+    AIModels, ShortcutKeys, Lora, SavedPrompt, Embedding, PromptTemplate, ControlnetModel,
+    FontSetting, PipelineModel, WindowSettings
 )
 
 # this is the Alembic Config object, which provides
@@ -51,45 +29,23 @@ config = context.config
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
 
+# Create a single MetaData object
+metadata = MetaData()
+
+# Bind all models to the single MetaData object
+for model in [
+    ApplicationSettings, ActiveGridSettings, CanvasSettings, ControlnetSettings,
+    ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings,
+    GeneratorSettings, ControlnetImageSettings, LLMGeneratorSettings, TTSSettings,
+    SpeechT5Settings, EspeakSettings, STTSettings, Schedulers, BrushSettings,
+    GridSettings, PathSettings, MemorySettings, Chatbot, TargetFiles, TargetDirectories,
+    AIModels, ShortcutKeys, Lora, SavedPrompt, Embedding, PromptTemplate, ControlnetModel,
+    FontSetting, PipelineModel, WindowSettings, Conversation, Message, Summary
+]:
+    model.metadata = metadata
+
 # Combine all model's MetaData objects here
-target_metadata = [
-    ApplicationSettings.metadata,
-    ActiveGridSettings.metadata,
-    CanvasSettings.metadata,
-    ControlnetSettings.metadata,
-    ImageToImageSettings.metadata,
-    OutpaintSettings.metadata,
-    DrawingPadSettings.metadata,
-    MetadataSettings.metadata,
-    GeneratorSettings.metadata,
-    ControlnetImageSettings.metadata,
-    LLMGeneratorSettings.metadata,
-    TTSSettings.metadata,
-    SpeechT5Settings.metadata,
-    EspeakSettings.metadata,
-    STTSettings.metadata,
-    Schedulers.metadata,
-    BrushSettings.metadata,
-    GridSettings.metadata,
-    PathSettings.metadata,
-    MemorySettings.metadata,
-    Chatbot.metadata,
-    TargetFiles.metadata,
-    TargetDirectories.metadata,
-    AIModels.metadata,
-    ShortcutKeys.metadata,
-    Lora.metadata,
-    SavedPrompt.metadata,
-    Embedding.metadata,
-    PromptTemplate.metadata,
-    ControlnetModel.metadata,
-    FontSetting.metadata,
-    PipelineModel.metadata,
-    WindowSettings.metadata,
-    Conversation.metadata,
-    Message.metadata,
-    Summary.metadata,
-]
+target_metadata = metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
