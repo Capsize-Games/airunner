@@ -22,7 +22,7 @@ class CausalLMTransformerBaseHandler(
     tokenizer_class_ = AutoTokenizer
     model_type = ModelType.LLM
 
-    def __init__(self, do_load_on_init: bool = False, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.model_type = ModelType.LLM
         self.model_class = "llm"
         self.agent_options = kwargs.pop("agent_options", {})
@@ -79,9 +79,6 @@ class CausalLMTransformerBaseHandler(
         self._model_status = ModelStatus.UNLOADED
 
         super().__init__(*args, **kwargs)
-
-        if do_load_on_init:
-            self.load()
 
     @property
     def is_mistral(self) -> bool:
@@ -208,6 +205,7 @@ class CausalLMTransformerBaseHandler(
         self._unload_model()
         self._unload_tokenizer()
         self._unload_agent()
+        clear_memory()
         self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
 
     def handle_request(self, data:dict):

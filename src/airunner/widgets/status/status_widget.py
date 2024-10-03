@@ -100,9 +100,7 @@ class StatusWidget(BaseWidget):
         if data["model"] == ModelType.SD:
             element_name = "sd_status"
             tool_tip = "Stable Diffusion"
-
             self.set_sd_status_text()
-
         elif data["model"] == ModelType.CONTROLNET:
             element_name = "controlnet_status"
             tool_tip = "Controlnet"
@@ -124,11 +122,13 @@ class StatusWidget(BaseWidget):
         if element_name != "":
             getattr(self.ui, element_name).setStyleSheet(styles)
             getattr(self.ui, element_name).setToolTip(tool_tip)
+        QApplication.processEvents()
 
     def set_sd_status_text(self):
         self.ui.sd_status.setText(self.generator_settings.version)
 
     def on_model_status_changed_signal(self, data):
+        print("ON MODEL STATUS CHANGED SIGNAL", data)
         self.update_model_status(data)
 
     def on_status_info_signal(self, message):
