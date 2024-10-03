@@ -141,6 +141,7 @@ class STTHandler(BaseHandler):
         """
         Run the model on the given inputs.
         :param inputs: str - The transcription of the audio data.
+        :param role: LLMChatRole - The role of the speaker.
         :return:
         """
         # Extract the tensor from the BatchFeature object

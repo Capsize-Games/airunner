@@ -357,7 +357,7 @@ class MainWindow(
         """
         Takes a message from the LLM and strips bash commands from it.
         Passes bash command to the bash_execute function.
-        :param message:
+        :param data: dict
         :return:
         """
         args = data["args"]

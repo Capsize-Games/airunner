@@ -1,6 +1,5 @@
 from typing import List
 
-from airunner.aihandler.models.settings_models import AIModels
 from airunner.enums import SignalCode
 
 

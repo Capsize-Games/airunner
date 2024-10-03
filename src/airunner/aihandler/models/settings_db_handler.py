@@ -540,7 +540,7 @@ class SettingsDBHandler(DatabaseHandler):
     def create_conversation(self):
         with self.get_db_session() as session:
             conversation = Conversation(
-                timestamp=datetime.datetime.utcnow(),
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
                 title=""
             )
             session.add(conversation)

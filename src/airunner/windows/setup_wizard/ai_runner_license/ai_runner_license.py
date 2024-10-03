@@ -1,5 +1,3 @@
-from PySide6.QtCore import Slot
-
 from airunner.windows.setup_wizard.user_agreement.agreement_page import AgreementPage
 from airunner.windows.setup_wizard.ai_runner_license.templates.airunner_license_ui import Ui_airunner_license
 
