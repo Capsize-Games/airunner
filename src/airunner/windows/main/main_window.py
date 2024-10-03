@@ -37,7 +37,7 @@ from airunner.enums import (
     SignalCode,
     CanvasToolName,
     GeneratorSection,
-    LLMAction
+    LLMAction, ModelType, ModelStatus
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.resources_dark_rc import *
@@ -148,6 +148,13 @@ class MainWindow(
         self._generator_settings = None
         self.listening = False
         self.initialized = False
+        self._model_status = {
+            ModelType.SD: ModelStatus.UNLOADED,
+            ModelType.LLM: ModelStatus.UNLOADED,
+            ModelType.TTS: ModelStatus.UNLOADED,
+            ModelType.CONTROLNET: ModelStatus.UNLOADED,
+            ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
+        }
 
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.debug("Starting AI Runnner")
@@ -1051,19 +1058,25 @@ class MainWindow(
 
     @Slot(bool)
     def action_image_generator_toggled(self, val: bool):
+        if self._model_status[ModelType.SD] is ModelStatus.LOADING:
+            val = not val
         self.ui.actionToggle_Stable_Diffusion.blockSignals(True)
         self.ui.actionToggle_Stable_Diffusion.setChecked(val)
         self.ui.actionToggle_Stable_Diffusion.blockSignals(False)
         QApplication.processEvents()
         self.update_application_settings("sd_enabled", val)
-        if val:
-            self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
-        else:
-            self.update()
-            self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
+
+        if self._model_status[ModelType.SD] is not ModelStatus.LOADING:
+            if val:
+                self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
+            else:
+                self.update()
+                self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
 
     @Slot(bool)
     def action_controlnet_toggled(self, val: bool):
+        if self._model_status[ModelType.CONTROLNET] is ModelStatus.LOADING:
+            val = not val
         self.ui.actionToggle_Controlnet.blockSignals(True)
         self.ui.actionToggle_Controlnet.setChecked(val)
         self.ui.actionToggle_Controlnet.blockSignals(False)
@@ -1087,4 +1100,9 @@ class MainWindow(
     def on_model_status_changed_signal(self, data):
         model = data["model"]
         status = data["status"]
+        self._model_status[model] = status
+        if model is ModelType.SD:
+            self.ui.actionToggle_Stable_Diffusion.setDisabled(status is ModelStatus.LOADING)
+        elif model is ModelType.CONTROLNET:
+            self.ui.actionToggle_Controlnet.setDisabled(status is ModelStatus.LOADING)
         self.initialize_widget_elements()
