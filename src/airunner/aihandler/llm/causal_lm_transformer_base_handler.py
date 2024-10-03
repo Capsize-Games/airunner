@@ -37,7 +37,6 @@ class CausalLMTransformerBaseHandler(
         self._use_query_engine: bool = False
         self._use_chat_engine: bool = True
         self._user_evaluation: str = ""
-        self._tools: dict = self.load_tools()
         self._restrict_tools_to_additional: bool = True
         self._return_agent_code: bool = False
         self._rag_tokenizer = None
@@ -181,19 +180,6 @@ class CausalLMTransformerBaseHandler(
             model_version
         ))
 
-    @staticmethod
-    def load_tools() -> dict:
-        return {
-            # LLMToolName.QUIT_APPLICATION.value: QuitApplicationTool(),
-            # LLMToolName.STT_START_CAPTURE.value: StartAudioCaptureTool(),
-            # LLMToolName.STT_STOP_CAPTURE.value: StopAudioCaptureTool(),
-            # LLMToolName.TTS_ENABLE.value: StartSpeakersTool(),
-            # LLMToolName.TTS_DISABLE.value: StopSpeakersTool(),
-            # LLMToolName.LLM_PROCESS_STT_AUDIO.value: ProcessAudioTool(),
-            # LLMToolName.BASH_EXECUTE.value: BashExecuteTool(),
-            # LLMToolName.WRITE_FILE.value: WriteFileTool(),
-        }
-
     def load(self):
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
         self._current_model_path = self.model_path
@@ -322,7 +308,6 @@ class CausalLMTransformerBaseHandler(
             model=self._model,
             tokenizer=self._tokenizer,
             streamer=self._streamer,
-            tools=self._tools,
             chat_template=self.chat_template,
             is_mistral=self.is_mistral,
         )
