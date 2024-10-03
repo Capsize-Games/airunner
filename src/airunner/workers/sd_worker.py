@@ -7,6 +7,8 @@ from PySide6.QtCore import QObject, Signal, Slot
 from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.workers.worker import Worker
+
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
@@ -29,40 +31,39 @@ class GenerateWorker(QObject):
             self.finished.emit()
 
 
-class SDWorker(QObject, MediatorMixin, SettingsMixin):
+class SDWorker(Worker):
     queue_type = QueueType.GET_LAST_ITEM
 
     def __init__(self, prefix="SDWorker"):
         self.sd = None
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
-        super().__init__()
+        super().__init__(
+            prefix=prefix,
+            signals=(
+                (SignalCode.RESET_APPLIED_MEMORY_SETTINGS, self.on_reset_applied_memory_settings),
+                (SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal),
+                (SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL, self.on_start_auto_image_generation_signal),
+                (SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL, self.on_stop_auto_image_generation_signal),
+                (SignalCode.DO_GENERATE_SIGNAL, self.on_do_generate_signal),
+                (SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL, self.on_interrupt_image_generation_signal),
+                (SignalCode.CHANGE_SCHEDULER_SIGNAL, self.on_change_scheduler_signal),
+                (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
+                (SignalCode.SD_LOAD_SIGNAL, self.on_load_stablediffusion_signal),
+                (SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal),
+                (SignalCode.CONTROLNET_LOAD_SIGNAL, self.on_load_controlnet_signal),
+                (SignalCode.CONTROLNET_UNLOAD_SIGNAL, self.on_unload_controlnet_signal),
+                (SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal),
+                (SignalCode.EMBEDDING_UPDATE_SIGNAL, self.on_update_embeddings_signal),
+                (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings),
+                (SignalCode.SD_STATE_CHANGED_SIGNAL, self.handle_sd_state_changed_signal),
+                (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_load_safety_checker),
+                (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.on_unload_safety_checker),
+            )
+        )
         self.__requested_action = ModelAction.NONE
         self._threads = []
         self._workers = []
-        for signal in [
-            (SignalCode.RESET_APPLIED_MEMORY_SETTINGS, self.on_reset_applied_memory_settings),
-            (SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal),
-            (SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL, self.on_start_auto_image_generation_signal),
-            (SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL, self.on_stop_auto_image_generation_signal),
-            (SignalCode.DO_GENERATE_SIGNAL, self.on_do_generate_signal),
-            (SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL, self.on_interrupt_image_generation_signal),
-            (SignalCode.CHANGE_SCHEDULER_SIGNAL, self.on_change_scheduler_signal),
-            (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
-            (SignalCode.SD_LOAD_SIGNAL, self.on_load_stablediffusion_signal),
-            (SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal),
-            (SignalCode.CONTROLNET_LOAD_SIGNAL, self.on_load_controlnet_signal),
-            (SignalCode.CONTROLNET_UNLOAD_SIGNAL, self.on_unload_controlnet_signal),
-            (SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal),
-            (SignalCode.EMBEDDING_UPDATE_SIGNAL, self.on_update_embeddings_signal),
-            (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings),
-            (SignalCode.SD_STATE_CHANGED_SIGNAL, self.handle_sd_state_changed_signal),
-            (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_load_safety_checker),
-            (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.on_unload_safety_checker),
-        ]:
-            self.register(signal[0], signal[1])
-
-        threading.Thread(target=self.start_worker_thread).start()
 
     def handle_sd_state_changed_signal(self, _data=None):
         self.sd.controlnet_handle_sd_state_changed_signal()
