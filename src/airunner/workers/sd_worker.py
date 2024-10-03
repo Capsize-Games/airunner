@@ -4,8 +4,9 @@ import torch
 from PySide6.QtCore import QThread
 from PySide6.QtCore import QObject, Signal, Slot
 
-from airunner.enums import QueueType, SignalCode, ModelType, ModelStatus, ModelAction
-from airunner.workers.worker import Worker
+from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
+from airunner.mediator_mixin import MediatorMixin
+from airunner.windows.main.settings_mixin import SettingsMixin
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
@@ -28,12 +29,14 @@ class GenerateWorker(QObject):
             self.finished.emit()
 
 
-class SDWorker(Worker):
+class SDWorker(QObject, MediatorMixin, SettingsMixin):
     queue_type = QueueType.GET_LAST_ITEM
 
     def __init__(self, prefix="SDWorker"):
         self.sd = None
-        super().__init__(prefix=prefix)
+        MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
+        super().__init__()
         self.__requested_action = ModelAction.NONE
         self._threads = []
         self._workers = []
@@ -58,6 +61,8 @@ class SDWorker(Worker):
             (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.on_unload_safety_checker),
         ]:
             self.register(signal[0], signal[1])
+
+        threading.Thread(target=self.start_worker_thread).start()
 
     def handle_sd_state_changed_signal(self, _data=None):
         self.sd.controlnet_handle_sd_state_changed_signal()
