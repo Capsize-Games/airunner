@@ -22,6 +22,11 @@ class LoraContainerWidget(BaseWidget):
 
         self.loras = None
         self.initialized = False
+        self._version = None
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+
+    def on_application_settings_changed_signal(self):
+        self.load_lora()
 
     def toggle_all(self, val):
         lora_widgets = [
@@ -46,16 +51,19 @@ class LoraContainerWidget(BaseWidget):
 
     def load_lora(self):
         version = self.generator_settings.version
-        loras = self.get_lora_by_version(version)
-        if loras:
-            self.remove_spacer()
-            filtered_loras = [
-                lora for lora in loras
-                if self.search_filter.lower() in lora.name.lower()
-            ]
-            for lora in filtered_loras:
-                self.add_lora(lora)
-            self.add_spacer()
+        if self._version is None or self._version != version:
+            self._version = version
+            self.clear_lora_widgets()
+            loras = self.get_lora_by_version(self._version)
+            if loras:
+                self.remove_spacer()
+                filtered_loras = [
+                    lora for lora in loras
+                    if self.search_filter.lower() in lora.name.lower()
+                ]
+                for lora in filtered_loras:
+                    self.add_lora(lora)
+                self.add_spacer()
 
     def remove_spacer(self):
         # remove spacer from end of self.ui.scrollAreaWidgetContents.layout()
@@ -81,7 +89,7 @@ class LoraContainerWidget(BaseWidget):
         lora_widget = data["lora_widget"]
 
         # Remove lora from settings
-        self.delete_lora_by_name(lora_widget.lora["name"], self.generator_settings.version)
+        self.delete_lora_by_name(lora_widget.lora["name"], self._version)
 
         # Remove lora widget from scroll area
         self.ui.scrollAreaWidgetContents.layout().removeWidget(lora_widget)
@@ -92,7 +100,7 @@ class LoraContainerWidget(BaseWidget):
             os.path.join(
                 self.path_settings.base_path,
                 "art/models",
-                self.generator_settings.version,
+                self._version,
                 "lora"
             )
         )
@@ -106,7 +114,6 @@ class LoraContainerWidget(BaseWidget):
     @Slot()
     def scan_for_lora(self):
         # clear all lora widgets
-        self.clear_lora_widgets()
         loras = scan_path_for_lora(self.path_settings.base_path)
         self.update_loras(loras)
         self.load_lora()
@@ -123,7 +130,7 @@ class LoraContainerWidget(BaseWidget):
             os.path.join(
                 self.path_settings.base_path,
                 "art/models",
-                self.generator_settings.version,
+                self._version,
                 "lora"
             )
         )
@@ -261,7 +268,6 @@ class LoraContainerWidget(BaseWidget):
 
     def search_text_changed(self, val):
         self.search_filter = val
-        self.clear_lora_widgets()
         self.load_lora()
     
     def clear_lora_widgets(self):
