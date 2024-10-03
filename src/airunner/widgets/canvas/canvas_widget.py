@@ -107,4 +107,4 @@ class CanvasWidget(
         self.ui.canvas_container_size = self.ui.canvas_container.viewport().size()
 
     def save_image(self, image_path, image=None):
-        self.save_image(image_path, image, self.scene.items())
+        self.save_image(image_path, image)

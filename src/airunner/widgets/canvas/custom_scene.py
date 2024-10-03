@@ -274,7 +274,7 @@ class CustomScene(
     ):
         """
         Adds a given image to the scene
-        :param image_data: dict containing the image to be added to the scene
+        :param image: Image object to add to the scene
         :param is_outpaint: bool indicating if the image is an outpaint
         :param outpaint_box_rect: QPoint indicating the root point of the image
         :param border_size: int indicating the size of the border
