@@ -1,10 +1,7 @@
 import queue
 import threading
 
-from PySide6.QtCore import QThread
-
-from airunner.enums import SignalCode, QueueType, TTSModel
-from airunner.settings import SLEEP_TIME_IN_MS
+from airunner.enums import SignalCode, TTSModel
 from airunner.workers.worker import Worker
 
 
@@ -19,61 +16,12 @@ class TTSGeneratorWorker(Worker):
         self.play_queue = []
         self.play_queue_started = False
         self.do_interrupt = False
-        super().__init__(*args, **kwargs)
-
-    def on_enable_tts_signal(self):
-        if self.tts:
-            self.tts.enable_tts_signal()
-
-    def on_disable_tts_signal(self):
-        if self.tts:
-            self.tts.disable_tts_signal()
-
-    def on_application_settings_changed_signal(self, message: dict):
-        if self.tts:
-            self.tts.application_settings_changed_signal(message)
-
-    def start_worker_thread(self):
-        tts_model = self.tts_settings.model.lower()
-
-        if tts_model == TTSModel.ESPEAK.value:
-            from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
-            tts_handler_class_ = EspeakTTSHandler
-        else:
-            from airunner.aihandler.tts.speecht5_tts_handler import SpeechT5TTSHandler
-            tts_handler_class_ = SpeechT5TTSHandler
-        self.tts = tts_handler_class_()
-        self.tts.run()
-
-    def add_to_queue(self, message):
-        if self.do_interrupt:
-            return
-        super().add_to_queue(message)
-    
-    def run(self):
-        if self.queue_type == QueueType.NONE:
-            return
-        self.logger.debug("Starting TTS generator worker")
-        self.running = True
-        while self.running:
-            self.preprocess()
-            try:
-                msg = self.get_item_from_queue()
-                if msg is not None:
-                    self.handle_message(msg)
-            except queue.Empty:
-                msg = None
-            if self.paused:
-                self.logger.debug("Paused")
-                while self.paused:
-                    QThread.msleep(SLEEP_TIME_IN_MS)
-                self.logger.debug("Resumed")
-            QThread.msleep(SLEEP_TIME_IN_MS)
-
-    def get_item_from_queue(self):
-        if self.do_interrupt:
-            return None
-        return super().get_item_from_queue()
+        super().__init__(*args, signals=(
+            (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
+            (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
+            (SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal),
+            (SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal),
+        ), **kwargs)
 
     def on_interrupt_process_signal(self):
         self.play_queue = []
@@ -89,6 +37,45 @@ class TTSGeneratorWorker(Worker):
         self.do_interrupt = False
         self.paused = False
         self.tts.unblock_tts_generator_signal()
+
+    def on_enable_tts_signal(self):
+        if self.tts:
+            thread = threading.Thread(target=self._load_tts)
+            thread.start()
+
+    def on_disable_tts_signal(self):
+        if self.tts:
+            thread = threading.Thread(target=self._unload_tts)
+            thread.start()
+
+    def _load_tts(self):
+        self.tts.load()
+
+    def _unload_tts(self):
+        self.tts.unload()
+
+    def start_worker_thread(self):
+        tts_model = self.tts_settings.model.lower()
+
+        if tts_model == TTSModel.ESPEAK.value:
+            from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
+            tts_handler_class_ = EspeakTTSHandler
+        else:
+            from airunner.aihandler.tts.speecht5_tts_handler import SpeechT5TTSHandler
+            tts_handler_class_ = SpeechT5TTSHandler
+        self.tts = tts_handler_class_()
+        if self.application_settings.tts_enabled:
+            self.tts.load()
+
+    def add_to_queue(self, message):
+        if self.do_interrupt:
+            return
+        super().add_to_queue(message)
+
+    def get_item_from_queue(self):
+        if self.do_interrupt:
+            return None
+        return super().get_item_from_queue()
 
     def handle_message(self, data):
         if self.do_interrupt:

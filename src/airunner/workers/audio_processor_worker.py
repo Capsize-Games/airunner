@@ -11,10 +11,9 @@ class AudioProcessorWorker(Worker):
     fs = 0
 
     def __init__(self, prefix):
-        self.signals = [
-            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.update_properties)
-        ]
-        super().__init__(prefix=prefix)
+        super().__init__(prefix=prefix, signals = (
+            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.update_properties),
+        ))
         self.stt = WhisperHandler()
 
     def on_load_signal(self):

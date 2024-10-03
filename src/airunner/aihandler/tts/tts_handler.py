@@ -18,24 +18,7 @@ class TTSHandler(BaseHandler):
         super().__init__(*args, **kwargs)
         self.model_type = ModelType.TTS
         self.model_class = "tts"
-        self.tts_enabled = False
         self._engine = None
-
-    @property
-    def tts_enabled(self):
-        return self.application_settings.tts_enabled
-
-    @tts_enabled.setter
-    def tts_enabled(self, value):
-        self.update_application_settings("tts_enabled", value)
-
-    def enable_tts_signal(self):
-        self.tts_enabled = True
-        self.load()
-
-    def disable_tts_signal(self):
-        self.tts_enabled = False
-        self.unload()
 
     def interrupt_process_signal(self):
         pass
