@@ -95,10 +95,6 @@ class ImagePanelWidget(BaseWidget):
     def display_thumbnails(self):
         """
         Display thumbnails of images from the sorted_files list within the specified range.
-
-        Args:
-            start (int): The starting index of the range.
-            end (int): The ending index of the range.
         """
         for file in self.sorted_files[self.start:self.end]:
             if file.endswith(".png"):

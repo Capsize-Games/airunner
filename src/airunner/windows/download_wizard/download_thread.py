@@ -33,9 +33,9 @@ class DownloadThread(QThread):
                         #     repo_type=repo_type
                         # )
                         self.hf_downloader.download_model(
-                            path=model["path"],
-                            file_name=filename,
-                            callback=self.progress_updated.emit
+                            requested_path=model["path"],
+                            requested_file_name=filename,
+                            requested_callback=self.progress_updated.emit
                         )
                 else:
                     print("Skipping download for model with no files {}".format(model["name"]))

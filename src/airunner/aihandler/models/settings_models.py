@@ -552,7 +552,7 @@ class WindowSettings(Base):
 class Conversation(Base):
     __tablename__ = 'conversations'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
     title = Column(String, nullable=True)  # New column added
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
 
@@ -562,7 +562,7 @@ class Message(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     role = Column(String, nullable=False)
     content = Column(String, nullable=False)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
     conversation_id = Column(Integer, ForeignKey('conversations.id'))
     conversation = relationship("Conversation", back_populates="messages")
     name = Column(String, nullable=True)  # New column added
@@ -576,7 +576,7 @@ class Summary(Base):
     __tablename__ = 'summaries'
     id = Column(Integer, primary_key=True, autoincrement=True)
     content = Column(String, nullable=False)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
     conversation_id = Column(Integer, ForeignKey('conversations.id'))
     conversation = relationship("Conversation", back_populates="summaries")
 
