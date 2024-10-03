@@ -82,7 +82,6 @@ class BaseAgent(
         self.rendered_template = None
         self.tokenizer = kwargs.pop("tokenizer", None)
         self.streamer = kwargs.pop("streamer", None)
-        self.tools = kwargs.pop("tools", None)
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
         self.conversation_id = None
