@@ -90,9 +90,11 @@ class SpeechT5TTSHandler(TTSHandler):
         )
 
     def generate(self, message):
-        if self._do_interrupt or self._paused:
+        if self._model_status is not ModelStatus.LOADED:
             return None
 
+        if self._do_interrupt or self._paused:
+            return None
         try:
             return self._do_generate(message)
         except torch.cuda.OutOfMemoryError:
