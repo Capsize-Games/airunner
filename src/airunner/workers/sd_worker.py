@@ -145,7 +145,6 @@ class SDWorker(QObject, MediatorMixin, SettingsMixin):
             self.sd.sd_load_tokenizer(data)
 
     def start_worker_thread(self):
-        print("start worker thread")
         from airunner.aihandler.stablediffusion.sd_handler import SDHandler
         self.sd = SDHandler()
         if self.application_settings.sd_enabled:

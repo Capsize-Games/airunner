@@ -22,12 +22,15 @@ class EspeakTTSHandler(TTSHandler):
 
     def load(self, target_model=None):
         self.logger.debug("Initializing espeak")
+        self.unload()
+        self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self._engine = pyttsx3.init()
         self._initialize()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 
     def unload(self):
         self.logger.debug("Unloading espeak")
+        self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self._engine = None
         self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED)
 

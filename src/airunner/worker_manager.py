@@ -31,7 +31,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         disable_llm: bool = False,
         disable_tts: bool = False,
         disable_stt: bool = False,
-        do_load_llm_on_init: bool = False,
         agent_options: dict = None,
         **kwargs
     ):
@@ -58,13 +57,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             (SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal),
             (SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal),
             (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_stt_process_audio_signal),
-            (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
-            (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
-            (SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal),
-            (SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal),
-            (SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, self.on_TTSGeneratorWorker_add_to_stream_signal),
 
-            (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.tts_interrupt_process_signal),
+
             (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal),
         ]
         for signal in signals:
@@ -93,10 +87,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         if not disable_stt:
             self.register_stt_workers()
 
-    def tts_interrupt_process_signal(self):
-        if self.tts_vocalizer_worker:
-            self.tts_vocalizer_worker.on_interrupt_process_signal()
-
     def on_llm_text_streamed_signal(self, data: dict):
         try:
             if self.application_settings.tts_enabled:
@@ -104,9 +94,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         except TypeError as e:
             self.logger.error(f"Error in on_llm_text_streamed_signal: {e}")
         self.emit_signal(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, data)
-
-    def on_TTSGeneratorWorker_add_to_stream_signal(self, response: dict):
-        self.tts_vocalizer_worker.on_TTSGeneratorWorker_add_to_stream_signal(response)
 
     def register_sd_workers(self):
         from airunner.workers.sd_worker import SDWorker
@@ -139,24 +126,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
     def on_stt_stop_capture_signal(self):
         self.stt_audio_capture_worker.on_stop_capture_signal()
-
-    def on_interrupt_process_signal(self):
-        if self.tts_generator_worker:
-            self.tts_generator_worker.on_interrupt_process_signal()
-
-    def on_unblock_tts_generator_signal(self):
-        if self.tts_generator_worker:
-            self.tts_generator_worker.on_unblock_tts_generator_signal()
-        if self.tts_vocalizer_worker:
-            self.tts_vocalizer_worker.on_unblock_tts_generator_signal()
-
-    def on_enable_tts_signal(self):
-        if self.tts_generator_worker:
-            self.tts_generator_worker.on_enable_tts_signal()
-
-    def on_disable_tts_signal(self):
-        if self.tts_generator_worker:
-            self.tts_generator_worker.on_disable_tts_signal()
 
     def on_stt_process_audio_signal(self, message):
         self.stt_audio_processor_worker.add_to_queue(message)

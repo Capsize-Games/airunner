@@ -148,20 +148,12 @@ class MainWindow(
         self._generator_settings = None
         self.listening = False
         self.initialized = False
-        self._model_status = {
-            ModelType.SD: ModelStatus.UNLOADED,
-            ModelType.LLM: ModelStatus.UNLOADED,
-            ModelType.TTS: ModelStatus.UNLOADED,
-            ModelType.CONTROLNET: ModelStatus.UNLOADED,
-            ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
-        }
+        self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
 
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
-
-        self.do_load_llm_on_init = self.application_settings.llm_enabled
 
         super().__init__(*args, **kwargs)
 
@@ -556,26 +548,99 @@ class MainWindow(
             f"Click to {'enable' if not self.application_settings.nsfw_filter else 'disable'} NSFW filter"
         )
 
-    def on_toggle_fullscreen_signal(self, message: dict = None):
+    def on_toggle_fullscreen_signal(self):
         if self.isFullScreen():
             self.showNormal()
         else:
             self.showFullScreen()
 
-    def on_toggle_tts(self, message: dict = None):
+    def on_toggle_tts(self):
         self.tts_button_toggled(not self.application_settings.tts_enabled)
 
     @Slot(bool)
+    def action_outpaint_toggled(self, val: bool):
+        self.update_outpaint_settings("enabled", val)
+
+    @Slot()
+    def action_outpaint_export(self):
+        self.emit_signal(SignalCode.OUTPAINT_EXPORT_SIGNAL)
+
+    @Slot()
+    def action_outpaint_import(self):
+        self.emit_signal(SignalCode.OUTPAINT_IMPORT_SIGNAL)
+
+    @Slot()
+    def action_run_setup_wizard_clicked(self):
+        self.show_setup_wizard()
+
+    @Slot(bool)
+    def action_toggle_llm(self, val):
+        if self._model_status[ModelType.LLM] is ModelStatus.LOADING:
+            val = not val
+        self.ui.actionToggle_LLM.blockSignals(True)
+        self.ui.actionToggle_LLM.setChecked(val)
+        self.ui.actionToggle_LLM.blockSignals(False)
+        QApplication.processEvents()
+        self.update_application_settings("llm_enabled", val)
+        if self._model_status[ModelType.LLM] is not ModelStatus.LOADING:
+            if val:
+                self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
+            else:
+                self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
+
+    @Slot(bool)
+    def action_image_generator_toggled(self, val: bool):
+        if self._model_status[ModelType.SD] is ModelStatus.LOADING:
+            val = not val
+        self.ui.actionToggle_Stable_Diffusion.blockSignals(True)
+        self.ui.actionToggle_Stable_Diffusion.setChecked(val)
+        self.ui.actionToggle_Stable_Diffusion.blockSignals(False)
+        QApplication.processEvents()
+        self.update_application_settings("sd_enabled", val)
+        if self._model_status[ModelType.SD] is not ModelStatus.LOADING:
+            if val:
+                self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
+            else:
+                self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
+
+    @Slot(bool)
+    def action_controlnet_toggled(self, val: bool):
+        if self._model_status[ModelType.CONTROLNET] is ModelStatus.LOADING:
+            val = not val
+        self.ui.actionToggle_Controlnet.blockSignals(True)
+        self.ui.actionToggle_Controlnet.setChecked(val)
+        self.ui.actionToggle_Controlnet.blockSignals(False)
+        QApplication.processEvents()
+        self.update_controlnet_settings("enabled", val)
+        for widget in [self.ui.actionToggle_Controlnet, self.ui.enable_controlnet]:
+            widget.blockSignals(True)
+            widget.setChecked(val)
+            widget.blockSignals(False)
+        if self._model_status[ModelType.CONTROLNET] is not ModelStatus.LOADING:
+            if val:
+                self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
+            else:
+                self.emit_signal(SignalCode.CONTROLNET_UNLOAD_SIGNAL)
+
+    @Slot(bool)
     def tts_button_toggled(self, val):
+        if self._model_status[ModelType.TTS] is ModelStatus.LOADING:
+            val = not val
         self.ui.actionToggle_Text_to_Speech.blockSignals(True)
         self.ui.actionToggle_Text_to_Speech.setChecked(val)
         self.ui.actionToggle_Text_to_Speech.blockSignals(False)
         QApplication.processEvents()
         self.update_application_settings("tts_enabled", val)
-        self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL if val else SignalCode.TTS_DISABLE_SIGNAL)
+        if self._model_status[ModelType.TTS] is not ModelStatus.LOADING:
+            if val:
+                self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL)
+            else:
+                self.emit_signal(SignalCode.TTS_DISABLE_SIGNAL)
 
     @Slot(bool)
     def v2t_button_toggled(self, val):
+        if self._model_status[ModelType.STT] is ModelStatus.LOADING:
+            val = not val
         self.ui.actionToggle_Speech_to_Text.blockSignals(True)
         self.ui.actionToggle_Speech_to_Text.setChecked(val)
         self.ui.actionToggle_Speech_to_Text.blockSignals(False)
@@ -585,6 +650,13 @@ class MainWindow(
             self.emit_signal(SignalCode.STT_UNLOAD_SIGNAL)
         else:
             self.emit_signal(SignalCode.STT_LOAD_SIGNAL)
+
+    @Slot()
+    def action_stats_triggered(self):
+        from airunner.widgets.stats.stats_widget import StatsWidget
+        widget = StatsWidget()
+        # display in a window
+        widget.show()
 
     def save_state(self):
         if self.quitting:
@@ -861,8 +933,7 @@ class MainWindow(
             disable_sd=self.disable_sd,
             disable_llm=self.disable_llm,
             disable_tts=self.disable_tts,
-            disable_stt=self.disable_stt,
-            do_load_llm_on_init=self.do_load_llm_on_init
+            disable_stt=self.disable_stt
         )
 
     def _initialize_filter_actions(self):
@@ -1028,80 +1099,11 @@ class MainWindow(
     def action_import_image_triggered(self):
         self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
 
-    @Slot(bool)
-    def action_outpaint_toggled(self, val: bool):
-        self.update_outpaint_settings("enabled", val)
-
-    @Slot()
-    def action_outpaint_export(self):
-        self.emit_signal(SignalCode.OUTPAINT_EXPORT_SIGNAL)
-
-    @Slot()
-    def action_outpaint_import(self):
-        self.emit_signal(SignalCode.OUTPAINT_IMPORT_SIGNAL)
-
-    @Slot()
-    def action_run_setup_wizard_clicked(self):
-        self.show_setup_wizard()
-
-    @Slot(bool)
-    def action_toggle_llm(self, val):
-        if self._model_status[ModelType.LLM] is ModelStatus.LOADING:
-            val = not val
-        self.ui.actionToggle_LLM.blockSignals(True)
-        self.ui.actionToggle_LLM.setChecked(val)
-        self.ui.actionToggle_LLM.blockSignals(False)
-        QApplication.processEvents()
-        self.update_application_settings("llm_enabled", val)
-        if self._model_status[ModelType.LLM] is not ModelStatus.LOADING:
-            if val:
-                self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
-            else:
-                self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
-
-    @Slot(bool)
-    def action_image_generator_toggled(self, val: bool):
-        if self._model_status[ModelType.SD] is ModelStatus.LOADING:
-            val = not val
-        self.ui.actionToggle_Stable_Diffusion.blockSignals(True)
-        self.ui.actionToggle_Stable_Diffusion.setChecked(val)
-        self.ui.actionToggle_Stable_Diffusion.blockSignals(False)
-        QApplication.processEvents()
-        self.update_application_settings("sd_enabled", val)
-
-        if self._model_status[ModelType.SD] is not ModelStatus.LOADING:
-            if val:
-                self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
-            else:
-                self.update()
-                self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
-
-    @Slot(bool)
-    def action_controlnet_toggled(self, val: bool):
-        if self._model_status[ModelType.CONTROLNET] is ModelStatus.LOADING:
-            val = not val
-        self.ui.actionToggle_Controlnet.blockSignals(True)
-        self.ui.actionToggle_Controlnet.setChecked(val)
-        self.ui.actionToggle_Controlnet.blockSignals(False)
-        QApplication.processEvents()
-        self.update_controlnet_settings("enabled", val)
-        for widget in [self.ui.actionToggle_Controlnet, self.ui.enable_controlnet]:
-            widget.blockSignals(True)
-            widget.setChecked(val)
-            widget.blockSignals(False)
-        signal = SignalCode.CONTROLNET_LOAD_SIGNAL if val else SignalCode.CONTROLNET_UNLOAD_SIGNAL
-        self.emit_signal(signal)
-
-    @Slot()
-    def action_stats_triggered(self):
-        from airunner.widgets.stats.stats_widget import StatsWidget
-        widget = StatsWidget()
-        # display in a window
-        widget.show()
-
     def on_model_status_changed_signal(self, data):
         model = data["model"]
         status = data["status"]
+        if self._model_status[model] is status:
+            return
         self._model_status[model] = status
         if model is ModelType.SD:
             self.ui.actionToggle_Stable_Diffusion.setDisabled(status is ModelStatus.LOADING)
@@ -1109,4 +1111,9 @@ class MainWindow(
             self.ui.actionToggle_Controlnet.setDisabled(status is ModelStatus.LOADING)
         elif model is ModelType.LLM:
             self.ui.actionToggle_LLM.setDisabled(status is ModelStatus.LOADING)
+        elif model is ModelType.TTS:
+            self.ui.actionToggle_Text_to_Speech.setDisabled(status is ModelStatus.LOADING)
+        elif model is ModelType.STT:
+            self.ui.actionToggle_Speech_to_Text.setDisabled(status is ModelStatus.LOADING)
         self.initialize_widget_elements()
+        QApplication.processEvents()
