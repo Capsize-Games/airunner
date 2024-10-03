@@ -734,6 +734,8 @@ class SDHandler(BaseHandler):
                 self.logger.error(f"Failed to load model from {self.model_path}: {e}")
                 self.change_model_status(ModelType.SD, ModelStatus.FAILED)
                 return
+            except RuntimeError as e:
+                self.logger.warning(f"Failed to load model from {self.model_path}: {e}")
         else:
             if self.enable_controlnet:
                 data["controlnet"] = self._controlnet
@@ -749,7 +751,10 @@ class SDHandler(BaseHandler):
                 return
 
         if self._pipe is not None:
-            self._pipe.to(self._device)
+            try:
+                self._pipe.to(self._device)
+            except torch.OutOfMemoryError as e:
+                self.logger.error(f"Failed to load model to device: {e}")
 
     def _load_lora(self):
         self._loaded_lora = []
@@ -1042,7 +1047,10 @@ class SDHandler(BaseHandler):
             del self._pipe.safety_checker
             self._pipe.safety_checker = None
         if self._safety_checker:
-            self._safety_checker.to("cpu")
+            try:
+                self._safety_checker.to("cpu")
+            except RuntimeError as e:
+                self.logger.warning(f"Failed to load model from {self.model_path}: {e}")
         del self._safety_checker
         self._safety_checker = None
 
@@ -1071,7 +1079,10 @@ class SDHandler(BaseHandler):
     def _unload_controlnet_model(self):
         self.logger.debug("Clearing controlnet")
         if self._pipe and hasattr(self._pipe, "controlnet"):
-            del self._pipe.__controlnet
+            try:
+                del self._pipe.__controlnet
+            except AttributeError:
+                pass
             self._pipe.__controlnet = None
         del self._controlnet
         self._controlnet = None
@@ -1139,7 +1150,10 @@ class SDHandler(BaseHandler):
 
     def _unload_deep_cache(self):
         if self._deep_cache_helper is not None:
-            self._deep_cache_helper.disable()
+            try:
+                self._deep_cache_helper.disable()
+            except AttributeError:
+                pass
         del self._deep_cache_helper
         self._deep_cache_helper = None
 
