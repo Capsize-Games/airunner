@@ -412,6 +412,9 @@ class CustomScene(
         else:
             self.logger.error(f"Unhandled response code: {code}")
         self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
+        callback = response.get("callback", None)
+        if callback:
+            callback(response)
 
     def on_canvas_clear_signal(self):
         self.update_current_settings("image", None)

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QCheckBox, QInputDialog
 )
 from bs4 import BeautifulSoup
+from tensorflow.python.ops.gen_dataset_ops import ModelDataset
 
 from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
@@ -320,6 +321,8 @@ class MainWindow(
         self.register(SignalCode.WRITE_FILE, self.on_write_file_signal)
         self.register(SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal)
         self.register(SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts)
+        self.register(SignalCode.TOGGLE_SD_SIGNAL, self.on_toggle_sd)
+        self.register(SignalCode.TOGGLE_LLM_SIGNAL, self.on_toggle_llm)
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.action_reset_settings)
         self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal)
         self.register(SignalCode.REFRESH_STYLESHEET_SIGNAL, self.refresh_stylesheet)
@@ -554,9 +557,6 @@ class MainWindow(
         else:
             self.showFullScreen()
 
-    def on_toggle_tts(self):
-        self.tts_button_toggled(not self.application_settings.tts_enabled)
-
     @Slot(bool)
     def action_outpaint_toggled(self, val: bool):
         self.update_outpaint_settings("enabled", val)
@@ -574,82 +574,106 @@ class MainWindow(
         self.show_setup_wizard()
 
     @Slot(bool)
-    def action_toggle_llm(self, val):
-        if self._model_status[ModelType.LLM] is ModelStatus.LOADING:
-            val = not val
-        self.ui.actionToggle_LLM.blockSignals(True)
-        self.ui.actionToggle_LLM.setChecked(val)
-        self.ui.actionToggle_LLM.blockSignals(False)
-        QApplication.processEvents()
-        self.update_application_settings("llm_enabled", val)
-        if self._model_status[ModelType.LLM] is not ModelStatus.LOADING:
-            if val:
-                self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
-            else:
-                self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
+    def action_toggle_llm(self, val: bool):
+        self.on_toggle_llm(val=val)
 
     @Slot(bool)
     def action_image_generator_toggled(self, val: bool):
-        if self._model_status[ModelType.SD] is ModelStatus.LOADING:
-            val = not val
-        self.ui.actionToggle_Stable_Diffusion.blockSignals(True)
-        self.ui.actionToggle_Stable_Diffusion.setChecked(val)
-        self.ui.actionToggle_Stable_Diffusion.blockSignals(False)
-        QApplication.processEvents()
-        self.update_application_settings("sd_enabled", val)
-        if self._model_status[ModelType.SD] is not ModelStatus.LOADING:
-            if val:
-                self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
-            else:
-                self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
+        self.on_toggle_sd(val=val)
+
+    @Slot(bool)
+    def tts_button_toggled(self, val: bool):
+        self.on_toggle_tts(val=val)
 
     @Slot(bool)
     def action_controlnet_toggled(self, val: bool):
-        if self._model_status[ModelType.CONTROLNET] is ModelStatus.LOADING:
-            val = not val
-        self.ui.actionToggle_Controlnet.blockSignals(True)
-        self.ui.actionToggle_Controlnet.setChecked(val)
-        self.ui.actionToggle_Controlnet.blockSignals(False)
-        QApplication.processEvents()
-        self.update_controlnet_settings("enabled", val)
-        for widget in [self.ui.actionToggle_Controlnet, self.ui.enable_controlnet]:
-            widget.blockSignals(True)
-            widget.setChecked(val)
-            widget.blockSignals(False)
-        if self._model_status[ModelType.CONTROLNET] is not ModelStatus.LOADING:
-            if val:
-                self.emit_signal(SignalCode.CONTROLNET_LOAD_SIGNAL)
-            else:
-                self.emit_signal(SignalCode.CONTROLNET_UNLOAD_SIGNAL)
-
-    @Slot(bool)
-    def tts_button_toggled(self, val):
-        if self._model_status[ModelType.TTS] is ModelStatus.LOADING:
-            val = not val
-        self.ui.actionToggle_Text_to_Speech.blockSignals(True)
-        self.ui.actionToggle_Text_to_Speech.setChecked(val)
-        self.ui.actionToggle_Text_to_Speech.blockSignals(False)
-        QApplication.processEvents()
-        self.update_application_settings("tts_enabled", val)
-        if self._model_status[ModelType.TTS] is not ModelStatus.LOADING:
-            if val:
-                self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL)
-            else:
-                self.emit_signal(SignalCode.TTS_DISABLE_SIGNAL)
+        self._update_action_button(
+            ModelType.CONTROLNET,
+            self.ui.actionToggle_Controlnet,
+            val,
+            SignalCode.CONTROLNET_LOAD_SIGNAL,
+            SignalCode.CONTROLNET_UNLOAD_SIGNAL,
+            "enabled"
+        )
 
     @Slot(bool)
     def v2t_button_toggled(self, val):
         if self._model_status[ModelType.STT] is ModelStatus.LOADING:
             val = not val
-        self.ui.actionToggle_Speech_to_Text.blockSignals(True)
-        self.ui.actionToggle_Speech_to_Text.setChecked(val)
-        self.ui.actionToggle_Speech_to_Text.blockSignals(False)
+        self._update_action_button(self.ui.actionToggle_Speech_to_Text, val)
         QApplication.processEvents()
         self.update_application_settings("stt_enabled", val)
         if not val:
             self.emit_signal(SignalCode.STT_UNLOAD_SIGNAL)
         else:
             self.emit_signal(SignalCode.STT_LOAD_SIGNAL)
+
+    def on_toggle_llm(self, data:dict=None, val=None):
+        if val is None:
+            val = not self.application_settings.llm_enabled
+        self._update_action_button(
+            ModelType.LLM,
+            self.ui.actionToggle_LLM,
+            val,
+            SignalCode.LLM_LOAD_SIGNAL,
+            SignalCode.LLM_UNLOAD_SIGNAL,
+            "llm_enabled",
+            data
+        )
+
+    def on_toggle_sd(self, data:dict=None, val=None):
+        if val is None:
+            val = not self.application_settings.sd_enabled
+        self._update_action_button(
+            ModelType.SD,
+            self.ui.actionToggle_Stable_Diffusion,
+            val,
+            SignalCode.SD_LOAD_SIGNAL,
+            SignalCode.SD_UNLOAD_SIGNAL,
+            "sd_enabled",
+            data
+        )
+
+    def on_toggle_tts(self, data:dict=None, val=None):
+        if val is None:
+            val = not self.application_settings.sd_enabled
+        self._update_action_button(
+            ModelType.TTS,
+            self.ui.actionToggle_Text_to_Speech,
+            val,
+            SignalCode.TTS_ENABLE_SIGNAL,
+            SignalCode.TTS_DISABLE_SIGNAL,
+            "tts_enabled",
+            data
+        )
+
+    def _update_action_button(
+        self,
+        model_type,
+        element,
+        val:bool,
+        load_signal: SignalCode,
+        unload_signal: SignalCode,
+        application_setting:str=None,
+        data:dict=None
+    ):
+        if self._model_status[model_type] is ModelStatus.LOADING:
+            val = not val
+        element.blockSignals(True)
+        element.setChecked(val)
+        element.blockSignals(False)
+        QApplication.processEvents()
+        if application_setting:
+            if model_type is ModelType.CONTROLNET:
+                self.update_controlnet_settings(application_setting, val)
+            else:
+                self.update_application_settings(application_setting, val)
+        print("UDPATE ACTION BUTTON", data)
+        if self._model_status[model_type] is not ModelStatus.LOADING:
+            if val:
+                self.emit_signal(load_signal, data)
+            else:
+                self.emit_signal(unload_signal, data)
 
     @Slot()
     def action_stats_triggered(self):

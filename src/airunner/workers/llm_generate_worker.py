@@ -22,12 +22,18 @@ class LLMGenerateWorker(Worker):
     def on_llm_request_worker_response_signal(self, message: dict):
         self.add_to_queue(message)
 
-    def on_llm_on_unload_signal(self):
+    def on_llm_on_unload_signal(self, data):
         self.logger.debug("Unloading LLM")
         self.llm.unload()
+        callback = data.get("callback", None)
+        if callback:
+            callback(data)
 
-    def on_llm_load_model_signal(self):
+    def on_llm_load_model_signal(self, data):
         self.llm.load()
+        callback = data.get("callback", None)
+        if callback:
+            callback(data)
 
     def on_llm_clear_history_signal(self):
         self.llm.clear_history()

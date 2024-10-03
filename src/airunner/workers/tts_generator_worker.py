@@ -132,8 +132,10 @@ class TTSGeneratorWorker(Worker):
 
         if type(message) == dict:
             message = message.get("message", "")
-        
-        response = self.tts.generate(message)
+
+        response = None
+        if self.tts:
+            response = self.tts.generate(message)
 
         if self.do_interrupt:
             return

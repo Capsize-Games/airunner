@@ -305,7 +305,10 @@ class SDHandler(BaseHandler):
         clear_memory()
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
 
-    def handle_generate_signal(self, message: dict):
+    def handle_generate_signal(self, message: dict=None):
+        if self._model_status is not ModelStatus.LOADED:
+            self.load_stable_diffusion()
+
         if self._current_state not in (
             HandlerState.GENERATING,
             HandlerState.PREPARING_TO_GENERATE
@@ -319,6 +322,11 @@ class SDHandler(BaseHandler):
             except Exception as e:
                 self.logger.error(f"Error generating image: {e}")
                 response = None
+            print("HANDLE GENERATE SIGNAL", message)
+            if message is not None:
+                callback = message.get("callback", None)
+                if callback:
+                    callback(message)
             self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
                 'code': EngineResponseCode.IMAGE_GENERATED,
                 'message': response
