@@ -322,7 +322,6 @@ class SDHandler(BaseHandler):
             except Exception as e:
                 self.logger.error(f"Error generating image: {e}")
                 response = None
-            print("HANDLE GENERATE SIGNAL", message)
             if message is not None:
                 callback = message.get("callback", None)
                 if callback:
