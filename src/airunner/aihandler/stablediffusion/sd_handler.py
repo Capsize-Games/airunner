@@ -41,6 +41,7 @@ SKIP_RELOAD_CONSTS = (
 class SDHandler(BaseHandler):
     def  __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._model_status = ModelStatus.UNLOADED
         self.model_type = "sd"
         self._current_model:str = ""
         self._controlnet:ControlNetModel = None
