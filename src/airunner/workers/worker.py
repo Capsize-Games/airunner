@@ -15,9 +15,9 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
     queue_type = QueueType.GET_NEXT_ITEM
     finished = Signal()
     prefix = "Worker"
-    signals = []
 
-    def __init__(self, prefix=None):
+    def __init__(self, signals=None, prefix=None):
+        self.signals = signals or []
         self.prefix = prefix or self.__class__.__name__
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
