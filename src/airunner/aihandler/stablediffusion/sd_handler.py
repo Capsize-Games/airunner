@@ -41,7 +41,9 @@ SKIP_RELOAD_CONSTS = (
 class SDHandler(BaseHandler):
     def  __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._model_status = ModelStatus.UNLOADED
+        self._outpaint_image = None
+        self._img2img_image = None
+        self._controlnet_image = None
         self.model_type = "sd"
         self._current_model:str = ""
         self._controlnet:ControlNetModel = None
@@ -83,10 +85,6 @@ class SDHandler(BaseHandler):
         self._current_state: HandlerState = HandlerState.UNINITIALIZED
         self._deep_cache_helper: DeepCacheSDHelper = None
         self.do_interrupt_image_generation = False
-        self._sd_status = ModelStatus.UNLOADED
-        self._controlnet_status = ModelStatus.UNLOADED
-        self._safety_checker_status = ModelStatus.UNLOADED
-        self._section = None
 
     @Slot(str)
     def _handle_worker_error(self, error_message):
@@ -119,19 +117,31 @@ class SDHandler(BaseHandler):
         return self.generator_settings.version == StableDiffusionVersion.SDXL_TURBO.value
 
     @property
-    def section(self):
-        if self._section is None:
-            section = GeneratorSection.TXT2IMG
-            if self.image_to_image_settings.image is not None or self.drawing_pad_settings.image is not None:
-                section = GeneratorSection.IMG2IMG
-            if self.outpaint_image is not None and self.outpaint_settings.enabled:
-                section = GeneratorSection.OUTPAINT
-            self.section = section
-        return self._section
+    def img2img_image_cached(self):
+        if self._img2img_image is None:
+            self._img2img_image = self.img2img_image
+        return self._img2img_image
 
-    @section.setter
-    def section(self, value):
-        self._section = value
+    @property
+    def outpaint_image_cached(self):
+        if self._outpaint_image is None:
+            self._outpaint_image = self.outpaint_image
+        return self._outpaint_image
+
+    @property
+    def controlnet_image_cached(self):
+        if self._controlnet_image is None:
+            self._controlnet_image = self.controlnet_image
+        return self._controlnet_image
+
+    @property
+    def section(self):
+        section = GeneratorSection.TXT2IMG
+        if self.img2img_image_cached is not None and self.image_to_image_settings.enabled:
+            section = GeneratorSection.IMG2IMG
+        if self.outpaint_image_cached is not None and self.outpaint_settings.enabled:
+            section = GeneratorSection.OUTPAINT
+        return section
 
     @property
     def model_path(self):
@@ -204,6 +214,30 @@ class SDHandler(BaseHandler):
         return self.controlnet_settings.enabled
 
     @property
+    def safety_checker_is_loading(self):
+        return self.model_status[ModelType.SAFETY_CHECKER] is ModelStatus.LOADING
+
+    @property
+    def sd_is_loading(self):
+        return self.model_status[ModelType.SD] is ModelStatus.LOADING
+
+    @property
+    def sd_is_loaded(self):
+        return self.model_status[ModelType.SD] is ModelStatus.LOADED
+
+    @property
+    def sd_is_unloaded(self):
+        return self.model_status[ModelType.SD] is ModelStatus.UNLOADED
+
+    @property
+    def controlnet_is_loading(self):
+        return self.model_status[ModelType.CONTROLNET] is ModelStatus.LOADING
+
+    @property
+    def controlnet_is_unloaded(self):
+        return self.model_status[ModelType.CONTROLNET] is ModelStatus.UNLOADED
+
+    @property
     def _device(self):
         return get_torch_device(self.memory_settings.default_gpu_sd)
 
@@ -242,7 +276,7 @@ class SDHandler(BaseHandler):
         """
         Public method to load the safety checker model.
         """
-        if self._safety_checker_status is ModelStatus.LOADING:
+        if self.safety_checker_is_loading:
             return
         self._load_safety_checker()
 
@@ -250,7 +284,7 @@ class SDHandler(BaseHandler):
         """
         Public method to unload the safety checker model.
         """
-        if self._safety_checker_status is ModelStatus.LOADING:
+        if self.safety_checker_is_loading:
             return
         self._unload_safety_checker()
 
@@ -264,16 +298,15 @@ class SDHandler(BaseHandler):
         """
         Public method to unload the controlnet model.
         """
-        if self._controlnet_status is ModelStatus.LOADING:
+        if self.controlnet_is_loading:
             return
         self._unload_controlnet()
 
     def load_stable_diffusion(self):
-        if self._sd_status is ModelStatus.LOADING:
+        if self.sd_is_loading or self.sd_is_loaded:
             return
         self.unload_stable_diffusion()
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
-        self._reset_parameters()
         self._load_safety_checker()
         self._load_tokenizer()
         self._load_generator()
@@ -288,7 +321,7 @@ class SDHandler(BaseHandler):
         self._finalize_load_stable_diffusion()
 
     def unload_stable_diffusion(self):
-        if self._sd_status is ModelStatus.LOADING:
+        if self.sd_is_loading or self.sd_is_unloaded:
             return
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         self._unload_safety_checker()
@@ -306,9 +339,9 @@ class SDHandler(BaseHandler):
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
 
     def handle_generate_signal(self, message: dict=None):
-        if self._model_status is not ModelStatus.LOADED:
-            self.load_stable_diffusion()
-
+        self.load_stable_diffusion()
+        self._clear_cached_images()
+        self._swap_pipeline()
         if self._current_state not in (
             HandlerState.GENERATING,
             HandlerState.PREPARING_TO_GENERATE
@@ -342,17 +375,17 @@ class SDHandler(BaseHandler):
         if self._current_state == HandlerState.GENERATING:
             self.do_interrupt_image_generation = True
 
-    def change_model_status(self, model: ModelType, status: ModelStatus):
-        if model is ModelType.SD:
-            self._model_status = status
-        elif model is ModelType.CONTROLNET:
-            self._controlnet_status = status
-        elif model is ModelType.SAFETY_CHECKER:
-            self._safety_checker_status = status
-        super().change_model_status(model, status)
+    def _clear_cached_images(self):
+        self._img2img_image = None
+        self._outpaint_image = None
+        self._controlnet_image = None
 
-    def _reset_parameters(self):
-        self.section = None
+    def _swap_pipeline(self):
+        pipeline_class_ = self._pipeline_class
+        if self._pipe.__class__ is pipeline_class_:  # noqa
+            return
+        self.logger.debug(f"Swapping pipeline from {self._pipe.__class__} to {pipeline_class_}")
+        self._pipe = pipeline_class_.from_pipe(self._pipe)
 
     def _generate(self):
         self.logger.debug("Generating image")
@@ -458,7 +491,7 @@ class SDHandler(BaseHandler):
         return images, has_nsfw_concepts
 
     def _load_safety_checker(self):
-        if not self.application_settings.nsfw_filter or self._safety_checker_status is ModelStatus.LOADING:
+        if not self.application_settings.nsfw_filter or self.safety_checker_is_loading:
             return
         self._load_safety_checker_model()
         self._load_feature_extractor()
@@ -542,7 +575,7 @@ class SDHandler(BaseHandler):
         return self._generator
 
     def _load_controlnet(self):
-        if not self.controlnet_settings.enabled or self._controlnet_status is ModelStatus.LOADING:
+        if not self.controlnet_settings.enabled or self.controlnet_is_loading:
             return
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
 
@@ -1207,6 +1240,7 @@ class SDHandler(BaseHandler):
             ))
 
         if self.is_img2img:
+            image = self.img2img_image
             if args["num_inference_steps"] < MIN_NUM_INFERENCE_STEPS_IMG2IMG:
                 args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
 

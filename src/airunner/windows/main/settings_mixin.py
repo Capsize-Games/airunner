@@ -144,6 +144,24 @@ class SettingsMixin:
         return imagefilter_bootstrap_data
 
     @property
+    def drawing_pad_image(self):
+        base_64_image = self.drawing_pad_settings.image
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
+
+    @property
+    def img2img_image(self):
+        if self.image_to_image_settings.use_grid_image_as_input:
+            return self.drawing_pad_image
+        base_64_image = self.image_to_image_settings.image
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
+
+    @property
     def controlnet_image(self):
         base_64_image = self.controlnet_image_settings.imported_image_base64
         image = convert_base64_to_image(base_64_image)
