@@ -1046,15 +1046,18 @@ class MainWindow(
 
     @Slot(bool)
     def action_toggle_llm(self, val):
+        if self._model_status[ModelType.LLM] is ModelStatus.LOADING:
+            val = not val
         self.ui.actionToggle_LLM.blockSignals(True)
         self.ui.actionToggle_LLM.setChecked(val)
         self.ui.actionToggle_LLM.blockSignals(False)
         QApplication.processEvents()
         self.update_application_settings("llm_enabled", val)
-        if val:
-            self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
-        else:
-            self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
+        if self._model_status[ModelType.LLM] is not ModelStatus.LOADING:
+            if val:
+                self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
+            else:
+                self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
 
     @Slot(bool)
     def action_image_generator_toggled(self, val: bool):
@@ -1104,4 +1107,6 @@ class MainWindow(
             self.ui.actionToggle_Stable_Diffusion.setDisabled(status is ModelStatus.LOADING)
         elif model is ModelType.CONTROLNET:
             self.ui.actionToggle_Controlnet.setDisabled(status is ModelStatus.LOADING)
+        elif model is ModelType.LLM:
+            self.ui.actionToggle_LLM.setDisabled(status is ModelStatus.LOADING)
         self.initialize_widget_elements()
