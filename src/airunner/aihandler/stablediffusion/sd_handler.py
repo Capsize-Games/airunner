@@ -31,7 +31,6 @@ from airunner.exceptions import PipeNotLoadedException, InterruptedException
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.get_torch_device import get_torch_device
-from airunner.workers.watch_state_worker import WatchStateWorker
 
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -40,10 +39,6 @@ SKIP_RELOAD_CONSTS = (
 
 
 class SDHandler(BaseHandler):
-    _handle_requested_action = Signal()
-    _handle_requested_controlnet_action = Signal()
-    _handle_requested_safety_checker_action = Signal()
-
     def  __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.model_type = "sd"
@@ -87,69 +82,14 @@ class SDHandler(BaseHandler):
         self._current_state: HandlerState = HandlerState.UNINITIALIZED
         self._deep_cache_helper: DeepCacheSDHelper = None
         self.do_interrupt_image_generation = False
-        self._requested_model_state = None
-        self._requested_controlnet_state = None
-        self._requested_safety_checker_state = None
-        self._is_loading = False
-        self._is_unloading = False
-        self._is_loading_controlnet = False
-        self._is_unloading_controlnet = False
-        self._is_loading_safety_checker = False
-        self._is_unloading_safety_checker = False
-        self._watch_state_thread = None
-        self._watch_state_thread_controlnet = None
-        self._watch_state_thread_safety_checker = None
-        self._watch_state_worker = WatchStateWorker(self._handle_requested_action)
-        self._watch_state_worker_controlnet = WatchStateWorker(self._handle_requested_controlnet_action)
-        self._watch_state_worker_safety_checker = WatchStateWorker(self._handle_requested_safety_checker_action)
+        self._sd_status = ModelStatus.UNLOADED
+        self._controlnet_status = ModelStatus.UNLOADED
+        self._safety_checker_status = ModelStatus.UNLOADED
+        self._section = None
 
-    def _start_watch_state_worker(self):
-        self._watch_state_thread = QThread()
-        self._watch_state_worker.moveToThread(self._watch_state_thread)
-        self._watch_state_thread.started.connect(self._watch_state_worker.run)
-        self._watch_state_thread.start()
-
-    def _start_watch_state_worker_controlnet(self):
-        self._watch_state_thread_controlnet = QThread()
-        self._watch_state_worker_controlnet.moveToThread(self._watch_state_thread_controlnet)
-        self._watch_state_thread_controlnet.started.connect(self._watch_state_worker_controlnet.run)
-        self._watch_state_thread_controlnet.start()
-
-    def _start_watch_state_worker_safety_checker(self):
-        self._watch_state_thread_safety_checker = QThread()
-        self._watch_state_worker_safety_checker.moveToThread(self._watch_state_thread_safety_checker)
-        self._watch_state_thread_safety_checker.started.connect(self._watch_state_worker_safety_checker.run)
-        self._watch_state_thread_safety_checker.start()
-
-    @Slot()
-    def _handle_requested_safety_checker_action(self):
-        if not self._is_loading_safety_checker:
-            if self._requested_safety_checker_state is ModelStatus.LOADED:
-                self.load_safety_checker()
-            if self._requested_safety_checker_state is ModelStatus.UNLOADED:
-                self.unload_safety_checker()
-            self._requested_safety_checker_state = None
-        self._start_watch_state_worker_safety_checker()
-
-    @Slot()
-    def _handle_requested_controlnet_action(self):
-        if not self._is_loading:
-            if self._requested_controlnet_state is ModelStatus.LOADED:
-                self.load_controlnet()
-            if self._requested_controlnet_state is ModelStatus.UNLOADED:
-                self.unload_controlnet()
-            self._requested_controlnet_state = None
-        self._start_watch_state_worker_controlnet()
-
-    @Slot()
-    def handle_requested_action(self):
-        if not self._is_loading:
-            if self._requested_model_state is ModelStatus.LOADED:
-                self.load_stable_diffusion()
-            if self._requested_model_state is ModelStatus.UNLOADED:
-                self.unload_stable_diffusion()
-            self._requested_model_state = None
-        self._start_watch_state_worker()
+    @Slot(str)
+    def _handle_worker_error(self, error_message):
+        self.logger.error(f"Worker error: {error_message}")
 
     @property
     def is_single_file(self) -> bool:
@@ -179,12 +119,18 @@ class SDHandler(BaseHandler):
 
     @property
     def section(self):
-        section = GeneratorSection.TXT2IMG
-        if self.image_to_image_settings.image is not None or self.drawing_pad_settings.image is not None:
-            section = GeneratorSection.IMG2IMG
-        if self.outpaint_image is not None and self.outpaint_settings.enabled:
-            section = GeneratorSection.OUTPAINT
-        return section.value
+        if self._section is None:
+            section = GeneratorSection.TXT2IMG
+            if self.image_to_image_settings.image is not None or self.drawing_pad_settings.image is not None:
+                section = GeneratorSection.IMG2IMG
+            if self.outpaint_image is not None and self.outpaint_settings.enabled:
+                section = GeneratorSection.OUTPAINT
+            self.section = section
+        return section
+
+    @section.setter
+    def section(self, value):
+        self._section = value
 
     @property
     def model_path(self):
@@ -242,15 +188,15 @@ class SDHandler(BaseHandler):
 
     @property
     def is_txt2img(self) -> bool:
-        return True
+        return self.section is GeneratorSection.TXT2IMG
 
     @property
     def is_img2img(self) -> bool:
-        return False
+        return self.section is GeneratorSection.IMG2IMG
 
     @property
     def is_outpaint(self) -> bool:
-        return False
+        return self.section is GeneratorSection.OUTPAINT
 
     @property
     def controlnet_enabled(self) -> bool:
@@ -295,15 +241,7 @@ class SDHandler(BaseHandler):
         """
         Public method to load the safety checker model.
         """
-        if self._is_loading_safety_checker:
-            return
-        elif (
-            self._is_loading or
-            self._is_unloading or
-            self._is_unloading_safety_checker
-        ):
-            self._requested_safety_checker_state = ModelStatus.LOADED
-            self._start_watch_state_worker_safety_checker()
+        if self._safety_checker_status is ModelStatus.LOADING:
             return
         self._load_safety_checker()
 
@@ -311,15 +249,7 @@ class SDHandler(BaseHandler):
         """
         Public method to unload the safety checker model.
         """
-        if self._is_unloading_safety_checker:
-            return
-        elif (
-            self._is_loading or
-            self._is_unloading or
-            self._is_loading_safety_checker
-        ):
-            self._requested_safety_checker_state = ModelStatus.UNLOADED
-            self._start_watch_state_worker_safety_checker()
+        if self._safety_checker_status is ModelStatus.LOADING:
             return
         self._unload_safety_checker()
 
@@ -327,47 +257,24 @@ class SDHandler(BaseHandler):
         """
         Public method to load the controlnet model.
         """
-        if self._is_loading_controlnet or self._requested_controlnet_state is not None:
+        if self._controlnet_status is ModelStatus.LOADING:
             return
-        elif (
-            self._is_loading or
-            self._is_unloading or
-            self._is_unloading_controlnet
-        ):
-            self._requested_controlnet_state = ModelStatus.LOADED
-            self._start_watch_state_worker_controlnet()
-            return
-        self._is_loading_controlnet = True
         self._load_controlnet()
-        self._is_loading_controlnet = False
 
     def unload_controlnet(self):
         """
         Public method to unload the controlnet model.
         """
-        if self._is_unloading_controlnet or self._requested_controlnet_state is not None:
+        if self._controlnet_status is ModelStatus.LOADING:
             return
-        elif (
-            self._is_loading or
-            self._is_unloading or
-            self._is_loading_controlnet
-        ):
-            self._requested_controlnet_state = ModelStatus.UNLOADED
-            self._start_watch_state_worker_controlnet()
-            return
-        self._is_unloading_controlnet = True
         self._unload_controlnet()
-        self._is_unloading_controlnet = False
 
     def load_stable_diffusion(self):
-        if self._is_loading or self._requested_model_state is not None:
+        if self._sd_status is ModelStatus.LOADING:
             return
-        elif self._is_unloading:
-            self._requested_model_state = ModelStatus.LOADED
-            self._start_watch_state_worker()
-            return
-        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         self.unload_stable_diffusion()
+        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
+        self._reset_parameters()
         self._load_safety_checker()
         self._load_tokenizer()
         self._load_generator()
@@ -380,14 +287,9 @@ class SDHandler(BaseHandler):
         self._load_deep_cache()
         self._make_memory_efficient()
         self._finalize_load_stable_diffusion()
-        self._is_loading = False
 
     def unload_stable_diffusion(self):
-        if self._is_unloading or self._requested_model_state is not None:
-            return
-        elif self._is_loading and self._requested_model_state:
-            self._requested_model_state = ModelStatus.UNLOADED
-            self._start_watch_state_worker()
+        if self._sd_status is ModelStatus.LOADING:
             return
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         self._unload_safety_checker()
@@ -403,7 +305,6 @@ class SDHandler(BaseHandler):
         self._clear_memory_efficient_settings()
         clear_memory()
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
-        self._is_unloading = False
 
     def handle_generate_signal(self, message: dict):
         if self._current_state not in (
@@ -434,6 +335,18 @@ class SDHandler(BaseHandler):
     def interrupt_image_generation(self):
         if self._current_state == HandlerState.GENERATING:
             self.do_interrupt_image_generation = True
+
+    def change_model_status(self, model: ModelType, status: ModelStatus):
+        if model is ModelType.SD:
+            self._model_status = status
+        elif model is ModelType.CONTROLNET:
+            self._controlnet_status = status
+        elif model is ModelType.SAFETY_CHECKER:
+            self._safety_checker_status = status
+        super().change_model_status(model, status)
+
+    def _reset_parameters(self):
+        self.section = None
 
     def _generate(self):
         self.logger.debug("Generating image")
@@ -754,6 +667,8 @@ class SDHandler(BaseHandler):
             try:
                 self._pipe.to(self._device)
             except torch.OutOfMemoryError as e:
+                self.logger.error(f"Failed to load model to device: {e}")
+            except RuntimeError as e:
                 self.logger.error(f"Failed to load model to device: {e}")
 
     def _load_lora(self):
