@@ -11,6 +11,7 @@ from transformers.generation.streamers import TextIteratorStreamer
 
 from airunner.aihandler.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
+from airunner.settings import MAX_SEED
 from airunner.utils.clear_memory import clear_memory
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 
@@ -196,7 +197,7 @@ class CausalLMTransformerBaseHandler(
     def handle_request(self, data:dict):
         self.logger.debug("Handling request")
         self._processing_request = True
-        self._do_set_seed(self.chatbot.seed)
+        self._do_set_seed()
         self.load()
         self._processing_request = True
         action = self.llm_generator_settings.action
@@ -398,18 +399,27 @@ class CausalLMTransformerBaseHandler(
             is_end_of_message=True
         )
 
-    def _do_set_seed(self, seed=None):
+    def _do_set_seed(self):
         self.logger.debug("Setting seed")
-        seed = self.seed if seed is None else seed
-        self.seed = seed
-        torch.manual_seed(self.seed)
-        torch.cuda.manual_seed(self.seed)
-        torch.cuda.manual_seed_all(self.seed)
-        random.seed(self.seed)
+
+        if self.llm_generator_settings.override_parameters:
+            seed = self.llm_generator_settings.seed
+            random_seed = self.llm_generator_settings.random_seed
+        else:
+            seed = self.chatbot.seed
+            random_seed = self.chatbot.random_seed
+
+        if random_seed:
+            seed = random.randint(-MAX_SEED, MAX_SEED)
+
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        random.seed(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         if self._tokenizer:
-            self._tokenizer.seed = self.seed
+            self._tokenizer.seed = seed
 
     def _save_quantized_model(self):
         self.logger.debug("Saving quantized model to cache")
