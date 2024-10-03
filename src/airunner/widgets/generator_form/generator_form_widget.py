@@ -330,7 +330,6 @@ class GeneratorForm(BaseWidget):
         self.do_generate()
 
     def do_generate(self, data=None):
-        print("DO GENERATE", data)
         if data:
             finalize = data.get("finalize", None)
             if finalize:
@@ -366,7 +365,6 @@ class GeneratorForm(BaseWidget):
         pass
 
     def handle_generate_button_clicked(self, data=None):
-        print("HANDLE GENERATE BUTTON CLICKED", data)
         self.start_progress_bar()
         self.generate(data)
 
