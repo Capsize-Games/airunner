@@ -105,20 +105,6 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             self.logger.error(f"Error in on_llm_text_streamed_signal: {e}")
         self.emit_signal(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, data)
 
-    # @property
-    # def llm_generate_worker(self):
-    #     if self._llm_generate_worker is None:
-    #         self.register_llm_workers(True, self.agent_options)
-    #     return self._llm_generate_worker
-    #
-    # @llm_generate_worker.setter
-    # def llm_generate_worker(self, value):
-    #     if value is None:
-    #         del self._llm_generate_worker
-    #     gc.collect()
-    #
-    #     self._llm_generate_worker = value
-
     def on_TTSGeneratorWorker_add_to_stream_signal(self, response: dict):
         self.tts_vocalizer_worker.on_TTSGeneratorWorker_add_to_stream_signal(response)
 
