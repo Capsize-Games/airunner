@@ -2,7 +2,6 @@ from PySide6.QtCore import Slot, QTimer
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
 
-from airunner.aihandler.models.settings_models import Chatbot, Conversation
 from airunner.enums import SignalCode, LLMActionType, ModelType, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.custom_scene import CustomScene
