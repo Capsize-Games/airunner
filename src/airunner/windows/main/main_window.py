@@ -392,7 +392,7 @@ class MainWindow(
             (self.ui.actionToggle_Text_to_Speech, self.application_settings.tts_enabled),
             (self.ui.actionToggle_Speech_to_Text, self.application_settings.stt_enabled),
             (self.ui.actionToggle_Stable_Diffusion, self.application_settings.sd_enabled),
-            (self.ui.actionToggle_Controlnet, self.application_settings.controlnet_enabled),
+            (self.ui.actionToggle_Controlnet, self.controlnet_settings.enabled),
         ):
             item[0].blockSignals(True)
             item[0].setChecked(item[1])
@@ -1081,12 +1081,11 @@ class MainWindow(
         self.ui.actionToggle_Controlnet.setChecked(val)
         self.ui.actionToggle_Controlnet.blockSignals(False)
         QApplication.processEvents()
-        self.update_application_settings("controlnet_enabled", val)
+        self.update_controlnet_settings("enabled", val)
         for widget in [self.ui.actionToggle_Controlnet, self.ui.enable_controlnet]:
             widget.blockSignals(True)
             widget.setChecked(val)
             widget.blockSignals(False)
-
         signal = SignalCode.CONTROLNET_LOAD_SIGNAL if val else SignalCode.CONTROLNET_UNLOAD_SIGNAL
         self.emit_signal(signal)
 
