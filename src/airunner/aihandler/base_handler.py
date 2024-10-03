@@ -27,24 +27,6 @@ class BaseHandler(
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
         self._requested_action = None
-        self._model_status = ModelStatus.UNLOADED
-
-    @property
-    def model_status(self) -> ModelStatus:
-        return self._model_status
-
-    @model_status.setter
-    def model_status(self, value: ModelStatus):
-        if self._model_status is value:
-            return
-
-        if self.model_type is ModelType.LLM:
-            print(f"ModelType.LLM Model status changed to {value}")
-
-        self._model_status = value
-        self.change_model_status(self.model_type, value)
-        if self._requested_action:
-            self.handle_requested_action()
 
     def handle_requested_action(self):
         if self._requested_action is ModelAction.LOAD:
