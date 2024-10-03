@@ -43,6 +43,10 @@ class SpeechT5TTSHandler(TTSHandler):
         super().__init__(*args, **kwargs)
 
     @property
+    def model_status(self):
+        return self._model_status
+
+    @property
     def processor_path(self) -> str:
         path:str = self.speech_t5_settings.processor_path
         return os.path.expanduser(
