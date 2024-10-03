@@ -106,13 +106,6 @@ class Ui_status_widget(object):
 
         self.horizontalLayout.addWidget(self.llm_status)
 
-        self.stt_status = QLabel(status_widget)
-        self.stt_status.setObjectName(u"stt_status")
-        self.stt_status.setFont(font)
-        self.stt_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        self.horizontalLayout.addWidget(self.stt_status)
-
         self.tts_status = QLabel(status_widget)
         self.tts_status.setObjectName(u"tts_status")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
@@ -124,6 +117,13 @@ class Ui_status_widget(object):
         self.tts_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.horizontalLayout.addWidget(self.tts_status)
+
+        self.stt_status = QLabel(status_widget)
+        self.stt_status.setObjectName(u"stt_status")
+        self.stt_status.setFont(font)
+        self.stt_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.horizontalLayout.addWidget(self.stt_status)
 
 
         self.retranslateUi(status_widget)
@@ -139,7 +139,7 @@ class Ui_status_widget(object):
         self.sd_status.setText(QCoreApplication.translate("status_widget", u"SD", None))
         self.controlnet_status.setText(QCoreApplication.translate("status_widget", u"CN", None))
         self.llm_status.setText(QCoreApplication.translate("status_widget", u"LLM", None))
-        self.stt_status.setText(QCoreApplication.translate("status_widget", u"STT", None))
         self.tts_status.setText(QCoreApplication.translate("status_widget", u"TTS", None))
+        self.stt_status.setText(QCoreApplication.translate("status_widget", u"STT", None))
     # retranslateUi
 
