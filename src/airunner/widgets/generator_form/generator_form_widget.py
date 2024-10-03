@@ -270,11 +270,8 @@ class GeneratorForm(BaseWidget):
     def generate(self):
         if self.generator_settings.random_seed:
             self.seed = random_seed()
-        if self.generator_settings.n_samples > 1:
-            self.emit_signal(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL)
         self.do_generate()
         self.seed_override = None
-        self.emit_signal(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
 
     def do_generate_image(self):
         time.sleep(0.1)

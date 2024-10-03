@@ -127,7 +127,7 @@ class SDHandler(BaseHandler):
             if self.outpaint_image is not None and self.outpaint_settings.enabled:
                 section = GeneratorSection.OUTPAINT
             self.section = section
-        return section
+        return self._section
 
     @section.setter
     def section(self, value):
@@ -317,7 +317,7 @@ class SDHandler(BaseHandler):
                 self.logger.warning(e)
                 response = None
             except Exception as e:
-                self.logger.error(f"Generating image: {e}")
+                self.logger.error(f"Error generating image: {e}")
                 response = None
             self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
                 'code': EngineResponseCode.IMAGE_GENERATED,
