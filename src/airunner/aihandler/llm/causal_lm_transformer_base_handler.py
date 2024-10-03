@@ -165,7 +165,10 @@ class CausalLMTransformerBaseHandler(
         ))
 
     def load(self):
-        if self._model_status is ModelStatus.LOADING:
+        if self._model_status in (
+            ModelStatus.LOADING,
+            ModelStatus.LOADED
+        ):
             return
         self.unload()
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
@@ -180,7 +183,10 @@ class CausalLMTransformerBaseHandler(
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
 
     def unload(self):
-        if self._model_status is ModelStatus.LOADING:
+        if self._model_status in (
+            ModelStatus.LOADING,
+            ModelStatus.UNLOADED
+        ):
             return
         self.logger.debug("Unloading LLM")
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
