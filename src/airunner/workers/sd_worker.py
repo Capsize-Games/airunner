@@ -113,21 +113,29 @@ class SDWorker(Worker):
             thread = threading.Thread(target=self._unload_controlnet)
             thread.start()
 
-    def on_load_stablediffusion_signal(self):
+    def on_load_stablediffusion_signal(self, data:dict=None):
         if self.sd:
-            thread = threading.Thread(target=self._load_sd)
+            thread = threading.Thread(target=self._load_sd, args=(data,))
             thread.start()
 
-    def on_unload_stablediffusion_signal(self, _data=None):
+    def on_unload_stablediffusion_signal(self, data=None):
         if self.sd:
-            thread = threading.Thread(target=self._unload_sd)
+            thread = threading.Thread(target=self._unload_sd, args=(data,))
             thread.start()
 
-    def _load_sd(self):
+    def _load_sd(self, data:dict=None):
         self.sd.load_stable_diffusion()
+        if data:
+            callback = data.get("callback", None)
+            if callback is not None:
+                callback(data)
 
-    def _unload_sd(self):
+    def _unload_sd(self, data:dict=None):
         self.sd.unload_stable_diffusion()
+        if data:
+            callback = data.get("callback", None)
+            if callback is not None:
+                callback(data)
 
     def _load_controlnet(self):
         self.sd.load_controlnet()
