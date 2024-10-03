@@ -11,8 +11,7 @@ from PySide6.QtCore import (
     QObject, QTimer,
 )
 from PySide6.QtGui import (
-    Qt,
-    QWindow, QPixmap, QGuiApplication
+    Qt, QPixmap, QGuiApplication
 )
 from PySide6.QtWidgets import (
     QApplication, QSplashScreen,

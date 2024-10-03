@@ -2,12 +2,12 @@ import inspect
 import queue
 import threading
 
-from PySide6.QtCore import Signal, QThread, QSettings, QObject
+from PySide6.QtCore import Signal, QThread, QObject
 
 from airunner.enums import QueueType, SignalCode, WorkerState
 from airunner.aihandler.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import SLEEP_TIME_IN_MS, ORGANIZATION, APPLICATION_NAME
+from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 

@@ -348,6 +348,7 @@ class CustomGraphicsView(
         This is used to adjust the selection tool to the grid
         in real time during rubberband mode.
         :param event:
+        :param use_floor:
         :return:
         """
         if self.current_tool is CanvasToolName.SELECTION:
