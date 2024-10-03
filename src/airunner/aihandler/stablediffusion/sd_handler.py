@@ -10,7 +10,7 @@ from PIL import (
     ImageDraw,
     ImageFont
 )
-from PySide6.QtCore import QRect, QThread, Slot, Signal
+from PySide6.QtCore import QRect, Slot
 from PySide6.QtWidgets import QApplication
 from compel import Compel, DiffusersTextualInversionManager, ReturnedEmbeddingsType
 from controlnet_aux.processor import Processor
