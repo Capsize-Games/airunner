@@ -44,21 +44,6 @@ class CausalLMTransformerBaseHandler(
         self._do_quantize_model = kwargs.pop("do_quantize_model", True)
         self.__model = None
         self._vocoder = None
-
-        self.temperature = kwargs.get("temperature", 0.7)
-        self.max_new_tokens = 30
-        self.min_length = kwargs.get("min_length", 0)
-        self.num_beams = kwargs.get("num_beams", 1)
-        self.top_k = kwargs.get("top_k", 20)
-        self.eta_cutoff = kwargs.get("eta_cutoff", 10)
-        self.top_p = kwargs.get("top_p", 1.0)
-        self.repetition_penalty = kwargs.get("repetition_penalty", 1.15)
-        self.early_stopping = kwargs.get("early_stopping", True)
-        self.length_penalty = kwargs.get("length_penalty", 1.0)
-        self.sequences = kwargs.get("sequences", 1)
-        self.seed = kwargs.get("seed", 42)
-        self.do_sample = kwargs.get("do_sample", True)
-
         self._current_model_path = kwargs.get("current_model_path", "")
         self._history = []
         self._set_attention_mask = kwargs.get("set_attention_mask", False)
