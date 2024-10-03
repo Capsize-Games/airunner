@@ -210,7 +210,7 @@ class ChatPromptWidget(BaseWidget):
         super().showEvent(event)
         if not self.registered:
             self.register(SignalCode.LLM_TOKEN_SIGNAL, self.on_token_signal)
-            self.register(SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION, self.on_add_bot_message_to_conversation)
+            self.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_add_bot_message_to_conversation)
             self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed)
             self.registered = True
 

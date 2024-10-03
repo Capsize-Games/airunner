@@ -180,7 +180,7 @@ class GeneratorForm(BaseWidget):
 
         # Send a messagae to the user as chatbot letting them know that the image is generating
         self.emit_signal(
-            SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION,
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
             dict(
                 message="Your image is generating...",
                 is_first_message=True,
@@ -248,7 +248,7 @@ class GeneratorForm(BaseWidget):
                 self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
                     callback=lambda d: self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, dict(
                         callback=lambda d: self.emit_signal(
-                            SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION,
+                            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                             image_generated_message
                         )
                     ))
@@ -256,7 +256,7 @@ class GeneratorForm(BaseWidget):
             else:
                 self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
                     callback=lambda d: self.emit_signal(
-                        SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION,
+                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                         image_generated_message
                     )
                 ))
@@ -266,7 +266,7 @@ class GeneratorForm(BaseWidget):
             if not self.application_settings.llm_enabled:
                 self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, dict(
                     callback=lambda d: self.emit_signal(
-                        SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION,
+                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                         image_generated_message
                     )
                 ))
@@ -274,7 +274,7 @@ class GeneratorForm(BaseWidget):
                 # If SD is disabled and LLM is enabled, emit a signal to add
                 # the image generated message to the conversation.
                 self.emit_signal(
-                    SignalCode.APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION,
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                     image_generated_message
                 )
     ##########################################################################
