@@ -1,4 +1,5 @@
 import queue
+import threading
 import time
 
 import sounddevice as sd
@@ -18,23 +19,38 @@ class AudioCaptureWorker(Worker):
     """
 
     def __init__(self, prefix):
-        super().__init__(prefix=prefix)
+        super().__init__(prefix=prefix, signals=(
+            (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal),
+            (SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal),
+            (SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal),
+        ))
         self.listening: bool = False
         self.voice_input_start_time: time.time = None
         self.chunk_duration = self.stt_settings.chunk_duration  # duration of chunks in milliseconds
         self.fs = self.stt_settings.fs
         self.stream = None
+        self.running = False
         self._audio_process_queue = queue.Queue()
+        self._capture_thread = None
 
-    def on_start_capture_signal(self):
-        self._start_listening()
+    def on_AudioCaptureWorker_response_signal(self, message: dict):
+        item: np.ndarray = message["item"]
+        self.logger.debug("Heard signal")
+        self.add_to_queue(item)
 
-    def on_stop_capture_signal(self):
-        self._stop_listening()
+    def on_stt_start_capture_signal(self):
+        if self._capture_thread is not None and self._capture_thread.is_alive():
+            return
+        self._capture_thread = threading.Thread(target=self._start_listening)
+        self._capture_thread.start()
+
+    def on_stt_stop_capture_signal(self):
+        if self._capture_thread is not None and self._capture_thread.is_alive():
+            self._stop_listening()
 
     def start(self):
         self.logger.debug("Starting audio capture worker")
-        running = True
+        self.running = True
         chunk_duration = self.stt_settings.chunk_duration
         fs = self.stt_settings.fs
         volume_input_threshold = self.stt_settings.volume_input_threshold
@@ -42,8 +58,8 @@ class AudioCaptureWorker(Worker):
         voice_input_start_time = None
         recording = []
         is_receiving_input = False
-        while running:
-            while self.listening and running and self.stream:
+        while self.running:
+            while self.listening and self.running and self.stream:
                 try:
                     chunk, overflowed = self.stream.read(int(chunk_duration * fs))
                 except sd.PortAudioError as e:
@@ -70,7 +86,7 @@ class AudioCaptureWorker(Worker):
                     chunk_bytes = np.int16(chunk * 32767).tobytes()  # convert to bytes
                     recording.append(chunk_bytes)
 
-            while not self.listening and running:
+            while not self.listening and self.running:
                 QThread.msleep(SLEEP_TIME_IN_MS)
 
     def _start_listening(self):
@@ -89,12 +105,13 @@ class AudioCaptureWorker(Worker):
     def _stop_listening(self):
         self.logger.debug("Stop listening")
         self.listening = False
+        self.running = False
         try:
             self.stream.stop()
         except Exception as e:
             self.logger.error(e)
-
         try:
             self.stream.close()
         except Exception as e:
             self.logger.error(e)
+        self._capture_thread.join()
