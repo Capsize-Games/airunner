@@ -1,6 +1,5 @@
 import random
 import os
-from typing import List
 
 import torch
 
@@ -11,8 +10,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
 
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.aihandler.models.settings_models import TargetFiles
-from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType, ModelAction
+from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.utils.clear_memory import clear_memory
 from airunner.aihandler.llm.agent.base_agent import BaseAgent
 
