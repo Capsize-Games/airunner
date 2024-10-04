@@ -1,6 +1,6 @@
 import os
 
-from PySide6.QtCore import Slot, QSize
+from PySide6.QtCore import Slot, QSize, QObject, QThread, Signal
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.enums import SignalCode, ModelType, ModelStatus
@@ -8,6 +8,21 @@ from airunner.utils.models.scan_path_for_items import scan_path_for_lora
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.lora_widget import LoraWidget
 from airunner.widgets.lora.templates.lora_container_ui import Ui_lora_container
+
+
+class DirectoryWatcher(QObject):
+    scan_completed = Signal(bool)
+
+    def __init__(self, base_path: str, scan_function: callable):
+        super().__init__()
+        self.base_path = base_path
+        self._scan_function = scan_function
+
+    def run(self):
+        while True:
+            force_reload = self._scan_function(self.base_path)
+            self.scan_completed.emit(force_reload)
+            QThread.sleep(1)
 
 
 class LoraContainerWidget(BaseWidget):
@@ -30,13 +45,22 @@ class LoraContainerWidget(BaseWidget):
         self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
         self._apply_button_enabled = False
         self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
+        self._scanner_worker = DirectoryWatcher(self.path_settings.base_path, scan_path_for_lora)
+        self._scanner_worker.scan_completed.connect(self.on_scan_completed)
+        self._scanner_thread = QThread()
+        self._scanner_worker.moveToThread(self._scanner_thread)
+        self._scanner_thread.started.connect(self._scanner_worker.run)
+        self._scanner_thread.start()
+
+    @Slot(bool)
+    def on_scan_completed(self, force_reload: bool):
+        self.load_lora(force_reload=force_reload)
 
     @Slot()
     def scan_for_lora(self):
         # clear all lora widgets
-        loras = scan_path_for_lora(self.path_settings.base_path)
-        self.update_loras(loras)
-        self.load_lora()
+        force_reload = scan_path_for_lora(self.path_settings.base_path)
+        self.load_lora(force_reload=force_reload)
 
     @Slot()
     def apply_lora(self):
@@ -107,9 +131,10 @@ class LoraContainerWidget(BaseWidget):
             self.initialized = True
         self.load_lora()
 
-    def load_lora(self):
+    def load_lora(self, force_reload=False):
         version = self.generator_settings.version
-        if self._version is None or self._version != version:
+        if self._version is None or self._version != version or force_reload:
+            print("LOAD LORA")
             self._version = version
             self.clear_lora_widgets()
             loras = self.get_lora_by_version(self._version)
@@ -227,8 +252,7 @@ class LoraContainerWidget(BaseWidget):
 
     def search_text_changed(self, val):
         self.search_filter = val
-        self._version = None
-        self.load_lora()
+        self.load_lora(force_reload=True)
     
     def clear_lora_widgets(self):
         if self.spacer:
