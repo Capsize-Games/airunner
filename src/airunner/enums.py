@@ -154,6 +154,8 @@ class SignalCode(Enum):
     LORA_UPDATE_SIGNAL = "update_lora_signal"
     LORA_UPDATED_SIGNAL = "lora_updated_signal"
     LORA_DELETE_SIGNAL = "delete_lora_signal"
+    EMBEDDING_UPDATED_SIGNAL = "embedding_updated_signal"
+    EMBEDDING_DELETE_SIGNAL = "delete_embedding_signal"
     SET_CANVAS_COLOR_SIGNAL = "set_canvas_color_signal"
     UPDATE_SCENE_SIGNAL = "update_scene_signal"
     DRAW_GRID_SIGNAL = "draw_grid_signal"
@@ -236,6 +238,7 @@ class SignalCode(Enum):
 
     KEYBOARD_SHORTCUTS_UPDATED = enum.auto()
     LORA_STATUS_CHANGED = enum.auto()
+    EMBEDDING_STATUS_CHANGED = enum.auto()
 
 class EngineResponseCode(Enum):
     STATUS = 100
