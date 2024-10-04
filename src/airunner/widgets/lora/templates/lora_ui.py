@@ -98,6 +98,7 @@ class Ui_lora(object):
         self.retranslateUi(lora)
         self.trigger_word_edit.textChanged.connect(lora.action_changed_trigger_words)
         self.enabledCheckbox.toggled.connect(lora.action_toggled_lora_enabled)
+        self.delete_button.clicked.connect(lora.action_clicked_button_deleted)
 
         QMetaObject.connectSlotsByName(lora)
     # setupUi
