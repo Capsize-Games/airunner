@@ -183,6 +183,8 @@ class GeneratorSettings(Base):
     negative_original_size = Column(JSON, default={"width": 512, "height": 512})
     negative_target_size = Column(JSON, default={"width": 512, "height": 512})
 
+    lora_scale = Column(Integer, default=100)
+
 
 class ControlnetImageSettings(Base):
     __tablename__ = 'controlnet_image_settings'
@@ -468,7 +470,7 @@ class Lora(Base):
     __tablename__ = 'lora'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
-    scale = Column(Float, nullable=False)
+    scale = Column(Integer, nullable=False)
     enabled = Column(Boolean, nullable=False)
     loaded = Column(Boolean, default=False, nullable=False)
     trigger_word = Column(String, nullable=True)

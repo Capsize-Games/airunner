@@ -1,5 +1,5 @@
 import os
-from typing import Any, List
+from typing import Any, List, Dict
 
 import diffusers
 import numpy as np
@@ -24,9 +24,10 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import CLIPFeatureExtractor, CLIPTokenizerFast
 
 from airunner.aihandler.base_handler import BaseHandler
+from airunner.aihandler.models.settings_models import Schedulers, Lora
 from airunner.enums import (
     SDMode, StableDiffusionVersion, GeneratorSection, ModelStatus, ModelType, SignalCode, HandlerState,
-    EngineResponseCode
+    EngineResponseCode, ModelAction
 )
 from airunner.exceptions import PipeNotLoadedException, InterruptedException
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
@@ -73,11 +74,11 @@ class SDHandler(BaseHandler):
         self._current_prompt_2: str = ""
         self._current_negative_prompt_2: str = ""
         self._tokenizer: CLIPTokenizerFast = None
-        self._generator: torch.Generator = None
+        self._generator = None
         self._latents = None
         self._textual_inversion_manager: DiffusersTextualInversionManager = None
         self._compel_proc: Compel = None
-        self._loaded_lora: List = []
+        self._loaded_lora: Dict = {}
         self._disabled_lora: List = []
         self._loaded_embeddings: List = []
         self._current_state: HandlerState = HandlerState.UNINITIALIZED
@@ -239,6 +240,21 @@ class SDHandler(BaseHandler):
                 )
 
     @property
+    def lora_base_path(self) -> str:
+        return os.path.expanduser(
+            os.path.join(
+                self.path_settings_cached.base_path,
+                "art/models",
+                self.generator_settings_cached.version,
+                "lora"
+            )
+        )
+
+    @property
+    def lora_scale(self) -> float:
+        return self.generator_settings_cached.lora_scale / 100.0
+
+    @property
     def data_type(self) -> torch.dtype:
         return torch.float16
 
@@ -352,10 +368,15 @@ class SDHandler(BaseHandler):
             return
         self._unload_controlnet()
 
-    def load_stable_diffusion(self):
+    def reload(self):
+        self.logger.debug("Reloading stable diffusion")
+        self.unload()
+        self.load()
+
+    def load(self):
         if self.sd_is_loading or self.sd_is_loaded:
             return
-        self.unload_stable_diffusion()
+        self.unload()
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         self._load_safety_checker()
         self._load_tokenizer()
@@ -370,14 +391,23 @@ class SDHandler(BaseHandler):
         self._make_memory_efficient()
         self._finalize_load_stable_diffusion()
 
-    def unload_stable_diffusion(self):
-        if self.sd_is_loading or self.sd_is_unloaded:
+    def unload(self):
+        if (
+            self.sd_is_loading or
+            self.sd_is_unloaded
+        ):
             return
+        elif self._current_state in (
+            HandlerState.PREPARING_TO_GENERATE,
+            HandlerState.GENERATING
+        ):
+            self.interrupt_image_generation()
+            self.requested_action = ModelAction.CLEAR
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         self._unload_safety_checker()
         self._unload_scheduler()
         self._unload_controlnet()
-        self._unload_lora()
+        self._unload_loras()
         self._unload_emebeddings()
         self._unload_compel()
         self._unload_tokenizer()
@@ -389,7 +419,7 @@ class SDHandler(BaseHandler):
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
 
     def handle_generate_signal(self, message: dict=None):
-        self.load_stable_diffusion()
+        self.load()
         self._clear_cached_properties()
         self._swap_pipeline()
         if self._current_state not in (
@@ -414,15 +444,29 @@ class SDHandler(BaseHandler):
                 'message': response
             })
             self._current_state = HandlerState.READY
+            clear_memory()
+        self.handle_requested_action()
 
-    def load_lora(self):
+    def reload_lora(self):
+        if self.model_status[ModelType.SD] is not ModelStatus.LOADED or self._current_state in (
+            HandlerState.PREPARING_TO_GENERATE,
+            HandlerState.GENERATING
+        ):
+            return
+        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
+        self._unload_loras()
         self._load_lora()
+        self.emit_signal(SignalCode.LORA_UPDATED_SIGNAL)
+        self.change_model_status(ModelType.SD, ModelStatus.LOADED)
 
     def load_embeddings(self):
         self._load_embeddings()
 
     def interrupt_image_generation(self):
-        if self._current_state == HandlerState.GENERATING:
+        if self._current_state in (
+            HandlerState.PREPARING_TO_GENERATE,
+            HandlerState.GENERATING
+        ):
             self.do_interrupt_image_generation = True
 
     def _swap_pipeline(self):
@@ -437,8 +481,7 @@ class SDHandler(BaseHandler):
         model = self.generator_settings_cached.model
         if self._current_model != model:
             if self._pipe is not None:
-                self.unload_stable_diffusion()
-                self.load_stable_diffusion()
+                self.reload()
         if self._pipe is None:
             raise PipeNotLoadedException()
         self._load_prompt_embeds()
@@ -611,13 +654,12 @@ class SDHandler(BaseHandler):
             self.logger.error(f"Failed to load tokenizer")
             self.logger.error(e)
 
-    def _load_generator(self, seed=None):
+    def _load_generator(self):
         self.logger.debug("Loading generator")
-        if not self._generator is None:
-            seed = seed or int(self.generator_settings_cached.seed)
+        if self._generator is None:
+            seed = int(self.generator_settings_cached.seed)
             self._generator = torch.Generator(device=self._device)
             self._generator.manual_seed(seed)
-        return self._generator
 
     def _load_controlnet(self):
         if not self.controlnet_enabled or self.controlnet_is_loading:
@@ -687,27 +729,28 @@ class SDHandler(BaseHandler):
                 "txt2img/scheduler/scheduler_config.json"
             )
         )
-        for scheduler in self.schedulers:
-            if scheduler.display_name == scheduler_name:
-                scheduler_name = scheduler.display_name
-                scheduler_class_name = scheduler.name
-                scheduler_class = getattr(diffusers, scheduler_class_name)
-                try:
-                    self.scheduler = scheduler_class.from_pretrained(
-                        scheduler_path,
-                        subfolder="scheduler",
-                        local_files_only=True
-                    )
-                    self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
-                    self.current_scheduler_name = scheduler_name
-                    self.logger.debug(f"Loaded scheduler {scheduler_name}")
-                except Exception as e:
-                    self.logger.error(f"Failed to load scheduler {scheduler_name}: {e}")
-                    self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
-                    return
-                if self._pipe:
-                    self._pipe.scheduler = self.scheduler
-                return scheduler
+        session = self.db_handler.get_db_session()
+        scheduler = session.query(Schedulers).filter_by(display_name=scheduler_name).first()
+        if not scheduler:
+            self.logger.error(f"Failed to find scheduler {scheduler_name}")
+            return None
+        scheduler_class_name = scheduler.name
+        scheduler_class = getattr(diffusers, scheduler_class_name)
+        try:
+            self.scheduler = scheduler_class.from_pretrained(
+                scheduler_path,
+                subfolder="scheduler",
+                local_files_only=True
+            )
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
+            self.current_scheduler_name = scheduler_name
+            self.logger.debug(f"Loaded scheduler {scheduler_name}")
+        except Exception as e:
+            self.logger.error(f"Failed to load scheduler {scheduler_name}: {e}")
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
+            return
+        if self._pipe:
+            self._pipe.scheduler = self.scheduler
 
     def _load_pipe(self):
         self._current_model = self.generator_settings_cached.model
@@ -759,77 +802,54 @@ class SDHandler(BaseHandler):
                 self.logger.error(f"Failed to load model to device: {e}")
 
     def _load_lora(self):
-        self._loaded_lora = []
-        available_lora = self.get_lora_by_version(self.generator_settings_cached.version)
-        if len(available_lora) == 0:
-            return
-        self._remove_lora_from_pipe()
-        if self._pipe is not None:
-            for lora in available_lora:
-                if lora.enabled:
-                    self._apply_lora(lora, available_lora)
-            if len(self.loaded_lora):
-                self.logger.debug("LoRA loaded")
+        session = self.db_handler.get_db_session()
+        enabled_lora = session.query(Lora).filter_by(
+            version=self.generator_settings_cached.version,
+            enabled=True
+        ).all()
+        for lora in enabled_lora:
+            self._load_lora_weights(lora)
 
-    def _apply_lora(self, lora, available_lora):
-        if lora.path in self._disabled_lora:
+    def _load_lora_weights(self, lora: Lora):
+        if lora in self._disabled_lora or lora.path in self._loaded_lora:
             return
-
-        if not self._has_lora_changed(available_lora):
-            return
-
         do_disable_lora = False
-
+        filename = os.path.basename(lora.path)
         try:
-            filename = lora.path.split("/")[-1]
-            for _lora in self.loaded_lora:
-                if _lora.name == lora.name and _lora.path == lora.path:
-                    return
-            base_path:str = self.path_settings_cached.base_path
-            version:str = self.generator_settings_cached.version
-            lora_path = os.path.expanduser(
-                os.path.join(
-                    base_path,
-                    "art/models",
-                    version,
-                    "lora"
-                )
-            )
+            lora_base_path = self.lora_base_path
+            self.logger.info(f"Loading LORA weights from {lora_base_path}/{filename}")
+            adapter_name = os.path.splitext(filename)[0]
             self._pipe.load_lora_weights(
-                lora_path,
-                weight_name=filename
+                lora_base_path,
+                weight_name=filename,
+                adapter_name=adapter_name
             )
-            self.loaded_lora.append(lora)
+            self._loaded_lora[lora.path] = lora
         except AttributeError as _e:
             self.logger.warning("This model does not support LORA")
             do_disable_lora = True
         except RuntimeError:
-            self.logger.warning("LORA could not be loaded")
+            self.logger.warning(f"LORA {filename} could not be loaded")
             do_disable_lora = True
         except ValueError:
-            self.logger.warning("LORA could not be loaded")
+            self.logger.warning(f"LORA {filename} could not be loaded")
             do_disable_lora = True
-
         if do_disable_lora:
-            self._disabled_lora.append(lora.path)
+            self._disabled_lora.append(lora)
 
-    def _has_lora_changed(self, available_lora):
-        """
-        Check if there are any changes in the available LORA compared to the loaded LORA.
-        Return True if there are changes, otherwise False.
-        """
-        loaded_lora_paths = {lora.path for lora in self.loaded_lora}
-
-        for lora in available_lora:
-            if lora.enabled and lora.path not in loaded_lora_paths:
-                return True
-
-        return False
-
-    def _remove_lora_from_pipe(self):
-        self.loaded_lora = []
-        if self._pipe is not None:
-            self._pipe.unload_lora_weights()
+    def _set_lora_adapters(self):
+        self.logger.debug("Setting LORA adapters")
+        session = self.db_handler.get_db_session()
+        loaded_lora_id = [l.id for l in self._loaded_lora.values()]
+        enabled_lora = session.query(Lora).filter(Lora.id.in_(loaded_lora_id)).all()
+        adapter_weights = []
+        adapter_names = []
+        for lora in enabled_lora:
+            adapter_weights.append(lora.scale / 100.0)
+            adapter_names.append(os.path.splitext(os.path.basename(lora.path))[0])
+        if len(adapter_weights) > 0:
+            self._pipe.set_adapters(adapter_names, adapter_weights=adapter_weights)
+        self.logger.debug("LORA adapters set")
 
     def _load_embeddings(self):
         if not self._pipe:
@@ -939,7 +959,7 @@ class SDHandler(BaseHandler):
         else:
             self.logger.error("Something went wrong with Stable Diffusion loading")
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
-            self.unload_stable_diffusion()
+            self.unload()
 
         if (
             self._controlnet is not None
@@ -1097,13 +1117,22 @@ class SDHandler(BaseHandler):
         del self._controlnet_processor
         self._controlnet_processor = None
 
-    def _unload_lora(self):
+    def _unload_loras(self):
         self.logger.debug("Unloading lora")
-        self._remove_lora_from_pipe()
         if self._pipe is not None:
             self._pipe.unload_lora_weights()
-        self._loaded_lora = []
+        self._loaded_lora = {}
         self._disabled_lora = []
+
+    def _unload_lora(self, lora:Lora):
+        if lora.path in self._loaded_lora:
+            self.logger.debug(f"Unloading LORA {lora.path}")
+            del self._loaded_lora[lora.path]
+        if len(self._loaded_lora) > 0:
+            self._set_lora_adapters()
+        else:
+            self._unload_loras()
+            clear_memory()
 
     def _unload_emebeddings(self):
         self.logger.debug("Unloading embeddings")
@@ -1248,6 +1277,9 @@ class SDHandler(BaseHandler):
             -self.canvas_settings.pos_x,
             -self.canvas_settings.pos_y
         )
+
+        self._set_seed()
+
         args = dict(
             outpaint_box_rect=active_rect,
             width=int(self.application_settings_cached.working_width),
@@ -1259,6 +1291,12 @@ class SDHandler(BaseHandler):
             generator=self._generator,
             callback_on_step_end=self.__interrupt_callback,
         )
+
+        if len(self._loaded_lora) > 0:
+            args.update(cross_attention_kwargs=dict(
+                scale=self.lora_scale,
+            ))
+            self._set_lora_adapters()
 
         if self.generator_settings_cached.use_compel:
             args.update(dict(
@@ -1341,8 +1379,6 @@ class SDHandler(BaseHandler):
     def _set_seed(self):
         seed = self.generator_settings_cached.seed
         self._generator.manual_seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
 
     def _callback(self, step: int, _time_step, latents):
         self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
