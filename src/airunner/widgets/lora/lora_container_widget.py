@@ -36,21 +36,27 @@ class LoraContainerWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.loras = None
         self.initialized = False
+        self._deleting = False
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
         self.register(SignalCode.LORA_UPDATED_SIGNAL, self.on_lora_updated_signal)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.LORA_STATUS_CHANGED, self.on_lora_modified)
-        self.register(SignalCode.LORA_DELETE_SIGNAL, self.on_lora_modified)
+        self.register(SignalCode.LORA_DELETE_SIGNAL, self.delete_lora)
         self.ui.loading_icon.hide()
         self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
         self._apply_button_enabled = False
         self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
-        self._scanner_worker = DirectoryWatcher(self.path_settings.base_path, scan_path_for_lora)
+        self._scanner_worker = DirectoryWatcher(self.path_settings.base_path, self._scan_path_for_lora)
         self._scanner_worker.scan_completed.connect(self.on_scan_completed)
         self._scanner_thread = QThread()
         self._scanner_worker.moveToThread(self._scanner_thread)
         self._scanner_thread.started.connect(self._scanner_worker.run)
         self._scanner_thread.start()
+
+    def _scan_path_for_lora(self, path) -> bool:
+        if self._deleting:
+            return False
+        return scan_path_for_lora(path)
 
     @Slot(bool)
     def on_scan_completed(self, force_reload: bool):
@@ -126,15 +132,14 @@ class LoraContainerWidget(BaseWidget):
 
     def showEvent(self, event):
         if not self.initialized:
-            self.register(SignalCode.LORA_DELETE_SIGNAL, self.delete_lora)
             self.scan_for_lora()
             self.initialized = True
         self.load_lora()
 
     def load_lora(self, force_reload=False):
         version = self.generator_settings.version
+
         if self._version is None or self._version != version or force_reload:
-            print("LOAD LORA")
             self._version = version
             self.clear_lora_widgets()
             loras = self.get_lora_by_version(self._version)
@@ -169,14 +174,8 @@ class LoraContainerWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addWidget(lora_widget)
 
     def delete_lora(self, data: dict):
+        self._deleting = True
         lora_widget = data["lora_widget"]
-
-        # Remove lora from settings
-        self.delete_lora_by_name(lora_widget.lora["name"], self._version)
-
-        # Remove lora widget from scroll area
-        self.ui.scrollAreaWidgetContents.layout().removeWidget(lora_widget)
-        self.add_spacer()
 
         # Delete the lora from disc
         lora_path = os.path.expanduser(
@@ -187,12 +186,23 @@ class LoraContainerWidget(BaseWidget):
                 "lora"
             )
         )
-        lora_file = lora_widget.lora["name"]
+        lora_file = lora_widget.current_lora.name
         for dirpath, dirnames, filenames in os.walk(lora_path):
             for file in filenames:
                 if file.startswith(lora_file):
                     os.remove(os.path.join(dirpath, file))
                     break
+
+        # Remove lora from database
+        session = self.db_handler.get_db_session()
+        session.delete(lora_widget.current_lora)
+        session.commit()
+        session.close()
+
+        self._apply_button_enabled = True
+        self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
+        self.load_lora(force_reload=True)
+        self._deleting = False
 
     def available_lora(self, action):
         available_lora = []
