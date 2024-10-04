@@ -27,13 +27,23 @@ class BaseHandler(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
-        self._requested_action = None
+        self._requested_action:ModelAction = ModelAction.NONE
+
+    @property
+    def requested_action(self):
+        return self._requested_action
+
+    @requested_action.setter
+    def requested_action(self, value):
+        self._requested_action = value
 
     def handle_requested_action(self):
         if self._requested_action is ModelAction.LOAD:
             self.load()
+            self._requested_action = ModelAction.NONE
         if self._requested_action is ModelAction.CLEAR:
             self.unload()
+            self._requested_action = ModelAction.NONE
 
     def load(self):
         pass
