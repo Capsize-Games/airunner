@@ -94,6 +94,14 @@ QCheckBox:indicator:checked {
     height: 12px;
 }
 
+QCheckBox:disabled {
+    color: #333;
+}
+
+QCheckBox:indicator:disabled {
+    border: 1px solid #333;
+}
+
 QPushButton {
     border-radius: none;
     padding: 4px 4px 3px 4px;
