@@ -165,7 +165,7 @@ class Ui_lora_container(object):
         lora_container.setWindowTitle(QCoreApplication.translate("lora_container", u"Form", None))
         self.pushButton.setText(QCoreApplication.translate("lora_container", u"Scan for LoRA", None))
         self.label.setText(QCoreApplication.translate("lora_container", u"Lora", None))
-        self.apply_lora_button.setText(QCoreApplication.translate("lora_container", u"Apply Lora", None))
+        self.apply_lora_button.setText(QCoreApplication.translate("lora_container", u"Apply Changes", None))
         self.lora_scale_slider.setProperty("settings_property", QCoreApplication.translate("lora_container", u"generator_settings.lora_scale", None))
         self.lora_scale_slider.setProperty("label_text", QCoreApplication.translate("lora_container", u"Scale", None))
         self.lineEdit.setPlaceholderText(QCoreApplication.translate("lora_container", u"Search", None))
