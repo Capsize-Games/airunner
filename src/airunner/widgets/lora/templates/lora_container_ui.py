@@ -65,7 +65,7 @@ class Ui_lora_container(object):
         self.verticalLayout.setContentsMargins(0, 0, 10, 10)
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(-1, -1, 10, -1)
+        self.horizontalLayout_2.setContentsMargins(-1, -1, 0, -1)
         self.label = QLabel(lora_container)
         self.label.setObjectName(u"label")
         font1 = QFont()
@@ -124,7 +124,7 @@ class Ui_lora_container(object):
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setSpacing(10)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(0, -1, 10, -1)
+        self.horizontalLayout.setContentsMargins(0, -1, 0, -1)
         self.lineEdit = QLineEdit(lora_container)
         self.lineEdit.setObjectName(u"lineEdit")
 
