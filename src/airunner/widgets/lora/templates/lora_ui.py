@@ -64,8 +64,7 @@ class Ui_lora(object):
         self.delete_button.setMinimumSize(QSize(24, 24))
         self.delete_button.setMaximumSize(QSize(24, 24))
         self.delete_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon = QIcon()
-        icon.addFile(u":/icons/light/recycle-bin-line-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon = QIcon(QIcon.fromTheme(u"user-trash"))
         self.delete_button.setIcon(icon)
 
         self.gridLayout_3.addWidget(self.delete_button, 2, 2, 1, 1)

@@ -1,6 +1,6 @@
 import os
 
-from PySide6.QtCore import Slot, QSize, QObject, QThread, Signal
+from PySide6.QtCore import Slot, QSize, QThread
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.enums import SignalCode, ModelType, ModelStatus
@@ -8,33 +8,17 @@ from airunner.utils.models.scan_path_for_items import scan_path_for_lora
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.lora_widget import LoraWidget
 from airunner.widgets.lora.templates.lora_container_ui import Ui_lora_container
-
-
-class DirectoryWatcher(QObject):
-    scan_completed = Signal(bool)
-
-    def __init__(self, base_path: str, scan_function: callable):
-        super().__init__()
-        self.base_path = base_path
-        self._scan_function = scan_function
-
-    def run(self):
-        while True:
-            force_reload = self._scan_function(self.base_path)
-            self.scan_completed.emit(force_reload)
-            QThread.sleep(1)
+from airunner.workers.directory_watcher import DirectoryWatcher
 
 
 class LoraContainerWidget(BaseWidget):
     widget_class_ = Ui_lora_container
-    lora_loaded = False
     search_filter = ""
     spacer = None
 
     def __init__(self, *args, **kwargs):
         self._version = None
         super().__init__(*args, **kwargs)
-        self.loras = None
         self.initialized = False
         self._deleting = False
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
@@ -71,9 +55,7 @@ class LoraContainerWidget(BaseWidget):
     @Slot()
     def apply_lora(self):
         self._apply_button_enabled = False
-        self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
         self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL)
-        self._disable_form()
 
     def on_lora_modified(self):
         self._apply_button_enabled = True
@@ -84,10 +66,8 @@ class LoraContainerWidget(BaseWidget):
         status = data["status"]
         if model is ModelType.SD:
             if status is ModelStatus.LOADING:
-                self.ui.loading_icon.show()
                 self._disable_form()
             else:
-                self.ui.loading_icon.hide()
                 self._enable_form()
 
     def _disable_form(self):
@@ -234,13 +214,6 @@ class LoraContainerWidget(BaseWidget):
             lora_object = self.lora[n]
             if lora_object.name == lora.name:
                 lora_object.trigger_word = value
-                self.update_lora(lora_object)
-
-    def toggle_lora(self, lora, value, tab_name):
-        for n in range(len(self.loras)):
-            if self.loras[n].name == lora.name:
-                lora_object = self.loras[n]
-                lora_object.enabled = value == 2
                 self.update_lora(lora_object)
 
     def handle_lora_slider(self, lora, lora_widget, value, tab_name):
