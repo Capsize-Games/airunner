@@ -206,7 +206,7 @@ class LoraContainerWidget(BaseWidget):
             if self.loras[n].name == lora.name:
                 lora_object = self.loras[n]
                 lora_object.enabled = value == 2
-                self.update_lora(lora_object)x
+                self.update_lora(lora_object)
 
     def handle_lora_slider(self, lora, lora_widget, value, tab_name):
         float_val = value / 100
