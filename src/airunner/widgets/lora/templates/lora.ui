@@ -113,8 +113,7 @@
            <string/>
           </property>
           <property name="icon">
-           <iconset resource="../../../resources_light.qrc">
-            <normaloff>:/icons/light/recycle-bin-line-icon.svg</normaloff>:/icons/light/recycle-bin-line-icon.svg</iconset>
+           <iconset theme="user-trash"/>
           </property>
          </widget>
         </item>
