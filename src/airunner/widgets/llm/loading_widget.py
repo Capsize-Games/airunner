@@ -17,3 +17,9 @@ class LoadingWidget(BaseWidget):
         movie.setScaledSize(QSize(64, 64))  # Resize the GIF
         self.ui.label.setMovie(movie)  # Set the QMovie object to the label
         movie.start()  # Start the animation
+
+    def set_size(self, spinner_size: QSize, label_size: QSize):
+        self.ui.label.movie().setScaledSize(spinner_size)
+        self.ui.label.setFixedSize(label_size)
+        self.ui.label.update()
+        self.ui.label.repaint()

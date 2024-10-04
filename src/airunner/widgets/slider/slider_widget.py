@@ -1,6 +1,8 @@
 from typing import Any, List
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QDoubleSpinBox
+
+from airunner.aihandler.models.settings_models import Lora
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget
@@ -15,8 +17,10 @@ class SliderWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.settings_property = None
-        self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
-        self.register(SignalCode.WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
+        self.table_id = None
+        self.table_name = None
+        self.table_column = None
+        self.table_item = None
         self.ui.slider.sliderReleased.connect(self.handle_slider_release)  # Connect valueChanged signal
         self.ui.slider_spinbox.valueChanged.connect(self.handle_spinbox_change)  # Connect valueChanged signal
         self._callback = None
@@ -102,11 +106,9 @@ class SliderWidget(BaseWidget):
     def spinbox_minimum(self, val):
         self.ui.slider_spinbox.setMinimum(val)
 
-    def on_main_window_loaded_signal(self):
-        try:
-            self.init()
-        except RuntimeError as e:
-            self.logger.error(f"Error initializing SliderWidget: {e}")
+    def showEvent(self, event):
+        self.init()
+        super().showEvent(event)
 
     def init(self, **kwargs):
         self.is_loading = True
@@ -119,6 +121,9 @@ class SliderWidget(BaseWidget):
         spinbox_maximum = kwargs.get("spinbox_maximum", self.property("spinbox_maximum") or 100.0)
         current_value = None
         settings_property = kwargs.get("settings_property", self.property("settings_property") or None)
+        self.table_id = self.property("table_id") or None
+        if self.table_id is not None:
+            self.table_name, self.table_column = settings_property.split(".")
         label_text = kwargs.get("label_text", self.property("label_text") or "")
         display_as_float = kwargs.get("display_as_float", self.property("display_as_float") or False)
 
@@ -134,7 +139,13 @@ class SliderWidget(BaseWidget):
 
         divide_by = self.property("divide_by") or 1.0
 
-        if current_value is None:
+        if self.table_id is not None and self.table_name is not None and self.table_column is not None:
+            session = self.db_handler.get_db_session()
+            if self.table_name == "lora":
+                self.table_item = session.query(Lora).filter_by(id=self.table_id).first()
+                current_value = getattr(self.table_item, self.table_column)
+            session.close()
+        elif current_value is None:
             if settings_property is not None:
                 current_value = self.get_settings_value(settings_property)
             else:
@@ -189,6 +200,8 @@ class SliderWidget(BaseWidget):
             self.set_settings_value(attr_name, value)
 
     def get_settings_value(self, settings_property):
+        if self.table_item is not None:
+            return getattr(self.table_item, self.table_column)
         keys = settings_property.split(".")
 
         if len(keys) == 1:
@@ -202,10 +215,15 @@ class SliderWidget(BaseWidget):
         return getattr(obj, keys[1])
 
     def set_settings_value(self, settings_property: str, val: Any):
-        if settings_property is None:
-            return
-        keys = settings_property.split(".")
-        self.update_settings_by_name(keys[0], keys[1], val)
+        if self.table_item is not None:
+            session = self.db_handler.get_db_session()
+            setattr(self.table_item, self.table_column, val)
+            session.add(self.table_item)
+            session.commit()
+            session.close()
+        elif settings_property is not None:
+            keys = settings_property.split(".")
+            self.update_settings_by_name(keys[0], keys[1], val)
 
     def _update_dict_recursively(self, data: dict, keys: List[str], val: Any) -> dict:
         if len(keys) == 1:

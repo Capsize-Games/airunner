@@ -190,7 +190,11 @@ class SettingsMixin:
     #######################################
 
     def get_lora_by_version(self, version):
-        return [lora for lora in self.lora if lora.version == version]
+        session = self.db_handler.get_db_session()
+        try:
+            return session.query(Lora).filter_by(version=version).all()
+        finally:
+            session.close()
 
     def delete_lora_by_name(self, name, version):
         self.db_handler.delete_lora_by_name(name, version)

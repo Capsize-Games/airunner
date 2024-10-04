@@ -152,6 +152,7 @@ class SignalCode(Enum):
     LLM_PROCESS_STT_AUDIO_SIGNAL = "llm_process_stt_audio"
     LORA_ADD_SIGNAL = "add_lora_signal"
     LORA_UPDATE_SIGNAL = "update_lora_signal"
+    LORA_UPDATED_SIGNAL = "lora_updated_signal"
     LORA_DELETE_SIGNAL = "delete_lora_signal"
     SET_CANVAS_COLOR_SIGNAL = "set_canvas_color_signal"
     UPDATE_SCENE_SIGNAL = "update_scene_signal"
@@ -234,6 +235,7 @@ class SignalCode(Enum):
     CONVERSATION_DELETED = enum.auto()
 
     KEYBOARD_SHORTCUTS_UPDATED = enum.auto()
+    LORA_STATUS_CHANGED = enum.auto()
 
 class EngineResponseCode(Enum):
     STATUS = 100
