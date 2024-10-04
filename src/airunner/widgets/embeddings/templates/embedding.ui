@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>168</height>
+    <width>542</width>
+    <height>73</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_2">
+  <layout class="QGridLayout" name="gridLayout">
    <property name="leftMargin">
     <number>0</number>
    </property>
@@ -26,52 +26,42 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
-   <property name="spacing">
+   <property name="horizontalSpacing">
+    <number>10</number>
+   </property>
+   <property name="verticalSpacing">
     <number>0</number>
    </property>
-   <item row="0" column="0" colspan="2">
-    <widget class="QGroupBox" name="enabledCheckbox">
-     <property name="title">
-      <string>Embedding name here</string>
+   <item row="0" column="0">
+    <widget class="QCheckBox" name="enabledCheckbox">
+     <property name="text">
+      <string>enabledCheckbox</string>
      </property>
-     <property name="checkable">
-      <bool>true</bool>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLineEdit" name="trigger_word_edit">
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
      </property>
-     <property name="checked">
-      <bool>false</bool>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
-     <layout class="QGridLayout" name="gridLayout">
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <property name="spacing">
-       <number>0</number>
-      </property>
-      <item row="2" column="0">
-       <widget class="QLineEdit" name="trigger_word_edit">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="placeholderText">
-         <string>Trigger words (comma separated)</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
+     <property name="placeholderText">
+      <string>Trigger words (comma separated)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QPushButton" name="delete_button">
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="user-trash"/>
+     </property>
     </widget>
    </item>
   </layout>
@@ -79,18 +69,18 @@
  <resources/>
  <connections>
   <connection>
-   <sender>enabledCheckbox</sender>
-   <signal>toggled(bool)</signal>
+   <sender>delete_button</sender>
+   <signal>clicked()</signal>
    <receiver>embedding</receiver>
-   <slot>action_toggled_embedding(bool)</slot>
+   <slot>action_clicked_button_deleted()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>185</x>
-     <y>68</y>
+     <x>530</x>
+     <y>46</y>
     </hint>
     <hint type="destinationlabel">
-     <x>185</x>
-     <y>68</y>
+     <x>446</x>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -101,12 +91,28 @@
    <slot>action_changed_trigger_word(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>162</x>
-     <y>93</y>
+     <x>195</x>
+     <y>50</y>
     </hint>
     <hint type="destinationlabel">
-     <x>106</x>
-     <y>-13</y>
+     <x>215</x>
+     <y>14</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enabledCheckbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>embedding</receiver>
+   <slot>action_toggled_embedding(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>67</x>
+     <y>18</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>86</x>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -117,5 +123,6 @@
   <slot>action_toggled_embedding(bool)</slot>
   <slot>action_clicked_copy()</slot>
   <slot>action_changed_trigger_word(QString)</slot>
+  <slot>action_clicked_button_deleted()</slot>
  </slots>
 </ui>

@@ -51,7 +51,9 @@ def scan_path_for_lora(base_path) -> bool:
             session.close()
     return lora_deleted or lora_added
 
-def scan_path_for_embeddings(base_path) -> List[Embedding]:
+def scan_path_for_embeddings(base_path) -> bool:
+    embedding_added = False
+    embedding_deleted = False
     db_handler = SettingsDBHandler()
     items = []
     for versionpath, versionnames, versionfiles in os.walk(os.path.expanduser(os.path.join(base_path, "art/models"))):
@@ -66,6 +68,12 @@ def scan_path_for_embeddings(base_path) -> List[Embedding]:
         )
         if not os.path.exists(embedding_path):
             continue
+        session = db_handler.get_db_session()
+        existing_embeddings = session.query(Embedding).all()
+        for embedding in existing_embeddings:
+            if not os.path.exists(embedding.path):
+                session.delete(embedding)
+                embedding_deleted = True
         for dirpath, dirnames, filenames in os.walk(embedding_path):
             for file in filenames:
                 if file.endswith(".ckpt") or file.endswith(".safetensors") or file.endswith(".pt"):
@@ -81,6 +89,9 @@ def scan_path_for_embeddings(base_path) -> List[Embedding]:
                             active=False,
                             trigger_word=""
                         )
-                        db_handler.add_embedding(item)
-                    items.append(item)
-    return items
+                        session.add(item)
+                        embedding_added = True
+        if embedding_deleted or embedding_added:
+            session.commit()
+            session.close()
+    return embedding_deleted or embedding_added

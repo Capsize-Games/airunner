@@ -24,7 +24,7 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import CLIPFeatureExtractor, CLIPTokenizerFast
 
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.aihandler.models.settings_models import Schedulers, Lora
+from airunner.aihandler.models.settings_models import Schedulers, Lora, Embedding
 from airunner.enums import (
     SDMode, StableDiffusionVersion, GeneratorSection, ModelStatus, ModelType, SignalCode, HandlerState,
     EngineResponseCode, ModelAction
@@ -459,6 +459,17 @@ class SDHandler(BaseHandler):
         self.emit_signal(SignalCode.LORA_UPDATED_SIGNAL)
         self.change_model_status(ModelType.SD, ModelStatus.LOADED)
 
+    def reload_embeddings(self):
+        if self.model_status[ModelType.SD] is not ModelStatus.LOADED or self._current_state in (
+            HandlerState.PREPARING_TO_GENERATE,
+            HandlerState.GENERATING
+        ):
+            return
+        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
+        self._load_embeddings()
+        self.emit_signal(SignalCode.EMBEDDING_UPDATED_SIGNAL)
+        self.change_model_status(ModelType.SD, ModelStatus.LOADED)
+
     def load_embeddings(self):
         self._load_embeddings()
 
@@ -852,28 +863,59 @@ class SDHandler(BaseHandler):
         self.logger.debug("LORA adapters set")
 
     def _load_embeddings(self):
-        if not self._pipe:
+        # if not self._pipe:
+        #     return
+        # self.logger.debug("Loading embeddings")
+        # available_embeddings = self.get_embeddings_by_version(self.generator_settings_cached.version)
+        # for embedding in available_embeddings:
+        #     path = os.path.expanduser(embedding.path)
+        #     if embedding.active and embedding not in self._loaded_embeddings:
+        #         if os.path.exists(path):
+        #             token = embedding.name
+        #             try:
+        #                 self._pipe.load_textual_inversion(path, token=token, weight_name=path)
+        #                 self._loaded_embeddings.append(embedding)
+        #             except Exception as e:
+        #                 if "already in tokenizer" not in str(e):
+        #                     self.logger.error(f"Failed to load embedding {token}: {e}")
+        #     else:
+        #         try:
+        #             self._pipe.unload_textual_inversion(embedding.name)
+        #             self._loaded_embeddings.remove(embedding)
+        #         except ValueError as e:
+        #             if "No tokens to remove" not in str(e):
+        #                 self.logger.error(f"Failed to unload embedding {embedding.name}: {e}")
+        if self._pipe is None:
+            self.logger.error("Pipe is None, unable to load embeddings")
             return
         self.logger.debug("Loading embeddings")
-        available_embeddings = self.get_embeddings_by_version(self.generator_settings_cached.version)
-        for embedding in available_embeddings:
-            path = os.path.expanduser(embedding.path)
-            if embedding.active and embedding not in self._loaded_embeddings:
-                if os.path.exists(path):
-                    token = embedding.name
+        self._pipe.unload_textual_inversion()
+        session = self.db_handler.get_db_session()
+        embeddings = session.query(Embedding).filter_by(
+            version=self.generator_settings_cached.version
+        ).all()
+        session.close()
+        for embedding in embeddings:
+            embedding_path = embedding.path
+            if embedding.active and embedding_path not in self._loaded_embeddings:
+                if not os.path.exists(embedding_path):
+                    self.logger.error(f"Embedding path {embedding_path} does not exist")
+                else:
                     try:
-                        self._pipe.load_textual_inversion(path, token=token, weight_name=path)
-                        self._loaded_embeddings.append(embedding)
+                        self.logger.debug(f"Loading embedding {embedding_path}")
+                        self._pipe.load_textual_inversion(embedding_path, token=embedding.name, weight_name=embedding_path)
+                        self._loaded_embeddings.append(embedding_path)
                     except Exception as e:
-                        if "already in tokenizer" not in str(e):
-                            self.logger.error(f"Failed to load embedding {token}: {e}")
-            else:
-                try:
-                    self._pipe.unload_textual_inversion(embedding.name)
-                    self._loaded_embeddings.remove(embedding)
-                except ValueError as e:
-                    if "No tokens to remove" not in str(e):
-                        self.logger.error(f"Failed to unload embedding {embedding.name}: {e}")
+                        self.logger.error(f"Failed to load embedding {embedding_path}: {e}")
+            # elif not embedding.active and embedding_path in self._loaded_embeddings:
+            #     self.logger.debug(f"Unloading embedding {embedding_path}")
+            #     try:
+            #         self._pipe.unload_textual_inversion(tokens=['an14', 'an14_1', 'an14_2', 'an14_3', 'an14_4', 'an14_5', 'an14_6', 'an14_7', 'an14_8', 'an14_9', 'an14_10', 'an14_11', 'an14_12', 'an14_13', 'an14_14'])
+            #         self._loaded_embeddings.remove(embedding_path)
+            #     except Exception as e:
+            #         self.logger.error(f"Failed to remove embedding {embedding_path}: {e}")
+            #     continue
+        self.logger.debug("Embeddings loaded")
 
     def _load_compel(self):
         if self.generator_settings_cached.use_compel:
