@@ -196,8 +196,8 @@
    <slot>action_changed_trigger_words(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>401</x>
-     <y>43</y>
+     <x>402</x>
+     <y>77</y>
     </hint>
     <hint type="destinationlabel">
      <x>404</x>
@@ -218,6 +218,22 @@
     <hint type="destinationlabel">
      <x>88</x>
      <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>delete_button</sender>
+   <signal>clicked()</signal>
+   <receiver>lora</receiver>
+   <slot>action_clicked_button_deleted()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>508</x>
+     <y>62</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>520</x>
+     <y>12</y>
     </hint>
    </hints>
   </connection>
