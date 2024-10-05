@@ -468,10 +468,6 @@ class MainWindow(
         ModelManagerWidget()
 
     @Slot()
-    def action_show_stablediffusion(self):
-        self.activate_image_generation_section()
-
-    @Slot()
     def action_triggered_browse_ai_runner_path(self):
         path = self.path_settings.base_path
         if path == "":
