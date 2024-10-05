@@ -501,15 +501,3 @@ class ImagePreset(Enum):
     PHOTOGRAPH = "Photograph"
     PAINTING = "Painting"
 
-
-class WorkerType(Enum):
-    LLMGenerateWorker = enum.auto()
-    SDWorker = enum.auto()
-    TTSGeneratorWorker = enum.auto()
-    TTSVocalizerWorker = enum.auto()
-    AudioCaptureWorker = enum.auto()
-    AudioProcessorWorker = enum.auto()
-    AgentWorker = enum.auto()
-    LatentsWorker = enum.auto()
-    MaskGeneratorWorker = enum.auto()
-    ModelScannerWorker = enum.auto()

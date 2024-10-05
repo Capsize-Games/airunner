@@ -1,10 +1,4 @@
-from typing import List
-
-from attr.validators import instance_of
-
-from airunner.aihandler.models.settings_models import AIModels
-from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
-from airunner.enums import SignalCode, GeneratorSection, ImageGenerator, WorkerType
+from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 from airunner.windows.main.pipeline_mixin import PipelineMixin

@@ -55,6 +55,7 @@ from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
+from airunner.worker_manager import WorkerManager
 
 
 class MainWindow(
@@ -948,7 +949,6 @@ class MainWindow(
 
     def _initialize_worker_manager(self):
         self.logger.debug("Initializing worker manager")
-        from airunner.worker_manager import WorkerManager
         self.worker_manager = WorkerManager(
             disable_sd=self.disable_sd,
             disable_llm=self.disable_llm,

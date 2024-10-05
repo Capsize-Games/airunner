@@ -27,7 +27,8 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import (
     SignalCode,
     LLMChatRole,
-    LLMActionType, WorkerType, AgentState
+    LLMActionType,
+    AgentState
 )
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.utils.create_worker import create_worker
