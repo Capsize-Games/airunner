@@ -8,8 +8,8 @@ from airunner.aihandler.models.settings_models import ApplicationSettings, LLMGe
     ControlnetSettings, ControlnetImageSettings, BrushSettings, DrawingPadSettings, GridSettings, ActiveGridSettings, \
     ImageToImageSettings, OutpaintSettings, PathSettings, CanvasSettings, MemorySettings, Chatbot, \
     AIModels, Schedulers, Lora, ShortcutKeys, SavedPrompt, SpeechT5Settings, TTSSettings, EspeakSettings, \
-    MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, TargetFiles
-from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
+    MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, TargetFiles, \
+    ImageFilterValue
 from airunner.enums import SignalCode
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 
@@ -140,10 +140,6 @@ class SettingsMixin:
         return self.db_handler.load_pipelines()
 
     @property
-    def image_filters(self):
-        return imagefilter_bootstrap_data
-
-    @property
     def drawing_pad_image(self):
         base_64_image = self.drawing_pad_settings.image
         image = convert_base64_to_image(base_64_image)
@@ -184,6 +180,14 @@ class SettingsMixin:
         if image is not None:
             image = image.convert("RGB")
         return image
+
+    @property
+    def image_filter_values(self):
+        session = self.db_handler.get_db_session()
+        try:
+            return session.query(ImageFilterValue).all()
+        finally:
+            session.close()
 
     #######################################
     ### LORA ###
