@@ -14,7 +14,6 @@ class ModelScannerWorker(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         PipelineMixin.__init__(self)
-        self.logger = Logger(prefix=self.__class__.__name__)
 
     def handle_message(self):
         self.scan_for_models()

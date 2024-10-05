@@ -17,8 +17,8 @@ class AudioCaptureWorker(Worker):
     It will capture audio when it detects voice activity and then send the audio to the audio_processor_worker.
     """
 
-    def __init__(self, prefix):
-        super().__init__(prefix=prefix, signals=(
+    def __init__(self):
+        super().__init__(signals=(
             (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal),
             (SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal),
             (SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal),

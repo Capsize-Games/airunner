@@ -12,8 +12,8 @@ class AudioProcessorWorker(Worker):
     """ 
     fs = 0
 
-    def __init__(self, prefix):
-        super().__init__(prefix=prefix, signals = (
+    def __init__(self):
+        super().__init__(signals = (
             (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.update_properties),
             (SignalCode.STT_LOAD_SIGNAL, self.on_stt_load_signal),
             (SignalCode.STT_UNLOAD_SIGNAL, self.on_stt_unload_signal),
