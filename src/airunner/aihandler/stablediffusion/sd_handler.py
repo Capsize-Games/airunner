@@ -1277,8 +1277,8 @@ class SDHandler(BaseHandler):
             prompt_embeds, pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(f'("{prompt}", "{prompt_2}").and()')
             negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(f'("{negative_prompt}", "{negative_prompt_2}").and()')
         else:
-            prompt_embeds = self._compel_proc.build_conditioning_tensor(prompt)
-            negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(negative_prompt)
+            prompt_embeds = self._compel_proc.build_conditioning_tensor(f'("{prompt}", "{prompt_2}").and()')
+            negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(f'("{negative_prompt}", "{negative_prompt_2}").and()')
         [
             prompt_embeds,
             negative_prompt_embeds
@@ -1292,10 +1292,14 @@ class SDHandler(BaseHandler):
         self._pooled_prompt_embeds = pooled_prompt_embeds
         self._negative_pooled_prompt_embeds = negative_pooled_prompt_embeds
 
-        self._prompt_embeds.half().to(self._device)
-        self._negative_prompt_embeds.half().to(self._device)
-        self._pooled_prompt_embeds.half().to(self._device)
-        self._negative_pooled_prompt_embeds.half().to(self._device)
+        if self._prompt_embeds is not None:
+            self._prompt_embeds.half().to(self._device)
+        if self._negative_prompt_embeds is not None:
+            self._negative_prompt_embeds.half().to(self._device)
+        if self._pooled_prompt_embeds is not None:
+            self._pooled_prompt_embeds.half().to(self._device)
+        if self._negative_pooled_prompt_embeds is not None:
+            self._negative_pooled_prompt_embeds.half().to(self._device)
 
     def _clear_memory_efficient_settings(self):
         self.logger.debug("Clearing memory efficient settings")

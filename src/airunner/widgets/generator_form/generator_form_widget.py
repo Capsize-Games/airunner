@@ -292,21 +292,9 @@ class GeneratorForm(BaseWidget):
 
     def toggle_secondary_prompts(self):
         if self.generator_settings.version != StableDiffusionVersion.SDXL1_0.value:
-            if self.generator_settings.version == StableDiffusionVersion.SDXL_TURBO.value:
-                self.ui.negative_prompt_label.hide()
-                self.ui.negative_prompt.hide()
-            else:
-                self.ui.negative_prompt_label.show()
-                self.ui.negative_prompt.show()
             self.ui.croops_coord_top_left_groupbox.hide()
-            self.ui.secondary_prompt.hide()
-            self.ui.secondary_negative_prompt.hide()
         else:
             self.ui.croops_coord_top_left_groupbox.show()
-            self.ui.negative_prompt_label.show()
-            self.ui.negative_prompt.show()
-            self.ui.secondary_prompt.show()
-            self.ui.secondary_negative_prompt.show()
 
     def on_load_saved_stablediffuion_prompt_signal(self, data: dict):
         saved_prompt = data.get("saved_prompt")
