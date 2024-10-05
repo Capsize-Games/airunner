@@ -3,8 +3,8 @@ from airunner.workers.worker import Worker
 
 
 class ImageDataWorker(Worker):
-    def __init__(self, prefix):
-        super().__init__(prefix=prefix)
+    def __init__(self):
+        super().__init__()
         self.running = False
 
     def handle_message(self, incoming_message):

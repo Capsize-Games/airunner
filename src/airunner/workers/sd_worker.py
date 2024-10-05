@@ -34,12 +34,11 @@ class GenerateWorker(QObject):
 class SDWorker(Worker):
     queue_type = QueueType.GET_LAST_ITEM
 
-    def __init__(self, prefix="SDWorker"):
+    def __init__(self):
         self.sd = None
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(
-            prefix=prefix,
             signals=(
                 (SignalCode.RESET_APPLIED_MEMORY_SETTINGS, self.on_reset_applied_memory_settings),
                 (SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal),
