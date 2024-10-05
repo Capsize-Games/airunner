@@ -1,3 +1,4 @@
+from airunner.aihandler.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
@@ -57,7 +58,6 @@ class LLMGenerateWorker(Worker):
             self.logger.error(f"Error in on_load_conversation: {e}")
 
     def start_worker_thread(self):
-        from airunner.aihandler.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
         self.llm = CausalLMTransformerBaseHandler(agent_options=self.agent_options)
         if self.application_settings.llm_enabled:
             self.llm.load()

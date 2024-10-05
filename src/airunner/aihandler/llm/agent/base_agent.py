@@ -33,6 +33,7 @@ from airunner.utils.get_torch_device import get_torch_device
 from airunner.utils.create_worker import create_worker
 from airunner.utils.prepare_llm_generate_kwargs import prepare_llm_generate_kwargs
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.workers.agent_worker import AgentWorker
 
 
 class BaseAgent(
@@ -90,7 +91,7 @@ class BaseAgent(
         self.prompt = ""
         self.thread = None
         self.do_interrupt = False
-        self.response_worker = create_worker(WorkerType.AgentWorker)
+        self.response_worker = create_worker(AgentWorker)
         self.load_rag(model=self.model, tokenizer=self.tokenizer)
 
     @property
