@@ -664,11 +664,7 @@ class MainWindow(
         element.blockSignals(False)
         QApplication.processEvents()
         if application_setting:
-            if model_type is ModelType.CONTROLNET:
-                self.update_controlnet_settings(application_setting, val)
-            else:
-                self.update_application_settings(application_setting, val)
-        print("UDPATE ACTION BUTTON", data)
+            self.update_application_settings(application_setting, val)
         if self._model_status[model_type] is not ModelStatus.LOADING:
             if val:
                 self.emit_signal(load_signal, data)

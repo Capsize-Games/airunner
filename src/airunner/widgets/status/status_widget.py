@@ -25,7 +25,7 @@ class StatusWidget(BaseWidget):
         self.feature_extractor_status = ModelStatus.UNLOADED
         self._model_status = {
             ModelType.SD: ModelStatus.LOADING if self.application_settings.sd_enabled else ModelStatus.UNLOADED,
-            ModelType.CONTROLNET: ModelStatus.LOADING if self.controlnet_settings.enabled else ModelStatus.UNLOADED,
+            ModelType.CONTROLNET: ModelStatus.LOADING if self.application_settings.controlnet_enabled else ModelStatus.UNLOADED,
             ModelType.LLM: ModelStatus.LOADING if self.application_settings.llm_enabled else ModelStatus.UNLOADED,
             ModelType.TTS: ModelStatus.LOADING if self.application_settings.tts_enabled else ModelStatus.UNLOADED,
             ModelType.STT: ModelStatus.LOADING if self.application_settings.stt_enabled else ModelStatus.UNLOADED,

@@ -57,7 +57,8 @@ class StableDiffusionSettingsWidget(
 
     def handle_model_changed(self, name):
         self.update_generator_settings("model", name)
-        self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
+        if self.application_settings.sd_enabled:
+            self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
 
     def handle_scheduler_changed(self, name):
         self.update_generator_settings("scheduler", name)
