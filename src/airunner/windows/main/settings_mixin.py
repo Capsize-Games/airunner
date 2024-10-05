@@ -144,6 +144,14 @@ class SettingsMixin:
         return image
 
     @property
+    def drawing_pad_mask(self):
+        base_64_image = self.drawing_pad_settings.mask
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
+
+    @property
     def img2img_image(self):
         if self.image_to_image_settings.use_grid_image_as_input:
             return self.drawing_pad_image
@@ -179,7 +187,7 @@ class SettingsMixin:
 
     @property
     def outpaint_mask(self):
-        base_64_image = self.outpaint_settings.mask
+        base_64_image = self.drawing_pad_settings.mask
         image = convert_base64_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
