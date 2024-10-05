@@ -16,7 +16,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QSizePolicy,
-    QSpacerItem, QVBoxLayout, QWidget)
+    QVBoxLayout, QWidget)
 
 from airunner.widgets.slider.slider_widget import SliderWidget
 
@@ -37,11 +37,6 @@ class Ui_controlnet_settings_widget(object):
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.controlnet = QComboBox(self.widget_3)
-        self.controlnet.setObjectName(u"controlnet")
-
-        self.gridLayout.addWidget(self.controlnet, 0, 0, 1, 1)
-
         self.widget = QWidget(self.widget_3)
         self.widget.setObjectName(u"widget")
         self.widget.setMinimumSize(QSize(0, 0))
@@ -83,9 +78,10 @@ class Ui_controlnet_settings_widget(object):
 
         self.gridLayout.addWidget(self.widget, 1, 0, 1, 1)
 
-        self.verticalSpacer = QSpacerItem(20, 479, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.controlnet = QComboBox(self.widget_3)
+        self.controlnet.setObjectName(u"controlnet")
 
-        self.gridLayout.addItem(self.verticalSpacer, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.controlnet, 0, 0, 1, 1)
 
 
         self.gridLayout_2.addWidget(self.widget_3, 1, 0, 1, 1)
