@@ -8,12 +8,15 @@ from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsLineIt
 from airunner.aihandler.logger import Logger
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
+from airunner.utils.convert_image_to_base64 import convert_image_to_base64
+from airunner.utils.create_worker import create_worker
 from airunner.utils.snap_to_grid import snap_to_grid
 from airunner.widgets.canvas.brush_scene import BrushScene
 from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.widgets.canvas.zoom_handler import ZoomHandler
+from airunner.workers.mask_generator_worker import MaskGeneratorWorker
 
 
 class CustomGraphicsView(
@@ -35,6 +38,7 @@ class CustomGraphicsView(
         self.pixmaps = {}
         self.line_group = QGraphicsItemGroup()
         self._scene_is_active = False
+        self.mask_generator_worker = create_worker(MaskGeneratorWorker)
 
         # register signal handlers
         signal_handlers = {
@@ -48,6 +52,7 @@ class CustomGraphicsView(
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL: self.handle_active_grid_area_moved_signal,
+            SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
         }
 
         for k, v in signal_handlers.items():
@@ -81,6 +86,10 @@ class CustomGraphicsView(
 
     def handle_active_grid_area_moved_signal(self):
         self.active_grid_area.update_position()
+
+    def on_mask_generator_worker_response_signal(self, message: dict):
+        mask = convert_image_to_base64(message["mask"])
+        self.update_drawing_pad_settings("mask", mask)
 
     def on_main_window_loaded_signal(self):
         self.initialized = True

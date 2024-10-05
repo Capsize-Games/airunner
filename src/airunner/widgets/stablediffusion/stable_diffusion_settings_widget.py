@@ -62,7 +62,7 @@ class StableDiffusionSettingsWidget(
         if val == f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}":
             val = GeneratorSection.TXT2IMG.value
         elif val == f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}":
-            val = GeneratorSection.OUTPAINT.value
+            val = GeneratorSection.INPAINT.value
         self.update_application_settings("pipeline", val)
         self.update_generator_settings("section", val)
         self.load_versions()
@@ -85,7 +85,7 @@ class StableDiffusionSettingsWidget(
         if current_pipeline != "":
             if current_pipeline == GeneratorSection.TXT2IMG.value:
                 current_pipeline = f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}"
-            elif current_pipeline == GeneratorSection.OUTPAINT.value:
+            elif current_pipeline == GeneratorSection.INPAINT.value:
                 current_pipeline = f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}"
             self.ui.pipeline.setCurrentText(current_pipeline)
         self.ui.pipeline.blockSignals(False)
@@ -143,8 +143,6 @@ class StableDiffusionSettingsWidget(
             except Exception as e:
                 self.logger.error(f"Error finding model by name: {name}")
 
-        if model:
-            self.generator_settings.model = model["name"]
         self.ui.model.blockSignals(False)
         self.update_generator_settings("model", self.generator_settings.model)
 

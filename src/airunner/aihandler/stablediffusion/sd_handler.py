@@ -148,12 +148,6 @@ class SDHandler(BaseHandler):
         return self._img2img_image
 
     @property
-    def outpaint_image_cached(self) -> Image:
-        if self._outpaint_image is None:
-            self._outpaint_image = self.outpaint_image
-        return self._outpaint_image
-
-    @property
     def application_settings_cached(self):
         if self._application_settings is None:
             self._application_settings = self.application_settings
@@ -240,7 +234,7 @@ class SDHandler(BaseHandler):
         section = GeneratorSection.TXT2IMG
         if self.img2img_image_cached is not None and self.image_to_image_settings.enabled:
             section = GeneratorSection.IMG2IMG
-        if self.outpaint_image_cached is not None and self.outpaint_settings.enabled:
+        if self.drawing_pad_settings.image is not None and self.generator_settings_cached.section == "inpaint":
             section = GeneratorSection.OUTPAINT
         return section
 
@@ -528,8 +522,9 @@ class SDHandler(BaseHandler):
         clear_memory()
         args = self._prepare_data()
         self._current_state = HandlerState.GENERATING
-        # with torch.no_grad():
-        results = self._pipe(**args)
+
+        with torch.no_grad():
+            results = self._pipe(**args)
         images = results.get("images", [])
         images, nsfw_content_detected = self._check_and_mark_nsfw_images(images)
         if images is not None:
@@ -823,6 +818,10 @@ class SDHandler(BaseHandler):
                     **data
                 )
             except (FileNotFoundError, OSError) as e:
+                self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+                self.change_model_status(ModelType.SD, ModelStatus.FAILED)
+                return
+            except TypeError as e:
                 self.logger.error(f"Failed to load model from {self.model_path}: {e}")
                 self.change_model_status(ModelType.SD, ModelStatus.FAILED)
                 return
@@ -1399,6 +1398,10 @@ class SDHandler(BaseHandler):
             image = self.img2img_image
             if args["num_inference_steps"] < MIN_NUM_INFERENCE_STEPS_IMG2IMG:
                 args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
+        elif self.is_outpaint:
+            image = self.drawing_pad_image
+            mask = self.drawing_pad_mask
+            print("IS OUTPAINT, SAVING IMAGE TO DISC")
 
         if not self.controlnet_enabled:
             if self.is_txt2img:
@@ -1410,12 +1413,6 @@ class SDHandler(BaseHandler):
                     strength=self.generator_settings_cached.strength / 100.0,
                     guidance_scale=self.generator_settings_cached.scale / 100.0
                 ))
-
-        if self.is_outpaint:
-            if image is None:
-                image = self.outpaint_image
-            if mask is None:
-                mask = self.outpaint_mask
 
         # set the image to controlnet image if controlnet is enabled
         if self.controlnet_enabled:
@@ -1446,7 +1443,6 @@ class SDHandler(BaseHandler):
 
         if mask is not None and self.is_outpaint:
             mask = self._resize_image(mask, width, height)
-
             args.update(dict(
                 mask_image=mask
             ))
