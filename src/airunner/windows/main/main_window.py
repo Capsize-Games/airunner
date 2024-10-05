@@ -602,7 +602,7 @@ class MainWindow(
             (self.ui.actionToggle_Controlnet, self.application_settings.controlnet_enabled),
         ):
             item[0].blockSignals(True)
-            item[0].setChecked(item[1])
+            item[0].setChecked(item[1] or False)
             item[0].blockSignals(False)
         self.initialized = True
 
@@ -780,39 +780,41 @@ class MainWindow(
         self.ui.actionToggle_Grid.setChecked(self.grid_settings.show_grid)
         self.ui.actionToggle_Grid.blockSignals(False)
 
-        if self.window_settings is not None:
-            splitters = [
-                ("content_splitter", self.ui.content_splitter),
-                ("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter),
-                # ("canvas_splitter", self.ui.canvas_widget_2.ui.canvas_splitter),
-                ("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter),
-                ("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter),
-            ]
-            for splitter_name, splitter in splitters:
-                splitter_state = getattr(self.window_settings, splitter_name)
-                if splitter_state is not None:
-                    splitter.blockSignals(True)
-                    splitter.restoreState(splitter_state)
-                    splitter.blockSignals(False)
+        first_run = False
+        splitters = [
+            ("content_splitter", self.ui.content_splitter),
+            ("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter),
+            ("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter),
+            ("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter),
+        ]
+        for splitter_name, splitter in splitters:
+            splitter_state = getattr(self.window_settings, splitter_name)
+            if splitter_state is not None:
+                splitter.blockSignals(True)
+                splitter.restoreState(splitter_state)
+                splitter.blockSignals(False)
+            elif splitter_name == "content_splitter":
+                first_run = True
+                splitter.setSizes([self.width() - 200, 512, 200])
 
         self.setMinimumSize(100, 100)  # Set a reasonable minimum size
 
-        if self.window_settings is not None:
-            width = int(self.window_settings.width)
-            height = int(self.window_settings.height)
+        width = int(self.window_settings.width)
+        height = int(self.window_settings.height)
+        if first_run:
+            screen_geometry = QGuiApplication.primaryScreen().geometry()
+            x_pos = (screen_geometry.width() - width) // 2
+            y_pos = (screen_geometry.height() - height) // 2
+        else:
             x_pos = int(self.window_settings.x_pos)
             y_pos = int(self.window_settings.y_pos)
-            self.ui.generator_widget.ui.generator_form_tabs.setCurrentIndex(
-                int(self.window_settings.mode_tab_widget_index)
-            )
-        else:
-            width = 800
-            height = 600
-            x_pos = 0
-            y_pos = 0
+        self.ui.generator_widget.ui.generator_form_tabs.setCurrentIndex(
+            int(self.window_settings.mode_tab_widget_index)
+        )
 
         self.resize(width, height)
         self.move(x_pos, y_pos)
+        self.raise_()
 
     ##### End window properties #####
     #################################
