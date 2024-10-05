@@ -30,6 +30,10 @@ class BaseHandler(
         self._requested_action:ModelAction = ModelAction.NONE
 
     @property
+    def model_status(self):
+        return self._model_status[self.model_type]
+
+    @property
     def requested_action(self):
         return self._requested_action
 

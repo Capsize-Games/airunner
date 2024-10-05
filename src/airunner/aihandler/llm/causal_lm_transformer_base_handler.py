@@ -62,7 +62,6 @@ class CausalLMTransformerBaseHandler(
         self._decoder_start_token_id = kwargs.get("decoder_start_token_id", None)
         self._tokenizer = None
         self._generator = None
-        self._model_status = ModelStatus.UNLOADED
 
         super().__init__(*args, **kwargs)
 
@@ -165,7 +164,7 @@ class CausalLMTransformerBaseHandler(
         ))
 
     def load(self):
-        if self._model_status in (
+        if self.model_status in (
             ModelStatus.LOADING,
             ModelStatus.LOADED
         ):
@@ -183,7 +182,7 @@ class CausalLMTransformerBaseHandler(
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
 
     def unload(self):
-        if self._model_status in (
+        if self.model_status in (
             ModelStatus.LOADING,
             ModelStatus.UNLOADED
         ):
@@ -434,7 +433,3 @@ class CausalLMTransformerBaseHandler(
     def _clear_memory(self):
         self.logger.debug("Clearing memory")
         clear_memory(self.memory_settings.default_gpu_llm)
-
-    def change_model_status(self, model: ModelType, status: ModelStatus):
-        self._model_status = status
-        super().change_model_status(model, status)

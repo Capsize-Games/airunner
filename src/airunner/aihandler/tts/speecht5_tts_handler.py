@@ -16,7 +16,6 @@ class SpeechT5TTSHandler(TTSHandler):
     target_model = "t5"
 
     def __init__(self, *args, **kwargs):
-        self._model_status = None
         from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech
         self._model_class_ = SpeechT5ForTextToSpeech
         self._processor_class_ = SpeechT5Processor
@@ -41,10 +40,6 @@ class SpeechT5TTSHandler(TTSHandler):
         self._cancel_generated_speech = False
         self._paused = False
         super().__init__(*args, **kwargs)
-
-    @property
-    def model_status(self):
-        return self._model_status
 
     @property
     def processor_path(self) -> str:
@@ -94,7 +89,7 @@ class SpeechT5TTSHandler(TTSHandler):
         )
 
     def generate(self, message):
-        if self._model_status is not ModelStatus.LOADED:
+        if self.model_status is not ModelStatus.LOADED:
             return None
 
         if self._do_interrupt or self._paused:
@@ -106,9 +101,9 @@ class SpeechT5TTSHandler(TTSHandler):
             return None
 
     def load(self, target_model=None):
-        if self._model_status is ModelStatus.LOADING:
+        if self.model_status is ModelStatus.LOADING:
             return
-        if self._model_status in (
+        if self.model_status in (
             ModelStatus.LOADED,
             ModelStatus.READY,
             ModelStatus.FAILED
@@ -137,7 +132,7 @@ class SpeechT5TTSHandler(TTSHandler):
             self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
 
     def unload(self):
-        if self._model_status is ModelStatus.LOADING:
+        if self.model_status is ModelStatus.LOADING:
             return
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self.logger.debug("Unloading")
@@ -364,7 +359,3 @@ class SpeechT5TTSHandler(TTSHandler):
         self._cancel_generated_speech = False
         self._paused = True
         self._text_queue = Queue()
-
-    def change_model_status(self, model: ModelType, status: ModelStatus):
-        self._model_status = status
-        super().change_model_status(model, status)
