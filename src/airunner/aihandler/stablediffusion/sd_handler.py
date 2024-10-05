@@ -166,6 +166,10 @@ class SDHandler(BaseHandler):
         return self._generator_settings
 
     @property
+    def generator_settings_scale(self) -> int:
+        return self.generator_settings_cached.scale
+
+    @property
     def controlnet_settings_cached(self):
         if self._controlnet_settings is None:
             self._controlnet_settings = self.controlnet_settings
@@ -194,10 +198,6 @@ class SDHandler(BaseHandler):
     @property
     def controlnet_conditioning_scale(self) -> int:
         return self.controlnet_settings_cached.conditioning_scale
-
-    @property
-    def generator_settings_scale(self) -> int:
-        return self.generator_settings_cached.scale
 
     @property
     def controlnet_is_loading(self) -> bool:

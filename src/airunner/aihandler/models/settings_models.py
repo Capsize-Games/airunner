@@ -515,6 +515,7 @@ class ControlnetModel(Base):
     name = Column(String, nullable=False)
     path = Column(String, nullable=False)
     display_name = Column(String, nullable=False)
+    version = Column(String, nullable=False)
 
 
 class FontSetting(Base):
