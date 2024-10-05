@@ -36,8 +36,6 @@ def upgrade():
                     *settings_models.MetadataSettings.__table__.columns)
     op.create_table(settings_models.GeneratorSettings.__tablename__,
                     *settings_models.GeneratorSettings.__table__.columns)
-    op.create_table(settings_models.ControlnetImageSettings.__tablename__,
-                    *settings_models.ControlnetImageSettings.__table__.columns)
     op.create_table(settings_models.TTSSettings.__tablename__,
                     *settings_models.TTSSettings.__table__.columns)
     op.create_table(settings_models.SpeechT5Settings.__tablename__,
@@ -92,7 +90,6 @@ def upgrade():
     set_default_values(settings_models.DrawingPadSettings)
     set_default_values(settings_models.MetadataSettings)
     set_default_values(settings_models.GeneratorSettings)
-    set_default_values(settings_models.ControlnetImageSettings)
     set_default_values(settings_models.TTSSettings)
     set_default_values(settings_models.SpeechT5Settings)
     set_default_values(settings_models.EspeakSettings)

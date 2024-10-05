@@ -1,6 +1,7 @@
 import os
 from typing import Any, List, Dict
 
+import PIL
 import diffusers
 import numpy as np
 import tomesd
@@ -24,7 +25,7 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import CLIPFeatureExtractor, CLIPTokenizerFast
 
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.aihandler.models.settings_models import Schedulers, Lora, Embedding
+from airunner.aihandler.models.settings_models import Schedulers, Lora, Embedding, ControlnetModel
 from airunner.enums import (
     SDMode, StableDiffusionVersion, GeneratorSection, ModelStatus, ModelType, SignalCode, HandlerState,
     EngineResponseCode, ModelAction
@@ -32,6 +33,8 @@ from airunner.enums import (
 from airunner.exceptions import PipeNotLoadedException, InterruptedException
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils.clear_memory import clear_memory
+from airunner.utils.convert_base64_to_image import convert_base64_to_image
+from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 from airunner.utils.get_torch_device import get_torch_device
 
 SKIP_RELOAD_CONSTS = (
@@ -43,6 +46,7 @@ SKIP_RELOAD_CONSTS = (
 class SDHandler(BaseHandler):
     def  __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._controlnet_model = None
         self._controlnet: ControlNetModel = None
         self._controlnet_processor: Processor = None
         self.model_type = "sd"
@@ -90,19 +94,21 @@ class SDHandler(BaseHandler):
         # database. Caching them here allows us to avoid querying the database each time.
         self._outpaint_image = None
         self._img2img_image = None
-        self._controlnet_image = None
         self._controlnet_settings = None
+        self._controlnet_image_settings = None
         self._generator_settings = None
         self._application_settings = None
+        self._drawing_pad_settings = None
         self._path_settings = None
 
     def _clear_cached_properties(self):
         self._outpaint_image = None
         self._img2img_image = None
-        self._controlnet_image = None
         self._controlnet_settings = None
+        self._controlnet_image_settings = None
         self._generator_settings = None
         self._application_settings = None
+        self._drawing_pad_settings = None
         self._path_settings = None
 
     @Slot(str)
@@ -154,6 +160,12 @@ class SDHandler(BaseHandler):
         return self._application_settings
 
     @property
+    def drawing_pad_settings_cached(self):
+        if self._drawing_pad_settings is None:
+            self._drawing_pad_settings = self.drawing_pad_settings
+        return self._drawing_pad_settings
+
+    @property
     def path_settings_cached(self):
         if self._path_settings is None:
             self._path_settings = self.path_settings
@@ -176,16 +188,32 @@ class SDHandler(BaseHandler):
         return self._controlnet_settings
 
     @property
-    def controlnet_image_cached(self) -> Image:
-        if self._controlnet_image is None:
-            self._controlnet_image = self.controlnet_image
-        return self._controlnet_image
+    def controlnet_image(self) -> Image:
+        img = None
+        if self.controlnet_settings_cached.use_grid_image_as_input:
+            img = self.drawing_pad_settings_cached.image
+            if img is not None:
+                img = convert_base64_to_image(img)
+        else:
+            img = self.controlnet_settings_cached.image
+            if img is not None:
+                img = convert_base64_to_image(img)
+        return img
 
     @property
-    def controlnet_type(self) -> str:
-        controlnet = self.controlnet_image_settings.controlnet
-        controlnet_item = self.controlnet_model_by_name(controlnet)
-        return controlnet_item.name
+    def controlnet_model(self) -> ControlnetModel:
+        if (
+            not self._controlnet_model or
+            self._controlnet_model.version != self.generator_settings_cached.version or
+            self._controlnet_model.display_name != self.controlnet_settings_cached.controlnet
+        ):
+            session = self.db_handler.get_db_session()
+            self._controlnet_model = session.query(ControlnetModel).filter_by(
+                display_name=self.controlnet_settings_cached.controlnet,
+                version=self.generator_settings_cached.version
+            ).first()
+            session.close()
+        return self._controlnet_model
 
     @property
     def controlnet_enabled(self) -> bool:
@@ -381,9 +409,9 @@ class SDHandler(BaseHandler):
         self._load_safety_checker()
         self._load_tokenizer()
         self._load_generator()
+        self._load_controlnet()
         self._load_pipe()
         self._load_scheduler()
-        self._load_controlnet()
         self._load_lora()
         self._load_embeddings()
         self._load_compel()
@@ -430,9 +458,10 @@ class SDHandler(BaseHandler):
             try:
                 response = self._generate()
             except PipeNotLoadedException as e:
-                self.logger.warning(e)
+                self.logger.error(e)
                 response = None
             except Exception as e:
+                print(e)
                 self.logger.error(f"Error generating image: {e}")
                 response = None
             if message is not None:
@@ -499,8 +528,8 @@ class SDHandler(BaseHandler):
         clear_memory()
         args = self._prepare_data()
         self._current_state = HandlerState.GENERATING
-        with torch.no_grad():
-            results = self._pipe(**args)
+        # with torch.no_grad():
+        results = self._pipe(**args)
         images = results.get("images", [])
         images, nsfw_content_detected = self._check_and_mark_nsfw_images(images)
         if images is not None:
@@ -673,7 +702,7 @@ class SDHandler(BaseHandler):
             self._generator.manual_seed(seed)
 
     def _load_controlnet(self):
-        if not self.application_settings.controlnet_enabled or self.controlnet_is_loading:
+        if not self.controlnet_enabled or self.controlnet_is_loading:
             return
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
 
@@ -697,14 +726,11 @@ class SDHandler(BaseHandler):
         if self._controlnet is not None:
             return
         self.logger.debug(f"Loading controlnet model")
-        name = self.controlnet_type
-        controlnet_model = self.controlnet_model_by_name(name)
-        if not controlnet_model:
+        if not self.controlnet_model:
             raise ValueError(f"Unable to find controlnet model {name}")
-        controlnet_model_path = controlnet_model.path
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
-        version: str = self.generator_settings_cached.version
-        path: str = "diffusers/controlnet-canny-sdxl-1.0-small" if self.is_sd_xl else controlnet_model_path
+        version: str = self.controlnet_model.version
+        path: str = "diffusers/controlnet-canny-sdxl-1.0-small" if self.is_sd_xl else self.controlnet_model.path
         controlnet_path = os.path.expanduser(os.path.join(
             self.path_settings_cached.base_path,
             "art/models",
@@ -725,7 +751,7 @@ class SDHandler(BaseHandler):
         if self._controlnet_processor is not None:
             return
         self.logger.debug("Loading controlnet processor")
-        self._controlnet_processor = Processor(self.controlnet_type)
+        self._controlnet_processor = Processor(self.controlnet_model.name)
 
     def _load_scheduler(self):
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
@@ -791,9 +817,6 @@ class SDHandler(BaseHandler):
             except RuntimeError as e:
                 self.logger.warning(f"Failed to load model from {self.model_path}: {e}")
         else:
-            if self.controlnet_enabled:
-                data["controlnet"] = self._controlnet
-
             try:
                 self._pipe = pipeline_class_.from_pretrained(
                     self.model_path,
@@ -1328,7 +1351,6 @@ class SDHandler(BaseHandler):
         self._set_seed()
 
         args = dict(
-            outpaint_box_rect=active_rect,
             width=int(self.application_settings_cached.working_width),
             height=int(self.application_settings_cached.working_height),
             clip_skip=int(self.generator_settings_cached.clip_skip),
@@ -1349,9 +1371,13 @@ class SDHandler(BaseHandler):
             args.update(dict(
                 prompt_embeds=self._prompt_embeds,
                 negative_prompt_embeds=self._negative_prompt_embeds,
-                pooled_prompt_embeds=self._pooled_prompt_embeds,
-                negative_pooled_prompt_embeds=self._negative_pooled_prompt_embeds
             ))
+
+            if self.is_sd_xl:
+                args.update(dict(
+                    pooled_prompt_embeds=self._pooled_prompt_embeds,
+                    negative_pooled_prompt_embeds=self._negative_pooled_prompt_embeds
+                ))
         else:
             args.update(dict(
                 prompt=self.generator_settings_cached.prompt,
@@ -1391,37 +1417,90 @@ class SDHandler(BaseHandler):
             if mask is None:
                 mask = self.outpaint_mask
 
+        # set the image to controlnet image if controlnet is enabled
+        if self.controlnet_enabled:
+            controlnet_image = self.controlnet_image
+            if controlnet_image:
+                controlnet_image = self._resize_image(controlnet_image, width, height)
+                control_image = self._controlnet_processor(controlnet_image, to_pil=True)
+                if control_image is not None:
+                    self.update_settings_by_name(
+                        "controlnet_settings",
+                        "generated_image",
+                        convert_image_to_base64(control_image)
+                    )
+                    if self.is_txt2img:
+                        image = control_image
+                    else:
+                        args.update(dict(
+                            control_image=control_image
+                        ))
+                else:
+                    raise ValueError("Controlnet image is None")
+
         if image is not None:
+            image = self._resize_image(image, width, height)
             args.update(dict(
                 image=image
             ))
 
-        if mask is not None:
+        if mask is not None and self.is_outpaint:
+            mask = self._resize_image(mask, width, height)
+
             args.update(dict(
-                mask=mask
+                mask_image=mask
             ))
 
         if self.controlnet_enabled:
             args.update(dict(
-                guess_mode=None,
+                guess_mode=False,
                 control_guidance_start=0.0,
                 control_guidance_end=1.0,
                 strength=self.controlnet_strength / 100.0,
                 guidance_scale=self.generator_settings_scale / 100.0,
                 controlnet_conditioning_scale=self.controlnet_conditioning_scale / 100.0,
-                controlnet=[
-                    self.controlnet_image_settings.controlnet
-                ]
+                # controlnet=[
+                #     self.controlnet_image_settings.controlnet
+                # ]
             ))
-            if self.is_txt2img:
-                args.update(dict(
-                    image=self.controlnet_image
-                ))
-            else:
-                args.update(dict(
-                    control_image=self.controlnet_image
-                ))
         return args
+
+    def _resize_image(self, image: Image, max_width: int, max_height: int) -> Image:
+        """
+        Resize the image to ensure it is not larger than max_width and max_height,
+        while maintaining the aspect ratio.
+
+        :param image: The input PIL Image.
+        :param max_width: The maximum allowed width.
+        :param max_height: The maximum allowed height.
+        :return: The resized PIL Image.
+        """
+        if image is None:
+            return None
+
+        # Get the original dimensions
+        original_width, original_height = image.size
+
+        # Check if resizing is necessary
+        if original_width <= max_width and original_height <= max_height:
+            return image
+
+        # Calculate the aspect ratio
+        aspect_ratio = original_width / original_height
+
+        # Determine the new dimensions while maintaining the aspect ratio
+        if aspect_ratio > 1:
+            # Landscape orientation
+            new_width = min(max_width, original_width)
+            new_height = int(new_width / aspect_ratio)
+        else:
+            # Portrait orientation or square
+            new_height = min(max_height, original_height)
+            new_width = int(new_height * aspect_ratio)
+
+        # Resize the image
+        resized_image = image.resize((new_width, new_height), PIL.Image.Resampling.LANCZOS)
+        return resized_image
 
     def _set_seed(self):
         seed = self.generator_settings_cached.seed
