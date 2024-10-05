@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QFileDialog
 
-from airunner.enums import SignalCode, WorkerType
+from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils.create_worker import create_worker
 from airunner.widgets.canvas.custom_scene import CustomScene

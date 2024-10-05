@@ -1,8 +1,6 @@
-from functools import partial
-
 from PySide6.QtCore import Slot, QTimer
 
-from airunner.enums import SignalCode, StableDiffusionVersion, ImageGenerator, GeneratorSection, WorkerType
+from airunner.enums import SignalCode, StableDiffusionVersion, ImageGenerator, GeneratorSection
 from airunner.utils.create_worker import create_worker
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.model_widget import ModelWidget
