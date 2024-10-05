@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import threading
 import urllib
 import webbrowser
 from functools import partial
@@ -19,7 +20,6 @@ from PySide6.QtWidgets import (
     QCheckBox, QInputDialog
 )
 from bs4 import BeautifulSoup
-from tensorflow.python.ops.gen_dataset_ops import ModelDataset
 
 from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
