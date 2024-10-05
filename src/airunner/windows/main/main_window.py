@@ -1062,6 +1062,7 @@ class MainWindow(
         self.emit_signal(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, {
             "tool": tool
         })
+        self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
 
     def _initialize_window(self):
         self.center()
