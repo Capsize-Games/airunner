@@ -512,8 +512,6 @@ class BaseAgent(
 
         self.rendered_template = self.get_rendered_template(action)
 
-        print(self.rendered_template)
-
         model_inputs = self.tokenizer(
             self.rendered_template,
             return_tensors="pt"
@@ -731,8 +729,6 @@ class BaseAgent(
                     }
                 )
             elif action is LLMActionType.APPLICATION_COMMAND:
-                print("LLMActionType.APPLICATION_COMMAND", action)
-                print(streamed_template)
                 index = ''.join(c for c in streamed_template if c.isdigit())
                 try:
                     index = int(index)
