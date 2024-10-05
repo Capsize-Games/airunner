@@ -31,7 +31,7 @@ class Ui_chat_prompt(object):
         self.gridLayout_3.setVerticalSpacing(10)
         self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setSpacing(0)
+        self.horizontalLayout.setSpacing(5)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.action = QComboBox(chat_prompt)
