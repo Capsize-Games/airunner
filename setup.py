@@ -31,7 +31,6 @@ setup(
         "xformers==0.0.28.post1",
         "tensorflow==2.17.0",
         "DeepCache==0.1.1",
-        "tensorflow==2.17.0",
         "alembic==1.13.3",
 
         # LLM Dependencies
