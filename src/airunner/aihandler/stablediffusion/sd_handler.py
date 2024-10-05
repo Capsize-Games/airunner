@@ -185,7 +185,7 @@ class SDHandler(BaseHandler):
 
     @property
     def controlnet_enabled(self) -> bool:
-        return self.controlnet_settings_cached.enabled
+        return self.controlnet_settings_cached.enabled and self.application_settings.controlnet_enabled
 
     @property
     def controlnet_strength(self) -> int:
@@ -673,7 +673,7 @@ class SDHandler(BaseHandler):
             self._generator.manual_seed(seed)
 
     def _load_controlnet(self):
-        if not self.controlnet_enabled or self.controlnet_is_loading:
+        if not self.application_settings.controlnet_enabled or self.controlnet_is_loading:
             return
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
 

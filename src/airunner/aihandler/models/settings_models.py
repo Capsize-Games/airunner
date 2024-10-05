@@ -22,6 +22,7 @@ class ApplicationSettings(Base):
     llm_enabled = Column(Boolean, default=False)
     tts_enabled = Column(Boolean, default=False)
     stt_enabled = Column(Boolean, default=False)
+    controlnet_enabled = Column(Boolean, default=False)
     ai_mode = Column(Boolean, default=True)
     active_grid_size_lock = Column(Boolean, default=False)
     installation_path = Column(String, default="~/.airunner")

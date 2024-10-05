@@ -48,7 +48,7 @@ class StatusWidget(BaseWidget):
                 "status": self._model_status[ModelType.SD],
                 "path": ""
             })
-        if self.controlnet_settings.enabled:
+        if self.application_settings.controlnet_enabled:
             self.on_model_status_changed_signal({
                 "model": ModelType.CONTROLNET,
                 "status": self._model_status[ModelType.CONTROLNET],
