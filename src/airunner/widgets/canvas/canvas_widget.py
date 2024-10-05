@@ -71,7 +71,7 @@ class CanvasWidget(
         self.update_application_settings("pivot_point_y", value.y())
 
     def on_canvas_update_cursor_signal(self, message: dict):
-        event = message["event"]
+        event = message.get("event", None)
         if self.current_tool in (
             CanvasToolName.BRUSH,
             CanvasToolName.ERASER
@@ -82,7 +82,7 @@ class CanvasWidget(
                 self.brush_settings.size,
             )
         elif self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
-            if event.buttons() == Qt.MouseButton.LeftButton:
+            if event and event.buttons() == Qt.MouseButton.LeftButton:
                 cursor = Qt.CursorShape.ClosedHandCursor
             else:
                 cursor = Qt.CursorShape.OpenHandCursor
