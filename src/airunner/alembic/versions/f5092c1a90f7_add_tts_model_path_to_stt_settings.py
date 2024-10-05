@@ -1,10 +1,3 @@
-"""Add tts_model_path to path_settings
-
-Revision ID: f5092c1a90f7
-Revises: 7766054d170b
-Create Date: 2024-10-01 12:06:21.714869
-
-"""
 from typing import Sequence, Union
 
 from alembic import op
@@ -17,10 +10,21 @@ down_revision: Union[str, None] = '7766054d170b'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-
 def upgrade():
-    op.add_column('path_settings', sa.Column('tts_model_path', sa.String(), nullable=True, server_default='default/path/to/tts_model'))
+    # Check if the 'tts_model_path' column already exists
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = [column['name'] for column in inspector.get_columns('path_settings')]
+
+    if 'tts_model_path' not in columns:
+        op.add_column('path_settings', sa.Column('tts_model_path', sa.String(), nullable=True, server_default='default/path/to/tts_model'))
 
 def downgrade():
-    op.drop_column('path_settings', 'tts_model_path')
+    # Drop the 'tts_model_path' column if it exists
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = [column['name'] for column in inspector.get_columns('path_settings')]
+
+    if 'tts_model_path' in columns:
+        op.drop_column('path_settings', 'tts_model_path')
     # ### end Alembic commands ###
