@@ -830,6 +830,7 @@ class SDHandler(BaseHandler):
             lora_base_path = self.lora_base_path
             self.logger.info(f"Loading LORA weights from {lora_base_path}/{filename}")
             adapter_name = os.path.splitext(filename)[0]
+            adapter_name = adapter_name.replace(".", "_")
             self._pipe.load_lora_weights(
                 lora_base_path,
                 weight_name=filename,
