@@ -5,6 +5,12 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.aihandler.logger import Logger
 from airunner.utils.create_worker import create_worker
+from airunner.workers.audio_capture_worker import AudioCaptureWorker
+from airunner.workers.audio_processor_worker import AudioProcessorWorker
+from airunner.workers.llm_generate_worker import LLMGenerateWorker
+from airunner.workers.sd_worker import SDWorker
+from airunner.workers.tts_generator_worker import TTSGeneratorWorker
+from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 
 
 class WorkerManager(QObject, MediatorMixin, SettingsMixin):
@@ -51,15 +57,15 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
             self.register_stt_workers()
 
     def register_sd_workers(self):
-        self._sd_worker = create_worker(WorkerType.SDWorker)
+        self._sd_worker = create_worker(SDWorker)
 
     def register_llm_workers(self, agent_options):
-        self._llm_generate_worker = create_worker(WorkerType.LLMGenerateWorker, agent_options=agent_options)
+        self._llm_generate_worker = create_worker(LLMGenerateWorker, agent_options=agent_options)
 
     def register_tts_workers(self):
-        self._tts_generator_worker = create_worker(WorkerType.TTSGeneratorWorker)
-        self._tts_vocalizer_worker = create_worker(WorkerType.TTSVocalizerWorker)
+        self._tts_generator_worker = create_worker(TTSGeneratorWorker)
+        self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
 
     def register_stt_workers(self):
-        self._stt_audio_capture_worker = create_worker(WorkerType.AudioCaptureWorker)
-        self._stt_audio_processor_worker = create_worker(WorkerType.AudioProcessorWorker)
+        self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
+        self._stt_audio_processor_worker = create_worker(AudioProcessorWorker)
