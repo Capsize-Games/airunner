@@ -227,7 +227,9 @@ QWidget#scrollAreaWidgetContents {
 }
 
 QStatusBar {
-    border-top: 1px solid #333;
+    border-top: 1px solid #111;
+    border-bottom: 1px solid #111;
+    border-left: 1px solid #111;
 }
 
 QStatusBar QLabel {
@@ -719,5 +721,12 @@ QGraphicsView#image_container {
 }
 
 #content_splitter {
-    border: 1px solid rgba(0, 132, 185, 50);
+    border: 1px solid #101010;
+}
+
+QMenu, QToolBar, QMenuBar {
+    border: 1px solid #111;
+}
+QMenu {
+    padding: 10px;
 }
