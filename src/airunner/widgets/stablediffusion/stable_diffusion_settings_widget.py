@@ -9,6 +9,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.utils.create_worker import create_worker
+from airunner.workers.model_scanner_worker import ModelScannerWorker
 
 
 class StableDiffusionSettingsWidget(
@@ -20,7 +21,7 @@ class StableDiffusionSettingsWidget(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         PipelineMixin.__init__(self)
-        self.model_scanner_worker = create_worker(WorkerType.ModelScannerWorker)
+        self.model_scanner_worker = create_worker(ModelScannerWorker)
         self.register(SignalCode.AI_MODELS_CREATE_SIGNAL, self.on_models_changed_signal)
         self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.update_form)
 
