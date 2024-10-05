@@ -10,11 +10,11 @@ Do not change the order of the imports.
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
-import facehuggershield
-facehuggershield.huggingface.activate(
-    show_stdout=True,
-    darklock_os_whitelisted_directories=["~/.airunner", "/tmp"]
-)
+# import facehuggershield
+# facehuggershield.huggingface.activate(
+#     show_stdout=True,
+#     darklock_os_whitelisted_directories=["~/.airunner", "/tmp"]
+# )
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
@@ -37,5 +37,5 @@ if __name__ == "__main__":
     run_alembic_upgrade()
     App(
         restrict_os_access=None,
-        defendatron=facehuggershield.huggingface.defendatron
+        #defendatron=facehuggershield.huggingface.defendatron
     )

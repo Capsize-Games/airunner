@@ -14,7 +14,7 @@ class ControlnetSettingsWidget(BaseWidget):
         self._load_controlnet_models()
 
     def controlnet_changed(self, val):
-        self.update_controlnet_image_settings("controlnet", val)
+        self.update_controlnet_settings("controlnet", val)
 
     def on_application_settings_changed_signal(self):
         self._load_controlnet_models()
@@ -32,7 +32,7 @@ class ControlnetSettingsWidget(BaseWidget):
             self.ui.controlnet.clear()
             for index, item in enumerate(controlnet_models):
                 self.ui.controlnet.addItem(item.display_name)
-                if self.controlnet_image_settings.controlnet == item.display_name:
+                if self.controlnet_settings.controlnet == item.display_name:
                     current_index = index
             self.ui.controlnet.setCurrentIndex(current_index)
             self.ui.controlnet.blockSignals(False)

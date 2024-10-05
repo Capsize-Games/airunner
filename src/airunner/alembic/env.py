@@ -14,7 +14,7 @@ from airunner.aihandler.models.settings_models import (
     Conversation, Message, Summary,
     ApplicationSettings, ActiveGridSettings, CanvasSettings, ControlnetSettings,
     ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings,
-    GeneratorSettings, ControlnetImageSettings, LLMGeneratorSettings, TTSSettings,
+    GeneratorSettings, LLMGeneratorSettings, TTSSettings,
     SpeechT5Settings, EspeakSettings, STTSettings, Schedulers, BrushSettings,
     GridSettings, PathSettings, MemorySettings, Chatbot, TargetFiles, TargetDirectories,
     AIModels, ShortcutKeys, Lora, SavedPrompt, Embedding, PromptTemplate, ControlnetModel,
@@ -36,7 +36,7 @@ metadata = MetaData()
 for model in [
     ApplicationSettings, ActiveGridSettings, CanvasSettings, ControlnetSettings,
     ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings,
-    GeneratorSettings, ControlnetImageSettings, LLMGeneratorSettings, TTSSettings,
+    GeneratorSettings, LLMGeneratorSettings, TTSSettings,
     SpeechT5Settings, EspeakSettings, STTSettings, Schedulers, BrushSettings,
     GridSettings, PathSettings, MemorySettings, Chatbot, TargetFiles, TargetDirectories,
     AIModels, ShortcutKeys, Lora, SavedPrompt, Embedding, PromptTemplate, ControlnetModel,
