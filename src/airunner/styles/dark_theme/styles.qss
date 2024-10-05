@@ -717,3 +717,7 @@ QPushButton#size_lock_button {
 QGraphicsView#image_container {
     background-color: #000;
 }
+
+#content_splitter {
+    border: 1px solid rgba(0, 132, 185, 50);
+}
