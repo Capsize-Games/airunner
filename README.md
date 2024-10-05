@@ -14,71 +14,55 @@
 
 # AI RUNNER 
 
-## v3.0.0.devX
-
-AI Runner can be compiled with `pyinstaller` however the current version
-is not yet stable (check the releases for stable versions).
-
-Version 3.0 is a major upgrade which aims to move the application out of
-prototype stage and into a more stable and user-friendly state.
-
-It comes with a new UI, new features, and a more robust codebase, security
-updates, and a more streamlined installation process and much more.
-
-We plan to release future distributions via Snap on Linux.
-
-See `Privacy and Security` for more information.
-
 ---
 
-## Stable Diffusion on your own hardware 
+## Run AI models on your own hardware 
 
+### Stable Diffusion
 
-![img_3.png](img.png)
+![img.png](img.png)
+
+### Customizable Chatbots with Moods and Personalities
+
+![img_1.png](img_1.png)
 
 ---
 
 ## ⭐ Features
 
-AI Runner is a multi-modal AI interface which allows you to run open-source 
-large language models and AI image generators on your own hardware.
+AI Runner is an AI interface which allows you to run open-source 
+large language models (LLM) and AI image generators (Stable Diffusion) on your own hardware.
 
-| Feature                                           | Description                                              |
-|---------------------------------------------------|----------------------------------------------------------|
-| 🗣️ **LLMs and communication**                    |
-| ✅ Voice-based chatbot conversations               | Have conversations with a chatbot using your voice       |
-| ✅ Text-to-speech                                  | Convert text to spoken audio                             |
-| ✅ Speech-to-text                                  | Convert spoken audio to text                             |
-| ✅ Vision-to-text                                  | Extract text from images                                 |
-| ✅ Text generation with LLMs                       | Generate text using large language models                |
-| ✅ RAG on local documents and websites             | Interact with your local documents using an LLM          |
-| 🎨 **Image Generation**                           |
-| ✅ Stable Diffusion (all versions)                 | Generate images using Stable Diffusion                   |
-| 🔜 Kandinsky                                      | Generate images using Kandinsky                          |
-| ✅ Near Real-Time Drawing                          | Draw and generate images in near real-time               |
-| ✅ Text to Image (aka TextToImage / Txt2Img)       | Generate images from textual descriptions                |
-| ✅ Image to Image (aka ImageToImage / Image2Image) | Generate images based on input images                    |
-| 🖼️ **Image Manipulation**                        |
-| ✅ Inpaint and Outpaint                            | Modify parts of an image while maintaining context       |
-| ✅ Pix2Pix                                         | Transform images from one domain to another              |
-| ✅ Depth to Image (aka DepthToImage / Depth2Img)   | Generate images from depth maps                          |
-| ✅ Controlnet                                      | Control image generation with additional input           |
-| ✅ LoRA                                            | Efficiently fine-tune models with LoRA                   |
-| ✅ Textual Embeddings                              | Use textual embeddings for image generation control      |
-| 🔜 Upscale with GFPGAN                            | Use textual embeddings for image generation control      |
-| 🔧 **Utility**                                    |
-| ✅ Run offline, locally                            | Run on your own hardware without internet                |
-| ✅ Fast generation                                 | Generate images in ~2 seconds (RTX 2080s)                |
-| ✅ Run multiple models at once                     | Utilize multiple models simultaneously                   |
-| ✅ Drawing tools                                   | Built-in tools for drawing and image manipulation        |
-| ✅ Image filters                                   | Apply various filters to images                          |
-| ✅ Dark mode                                       | Comfortable viewing experience in low-light environments |
-| ✅ Infinite scrolling canvas                       | Seamlessly scroll through generated images               |
-| ✅ NSFW filter toggle                              | Help control the visibility of NSFW content              |
-| ✅ NSFW guardrails                                 | Help prevent generation of harmful content               |
-| ✅ Standard Stable Diffusion settings              | Easily adjust standard Stable Diffusion parameters       |
-| ✅ Fast load time, responsive interface            | Enjoy a smooth and responsive user experience            |
-| ✅ Pure python                                     | No reliance on a webserver, pure python implementation   |
+| Feature                                | Description                                              |
+|----------------------------------------|----------------------------------------------------------|
+| 🗣️ **LLMs and communication**         |
+| ✅ Voice-based chatbot conversations    | Have conversations with a chatbot using your voice       |
+| ✅ Text-to-speech                       | Convert text to spoken audio                             |
+| ✅ Speech-to-text                       | Convert spoken audio to text                             |
+| ✅ Customizable chatbots with LLMs      | Generate text using large language models                |
+| ✅ RAG on local documents and websites  | Interact with your local documents using an LLM          |
+| 🎨 **Image Generation**                |
+| ✅ Stable Diffusion (all versions)      | Generate images using Stable Diffusion                   |
+| ✅ Drawing tools                        | Turn sketches into art                                   |
+| ✅ Text-to-Image                        | Generate images from textual descriptions                |
+| ✅ Image-to-Image                       | Generate images based on input images                    |
+| 🖼️ **Image Manipulation**             |
+| ✅ Inpaint and Outpaint                 | Modify parts of an image while maintaining context       |
+| ✅ Controlnet                           | Control image generation with additional input           |
+| ✅ LoRA                                 | Efficiently fine-tune models with LoRA                   |
+| ✅ Textual Embeddings                   | Use textual embeddings for image generation control      |
+| ✅ Image Filters                        | Blur, film grain, pixel art and more                     |
+| 🔧 **Utility**                         |
+| ✅ Run offline, locally                 | Run on your own hardware without internet                |
+| ✅ Fast generation                      | Generate images in ~2 seconds (RTX 2080s)                |
+| ✅ Run multiple models at once          | Utilize multiple models simultaneously                   |
+| ✅ Dark mode                            | Comfortable viewing experience in low-light environments |
+| ✅ Infinite scrolling canvas            | Seamlessly scroll through generated images               |
+| ✅ NSFW filter toggle                   | Help control the visibility of NSFW content              |
+| ✅ NSFW guardrails toggle               | Help prevent generation of LLM harmful content           |
+| ✅ Fully customizable                   | Easily adjust all parameters                             |
+| ✅ Fast load time, responsive interface | Enjoy a smooth and responsive user experience            |
+| ✅ Pure python                          | No reliance on a webserver, pure python implementation   |
 
 ---
 
@@ -162,7 +146,7 @@ python -m unittest discover tests
 Run tests with coverage tracking:
 
 ```bash
-coverage run --source=src/airunner --omit=__init__.py,*/GFPGAN/*,*/data/*,*/tests/*,*_ui.py,*/enums.py,*/settings.py -m unittest discover src/airunner/tests
+coverage run --source=src/airunner --omit=__init__.py,*/data/*,*/tests/*,*_ui.py,*/enums.py,*/settings.py -m unittest discover src/airunner/tests
 ```
 
 To see a report in the terminal, use:
