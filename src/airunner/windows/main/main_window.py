@@ -1,7 +1,6 @@
 import os
 import re
 import sys
-import threading
 import urllib
 import webbrowser
 from functools import partial
@@ -55,6 +54,7 @@ from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
+from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.worker_manager import WorkerManager
 
 
@@ -185,6 +185,265 @@ class MainWindow(
 
         self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, { "main_window": self })
 
+    @property
+    def generator_tab_widget(self):
+        return self.ui.generator_widget
+
+    @property
+    def version(self):
+        if self._version is None:
+            self._version = get_version()
+        return f"v{self._version}"
+
+    @property
+    def latest_version(self):
+        return self._latest_version
+
+    @latest_version.setter
+    def latest_version(self, val):
+        self._latest_version = val
+
+    @property
+    def document_name(self):
+        return "Untitled"
+
+    @property
+    def current_tool(self):
+        return CanvasToolName(self.application_settings.current_tool)
+
+    """
+    Slot functions
+    
+    The following functions are defined in and connected to the appropriate
+    signals in the corresponding ui file.
+    """
+    @Slot(bool)
+    def action_toggle_brush(self, active: bool):
+        self.toggle_tool(CanvasToolName.BRUSH, active)
+
+    @Slot(bool)
+    def action_toggle_eraser(self, active: bool):
+        self.toggle_tool(CanvasToolName.ERASER, active)
+
+    @Slot(bool)
+    def action_toggle_select(self, active: bool):
+        self.toggle_tool(CanvasToolName.SELECTION, active)
+
+    @Slot(bool)
+    def action_toggle_active_grid_area(self, active: bool):
+        self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, active)
+
+    @Slot(bool)
+    def action_toggle_nsfw_filter_triggered(self, val: bool):
+        if val is False:
+            self.show_nsfw_warning_popup()
+        else:
+            self.update_application_settings("nsfw_filter", val)
+            self.toggle_nsfw_filter()
+            self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
+
+    @Slot()
+    def action_center_clicked(self):
+        print("center clicked")
+
+    @Slot()
+    def action_reset_settings(self):
+        reply = QMessageBox.question(
+            self,
+            'Reset Settings',
+            'Are you sure you want to reset all settings to their default values?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            self.reset_settings()
+            self.restart()
+
+    @Slot()
+    def import_controlnet_image(self):
+        self.emit_signal(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
+
+    @Slot()
+    def export_controlnet_image(self):
+        self.emit_signal(SignalCode.CONTROLNET_EXPORT_IMAGE_SIGNAL)
+
+    @Slot()
+    def import_drawingpad_image(self):
+        self.emit_signal(SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL)
+
+    @Slot()
+    def export_drawingpad_image(self):
+        self.emit_signal(SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL)
+
+    @Slot()
+    def action_export_image_triggered(self):
+        self.emit_signal(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
+
+    @Slot()
+    def action_import_image_triggered(self):
+        self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
+
+    @Slot()
+    def action_new_document_triggered(self):
+        self.new_document()
+        self.emit_signal(SignalCode.CANVAS_CLEAR)
+
+    @Slot()
+    def action_undo_triggered(self):
+        self.emit_signal(SignalCode.UNDO_SIGNAL)
+
+    @Slot()
+    def action_redo_triggered(self):
+        self.emit_signal(SignalCode.REDO_SIGNAL)
+
+    @Slot()
+    def action_paste_image_triggered(self):
+        self.emit_signal(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL)
+
+    @Slot()
+    def action_copy_image_triggered(self):
+        self.emit_signal(SignalCode.CANVAS_COPY_IMAGE_SIGNAL)
+
+    @Slot()
+    def action_cut_image_triggered(self):
+        self.emit_signal(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
+
+    @Slot()
+    def action_rotate_90_clockwise_triggered(self):
+        self.emit_signal(SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL)
+
+    @Slot()
+    def action_rotate_90_counterclockwise_triggered(self):
+        self.emit_signal(SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL)
+
+    @Slot()
+    def action_show_prompt_browser_triggered(self):
+        PromptBrowser()
+
+    @Slot()
+    def action_clear_all_prompts_triggered(self):
+        self.clear_all_prompts()
+
+    @Slot()
+    def action_show_model_manager(self):
+        from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
+        ModelManagerWidget()
+
+    @Slot()
+    def action_triggered_browse_ai_runner_path(self):
+        path = self.path_settings.base_path
+        if path == "":
+            path = BASE_PATH
+        show_path(path)
+
+    @Slot()
+    def action_show_images_path(self):
+        self.show_settings_path("image_path")
+
+    @Slot()
+    def action_show_model_path_txt2img(self):
+        self.show_settings_path("txt2img_model_path")
+
+    @Slot()
+    def action_show_model_path_inpaint(self):
+        self.show_settings_path("inpaint_model_path")
+
+    @Slot()
+    def action_show_model_path_embeddings(self):
+        self.show_settings_path("embeddings_model_path")
+
+    @Slot()
+    def action_show_model_path_lora(self):
+        self.show_settings_path("lora_model_path")
+
+    @Slot()
+    def action_show_llm(self):
+        pass
+
+    @Slot()
+    def action_show_about_window(self):
+        from airunner.windows.about.about import AboutWindow
+        AboutWindow()
+
+    @Slot()
+    def action_show_settings(self):
+        from airunner.windows.settings.airunner_settings import SettingsWindow
+        SettingsWindow()
+
+    @Slot()
+    def action_open_vulnerability_report(self):
+        webbrowser.open(VULNERABILITY_REPORT_LINK)
+
+    @Slot()
+    def action_open_bug_report(self):
+        webbrowser.open(BUG_REPORT_LINK)
+
+    @Slot()
+    def action_open_discord(self):
+        pass
+
+    @Slot(bool)
+    def action_outpaint_toggled(self, val: bool):
+        self.update_outpaint_settings("enabled", val)
+
+    @Slot()
+    def action_outpaint_export(self):
+        self.emit_signal(SignalCode.OUTPAINT_EXPORT_SIGNAL)
+
+    @Slot()
+    def action_outpaint_import(self):
+        self.emit_signal(SignalCode.OUTPAINT_IMPORT_SIGNAL)
+
+    @Slot()
+    def action_run_setup_wizard_clicked(self):
+        self.show_setup_wizard()
+
+    @Slot(bool)
+    def action_toggle_llm(self, val: bool):
+        self.on_toggle_llm(val=val)
+
+    @Slot(bool)
+    def action_image_generator_toggled(self, val: bool):
+        self.on_toggle_sd(val=val)
+
+    @Slot(bool)
+    def tts_button_toggled(self, val: bool):
+        self.on_toggle_tts(val=val)
+
+    @Slot(bool)
+    def action_controlnet_toggled(self, val: bool):
+        self._update_action_button(
+            ModelType.CONTROLNET,
+            self.ui.actionToggle_Controlnet,
+            val,
+            SignalCode.CONTROLNET_LOAD_SIGNAL,
+            SignalCode.CONTROLNET_UNLOAD_SIGNAL,
+            "controlnet_enabled"
+        )
+
+    @Slot(bool)
+    def v2t_button_toggled(self, val):
+        if self._model_status[ModelType.STT] is ModelStatus.LOADING:
+            val = not val
+        self._update_action_button(self.ui.actionToggle_Speech_to_Text, val)
+        QApplication.processEvents()
+        self.update_application_settings("stt_enabled", val)
+        if not val:
+            self.emit_signal(SignalCode.STT_UNLOAD_SIGNAL)
+        else:
+            self.emit_signal(SignalCode.STT_LOAD_SIGNAL)
+
+    @Slot()
+    def action_stats_triggered(self):
+        from airunner.widgets.stats.stats_widget import StatsWidget
+        widget = StatsWidget()
+        # display in a window
+        widget.show()
+
+    """
+    End slot functions
+    """
     def download_url(self, url, save_path):
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -249,54 +508,6 @@ class MainWindow(
                     }
                 }
             )
-
-    def keyPressEvent(self, event):
-        super().keyPressEvent(event)
-        for v in self.shortcut_keys:
-            if v.key == event.key():
-                for signal in SignalCode:
-                    if signal.value == v.signal:
-                        self.emit_signal(signal)
-                        break
-
-    def key_text(self, key_name):
-        for shortcutkey in self.shortcut_keys:
-            if shortcutkey.name == key_name:
-                return shortcutkey.text
-        return ""
-
-    def on_save_stablediffusion_prompt_signal(self, data: dict):
-        self.create_saved_prompt({
-            'prompt': data["prompt"],
-            'negative_prompt': data["negative_prompt"],
-            'secondary_prompt': data["secondary_prompt"],
-            'secondary_negative_prompt': data["secondary_negative_prompt"],
-        })
-
-    def set_path_settings(self, key, val):
-        self.update_path_settings(key, val)
-
-    @property
-    def generator_tab_widget(self):
-        return self.ui.generator_widget
-
-    @property
-    def version(self):
-        if self._version is None:
-            self._version = get_version()
-        return f"v{self._version}"
-
-    @property
-    def latest_version(self):
-        return self._latest_version
-
-    @latest_version.setter
-    def latest_version(self, val):
-        self._latest_version = val
-
-    @property
-    def document_name(self):
-        return "Untitled"
 
     def on_describe_image_signal(self, data):
         image = data["image"]
@@ -398,12 +609,33 @@ class MainWindow(
     def layer_opacity_changed(self, attr_name, value=None, widget=None):
         self.emit_signal(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
 
-    """
-    Slot functions
-    
-    The following functions are defined in and connected to the appropriate
-    signals in the corresponding ui file.
-    """
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+        for v in self.shortcut_keys:
+            if v.key == event.key():
+                for signal in SignalCode:
+                    if signal.value == v.signal:
+                        self.emit_signal(signal)
+                        break
+
+    def key_text(self, key_name):
+        for shortcutkey in self.shortcut_keys:
+            if shortcutkey.name == key_name:
+                return shortcutkey.text
+        return ""
+
+    def on_save_stablediffusion_prompt_signal(self, data: dict):
+        self.create_saved_prompt({
+            'prompt': data["prompt"],
+            'negative_prompt': data["negative_prompt"],
+            'secondary_prompt': data["secondary_prompt"],
+            'secondary_negative_prompt': data["secondary_negative_prompt"],
+        })
+
+    def set_path_settings(self, key, val):
+        self.update_path_settings(key, val)
+
+
     def action_quit_triggered(self):
         QApplication.quit()
         self.close()
@@ -421,82 +653,6 @@ class MainWindow(
         self.emit_signal(SignalCode.QUIT_APPLICATION)
         # super().closeEvent(event)
 
-    @Slot()
-    def action_new_document_triggered(self):
-        self.new_document()
-        self.emit_signal(SignalCode.CANVAS_CLEAR)
-
-    @Slot()
-    def action_undo_triggered(self):
-        self.emit_signal(SignalCode.UNDO_SIGNAL)
-
-    @Slot()
-    def action_redo_triggered(self):
-        self.emit_signal(SignalCode.REDO_SIGNAL)
-
-    @Slot()
-    def action_paste_image_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL)
-
-    @Slot()
-    def action_copy_image_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_COPY_IMAGE_SIGNAL)
-
-    @Slot()
-    def action_cut_image_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
-
-    @Slot()
-    def action_rotate_90_clockwise_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL)
-
-    @Slot()
-    def action_rotate_90_counterclockwise_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL)
-
-    @Slot()
-    def action_show_prompt_browser_triggered(self):
-        self.show_prompt_browser()
-
-    @Slot()
-    def action_clear_all_prompts_triggered(self):
-        self.clear_all_prompts()
-
-    @Slot()
-    def action_show_model_manager(self):
-        from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
-        ModelManagerWidget()
-
-    @Slot()
-    def action_triggered_browse_ai_runner_path(self):
-        path = self.path_settings.base_path
-        if path == "":
-            path = BASE_PATH
-        show_path(path)
-
-    @Slot()
-    def action_show_images_path(self):
-        self.show_settings_path("image_path")
-
-    @Slot()
-    def action_show_model_path_txt2img(self):
-        self.show_settings_path("txt2img_model_path")
-
-    @Slot()
-    def action_show_model_path_inpaint(self):
-        self.show_settings_path("inpaint_model_path")
-
-    @Slot()
-    def action_show_model_path_embeddings(self):
-        self.show_settings_path("embeddings_model_path")
-
-    @Slot()
-    def action_show_model_path_lora(self):
-        self.show_settings_path("lora_model_path")
-
-    @Slot()
-    def action_show_llm(self):
-        pass
 
     def show_settings_path(self, name, default_path=None):
         path = getattr(self.path_settings, name)
@@ -508,37 +664,12 @@ class MainWindow(
 
         icon = QtGui.QIcon()
         icon.addPixmap(
-            QtGui.QPixmap(f":/icons/{theme}/{icon_name}.svg"), 
-            QtGui.QIcon.Mode.Normal, 
+            QtGui.QPixmap(f":/icons/{theme}/{icon_name}.svg"),
+            QtGui.QIcon.Mode.Normal,
             QtGui.QIcon.State.Off)
         getattr(self.ui, widget_name).setIcon(icon)
         self.update()
 
-    @Slot()
-    def action_show_about_window(self):
-        from airunner.windows.about.about import AboutWindow
-        AboutWindow()
-
-    @Slot()
-    def action_show_settings(self):
-        from airunner.windows.settings.airunner_settings import SettingsWindow
-        SettingsWindow()
-
-    @Slot()
-    def action_open_vulnerability_report(self):
-        webbrowser.open(VULNERABILITY_REPORT_LINK)
-
-    @Slot()
-    def action_open_bug_report(self):
-        webbrowser.open(BUG_REPORT_LINK)
-
-    @Slot()
-    def action_open_discord(self):
-        pass
-
-    """
-    End slot functions
-    """
 
     def toggle_nsfw_filter(self):
         self.set_nsfw_filter_tooltip()
@@ -553,57 +684,6 @@ class MainWindow(
             self.showNormal()
         else:
             self.showFullScreen()
-
-    @Slot(bool)
-    def action_outpaint_toggled(self, val: bool):
-        self.update_outpaint_settings("enabled", val)
-
-    @Slot()
-    def action_outpaint_export(self):
-        self.emit_signal(SignalCode.OUTPAINT_EXPORT_SIGNAL)
-
-    @Slot()
-    def action_outpaint_import(self):
-        self.emit_signal(SignalCode.OUTPAINT_IMPORT_SIGNAL)
-
-    @Slot()
-    def action_run_setup_wizard_clicked(self):
-        self.show_setup_wizard()
-
-    @Slot(bool)
-    def action_toggle_llm(self, val: bool):
-        self.on_toggle_llm(val=val)
-
-    @Slot(bool)
-    def action_image_generator_toggled(self, val: bool):
-        self.on_toggle_sd(val=val)
-
-    @Slot(bool)
-    def tts_button_toggled(self, val: bool):
-        self.on_toggle_tts(val=val)
-
-    @Slot(bool)
-    def action_controlnet_toggled(self, val: bool):
-        self._update_action_button(
-            ModelType.CONTROLNET,
-            self.ui.actionToggle_Controlnet,
-            val,
-            SignalCode.CONTROLNET_LOAD_SIGNAL,
-            SignalCode.CONTROLNET_UNLOAD_SIGNAL,
-            "controlnet_enabled"
-        )
-
-    @Slot(bool)
-    def v2t_button_toggled(self, val):
-        if self._model_status[ModelType.STT] is ModelStatus.LOADING:
-            val = not val
-        self._update_action_button(self.ui.actionToggle_Speech_to_Text, val)
-        QApplication.processEvents()
-        self.update_application_settings("stt_enabled", val)
-        if not val:
-            self.emit_signal(SignalCode.STT_UNLOAD_SIGNAL)
-        else:
-            self.emit_signal(SignalCode.STT_LOAD_SIGNAL)
 
     def on_toggle_llm(self, data:dict=None, val=None):
         if val is None:
@@ -667,13 +747,6 @@ class MainWindow(
                 self.emit_signal(load_signal, data)
             else:
                 self.emit_signal(unload_signal, data)
-
-    @Slot()
-    def action_stats_triggered(self):
-        from airunner.widgets.stats.stats_widget import StatsWidget
-        widget = StatsWidget()
-        # display in a window
-        widget.show()
 
     def save_state(self):
         if self.quitting:
@@ -765,31 +838,6 @@ class MainWindow(
 
     def action_toggle_grid(self, val):
         self.update_grid_settings("show_grid", val)
-
-    @Slot(bool)
-    def action_toggle_brush(self, active: bool):
-        self.toggle_tool(CanvasToolName.BRUSH, active)
-
-    @Slot(bool)
-    def action_toggle_eraser(self, active: bool):
-        self.toggle_tool(CanvasToolName.ERASER, active)
-
-    @Slot(bool)
-    def action_toggle_select(self, active: bool):
-        self.toggle_tool(CanvasToolName.SELECTION, active)
-
-    @Slot(bool)
-    def action_toggle_active_grid_area(self, active: bool):
-        self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, active)
-
-    @Slot(bool)
-    def action_toggle_nsfw_filter_triggered(self, val: bool):
-        if val is False:
-            self.show_nsfw_warning_popup()
-        else:
-            self.update_application_settings("nsfw_filter", val)
-            self.toggle_nsfw_filter()
-            self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
 
     def show_nsfw_warning_popup(self):
         if self.application_settings.show_nsfw_warning:
@@ -964,10 +1012,6 @@ class MainWindow(
     def display_filter_window(self, image_filter):
         FilterWindow(image_filter.id)
 
-    @property
-    def current_tool(self):
-        return CanvasToolName(self.application_settings.current_tool)
-
     def _initialize_default_buttons(self):
         show_grid = self.grid_settings.show_grid
         current_tool = self.current_tool
@@ -981,7 +1025,8 @@ class MainWindow(
         self.ui.actionSafety_Checker.setChecked(self.application_settings.nsfw_filter)
         self.ui.actionSafety_Checker.blockSignals(False)
 
-    def __toggle_button(self, ui_element, state):
+    @staticmethod
+    def __toggle_button(ui_element, state):
         ui_element.blockSignals(True)
         ui_element.setChecked(state)
         ui_element.blockSignals(False)
@@ -1016,24 +1061,6 @@ class MainWindow(
             "tool": tool
         })
 
-    def plain_text_widget_value(self, widget):
-        try:
-            return widget.toPlainText()
-        except AttributeError:
-            return None
-
-    def current_text_widget_value(self, widget):
-        try:
-            return widget.currentText()
-        except AttributeError:
-            return None
-
-    def value_widget_value(self, widget):
-        try:
-            return widget.value()
-        except AttributeError:
-            return None
-
     def _initialize_window(self):
         self.center()
         self.set_window_title()
@@ -1062,10 +1089,6 @@ class MainWindow(
         self.set_window_title()
         self.current_filter = None
 
-    def post_process_images(self, images):
-        #return self.automatic_filter_manager.apply_filters(images)
-        return images
-
     def handle_unknown(self, message):
         self.logger.error(f"Unknown message code: {message}")
 
@@ -1074,46 +1097,8 @@ class MainWindow(
         self.negative_prompt = ""
         self.generator_tab_widget.clear_prompts()
 
-    def show_prompt_browser(self):
-        from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
-        PromptBrowser()
-
     def new_batch(self, index, image, data):
         self.generator_tab_widget.new_batch(index, image, data)
-
-    def action_center_clicked(self):
-        print("center clicked")
-
-    def action_reset_settings(self):
-        reply = QMessageBox.question(
-            self,
-            'Reset Settings',
-            'Are you sure you want to reset all settings to their default values?',
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-
-        if reply == QMessageBox.Yes:
-            self.reset_settings()
-            self.restart()
-
-    def import_controlnet_image(self):
-        self.emit_signal(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
-
-    def export_controlnet_image(self):
-        self.emit_signal(SignalCode.CONTROLNET_EXPORT_IMAGE_SIGNAL)
-
-    def import_drawingpad_image(self):
-        self.emit_signal(SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL)
-
-    def export_drawingpad_image(self):
-        self.emit_signal(SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL)
-
-    def action_export_image_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
-
-    def action_import_image_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
 
     def on_model_status_changed_signal(self, data):
         model = data["model"]
