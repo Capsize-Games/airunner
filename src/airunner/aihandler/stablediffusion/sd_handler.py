@@ -886,28 +886,6 @@ class SDHandler(BaseHandler):
         self.logger.debug("LORA adapters set")
 
     def _load_embeddings(self):
-        # if not self._pipe:
-        #     return
-        # self.logger.debug("Loading embeddings")
-        # available_embeddings = self.get_embeddings_by_version(self.generator_settings_cached.version)
-        # for embedding in available_embeddings:
-        #     path = os.path.expanduser(embedding.path)
-        #     if embedding.active and embedding not in self._loaded_embeddings:
-        #         if os.path.exists(path):
-        #             token = embedding.name
-        #             try:
-        #                 self._pipe.load_textual_inversion(path, token=token, weight_name=path)
-        #                 self._loaded_embeddings.append(embedding)
-        #             except Exception as e:
-        #                 if "already in tokenizer" not in str(e):
-        #                     self.logger.error(f"Failed to load embedding {token}: {e}")
-        #     else:
-        #         try:
-        #             self._pipe.unload_textual_inversion(embedding.name)
-        #             self._loaded_embeddings.remove(embedding)
-        #         except ValueError as e:
-        #             if "No tokens to remove" not in str(e):
-        #                 self.logger.error(f"Failed to unload embedding {embedding.name}: {e}")
         if self._pipe is None:
             self.logger.error("Pipe is None, unable to load embeddings")
             return
@@ -930,14 +908,6 @@ class SDHandler(BaseHandler):
                         self._loaded_embeddings.append(embedding_path)
                     except Exception as e:
                         self.logger.error(f"Failed to load embedding {embedding_path}: {e}")
-            # elif not embedding.active and embedding_path in self._loaded_embeddings:
-            #     self.logger.debug(f"Unloading embedding {embedding_path}")
-            #     try:
-            #         self._pipe.unload_textual_inversion(tokens=['an14', 'an14_1', 'an14_2', 'an14_3', 'an14_4', 'an14_5', 'an14_6', 'an14_7', 'an14_8', 'an14_9', 'an14_10', 'an14_11', 'an14_12', 'an14_13', 'an14_14'])
-            #         self._loaded_embeddings.remove(embedding_path)
-            #     except Exception as e:
-            #         self.logger.error(f"Failed to remove embedding {embedding_path}: {e}")
-            #     continue
         self.logger.debug("Embeddings loaded")
 
     def _load_compel(self):
