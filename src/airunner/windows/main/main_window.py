@@ -387,7 +387,7 @@ class MainWindow(
             (self.ui.actionToggle_Text_to_Speech, self.application_settings.tts_enabled),
             (self.ui.actionToggle_Speech_to_Text, self.application_settings.stt_enabled),
             (self.ui.actionToggle_Stable_Diffusion, self.application_settings.sd_enabled),
-            (self.ui.actionToggle_Controlnet, self.controlnet_settings.enabled),
+            (self.ui.actionToggle_Controlnet, self.application_settings.controlnet_enabled),
         ):
             item[0].blockSignals(True)
             item[0].setChecked(item[1])
@@ -593,7 +593,7 @@ class MainWindow(
             val,
             SignalCode.CONTROLNET_LOAD_SIGNAL,
             SignalCode.CONTROLNET_UNLOAD_SIGNAL,
-            "enabled"
+            "controlnet_enabled"
         )
 
     @Slot(bool)
