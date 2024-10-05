@@ -32,9 +32,9 @@ class ChatPromptWidget(BaseWidget):
         self.conversation_id = None
 
         self.ui.action.blockSignals(True)
-        # iterate over each LLMActionType enum and add its value to the llm_tool_name
-        for action_type in LLMActionType:
-            self.ui.action.addItem(action_type.value)
+        self.ui.action.addItem("Auto")
+        self.ui.action.addItem("Chat")
+        self.ui.action.addItem("Image")
         self.ui.action.setCurrentText(self.action)
         self.ui.action.blockSignals(False)
         self.originalKeyPressEvent = None
@@ -235,7 +235,13 @@ class ChatPromptWidget(BaseWidget):
                 self.disable_send_button()
 
     def llm_action_changed(self, val: str):
-        self.update_llm_generator_settings("action", val)
+        if val == "Chat":
+            llm_action_value = LLMActionType.CHAT
+        elif val == "Image":
+            llm_action_value = LLMActionType.GENERATE_IMAGE
+        else:
+            llm_action_value = LLMActionType.APPLICATION_COMMAND
+        self.update_llm_generator_settings("action", llm_action_value.value)
 
     def prompt_text_changed(self):
         self.prompt = self.ui.prompt.toPlainText()
