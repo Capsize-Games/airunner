@@ -279,20 +279,17 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionRun_setup_wizard_2"/>
-    <addaction name="separator"/>
-    <addaction name="actionModel_Manager_3"/>
-    <addaction name="separator"/>
-    <addaction name="actionStats"/>
-    <addaction name="separator"/>
-    <addaction name="actionSafety_Checker"/>
-    <addaction name="separator"/>
     <addaction name="actionToggle_LLM"/>
     <addaction name="actionToggle_Text_to_Speech"/>
     <addaction name="actionToggle_Speech_to_Text"/>
     <addaction name="actionToggle_Stable_Diffusion"/>
     <addaction name="actionToggle_Controlnet"/>
     <addaction name="separator"/>
+    <addaction name="actionSafety_Checker"/>
+    <addaction name="separator"/>
+    <addaction name="actionStats"/>
+    <addaction name="separator"/>
+    <addaction name="actionRun_setup_wizard_2"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
