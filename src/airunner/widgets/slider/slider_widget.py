@@ -3,7 +3,6 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QDoubleSpinBox
 
 from airunner.aihandler.models.settings_models import Lora
-from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget
 
@@ -224,18 +223,6 @@ class SliderWidget(BaseWidget):
         elif settings_property is not None:
             keys = settings_property.split(".")
             self.update_settings_by_name(keys[0], keys[1], val)
-
-    def _update_dict_recursively(self, data: dict, keys: List[str], val: Any) -> dict:
-        if len(keys) == 1:
-            data[keys[0]] = val
-            return data
-
-        key = keys[0]
-        if key not in data:
-            data[key] = {}
-
-        data[key] = self._update_dict_recursively(data[key], keys[1:], val)
-        return data
 
     def set_slider_and_spinbox_values(self, val):
         if val is None:
