@@ -722,7 +722,7 @@ class SDHandler(BaseHandler):
             return
         self.logger.debug(f"Loading controlnet model")
         if not self.controlnet_model:
-            raise ValueError(f"Unable to find controlnet model {name}")
+            raise ValueError(f"Unable to find controlnet model {self.controlnet_settings_cached.controlnet}")
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
         version: str = self.controlnet_model.version
         path: str = "diffusers/controlnet-canny-sdxl-1.0-small" if self.is_sd_xl else self.controlnet_model.path
