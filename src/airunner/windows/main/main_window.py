@@ -24,8 +24,7 @@ from tensorflow.python.ops.gen_dataset_ops import ModelDataset
 from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
 from airunner.aihandler.logger import Logger
-from airunner.aihandler.models.settings_models import ShortcutKeys
-from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
+from airunner.aihandler.models.settings_models import ShortcutKeys, ImageFilter
 from airunner.settings import (
     STATUS_ERROR_COLOR,
     STATUS_NORMAL_COLOR_LIGHT,
@@ -51,6 +50,7 @@ from airunner.utils.file_system.operations import FileSystemOperations
 
 from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
+from airunner.windows.filter_window import FilterWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -962,15 +962,15 @@ class MainWindow(
 
     def _initialize_filter_actions(self):
         # add more filters:
-        for filter_name, filter_data in imagefilter_bootstrap_data.items():
+        session = self.db_handler.get_db_session()
+        image_filters = session.query(ImageFilter).all()
+        for image_filter in image_filters:
+            action = self.ui.menuFilters.addAction(image_filter.display_name)
+            action.triggered.connect(partial(self.display_filter_window, image_filter))
+        session.close()
 
-            action = self.ui.menuFilters.addAction(filter_data["display_name"])
-            action.triggered.connect(partial(self.display_filter_window, filter_data["name"]))
-
-    def display_filter_window(self, filter_name):
-        from airunner.windows.filter_window import FilterWindow
-        print("opening filter window with ", filter_name)
-        FilterWindow(filter_name)
+    def display_filter_window(self, image_filter):
+        FilterWindow(image_filter.id)
 
     @property
     def current_tool(self):
