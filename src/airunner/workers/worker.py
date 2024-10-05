@@ -16,14 +16,13 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
     finished = Signal()
     prefix = "Worker"
 
-    def __init__(self, signals=None, prefix=None):
+    def __init__(self, signals=None):
         self.signals = signals or []
-        self.prefix = prefix or self.__class__.__name__
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__()
         self.state = WorkerState.HALTED
-        self.logger = Logger(prefix=prefix)
+        self.logger = Logger(prefix=self.__class__.__name__)
         self.running = False
         self.queue = queue.Queue()
         self.items = {}

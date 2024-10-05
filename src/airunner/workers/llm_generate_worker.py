@@ -4,10 +4,10 @@ from airunner.workers.worker import Worker
 
 
 class LLMGenerateWorker(Worker):
-    def __init__(self, prefix=None, agent_options=None):
+    def __init__(self, agent_options=None):
         self.llm = None
         self.agent_options = agent_options
-        super().__init__(prefix=prefix)
+        super().__init__()
         for signal in (
             (SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal),
             (SignalCode.LLM_UNLOAD_SIGNAL, self.on_llm_on_unload_signal),
