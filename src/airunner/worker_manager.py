@@ -1,6 +1,5 @@
 from PySide6.QtCore import QObject, Signal
 
-from airunner.enums import WorkerType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.aihandler.logger import Logger
