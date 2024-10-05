@@ -99,10 +99,13 @@ class ControlnetSettings(Base):
     __tablename__ = 'controlnet_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     image = Column(String, nullable=True)
+    generated_image = Column(String, nullable=True)
     enabled = Column(Boolean, default=False)
     use_grid_image_as_input = Column(Boolean, default=False)
     strength = Column(Integer, default=50)
     conditioning_scale = Column(Integer, default=100)
+    guidance_scale = Column(Integer, default=750)
+    controlnet = Column(String, default="canny")
 
 
 class ImageToImageSettings(Base):
@@ -185,22 +188,6 @@ class GeneratorSettings(Base):
     negative_target_size = Column(JSON, default={"width": 512, "height": 512})
 
     lora_scale = Column(Integer, default=100)
-
-
-class ControlnetImageSettings(Base):
-    __tablename__ = 'controlnet_image_settings'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    imported_image_base64 = Column(String, nullable=True)
-    link_to_input_image = Column(Boolean, default=True)
-    use_imported_image = Column(Boolean, default=False)
-    use_grid_image = Column(Boolean, default=False)
-    recycle_grid_image = Column(Boolean, default=False)
-    mask_link_input_image = Column(Boolean, default=False)
-    mask_use_imported_image = Column(Boolean, default=False)
-    controlnet = Column(String, default="canny")  # Adjust default value as needed
-    conditioning_scale = Column(Integer, default=100)
-    guidance_scale = Column(Integer, default=750)
-    controlnet_image_base64 = Column(String, nullable=True)
 
 
 class LLMGeneratorSettings(Base):

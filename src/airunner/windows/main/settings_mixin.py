@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload
 
 from airunner.aihandler.models.settings_db_handler import SettingsDBHandler
 from airunner.aihandler.models.settings_models import ApplicationSettings, LLMGeneratorSettings, GeneratorSettings, \
-    ControlnetSettings, ControlnetImageSettings, BrushSettings, DrawingPadSettings, GridSettings, ActiveGridSettings, \
+    ControlnetSettings, BrushSettings, DrawingPadSettings, GridSettings, ActiveGridSettings, \
     ImageToImageSettings, OutpaintSettings, PathSettings, CanvasSettings, MemorySettings, Chatbot, \
     AIModels, Schedulers, Lora, ShortcutKeys, SavedPrompt, SpeechT5Settings, TTSSettings, EspeakSettings, \
     MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, TargetFiles, \
@@ -50,10 +50,6 @@ class SettingsMixin:
     @property
     def drawing_pad_settings(self) -> DrawingPadSettings:
         return self.db_handler.load_settings_from_db(DrawingPadSettings)
-
-    @property
-    def controlnet_image_settings(self) -> ControlnetImageSettings:
-        return self.db_handler.load_settings_from_db(ControlnetImageSettings)
 
     @property
     def brush_settings(self) -> BrushSettings:
@@ -159,7 +155,15 @@ class SettingsMixin:
 
     @property
     def controlnet_image(self):
-        base_64_image = self.controlnet_image_settings.imported_image_base64
+        base_64_image = self.controlnet_settings.image
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
+
+    @property
+    def controlnet_generated_image(self):
+        base_64_image = self.controlnet_settings.imported_image_base64
         image = convert_base64_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
@@ -335,10 +339,6 @@ class SettingsMixin:
     #######################################
     ### CONTROLNET ###
     #######################################
-    def update_controlnet_image_settings(self, column_name, val):
-        self.db_handler.update_setting(ControlnetImageSettings, column_name, val)
-        self.__settings_updated()
-
     def update_controlnet_settings(self, column_name, val):
         self.db_handler.update_setting(ControlnetSettings, column_name, val)
         self.__settings_updated()

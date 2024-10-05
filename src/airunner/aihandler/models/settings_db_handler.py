@@ -7,7 +7,7 @@ from airunner.aihandler.models.database_handler import DatabaseHandler
 from airunner.aihandler.models.settings_models import Chatbot, AIModels, Schedulers, Lora, PathSettings, SavedPrompt, \
     Embedding, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, ShortcutKeys, \
     GeneratorSettings, WindowSettings, ApplicationSettings, ActiveGridSettings, CanvasSettings, ControlnetSettings, \
-    ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings, ControlnetImageSettings, \
+    ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings, \
     LLMGeneratorSettings, TTSSettings, SpeechT5Settings, EspeakSettings, STTSettings, BrushSettings, GridSettings, \
     MemorySettings, Message, Conversation, Summary
 
@@ -75,7 +75,6 @@ class SettingsDBHandler(DatabaseHandler):
             session.query(DrawingPadSettings).delete()
             session.query(MetadataSettings).delete()
             session.query(GeneratorSettings).delete()
-            session.query(ControlnetImageSettings).delete()
             session.query(LLMGeneratorSettings).delete()
             session.query(TTSSettings).delete()
             session.query(SpeechT5Settings).delete()
