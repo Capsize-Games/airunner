@@ -267,7 +267,7 @@ class CustomGraphicsView(
         # and add it to the scene
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea()
-            self.active_grid_area.setZValue(1)
+            self.active_grid_area.setZValue(10)
             self._scene.addItem(self.active_grid_area)
 
     def on_zoom_level_changed_signal(self):
