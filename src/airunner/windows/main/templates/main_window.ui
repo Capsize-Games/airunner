@@ -279,13 +279,13 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionToggle_LLM"/>
-    <addaction name="actionToggle_Text_to_Speech"/>
-    <addaction name="actionToggle_Speech_to_Text"/>
+    <addaction name="actionSafety_Checker"/>
     <addaction name="actionToggle_Stable_Diffusion"/>
     <addaction name="actionToggle_Controlnet"/>
     <addaction name="separator"/>
-    <addaction name="actionSafety_Checker"/>
+    <addaction name="actionToggle_LLM"/>
+    <addaction name="actionToggle_Text_to_Speech"/>
+    <addaction name="actionToggle_Speech_to_Text"/>
     <addaction name="separator"/>
     <addaction name="actionStats"/>
     <addaction name="separator"/>
