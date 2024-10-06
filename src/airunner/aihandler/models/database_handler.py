@@ -6,7 +6,7 @@ from airunner.aihandler.models.settings_models import Base
 class DatabaseHandler:
     def __init__(self, db_path=os.path.expanduser(
         os.path.join(
-            "~/.airunner",
+            "~/.local/share/aihandler",
             "data",
             "airunner.db"
         )
