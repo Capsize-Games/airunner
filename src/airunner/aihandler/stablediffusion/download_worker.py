@@ -51,11 +51,15 @@ class DownloadWorker(
             if self.queue.empty():
                 time.sleep(0.1)
                 continue
-            path, file_name, file_path, callback = self.queue.get()
-            url = f"{DEFAULT_HF_ENDPOINT}/{path}/resolve/main/{file_name}?download=true".replace(" ", "")
-            size_kb = self.get_size(url)
-            self.emit_signal(SignalCode.CLEAR_DOWNLOAD_STATUS_BAR)
 
+            queue_size = self.queue.qsize()
+
+            path, file_name, file_path, callback = self.queue.get()
+            if path == "" and file_name == "" and file_path == "":
+                callback()
+                return
+            url = f"{DEFAULT_HF_ENDPOINT}/{path}/resolve/main/{file_name}?download=true".replace(" ", "")
+            self.emit_signal(SignalCode.CLEAR_DOWNLOAD_STATUS_BAR)
             self.emit_signal(SignalCode.SET_DOWNLOAD_STATUS_LABEL, {
                 "message": f"Downloading {file_name}"
             })
@@ -66,13 +70,6 @@ class DownloadWorker(
             if not os.path.exists(os.path.dirname(file_name)):
                 os.makedirs(os.path.dirname(file_name), exist_ok=True)
 
-            self.emit_signal(
-                SignalCode.UPDATE_DOWNLOAD_LOG,
-                {
-                    "message": f"Downloading {url} of size {size_kb} KB to {file_name}"
-                }
-            )
-
             if os.path.exists(file_name):
                 self.emit_signal(
                     SignalCode.UPDATE_DOWNLOAD_LOG,
@@ -81,11 +78,19 @@ class DownloadWorker(
                     }
                 )
                 self.emit_signal(SignalCode.DOWNLOAD_PROGRESS, {
-                    "current": size_kb,
-                    "total": size_kb
+                    "current": 0,
+                    "total": 0
                 })
                 self.finished.emit()
                 continue
+
+            size_kb = self.get_size(url)
+            self.emit_signal(
+                SignalCode.UPDATE_DOWNLOAD_LOG,
+                {
+                    "message": f"Downloading {url} of size {size_kb} KB to {file_name}"
+                }
+            )
 
             try:
                 headers = {}

@@ -49,7 +49,7 @@ class SDHandler(BaseHandler):
         self._controlnet_model = None
         self._controlnet: ControlNetModel = None
         self._controlnet_processor: Processor = None
-        self.model_type = "sd"
+        self.model_type = ModelType.SD
         self._current_model:str = ""
         self._safety_checker:StableDiffusionSafetyChecker = None
         self._feature_extractor:CLIPFeatureExtractor = None
@@ -110,6 +110,10 @@ class SDHandler(BaseHandler):
         self._application_settings = None
         self._drawing_pad_settings = None
         self._path_settings = None
+
+    @property
+    def model_status(self):
+        return self._model_status
 
     @Slot(str)
     def _handle_worker_error(self, error_message):
@@ -636,8 +640,11 @@ class SDHandler(BaseHandler):
         safety_checker_path = os.path.expanduser(
             os.path.join(
                 self.path_settings_cached.base_path,
-                "art/models/SD 1.5/safety_checker",
-                "CompVis/stable-diffusion-safety-checker/"
+                "art",
+                "models",
+                "SD 1.5",
+                "txt2img",
+                "safety_checker"
             )
         )
         try:
@@ -659,8 +666,11 @@ class SDHandler(BaseHandler):
         feature_extractor_path = os.path.expanduser(
             os.path.join(
                 self.path_settings_cached.base_path,
-                "art/models/SD 1.5/feature_extractor",
-                "openai/clip-vit-large-patch14/"
+                "art",
+                "models",
+                "SD 1.5",
+                "txt2img",
+                "feature_extractor"
             )
         )
         try:
@@ -683,10 +693,11 @@ class SDHandler(BaseHandler):
         tokenizer_path = os.path.expanduser(
             os.path.join(
                 self.path_settings_cached.base_path,
-                "art/models",
-                "SD 1.5",
-                "feature_extractor",
-                "openai/clip-vit-large-patch14"
+                "art",
+                "models",
+                self.generator_settings_cached.version,
+                "txt2img",
+                "tokenizer"
             )
         )
         try:
@@ -736,10 +747,11 @@ class SDHandler(BaseHandler):
             raise ValueError(f"Unable to find controlnet model {self.controlnet_settings_cached.controlnet}")
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
         version: str = self.controlnet_model.version
-        path: str = "diffusers/controlnet-canny-sdxl-1.0-small" if self.is_sd_xl else self.controlnet_model.path
+        path: str = self.controlnet_model.path
         controlnet_path = os.path.expanduser(os.path.join(
             self.path_settings_cached.base_path,
-            "art/models",
+            "art",
+            "models",
             version,
             "controlnet",
             path
@@ -756,7 +768,7 @@ class SDHandler(BaseHandler):
     def _load_controlnet_processor(self):
         if self._controlnet_processor is not None:
             return
-        self.logger.debug("Loading controlnet processor")
+        self.logger.debug(f"Loading controlnet processor {self.controlnet_model.name}")
         self._controlnet_processor = Processor(self.controlnet_model.name)
 
     def _load_scheduler(self):
@@ -820,8 +832,12 @@ class SDHandler(BaseHandler):
                 self.logger.error(f"Failed to load model from {self.model_path}: {e}")
                 self.change_model_status(ModelType.SD, ModelStatus.FAILED)
                 return
-            except RuntimeError as e:
+            except EnvironmentError as e:
                 self.logger.warning(f"Failed to load model from {self.model_path}: {e}")
+            except ValueError as e:
+                self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+                self.change_model_status(ModelType.SD, ModelStatus.FAILED)
+                return
         else:
             try:
                 self._pipe = pipeline_class_.from_pretrained(
@@ -833,6 +849,10 @@ class SDHandler(BaseHandler):
                 self.change_model_status(ModelType.SD, ModelStatus.FAILED)
                 return
             except TypeError as e:
+                self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+                self.change_model_status(ModelType.SD, ModelStatus.FAILED)
+                return
+            except ValueError as e:
                 self.logger.error(f"Failed to load model from {self.model_path}: {e}")
                 self.change_model_status(ModelType.SD, ModelStatus.FAILED)
                 return

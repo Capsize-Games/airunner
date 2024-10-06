@@ -16,10 +16,11 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QApplication, QSplashScreen,
 )
+
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.download_wizard.download_wizard_window import DownloadWizardWindow
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
+from airunner.windows.setup_wizard.setup_wizard_window import SetupWizardWindow
 from airunner.aihandler.logger import Logger
 
 
@@ -64,21 +65,13 @@ class AppInstaller(
         :return: bool
         """
         return (
-            self.settings["run_setup_wizard"] or
-            not self.settings["paths_initialized"] or
-            not self.settings["agreements"]["user"] or
-            not self.settings["agreements"]["stable_diffusion"] or
-            not self.settings["agreements"]["airunner"]
+            (
+                # self.wizard.setup_settings["paths_initialized"] and
+                self.application_settings.user_agreement_checked and
+                self.application_settings.stable_diffusion_agreement_checked and
+                self.application_settings.airunner_agreement_checked
+            )
         )
-
-    @property
-    def do_show_download_wizard(self) -> bool:
-        """
-        This flag is used to determine if the download wizard should be displayed.
-        If the download wizard has not been completed, the download wizard will be displayed.
-        :return: bool
-        """
-        return not self.settings["download_wizard_completed"]
 
     def start(self):
         """
@@ -89,20 +82,11 @@ class AppInstaller(
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
         self.app = QApplication([])
 
-        self.wizard = SetupWizard()
+        self.wizard = SetupWizardWindow()
         self.wizard.exec()
 
-        # Quit the application if the setup wizard was not completed
-        if self.do_show_setup_wizard:
-            sys.exit(0)
-
-        if self.do_show_download_wizard:
-            print("STARTING DOWNLOAD WIZARD")
-            self.download_wizard = DownloadWizardWindow(self.wizard.setup_settings)
-            self.download_wizard.exec()
-            print("continuing")
-
-
+        self.download_wizard = DownloadWizardWindow()
+        self.download_wizard.exec()
 
     def run(self):
         """
