@@ -35,7 +35,13 @@ class ChatPromptWidget(BaseWidget):
         self.ui.action.addItem("Auto")
         self.ui.action.addItem("Chat")
         self.ui.action.addItem("Image")
-        self.ui.action.setCurrentText(self.action)
+        action = LLMActionType[self.action]
+        if action is LLMActionType.APPLICATION_COMMAND:
+            self.ui.action.setCurrentIndex(0)
+        elif action is LLMActionType.CHAT:
+            self.ui.action.setCurrentIndex(1)
+        elif action is LLMActionType.GENERATE_IMAGE:
+            self.ui.action.setCurrentIndex(2)
         self.ui.action.blockSignals(False)
         self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
@@ -241,7 +247,7 @@ class ChatPromptWidget(BaseWidget):
             llm_action_value = LLMActionType.GENERATE_IMAGE
         else:
             llm_action_value = LLMActionType.APPLICATION_COMMAND
-        self.update_llm_generator_settings("action", llm_action_value.value)
+        self.update_llm_generator_settings("action", llm_action_value.name)
 
     def prompt_text_changed(self):
         self.prompt = self.ui.prompt.toPlainText()
