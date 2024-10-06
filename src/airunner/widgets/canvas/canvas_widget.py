@@ -38,7 +38,6 @@ class CanvasWidget(
         self.draggable_pixmaps_in_scene = {}
         self.drag_pos: QPoint = Optional[None]
         self._grid_settings = {}
-        self._canvas_settings = {}
         self._active_grid_settings = {}
         self.image_data_worker = None
         self.canvas_resize_worker = None
