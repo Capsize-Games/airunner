@@ -83,18 +83,6 @@ class ActiveGridSettings(Base):
     height = Column(Integer, default=512)
 
 
-class CanvasSettings(Base):
-    __tablename__ = 'canvas_settings'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pos_x = Column(Integer, default=0)
-    pos_y = Column(Integer, default=0)
-    mask = Column(String, nullable=True)
-    image = Column(String, nullable=True)
-    active_canvas = Column(String, default="")
-    document_outline_color = Column(String, default="(255, 0, 255, 144)")
-    document_outline_width = Column(Integer, default=2)
-
-
 class ControlnetSettings(Base):
     __tablename__ = 'controlnet_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -130,6 +118,8 @@ class DrawingPadSettings(Base):
     mask = Column(String, nullable=True)
     enabled = Column(Boolean, default=True)
     enable_automatic_drawing = Column(Boolean, default=True)
+    x_pos = Column(Integer, default=0)
+    y_pos = Column(Integer, default=0)
 
 
 class MetadataSettings(Base):
@@ -170,7 +160,6 @@ class GeneratorSettings(Base):
     use_prompt_builder = Column(Boolean, default=False)
     version = Column(String, default="SD 1.5")
     is_preset = Column(Boolean, default=False)
-    input_image = Column(String, nullable=True)
     use_compel = Column(Boolean, default=True)
 
     steps = Column(Integer, default=20)

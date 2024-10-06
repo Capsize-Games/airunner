@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QSplitter
 
 from airunner.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.widgets.brush.brush_container_widget import BrushContainerWidget
-from airunner.widgets.canvas.input_image import InputImage
+from airunner.widgets.canvas.input_image_container import InputImageContainer
 from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 from airunner.widgets.llm.llm_settings_widget import LLMSettingsWidget
@@ -31,7 +31,7 @@ class Ui_tool_tab_widget(object):
     def setupUi(self, tool_tab_widget):
         if not tool_tab_widget.objectName():
             tool_tab_widget.setObjectName(u"tool_tab_widget")
-        tool_tab_widget.resize(680, 868)
+        tool_tab_widget.resize(654, 868)
         self.gridLayout_3 = QGridLayout(tool_tab_widget)
         self.gridLayout_3.setSpacing(0)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
@@ -65,7 +65,7 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_6.setSpacing(0)
         self.gridLayout_6.setObjectName(u"gridLayout_6")
         self.gridLayout_6.setContentsMargins(0, 0, 0, 0)
-        self.image_to_image = InputImage(self.tab_5)
+        self.image_to_image = InputImageContainer(self.tab_5)
         self.image_to_image.setObjectName(u"image_to_image")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -86,7 +86,7 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_11.setSpacing(0)
         self.gridLayout_11.setObjectName(u"gridLayout_11")
         self.gridLayout_11.setContentsMargins(0, 0, 0, 0)
-        self.controlnet_image = InputImage(self.tab_8)
+        self.controlnet_image = InputImageContainer(self.tab_8)
         self.controlnet_image.setObjectName(u"controlnet_image")
         sizePolicy.setHeightForWidth(self.controlnet_image.sizePolicy().hasHeightForWidth())
         self.controlnet_image.setSizePolicy(sizePolicy)
@@ -98,6 +98,18 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_11.addWidget(self.controlnet_image, 0, 0, 1, 1)
 
         self.tool_tab_widget_container.addTab(self.tab_8, "")
+        self.tab_9 = QWidget()
+        self.tab_9.setObjectName(u"tab_9")
+        self.gridLayout_12 = QGridLayout(self.tab_9)
+        self.gridLayout_12.setSpacing(0)
+        self.gridLayout_12.setObjectName(u"gridLayout_12")
+        self.gridLayout_12.setContentsMargins(0, 0, 0, 0)
+        self.widget_2 = InputImageContainer(self.tab_9)
+        self.widget_2.setObjectName(u"widget_2")
+
+        self.gridLayout_12.addWidget(self.widget_2, 0, 0, 1, 1)
+
+        self.tool_tab_widget_container.addTab(self.tab_9, "")
         self.tab_6 = QWidget()
         self.tab_6.setObjectName(u"tab_6")
         self.gridLayout_7 = QGridLayout(self.tab_6)
@@ -195,6 +207,8 @@ class Ui_tool_tab_widget(object):
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_5), QCoreApplication.translate("tool_tab_widget", u"Input image", None))
         self.controlnet_image.setProperty("settings_key", QCoreApplication.translate("tool_tab_widget", u"controlnet_settings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_8), QCoreApplication.translate("tool_tab_widget", u"Controlnet", None))
+        self.widget_2.setProperty("settings_key", QCoreApplication.translate("tool_tab_widget", u"outpaint_settings", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_9), QCoreApplication.translate("tool_tab_widget", u"Inpaint", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_6), QCoreApplication.translate("tool_tab_widget", u"LoRA", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_7), QCoreApplication.translate("tool_tab_widget", u"Embeddings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("tool_tab_widget", u"Brush", None))

@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
-    QGridLayout, QHBoxLayout, QLabel, QScrollArea,
-    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
+    QGridLayout, QLabel, QScrollArea, QSizePolicy,
+    QSpacerItem, QVBoxLayout, QWidget)
 
 from airunner.widgets.seed.seed_widget import SeedWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
@@ -45,14 +45,29 @@ class Ui_stable_diffusion_settings_widget(object):
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
         self.gridLayout.setContentsMargins(0, 0, 10, 0)
-        self.horizontalLayout_5 = QHBoxLayout()
-        self.horizontalLayout_5.setSpacing(10)
-        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.steps_widget = SliderWidget(self.scrollAreaWidgetContents)
-        self.steps_widget.setObjectName(u"steps_widget")
+        self.verticalLayout_3 = QVBoxLayout()
+        self.verticalLayout_3.setSpacing(10)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.scale_widget = SliderWidget(self.scrollAreaWidgetContents)
+        self.scale_widget.setObjectName(u"scale_widget")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.scale_widget.sizePolicy().hasHeightForWidth())
+        self.scale_widget.setSizePolicy(sizePolicy)
+        self.scale_widget.setMinimumSize(QSize(0, 0))
+        self.scale_widget.setProperty("current_value", 0)
+        self.scale_widget.setProperty("slider_maximum", 10000)
+        self.scale_widget.setProperty("spinbox_maximum", 100.000000000000000)
+        self.scale_widget.setProperty("display_as_float", True)
+        self.scale_widget.setProperty("spinbox_single_step", 0.010000000000000)
+        self.scale_widget.setProperty("spinbox_page_step", 0.010000000000000)
+        self.scale_widget.setProperty("settings_property", u"generator_settings.scale")
+
+        self.verticalLayout_3.addWidget(self.scale_widget)
+
+        self.steps_widget = SliderWidget(self.scrollAreaWidgetContents)
+        self.steps_widget.setObjectName(u"steps_widget")
         sizePolicy.setHeightForWidth(self.steps_widget.sizePolicy().hasHeightForWidth())
         self.steps_widget.setSizePolicy(sizePolicy)
         self.steps_widget.setMinimumSize(QSize(0, 0))
@@ -66,25 +81,10 @@ class Ui_stable_diffusion_settings_widget(object):
         self.steps_widget.setProperty("slider_minimum", 1)
         self.steps_widget.setProperty("settings_property", u"generator_settings.steps")
 
-        self.horizontalLayout_5.addWidget(self.steps_widget)
-
-        self.scale_widget = SliderWidget(self.scrollAreaWidgetContents)
-        self.scale_widget.setObjectName(u"scale_widget")
-        sizePolicy.setHeightForWidth(self.scale_widget.sizePolicy().hasHeightForWidth())
-        self.scale_widget.setSizePolicy(sizePolicy)
-        self.scale_widget.setMinimumSize(QSize(0, 0))
-        self.scale_widget.setProperty("current_value", 0)
-        self.scale_widget.setProperty("slider_maximum", 10000)
-        self.scale_widget.setProperty("spinbox_maximum", 100.000000000000000)
-        self.scale_widget.setProperty("display_as_float", True)
-        self.scale_widget.setProperty("spinbox_single_step", 0.010000000000000)
-        self.scale_widget.setProperty("spinbox_page_step", 0.010000000000000)
-        self.scale_widget.setProperty("settings_property", u"generator_settings.scale")
-
-        self.horizontalLayout_5.addWidget(self.scale_widget)
+        self.verticalLayout_3.addWidget(self.steps_widget)
 
 
-        self.gridLayout.addLayout(self.horizontalLayout_5, 6, 0, 1, 2)
+        self.gridLayout.addLayout(self.verticalLayout_3, 6, 0, 1, 2)
 
         self.verticalLayout_2 = QVBoxLayout()
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
@@ -108,26 +108,9 @@ class Ui_stable_diffusion_settings_widget(object):
 
         self.gridLayout.addLayout(self.verticalLayout_2, 3, 0, 1, 2)
 
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setSpacing(10)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.ddim_eta_slider_widget = SliderWidget(self.scrollAreaWidgetContents)
-        self.ddim_eta_slider_widget.setObjectName(u"ddim_eta_slider_widget")
-        sizePolicy.setHeightForWidth(self.ddim_eta_slider_widget.sizePolicy().hasHeightForWidth())
-        self.ddim_eta_slider_widget.setSizePolicy(sizePolicy)
-        self.ddim_eta_slider_widget.setMinimumSize(QSize(0, 0))
-        self.ddim_eta_slider_widget.setProperty("current_value", 1)
-        self.ddim_eta_slider_widget.setProperty("slider_maximum", 10)
-        self.ddim_eta_slider_widget.setProperty("spinbox_maximum", 10)
-        self.ddim_eta_slider_widget.setProperty("display_as_float", False)
-        self.ddim_eta_slider_widget.setProperty("spinbox_single_step", 1)
-        self.ddim_eta_slider_widget.setProperty("spinbox_page_step", 1)
-        self.ddim_eta_slider_widget.setProperty("spinbox_minimum", 1)
-        self.ddim_eta_slider_widget.setProperty("slider_minimum", 1)
-        self.ddim_eta_slider_widget.setProperty("settings_property", u"generator_settings.ddim_eta")
-
-        self.horizontalLayout.addWidget(self.ddim_eta_slider_widget)
-
+        self.verticalLayout = QVBoxLayout()
+        self.verticalLayout.setSpacing(10)
+        self.verticalLayout.setObjectName(u"verticalLayout")
         self.frames_slider_widget = SliderWidget(self.scrollAreaWidgetContents)
         self.frames_slider_widget.setObjectName(u"frames_slider_widget")
         sizePolicy.setHeightForWidth(self.frames_slider_widget.sizePolicy().hasHeightForWidth())
@@ -143,10 +126,27 @@ class Ui_stable_diffusion_settings_widget(object):
         self.frames_slider_widget.setProperty("slider_minimum", 1)
         self.frames_slider_widget.setProperty("settings_property", u"generator_settings.n_samples")
 
-        self.horizontalLayout.addWidget(self.frames_slider_widget)
+        self.verticalLayout.addWidget(self.frames_slider_widget)
+
+        self.ddim_eta_slider_widget = SliderWidget(self.scrollAreaWidgetContents)
+        self.ddim_eta_slider_widget.setObjectName(u"ddim_eta_slider_widget")
+        sizePolicy.setHeightForWidth(self.ddim_eta_slider_widget.sizePolicy().hasHeightForWidth())
+        self.ddim_eta_slider_widget.setSizePolicy(sizePolicy)
+        self.ddim_eta_slider_widget.setMinimumSize(QSize(0, 0))
+        self.ddim_eta_slider_widget.setProperty("current_value", 1)
+        self.ddim_eta_slider_widget.setProperty("slider_maximum", 10)
+        self.ddim_eta_slider_widget.setProperty("spinbox_maximum", 10)
+        self.ddim_eta_slider_widget.setProperty("display_as_float", False)
+        self.ddim_eta_slider_widget.setProperty("spinbox_single_step", 1)
+        self.ddim_eta_slider_widget.setProperty("spinbox_page_step", 1)
+        self.ddim_eta_slider_widget.setProperty("spinbox_minimum", 1)
+        self.ddim_eta_slider_widget.setProperty("slider_minimum", 1)
+        self.ddim_eta_slider_widget.setProperty("settings_property", u"generator_settings.ddim_eta")
+
+        self.verticalLayout.addWidget(self.ddim_eta_slider_widget)
 
 
-        self.gridLayout.addLayout(self.horizontalLayout, 5, 0, 1, 2)
+        self.gridLayout.addLayout(self.verticalLayout, 5, 0, 1, 2)
 
         self.clip_skip_slider_widget = SliderWidget(self.scrollAreaWidgetContents)
         self.clip_skip_slider_widget.setObjectName(u"clip_skip_slider_widget")
@@ -269,11 +269,11 @@ class Ui_stable_diffusion_settings_widget(object):
 
     def retranslateUi(self, stable_diffusion_settings_widget):
         stable_diffusion_settings_widget.setWindowTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Form", None))
-        self.steps_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Steps", None))
         self.scale_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Guidance Scale", None))
+        self.steps_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Steps", None))
         self.label_4.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Scheduler", None))
-        self.ddim_eta_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"DDIM ETA", None))
         self.frames_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Frames", None))
+        self.ddim_eta_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"DDIM ETA", None))
         self.clip_skip_slider_widget.setProperty("label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Clip Skip", None))
         self.label_6.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Version", None))
         self.label_3.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Model", None))

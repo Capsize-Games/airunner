@@ -24,7 +24,7 @@ class Ui_controlnet_settings_widget(object):
     def setupUi(self, controlnet_settings_widget):
         if not controlnet_settings_widget.objectName():
             controlnet_settings_widget.setObjectName(u"controlnet_settings_widget")
-        controlnet_settings_widget.resize(408, 521)
+        controlnet_settings_widget.resize(694, 763)
         self.gridLayout_2 = QGridLayout(controlnet_settings_widget)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setHorizontalSpacing(0)

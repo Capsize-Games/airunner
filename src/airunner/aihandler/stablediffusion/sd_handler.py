@@ -520,7 +520,17 @@ class SDHandler(BaseHandler):
             raise PipeNotLoadedException()
         self._load_prompt_embeds()
         clear_memory()
-        args = self._prepare_data()
+        active_rect = QRect(
+            self.active_grid_settings.pos_x,
+            self.active_grid_settings.pos_y,
+            self.application_settings_cached.working_width,
+            self.application_settings_cached.working_height,
+        )
+        active_rect.translate(
+            -self.drawing_pad_settings.x_pos,
+            -self.drawing_pad_settings.y_pos
+        )
+        args = self._prepare_data(active_rect)
         self._current_state = HandlerState.GENERATING
 
         with torch.no_grad():
@@ -542,13 +552,17 @@ class SDHandler(BaseHandler):
             return dict(
                 images=images,
                 data=args,
-                nsfw_content_detected=any(nsfw_content_detected)
+                nsfw_content_detected=any(nsfw_content_detected),
+                active_rect=active_rect,
+                is_outpaint=self.is_outpaint
             )
         else:
             return dict(
                 images=[],
                 data=args,
-                nsfw_content_detected=False
+                nsfw_content_detected=False,
+                active_rect=active_rect,
+                is_outpaint=self.is_outpaint
             )
 
     def _export_images(self, images: List[Any]):
@@ -1300,23 +1314,12 @@ class SDHandler(BaseHandler):
             if key.endswith("_applied"):
                 self._memory_settings_flags[key] = None
 
-    def _prepare_data(self) -> dict:
+    def _prepare_data(self, active_rect = None) -> dict:
         """
         Here we are loading the arguments for the Stable Diffusion generator.
         :return:
         """
         self.logger.debug("Preparing data")
-        active_rect = QRect(
-            self.active_grid_settings.pos_x,
-            self.active_grid_settings.pos_y,
-            self.application_settings_cached.working_width,
-            self.application_settings_cached.working_height,
-        )
-        active_rect.translate(
-            -self.canvas_settings.pos_x,
-            -self.canvas_settings.pos_y
-        )
-
         self._set_seed()
 
         args = dict(
@@ -1371,7 +1374,16 @@ class SDHandler(BaseHandler):
         elif self.is_outpaint:
             image = self.drawing_pad_image
             mask = self.drawing_pad_mask
-            print("IS OUTPAINT, SAVING IMAGE TO DISC")
+
+            # Crop the image based on the active grid location
+            active_grid_x = active_rect.left()
+            active_grid_y = active_rect.top()
+            cropped_image = image.crop((active_grid_x, active_grid_y, width + active_grid_x, height + active_grid_y))
+
+            # Create a new image with a black strip at the bottom
+            new_image = PIL.Image.new("RGBA", (width, height), (0, 0, 0, 255))
+            new_image.paste(cropped_image, (0, 0))
+            image = new_image.convert("RGB")
 
         if not self.controlnet_enabled:
             if self.is_txt2img:
@@ -1413,6 +1425,8 @@ class SDHandler(BaseHandler):
 
         if mask is not None and self.is_outpaint:
             mask = self._resize_image(mask, width, height)
+
+            mask = self._pipe.mask_processor.blur(mask, blur_factor=50)
             args.update(dict(
                 mask_image=mask
             ))
@@ -1424,10 +1438,7 @@ class SDHandler(BaseHandler):
                 control_guidance_end=1.0,
                 strength=self.controlnet_strength / 100.0,
                 guidance_scale=self.generator_settings_scale / 100.0,
-                controlnet_conditioning_scale=self.controlnet_conditioning_scale / 100.0,
-                # controlnet=[
-                #     self.controlnet_image_settings.controlnet
-                # ]
+                controlnet_conditioning_scale=self.controlnet_conditioning_scale / 100.0
             ))
         return args
 

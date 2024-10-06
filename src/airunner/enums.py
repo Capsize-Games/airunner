@@ -60,6 +60,7 @@ class SignalCode(Enum):
     APPLICATION_TOOL_CHANGED_SIGNAL = "tool_changed_signal"
     APPLICATION_ACTIVE_GRID_AREA_UPDATED = "active_grid_area_updated"
     ACTIVE_GRID_AREA_MOVED_SIGNAL = "active_grid_area_moved_signal"
+    GENERATE_MASK = "generate_mask"
     MASK_GENERATOR_WORKER_RESPONSE_SIGNAL = "mask_generator_worker_response_signal"
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL = "AudioProcessorWorker_processed_audio"
