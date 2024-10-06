@@ -55,6 +55,7 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
+from airunner.windows.setup_wizard.setup_wizard_window import SetupWizardWindow
 from airunner.worker_manager import WorkerManager
 
 
@@ -941,8 +942,7 @@ class MainWindow(
                 ui.setStyleSheet("")
 
     def show_setup_wizard(self):
-        from airunner.windows.setup_wizard.setup_wizard_window import SetupWizard
-        wizard = SetupWizard()
+        wizard = SetupWizardWindow()
         wizard.exec()
 
     def showEvent(self, event):
