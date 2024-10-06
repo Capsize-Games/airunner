@@ -426,7 +426,14 @@ class MainWindow(
     def v2t_button_toggled(self, val):
         if self._model_status[ModelType.STT] is ModelStatus.LOADING:
             val = not val
-        self._update_action_button(self.ui.actionToggle_Speech_to_Text, val)
+        self._update_action_button(
+            ModelType.STT,
+            self.ui.actionToggle_Speech_to_Text,
+            val,
+            SignalCode.STT_LOAD_SIGNAL,
+            SignalCode.STT_UNLOAD_SIGNAL,
+            "stt_enabled"
+        )
         QApplication.processEvents()
         self.update_application_settings("stt_enabled", val)
         if not val:
