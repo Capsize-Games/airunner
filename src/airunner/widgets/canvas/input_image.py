@@ -5,6 +5,7 @@ from PIL.ImageQt import ImageQt
 from PySide6.QtGui import QPixmap, QImage, Qt
 from PySide6.QtWidgets import QGraphicsScene
 
+from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
@@ -15,9 +16,11 @@ from airunner.widgets.canvas.templates.input_image_ui import Ui_input_image
 class InputImage(BaseWidget):
     widget_class_ = Ui_input_image
 
-    @property
-    def settings_key(self):
-        return self.property("settings_key")
+    def __init__(self, *args, **kwargs):
+        self.settings_key = kwargs.pop("settings_key")
+        self.use_generated_image = kwargs.pop("use_generated_image", False)
+        super().__init__(*args, **kwargs)
+        self.register(SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL, self.on_mask_generator_worker_response_signal)
 
     @property
     def current_settings(self):
@@ -36,6 +39,10 @@ class InputImage(BaseWidget):
 
         return settings
 
+    def on_mask_generator_worker_response_signal(self, message):
+        if self.settings_key == "outpaint_settings":
+            self.load_image_from_settings()
+
     def update_current_settings(self, key, value):
         if self.settings_key == "controlnet_settings":
             self.update_controlnet_settings(key, value)
@@ -47,12 +54,8 @@ class InputImage(BaseWidget):
             self.update_drawing_pad_settings(key, value)
 
     def showEvent(self, event):
-        settings_key = self.property("settings_key")
-        self.ui.label.setText(
-            "Controlnet" if settings_key == "controlnet_settings" else "Image to Image"
-        )
-
-        if settings_key == "controlnet_settings":
+        super().showEvent(event)
+        if self.settings_key == "controlnet_settings":
             self.ui.strength_slider_widget.hide()
             self.ui.controlnet_settings.show()
 
@@ -63,8 +66,15 @@ class InputImage(BaseWidget):
         self.ui.enable_checkbox.blockSignals(True)
         self.ui.use_grid_image_as_input_checkbox.blockSignals(True)
         self.ui.enable_checkbox.setChecked(self.current_settings.enabled)
-        self.ui.use_grid_image_as_input_checkbox.setChecked(
-            self.current_settings.use_grid_image_as_input)
+        if self.settings_key == "outpaint_settings":
+            self.ui.import_button.hide()
+            self.ui.delete_button.hide()
+            self.ui.use_grid_image_as_input_checkbox.hide()
+            self.ui.use_grid_image_as_input_checkbox.hide()
+        else:
+            self.ui.use_grid_image_as_input_checkbox.setChecked(
+                self.current_settings.use_grid_image_as_input
+            )
         self.ui.enable_checkbox.blockSignals(False)
         self.ui.use_grid_image_as_input_checkbox.blockSignals(False)
         self.load_image_from_settings()
@@ -87,10 +97,8 @@ class InputImage(BaseWidget):
 
     def import_image(self):
         file_path, _ = QFileDialog.getOpenFileName(
-            self.window(),  # Pass the main window as the parent
-            "Open Image",
-            "",
-            f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
+            self.window(),
+            "Open Image", "", f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
         )
         if file_path == "":
             return
@@ -98,10 +106,16 @@ class InputImage(BaseWidget):
 
     def load_image(self, file_path: str):
         image = Image.open(file_path)
+        self.save_image(image, use_generated_image=self.use_generated_image)
         self.load_image_from_object(image)
 
     def load_image_from_settings(self):
-        image = self.current_settings.image
+        if self.use_generated_image:
+            image = self.current_settings.generated_image
+        elif self.settings_key == "outpaint_settings":
+            image = self.drawing_pad_settings.mask
+        else:
+            image = self.current_settings.image
         if image is not None:
             image = convert_base64_to_image(image)
             if image:
@@ -120,16 +134,21 @@ class InputImage(BaseWidget):
         scene = QGraphicsScene()
         scene.addPixmap(qpixmap)
 
+        # Set scene width and height
+        scene.setSceneRect(0, 0, qpixmap.width(), qpixmap.height())
+
         # Set the QGraphicsScene to the QGraphicsView
         self.ui.image_container.setScene(scene)
 
-        # Fit the scene to the QGraphicsView
-        self.ui.image_container.fitInView(scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+        # Set the alignment to top-left corner
+        self.ui.image_container.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
-        # Update settings with base64 image
-        settings_key = self.property("settings_key")
+    def save_image(self, image, use_generated_image:bool = False):
         base64_image = convert_image_to_base64(image)
-        self.update_current_settings("image", base64_image)
+        if use_generated_image:
+            self.update_current_settings("generated_image", base64_image)
+        else:
+            self.update_current_settings("image", base64_image)
 
     def delete_image(self):
         self.update_current_settings("image", None)

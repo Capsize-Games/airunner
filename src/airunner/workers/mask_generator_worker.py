@@ -15,13 +15,13 @@ class MaskGeneratorWorker(Worker):
             self.application_settings.working_width,
             self.application_settings.working_height
         )
-        rect.translate(-self.canvas_settings.pos_x, -self.canvas_settings.pos_y)
+        rect.translate(-self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos)
         return rect
 
     def register_signals(self):
-        self.register(SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL, self.on_active_grid_area_moved_signal)
+        self.register(SignalCode.GENERATE_MASK, self.on_generate_mask_signal)
 
-    def on_active_grid_area_moved_signal(self, message: dict):
+    def on_generate_mask_signal(self, message: dict):
         mask = self.generate_mask()
         self.emit_signal(
             SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL,
@@ -60,8 +60,8 @@ class MaskGeneratorWorker(Worker):
 
                 # Calculate the mask coordinates for transparent pixels
                 mask_y, mask_x = np.where(transparent_pixels)  # Note the order of mask_x and mask_y
-                mask_x += self.active_rect.left()
-                mask_y += self.active_rect.top()
+                mask_x -= self.active_rect.left()
+                mask_y -= self.active_rect.top()
 
                 # Ensure the coordinates are within the mask bounds
                 valid_coords = (mask_x >= 0) & (mask_x < self.application_settings.working_width) & \
