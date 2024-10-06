@@ -30,8 +30,6 @@ class CustomScene(
     ImageHandlerMixin,
     ClipboardHandlerMixin
 ):
-    settings_key = "canvas_settings"
-
     def __init__(self, canvas_type: str):
         self.canvas_type = canvas_type
         self.logger = Logger(prefix=self.__class__.__name__)
@@ -115,10 +113,6 @@ class CustomScene(
             path = url.toLocalFile()
             if path.split('.')[-1].lower().encode() in QImageReader.supportedImageFormats():
                 self.load_image(path)
-
-    @property
-    def scene_is_active(self):
-        return self.canvas_type == self.canvas_settings.active_canvas
 
     def register_signals(self):
         signals = [
@@ -208,11 +202,15 @@ class CustomScene(
         self.update_current_settings("image", image)
         self.refresh_image()
 
-    def create_image(self, image):
+    def create_image(self, image, is_outpaint, outpaint_box_rect):
         if self.application_settings.resize_on_paste:
             image = self.resize_image(image)
         if image is not None:
-            self.add_image_to_scene(image)
+            self.add_image_to_scene(
+                image,
+                is_outpaint=is_outpaint,
+                outpaint_box_rect=outpaint_box_rect
+            )
 
     def resize_image(self, image: Image) -> Image:
         if image is None:
@@ -320,8 +318,7 @@ class CustomScene(
 
         pivot_point = self.image_pivot_point
         root_point = QPoint(0, 0)
-        layer = self.current_layer()
-        current_image_position = QPoint(layer["pos_x"], layer["pos_y"])
+        current_image_position = QPoint(0, 0)
 
         is_drawing_left = outpaint_box_rect.x() < current_image_position.x()
         is_drawing_right = outpaint_box_rect.x() > current_image_position.x()
@@ -374,8 +371,6 @@ class CustomScene(
                 base_64_image = convert_image_to_base64(image)
         except Exception as e:
             self.logger.error(e)
-        if base_64_image is not None:
-            self.update_current_settings("image", base_64_image)
 
         # Save the current viewport position
         view = self.views()[0]
@@ -408,7 +403,11 @@ class CustomScene(
             if len(images) == 0:
                 self.logger.debug("No images received from engine")
             elif message:
-                self.create_image(images[0].convert("RGBA"))
+                self.create_image(
+                    image=images[0].convert("RGBA"),
+                    is_outpaint=message["is_outpaint"],
+                    outpaint_box_rect=message["active_rect"]
+                )
         else:
             self.logger.error(f"Unhandled response code: {code}")
         self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
@@ -534,29 +533,7 @@ class CustomScene(
                 img = None
             except IsADirectoryError:
                 img = None
-            # img_scene = self.item.scene() if self.item is not NoneType else None
-            # if img_scene is not None:
-            #     img_scene.removeItem(self.item)
             self.image = img
-            #self.initialize_image()
-
-            working_width = self.application_settings.working_width
-            working_height = self.application_settings.working_height
-            if working_width != pil_image.width or working_height != pil_image.height:
-                self._do_resize = True
-                self._target_size = QSize(working_width, working_height)
-                resized_image = QImage(
-                    working_width,
-                    working_height,
-                    QImage.Format.Format_ARGB32
-                )
-                resized_image.fill(Qt.GlobalColor.transparent)
-                painter = QPainter(resized_image)
-                painter.drawImage(0, 0, img)
-                painter.end()
-                self.image = resized_image
-
-
         else:
             self.image = QImage(
                 self.application_settings.working_width,
@@ -684,7 +661,7 @@ class CustomScene(
         self.last_pos = event.scenePos()
         self.update()
 
-        if self.scene_is_active and event.button() == Qt.MouseButton.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.handle_left_mouse_press(event)
             self.handle_cursor(event)
             if not self.is_brush_or_eraser:
@@ -701,26 +678,19 @@ class CustomScene(
         self.handle_cursor(event)
 
         super().mouseReleaseEvent(event)
-        if self.scene_is_active and event.button() == Qt.MouseButton.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self._is_drawing = False
             self._is_erasing = False
             self.last_pos = None
             self.start_pos = None
-            if type(self.image) is Image:
-                image = ImageQt.ImageQt(self.image.convert("RGBA"))
-            else:
-                image = self.image
-            pil_image = ImageQt.fromqimage(image)
-            base_64_image = convert_image_to_base64(pil_image)
-            self.update_current_settings("image", base_64_image)
             self.do_update = False
-            if (
-                self.drawing_pad_settings.enable_automatic_drawing and
-                (
-                    self.current_tool is CanvasToolName.BRUSH or
-                    self.current_tool is CanvasToolName.ERASER
-                )
-            ):
+            if ((
+                self.current_tool is CanvasToolName.BRUSH or
+                self.current_tool is CanvasToolName.ERASER
+            )):
+                self.emit_signal(SignalCode.GENERATE_MASK)
+
+            if self.drawing_pad_settings.enable_automatic_drawing:
                 self.emit_signal(SignalCode.SD_GENERATE_IMAGE_SIGNAL)
 
     # Combined mouseMoveEvent
@@ -737,9 +707,8 @@ class CustomScene(
             self.handle_cursor(event)
             super(CustomScene, self).mouseMoveEvent(event)
 
-        if self.scene_is_active:
-            self.last_pos = event.scenePos()
-            self.update()
+        self.last_pos = event.scenePos()
+        self.update()
 
     def event(self, event):
         if self.handling_event:

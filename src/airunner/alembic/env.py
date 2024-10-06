@@ -12,7 +12,7 @@ config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
 # Import your models here
 from airunner.aihandler.models.settings_models import (
     Conversation, Message, Summary,
-    ApplicationSettings, ActiveGridSettings, CanvasSettings, ControlnetSettings,
+    ApplicationSettings, ActiveGridSettings, ControlnetSettings,
     ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings,
     GeneratorSettings, LLMGeneratorSettings, TTSSettings,
     SpeechT5Settings, EspeakSettings, STTSettings, Schedulers, BrushSettings,
@@ -34,7 +34,7 @@ metadata = MetaData()
 
 # Bind all models to the single MetaData object
 for model in [
-    ApplicationSettings, ActiveGridSettings, CanvasSettings, ControlnetSettings,
+    ApplicationSettings, ActiveGridSettings, ControlnetSettings,
     ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings,
     GeneratorSettings, LLMGeneratorSettings, TTSSettings,
     SpeechT5Settings, EspeakSettings, STTSettings, Schedulers, BrushSettings,

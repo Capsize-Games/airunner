@@ -5,9 +5,17 @@ from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 
 class ImageHandlerMixin:
     def __init__(self, image=None):
-        self.image = image
+        self._image = image
         self.image_backup = None
         self.previewing_filter = False
+
+    @property
+    def image(self):
+        return self._image
+
+    @image.setter
+    def image(self, value):
+        self._image = value
 
     def load_image(self, image_path: str) -> Image:
         image = Image.open(image_path)

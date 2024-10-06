@@ -85,11 +85,13 @@ class CustomGraphicsView(
         )
 
     def handle_active_grid_area_moved_signal(self):
-        self.active_grid_area.update_position()
+        self.active_grid_area.snap_to_grid()
 
     def on_mask_generator_worker_response_signal(self, message: dict):
-        mask = convert_image_to_base64(message["mask"])
-        self.update_drawing_pad_settings("mask", mask)
+        mask = message["mask"]
+        if mask is not None:
+            mask = convert_image_to_base64(mask)
+            self.update_drawing_pad_settings("mask", mask)
 
     def on_main_window_loaded_signal(self):
         self.initialized = True
@@ -382,6 +384,5 @@ class CustomGraphicsView(
         return new_event
 
     def mousePressEvent(self, event: QMouseEvent):
-        self.update_canvas_settings("active_canvas", self.canvas_type)
         new_event = self.snap_to_grid(event)
         super().mousePressEvent(new_event)

@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 from airunner.aihandler.models.database_handler import DatabaseHandler
 from airunner.aihandler.models.settings_models import Chatbot, AIModels, Schedulers, Lora, PathSettings, SavedPrompt, \
     Embedding, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, ShortcutKeys, \
-    GeneratorSettings, WindowSettings, ApplicationSettings, ActiveGridSettings, CanvasSettings, ControlnetSettings, \
+    GeneratorSettings, WindowSettings, ApplicationSettings, ActiveGridSettings, ControlnetSettings, \
     ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings, \
     LLMGeneratorSettings, TTSSettings, SpeechT5Settings, EspeakSettings, STTSettings, BrushSettings, GridSettings, \
     MemorySettings, Message, Conversation, Summary
@@ -68,7 +68,6 @@ class SettingsDBHandler(DatabaseHandler):
             # Delete all entries from the model class
             session.query(ApplicationSettings).delete()
             session.query(ActiveGridSettings).delete()
-            session.query(CanvasSettings).delete()
             session.query(ControlnetSettings).delete()
             session.query(ImageToImageSettings).delete()
             session.query(OutpaintSettings).delete()

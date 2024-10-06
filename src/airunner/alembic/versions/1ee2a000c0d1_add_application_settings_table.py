@@ -22,8 +22,6 @@ def upgrade():
                     *settings_models.ApplicationSettings.__table__.columns)
     op.create_table(settings_models.ActiveGridSettings.__tablename__,
                     *settings_models.ActiveGridSettings.__table__.columns)
-    op.create_table(settings_models.CanvasSettings.__tablename__,
-                    *settings_models.CanvasSettings.__table__.columns)
     op.create_table(settings_models.ControlnetSettings.__tablename__,
                     *settings_models.ControlnetSettings.__table__.columns)
     op.create_table(settings_models.ImageToImageSettings.__tablename__,
@@ -83,7 +81,6 @@ def upgrade():
 
     set_default_values(settings_models.ApplicationSettings)
     set_default_values(settings_models.ActiveGridSettings)
-    set_default_values(settings_models.CanvasSettings)
     set_default_values(settings_models.ControlnetSettings)
     set_default_values(settings_models.ImageToImageSettings)
     set_default_values(settings_models.OutpaintSettings)
@@ -233,10 +230,6 @@ def downgrade():
         pass
     try:
         op.drop_table('controlnet_settings')
-    except sqlalchemy.exc.OperationalError:
-        pass
-    try:
-        op.drop_table('canvas_settings')
     except sqlalchemy.exc.OperationalError:
         pass
     try:

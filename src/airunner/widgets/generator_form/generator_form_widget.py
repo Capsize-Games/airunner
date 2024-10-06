@@ -147,7 +147,7 @@ class GeneratorForm(BaseWidget):
             self.application_settings.working_width,
             self.application_settings.working_height
         )
-        rect.translate(-self.canvas_settings.pos_x, -self.canvas_settings.pos_y)
+        rect.translate(-self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos)
 
         return rect
 
@@ -368,39 +368,7 @@ class GeneratorForm(BaseWidget):
 
     def do_generate_image(self):
         time.sleep(0.1)
-
-        if self.generator_settings.section == GeneratorSection.OUTPAINT.value:
-            image = convert_base64_to_image(self.canvas_settings.image)
-            mask = convert_base64_to_image(self.outpaint_settings.image)
-
-            active_rect = self.active_rect
-            overlap_left = max(0, active_rect.left())
-            overlap_right = min(self.application_settings.working_width, active_rect.right())
-            overlap_top = max(0, active_rect.top())
-            overlap_bottom = min(self.application_settings.working_height, active_rect.bottom())
-
-            crop_rect = (overlap_left, overlap_top, overlap_right, overlap_bottom)
-
-            # Crop the image at the overlap position
-            cropped_image = image.crop(crop_rect)
-
-            # Create a new black image of the same size as the input image
-            new_image = Image.new('RGB', (self.application_settings.working_width, self.application_settings.working_height))
-
-            # Paste the cropped image to the top of the new image
-            position = (0, 0)
-            if active_rect.left() < 0:
-                position = (abs(active_rect.left()), 0)
-            if active_rect.top() < 0:
-                position = (0, abs(active_rect.top()))
-            new_image.paste(cropped_image, position)
-
-            self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {
-                "mask_image": mask.convert("RGB"),
-                "image": new_image.convert("RGB")
-            })
-        else:
-            self.do_generate()
+        self.do_generate()
 
     def extract_json_from_message(self, message):
         # Regular expression to find the JSON block
