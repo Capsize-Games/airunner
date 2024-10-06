@@ -66,7 +66,7 @@ DEFAULT_IMAGE_LLM_GUARDRAILS = (
     "Avoid generating images that are illegal, "
     "harmful, or might be seen as offensive."
 )
-BASE_PATH = "~/.local/share/aihandler"
+BASE_PATH = "~/.local/share/airunner"
 DEFAULT_PATH_SETTINGS = {
     "base_path": BASE_PATH,
     "documents_path": os.path.expanduser(

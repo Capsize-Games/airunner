@@ -66,7 +66,7 @@ class Ui_PathSettings(object):
         PathSettings.setWindowTitle(QCoreApplication.translate("PathSettings", u"Form", None))
         self.label_2.setText(QCoreApplication.translate("PathSettings", u"Let's begin by setting up the path to your AI Runner directory. This directory will contain subdirectories which will contain your models, generated images and more.", None))
         self.label.setText(QCoreApplication.translate("PathSettings", u"AI Runner path", None))
-        self.base_path.setText(QCoreApplication.translate("PathSettings", u"~/.local/share/aihandler", None))
+        self.base_path.setText(QCoreApplication.translate("PathSettings", u"~/.local/share/airunner", None))
         self.pushButton.setText(QCoreApplication.translate("PathSettings", u"Browse", None))
     # retranslateUi
 
