@@ -803,9 +803,10 @@ class BaseAgent(
         self.__load_rag()
 
     def unload_rag(self):
-        self.__llm.unload()
-        del self.__llm
-        self.__llm = None
+        if self.__llm is not None:
+            self.__llm.unload()
+            del self.__llm
+            self.__llm = None
 
     def reload_rag(self, data: dict = None):
         self.logger.debug("Reloading RAG index...")
