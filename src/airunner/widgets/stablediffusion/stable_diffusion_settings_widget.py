@@ -123,7 +123,8 @@ class StableDiffusionSettingsWidget(
             'category': image_generator,
             'pipeline_action': pipeline,
             'version': version,
-            'enabled': True
+            'enabled': True,
+            "is_default": False
         })
         model_names = [model.name for model in models]
         self.ui.model.addItems(model_names)

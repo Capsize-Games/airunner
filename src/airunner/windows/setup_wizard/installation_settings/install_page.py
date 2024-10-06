@@ -166,6 +166,7 @@ class InstallWorker(
                         "text",
                         "models",
                         model.category,
+                        model.pipeline_action,
                         model.path
                     )
                 )
@@ -212,8 +213,6 @@ class InstallWorker(
         })
         for k, v in SPEECH_T5_FILES.items():
             self.total_models_in_current_step += len(v)
-
-        for k, v in SPEECH_T5_FILES.items():
             for filename in v:
                 requested_file_path = os.path.expanduser(
                     os.path.join(

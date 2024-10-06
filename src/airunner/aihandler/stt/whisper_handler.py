@@ -42,8 +42,14 @@ class WhisperHandler(BaseHandler):
 
     @property
     def model_path(self) -> str:
-        path: str = self.path_settings.stt_model_path
-        file_path = os.path.expanduser(os.path.join(path, DEFAULT_STT_HF_PATH))
+        file_path = os.path.expanduser(os.path.join(
+            self.path_settings.base_path,
+            "text",
+            "models",
+            "stt",
+            "openai",
+            "whisper-tiny"
+        ))
         return os.path.abspath(file_path)
 
     def process_audio(self, audio_data):

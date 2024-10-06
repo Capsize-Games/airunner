@@ -10,7 +10,6 @@ from airunner.aihandler.models.settings_models import ShortcutKeys
 from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
-from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.random_seed import random_seed
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form

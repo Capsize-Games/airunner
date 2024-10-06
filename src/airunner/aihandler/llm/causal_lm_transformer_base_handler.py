@@ -158,7 +158,9 @@ class CausalLMTransformerBaseHandler(
         base:str = self.path_settings.base_path
         return os.path.expanduser(os.path.join(
             base,
-            "text/models",
+            "text",
+            "models",
+            "llm",
             local_path,
             model_version
         ))
@@ -207,7 +209,7 @@ class CausalLMTransformerBaseHandler(
         self._processing_request = True
         action = self.llm_generator_settings.action
         if type(action) is str:
-            action = LLMActionType(action)
+            action = LLMActionType[action]
         self._do_generate(
             data["request_data"]["prompt"],
             action
