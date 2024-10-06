@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 from airunner.aihandler.models.settings_db_handler import SettingsDBHandler
 from airunner.aihandler.models.settings_models import ApplicationSettings, LLMGeneratorSettings, GeneratorSettings, \
     ControlnetSettings, BrushSettings, DrawingPadSettings, GridSettings, ActiveGridSettings, \
-    ImageToImageSettings, OutpaintSettings, PathSettings, CanvasSettings, MemorySettings, Chatbot, \
+    ImageToImageSettings, OutpaintSettings, PathSettings, MemorySettings, Chatbot, \
     AIModels, Schedulers, Lora, ShortcutKeys, SavedPrompt, SpeechT5Settings, TTSSettings, EspeakSettings, \
     MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, TargetFiles, \
     ImageFilterValue
@@ -66,10 +66,6 @@ class SettingsMixin:
     @property
     def path_settings(self) -> PathSettings:
         return self.db_handler.load_settings_from_db(PathSettings)
-
-    @property
-    def canvas_settings(self) -> CanvasSettings:
-        return self.db_handler.load_settings_from_db(CanvasSettings)
 
     @property
     def memory_settings(self) -> MemorySettings:
@@ -172,14 +168,6 @@ class SettingsMixin:
     @property
     def controlnet_generated_image(self):
         base_64_image = self.controlnet_settings.imported_image_base64
-        image = convert_base64_to_image(base_64_image)
-        if image is not None:
-            image = image.convert("RGB")
-        return image
-
-    @property
-    def outpaint_image(self):
-        base_64_image = self.outpaint_settings.image
         image = convert_base64_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
@@ -315,8 +303,6 @@ class SettingsMixin:
             self.update_active_grid_settings(column_name, val)
         elif setting_name == "path_settings":
             self.update_path_settings(column_name, val)
-        elif setting_name == "canvas_settings":
-            self.update_canvas_settings(column_name, val)
         elif setting_name == "memory_settings":
             self.update_memory_settings(column_name, val)
         elif setting_name == "llm_generator_settings":
@@ -384,10 +370,6 @@ class SettingsMixin:
 
     def reset_path_settings(self):
         self.db_handler.reset_path_settings()
-
-    def update_canvas_settings(self, column_name, val):
-        self.db_handler.update_setting(CanvasSettings, column_name, val)
-        self.__settings_updated()
 
     def update_memory_settings(self, column_name, val):
         self.db_handler.update_setting(MemorySettings, column_name, val)
