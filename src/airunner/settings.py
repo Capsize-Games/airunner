@@ -32,7 +32,7 @@ NLTK_DOWNLOAD_DIR = os.path.join(
 ORGANIZATION = "Capsize Games"
 APPLICATION_NAME = "AI Runner"
 LOG_LEVEL = logging.DEBUG
-DEFAULT_LLM_HF_PATH = "mistralai/Mistral-7B-Instruct-v0.3"
+DEFAULT_LLM_HF_PATH = "w4ffl35/Mistral-7B-Instruct-v0.3-4bit"
 DEFAULT_STT_HF_PATH = "openai/whisper-tiny"
 DEFAULT_IMAGE_SYSTEM_PROMPT = "\n".join([
     (

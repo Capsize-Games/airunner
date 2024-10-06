@@ -1,13 +1,10 @@
 LLM_FILE_BOOTSTRAP_DATA = {
-    "mistralai/Mistral-7B-Instruct-v0.3": {
+    "w4ffl35/Mistral-7B-Instruct-v0.3-4bit": {
         "path_settings": "llm_causallm_model_path",
         "files": [
             "config.json",
             "generation_config.json",
-            "model-00001-of-00003.safetensors",
-            "model-00002-of-00003.safetensors",
-            "model-00003-of-00003.safetensors",
-            "model.safetensors.index.json",
+            "model.safetensors",
             "special_tokens_map.json",
             "tokenizer.json",
             "tokenizer.model",

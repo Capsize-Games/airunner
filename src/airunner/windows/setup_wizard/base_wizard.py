@@ -42,4 +42,5 @@ class BaseWizard(
         Do not call this function directly.
         :return:
         """
-        pass
+        self.update_application_settings("run_setup_wizard", False)
+        self.update_application_settings("download_wizard_completed", True)
