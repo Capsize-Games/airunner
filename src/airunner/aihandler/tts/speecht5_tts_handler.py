@@ -84,6 +84,9 @@ class SpeechT5TTSHandler(TTSHandler):
                 self.path_settings.base_path,
                 "text/models",
                 "tts",
+                "datasets",
+                "w4ffl35",
+                "speecht5_speaker_embeddings",
                 "speaker_embeddings"
             )
         )
