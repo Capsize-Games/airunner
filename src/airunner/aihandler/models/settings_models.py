@@ -25,7 +25,7 @@ class ApplicationSettings(Base):
     controlnet_enabled = Column(Boolean, default=False)
     ai_mode = Column(Boolean, default=True)
     active_grid_size_lock = Column(Boolean, default=False)
-    installation_path = Column(String, default="~/.airunner")
+    installation_path = Column(String, default="~/.local/share/aihandler")
     current_layer_index = Column(Integer, default=0)
     paths_initialized = Column(Boolean, default=False)
     trust_remote_code = Column(Boolean, default=False)  # Leave this hardcoded. We will never trust remote code.
