@@ -11,9 +11,14 @@ Do not change the order of the imports.
 # variables for the application.
 ################################################################
 import facehuggershield
+from airunner.settings import NLTK_DOWNLOAD_DIR
 facehuggershield.huggingface.activate(
     show_stdout=True,
-    darklock_os_whitelisted_directories=["~/.local/share/airunner", "/tmp"]
+    darklock_os_whitelisted_directories=[
+        "~/.local/share/airunner",
+        NLTK_DOWNLOAD_DIR,
+        "/tmp"
+    ]
 )
 
 ################################################################
@@ -39,12 +44,35 @@ from airunner.app import App
 from alembic.config import Config
 from alembic import command
 
-def run_alembic_upgrade():
-    alembic_cfg = Config("alembic.ini")
-    command.upgrade(alembic_cfg, "head")
+alembic_cfg = Config("alembic.ini")
+command.upgrade(alembic_cfg, "head")
+
+################################################################
+# Run the setup wizard if the application is not yet installed.
+################################################################
+from airunner.aihandler.models.database_handler import DatabaseHandler
+from airunner.aihandler.models.settings_models import ApplicationSettings
+from app_installer import AppInstaller
+database_handler = DatabaseHandler()
+session = database_handler.get_db_session()
+application_settings = session.query(ApplicationSettings).first()
+session.close()
+if application_settings.run_setup_wizard:
+    AppInstaller()
+    database_handler = DatabaseHandler()
+    session = database_handler.get_db_session()
+    application_settings = session.query(ApplicationSettings).first()
+    session.close()
+    if not (
+        application_settings.stable_diffusion_agreement_checked and
+        application_settings.airunner_agreement_checked and
+        application_settings.user_agreement_checked
+    ):
+        import sys
+        sys.exit(0)
+
 
 if __name__ == "__main__":
-    run_alembic_upgrade()
     App(
         restrict_os_access=None,
         defendatron=facehuggershield.huggingface.defendatron

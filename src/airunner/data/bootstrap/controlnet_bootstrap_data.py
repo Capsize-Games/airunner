@@ -26,5 +26,4 @@ controlnet_bootstrap_data = [
     {"display_name": "Inpaint", "name": "inpaint", "path": "lllyasviel/control_v11p_sd15_inpaint", "version": "SD 1.5"},
     {"display_name": "Shuffle", "name": "shuffle", "path": "lllyasviel/control_v11e_sd15_shuffle", "version": "SD 1.5"},
     {"display_name": "Canny", "name": "canny", "path": "diffusers/controlnet-canny-sdxl-1.0-small", "version": "SDXL 1.0"},
-    {"display_name": "Openpose", "name": "openpose", "path": "thibaud/controlnet-openpose-sdxl-1.0", "version": "SDXL 1.0"},
 ]
