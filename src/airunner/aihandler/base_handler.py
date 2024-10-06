@@ -50,14 +50,10 @@ class BaseHandler(
             self._requested_action = ModelAction.NONE
 
     def load(self):
-        pass
+        raise NotImplementedError
 
     def unload(self):
         pass
-
-    @property
-    def model_status(self):
-        return self._model_status
 
     @property
     def device(self):

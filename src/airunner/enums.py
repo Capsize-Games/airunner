@@ -175,7 +175,6 @@ class SignalCode(Enum):
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
     SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
     HANDLE_LATENTS_SIGNAL = "handle_latents_signal"
-    STT_AUDIO_PROCESSED = "stt_audio_processed_signal"
     STT_PROCESS_AUDIO_SIGNAL = "stt_process_audio"
     STT_START_CAPTURE_SIGNAL = "stt_start_capture"
     STT_STOP_CAPTURE_SIGNAL = "stt_stop_capture"
