@@ -93,7 +93,7 @@ class ControlnetSettings(Base):
     strength = Column(Integer, default=50)
     conditioning_scale = Column(Integer, default=100)
     guidance_scale = Column(Integer, default=750)
-    controlnet = Column(String, default="canny")
+    controlnet = Column(String, default="Canny")
 
 
 class ImageToImageSettings(Base):
@@ -186,7 +186,7 @@ class LLMGeneratorSettings(Base):
     use_tool_filter = Column(Boolean, default=False)
     seed = Column(Integer, default=0)
     random_seed = Column(Boolean, default=False)
-    model_version = Column(String, default="mistralai/Mistral-7B-Instruct-v0.3")
+    model_version = Column(String, default="w4ffl35/Mistral-7B-Instruct-v0.3-4bit")
     dtype = Column(String, default="4bit")
     use_gpu = Column(Boolean, default=True)
     message_type = Column(String, default="chat")
@@ -352,7 +352,7 @@ class Chatbot(Base):
     sequences = Column(Integer, default=1)
     seed = Column(Integer, default=42)
     random_seed = Column(Boolean, default=True)
-    model_version = Column(String, default="mistralai/Mistral-7B-Instruct-v0.3")
+    model_version = Column(String, default="w4ffl35/Mistral-7B-Instruct-v0.3-4bit")
     model_type = Column(String, default="llm")
     dtype = Column(String, default="4bit")
     return_result = Column(Boolean, default=True)
