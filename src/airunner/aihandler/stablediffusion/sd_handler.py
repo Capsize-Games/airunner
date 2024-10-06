@@ -414,10 +414,7 @@ class SDHandler(BaseHandler):
         self._finalize_load_stable_diffusion()
 
     def unload(self):
-        if (
-            self.sd_is_loading or
-            self.sd_is_unloaded
-        ):
+        if self.sd_is_loading or self.sd_is_unloaded:
             return
         elif self._current_state in (
             HandlerState.PREPARING_TO_GENERATE,

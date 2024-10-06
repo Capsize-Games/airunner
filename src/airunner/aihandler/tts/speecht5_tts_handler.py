@@ -110,7 +110,7 @@ class SpeechT5TTSHandler(TTSHandler):
         ):
             self.unload()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
-        self.logger.debug(f"Loading TTS")
+        self.logger.debug(f"Loading text-to-speech")
         self._load_model()
         self._load_vocoder()
         self._load_processor()
@@ -230,7 +230,7 @@ class SpeechT5TTSHandler(TTSHandler):
         clear_memory(self.memory_settings.default_gpu_tts)
 
     def _do_generate(self, message):
-        self.logger.debug("Generating TTS with T5")
+        self.logger.debug("Generating text-to-speech with T5")
         text = self._replace_unspeakable_characters(message)
         text = self._replace_numbers_with_words(text)
         text = text.strip()
@@ -350,7 +350,7 @@ class SpeechT5TTSHandler(TTSHandler):
         clear_memory(self.memory_settings.default_gpu_tts)
 
     def unblock_tts_generator_signal(self):
-        self.logger.debug("Unblocking TTS generation...")
+        self.logger.debug("Unblocking text-to-speech generation...")
         self._do_interrupt = False
         self._paused = False
 
