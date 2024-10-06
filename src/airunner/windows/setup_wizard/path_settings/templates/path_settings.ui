@@ -56,7 +56,7 @@
    <item row="2" column="0">
     <widget class="QLineEdit" name="base_path">
      <property name="text">
-      <string>~/.local/share/aihandler</string>
+      <string>~/.local/share/airunner</string>
      </property>
     </widget>
    </item>

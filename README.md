@@ -197,7 +197,7 @@ Write access for the transformers library has been disabled, preventing it from 
 cache directory at runtime.
 
 The application itself may still access the disc for reading and writing, however we have restricted
-reads and writes to the user provided `airunner` directory (by default this is located at `~/.local/share/aihandler`).
+reads and writes to the user provided `airunner` directory (by default this is located at `~/.local/share/airunner`).
 
 All other attempts to access the disc are blocked and logged for your review.
 

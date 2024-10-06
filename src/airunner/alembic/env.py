@@ -6,7 +6,7 @@ from sqlalchemy import engine_from_config, pool, MetaData
 from alembic import context
 
 config = context.config
-db_path = os.path.expanduser("~/.local/share/aihandler/data/airunner.db")
+db_path = os.path.expanduser("~/.local/share/airunner/data/airunner.db")
 config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
 
 # Import your models here
