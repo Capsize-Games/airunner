@@ -52,7 +52,9 @@ class StableDiffusionSettingsWidget(
     def handle_model_changed(self, name):
         self.update_generator_settings("model", name)
         if self.application_settings.sd_enabled:
-            self.emit_signal(SignalCode.SD_LOAD_SIGNAL)
+            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
+                "do_reload": False
+            })
 
     def handle_scheduler_changed(self, name):
         self.update_generator_settings("scheduler", name)
@@ -67,11 +69,19 @@ class StableDiffusionSettingsWidget(
         self.update_generator_settings("section", val)
         self.load_versions()
         self.load_models()
+        if self.application_settings.sd_enabled:
+            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
+                "do_reload": True
+            })
 
     def handle_version_changed(self, val):
         self.update_application_settings("current_version_stablediffusion", val)
         self.update_generator_settings("version", val)
         self.load_models()
+        if self.application_settings.sd_enabled:
+            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
+                "do_reload": True
+            })
 
     def load_pipelines(self):
         self.ui.pipeline.blockSignals(True)
