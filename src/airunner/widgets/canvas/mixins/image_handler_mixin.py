@@ -21,20 +21,6 @@ class ImageHandlerMixin:
         image = Image.open(image_path)
         return image
 
-    def save_image(
-        self,
-        image_path: str,
-        image: Image = None,
-        scene_items: list = None
-    ):
-        if image is None and scene_items is not None:
-            for item in scene_items:
-                if isinstance(item, DraggablePixmap):
-                    image = item.pixmap.toImage()
-                    image.save(image_path)
-        else:
-            image.save(image_path)
-
     def rotate_image(
         self,
         angle: float,
