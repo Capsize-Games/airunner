@@ -451,6 +451,10 @@ class CustomScene(
         if callback:
             callback(response)
 
+        if self.drawing_pad_settings.mask_layer_enabled:
+            self.set_mask()
+            self.initialize_image()
+
     def on_canvas_clear_signal(self):
         self.update_current_settings("image", None)
         self.delete_image()

@@ -274,7 +274,11 @@ class SDHandler(BaseHandler):
         section = GeneratorSection.TXT2IMG
         if self.img2img_image_cached is not None and self.image_to_image_settings.enabled:
             section = GeneratorSection.IMG2IMG
-        if self.drawing_pad_settings.mask is not None and self.generator_settings_cached.section == "inpaint":
+        if (
+            self.drawing_pad_settings.mask is not None and
+            self.drawing_pad_settings.image is not None and
+            self.generator_settings_cached.section == "inpaint"
+        ):
             section = GeneratorSection.OUTPAINT
         return section
 
@@ -1519,8 +1523,6 @@ class SDHandler(BaseHandler):
             args.update(dict(
                 mask_image=mask
             ))
-            image.save("image.png")
-            mask.save("mask.png")
 
         if self.controlnet_enabled:
             args.update(dict(
