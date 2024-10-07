@@ -127,7 +127,11 @@ class SDWorker(Worker):
             thread.start()
 
     def _load_sd(self, data:dict=None):
-        self.sd.load()
+        do_reload = data.get("do_reload", False)
+        if do_reload:
+            self.sd.reload()
+        else:
+            self.sd.load()
         if data:
             callback = data.get("callback", None)
             if callback is not None:

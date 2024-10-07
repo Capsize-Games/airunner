@@ -423,6 +423,7 @@ class SDHandler(BaseHandler):
 
     def reload(self):
         self.logger.debug("Reloading stable diffusion")
+        self._clear_cached_properties()
         self.unload()
         self.load()
 
