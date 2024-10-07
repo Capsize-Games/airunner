@@ -366,7 +366,7 @@ class SDHandler(BaseHandler):
         if self.controlnet_enabled:
             operation_type = f"{operation_type}_controlnet"
 
-        if self.is_sd_xl:
+        if self.is_sd_xl or self.is_sd_xl_turbo:
             pipeline_map = {
                 "txt2img": StableDiffusionXLPipeline,
                 "img2img": StableDiffusionXLImg2ImgPipeline,
@@ -716,7 +716,7 @@ class SDHandler(BaseHandler):
 
     def _load_tokenizer(self):
         self.logger.debug("Loading tokenizer")
-        if self.is_sd_xl:
+        if self.is_sd_xl or self.is_sd_xl_turbo:
             return
         tokenizer_path = os.path.expanduser(
             os.path.join(
@@ -851,10 +851,19 @@ class SDHandler(BaseHandler):
 
         pipeline_class_ = self._pipeline_class
         if self.is_single_file:
+            config_path = os.path.dirname(self.model_path)
+            if self.is_sd_xl_turbo:
+                config_path = os.path.expanduser(os.path.join(
+                    self.path_settings_cached.base_path,
+                    "art",
+                    "models",
+                    "SDXL 1.0",
+                    "txt2img"
+                ))
             try:
                 self._pipe = pipeline_class_.from_single_file(
                     self.model_path,
-                    config=os.path.dirname(self.model_path),
+                    config=config_path,
                     add_watermarker=False,
                     **data
                 )
@@ -1002,7 +1011,7 @@ class SDHandler(BaseHandler):
             truncate_long_prompts=False,
             textual_inversion_manager=self._textual_inversion_manager
         )
-        if self.is_sd_xl:
+        if self.is_sd_xl or self.is_sd_xl_turbo:
             tokenizer = [self._pipe.tokenizer, self._pipe.tokenizer_2]
             text_encoder = [self._pipe.text_encoder, self._pipe.text_encoder_2]
             parameters["returned_embeddings_type"] = ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED
@@ -1043,7 +1052,7 @@ class SDHandler(BaseHandler):
                 self._safety_checker is not None and
                 self._feature_extractor is not None
             )
-        if not self.is_sd_xl:
+        if not self.is_sd_xl and not self.is_sd_xl_turbo:
             tokenizer_ready = self._tokenizer is not None
         if (
             self._pipe is not None
@@ -1056,6 +1065,7 @@ class SDHandler(BaseHandler):
             self.logger.error("Something went wrong with Stable Diffusion loading")
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             self.unload()
+            self._clear_cached_properties()
 
         if (
             self._controlnet is not None
@@ -1327,7 +1337,7 @@ class SDHandler(BaseHandler):
         pooled_prompt_embeds = None
         negative_pooled_prompt_embeds = None
 
-        if self.is_sd_xl:
+        if self.is_sd_xl or self.is_sd_xl_turbo:
             prompt_embeds, pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(f'("{prompt}", "{prompt_2}").and()')
             negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(f'("{negative_prompt}", "{negative_prompt_2}").and()')
         else:
@@ -1392,7 +1402,7 @@ class SDHandler(BaseHandler):
                 negative_prompt_embeds=self._negative_prompt_embeds,
             ))
 
-            if self.is_sd_xl:
+            if self.is_sd_xl or self.is_sd_xl_turbo:
                 args.update(dict(
                     pooled_prompt_embeds=self._pooled_prompt_embeds,
                     negative_pooled_prompt_embeds=self._negative_pooled_prompt_embeds
