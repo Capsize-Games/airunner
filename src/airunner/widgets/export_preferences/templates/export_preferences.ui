@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>457</width>
-    <height>429</height>
+    <width>705</width>
+    <height>602</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,7 +29,7 @@
    <item row="1" column="0" colspan="2">
     <widget class="Line" name="line">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -70,7 +70,7 @@
    <item row="5" column="0" colspan="2">
     <widget class="Line" name="line_3">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -89,92 +89,16 @@
    <item row="8" column="0" colspan="2">
     <widget class="Line" name="line_2">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
    <item row="9" column="0" colspan="2">
     <layout class="QGridLayout" name="gridLayout">
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="font">
-        <font>
-         <bold>true</bold>
-        </font>
-       </property>
+     <item row="7" column="0">
+      <widget class="QCheckBox" name="metadata_iterations">
        <property name="text">
-        <string>Metadata</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QCheckBox" name="export_metadata">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export metadata along with images. &lt;/p&gt;&lt;p&gt;Only works with PNG files.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Export metadata</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="3">
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item row="1" column="0" colspan="2">
-      <widget class="QLabel" name="label_4">
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Choose which metadata to include with exported images</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QCheckBox" name="metadata_prompt">
-       <property name="text">
-        <string>Prompt</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QCheckBox" name="metadata_samples">
-       <property name="text">
-        <string>Samples</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <widget class="QCheckBox" name="metadata_negative_prompt">
-       <property name="text">
-        <string>Negative prompt</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QCheckBox" name="metadata_model">
-       <property name="text">
-        <string>Model</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QCheckBox" name="metadata_scale">
-       <property name="text">
-        <string>Scale</string>
+        <string>Iterations</string>
        </property>
       </widget>
      </item>
@@ -192,6 +116,25 @@
        </property>
       </widget>
      </item>
+     <item row="3" column="1">
+      <widget class="QCheckBox" name="metadata_model">
+       <property name="text">
+        <string>Model</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="font">
+        <font>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Metadata</string>
+       </property>
+      </widget>
+     </item>
      <item row="5" column="1">
       <widget class="QCheckBox" name="metadata_scheduler">
        <property name="text">
@@ -199,10 +142,47 @@
        </property>
       </widget>
      </item>
-     <item row="6" column="0">
-      <widget class="QCheckBox" name="metadata_steps">
+     <item row="0" column="1">
+      <widget class="QCheckBox" name="export_metadata">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export metadata along with images. &lt;/p&gt;&lt;p&gt;Only works with PNG files.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
-        <string>Steps</string>
+        <string>Export metadata</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QCheckBox" name="metadata_samples">
+       <property name="text">
+        <string>Samples</string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="0">
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>17</width>
+         <height>37</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item row="4" column="0">
+      <widget class="QCheckBox" name="metadata_scale">
+       <property name="text">
+        <string>Scale</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QCheckBox" name="metadata_negative_prompt">
+       <property name="text">
+        <string>Negative prompt</string>
        </property>
       </widget>
      </item>
@@ -213,25 +193,94 @@
        </property>
       </widget>
      </item>
-     <item row="7" column="0">
-      <widget class="QCheckBox" name="metadata_iterations">
+     <item row="2" column="0">
+      <widget class="QCheckBox" name="metadata_prompt">
        <property name="text">
-        <string>Iterations</string>
+        <string>Prompt</string>
        </property>
       </widget>
      </item>
-     <item row="8" column="0">
-      <spacer name="verticalSpacer">
+     <item row="6" column="0">
+      <widget class="QCheckBox" name="metadata_steps">
+       <property name="text">
+        <string>Steps</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <spacer name="horizontalSpacer">
        <property name="orientation">
-        <enum>Qt::Vertical</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
-         <width>17</width>
-         <height>37</height>
+         <width>40</width>
+         <height>20</height>
         </size>
        </property>
       </spacer>
+     </item>
+     <item row="2" column="2">
+      <widget class="QCheckBox" name="metadata_clip_skip">
+       <property name="text">
+        <string>Clip Skip</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="2">
+      <widget class="QCheckBox" name="metadata_version">
+       <property name="text">
+        <string>Version</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="2">
+      <widget class="QCheckBox" name="metadata_lora">
+       <property name="text">
+        <string>LoRA</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="2">
+      <widget class="QCheckBox" name="metadata_embeddings">
+       <property name="text">
+        <string>Embeddings</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="2">
+      <widget class="QCheckBox" name="metadata_timestamp">
+       <property name="text">
+        <string>Timestamp</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QCheckBox" name="metadata_strength">
+       <property name="text">
+        <string>Strength</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="2">
+      <widget class="QCheckBox" name="metadata_controlnet">
+       <property name="text">
+        <string>Controlnet</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0" colspan="3">
+      <widget class="QLabel" name="label_4">
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Choose which metadata to include with exported images</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
@@ -254,7 +303,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>80</x>
-     <y>-14</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -270,7 +319,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>13</x>
-     <y>-15</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -281,8 +330,8 @@
    <slot>action_clicked_button_browse()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>427</x>
-     <y>111</y>
+     <x>695</x>
+     <y>115</y>
     </hint>
     <hint type="destinationlabel">
      <x>343</x>
@@ -302,7 +351,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>71</x>
-     <y>-23</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -318,7 +367,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>396</x>
-     <y>-2</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -334,7 +383,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>54</x>
-     <y>-11</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -397,7 +446,7 @@
      <y>371</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-1</x>
+     <x>0</x>
      <y>114</y>
     </hint>
    </hints>
@@ -413,7 +462,7 @@
      <y>398</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-6</x>
+     <x>0</x>
      <y>146</y>
     </hint>
    </hints>
@@ -498,6 +547,118 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>metadata_strength</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_strength(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>247</x>
+     <y>400</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>362</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_clip_skip</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_clip_skip(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>409</x>
+     <y>252</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>239</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_version</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_version(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>393</x>
+     <y>290</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>283</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_lora</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_lora(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>385</x>
+     <y>318</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-5</x>
+     <y>341</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_embeddings</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_embeddings(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>441</x>
+     <y>350</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>402</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_timestamp</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_timestamp(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>399</x>
+     <y>365</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>451</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>metadata_controlnet</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>export_preferences</receiver>
+   <slot>action_toggled_controlnet(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>457</x>
+     <y>406</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>501</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>action_toggle_automatically_export_images(bool)</slot>
@@ -516,5 +677,12 @@
   <slot>action_toggled_scheduler(bool)</slot>
   <slot>action_toggled_samples(bool)</slot>
   <slot>action_toggled_ddim(bool)</slot>
+  <slot>action_toggled_strength(bool)</slot>
+  <slot>action_toggled_clip_skip(bool)</slot>
+  <slot>action_toggled_version(bool)</slot>
+  <slot>action_toggled_lora(bool)</slot>
+  <slot>action_toggled_embeddings(bool)</slot>
+  <slot>action_toggled_timestamp(bool)</slot>
+  <slot>action_toggled_controlnet(bool)</slot>
  </slots>
 </ui>

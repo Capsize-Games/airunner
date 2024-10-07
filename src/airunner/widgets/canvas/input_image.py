@@ -106,7 +106,6 @@ class InputImage(BaseWidget):
 
     def load_image(self, file_path: str):
         image = Image.open(file_path)
-        self.save_image(image, use_generated_image=self.use_generated_image)
         self.load_image_from_object(image)
 
     def load_image_from_settings(self):
@@ -142,13 +141,6 @@ class InputImage(BaseWidget):
 
         # Set the alignment to top-left corner
         self.ui.image_container.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-
-    def save_image(self, image, use_generated_image:bool = False):
-        base64_image = convert_image_to_base64(image)
-        if use_generated_image:
-            self.update_current_settings("generated_image", base64_image)
-        else:
-            self.update_current_settings("image", base64_image)
 
     def delete_image(self):
         self.update_current_settings("image", None)

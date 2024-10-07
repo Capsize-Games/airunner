@@ -14,6 +14,7 @@ from airunner.aihandler.logger import Logger
 from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import VALID_IMAGE_FILES
+from airunner.utils.export_image import export_image
 from airunner.utils.snap_to_grid import snap_to_grid
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
@@ -145,8 +146,8 @@ class CustomScene(
             initial_dir = self.last_export_path if self.last_export_path else ""
 
             file_dialog = QFileDialog(parent_window, "Save Image", initial_dir, f"Image Files ({' '.join(VALID_IMAGE_FILES)})")
-            file_dialog.setAcceptMode(QFileDialog.AcceptSave)
-            if file_dialog.exec() == QFileDialog.Accepted:
+            file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
                 file_path = file_dialog.selectedFiles()[0]
                 if file_path == "":
                     return
@@ -158,8 +159,7 @@ class CustomScene(
                 if not file_path.endswith(VALID_IMAGE_FILES):
                     file_path = f"{file_path}.png"
 
-                # Save the combined image
-                image.save(file_path)
+                export_image(image, file_path)
 
     def import_image(self):
         file_path, _ = QFileDialog.getOpenFileName(

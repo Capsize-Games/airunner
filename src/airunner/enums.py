@@ -170,7 +170,6 @@ class SignalCode(Enum):
     SD_SAVE_PROMPT_SIGNAL = "save_stablediffusion_prompt_signal"
     SD_LOAD_PROMPT_SIGNAL = "load_saved_stablediffuion_prompt_signal"
     SD_ADD_RESPONSE_TO_QUEUE_SIGNAL = "add_sd_response_to_queue_signal"
-    SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL = "ImageDataWorker_response_signal"
     SD_GENERATE_IMAGE_SIGNAL = "generate_image_signal"
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
     SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
