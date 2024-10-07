@@ -4,17 +4,15 @@
 ####################################################################################################
 import sys
 import signal
-from functools import partial
 
-from PySide6 import QtCore
 from PySide6.QtCore import (
-    QObject, QTimer,
+    QObject
 )
 from PySide6.QtGui import (
-    Qt, QPixmap, QGuiApplication
+    Qt
 )
 from PySide6.QtWidgets import (
-    QApplication, QSplashScreen,
+    QApplication
 )
 
 from airunner.mediator_mixin import MediatorMixin
@@ -54,7 +52,6 @@ class AppInstaller(
         super(AppInstaller, self).__init__()
 
         self.start()
-        sys.exit(0)
 
     @property
     def do_show_setup_wizard(self) -> bool:
@@ -80,36 +77,19 @@ class AppInstaller(
         """
         signal.signal(signal.SIGINT, self.signal_handler)
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
-        self.app = QApplication([])
+        self.app = QApplication.instance()
 
         self.wizard = SetupWizardWindow()
         self.wizard.exec()
 
+        if self.wizard.canceled:
+            self.cancel()
+            return
+
         self.download_wizard = DownloadWizardWindow()
         self.download_wizard.exec()
 
-    def run(self):
-        """
-        Run as a GUI application.
-        A splash screen is displayed while the application is loading
-        and a main window is displayed once the application is ready.
-
-        Override this method to run the application in a different mode.
-        """
-
-        # Continue with application execution
-        splash = self.display_splash_screen(self.app)
-
-        # Show the main application window
-        QTimer.singleShot(
-            50,
-            partial(
-                self.show_main_application,
-                self.app,
-                splash
-            )
-        )
-        sys.exit(self.app.exec())
+        self.quit()
 
     @staticmethod
     def signal_handler(
@@ -124,38 +104,20 @@ class AppInstaller(
         """
         print("\nExiting...")
         try:
-            app = QApplication.instance()
-            app.quit()
+            AppInstaller.quit()
             sys.exit(0)
         except Exception as e:
             print(e)
             sys.exit(0)
 
-    @staticmethod
-    def display_splash_screen(app):
-        """
-        Display a splash screen while the application is loading.
-        :param app:
-        :return:
-        """
-        screens = QGuiApplication.screens()
-        try:
-            screen = screens.at(0)
-        except AttributeError:
-            screen = screens[0]
-        pixmap = QPixmap("images/splashscreen.png")
-        splash = QSplashScreen(
-            screen,
-            pixmap,
-            QtCore.Qt.WindowType.WindowStaysOnTopHint
-        )
-        splash.show()
-        # make message white
-        splash.showMessage(
-            f"Loading AI Runner",
-            QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignCenter,
-            QtCore.Qt.GlobalColor.white
-        )
-        app.processEvents()
-        return splash
+    def cancel(self):
+        self.wizard.close()
+        if self.download_wizard:
+            self.download_wizard.close()
+        self.quit()
+        sys.exit(0)
 
+    @staticmethod
+    def quit():
+        app = QApplication.instance()
+        app.quit()

@@ -1,3 +1,4 @@
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWizard
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -19,6 +20,8 @@ class SetupWizardWindow(
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super(SetupWizardWindow, self).__init__(*args)
+
+        self.canceled = False
 
         # Reset agreements
         self.update_application_settings("stable_diffusion_agreement_checked", False)
@@ -69,8 +72,18 @@ class SetupWizardWindow(
             setattr(self, f"{key}_id", page_id)
             self.page_order.append(page_id)
 
+        # attach to parent page id changed signal
+        self.button(
+            QWizard.WizardButton.FinishButton
+        ).clicked.connect(self.save_settings)
+
+        self.button(
+            QWizard.WizardButton.CancelButton
+        ).clicked.connect(self.cancel)
+
         # Set window title
         self.setWindowTitle("AI Runner Setup Wizard")
+
 
     def addPage(self, page):
         page_id = super().addPage(page)
@@ -147,3 +160,17 @@ class SetupWizardWindow(
 
         # If the ID of the current page is not in the order list, use the default next page logic
         return super(SetupWizardWindow, self).nextId()
+
+    def save_settings(self):
+        """
+        Override this function to save settings based on specific page in question.
+        Do not call this function directly.
+        :return:
+        """
+        print("SAVE SETTINGS")
+        self.update_application_settings("run_setup_wizard", False)
+        self.update_application_settings("download_wizard_completed", True)
+
+    @Slot()
+    def cancel(self):
+        self.canceled = True
