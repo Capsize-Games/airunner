@@ -91,22 +91,4 @@ SD_FILE_BOOTSTRAP_DATA = {
             "diffusion_pytorch_model.fp16.safetensors"
         ]
     },
-    "SDXL Turbo": {
-        "txt2img": [
-            "scheduler/scheduler_config.json",
-            "text_encoder/config.json",
-            "text_encoder/model.fp16.safetensors",
-            "tokenizer/merges.txt",
-            "tokenizer/special_tokens_map.json",
-            "tokenizer/tokenizer_config.json",
-            "tokenizer/vocab.json",
-            "unet/config.json",
-            "unet/diffusion_pytorch_model.fp16.safetensors",
-            "vae/config.json",
-            "vae/diffusion_pytorch_model.fp16.safetensors",
-            "LICENSE.md",
-            "model_index.json",
-            #"sd_turbo.safetensors",
-        ]
-    },
 }
