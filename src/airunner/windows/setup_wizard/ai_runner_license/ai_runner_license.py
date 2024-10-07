@@ -4,4 +4,4 @@ from airunner.windows.setup_wizard.ai_runner_license.templates.airunner_license_
 
 class AIRunnerLicense(AgreementPage):
     class_name_ = Ui_airunner_license
-    setting_key = "airunner"
+    setting_key = "airunner_agreement_checked"

@@ -24,6 +24,7 @@ from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
 from airunner.aihandler.logger import Logger
 from airunner.aihandler.models.settings_models import ShortcutKeys, ImageFilter
+from airunner.app_installer import AppInstaller
 from airunner.settings import (
     STATUS_ERROR_COLOR,
     STATUS_NORMAL_COLOR_LIGHT,
@@ -942,8 +943,7 @@ class MainWindow(
                 ui.setStyleSheet("")
 
     def show_setup_wizard(self):
-        wizard = SetupWizardWindow()
-        wizard.exec()
+        AppInstaller(close_on_cancel=False)
 
     def showEvent(self, event):
         super().showEvent(event)
