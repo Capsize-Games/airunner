@@ -1,3 +1,5 @@
+import os
+
 from PIL import Image
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog
@@ -7,6 +9,7 @@ from PySide6.QtWidgets import QGraphicsScene
 
 from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
+from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.input_image_ui import Ui_input_image
 
@@ -17,6 +20,7 @@ class InputImage(BaseWidget):
     def __init__(self, *args, **kwargs):
         self.settings_key = kwargs.pop("settings_key")
         self.use_generated_image = kwargs.pop("use_generated_image", False)
+        self._import_path = ""
         super().__init__(*args, **kwargs)
 
     @property
@@ -87,6 +91,10 @@ class InputImage(BaseWidget):
     @Slot(bool)
     def use_grid_image_as_input_toggled(self, val):
         self.update_current_settings("use_grid_image_as_input", val)
+        if val is True:
+            base64_image = self.drawing_pad_settings.image
+            self.update_current_settings("image", base64_image)
+            self.load_image_from_settings()
 
     @Slot()
     def import_clicked(self):
@@ -97,17 +105,23 @@ class InputImage(BaseWidget):
         self.delete_image()
 
     def import_image(self):
-        file_path, _ = QFileDialog.getOpenFileName(
+        self._import_path, _ = QFileDialog.getOpenFileName(
             self.window(),
-            "Open Image", "", f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
+            "Open Image",
+            self._import_path,
+            f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
         )
-        if file_path == "":
+        if self._import_path == "":
             return
-        self.load_image(file_path)
+        self.load_image(
+            os.path.abspath(self._import_path)
+        )
 
     def load_image(self, file_path: str):
         image = Image.open(file_path)
         self.load_image_from_object(image)
+        if image is not None:
+            self.update_current_settings("image", convert_image_to_base64(image))
 
     def load_image_from_settings(self):
         if self.use_generated_image:
