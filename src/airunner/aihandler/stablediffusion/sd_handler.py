@@ -272,12 +272,16 @@ class SDHandler(BaseHandler):
     @property
     def section(self) -> GeneratorSection:
         section = GeneratorSection.TXT2IMG
-        if self.img2img_image_cached is not None and self.image_to_image_settings.enabled:
+        if (
+            self.img2img_image_cached is not None and
+            self.image_to_image_settings.enabled
+        ):
             section = GeneratorSection.IMG2IMG
         if (
             self.drawing_pad_settings.mask is not None and
             self.drawing_pad_settings.image is not None and
-            self.generator_settings_cached.section == "inpaint"
+            self.generator_settings_cached.section == "inpaint" and
+            self.outpaint_settings_cached.enabled
         ):
             section = GeneratorSection.OUTPAINT
         return section
