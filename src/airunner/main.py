@@ -44,35 +44,13 @@ from airunner.app import App
 from alembic.config import Config
 from alembic import command
 
-alembic_cfg = Config("alembic.ini")
-command.upgrade(alembic_cfg, "head")
-
-################################################################
-# Run the setup wizard if the application is not yet installed.
-################################################################
-from airunner.aihandler.models.database_handler import DatabaseHandler
-from airunner.aihandler.models.settings_models import ApplicationSettings
-from app_installer import AppInstaller
-database_handler = DatabaseHandler()
-session = database_handler.get_db_session()
-application_settings = session.query(ApplicationSettings).first()
-session.close()
-if application_settings.run_setup_wizard:
-    AppInstaller()
-    database_handler = DatabaseHandler()
-    session = database_handler.get_db_session()
-    application_settings = session.query(ApplicationSettings).first()
-    session.close()
-    if not (
-        application_settings.stable_diffusion_agreement_checked and
-        application_settings.airunner_agreement_checked and
-        application_settings.user_agreement_checked
-    ):
-        import sys
-        sys.exit(0)
+def setup_database():
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
 
 
 if __name__ == "__main__":
+    setup_database()
     App(
         restrict_os_access=None,
         defendatron=facehuggershield.huggingface.defendatron
