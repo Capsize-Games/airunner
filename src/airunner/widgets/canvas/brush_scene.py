@@ -192,7 +192,6 @@ class BrushScene(CustomScene):
             session.close()
             self.emit_signal(SignalCode.MASK_UPDATED)
         else:
-            print("drawing pad settings mask layer enabled FALSE")
             base_64_image = self.convert_imageqt_to_base64(self.active_image)
             self.update_drawing_pad_settings("image", base_64_image)
             if ((
