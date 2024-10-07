@@ -347,7 +347,6 @@ class InstallWorker(
             self.parent.on_set_downloading_status_label({
                 "label": f"Downloading Stable Diffusion"
             })
-            print(f"Dowloading Stable Diffusion...")
             self.current_step = 0
             self.download_stable_diffusion()
         elif (
