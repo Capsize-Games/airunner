@@ -4,5 +4,5 @@ from airunner.windows.setup_wizard.user_agreement.templates.user_agreement_ui im
 
 class UserAgreement(AgreementPage):
     class_name_ = Ui_user_agreement
-    setting_key = "user"
+    setting_key = "user_agreement_checked"
 

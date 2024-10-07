@@ -74,16 +74,11 @@ class SetupWizardWindow(
 
         # attach to parent page id changed signal
         self.button(
-            QWizard.WizardButton.FinishButton
-        ).clicked.connect(self.save_settings)
-
-        self.button(
             QWizard.WizardButton.CancelButton
         ).clicked.connect(self.cancel)
 
         # Set window title
         self.setWindowTitle("AI Runner Setup Wizard")
-
 
     def addPage(self, page):
         page_id = super().addPage(page)
@@ -128,31 +123,31 @@ class SetupWizardWindow(
 
                 # User agreement conditional
                 elif current_id == self.user_agreement_id:
-                    if self.application_settings.user_agreement_checked:
+                    if self.pages["user_agreement"].agreed:
                         return self.page_order[current_index + 1]
                     else:
                         return self.page_order[current_index]
 
                 # AI Runner license conditional
                 elif current_id == self.airunner_license_id:
-                    if self.application_settings.airunner_agreement_checked:
+                    if self.pages["airunner_license"].agreed:
                         return self.page_order[current_index + 1]
                     else:
                         return self.page_order[current_index]
 
                 # Stable Diffusion license conditional
                 elif current_id == self.stable_diffusion_license_id:
-                    if self.application_settings.stable_diffusion_agreement_checked:
+                    if self.pages["stable_diffusion_license"].agreed:
                         return self.page_order[current_index + 1]
                     else:
                         return self.page_order[current_index]
 
-                # AI Runner license conditional
-                elif current_id == self.airunner_license_id:
-                    if self.application_settings.airunner_agreement_checked:
-                        return self.page_order[current_index + 1]
-                    else:
-                        return self.page_order[current_index]
+                # # AI Runner license conditional
+                # elif current_id == self.airunner_license_id:
+                #     if self.application_settings.airunner_agreement_checked:
+                #         return self.page_order[current_index + 1]
+                #     else:
+                #         return self.page_order[current_index]
 
                 return self.page_order[current_index + 1]
             else:
@@ -160,16 +155,6 @@ class SetupWizardWindow(
 
         # If the ID of the current page is not in the order list, use the default next page logic
         return super(SetupWizardWindow, self).nextId()
-
-    def save_settings(self):
-        """
-        Override this function to save settings based on specific page in question.
-        Do not call this function directly.
-        :return:
-        """
-        print("SAVE SETTINGS")
-        self.update_application_settings("run_setup_wizard", False)
-        self.update_application_settings("download_wizard_completed", True)
 
     @Slot()
     def cancel(self):

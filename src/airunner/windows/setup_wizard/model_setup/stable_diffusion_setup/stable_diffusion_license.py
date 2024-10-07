@@ -4,6 +4,6 @@ from airunner.windows.setup_wizard.model_setup.stable_diffusion_setup.templates.
 
 class StableDiffusionLicense(AgreementPage):
     class_name_ = Ui_stable_diffusion_license
-    setting_key = "stable_diffusion"
+    setting_key = "stable_diffusion_agreement_checked"
 
 

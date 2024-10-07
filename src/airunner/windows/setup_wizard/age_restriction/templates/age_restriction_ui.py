@@ -149,8 +149,8 @@ class Ui_age_restriction_warning(object):
 
 
         self.retranslateUi(age_restriction_warning)
-        self.checkBox.clicked["bool"].connect(age_restriction_warning.age_agreement_clicked)
-        self.checkBox_2.clicked["bool"].connect(age_restriction_warning.read_agreement_clicked)
+        self.checkBox.toggled.connect(age_restriction_warning.age_agreement_clicked)
+        self.checkBox_2.toggled.connect(age_restriction_warning.read_agreement_clicked)
 
         QMetaObject.connectSlotsByName(age_restriction_warning)
     # setupUi

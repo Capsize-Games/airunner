@@ -20,10 +20,23 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
         SettingsMixin.__init__(self)
         super(DownloadWizardWindow, self).__init__()
         self.setWindowTitle("AI Runner Download Wizard")
-        self.setWizardStyle(QWizard.ModernStyle)
-        self.setOption(QWizard.IndependentPages, True)
+        self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
+        self.setOption(QWizard.WizardOption.IndependentPages, True)
+
+        self.button(
+            QWizard.WizardButton.FinishButton
+        ).clicked.connect(self.save_settings)
 
         self.init_pages()
+
+    def save_settings(self):
+        """
+        Override this function to save settings based on specific page in question.
+        Do not call this function directly.
+        :return:
+        """
+        self.update_application_settings("run_setup_wizard", False)
+        self.update_application_settings("download_wizard_completed", True)
 
     def init_pages(self):
         """
