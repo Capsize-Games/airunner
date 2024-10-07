@@ -239,6 +239,9 @@ class SignalCode(Enum):
     LORA_STATUS_CHANGED = enum.auto()
     EMBEDDING_STATUS_CHANGED = enum.auto()
 
+    MASK_LAYER_TOGGLED = enum.auto()
+    MASK_UPDATED = enum.auto()
+
 class EngineResponseCode(Enum):
     STATUS = 100
     ERROR = 200

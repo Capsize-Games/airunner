@@ -1,3 +1,4 @@
+from airunner.aihandler.models.settings_models import AIModels
 from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
@@ -49,11 +50,13 @@ class StableDiffusionSettingsWidget(
     def toggled_use_compel(self, val):
         self.update_generator_settings("use_compel", val)
 
-    def handle_model_changed(self, name):
-        self.update_generator_settings("model", name)
+    def handle_model_changed(self, model_name):
+        index = self.ui.model.currentIndex()
+        model_id = self.ui.model.itemData(index)
+        self.update_generator_settings("model", model_id)
         if self.application_settings.sd_enabled:
             self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
-                "do_reload": False
+                "do_reload": True
             })
 
     def handle_scheduler_changed(self, name):
@@ -69,10 +72,6 @@ class StableDiffusionSettingsWidget(
         self.update_generator_settings("section", val)
         self.load_versions()
         self.load_models()
-        if self.application_settings.sd_enabled:
-            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
-                "do_reload": True
-            })
 
     def handle_version_changed(self, val):
         self.update_application_settings("current_version_stablediffusion", val)
@@ -129,33 +128,28 @@ class StableDiffusionSettingsWidget(
         image_generator = ImageGenerator.STABLEDIFFUSION.value
         pipeline = self.application_settings.pipeline
         version = self.application_settings.current_version_stablediffusion
-        models = self.ai_model_get_by_filter({
-            'category': image_generator,
-            'pipeline_action': pipeline,
-            'version': version,
-            'enabled': True,
-            "is_default": False
-        })
-        model_names = [model.name for model in models]
-        self.ui.model.addItems(model_names)
-        model_name = self.generator_settings.model
-        if model_name != "":
-            self.ui.model.setCurrentText(model_name)
-        self.update_generator_settings("model", self.ui.model.currentText())
+        pipeline_actions = [GeneratorSection.TXT2IMG.value]
+        if pipeline == GeneratorSection.INPAINT.value:
+            pipeline_actions.append(GeneratorSection.INPAINT.value)
+        session = self.db_handler.get_db_session()
+        models = session.query(AIModels).filter(
+            AIModels.category == image_generator,
+            AIModels.pipeline_action.in_(pipeline_actions),
+            AIModels.version == version,
+            AIModels.enabled == True,
+            AIModels.is_default == False
+        ).all()
+        session.close()
 
-        model = None
-        try:
-            path = self.generator_settings.model
-            model = self.ai_model_get_by_filter({"path": path})
-        except Exception as e:
-            name = self.generator_settings.model
-            try:
-                model = [model for model in self.application_settings.ai_models if model["name"] == name][0]
-            except Exception as e:
-                self.logger.error(f"Error finding model by name: {name}")
+        for model in models:
+            self.ui.model.addItem(model.name, model.id)
 
+        model_id = self.generator_settings.model
+        if model_id:
+            index = self.ui.model.findData(model_id)
+            if index != -1:
+                self.ui.model.setCurrentIndex(index)
         self.ui.model.blockSignals(False)
-        self.update_generator_settings("model", self.generator_settings.model)
 
     def load_schedulers(self):
         self.ui.scheduler.blockSignals(True)
