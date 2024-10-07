@@ -189,7 +189,6 @@ class BrushScene(CustomScene):
             session = self.db_handler.get_db_session()
             drawing_pad_settings = session.query(DrawingPadSettings).first()
             img = convert_base64_to_image(drawing_pad_settings.mask)
-            img.save("foo.png")
             session.close()
             self.emit_signal(SignalCode.MASK_UPDATED)
         else:
