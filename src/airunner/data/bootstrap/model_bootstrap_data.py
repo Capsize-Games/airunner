@@ -23,7 +23,7 @@ model_bootstrap_data = [
     },
     {
         "name": "Stable Diffusion XL Turbo",
-        "path": "stabilityai/sd-turbo",
+        "path": "stabilityai/stable-diffusion-xl-base-1.0",
         "branch": "main",
         "version": "SDXL Turbo",
         "category": "stablediffusion",
