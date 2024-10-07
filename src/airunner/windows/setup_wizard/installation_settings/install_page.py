@@ -82,7 +82,8 @@ class InstallWorker(
         session = self.db_handler.get_db_session()
         models = session.query(AIModels).filter(
             AIModels.category == "stablediffusion",
-            AIModels.is_default == 1
+            AIModels.is_default == 1,
+            AIModels.version != "SDXL Turbo"
         ).all()
         session.close()
 
