@@ -61,10 +61,10 @@ class ApplicationSettings(Base):
     show_nsfw_warning = Column(Boolean, default=True)
     run_setup_wizard = Column(Boolean, default=True)
     download_wizard_completed = Column(Boolean, default=False)
-    stable_diffusion_agreement_checked = False,
-    airunner_agreement_checked = False,
-    user_agreement_checked = False,
-    llama_license_agreement_checked = False,
+    stable_diffusion_agreement_checked = Column(Boolean, default=True)
+    airunner_agreement_checked = Column(Boolean, default=True)
+    user_agreement_checked = Column(Boolean, default=True)
+    llama_license_agreement_checked = Column(Boolean, default=True)
 
 
 class ActiveGridSettings(Base):
