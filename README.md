@@ -70,15 +70,21 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 #### Minimum system requirements
 
-- Cuda capable GPU
-- 6gb of RAM
-- 6gb of disc space to install AI Runner
+- OS: Linux
+- Processor: Intel i5 or equivalent
+- Memory: 16 GB RAM
+- Graphics: 2080s RTX or higher
+- Network: Broadband Internet connection required for setup
+- Storage: 130 GB available space
 
 #### Recommended system specs
 
-- RTX 2080s or higher
-- 32gb of RAM
-- 100gb disc space
+- OS: Linux
+- Processor: Intel i7 or equivalent
+- Memory: 30 GB RAM
+- Graphics: 4090 RTX or higher
+- Network: Broadband Internet connection required for setup
+- Storage: 130 GB available space
 
 ---
 
