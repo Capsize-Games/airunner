@@ -7,7 +7,8 @@ from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot
 from PySide6.QtWidgets import QApplication
 
 from airunner.aihandler.models.settings_models import ShortcutKeys
-from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion
+from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion, \
+    ModelStatus, ModelType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.utils.random_seed import random_seed
@@ -108,6 +109,7 @@ class GeneratorForm(BaseWidget):
             SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
             SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated,
             SignalCode.KEYBOARD_SHORTCUTS_UPDATED: self.on_keyboard_shortcuts_updated,
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
         }
         self.thread = QThread()
         self.worker = SaveGeneratorSettingsWorker(parent=self)
@@ -436,6 +438,17 @@ class GeneratorForm(BaseWidget):
         self.ui.progress_bar.setRange(0, 0)
         self.ui.progress_bar.show()
 
+    def on_model_status_changed_signal(self, data):
+        if data["model"] is ModelType.SD:
+            if data["status"] is not ModelStatus.LOADING:
+                self.stop_progress_bar(do_clear=True)
+                self.ui.generate_button.setEnabled(True)
+                self.ui.interrupt_button.setEnabled(True)
+            else:
+                self.start_progress_bar()
+                self.ui.generate_button.setEnabled(False)
+                self.ui.interrupt_button.setEnabled(False)
+
     def showEvent(self, event):
         super().showEvent(event)
         self.activate_ai_mode()
@@ -485,15 +498,17 @@ class GeneratorForm(BaseWidget):
         self.ui.secondary_prompt.setPlainText("")
         self.ui.secondary_negative_prompt.setPlainText("")
 
-    def stop_progress_bar(self):
+    def stop_progress_bar(self, do_clear=False):
         progressbar = self.ui.progress_bar
         if not progressbar:
             return
         progressbar.setRange(0, 100)
-        progressbar.setValue(100)
-
-        # set text of progressbar to "complete"
-        progressbar.setFormat("Complete")
+        if do_clear:
+            progressbar.setValue(0)
+            progressbar.setFormat("")
+        else:
+            progressbar.setValue(100)
+            progressbar.setFormat("Complete")
 
     def _set_keyboard_shortcuts(self):
         session = self.db_handler.get_db_session()

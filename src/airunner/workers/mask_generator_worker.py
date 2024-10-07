@@ -33,6 +33,7 @@ class MaskGeneratorWorker(Worker):
         if base_64_image is None:
             return
         image = convert_base64_to_image(base_64_image)
+        image = image.convert('RGBA')
         if image is not None:
             image_width = image.width
             image_height = image.height

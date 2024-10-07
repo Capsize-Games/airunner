@@ -2,13 +2,11 @@ from PIL import Image
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog
 from PIL.ImageQt import ImageQt
-from PySide6.QtGui import QPixmap, QImage, Qt
+from PySide6.QtGui import QPixmap, QImage, Qt, QPen
 from PySide6.QtWidgets import QGraphicsScene
 
-from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
-from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.input_image_ui import Ui_input_image
 
@@ -20,7 +18,6 @@ class InputImage(BaseWidget):
         self.settings_key = kwargs.pop("settings_key")
         self.use_generated_image = kwargs.pop("use_generated_image", False)
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL, self.on_mask_generator_worker_response_signal)
 
     @property
     def current_settings(self):
@@ -39,7 +36,7 @@ class InputImage(BaseWidget):
 
         return settings
 
-    def on_mask_generator_worker_response_signal(self, message):
+    def on_mask_generator_worker_response_signal(self):
         if self.settings_key == "outpaint_settings":
             self.load_image_from_settings()
 
@@ -58,17 +55,21 @@ class InputImage(BaseWidget):
         if self.settings_key == "controlnet_settings":
             self.ui.strength_slider_widget.hide()
             self.ui.controlnet_settings.show()
-
         else:
             self.ui.strength_slider_widget.show()
             self.ui.controlnet_settings.hide()
+
+        if self.settings_key == "outpaint_settings":
+            self.ui.strength_slider_widget.setProperty("settings_property", 'outpaint_settings.strength')
+            self.ui.mask_blur_slider_widget.show()
+        else:
+            self.ui.mask_blur_slider_widget.hide()
 
         self.ui.enable_checkbox.blockSignals(True)
         self.ui.use_grid_image_as_input_checkbox.blockSignals(True)
         self.ui.enable_checkbox.setChecked(self.current_settings.enabled)
         if self.settings_key == "outpaint_settings":
             self.ui.import_button.hide()
-            self.ui.delete_button.hide()
             self.ui.use_grid_image_as_input_checkbox.hide()
             self.ui.use_grid_image_as_input_checkbox.hide()
         else:
@@ -111,26 +112,35 @@ class InputImage(BaseWidget):
     def load_image_from_settings(self):
         if self.use_generated_image:
             image = self.current_settings.generated_image
-        elif self.settings_key == "outpaint_settings":
-            image = self.drawing_pad_settings.mask
         else:
             image = self.current_settings.image
+
+        if self.settings_key == "outpaint_settings":
+            image = self.drawing_pad_settings.mask
+
         if image is not None:
             image = convert_base64_to_image(image)
-            if image:
+            if image is not None:
                 self.load_image_from_object(image)
+            else:
+                print("image is none")
 
     def load_image_from_object(self, image: Image):
         if image is None:
             self.logger.warning("Image is None, unable to add to scene")
             return
 
+        # Resize the image to maintain aspect ratio, but not exceed 512x512
+        max_size = (512, 512)
+        image.thumbnail(max_size, Image.Resampling.LANCZOS)
+
         # Convert PIL image to QImage
         qimage = ImageQt(image)
         qpixmap = QPixmap.fromImage(QImage(qimage))
 
-        # Create a QGraphicsScene and add the QPixmap to it
+        # Create a QGraphicsScene and clear it
         scene = QGraphicsScene()
+        scene.clear()  # Clear the scene before adding new items
         scene.addPixmap(qpixmap)
 
         # Set scene width and height
@@ -142,6 +152,14 @@ class InputImage(BaseWidget):
         # Set the alignment to top-left corner
         self.ui.image_container.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
+        # Draw a red border around the image
+        pen = QPen(Qt.GlobalColor.red)
+        pen.setWidth(3)  # Set the width of the border
+        scene.addRect(0, 0, qpixmap.width(), qpixmap.height(), pen)
+
     def delete_image(self):
-        self.update_current_settings("image", None)
+        if self.settings_key == "outpaint_settings":
+            self.update_drawing_pad_settings("mask", None)
+        else:
+            self.update_current_settings("image", None)
         self.ui.image_container.setScene(None)

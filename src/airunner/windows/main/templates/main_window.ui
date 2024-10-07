@@ -334,6 +334,7 @@
    <addaction name="actionToggle_Eraser"/>
    <addaction name="actionToggle_Grid"/>
    <addaction name="actionRecenter"/>
+   <addaction name="actionMask_toggle"/>
   </widget>
   <widget class="QToolBar" name="model_toolbar">
    <property name="windowTitle">
@@ -1249,6 +1250,24 @@
     <string>Toggle Eraser</string>
    </property>
   </action>
+  <action name="actionMask_toggle">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../resources_light.qrc">
+     <normaloff>:/icons/light/layer-icon.svg</normaloff>:/icons/light/layer-icon.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Mask</string>
+   </property>
+   <property name="toolTip">
+    <string>Toggle Mask</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -2011,6 +2030,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionMask_toggle</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_mask_layer(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>414</x>
+     <y>367</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -2107,5 +2142,6 @@
   <slot>action_stats_triggered()</slot>
   <slot>action_invert_image()</slot>
   <slot>action_film_image()</slot>
+  <slot>action_toggle_mask_layer(bool)</slot>
  </slots>
 </ui>
