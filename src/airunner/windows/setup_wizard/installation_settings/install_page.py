@@ -148,6 +148,55 @@ class InstallWorker(
                 except Exception as e:
                     print(f"Error downloading {filename}: {e}")
 
+    def download_controlnet_processors(self):
+        self.parent.on_set_downloading_status_label({
+            "label": "Downloading Controlnet processors..."
+        })
+        controlnet_processor_files = [
+            "150_16_swin_l_oneformer_coco_100ep.pth",
+            "250_16_swin_l_oneformer_ade20k_160k.pth",
+            "ControlNetHED.pth",
+            "ControlNetLama.pth",
+            "RealESRGAN_x4plus.pth",
+            "ZoeD_M12_N.pt",
+            "body_pose_model.pth",
+            "clip_g.pth",
+            "dpt_hybrid-midas-501f0c75.pt",
+            "erika.pth",
+            "facenet.pth",
+            "hand_pose_model.pth",
+            "lama.ckpt",
+            "latest_net_G.pth",
+            "mlsd_large_512_fp32.pth",
+            "netG.pth",
+            "network-bsds500.pth",
+            "res101.pth",
+            "scannet.pt",
+            "sk_model.pth",
+            "sk_model2.pth",
+            "table5_pidinet.pth",
+            "upernet_global_small.pth",
+        ]
+        self.parent.total_steps += len(controlnet_processor_files)
+        for filename in controlnet_processor_files:
+            requested_file_path = os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "art",
+                    "models",
+                    "controlnet_processors"
+                )
+            )
+            try:
+                self.hf_downloader.download_model(
+                    requested_path=f"lllyasviel/Annotators",
+                    requested_file_name=filename,
+                    requested_file_path=requested_file_path,
+                    requested_callback=self.progress_updated.emit
+                )
+            except Exception as e:
+                print(f"Error downloading {filename}: {e}")
+
     def download_llms(self):
         session = self.db_handler.get_db_session()
         models = session.query(AIModels).filter(
@@ -309,26 +358,32 @@ class InstallWorker(
             })
             self.current_step = 1
             self.download_controlnet()
-        elif self.current_step < 2:
+        elif (
+            self.application_settings.stable_diffusion_agreement_checked and
+            self.current_step < 2
+        ):
+            self.current_step = 2
+            self.download_controlnet_processors()
+        elif self.current_step < 3:
             self.parent.on_set_downloading_status_label({
                 "label": f"Downloading LLM"
             })
-            self.current_step = 2
+            self.current_step = 3
             self.download_llms()
-        elif self.current_step < 3:
+        elif self.current_step < 4:
             self.parent.on_set_downloading_status_label({
                 "label": f"Downloading Text-to-Speech"
             })
-            self.current_step = 3
+            self.current_step = 4
             self.download_tts()
-        elif self.current_step < 4:
+        elif self.current_step < 5:
             self.parent.on_set_downloading_status_label({
                 "label": f"Downloading Speech-to-Text"
             })
-            self.current_step = 4
-            self.download_stt()
-        elif self.current_step < 5:
             self.current_step = 5
+            self.download_stt()
+        elif self.current_step < 6:
+            self.current_step = 6
             self.download_nltk_files()
         else:
              self.hf_downloader.download_model(

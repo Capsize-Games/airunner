@@ -15,7 +15,7 @@ from PIL.Image import Image
 from PySide6.QtCore import QRect, Slot
 from PySide6.QtWidgets import QApplication
 from compel import Compel, DiffusersTextualInversionManager, ReturnedEmbeddingsType
-from controlnet_aux.processor import Processor
+from controlnet_aux.processor import MODELS as controlnet_aux_models
 from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, StableDiffusionInpaintPipeline, \
     StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
     StableDiffusionControlNetInpaintPipeline, StableDiffusionXLPipeline, StableDiffusionXLImg2ImgPipeline, \
@@ -48,7 +48,7 @@ class SDHandler(BaseHandler):
         super().__init__(*args, **kwargs)
         self._controlnet_model = None
         self._controlnet: ControlNetModel = None
-        self._controlnet_processor: Processor = None
+        self._controlnet_processor: Any = None
         self.model_type = ModelType.SD
         self._current_model:str = ""
         self._safety_checker:StableDiffusionSafetyChecker = None
@@ -110,6 +110,28 @@ class SDHandler(BaseHandler):
         self._application_settings = None
         self._drawing_pad_settings = None
         self._path_settings = None
+
+    @property
+    def controlnet_path(self):
+        version: str = self.controlnet_model.version
+        path: str = self.controlnet_model.path
+        return os.path.expanduser(os.path.join(
+            self.path_settings_cached.base_path,
+            "art",
+            "models",
+            version,
+            "controlnet",
+            path
+        ))
+
+    @property
+    def controlnet_processor_path(self):
+        return os.path.expanduser(os.path.join(
+            self.path_settings_cached.base_path,
+            "art",
+            "models",
+            "controlnet_processors"
+        ))
 
     @property
     def model_status(self):
@@ -201,7 +223,7 @@ class SDHandler(BaseHandler):
     @property
     def controlnet_model(self) -> ControlnetModel:
         if (
-            not self._controlnet_model or
+            self._controlnet_model is None or
             self._controlnet_model.version != self.generator_settings_cached.version or
             self._controlnet_model.display_name != self.controlnet_settings_cached.controlnet
         ):
@@ -384,6 +406,11 @@ class SDHandler(BaseHandler):
         """
         Public method to load the controlnet model.
         """
+        # clear the controlnet settings so that we get the latest selected controlnet model
+        if not self.controlnet_enabled or self.controlnet_is_loading:
+            return
+        self._controlnet_model = None
+        self._controlnet_settings = None
         self._load_controlnet()
 
     def unload_controlnet(self):
@@ -746,18 +773,8 @@ class SDHandler(BaseHandler):
         if not self.controlnet_model:
             raise ValueError(f"Unable to find controlnet model {self.controlnet_settings_cached.controlnet}")
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
-        version: str = self.controlnet_model.version
-        path: str = self.controlnet_model.path
-        controlnet_path = os.path.expanduser(os.path.join(
-            self.path_settings_cached.base_path,
-            "art",
-            "models",
-            version,
-            "controlnet",
-            path
-        ))
         self._controlnet = ControlNetModel.from_pretrained(
-            controlnet_path,
+            self.controlnet_path,
             torch_dtype=self.data_type,
             device=self._device,
             local_files_only=True,
@@ -769,7 +786,17 @@ class SDHandler(BaseHandler):
         if self._controlnet_processor is not None:
             return
         self.logger.debug(f"Loading controlnet processor {self.controlnet_model.name}")
-        self._controlnet_processor = Processor(self.controlnet_model.name)
+        #self._controlnet_processor = Processor(self.controlnet_model.name)
+        controlnet_data = controlnet_aux_models[self.controlnet_model.name]
+        controlnet_class_: Any = controlnet_data["class"]
+        checkpoint: bool = controlnet_data["checkpoint"]
+        if checkpoint:
+            self._controlnet_processor = controlnet_class_.from_pretrained(
+                self.controlnet_processor_path,
+                local_files_only=True
+            )
+        else:
+            self._controlnet_processor = controlnet_class_()
 
     def _load_scheduler(self):
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
@@ -781,7 +808,9 @@ class SDHandler(BaseHandler):
                 base_path,
                 "art/models",
                 scheduler_version,
-                "txt2img/scheduler/scheduler_config.json"
+                "txt2img",
+                "scheduler",
+                "scheduler_config.json"
             )
         )
         session = self.db_handler.get_db_session()
