@@ -7,6 +7,7 @@ from airunner.utils.create_worker import create_worker
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
+from airunner.workers.mask_generator_worker import MaskGeneratorWorker
 from airunner.workers.sd_worker import SDWorker
 from airunner.workers.tts_generator_worker import TTSGeneratorWorker
 from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
@@ -54,6 +55,8 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
 
         if not disable_stt:
             self.register_stt_workers()
+
+        self.mask_generator_worker = create_worker(MaskGeneratorWorker)
 
     def register_sd_workers(self):
         self._sd_worker = create_worker(SDWorker)

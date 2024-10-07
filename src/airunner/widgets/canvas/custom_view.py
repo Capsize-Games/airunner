@@ -16,7 +16,6 @@ from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.widgets.canvas.zoom_handler import ZoomHandler
-from airunner.workers.mask_generator_worker import MaskGeneratorWorker
 
 
 class CustomGraphicsView(
@@ -38,7 +37,6 @@ class CustomGraphicsView(
         self.pixmaps = {}
         self.line_group = QGraphicsItemGroup()
         self._scene_is_active = False
-        self.mask_generator_worker = create_worker(MaskGeneratorWorker)
 
         # register signal handlers
         signal_handlers = {

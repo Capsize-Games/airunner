@@ -26,7 +26,8 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import CLIPFeatureExtractor, CLIPTokenizerFast
 
 from airunner.aihandler.base_handler import BaseHandler
-from airunner.aihandler.models.settings_models import Schedulers, Lora, Embedding, ControlnetModel
+from airunner.aihandler.models.settings_models import Schedulers, Lora, Embedding, ControlnetModel, AIModels, \
+    GeneratorSettings
 from airunner.enums import (
     SDMode, StableDiffusionVersion, GeneratorSection, ModelStatus, ModelType, SignalCode, HandlerState,
     EngineResponseCode, ModelAction
@@ -48,11 +49,12 @@ SKIP_RELOAD_CONSTS = (
 class SDHandler(BaseHandler):
     def  __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._session = self.db_handler.get_db_session()
         self._controlnet_model = None
         self._controlnet: ControlNetModel = None
         self._controlnet_processor: Any = None
         self.model_type = ModelType.SD
-        self._current_model:str = ""
+        self._current_model:AIModels = None
         self._safety_checker:StableDiffusionSafetyChecker = None
         self._feature_extractor:CLIPFeatureExtractor = None
         self._memory_settings_flags:dict = {
@@ -101,6 +103,7 @@ class SDHandler(BaseHandler):
         self._generator_settings = None
         self._application_settings = None
         self._drawing_pad_settings = None
+        self._outpaint_settings = None
         self._path_settings = None
 
     def _clear_cached_properties(self):
@@ -111,6 +114,7 @@ class SDHandler(BaseHandler):
         self._generator_settings = None
         self._application_settings = None
         self._drawing_pad_settings = None
+        self._outpaint_settings = None
         self._path_settings = None
 
     @property
@@ -188,6 +192,12 @@ class SDHandler(BaseHandler):
         return self._drawing_pad_settings
 
     @property
+    def outpaint_settings_cached(self):
+        if self._outpaint_settings is None:
+            self._outpaint_settings = self.outpaint_settings
+        return self._outpaint_settings
+
+    @property
     def path_settings_cached(self):
         if self._path_settings is None:
             self._path_settings = self.path_settings
@@ -196,7 +206,9 @@ class SDHandler(BaseHandler):
     @property
     def generator_settings_cached(self):
         if self._generator_settings is None:
-            self._generator_settings = self.generator_settings
+            self._generator_settings = self._session.query(
+                GeneratorSettings
+            ).first()
         return self._generator_settings
 
     @property
@@ -262,32 +274,17 @@ class SDHandler(BaseHandler):
         section = GeneratorSection.TXT2IMG
         if self.img2img_image_cached is not None and self.image_to_image_settings.enabled:
             section = GeneratorSection.IMG2IMG
-        if self.drawing_pad_settings.image is not None and self.generator_settings_cached.section == "inpaint":
+        if self.drawing_pad_settings.mask is not None and self.generator_settings_cached.section == "inpaint":
             section = GeneratorSection.OUTPAINT
         return section
 
     @property
     def model_path(self) -> str:
-        base_path:str = self.path_settings_cached.base_path
-        model_name:str = self._current_model
-        version:str = self.generator_settings_cached.version
-        section:str = self.generator_settings_cached.section
-        for model in self.ai_models:
-            model_path:str = model.path
-            if (
-                model.name == model_name and
-                model.version == version and
-                model.pipeline_action == section
-            ):
-                return os.path.expanduser(
-                    os.path.join(
-                        base_path,
-                        "art/models",
-                        version,
-                        section,
-                        model_path
-                    )
-                )
+        if not self._current_model:
+            return ""
+        return os.path.expanduser(
+            self._current_model.path
+        )
 
     @property
     def lora_base_path(self) -> str:
@@ -390,7 +387,7 @@ class SDHandler(BaseHandler):
 
     @property
     def mask_blur(self) -> int:
-        return 50
+        return self.outpaint_settings_cached.mask_blur
 
     def load_safety_checker(self):
         """
@@ -547,7 +544,7 @@ class SDHandler(BaseHandler):
 
     def _generate(self):
         self.logger.debug("Generating image")
-        model = self.generator_settings_cached.model
+        model = self.generator_settings_cached.aimodel
         if self._current_model != model:
             if self._pipe is not None:
                 self.reload()
@@ -619,7 +616,7 @@ class SDHandler(BaseHandler):
                 metadata_dict["negative_prompt"] = self._current_negative_prompt
                 metadata_dict["negative_prompt_2"] = self._current_negative_prompt_2
             if self.metadata_settings.image_export_metadata_scale:
-                metadata_dict["scale"] = data["guidance_scale"]
+                metadata_dict["scale"] = data.get("guidance_scale", 0)
             if self.metadata_settings.image_export_metadata_seed:
                 metadata_dict["seed"] = self.generator_settings_cached.seed
             if self.metadata_settings.image_export_metadata_steps:
@@ -637,7 +634,7 @@ class SDHandler(BaseHandler):
             if self.metadata_settings.image_export_metadata_scheduler:
                 metadata_dict["scheduler"] = self.generator_settings_cached.scheduler
             if self.metadata_settings.image_export_metadata_strength:
-                metadata_dict["strength"] = self.generator_settings_cached.strength
+                metadata_dict["strength"] = data.get("strength", 0)
             if self.metadata_settings.image_export_metadata_lora:
                 metadata_dict["lora"] = self._loaded_lora
             if self.metadata_settings.image_export_metadata_embeddings:
@@ -888,7 +885,8 @@ class SDHandler(BaseHandler):
             self._pipe.scheduler = self.scheduler
 
     def _load_pipe(self):
-        self._current_model = self.generator_settings_cached.model
+        self.logger.debug("Loading pipe")
+        self._current_model = self.generator_settings_cached.aimodel
         data = dict(
             torch_dtype=self.data_type,
             use_safetensors=True,
@@ -900,51 +898,32 @@ class SDHandler(BaseHandler):
             data["controlnet"] = self._controlnet
 
         pipeline_class_ = self._pipeline_class
-        if self.is_single_file:
-            config_path = os.path.dirname(self.model_path)
-            if self.is_sd_xl_turbo:
-                config_path = os.path.expanduser(os.path.join(
-                    self.path_settings_cached.base_path,
-                    "art",
-                    "models",
-                    "SDXL 1.0",
-                    "txt2img"
-                ))
-            try:
-                self._pipe = pipeline_class_.from_single_file(
-                    self.model_path,
-                    config=config_path,
-                    add_watermarker=False,
-                    **data
-                )
-            except FileNotFoundError as e:
-                self.logger.error(f"Failed to load model from {self.model_path}: {e}")
-                self.change_model_status(ModelType.SD, ModelStatus.FAILED)
-                return
-            except EnvironmentError as e:
-                self.logger.warning(f"Failed to load model from {self.model_path}: {e}")
-            except ValueError as e:
-                self.logger.error(f"Failed to load model from {self.model_path}: {e}")
-                self.change_model_status(ModelType.SD, ModelStatus.FAILED)
-                return
-        else:
-            try:
-                self._pipe = pipeline_class_.from_pretrained(
-                    self.model_path,
-                    **data
-                )
-            except (FileNotFoundError, OSError) as e:
-                self.logger.error(f"Failed to load model from {self.model_path}: {e}")
-                self.change_model_status(ModelType.SD, ModelStatus.FAILED)
-                return
-            except TypeError as e:
-                self.logger.error(f"Failed to load model from {self.model_path}: {e}")
-                self.change_model_status(ModelType.SD, ModelStatus.FAILED)
-                return
-            except ValueError as e:
-                self.logger.error(f"Failed to load model from {self.model_path}: {e}")
-                self.change_model_status(ModelType.SD, ModelStatus.FAILED)
-                return
+        config_path = os.path.dirname(self.model_path)
+        if self.is_sd_xl_turbo:
+            config_path = os.path.expanduser(os.path.join(
+                self.path_settings_cached.base_path,
+                "art",
+                "models",
+                "SDXL 1.0",
+                "txt2img"
+            ))
+        try:
+            self._pipe = pipeline_class_.from_single_file(
+                self.model_path,
+                config=config_path,
+                add_watermarker=False,
+                **data
+            )
+        except FileNotFoundError as e:
+            self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
+            return
+        except EnvironmentError as e:
+            self.logger.warning(f"Failed to load model from {self.model_path}: {e}")
+        except ValueError as e:
+            self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
+            return
 
         if self._pipe is not None:
             try:
@@ -1492,15 +1471,18 @@ class SDHandler(BaseHandler):
             new_image.paste(cropped_image, (0, 0))
             image = new_image.convert("RGB")
 
+        args.update(dict(
+            guidance_scale=self.generator_settings_cached.scale / 100.0
+        ))
+
         if not self.controlnet_enabled:
-            if self.is_txt2img:
+            if self.is_img2img:
                 args.update(dict(
-                    guidance_scale=self.generator_settings_cached.scale / 100.0
+                    strength=self.generator_settings_cached.strength / 100.0
                 ))
-            elif self.is_img2img:
+            elif self.is_outpaint:
                 args.update(dict(
-                    strength=self.generator_settings_cached.strength / 100.0,
-                    guidance_scale=self.generator_settings_cached.scale / 100.0
+                    strength=self.outpaint_settings_cached.strength / 100.0
                 ))
 
         # set the image to controlnet image if controlnet is enabled
@@ -1537,6 +1519,8 @@ class SDHandler(BaseHandler):
             args.update(dict(
                 mask_image=mask
             ))
+            image.save("image.png")
+            mask.save("mask.png")
 
         if self.controlnet_enabled:
             args.update(dict(

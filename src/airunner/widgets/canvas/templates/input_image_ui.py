@@ -26,22 +26,22 @@ class Ui_input_image(object):
     def setupUi(self, input_image):
         if not input_image.objectName():
             input_image.setObjectName(u"input_image")
-        input_image.resize(562, 749)
+        input_image.resize(581, 568)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(input_image.sizePolicy().hasHeightForWidth())
         input_image.setSizePolicy(sizePolicy)
-        self.gridLayout = QGridLayout(input_image)
-        self.gridLayout.setSpacing(0)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout_3 = QGridLayout(input_image)
+        self.gridLayout_3.setSpacing(0)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
         self.scrollArea = QScrollArea(input_image)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 560, 666))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 565, 512))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setSpacing(0)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
@@ -56,13 +56,14 @@ class Ui_input_image(object):
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
-        self.gridLayout.addWidget(self.scrollArea, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.scrollArea, 0, 0, 1, 1)
 
         self.verticalWidget = QWidget(input_image)
         self.verticalWidget.setObjectName(u"verticalWidget")
-        self.gridLayout_3 = QGridLayout(self.verticalWidget)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.gridLayout_3.setContentsMargins(10, 10, 10, 10)
+        self.gridLayout = QGridLayout(self.verticalWidget)
+        self.gridLayout.setSpacing(10)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(10, 10, 10, 10)
         self.strength_slider_widget = SliderWidget(self.verticalWidget)
         self.strength_slider_widget.setObjectName(u"strength_slider_widget")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
@@ -77,15 +78,28 @@ class Ui_input_image(object):
         self.strength_slider_widget.setProperty("spinbox_single_step", 0.010000000000000)
         self.strength_slider_widget.setProperty("spinbox_page_step", 0.100000000000000)
 
-        self.gridLayout_3.addWidget(self.strength_slider_widget, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.strength_slider_widget, 0, 0, 1, 1)
+
+        self.mask_blur_slider_widget = SliderWidget(self.verticalWidget)
+        self.mask_blur_slider_widget.setObjectName(u"mask_blur_slider_widget")
+        sizePolicy1.setHeightForWidth(self.mask_blur_slider_widget.sizePolicy().hasHeightForWidth())
+        self.mask_blur_slider_widget.setSizePolicy(sizePolicy1)
+        self.mask_blur_slider_widget.setProperty("slider_maximum", 100)
+        self.mask_blur_slider_widget.setProperty("current_value", 0)
+        self.mask_blur_slider_widget.setProperty("spinbox_maximum", 1.000000000000000)
+        self.mask_blur_slider_widget.setProperty("display_as_float", True)
+        self.mask_blur_slider_widget.setProperty("spinbox_single_step", 0.010000000000000)
+        self.mask_blur_slider_widget.setProperty("spinbox_page_step", 0.100000000000000)
+
+        self.gridLayout.addWidget(self.mask_blur_slider_widget, 1, 0, 1, 1)
 
         self.controlnet_settings = ControlnetSettingsWidget(self.verticalWidget)
         self.controlnet_settings.setObjectName(u"controlnet_settings")
 
-        self.gridLayout_3.addWidget(self.controlnet_settings, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.controlnet_settings, 2, 0, 1, 1)
 
 
-        self.gridLayout.addWidget(self.verticalWidget, 1, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.verticalWidget, 1, 0, 1, 1)
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setSpacing(10)
@@ -127,7 +141,7 @@ class Ui_input_image(object):
         self.horizontalLayout.addWidget(self.delete_button)
 
 
-        self.gridLayout.addLayout(self.horizontalLayout, 2, 0, 1, 1)
+        self.gridLayout_3.addLayout(self.horizontalLayout, 2, 0, 1, 1)
 
 
         self.retranslateUi(input_image)
@@ -143,6 +157,8 @@ class Ui_input_image(object):
         input_image.setWindowTitle(QCoreApplication.translate("input_image", u"Form", None))
         self.strength_slider_widget.setProperty("label_text", QCoreApplication.translate("input_image", u"Strength", None))
         self.strength_slider_widget.setProperty("settings_property", QCoreApplication.translate("input_image", u"generator_settings.strength", None))
+        self.mask_blur_slider_widget.setProperty("label_text", QCoreApplication.translate("input_image", u"Mask Blur", None))
+        self.mask_blur_slider_widget.setProperty("settings_property", QCoreApplication.translate("input_image", u"outpaint_settings.mask_blur", None))
 #if QT_CONFIG(tooltip)
         self.use_grid_image_as_input_checkbox.setToolTip(QCoreApplication.translate("input_image", u"Use grid image as input", None))
 #endif // QT_CONFIG(tooltip)
