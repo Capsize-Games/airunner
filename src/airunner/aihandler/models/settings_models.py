@@ -109,6 +109,8 @@ class OutpaintSettings(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     image = Column(String, nullable=True)
     enabled = Column(Boolean, default=True)
+    strength = Column(Integer, default=50)
+    mask_blur = Column(Integer, default=0)
 
 
 class DrawingPadSettings(Base):
@@ -118,6 +120,7 @@ class DrawingPadSettings(Base):
     mask = Column(String, nullable=True)
     enabled = Column(Boolean, default=True)
     enable_automatic_drawing = Column(Boolean, default=True)
+    mask_layer_enabled = Column(Boolean, default=False)
     x_pos = Column(Integer, default=0)
     y_pos = Column(Integer, default=0)
 
@@ -160,7 +163,8 @@ class GeneratorSettings(Base):
     second_negative_prompt = Column(String, default="")
     random_seed = Column(Boolean, default=True)
     model_name = Column(String, default="")
-    model = Column(String, default="")
+    model = Column(Integer, ForeignKey('aimodels.id'), nullable=True)
+    aimodel = relationship("AIModels", back_populates="generator_settings")
     vae = Column(String, default=SD_DEFAULT_VAE_PATH)
     scheduler = Column(String, default=DEFAULT_SCHEDULER)
     variation = Column(Boolean, default=False)
@@ -437,6 +441,7 @@ class AIModels(Base):
     enabled = Column(Boolean, nullable=False)
     model_type = Column(String, nullable=False)
     is_default = Column(Boolean, nullable=False)
+    generator_settings = relationship("GeneratorSettings", back_populates="aimodel")
 
 
 class ShortcutKeys(Base):
