@@ -393,8 +393,6 @@ class InstallWorker(
                  requested_file_path="",
                  requested_callback=self.finalize_installation
              )
-        #     self.current_step = 6
-        #     self.finalize_installation()
 
 
 class InstallPage(BaseWizard):

@@ -38,8 +38,8 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
         ):
             create_airunner_paths(self.path_settings)
 
-            self.setPage(1, InstallSuccessPage(self))
             self.setPage(0, InstallPage(self))
+            self.setPage(1, InstallSuccessPage(self))
             failed = False
 
         if failed:

@@ -22,10 +22,11 @@ from PySide6.QtWidgets import (
     QSplashScreen
 )
 
+from airunner.app_installer import AppInstaller
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
-
+from airunner.aihandler.models.settings_models import ApplicationSettings
 
 class App(
     QObject,
@@ -67,7 +68,15 @@ class App(
         self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
 
         self.start()
+        self.run_setup_wizard()
         self.run()
+
+    def run_setup_wizard(self):
+        session = self.db_handler.get_db_session()
+        application_settings = session.query(ApplicationSettings).first()
+        session.close()
+        if application_settings.run_setup_wizard:
+            AppInstaller()
 
     def on_log_logged_signal(self, data: dict):
         message = data["message"].split(" - ")

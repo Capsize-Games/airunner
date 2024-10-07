@@ -25,8 +25,6 @@ class BaseWizard(
             layout.addWidget(widget)
             self.setLayout(layout)
 
-        # attach to parent page id changed signal
-        parent.button(QWizard.FinishButton).clicked.connect(self.save_settings)
         self.parent = parent
 
     def initialize_form(self):
@@ -35,12 +33,3 @@ class BaseWizard(
         :return:
         """
         pass
-
-    def save_settings(self):
-        """
-        Override this function to save settings based on specific page in question.
-        Do not call this function directly.
-        :return:
-        """
-        self.update_application_settings("run_setup_wizard", False)
-        self.update_application_settings("download_wizard_completed", True)
