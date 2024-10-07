@@ -2,9 +2,7 @@ from PySide6.QtWidgets import QFileDialog
 
 from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES
-from airunner.utils.create_worker import create_worker
 from airunner.widgets.canvas.custom_scene import CustomScene
-from airunner.workers.mask_generator_worker import MaskGeneratorWorker
 
 
 class OutpaintScene(CustomScene):
@@ -12,7 +10,6 @@ class OutpaintScene(CustomScene):
 
     def __init__(self, canvas_type: str):
         super().__init__(canvas_type)
-        self.mask_generator_worker = create_worker(MaskGeneratorWorker)
 
     def register_signals(self):
         signals = [

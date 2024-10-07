@@ -90,6 +90,7 @@ class MainWindow(
         ("setting-line-icon", "actionSettings"),
         ("object-selected-icon", "actionToggle_Active_Grid_Area"),
         ("select-svgrepo-com", "actionToggle_Selection"),
+        ("layer-icon", "actionMask_toggle"),
     ]
 
     def __init__(
@@ -384,6 +385,11 @@ class MainWindow(
     @Slot()
     def action_open_discord(self):
         pass
+
+    @Slot(bool)
+    def action_toggle_mask_layer(self, val: bool):
+        self.update_drawing_pad_settings("mask_layer_enabled", val)
+        self.emit_signal(SignalCode.MASK_LAYER_TOGGLED)
 
     @Slot(bool)
     def action_outpaint_toggled(self, val: bool):
@@ -1029,6 +1035,7 @@ class MainWindow(
         set_widget_state(self.ui.actionToggle_Brush, current_tool is CanvasToolName.BRUSH)
         set_widget_state(self.ui.actionToggle_Eraser, current_tool is CanvasToolName.ERASER)
         set_widget_state(self.ui.actionToggle_Grid, show_grid is True)
+        set_widget_state(self.ui.actionMask_toggle, self.drawing_pad_settings.mask_layer_enabled is True)
 
         self.ui.actionSafety_Checker.blockSignals(True)
         self.ui.actionSafety_Checker.setChecked(self.application_settings.nsfw_filter)
