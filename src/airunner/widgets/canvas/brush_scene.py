@@ -1,10 +1,16 @@
+from PIL import ImageQt
+from PIL.Image import Image
 from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QPainterPath
 from PySide6.QtGui import QPen, QPixmap, QPainter
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QFileDialog
+
+from airunner.aihandler.models.settings_models import DrawingPadSettings
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.settings import VALID_IMAGE_FILES
+from airunner.utils.convert_base64_to_image import convert_base64_to_image
+from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 from airunner.widgets.canvas.custom_scene import CustomScene
 
 
@@ -27,6 +33,30 @@ class BrushScene(CustomScene):
         self._do_generate_image = False
 
         self.register(SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.handle_brush_color_changed)
+
+    @property
+    def active_image(self):
+        if self.drawing_pad_settings.mask_layer_enabled:
+            return self.mask_image
+        return self.image
+
+    @property
+    def active_item(self):
+        if self.drawing_pad_settings.mask_layer_enabled:
+            return self.mask_item
+        return self.item
+
+    @property
+    def active_color(self):
+        if self.drawing_pad_settings.mask_layer_enabled:
+            return QColor(Qt.GlobalColor.white)
+        return self._brush_color
+
+    @property
+    def active_eraser_color(self):
+        if self.drawing_pad_settings.mask_layer_enabled:
+            return QColor(Qt.GlobalColor.black)
+        return QColor(Qt.GlobalColor.transparent)
 
     @property
     def is_brush_or_eraser(self):
@@ -52,9 +82,8 @@ class BrushScene(CustomScene):
     def drawBackground(self, painter, rect):
         if self.painter is None:
             self.refresh_image()
-
         if self.painter is not None and self.painter.isActive():
-            self.painter.drawImage(0, 0, self.image)
+            self.painter.drawImage(0, 0, self.active_image)
 
             if self.last_pos:
                 if self.current_tool is CanvasToolName.BRUSH:
@@ -78,7 +107,7 @@ class BrushScene(CustomScene):
 
             # check if painter is active
             if not painter.isActive():
-                painter.begin(self.image)
+                painter.begin(self.active_image)
 
             self.pen.setColor(self._brush_color if color is None else color)
 
@@ -115,20 +144,61 @@ class BrushScene(CustomScene):
         self.start_pos = self.last_pos
 
         # Create a QPixmap from the image and set it to the QGraphicsPixmapItem
-        pixmap = QPixmap.fromImage(self.image)
+        active_image = self.active_image
+
+        if self.drawing_pad_settings.mask_layer_enabled:
+            pil_image = ImageQt.fromqimage(active_image)
+            pil_image = pil_image.convert("RGBA")
+            alpha = pil_image.split()[3]
+            alpha = alpha.point(lambda p: p * 0.5)
+            pil_image.putalpha(alpha)
+            active_image = ImageQt.ImageQt(pil_image)
+
+        pixmap = QPixmap.fromImage(active_image)
 
         # save the image
-        self.item.setPixmap(pixmap)
+        self.active_item.setPixmap(pixmap)
 
     def draw_at(self, painter=None):
         self.create_line(
             drawing=True,
-            painter=painter
+            painter=painter,
+            color=self.active_color
         )
 
     def erase_at(self, painter=None):
         self.create_line(
             erasing=True,
             painter=painter,
-            color=QColor(Qt.GlobalColor.transparent)
+            color=self.active_eraser_color
         )
+
+    def convert_imageqt_to_base64(self, imageqt: ImageQt) -> str:
+        image = ImageQt.fromqimage(imageqt)
+        return convert_image_to_base64(image)
+
+    def handle_left_mouse_release(self, event) -> bool:
+        if self.drawing_pad_settings.mask_layer_enabled:
+            mask_image: Image = ImageQt.fromqimage(self.mask_image)
+            base_64_image = convert_image_to_base64(mask_image)
+            session = self.db_handler.get_db_session()
+            drawing_pad_settings = session.query(DrawingPadSettings).first()
+            drawing_pad_settings.mask = base_64_image
+            session.commit()
+            session.close()
+            session = self.db_handler.get_db_session()
+            drawing_pad_settings = session.query(DrawingPadSettings).first()
+            img = convert_base64_to_image(drawing_pad_settings.mask)
+            img.save("foo.png")
+            session.close()
+            self.emit_signal(SignalCode.MASK_UPDATED)
+        else:
+            print("drawing pad settings mask layer enabled FALSE")
+            base_64_image = self.convert_imageqt_to_base64(self.active_image)
+            self.update_drawing_pad_settings("image", base_64_image)
+            if ((
+                self.current_tool is CanvasToolName.BRUSH or
+                self.current_tool is CanvasToolName.ERASER
+            )):
+                self.emit_signal(SignalCode.GENERATE_MASK)
+        return super().handle_left_mouse_release(event)

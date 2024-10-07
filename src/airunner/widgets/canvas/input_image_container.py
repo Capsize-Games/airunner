@@ -1,3 +1,4 @@
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.input_image_container_ui import Ui_input_image_container
 from airunner.widgets.canvas.input_image import InputImage
@@ -7,7 +8,13 @@ class InputImageContainer(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.register(SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL, self.on_mask_generator_worker_response_signal)
+        self.register(SignalCode.MASK_UPDATED, self.on_mask_generator_worker_response_signal)
         self.input_image = None
+
+    def on_mask_generator_worker_response_signal(self, message):
+        if self.input_image:
+            self.input_image.on_mask_generator_worker_response_signal()
 
     def showEvent(self, event):
         if self.input_image is None:
@@ -19,6 +26,8 @@ class InputImageContainer(BaseWidget):
                 label = "Controlnet"
                 self.input_image = InputImage(settings_key=self.settings_key, use_generated_image=True)
                 self.ui.tabWidget.addTab(self.input_image, "Generated Image")
+            elif settings_key == "outpaint_settings":
+                label = "Inpaint / Outpaint"
             self.ui.label.setText(label)
 
     @property
