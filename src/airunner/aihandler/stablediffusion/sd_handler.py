@@ -1,3 +1,4 @@
+import datetime
 import os
 from typing import Any, List, Dict
 
@@ -35,6 +36,7 @@ from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
+from airunner.utils.export_image import export_images
 from airunner.utils.get_torch_device import get_torch_device
 
 SKIP_RELOAD_CONSTS = (
@@ -386,6 +388,10 @@ class SDHandler(BaseHandler):
             }
         return pipeline_map.get(operation_type)
 
+    @property
+    def mask_blur(self) -> int:
+        return 50
+
     def load_safety_checker(self):
         """
         Public method to load the safety checker model.
@@ -576,7 +582,7 @@ class SDHandler(BaseHandler):
                 return
 
             if self.application_settings_cached.auto_export_images:
-                self._export_images(images)
+                self._export_images(images, args)
 
             return dict(
                 images=images,
@@ -594,29 +600,73 @@ class SDHandler(BaseHandler):
                 is_outpaint=self.is_outpaint
             )
 
-    def _export_images(self, images: List[Any]):
+    def _export_images(self, images: List[Any], data:Dict):
         extension = self.application_settings_cached.image_export_type
         filename = "image"
-        i = 1
-        for image in images:
-            filepath = os.path.expanduser(
-                os.path.join(
-                    self.path_settings_cached.image_path,
-                    f"{filename}.{extension}"
-                )
+        file_path = os.path.expanduser(
+            os.path.join(
+                self.path_settings_cached.image_path,
+                f"{filename}.{extension}"
             )
-            while os.path.exists(filepath):
-                filename = f"image_{i}"
-                filepath = os.path.expanduser(
-                    os.path.join(
-                        self.path_settings_cached.image_path,
-                        f"{filename}.{extension}"
-                    )
-                )
-                if not os.path.exists(filepath):
-                    break
-                i += 1
-            image.save(filepath)
+        )
+        metadata = None
+        if self.metadata_settings.export_metadata:
+            metadata_dict = dict()
+            if self.metadata_settings.image_export_metadata_prompt:
+                metadata_dict["prompt"] = self._current_prompt
+                metadata_dict["prompt_2"] = self._current_prompt_2
+            if self.metadata_settings.image_export_metadata_negative_prompt:
+                metadata_dict["negative_prompt"] = self._current_negative_prompt
+                metadata_dict["negative_prompt_2"] = self._current_negative_prompt_2
+            if self.metadata_settings.image_export_metadata_scale:
+                metadata_dict["scale"] = data["guidance_scale"]
+            if self.metadata_settings.image_export_metadata_seed:
+                metadata_dict["seed"] = self.generator_settings_cached.seed
+            if self.metadata_settings.image_export_metadata_steps:
+                metadata_dict["steps"] = self.generator_settings_cached.steps
+            if self.metadata_settings.image_export_metadata_ddim_eta:
+                metadata_dict["ddim_eta"] = self.generator_settings_cached.ddim_eta
+            if self.metadata_settings.image_export_metadata_iterations:
+                metadata_dict["num_inference_steps"] = data["num_inference_steps"]
+            if self.metadata_settings.image_export_metadata_samples:
+                metadata_dict["n_samples"] = self.generator_settings_cached.n_samples
+            if self.metadata_settings.image_export_metadata_model:
+                metadata_dict["model"] = self._current_model
+            if self.metadata_settings.image_export_metadata_version:
+                metadata_dict["version"] = self.generator_settings_cached.version
+            if self.metadata_settings.image_export_metadata_scheduler:
+                metadata_dict["scheduler"] = self.generator_settings_cached.scheduler
+            if self.metadata_settings.image_export_metadata_strength:
+                metadata_dict["strength"] = self.generator_settings_cached.strength
+            if self.metadata_settings.image_export_metadata_lora:
+                metadata_dict["lora"] = self._loaded_lora
+            if self.metadata_settings.image_export_metadata_embeddings:
+                metadata_dict["embeddings"] = self._loaded_embeddings
+            if self.metadata_settings.image_export_metadata_timestamp:
+                metadata_dict["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            if self.metadata_settings.image_export_metadata_controlnet and self.controlnet_enabled:
+                metadata_dict.update({
+                    "guess_mode": data["guess_mode"],
+                    "control_guidance_start": data["control_guidance_start"],
+                    "control_guidance_end": data["control_guidance_end"],
+                    "controlnet_strength": data["strength"],
+                    "controlnet_guidance_scale": data["guidance_scale"],
+                    "controlnet_conditioning_scale": data["controlnet_conditioning_scale"],
+                    "controlnet": self.controlnet_settings_cached.controlnet,
+                })
+            if self.is_txt2img:
+                metadata_dict["action"] = "txt2img"
+            elif self.is_img2img:
+                metadata_dict["action"] = "img2img"
+            elif self.is_outpaint:
+                metadata_dict.update({
+                    "action": "inpaint",
+                    "mask_blur": self.mask_blur,
+                })
+            metadata_dict["tome_sd"] = self._memory_settings_flags["use_tome_sd"]
+            metadata_dict["tome_ratio"] = self._memory_settings_flags["tome_ratio"]
+            metadata = [metadata_dict for _ in range(len(images))]
+        export_images(images, file_path, metadata)
 
     def _check_and_mark_nsfw_images(self, images) -> tuple:
         if not self._feature_extractor or not self._safety_checker:
@@ -1483,7 +1533,7 @@ class SDHandler(BaseHandler):
         if mask is not None and self.is_outpaint:
             mask = self._resize_image(mask, width, height)
 
-            mask = self._pipe.mask_processor.blur(mask, blur_factor=50)
+            mask = self._pipe.mask_processor.blur(mask, blur_factor=self.mask_blur)
             args.update(dict(
                 mask_image=mask
             ))
