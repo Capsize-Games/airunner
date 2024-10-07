@@ -32,7 +32,8 @@ class AppInstaller(
     This class can be run as a GUI application or as a socket server.
     """
     def __init__(
-        self
+        self,
+        close_on_cancel:bool = True
     ):
         """
         Initialize the application and run as a GUI application or a socket server.
@@ -41,6 +42,7 @@ class AppInstaller(
         self.wizard = None
         self.download_wizard = None
         self.app = None
+        self.close_on_cancel = close_on_cancel
         self.logger = Logger(prefix=self.__class__.__name__)
 
         """
@@ -83,13 +85,12 @@ class AppInstaller(
         self.wizard.exec()
 
         if self.wizard.canceled:
+            print("canceled")
             self.cancel()
             return
 
         self.download_wizard = DownloadWizardWindow()
         self.download_wizard.exec()
-
-        self.quit()
 
     @staticmethod
     def signal_handler(
@@ -114,8 +115,9 @@ class AppInstaller(
         self.wizard.close()
         if self.download_wizard:
             self.download_wizard.close()
-        self.quit()
-        sys.exit(0)
+        if self.close_on_cancel:
+            self.quit()
+            sys.exit(0)
 
     @staticmethod
     def quit():
