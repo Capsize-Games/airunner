@@ -214,9 +214,9 @@
     <addaction name="actionImport"/>
     <addaction name="actionExport_3"/>
     <addaction name="separator"/>
-    <addaction name="actionQuit"/>
-    <addaction name="separator"/>
     <addaction name="actionReset_Settings_2"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
