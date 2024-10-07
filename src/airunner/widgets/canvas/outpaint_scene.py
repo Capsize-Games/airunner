@@ -31,24 +31,6 @@ class OutpaintScene(CustomScene):
     def on_mask_generator_worker_response_signal(self, message: dict):
         self.create_image(message["mask"])
 
-    def export_image(self):
-        image = self.current_active_image()
-        if image:
-            file_path, _ = QFileDialog.getSaveFileName(
-                None,
-                "Save Image",
-                "",
-                f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
-            )
-            if file_path == "":
-                return
-
-            # If missing file extension, add it
-            if not file_path.endswith(VALID_IMAGE_FILES):
-                file_path = f"{file_path}.png"
-
-            image.save(file_path)
-
     def import_image(self):
         file_path, _ = QFileDialog.getOpenFileName(
             None,
