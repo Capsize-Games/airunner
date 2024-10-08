@@ -115,6 +115,11 @@ class CustomScene(
         except PIL.UnidentifiedImageError:
             return None
 
+    @current_active_image.setter
+    def current_active_image(self, image: Image):
+        self._update_current_settings("image", convert_image_to_base64(image))
+        self.initialize_image(image)
+
     @image_pivot_point.setter
     def image_pivot_point(self, value):
         self.emit_signal(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, {
@@ -179,7 +184,7 @@ class CustomScene(
         image = self._load_image(image_path)
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
-        self.initialize_image(image)
+        self.current_active_image = image
 
     def on_apply_filter_signal(self, message):
         self._apply_filter(message)

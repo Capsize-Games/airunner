@@ -45,19 +45,6 @@
      <layout class="QGridLayout" name="gridLayout_2"/>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="QCheckBox" name="auto_apply">
-     <property name="font">
-      <font>
-       <pointsize>8</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Auto Apply Filter</string>
-     </property>
-    </widget>
-   </item>
    <item row="2" column="1">
     <spacer name="verticalSpacer">
      <property name="orientation">
