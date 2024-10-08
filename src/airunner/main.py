@@ -45,7 +45,14 @@ from alembic.config import Config
 from alembic import command
 
 def setup_database():
-    alembic_cfg = Config("alembic.ini")
+    here = os.path.dirname(os.path.abspath(__file__))
+    alembic_file = os.path.join(
+        here,
+        "alembic.ini"
+    )
+    alembic_cfg = Config(alembic_file)
+    # set he script_location to the current directory
+    alembic_cfg.set_main_option("script_location", os.path.join(here, "alembic"))
     command.upgrade(alembic_cfg, "head")
 
 
