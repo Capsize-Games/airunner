@@ -756,7 +756,7 @@
         </spacer>
        </item>
        <item row="1" column="0">
-        <widget class="QWidget" name="widget_8" native="true">
+        <widget class="QWidget" name="model_version_container" native="true">
          <layout class="QGridLayout" name="gridLayout_11">
           <property name="leftMargin">
            <number>0</number>
@@ -784,7 +784,7 @@
            </widget>
           </item>
           <item row="0" column="0">
-           <widget class="QLabel" name="label_5">
+           <widget class="QLabel" name="model_version_label">
             <property name="font">
              <font>
               <pointsize>8</pointsize>
@@ -799,7 +799,7 @@
         </widget>
        </item>
        <item row="2" column="0">
-        <widget class="QWidget" name="widget_14" native="true">
+        <widget class="QWidget" name="prompt_template_container" native="true">
          <layout class="QGridLayout" name="gridLayout_17">
           <property name="leftMargin">
            <number>0</number>
@@ -823,14 +823,14 @@
            <widget class="QComboBox" name="prompt_template"/>
           </item>
           <item row="0" column="0">
-           <widget class="QLabel" name="label">
+           <widget class="QLabel" name="prompt_template_label">
             <property name="font">
              <font>
               <pointsize>8</pointsize>
              </font>
             </property>
             <property name="text">
-             <string>Prompt Tempalte</string>
+             <string>Prompt Template</string>
             </property>
            </widget>
           </item>
@@ -838,7 +838,7 @@
         </widget>
        </item>
        <item row="0" column="0">
-        <widget class="QWidget" name="widget_7" native="true">
+        <widget class="QWidget" name="model_type_container" native="true">
          <property name="font">
           <font>
            <pointsize>8</pointsize>
@@ -867,7 +867,7 @@
            <widget class="QComboBox" name="model"/>
           </item>
           <item row="0" column="0">
-           <widget class="QLabel" name="label_3">
+           <widget class="QLabel" name="model_type_label">
             <property name="text">
              <string>Model Type</string>
             </property>
