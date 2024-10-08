@@ -5,15 +5,11 @@ from PySide6.QtCore import Qt, QPoint
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.canvas.mixins.clipboard_handler_mixin import ClipboardHandlerMixin
-from airunner.widgets.canvas.mixins.image_handler_mixin import ImageHandlerMixin
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
 
 
 class CanvasWidget(
-    BaseWidget,
-    ImageHandlerMixin,
-    ClipboardHandlerMixin
+    BaseWidget
 ):
     """
     Widget responsible for multiple functionalities:
@@ -26,8 +22,6 @@ class CanvasWidget(
     widget_class_ = Ui_canvas
 
     def __init__(self, *args, **kwargs):
-        ImageHandlerMixin.__init__(self)
-        ClipboardHandlerMixin.__init__(self)
         super().__init__(*args, **kwargs)
         self._startPos = QPoint(0, 0)
         self.images = {}
@@ -40,7 +34,6 @@ class CanvasWidget(
         self._active_grid_settings = {}
         self.signal_handlers = {
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
-            SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
         }
 
     @property
