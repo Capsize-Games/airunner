@@ -20,6 +20,9 @@ class LLMSettingsWidget(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         AIModelMixin.__init__(self)
+        self.ui.model_type_container.hide()
+        self.ui.model_version_container.hide()
+        self.ui.prompt_template_container.hide()
 
     @Slot(bool)
     def toggle_use_cache(self, val: bool):
