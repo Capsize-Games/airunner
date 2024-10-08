@@ -333,68 +333,68 @@ class Ui_llm_settings_widget(object):
 
         self.gridLayout.addItem(self.verticalSpacer, 4, 0, 1, 1)
 
-        self.widget_8 = QWidget(self.scrollAreaWidgetContents)
-        self.widget_8.setObjectName(u"widget_8")
-        self.gridLayout_11 = QGridLayout(self.widget_8)
+        self.model_version_container = QWidget(self.scrollAreaWidgetContents)
+        self.model_version_container.setObjectName(u"model_version_container")
+        self.gridLayout_11 = QGridLayout(self.model_version_container)
         self.gridLayout_11.setObjectName(u"gridLayout_11")
         self.gridLayout_11.setHorizontalSpacing(0)
         self.gridLayout_11.setVerticalSpacing(10)
         self.gridLayout_11.setContentsMargins(0, 0, 0, 0)
-        self.model_version = QComboBox(self.widget_8)
+        self.model_version = QComboBox(self.model_version_container)
         self.model_version.setObjectName(u"model_version")
 
         self.gridLayout_11.addWidget(self.model_version, 1, 0, 1, 1)
 
-        self.label_5 = QLabel(self.widget_8)
-        self.label_5.setObjectName(u"label_5")
-        self.label_5.setFont(font1)
+        self.model_version_label = QLabel(self.model_version_container)
+        self.model_version_label.setObjectName(u"model_version_label")
+        self.model_version_label.setFont(font1)
 
-        self.gridLayout_11.addWidget(self.label_5, 0, 0, 1, 1)
+        self.gridLayout_11.addWidget(self.model_version_label, 0, 0, 1, 1)
 
 
-        self.gridLayout.addWidget(self.widget_8, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.model_version_container, 1, 0, 1, 1)
 
-        self.widget_14 = QWidget(self.scrollAreaWidgetContents)
-        self.widget_14.setObjectName(u"widget_14")
-        self.gridLayout_17 = QGridLayout(self.widget_14)
+        self.prompt_template_container = QWidget(self.scrollAreaWidgetContents)
+        self.prompt_template_container.setObjectName(u"prompt_template_container")
+        self.gridLayout_17 = QGridLayout(self.prompt_template_container)
         self.gridLayout_17.setObjectName(u"gridLayout_17")
         self.gridLayout_17.setHorizontalSpacing(0)
         self.gridLayout_17.setVerticalSpacing(10)
         self.gridLayout_17.setContentsMargins(0, 0, 0, 0)
-        self.prompt_template = QComboBox(self.widget_14)
+        self.prompt_template = QComboBox(self.prompt_template_container)
         self.prompt_template.setObjectName(u"prompt_template")
 
         self.gridLayout_17.addWidget(self.prompt_template, 1, 0, 1, 1)
 
-        self.label = QLabel(self.widget_14)
-        self.label.setObjectName(u"label")
-        self.label.setFont(font1)
+        self.prompt_template_label = QLabel(self.prompt_template_container)
+        self.prompt_template_label.setObjectName(u"prompt_template_label")
+        self.prompt_template_label.setFont(font1)
 
-        self.gridLayout_17.addWidget(self.label, 0, 0, 1, 1)
+        self.gridLayout_17.addWidget(self.prompt_template_label, 0, 0, 1, 1)
 
 
-        self.gridLayout.addWidget(self.widget_14, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.prompt_template_container, 2, 0, 1, 1)
 
-        self.widget_7 = QWidget(self.scrollAreaWidgetContents)
-        self.widget_7.setObjectName(u"widget_7")
-        self.widget_7.setFont(font1)
-        self.gridLayout_10 = QGridLayout(self.widget_7)
+        self.model_type_container = QWidget(self.scrollAreaWidgetContents)
+        self.model_type_container.setObjectName(u"model_type_container")
+        self.model_type_container.setFont(font1)
+        self.gridLayout_10 = QGridLayout(self.model_type_container)
         self.gridLayout_10.setObjectName(u"gridLayout_10")
         self.gridLayout_10.setHorizontalSpacing(0)
         self.gridLayout_10.setVerticalSpacing(10)
         self.gridLayout_10.setContentsMargins(0, 0, 0, 0)
-        self.model = QComboBox(self.widget_7)
+        self.model = QComboBox(self.model_type_container)
         self.model.setObjectName(u"model")
 
         self.gridLayout_10.addWidget(self.model, 1, 0, 1, 1)
 
-        self.label_3 = QLabel(self.widget_7)
-        self.label_3.setObjectName(u"label_3")
+        self.model_type_label = QLabel(self.model_type_container)
+        self.model_type_label.setObjectName(u"model_type_label")
 
-        self.gridLayout_10.addWidget(self.label_3, 0, 0, 1, 1)
+        self.gridLayout_10.addWidget(self.model_type_label, 0, 0, 1, 1)
 
 
-        self.gridLayout.addWidget(self.widget_7, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.model_type_container, 0, 0, 1, 1)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
@@ -453,8 +453,8 @@ class Ui_llm_settings_widget(object):
         self.repetition_penalty.setProperty("label_text", QCoreApplication.translate("llm_settings_widget", u"Repetition Penalty", None))
         self.min_length.setProperty("settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.generator_settings.min_length", None))
         self.min_length.setProperty("label_text", QCoreApplication.translate("llm_settings_widget", u"Min Length", None))
-        self.label_5.setText(QCoreApplication.translate("llm_settings_widget", u"Model Version", None))
-        self.label.setText(QCoreApplication.translate("llm_settings_widget", u"Prompt Tempalte", None))
-        self.label_3.setText(QCoreApplication.translate("llm_settings_widget", u"Model Type", None))
+        self.model_version_label.setText(QCoreApplication.translate("llm_settings_widget", u"Model Version", None))
+        self.prompt_template_label.setText(QCoreApplication.translate("llm_settings_widget", u"Prompt Template", None))
+        self.model_type_label.setText(QCoreApplication.translate("llm_settings_widget", u"Model Type", None))
     # retranslateUi
 
