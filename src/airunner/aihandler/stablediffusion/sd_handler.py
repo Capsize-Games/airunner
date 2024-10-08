@@ -81,7 +81,6 @@ class SDHandler(BaseHandler):
         self._current_negative_prompt: str = ""
         self._current_prompt_2: str = ""
         self._current_negative_prompt_2: str = ""
-        self._tokenizer: CLIPTokenizerFast = None
         self._generator = None
         self._latents = None
         self._textual_inversion_manager: DiffusersTextualInversionManager = None
@@ -223,15 +222,9 @@ class SDHandler(BaseHandler):
 
     @property
     def controlnet_image(self) -> Image:
-        img = None
-        if self.controlnet_settings_cached.use_grid_image_as_input:
-            img = self.drawing_pad_settings_cached.image
-            if img is not None:
-                img = convert_base64_to_image(img)
-        else:
-            img = self.controlnet_settings_cached.image
-            if img is not None:
-                img = convert_base64_to_image(img)
+        img = self.controlnet_settings_cached.image
+        if img is not None:
+            img = convert_base64_to_image(img)
         return img
 
     @property
@@ -432,6 +425,12 @@ class SDHandler(BaseHandler):
             return
         self._unload_controlnet()
 
+    def load_scheduler(self, scheduler_name):
+        """
+        Public method to load the scheduler.
+        """
+        self._load_scheduler(scheduler_name)
+
     def reload(self):
         self.logger.debug("Reloading stable diffusion")
         self._clear_cached_properties()
@@ -444,7 +443,6 @@ class SDHandler(BaseHandler):
         self.unload()
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         self._load_safety_checker()
-        self._load_tokenizer()
         self._load_generator()
         self._load_controlnet()
         self._load_pipe()
@@ -472,7 +470,6 @@ class SDHandler(BaseHandler):
         self._unload_loras()
         self._unload_emebeddings()
         self._unload_compel()
-        self._unload_tokenizer()
         self._unload_generator()
         self._unload_deep_cache()
         self._unload_pipe()
@@ -769,31 +766,6 @@ class SDHandler(BaseHandler):
             self.logger.error(f"Unable to load feature extractor {e}")
             self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED)
 
-    def _load_tokenizer(self):
-        self.logger.debug("Loading tokenizer")
-        if self.is_sd_xl or self.is_sd_xl_turbo:
-            return
-        tokenizer_path = os.path.expanduser(
-            os.path.join(
-                self.path_settings_cached.base_path,
-                "art",
-                "models",
-                self.generator_settings_cached.version,
-                "txt2img",
-                "tokenizer"
-            )
-        )
-        try:
-            self.logger.debug(f"ModelMixin: Loading tokenizer from {tokenizer_path}")
-            self._tokenizer = CLIPTokenizerFast.from_pretrained(
-                tokenizer_path,
-                local_files_only=True,
-                torch_dtype=self.data_type
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to load tokenizer")
-            self.logger.error(e)
-
     def _load_generator(self):
         self.logger.debug("Loading generator")
         if self._generator is None:
@@ -854,9 +826,9 @@ class SDHandler(BaseHandler):
         else:
             self._controlnet_processor = controlnet_class_()
 
-    def _load_scheduler(self):
+    def _load_scheduler(self, scheduler=None):
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
-        scheduler_name = self.generator_settings_cached.scheduler
+        scheduler_name = scheduler or self.generator_settings_cached.scheduler
         base_path:str = self.path_settings_cached.base_path
         scheduler_version:str = self.generator_settings_cached.version
         scheduler_path = os.path.expanduser(
@@ -906,15 +878,17 @@ class SDHandler(BaseHandler):
             data["controlnet"] = self._controlnet
 
         pipeline_class_ = self._pipeline_class
-        config_path = os.path.dirname(self.model_path)
+
         if self.is_sd_xl_turbo:
             config_path = os.path.expanduser(os.path.join(
                 self.path_settings_cached.base_path,
                 "art",
                 "models",
-                "SDXL 1.0",
-                "txt2img"
+                StableDiffusionVersion.SDXL1_0.value,
+                self.generator_settings_cached.pipeline_action
             ))
+        else:
+            config_path = os.path.dirname(self.model_path)
         try:
             self._pipe = pipeline_class_.from_single_file(
                 self.model_path,
@@ -990,7 +964,9 @@ class SDHandler(BaseHandler):
             adapter_names.append(os.path.splitext(os.path.basename(lora.path))[0])
         if len(adapter_weights) > 0:
             self._pipe.set_adapters(adapter_names, adapter_weights=adapter_weights)
-        self.logger.debug("LORA adapters set")
+            self.logger.debug("LORA adapters set")
+        else:
+            self.logger.debug("No LORA adapters to set")
 
     def _load_embeddings(self):
         if self._pipe is None:
@@ -1015,17 +991,18 @@ class SDHandler(BaseHandler):
                         self._loaded_embeddings.append(embedding_path)
                     except Exception as e:
                         self.logger.error(f"Failed to load embedding {embedding_path}: {e}")
-        self.logger.debug("Embeddings loaded")
+        if len(self._loaded_embeddings) > 0:
+            self.logger.debug("Embeddings loaded")
+        else:
+            self.logger.debug("No embeddings enabled")
 
     def _load_compel(self):
         if self.generator_settings_cached.use_compel:
-            self.logger.debug("Loading compel")
             try:
                 self._load_textual_inversion_manager()
                 self._load_compel_proc()
             except Exception as e:
                 self.logger.error(f"Error creating compel proc: {e}")
-                self._unload_compel()
         else:
             self._unload_compel()
 
@@ -1041,9 +1018,11 @@ class SDHandler(BaseHandler):
             self.logger.error(f"Failed to enable deep cache: {e}")
 
     def _load_textual_inversion_manager(self):
+        self.logger.debug("Loading textual inversion manager")
         self._textual_inversion_manager = DiffusersTextualInversionManager(self._pipe)
 
     def _load_compel_proc(self):
+        self.logger.debug("Loading compel proc")
         parameters = dict(
             truncate_long_prompts=False,
             textual_inversion_manager=self._textual_inversion_manager
@@ -1075,7 +1054,7 @@ class SDHandler(BaseHandler):
             ("accelerated_transformers_applied", "use_accelerated_transformers", self._apply_accelerated_transformers),
             ("cpu_offload_applied", "use_enable_sequential_cpu_offload", self._apply_cpu_offload),
             ("model_cpu_offload_applied", "enable_model_cpu_offload", self._apply_model_offload),
-            ("tome_sd_applied", "tome_sd_ratio", self._apply_tome),
+            ("tome_sd_applied", "use_tome_sd", self._apply_tome),
         ]
 
         for setting_name, attribute_name, apply_func in memory_settings:
@@ -1089,11 +1068,8 @@ class SDHandler(BaseHandler):
                 self._safety_checker is not None and
                 self._feature_extractor is not None
             )
-        if not self.is_sd_xl and not self.is_sd_xl_turbo:
-            tokenizer_ready = self._tokenizer is not None
         if (
             self._pipe is not None
-            and tokenizer_ready
             and safety_checker_ready
         ):
             self._current_state = HandlerState.READY
@@ -1182,9 +1158,9 @@ class SDHandler(BaseHandler):
             self.logger.debug("Model cpu offload disabled")
 
     def _apply_tome(self, attr_val):
-        tome_sd_ratio = self.memory_settings.tome_sd_ratio / 1000
-        self.logger.debug(f"Applying ToMe SD weight merging with ratio {tome_sd_ratio}")
         if attr_val:
+            tome_sd_ratio = self.memory_settings.tome_sd_ratio / 1000
+            self.logger.debug(f"Applying ToMe SD weight merging with ratio {tome_sd_ratio}")
             self._remove_tome_sd()
             try:
                 tomesd.apply_patch(self._pipe, ratio=tome_sd_ratio)
@@ -1338,17 +1314,15 @@ class SDHandler(BaseHandler):
         self._pipe = None
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
 
-    def _unload_tokenizer(self):
-        self.logger.debug("Unloading tokenizer")
-        del self._tokenizer
-        self._tokenizer = None
-
     def _unload_generator(self):
         self.logger.debug("Unloading generator")
         del self._generator
         self._generator = None
 
     def _load_prompt_embeds(self):
+        if self._compel_proc is None:
+            self.logger.debug("Compel proc is not loading - attempting to load")
+            self._load_compel()
         self.logger.debug("Loading prompt embeds")
         if not self.generator_settings_cached.use_compel:
             return
@@ -1374,12 +1348,30 @@ class SDHandler(BaseHandler):
         pooled_prompt_embeds = None
         negative_pooled_prompt_embeds = None
 
-        if self.is_sd_xl or self.is_sd_xl_turbo:
-            prompt_embeds, pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(f'("{prompt}", "{prompt_2}").and()')
-            negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(f'("{negative_prompt}", "{negative_prompt_2}").and()')
+        if prompt != "" and prompt_2 != "":
+            compel_prompt = f'("{prompt}", "{prompt_2}").and()'
+        elif prompt != "" and prompt_2 == "":
+            compel_prompt = prompt
+        elif prompt == "" and prompt_2 != "":
+            compel_prompt = prompt_2
         else:
-            prompt_embeds = self._compel_proc.build_conditioning_tensor(f'("{prompt}", "{prompt_2}").and()')
-            negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(f'("{negative_prompt}", "{negative_prompt_2}").and()')
+            compel_prompt = ""
+
+        if negative_prompt != "" and negative_prompt_2 != "":
+            compel_negative_prompt = f'("{negative_prompt}", "{negative_prompt_2}").and()'
+        elif negative_prompt != "" and negative_prompt_2 == "":
+            compel_negative_prompt = negative_prompt
+        elif negative_prompt == "" and negative_prompt_2 != "":
+            compel_negative_prompt = negative_prompt_2
+        else:
+            compel_negative_prompt = ""
+
+        if self.is_sd_xl or self.is_sd_xl_turbo:
+            prompt_embeds, pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
+            negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
+        else:
+            prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
+            negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
         [
             prompt_embeds,
             negative_prompt_embeds
