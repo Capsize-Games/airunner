@@ -162,7 +162,7 @@ The supported Stable Diffusion models are:
 
 Models must be placed in their respective directories in the `airunner` directory.
     
-```bash
+```plaintext
 ~/.local/share/airunner
 ├── art
 │   ├── models
