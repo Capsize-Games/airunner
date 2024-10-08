@@ -1,8 +1,8 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QLabel, QPushButton, QHBoxLayout, QWidget
 
+from airunner.aihandler.models.settings_models import TargetFiles, Chatbot
 from airunner.enums import SignalCode
-from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils.open_file_path import open_file_path
 from airunner.utils.toggle_signals import toggle_signals
 from airunner.widgets.base_widget import BaseWidget
@@ -88,14 +88,18 @@ class BotPreferencesWidget(BaseWidget):
 
         # If the user clicked "OK" and entered a name
         if ok and chatbot_name:
-            self.create_chatbot(chatbot_name, DEFAULT_CHATBOT)
+            self.create_chatbot(chatbot_name)
             self.update_llm_generator_settings("current_chatbot", chatbot_name)
             self.load_saved_chatbots()
 
     def saved_chatbots_changed(self, val):
-        self.chatbot.name = val
+        session = self.db_handler.get_db_session()
+        chatbot = session.query(Chatbot).filter(Chatbot.name == val).first()
+        chatbot_id = chatbot.id
+        session.close()
+        self.update_llm_generator_settings("current_chatbot", chatbot_id)
         self.load_form_elements()
-        self.ui.llm_settings_widget.initialize_form()
+        self.emit_signal(SignalCode.CHATBOT_CHANGED)
 
     def load_saved_chatbots(self):
         names = [chatbot.name for chatbot in self.chatbots]
@@ -154,12 +158,8 @@ class BotPreferencesWidget(BaseWidget):
             self.logger.error(f"Invalid file path: {file_path}")
             return
 
-        documents = self.chatbot.get("target_files", [])
-        documents.append(file_path[0])
-        self.update_chatbot("target_files", documents)
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
-            "target_files": documents
-        })
+        self.add_chatbot_document_to_chatbot(self.chatbot, file_path[0])
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
         self.load_documents()
 
     def load_documents(self):
@@ -170,17 +170,23 @@ class BotPreferencesWidget(BaseWidget):
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
 
-        documents = self.chatbot.target_files
-        for doc in documents:
-            widget = DocumentWidget(doc, self.delete_document)
+        for target_file in self.chatbot.target_files:
+            widget = DocumentWidget(target_file, self.delete_document)
             layout.addWidget(widget)
 
-    def delete_document(self, document):
-        documents = self.chatbot.get("target_files", [])
-        if document in documents:
-            documents.remove(document)
-            self.update_chatbot("target_files", documents)
-            self.load_documents()  # Refresh the document list
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
-            "target_files": documents
-        })
+    def delete_document(self, target_file:TargetFiles):
+        session = self.db_handler.get_db_session()
+        session.delete(target_file)
+        session.commit()
+        session.close()
+        self.load_documents()
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+
+    def update_chatbot(self, key, val):
+        chatbot = self.chatbot
+        try:
+            setattr(chatbot, key, val)
+        except TypeError:
+            self.logger.error(f"Attribute {key} does not exist in Chatbot")
+            return
+        self.db_handler.save_object(chatbot)

@@ -2,6 +2,7 @@
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
+import os.path
 import sys
 import signal
 import traceback
@@ -21,10 +22,13 @@ from PySide6.QtWidgets import (
     QApplication,
     QSplashScreen
 )
+from sqlalchemy import distinct
 
+from airunner.app_installer import AppInstaller
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.aihandler.models.settings_models import ApplicationSettings, AIModels
 
 
 class App(
@@ -66,8 +70,52 @@ class App(
 
         self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
 
+        self.create_paths()
         self.start()
+        self.run_setup_wizard()
         self.run()
+
+    def create_paths(self):
+        self.logger.debug("Creating paths")
+        art_path = os.path.expanduser((
+            os.path.join(
+                self.path_settings.base_path,
+                "art",
+            )
+        ))
+        models_path = os.path.expanduser((
+            os.path.join(
+                art_path,
+                "models",
+            )
+        ))
+        images_path = os.path.expanduser((
+            os.path.join(
+                art_path,
+                "other",
+                "images"
+            )
+        ))
+        session = self.db_handler.get_db_session()
+        versions = session.query(distinct(AIModels.version)).filter(AIModels.category == 'stablediffusion').all()
+        session.close()
+        for version in versions:
+            os.makedirs(
+                os.path.join(models_path, version[0], "embeddings"),
+                exist_ok=True
+            )
+            os.makedirs(
+                os.path.join(models_path, version[0], "lora"),
+                exist_ok=True
+            )
+        os.makedirs(images_path, exist_ok=True)
+
+    def run_setup_wizard(self):
+        session = self.db_handler.get_db_session()
+        application_settings = session.query(ApplicationSettings).first()
+        session.close()
+        if application_settings.run_setup_wizard:
+            AppInstaller()
 
     def on_log_logged_signal(self, data: dict):
         message = data["message"].split(" - ")

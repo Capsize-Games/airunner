@@ -5,11 +5,11 @@ from sqlalchemy.orm import joinedload
 
 from airunner.aihandler.models.settings_db_handler import SettingsDBHandler
 from airunner.aihandler.models.settings_models import ApplicationSettings, LLMGeneratorSettings, GeneratorSettings, \
-    ControlnetSettings, ControlnetImageSettings, BrushSettings, DrawingPadSettings, GridSettings, ActiveGridSettings, \
-    ImageToImageSettings, OutpaintSettings, PathSettings, CanvasSettings, MemorySettings, Chatbot, \
-    AIModels, Schedulers, Lora, ShortcutKeys, SavedPrompt, SpeechT5Settings, TTSSettings, BarkSettings, EspeakSettings, \
-    MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel
-from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
+    ControlnetSettings, BrushSettings, DrawingPadSettings, GridSettings, ActiveGridSettings, \
+    ImageToImageSettings, OutpaintSettings, PathSettings, MemorySettings, Chatbot, \
+    AIModels, Schedulers, Lora, ShortcutKeys, SavedPrompt, SpeechT5Settings, TTSSettings, EspeakSettings, \
+    MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, TargetFiles, \
+    ImageFilterValue
 from airunner.enums import SignalCode
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 
@@ -52,10 +52,6 @@ class SettingsMixin:
         return self.db_handler.load_settings_from_db(DrawingPadSettings)
 
     @property
-    def controlnet_image_settings(self) -> ControlnetImageSettings:
-        return self.db_handler.load_settings_from_db(ControlnetImageSettings)
-
-    @property
     def brush_settings(self) -> BrushSettings:
         return self.db_handler.load_settings_from_db(BrushSettings)
 
@@ -70,10 +66,6 @@ class SettingsMixin:
     @property
     def path_settings(self) -> PathSettings:
         return self.db_handler.load_settings_from_db(PathSettings)
-
-    @property
-    def canvas_settings(self) -> CanvasSettings:
-        return self.db_handler.load_settings_from_db(CanvasSettings)
 
     @property
     def memory_settings(self) -> MemorySettings:
@@ -108,10 +100,6 @@ class SettingsMixin:
         return self.db_handler.load_settings_from_db(TTSSettings)
 
     @property
-    def bark_settings(self) -> BarkSettings:
-        return self.db_handler.load_settings_from_db(BarkSettings)
-
-    @property
     def espeak_settings(self) -> EspeakSettings:
         return self.db_handler.load_settings_from_db(EspeakSettings)
 
@@ -122,10 +110,6 @@ class SettingsMixin:
     @property
     def embeddings(self) -> List[Embedding]:
         return self.db_handler.load_embeddings()
-
-    @property
-    def translation_settings(self):
-        return self.db_handler.load_translation_settings()
 
     @property
     def prompt_templates(self) -> List[PromptTemplate]:
@@ -148,20 +132,40 @@ class SettingsMixin:
         return self.db_handler.load_pipelines()
 
     @property
-    def image_filters(self):
-        return imagefilter_bootstrap_data
-
-    @property
-    def controlnet_image(self):
-        base_64_image = self.controlnet_image_settings.imported_image_base64
+    def drawing_pad_image(self):
+        base_64_image = self.drawing_pad_settings.image
         image = convert_base64_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
 
     @property
-    def outpaint_image(self):
-        base_64_image = self.outpaint_settings.image
+    def drawing_pad_mask(self):
+        base_64_image = self.drawing_pad_settings.mask
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
+
+    @property
+    def img2img_image(self):
+        base_64_image = self.image_to_image_settings.image
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
+
+    @property
+    def controlnet_image(self):
+        base_64_image = self.controlnet_settings.image
+        image = convert_base64_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
+
+    @property
+    def controlnet_generated_image(self):
+        base_64_image = self.controlnet_settings.imported_image_base64
         image = convert_base64_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
@@ -169,18 +173,30 @@ class SettingsMixin:
 
     @property
     def outpaint_mask(self):
-        base_64_image = self.outpaint_settings.mask
+        base_64_image = self.drawing_pad_settings.mask
         image = convert_base64_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
+
+    @property
+    def image_filter_values(self):
+        session = self.db_handler.get_db_session()
+        try:
+            return session.query(ImageFilterValue).all()
+        finally:
+            session.close()
 
     #######################################
     ### LORA ###
     #######################################
 
     def get_lora_by_version(self, version):
-        return [lora for lora in self.lora if lora.version == version]
+        session = self.db_handler.get_db_session()
+        try:
+            return session.query(Lora).filter_by(version=version).all()
+        finally:
+            session.close()
 
     def delete_lora_by_name(self, name, version):
         self.db_handler.delete_lora_by_name(name, version)
@@ -209,42 +225,42 @@ class SettingsMixin:
         self.db_handler.update_embeddings(embeddings)
         self.__settings_updated()
 
-    def update_embedding(self, embedding: Embedding):
-        self.db_handler.update_embeddings([embedding])
-        self.__settings_updated()
-
     #######################################
     ### CHATBOT ###
     #######################################
     @property
     def chatbot(self) -> Chatbot:
-        return self.get_chatbot_by_name(
+        return self.get_chatbot_by_id(
             self.llm_generator_settings.current_chatbot
         )
 
-    def update_chatbot(self, key, val):
-        chatbot = self.chatbot
-        try:
-            setattr(chatbot, key, val)
-        except TypeError:
-            self.logger.error(f"Attribute {key} does not exist in Chatbot")
-            return
-        self.db_handler.update_chatbot(chatbot)
-        self.__settings_updated()
-
-    def get_chatbot_by_name(self, chatbot_name) -> Chatbot:
+    def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
+        chatbot = None
         session = self.db_handler.get_db_session()
         try:
-            chatbot = session.query(Chatbot).filter_by(name=chatbot_name).options(joinedload(Chatbot.target_files)).first()
-            return chatbot
+            chatbot = session.query(Chatbot).filter_by(id=chatbot_id).options(joinedload(Chatbot.target_files)).first()
+            if chatbot is None:
+                chatbot = session.query(Chatbot).options(joinedload(Chatbot.target_files)).first()
         finally:
             session.close()
+        return chatbot
 
     def delete_chatbot_by_name(self, chatbot_name):
         self.db_handler.delete_chatbot_by_name(chatbot_name)
 
-    def create_chatbot(self, chatbot_name, data: dict):
-        self.db_handler.create_chatbot(chatbot_name, data)
+    def create_chatbot(self, chatbot_name):
+        self.db_handler.create_chatbot(chatbot_name)
+
+    def add_chatbot_document_to_chatbot(self, chatbot, file_path):
+        session = self.db_handler.get_db_session()
+        try:
+            document = session.query(TargetFiles).filter_by(chatbot_id=chatbot.id, file_path=file_path).first()
+            if document is None:
+                document = TargetFiles(file_path=file_path, chatbot_id=chatbot.id)
+            session.merge(document)  # Use merge instead of add
+            session.commit()
+        finally:
+            session.close()
 
     #######################################
     ### SAVED PROMPTS ###
@@ -285,8 +301,6 @@ class SettingsMixin:
             self.update_active_grid_settings(column_name, val)
         elif setting_name == "path_settings":
             self.update_path_settings(column_name, val)
-        elif setting_name == "canvas_settings":
-            self.update_canvas_settings(column_name, val)
         elif setting_name == "memory_settings":
             self.update_memory_settings(column_name, val)
         elif setting_name == "llm_generator_settings":
@@ -301,15 +315,15 @@ class SettingsMixin:
     #######################################
     ### TTS Settings ###
     #######################################
-    def update_bark_settings(self, column_name, val):
-        self.db_handler.update_setting(BarkSettings, column_name, val)
-        self.__settings_updated()
-
     def update_espeak_settings(self, column_name, val):
         self.db_handler.update_setting(EspeakSettings, column_name, val)
         self.__settings_updated()
 
     def update_tts_settings(self, column_name, val):
+        self.db_handler.update_setting(TTSSettings, column_name, val)
+        self.__settings_updated()
+
+    def update_speech_t5_settings(self, column_name, val):
         self.db_handler.update_setting(SpeechT5Settings, column_name, val)
         self.__settings_updated()
 
@@ -317,10 +331,6 @@ class SettingsMixin:
     #######################################
     ### CONTROLNET ###
     #######################################
-    def update_controlnet_image_settings(self, column_name, val):
-        self.db_handler.update_setting(ControlnetImageSettings, column_name, val)
-        self.__settings_updated()
-
     def update_controlnet_settings(self, column_name, val):
         self.db_handler.update_setting(ControlnetSettings, column_name, val)
         self.__settings_updated()
@@ -359,10 +369,6 @@ class SettingsMixin:
     def reset_path_settings(self):
         self.db_handler.reset_path_settings()
 
-    def update_canvas_settings(self, column_name, val):
-        self.db_handler.update_setting(CanvasSettings, column_name, val)
-        self.__settings_updated()
-
     def update_memory_settings(self, column_name, val):
         self.db_handler.update_setting(MemorySettings, column_name, val)
         self.__settings_updated()
@@ -390,13 +396,6 @@ class SettingsMixin:
 
     def update_ai_model(self, model: AIModels):
         self.db_handler.update_ai_model(model)
-        self.__settings_updated()
-
-    #######################################
-    ### TRANSLATION SETTINGS ###
-    #######################################
-    def update_translation_settings(self, column_name, val):
-        self.db_handler.update_translation_settings(column_name, val)
         self.__settings_updated()
 
     #######################################

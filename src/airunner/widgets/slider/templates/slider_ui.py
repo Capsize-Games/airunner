@@ -22,7 +22,7 @@ class Ui_slider_widget(object):
     def setupUi(self, slider_widget):
         if not slider_widget.objectName():
             slider_widget.setObjectName(u"slider_widget")
-        slider_widget.resize(548, 50)
+        slider_widget.resize(548, 38)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -45,6 +45,7 @@ class Ui_slider_widget(object):
         font.setPointSize(9)
         self.groupBox.setFont(font)
         self.gridLayout_2 = QGridLayout(self.groupBox)
+        self.gridLayout_2.setSpacing(0)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.slider = QSlider(self.groupBox)
