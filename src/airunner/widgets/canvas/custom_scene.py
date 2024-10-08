@@ -165,8 +165,8 @@ class CustomScene(
 
     def on_paste_image_from_clipboard(self):
         image = self._paste_image_from_clipboard()
-        #self.delete_image()
-
+        if image is None:
+            return
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
         image = convert_image_to_base64(image)
