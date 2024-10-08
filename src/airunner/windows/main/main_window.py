@@ -50,13 +50,18 @@ from airunner.utils.file_system.operations import FileSystemOperations
 
 from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
+from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
+from airunner.widgets.stats.stats_widget import StatsWidget
+from airunner.widgets.status.status_widget import StatusWidget
+from airunner.windows.about.about import AboutWindow
 from airunner.windows.filter_window import FilterWindow
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
-from airunner.windows.setup_wizard.setup_wizard_window import SetupWizardWindow
+from airunner.windows.settings.airunner_settings import SettingsWindow
+from airunner.windows.update.update_window import UpdateWindow
 from airunner.worker_manager import WorkerManager
 
 
@@ -330,7 +335,6 @@ class MainWindow(
 
     @Slot()
     def action_show_model_manager(self):
-        from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
         ModelManagerWidget()
 
     @Slot()
@@ -366,12 +370,10 @@ class MainWindow(
 
     @Slot()
     def action_show_about_window(self):
-        from airunner.windows.about.about import AboutWindow
         AboutWindow()
 
     @Slot()
     def action_show_settings(self):
-        from airunner.windows.settings.airunner_settings import SettingsWindow
         SettingsWindow()
 
     @Slot()
@@ -451,7 +453,6 @@ class MainWindow(
 
     @Slot()
     def action_stats_triggered(self):
-        from airunner.widgets.stats.stats_widget import StatsWidget
         widget = StatsWidget()
         # display in a window
         widget.show()
@@ -601,7 +602,6 @@ class MainWindow(
         self.logger.debug("Loading UI")
         self.ui.setupUi(self)
         self.restore_state()
-        from airunner.widgets.status.status_widget import StatusWidget
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
@@ -920,7 +920,6 @@ class MainWindow(
         )
 
     def show_update_popup(self):
-        from airunner.windows.update.update_window import UpdateWindow
         self.update_popup = UpdateWindow()
 
     def refresh_stylesheet(self):
