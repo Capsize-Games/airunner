@@ -6,6 +6,7 @@ import webbrowser
 from functools import partial
 
 import requests
+from PIL import Image
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
@@ -23,7 +24,7 @@ from bs4 import BeautifulSoup
 from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
 from airunner.aihandler.llm.agent.actions.show_path import show_path
 from airunner.aihandler.logger import Logger
-from airunner.aihandler.models.settings_models import ShortcutKeys, ImageFilter
+from airunner.aihandler.models.settings_models import ShortcutKeys, ImageFilter, DrawingPadSettings
 from airunner.app_installer import AppInstaller
 from airunner.settings import (
     STATUS_ERROR_COLOR,
@@ -46,6 +47,7 @@ from airunner.settings import (
     BUG_REPORT_LINK,
     VULNERABILITY_REPORT_LINK
 )
+from airunner.utils.convert_image_to_base64 import convert_image_to_base64
 from airunner.utils.file_system.operations import FileSystemOperations
 
 from airunner.utils.get_version import get_version
@@ -390,6 +392,9 @@ class MainWindow(
 
     @Slot(bool)
     def action_toggle_mask_layer(self, val: bool):
+        if val is True and self.drawing_pad_mask is None:
+            self._generate_drawingpad_mask()
+
         self.update_drawing_pad_settings("mask_layer_enabled", val)
         self.emit_signal(SignalCode.MASK_LAYER_TOGGLED)
 
@@ -1134,3 +1139,14 @@ class MainWindow(
             self.ui.actionToggle_Speech_to_Text.setDisabled(status is ModelStatus.LOADING)
         self.initialize_widget_elements()
         QApplication.processEvents()
+
+    def _generate_drawingpad_mask(self):
+        width = self.active_grid_settings.width
+        height = self.active_grid_settings.height
+        img = Image.new("RGB", (width, height), (0, 0, 0))
+        base64_image = convert_image_to_base64(img)
+        session = self.db_handler.get_db_session()
+        drawing_pad_settings = session.query(DrawingPadSettings).first()
+        drawing_pad_settings.mask = base64_image
+        session.commit()
+        session.close()
