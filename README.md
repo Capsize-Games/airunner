@@ -92,10 +92,39 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 ### Linux
 
-1. Open your file explorer and navigate to the directory containing the `install.sh` script
-2. Open the terminal using the keyboard shortcut `Ctrl + Alt + T`
-3. Drag the `install.sh` script into the terminal and press `Enter`
-4. Follow the on-screen instructions
+Install prerequisites
+
+```bash
+sudo apt update
+sudo apt install -y fonts-noto-color-emoji
+sudo apt install -y libportaudio2
+sudo apt install -y libxcb-cursor0
+sudo apt install -y espeak
+sudo apt install -y xclip
+sudo apt install -y git
+sudo apt install -y python3-pip
+sudo apt install -y python3.10-venv
+```
+
+Clone the repository
+
+```bash
+git clone https://github.com/Capsize-Games/airunner.git
+cd airunner
+```
+
+Create a virtual environment
+
+```bash
+python3 -m venv airunner
+source airunner/bin/activate
+```
+
+Install AI Runner
+
+```bash
+pip install -e .
+```
 
 ---
 
@@ -103,71 +132,18 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 ### Linux
 
-1. Open the terminal using the keyboard shortcut `Ctrl + Alt + T`
-2. Navigate to the directory containing the `run.sh` script (`cd ~/airunner` for example)
-3. Run the `bin/run.sh` script by typing `./bin/run.sh` and pressing `Enter`
-4. AI Runner will start and you can begin using it after following the on-screen setup instructions
-
----
-
-## ✏️ Using AI Runner
-
-[Instructions on how to use AI Runner can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/AI-Runner)
-
-
----
-
-## 💾 Compiling AI Runner
-
-Clone this repository
+Activate the virtual environment
 
 ```bash
-git clone https://github.com/Capsize-Games/airunner.git
-cd airunner
+source airunner/bin/activate
 ```
 
-### Build from source
+Run AI Runner
 
 ```bash
-pip install -e .
-pip install pyinstaller
-bash build.dev.sh
+cd airunner/src/airunner
+./main.py
 ```
-
-## 🔬 Unit tests
-
-Run a specific test
-```bash
-python -m unittest src/airunner/tests/test_draggable_pixmap.py
-```
-
-Test coverage is currently low, but the existing tests can be run using the following command:
-
-```bash
-python -m unittest discover tests
-```
-
-### Test coverage
-
-Run tests with coverage tracking:
-
-```bash
-coverage run --source=src/airunner --omit=__init__.py,*/data/*,*/tests/*,*_ui.py,*/enums.py,*/settings.py -m unittest discover src/airunner/tests
-```
-
-To see a report in the terminal, use:
-
-```bash
-coverage report
-```
-
-For a more detailed HTML report, run:
-
-```bash
-coverage html
-```
-
-View results in `htmlcov/index.html`.
 
 ---
 
@@ -179,18 +155,11 @@ care to strip the application of any telemetry or tracking features.
 The main application itself is unable to access the internet, and we are working
 towards properly sandboxing certain features to ensure user privacy and security.
 
-As this application evolves we will migrate away from the Huggingface libraries.
+---
 
 ### Internet access
 
-The core application is incapable of accessing the internet. However there are two features which require
-internet access. These two features are the `setup wizard` and the `model manager`.
-
-Each of these tools are isolated in their own application windows
-which are capable of directly accessing and downloading files on Huggingface.co and 
-civitai.com (depending on the given URL). Any other URL will be blocked.
-
-The Huggingface Hub library is not used to access these downloads.
+Only the setup wizard needs access to the internet in order to download the required models.
 
 For more information see the [Darklock](https://github.com/capsize-games/darklock)  and
 [Facehuggershield](https://github.com/capsize-games/facehuggershield) libraries.
@@ -225,35 +194,3 @@ The security measures taken for this library are as follows
 - All telemetry disabled
 
 See [Facehuggershield](https://github.com/capsize-games/facehuggershield) for more information.
-
----
-
-#### Planned security measures for Huggingface Libraries
-
-We plant o remove the Huggingface libraries from the application in the future.
-Although the architecture is currently dependent on these libraries, we will
-migrate to a better solution in the future.
-
----
-
-## Improving performance
-
-To profile various functions in an effort to improve performance, you can install `line_profiler`
-
-```bash
-pip install line_profiler
-```
-
-To profile a function, add the `@profile` decorator to the function you wish to profile.
-
-Then run the following command:
-
-```bash
-kernprof -l -v main.py
-```
-
-To view the results after
-
-```bash
-python display_profile_data.py
-```
