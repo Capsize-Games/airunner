@@ -25,6 +25,9 @@ class DraggablePixmap(
             QGraphicsItem.GraphicsItemFlag.ItemIsMovable,
             True
         )
+        x = self.drawing_pad_settings.x_pos
+        y = self.drawing_pad_settings.y_pos
+        self.setPos(QPoint(x, y))
 
     @property
     def current_tool(self):
@@ -47,23 +50,22 @@ class DraggablePixmap(
             self.snap_to_grid(save=True)
         super().mouseReleaseEvent(event)
 
-    def snap_to_grid(self, save=False):
-        x, y = snap_to_grid(
-            self.grid_settings,
-            int(self.x()),
-            int(self.y()),
-            False
-        )
+    def snap_to_grid(self, x=None, y=None, save=False):
+        if x is None:
+            x = int(self.x())
+        if y is None:
+            y = int(self.y())
+        if self.grid_settings.snap_to_grid:
+            x, y = snap_to_grid(self.grid_settings, x, y, False)
         x += self.last_pos.x()
         y += self.last_pos.y()
-        self.setPos(x, y, save)
+        self.update_position(x, y, save)
 
-    def setPos(self, x, y, save = True):
-        super().setPos(x, y)
+    def update_position(self, x:int, y:int, save:bool=True):
+        self.setPos(QPoint(x, y))
         if save:
-            if self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
-                self.update_active_grid_settings("pos_x", x)
-                self.update_active_grid_settings("pos_y", y)
+            self.update_drawing_pad_settings("x_pos", x)
+            self.update_drawing_pad_settings("y_pos", y)
 
     def paint(self, painter: QPainter, option, widget=None):
         painter.drawPixmap(self.pixmap.rect(), self.pixmap)

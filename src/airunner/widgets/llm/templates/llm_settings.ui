@@ -32,7 +32,20 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="1" column="0">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>LLM Settings</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="frameShadow">
       <enum>QFrame::Shadow::Plain</enum>
@@ -49,7 +62,7 @@
         <x>0</x>
         <y>0</y>
         <width>579</width>
-        <height>713</height>
+        <height>700</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -867,16 +880,10 @@
      </widget>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="label_2">
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>LLM Settings</string>
+   <item row="1" column="0">
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>

@@ -1,27 +1,103 @@
 import os
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, QSize, QThread
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.utils.models.scan_path_for_items import scan_path_for_lora
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.lora_widget import LoraWidget
 from airunner.widgets.lora.templates.lora_container_ui import Ui_lora_container
+from airunner.workers.directory_watcher import DirectoryWatcher
 
 
 class LoraContainerWidget(BaseWidget):
     widget_class_ = Ui_lora_container
-    lora_loaded = False
-    total_lora_by_section = {}
     search_filter = ""
     spacer = None
 
     def __init__(self, *args, **kwargs):
+        self._version = None
         super().__init__(*args, **kwargs)
-
-        self.loras = None
         self.initialized = False
+        self._deleting = False
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        self.register(SignalCode.LORA_UPDATED_SIGNAL, self.on_lora_updated_signal)
+        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
+        self.register(SignalCode.LORA_STATUS_CHANGED, self.on_lora_modified)
+        self.register(SignalCode.LORA_DELETE_SIGNAL, self.delete_lora)
+        self.ui.loading_icon.hide()
+        self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
+        self._apply_button_enabled = False
+        self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
+        self._scanner_worker = DirectoryWatcher(self.path_settings.base_path, self._scan_path_for_lora)
+        self._scanner_worker.scan_completed.connect(self.on_scan_completed)
+        self._scanner_thread = QThread()
+        self._scanner_worker.moveToThread(self._scanner_thread)
+        self._scanner_thread.started.connect(self._scanner_worker.run)
+        self._scanner_thread.start()
+
+    def _scan_path_for_lora(self, path) -> bool:
+        if self._deleting:
+            return False
+        return scan_path_for_lora(path)
+
+    @Slot(bool)
+    def on_scan_completed(self, force_reload: bool):
+        self.load_lora(force_reload=force_reload)
+
+    @Slot()
+    def scan_for_lora(self):
+        # clear all lora widgets
+        force_reload = scan_path_for_lora(self.path_settings.base_path)
+        self.load_lora(force_reload=force_reload)
+
+    @Slot()
+    def apply_lora(self):
+        self._apply_button_enabled = False
+        self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL)
+
+    def on_lora_modified(self):
+        self._apply_button_enabled = True
+        self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
+
+    def on_model_status_changed_signal(self, data):
+        model = data["model"]
+        status = data["status"]
+        if model is ModelType.SD:
+            if status is ModelStatus.LOADING:
+                self._disable_form()
+            else:
+                self._enable_form()
+
+    def _disable_form(self):
+        self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
+        self.ui.lora_scale_slider.setEnabled(False)
+        self.ui.toggleAllLora.setEnabled(False)
+        self.ui.loading_icon.show()
+        self._toggle_lora_widgets(False)
+
+    def _enable_form(self):
+        self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
+        self.ui.lora_scale_slider.setEnabled(True)
+        self.ui.toggleAllLora.setEnabled(True)
+        self.ui.loading_icon.hide()
+        self._toggle_lora_widgets(True)
+
+    def _toggle_lora_widgets(self, enable: bool):
+        for i in range(self.ui.lora_scroll_area.widget().layout().count()):
+            lora_widget = self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
+            if isinstance(lora_widget, LoraWidget):
+                if enable:
+                    lora_widget.enable_lora_widget()
+                else:
+                    lora_widget.disable_lora_widget()
+
+    def on_application_settings_changed_signal(self):
+        self.load_lora()
+
+    def on_lora_updated_signal(self):
+        self._enable_form()
 
     def toggle_all(self, val):
         lora_widgets = [
@@ -31,33 +107,31 @@ class LoraContainerWidget(BaseWidget):
         ]
         for lora_widget in lora_widgets:
             lora_widget.ui.enabledCheckbox.blockSignals(True)
-            lora_widget.action_toggled_lora_enabled(val, emit_signal=False)
+            lora_widget.action_toggled_lora_enabled(val)
             lora_widget.ui.enabledCheckbox.blockSignals(False)
-        for lora in self.lora:
-            lora.enabled = val
-            self.update_lora(lora)
-        self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL, {
-            "lora": self.lora
-        })
 
     def showEvent(self, event):
         if not self.initialized:
-            self.register(SignalCode.LORA_DELETE_SIGNAL, self.delete_lora)
             self.scan_for_lora()
             self.initialized = True
+        self.load_lora()
 
-    def load_lora(self):
+    def load_lora(self, force_reload=False):
         version = self.generator_settings.version
-        loras = self.get_lora_by_version(version)
-        if loras:
-            self.remove_spacer()
-            filtered_loras = [
-                lora for lora in loras
-                if self.search_filter.lower() in lora.name.lower()
-            ]
-            for lora in filtered_loras:
-                self.add_lora(lora)
-            self.add_spacer()
+
+        if self._version is None or self._version != version or force_reload:
+            self._version = version
+            self.clear_lora_widgets()
+            loras = self.get_lora_by_version(self._version)
+            if loras:
+                self.remove_spacer()
+                filtered_loras = [
+                    lora for lora in loras
+                    if self.search_filter.lower() in lora.name.lower()
+                ]
+                for lora in filtered_loras:
+                    self.add_lora(lora)
+                self.add_spacer()
 
     def remove_spacer(self):
         # remove spacer from end of self.ui.scrollAreaWidgetContents.layout()
@@ -80,38 +154,35 @@ class LoraContainerWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.layout().addWidget(lora_widget)
 
     def delete_lora(self, data: dict):
+        self._deleting = True
         lora_widget = data["lora_widget"]
-
-        # Remove lora from settings
-        self.delete_lora_by_name(lora_widget.lora["name"], self.generator_settings.version)
-
-        # Remove lora widget from scroll area
-        self.ui.scrollAreaWidgetContents.layout().removeWidget(lora_widget)
-        self.add_spacer()
 
         # Delete the lora from disc
         lora_path = os.path.expanduser(
             os.path.join(
                 self.path_settings.base_path,
                 "art/models",
-                self.generator_settings.version,
+                self._version,
                 "lora"
             )
         )
-        lora_file = lora_widget.lora["name"]
+        lora_file = lora_widget.current_lora.name
         for dirpath, dirnames, filenames in os.walk(lora_path):
             for file in filenames:
                 if file.startswith(lora_file):
                     os.remove(os.path.join(dirpath, file))
                     break
 
-    @Slot()
-    def scan_for_lora(self):
-        # clear all lora widgets
-        self.clear_lora_widgets()
-        loras = scan_path_for_lora(self.path_settings.base_path)
-        self.update_loras(loras)
-        self.load_lora()
+        # Remove lora from database
+        session = self.db_handler.get_db_session()
+        session.delete(lora_widget.current_lora)
+        session.commit()
+        session.close()
+
+        self._apply_button_enabled = True
+        self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
+        self.load_lora(force_reload=True)
+        self._deleting = False
 
     def available_lora(self, action):
         available_lora = []
@@ -119,84 +190,6 @@ class LoraContainerWidget(BaseWidget):
             if lora.enabled and lora.scale > 0:
                 available_lora.append(lora)
         return available_lora
-
-    def get_available_loras(self, tab_name):
-        lora_path = os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "art/models",
-                self.generator_settings.version,
-                "lora"
-            )
-        )
-        if not os.path.exists(lora_path):
-            return []
-        available_lora = self.get_list_of_available_loras(tab_name, lora_path, lora_names=self.lora)
-        return available_lora
-
-    def get_list_of_available_loras(self, tab_name, lora_path, lora_names=None):
-        self.total_lora_by_section = {
-            "total": 0,
-            "enabled": 0
-        }
-
-        if lora_names is None:
-            lora_names = []
-        if not os.path.exists(lora_path):
-            return lora_names
-        possible_line_endings = ["ckpt", "safetensors", "bin"]
-        new_loras = []
-        from airunner.aihandler.models.settings_models import Lora
-
-        for lora_file in os.listdir(lora_path):
-            if os.path.isdir(os.path.join(lora_path, lora_file)):
-                lora_names = self.get_list_of_available_loras(tab_name, os.path.join(lora_path, lora_file), lora_names)
-            if lora_file.split(".")[-1] in possible_line_endings:
-                name = lora_file.split(".")[0]
-                scale = 100.0
-                enabled = True
-                trigger_word = ""
-                for lora in self.lora:
-                    if lora.name == name:
-                        scale = lora.scale
-                        enabled = lora.enabled
-                        trigger_word = lora.trigger_word if trigger_word in lora else ""
-                        self.total_lora_by_section["total"] += 1
-                        if enabled:
-                            self.total_lora_by_section["enabled"] += 1
-                        break
-                new_lora = Lora(
-                    name=name,
-                    scale=scale,
-                    enabled=enabled,
-                    loaded=False,
-                    trigger_word=trigger_word
-                )
-                self.create_lora(new_lora)
-
-            # check if name already in lora_names:
-            for old_lora in lora_names:
-                name = old_lora["name"]
-                found = False
-                for new_lora in new_loras:
-                    if new_lora.name == name:
-                        found = True
-                        break
-                if not found:
-                    lora_names.remove(old_lora)
-            merge_lora = []
-            for new_lora in new_loras:
-                name = new_lora.name
-                found = False
-                for current_lora in lora_names:
-                    if current_lora["name"] == name:
-                        found = True
-                if not found:
-                    merge_lora.append(new_lora)
-            lora_names.extend(merge_lora)
-        return lora_names
-
-    lora_tab_container = None
 
     def initialize_lora_trigger_words(self):
         for lora in self.lora:
@@ -223,27 +216,6 @@ class LoraContainerWidget(BaseWidget):
                 lora_object.trigger_word = value
                 self.update_lora(lora_object)
 
-    def toggle_lora(self, lora, value, tab_name):
-        for n in range(len(self.loras)):
-            if self.loras[n].name == lora.name:
-                lora_object = self.loras[n]
-                lora_object.enabled = value == 2
-                self.update_lora(lora_object)
-                if value == 2:
-                    self.total_lora_by_section["enabled"] += 1
-                else:
-                    self.total_lora_by_section["enabled"] -= 1
-                self.update_lora_tab_name(tab_name)
-
-    def update_lora_tab_name(self, tab_name):
-        # if tab_name not in self.total_lora_by_section:
-        #     self.total_lora_by_section[tab_name] = {"total": 0, "enabled": 0}
-        # self.tabs[tab_name].PromptTabsSection.setTabText(
-        #     2,
-        #     f'LoRA ({self.total_lora_by_section[tab_name]["enabled"]}/{self.total_lora_by_section[tab_name]["total"]})'
-        # )
-        pass
-
     def handle_lora_slider(self, lora, lora_widget, value, tab_name):
         float_val = value / 100
         for n in range(len(self.lora)):
@@ -263,8 +235,7 @@ class LoraContainerWidget(BaseWidget):
 
     def search_text_changed(self, val):
         self.search_filter = val
-        self.clear_lora_widgets()
-        self.load_lora()
+        self.load_lora(force_reload=True)
     
     def clear_lora_widgets(self):
         if self.spacer:

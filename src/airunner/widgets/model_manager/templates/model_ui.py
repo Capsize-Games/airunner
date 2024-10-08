@@ -168,7 +168,7 @@ class Ui_model_widget(object):
         ___qtablewidgetitem = self.details.item(0, 0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("model_widget", u"path", None));
         ___qtablewidgetitem1 = self.details.item(0, 1)
-        ___qtablewidgetitem1.setText(QCoreApplication.translate("model_widget", u"~/.airunner/models/model_type", None));
+        ___qtablewidgetitem1.setText(QCoreApplication.translate("model_widget", u"~/.local/share/airunner/models/model_type", None));
         ___qtablewidgetitem2 = self.details.item(1, 0)
         ___qtablewidgetitem2.setText(QCoreApplication.translate("model_widget", u"branch", None));
         ___qtablewidgetitem3 = self.details.item(1, 1)

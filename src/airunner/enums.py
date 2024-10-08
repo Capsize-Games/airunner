@@ -49,7 +49,6 @@ class SignalCode(Enum):
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
     WINDOW_LOADED_SIGNAL = "window_loaded_signal"
     APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"
-    APPLICATION_ADD_BOT_MESSAGE_TO_CONVERSATION = "add_bot_message_to_conversation"
     APPLICATION_MODELS_CHANGED_SIGNAL = "models_changed_signal"
     APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL = "clear_status_message_signal"
     APPLICATION_RESET_SETTINGS_SIGNAL = "reset_settings_signal"
@@ -61,6 +60,7 @@ class SignalCode(Enum):
     APPLICATION_TOOL_CHANGED_SIGNAL = "tool_changed_signal"
     APPLICATION_ACTIVE_GRID_AREA_UPDATED = "active_grid_area_updated"
     ACTIVE_GRID_AREA_MOVED_SIGNAL = "active_grid_area_moved_signal"
+    GENERATE_MASK = "generate_mask"
     MASK_GENERATOR_WORKER_RESPONSE_SIGNAL = "mask_generator_worker_response_signal"
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_WORKER_PROCESSED_SIGNAL = "AudioProcessorWorker_processed_audio"
@@ -151,10 +151,12 @@ class SignalCode(Enum):
     LLM_TOKEN_SIGNAL = "llm_token_signal"
     LLM_RESPOND_TO_USER_SIGNAL = "llm_respond_to_user_signal"
     LLM_PROCESS_STT_AUDIO_SIGNAL = "llm_process_stt_audio"
-    LOG_STATUS_SIGNAL = "status_signal"
     LORA_ADD_SIGNAL = "add_lora_signal"
     LORA_UPDATE_SIGNAL = "update_lora_signal"
+    LORA_UPDATED_SIGNAL = "lora_updated_signal"
     LORA_DELETE_SIGNAL = "delete_lora_signal"
+    EMBEDDING_UPDATED_SIGNAL = "embedding_updated_signal"
+    EMBEDDING_DELETE_SIGNAL = "delete_embedding_signal"
     SET_CANVAS_COLOR_SIGNAL = "set_canvas_color_signal"
     UPDATE_SCENE_SIGNAL = "update_scene_signal"
     DRAW_GRID_SIGNAL = "draw_grid_signal"
@@ -168,13 +170,10 @@ class SignalCode(Enum):
     SD_SAVE_PROMPT_SIGNAL = "save_stablediffusion_prompt_signal"
     SD_LOAD_PROMPT_SIGNAL = "load_saved_stablediffuion_prompt_signal"
     SD_ADD_RESPONSE_TO_QUEUE_SIGNAL = "add_sd_response_to_queue_signal"
-    SD_IMAGE_DATA_WORKER_RESPONSE_SIGNAL = "ImageDataWorker_response_signal"
     SD_GENERATE_IMAGE_SIGNAL = "generate_image_signal"
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
     SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
     HANDLE_LATENTS_SIGNAL = "handle_latents_signal"
-    STT_HEAR_SIGNAL = "hear_signal"
-    STT_AUDIO_PROCESSED = "stt_audio_processed_signal"
     STT_PROCESS_AUDIO_SIGNAL = "stt_process_audio"
     STT_START_CAPTURE_SIGNAL = "stt_start_capture"
     STT_STOP_CAPTURE_SIGNAL = "stt_stop_capture"
@@ -185,6 +184,8 @@ class SignalCode(Enum):
     QUIT_APPLICATION = "quit"
     TOGGLE_FULLSCREEN_SIGNAL = "fullscreen_signal"
     TOGGLE_TTS_SIGNAL = "toggle_tts_signal"
+    TOGGLE_SD_SIGNAL = "toggle_sd_signal"
+    TOGGLE_LLM_SIGNAL = "toggle_llm_signal"
     START_AUTO_IMAGE_GENERATION_SIGNAL = "start_auto_image_generation_signal"
     STOP_AUTO_IMAGE_GENERATION_SIGNAL = "stop_auto_image_generation_signal"
     LINES_UPDATED_SIGNAL = "lines_updated_signal"
@@ -204,26 +205,8 @@ class SignalCode(Enum):
     MODEL_STATUS_CHANGED_SIGNAL = "model_status_changed_signal"
     PIPE_MOVED_SIGNAL = "pipe_moved_signal"
 
-    TTS_LOAD_SIGNAL = "tts_load_signal"
-    TTS_UNLOAD_SIGNAL = "tts_unload_signal"
-    TTS_PROCESSOR_LOAD_SIGNAL = "tts_processor_load_signal"
-    TTS_PROCESSOR_UNLOAD_SIGNAL = "tts_processor_unload_signal"
-    TTS_VOCODER_LOAD_SIGNAL = "tts_vocoder_load_signal"
-    TTS_VOCODER_UNLOAD_SIGNAL = "tts_vocoder_unload_signal"
-    TTS_SPEAKER_EMBEDDINGS_LOAD_SIGNAL = "tts_speaker_embeddings_load_signal"
-    TTS_SPEAKER_EMBEDDINGS_UNLOAD_SIGNAL = "tts_speaker_embeddings_unload_signal"
-    TTS_TOKENIZER_LOAD_SIGNAL = "tts_tokenizer_load_signal"
-    TTS_TOKENIZER_UNLOAD_SIGNAL = "tts_tokenizer_unload_signal"
-    TTS_DATASET_LOAD_SIGNAL = "tts_dataset_load_signal"
-    TTS_DATASET_UNLOAD_SIGNAL = "tts_dataset_unload_signal"
-    TTS_FEATURE_EXTRACTOR_LOAD_SIGNAL = "tts_feature_extractor_load_signal"
-    TTS_FEATURE_EXTRACTOR_UNLOAD_SIGNAL = "tts_feature_extractor_unload_signal"
     STT_LOAD_SIGNAL = "stt_load_signal"
     STT_UNLOAD_SIGNAL = "stt_unload_signal"
-    STT_PROCESSOR_LOAD_SIGNAL = "stt_processor_load_signal"
-    STT_PROCESSOR_UNLOAD_SIGNAL = "stt_processor_unload_signal"
-    STT_FEATURE_EXTRACTOR_LOAD_SIGNAL = "stt_feature_extractor_load_signal"
-    STT_FEATURE_EXTRACTOR_UNLOAD_SIGNAL = "stt_feature_extractor_unload_signal"
     LLM_LOAD_SIGNAL = "llm_load_signal"
     LLM_UNLOAD_SIGNAL = "llm_unload_signal"
     LLM_LOAD_MODEL_SIGNAL = "llm_load_model_signal"
@@ -248,6 +231,16 @@ class SignalCode(Enum):
     REDO_SIGNAL = enum.auto()
     LOAD_CONVERSATION = enum.auto()
     SET_CONVERSATION = enum.auto()
+    BOT_MOOD_UPDATED = enum.auto()
+    CHATBOT_CHANGED = enum.auto()
+    CONVERSATION_DELETED = enum.auto()
+
+    KEYBOARD_SHORTCUTS_UPDATED = enum.auto()
+    LORA_STATUS_CHANGED = enum.auto()
+    EMBEDDING_STATUS_CHANGED = enum.auto()
+
+    MASK_LAYER_TOGGLED = enum.auto()
+    MASK_UPDATED = enum.auto()
 
 class EngineResponseCode(Enum):
     STATUS = 100
@@ -342,20 +335,20 @@ class LLMToolName(Enum):
 class LLMActionType(Enum):
     """
     The following action types are used by the LLM to process various user
-    requests. The default action type is "Chat". This is used when the user
+    requests. The default action type is "APPLICATION_COMMAND". This is used when the user
     wants to interact with a chatbot. When this is combined with the
     use_tool_flter flag, the LLM will attempt to determine which action to take
     based on the user's words.
     """
-    DO_NOT_RESPOND = "DO_NOT_RESPOND"
-    CHAT = "CHAT"
-    GENERATE_IMAGE = "GENERATE_IMAGE"
+    # DO_NOT_RESPOND = "DO NOTHING: Choose this action if none of the other actions apply to the user's request."
+    CHAT = "RESPOND: Choose this action if you want to respond to the user."
+    GENERATE_IMAGE = "GENERATE IMAGE: Choose this action if you want to generate an image."
     APPLICATION_COMMAND = "APPLICATION_COMMAND"
     UPDATE_MOOD = "UPDATE_MOOD"
-    QUIT_APPLICATION = "QUIT_APPLICATION"
-    TOGGLE_FULLSCREEN = "TOGGLE_FULLSCREEN"
-    TOGGLE_TTS = "TOGGLE_TTS"
-    PERFORM_RAG_SEARCH = "PERFORM_RAG_SEARCH"
+    QUIT_APPLICATION = "QUIT APPLICATION: If the users requests that you quit the application, choose this action."
+    TOGGLE_FULLSCREEN = "TOGGLE FULLSCREEN: If the user requests to toggle fullscreen mode, choose this action."
+    TOGGLE_TTS = "TOGGLE TEXT-TO-SPEECH: If the user requests that you turn on or off or toggle text-to-speech, choose this action."
+    PERFORM_RAG_SEARCH = "SEARCH: If the user requests that you search for information, choose this action."
     SUMMARIZE = "SUMMARIZE"
 
 
@@ -498,7 +491,6 @@ class HandlerState(Enum):
 class TTSModel(Enum):
     ESPEAK = "espeak"
     SPEECHT5 = "speecht5"
-    BARK = "bark"
 
 
 class AgentState(Enum):
@@ -511,15 +503,3 @@ class ImagePreset(Enum):
     PHOTOGRAPH = "Photograph"
     PAINTING = "Painting"
 
-
-class WorkerType(Enum):
-    LLMGenerateWorker = enum.auto()
-    SDWorker = enum.auto()
-    TTSGeneratorWorker = enum.auto()
-    TTSVocalizerWorker = enum.auto()
-    AudioCaptureWorker = enum.auto()
-    AudioProcessorWorker = enum.auto()
-    AgentWorker = enum.auto()
-    LatentsWorker = enum.auto()
-    MaskGeneratorWorker = enum.auto()
-    ModelScannerWorker = enum.auto()

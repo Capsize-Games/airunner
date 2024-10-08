@@ -1,9 +1,14 @@
+import threading
+
 import torch
 from PySide6.QtCore import QThread
 from PySide6.QtCore import QObject, Signal, Slot
 
-from airunner.enums import QueueType, SignalCode, ModelType, ModelStatus, ModelAction
+from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
+from airunner.mediator_mixin import MediatorMixin
+from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.worker import Worker
+
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
@@ -29,9 +34,32 @@ class GenerateWorker(QObject):
 class SDWorker(Worker):
     queue_type = QueueType.GET_LAST_ITEM
 
-    def __init__(self, prefix="SDWorker"):
+    def __init__(self):
         self.sd = None
-        super().__init__(prefix=prefix)
+        MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
+        super().__init__(
+            signals=(
+                (SignalCode.RESET_APPLIED_MEMORY_SETTINGS, self.on_reset_applied_memory_settings),
+                (SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal),
+                (SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL, self.on_start_auto_image_generation_signal),
+                (SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL, self.on_stop_auto_image_generation_signal),
+                (SignalCode.DO_GENERATE_SIGNAL, self.on_do_generate_signal),
+                (SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL, self.on_interrupt_image_generation_signal),
+                (SignalCode.CHANGE_SCHEDULER_SIGNAL, self.on_change_scheduler_signal),
+                (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
+                (SignalCode.SD_LOAD_SIGNAL, self.on_load_stablediffusion_signal),
+                (SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal),
+                (SignalCode.CONTROLNET_LOAD_SIGNAL, self.on_load_controlnet_signal),
+                (SignalCode.CONTROLNET_UNLOAD_SIGNAL, self.on_unload_controlnet_signal),
+                (SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal),
+                (SignalCode.EMBEDDING_UPDATE_SIGNAL, self.on_update_embeddings_signal),
+                (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings),
+                (SignalCode.SD_STATE_CHANGED_SIGNAL, self.handle_sd_state_changed_signal),
+                (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_load_safety_checker),
+                (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.on_unload_safety_checker),
+            )
+        )
         self.__requested_action = ModelAction.NONE
         self._threads = []
         self._workers = []
@@ -40,15 +68,17 @@ class SDWorker(Worker):
         self.sd.controlnet_handle_sd_state_changed_signal()
         self.sd.scheduler_handle_sd_state_changed_signal()
 
-    def on_load_safety_checker(self, _data=None):
+    def on_load_safety_checker(self):
         if self.sd:
-            self.sd.load_safety_checker()
+            thread = threading.Thread(target=self._load_safety_checker)
+            thread.start()
 
-    def on_unload_safety_checker(self, _data=None):
+    def on_unload_safety_checker(self):
         if self.sd:
-            self.sd.unload_safety_checker()
+            thread = threading.Thread(target=self._unload_safety_checker)
+            thread.start()
 
-    def scan_for_embeddings(self, _data=None):
+    def scan_for_embeddings(self):
         if self.sd:
             self.sd.scan_for_embeddings()
 
@@ -60,9 +90,17 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.get_embeddings(message)
 
-    def on_update_lora_signal(self, message):
+    def on_update_lora_signal(self):
+        thread = threading.Thread(target=self._reload_lora)
+        thread.start()
+
+    def _reload_lora(self):
         if self.sd:
-            self.sd.on_update_lora_signal(message)
+            self.sd.reload_lora()
+
+    def on_update_embeddings_signal(self):
+        if self.sd:
+            self.sd.reload_embeddings()
 
     def on_add_lora_signal(self, message):
         if self.sd:
@@ -70,50 +108,63 @@ class SDWorker(Worker):
 
     def on_load_controlnet_signal(self, _data=None):
         if self.sd:
-            self.sd.load_controlnet()
+            thread = threading.Thread(target=self._load_controlnet)
+            thread.start()
 
     def on_unload_controlnet_signal(self, _data=None):
         if self.sd:
-            self.sd.unload_controlnet()
+            thread = threading.Thread(target=self._unload_controlnet)
+            thread.start()
 
-    def on_load_stablediffusion_signal(self, data: dict = None):
+    def on_load_stablediffusion_signal(self, data:dict=None):
         if self.sd:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.SD,
-                    "status": ModelStatus.LOADING,
-                    "path": ""
-                }
-            )
-            self.sd.load_stable_diffusion()
+            thread = threading.Thread(target=self._load_sd, args=(data,))
+            thread.start()
 
-    def on_unload_stablediffusion_signal(self, _data=None):
-        if self.sd and self.sd.sd_model_status in (
-            ModelStatus.LOADED,
-            ModelStatus.FAILED,
-            ModelStatus.READY,
-        ):
-            self.sd.unload_stable_diffusion()
-        elif self.sd and self.sd.sd_model_status is ModelStatus.LOADING:
-            self.__requested_action = ModelAction.CLEAR
+    def on_unload_stablediffusion_signal(self, data=None):
+        if self.sd:
+            thread = threading.Thread(target=self._unload_sd, args=(data,))
+            thread.start()
+
+    def _load_sd(self, data:dict=None):
+        do_reload = data.get("do_reload", False)
+        if do_reload:
+            self.sd.reload()
+        else:
+            self.sd.load()
+        if data:
+            callback = data.get("callback", None)
+            if callback is not None:
+                callback(data)
+
+    def _unload_sd(self, data:dict=None):
+        self.sd.unload()
+        if data:
+            callback = data.get("callback", None)
+            if callback is not None:
+                callback(data)
+
+    def _load_controlnet(self):
+        self.sd.load_controlnet()
+
+    def _unload_controlnet(self):
+        self.sd.unload_controlnet()
+
+    def _load_safety_checker(self):
+        self.sd.load_safety_checker()
+
+    def _unload_safety_checker(self):
+        self.sd.unload_safety_checker()
 
     def on_tokenizer_load_signal(self, data: dict = None):
         if self.sd:
             self.sd.sd_load_tokenizer(data)
 
     def start_worker_thread(self):
-        if self.application_settings.sd_enabled:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.SD,
-                    "status": ModelStatus.LOADING,
-                    "path": ""
-                }
-            )
         from airunner.aihandler.stablediffusion.sd_handler import SDHandler
         self.sd = SDHandler()
         if self.application_settings.sd_enabled:
-            self.sd.load_stable_diffusion()
+            self.sd.load()
 
     def handle_message(self, message):
         if self.sd:
@@ -154,11 +205,11 @@ class SDWorker(Worker):
 
     def on_interrupt_image_generation_signal(self, _data=None):
         if self.sd:
-            self.sd.interrupt_image_generation_signal()
+            self.sd.interrupt_image_generation()
 
     def on_change_scheduler_signal(self, data: dict):
         if self.sd:
-            self.sd.load_scheduler(force_scheduler_name=data["scheduler"])
+            self.sd.load_scheduler(data["scheduler"])
 
     def on_model_status_changed_signal(self, message: dict):
         if self.sd and message["model"] == ModelType.SD:

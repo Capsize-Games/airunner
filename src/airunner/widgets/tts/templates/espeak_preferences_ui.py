@@ -38,6 +38,9 @@ class Ui_espeak_preferences(object):
         self.espeak.setCheckable(False)
         self.gridLayout_8 = QGridLayout(self.espeak)
         self.gridLayout_8.setObjectName(u"gridLayout_8")
+        self.gridLayout_8.setHorizontalSpacing(0)
+        self.gridLayout_8.setVerticalSpacing(10)
+        self.gridLayout_8.setContentsMargins(10, 10, 10, 10)
         self.pitch = SliderWidget(self.espeak)
         self.pitch.setObjectName(u"pitch")
         self.pitch.setProperty("slider_minimum", 1)
@@ -148,9 +151,9 @@ class Ui_espeak_preferences(object):
     def retranslateUi(self, espeak_preferences):
         espeak_preferences.setWindowTitle(QCoreApplication.translate("espeak_preferences", u"Form", None))
         self.espeak.setTitle(QCoreApplication.translate("espeak_preferences", u"Espeak", None))
-        self.pitch.setProperty("settings_property", QCoreApplication.translate("espeak_preferences", u"pitch", None))
+        self.pitch.setProperty("settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.pitch", None))
         self.pitch.setProperty("label_text", QCoreApplication.translate("espeak_preferences", u"Pitch", None))
-        self.volume.setProperty("settings_property", QCoreApplication.translate("espeak_preferences", u"volume", None))
+        self.volume.setProperty("settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.volume", None))
         self.volume.setProperty("label_text", QCoreApplication.translate("espeak_preferences", u"Volume", None))
         self.label_3.setText(QCoreApplication.translate("espeak_preferences", u"Robotic, fast, no VRAM usage", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("espeak_preferences", u"Language", None))
@@ -159,7 +162,7 @@ class Ui_espeak_preferences(object):
         self.gender_combobox.setItemText(0, QCoreApplication.translate("espeak_preferences", u"Male", None))
         self.gender_combobox.setItemText(1, QCoreApplication.translate("espeak_preferences", u"Female", None))
 
-        self.rate.setProperty("settings_property", QCoreApplication.translate("espeak_preferences", u"rate", None))
+        self.rate.setProperty("settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.rate", None))
         self.rate.setProperty("label_text", QCoreApplication.translate("espeak_preferences", u"Rate", None))
         self.groupBox.setTitle(QCoreApplication.translate("espeak_preferences", u"Voice", None))
     # retranslateUi

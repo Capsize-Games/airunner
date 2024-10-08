@@ -32,6 +32,15 @@ class Ui_llm_settings_widget(object):
         self.gridLayout_4.setHorizontalSpacing(0)
         self.gridLayout_4.setVerticalSpacing(10)
         self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.label_2 = QLabel(llm_settings_widget)
+        self.label_2.setObjectName(u"label_2")
+        font = QFont()
+        font.setPointSize(11)
+        font.setBold(True)
+        self.label_2.setFont(font)
+
+        self.gridLayout_4.addWidget(self.label_2, 0, 0, 1, 1)
+
         self.scrollArea = QScrollArea(llm_settings_widget)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setFrameShadow(QFrame.Shadow.Plain)
@@ -39,7 +48,7 @@ class Ui_llm_settings_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 579, 713))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 579, 700))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -47,9 +56,9 @@ class Ui_llm_settings_widget(object):
         self.gridLayout.setContentsMargins(0, 0, 10, 0)
         self.override_parameters = QGroupBox(self.scrollAreaWidgetContents)
         self.override_parameters.setObjectName(u"override_parameters")
-        font = QFont()
-        font.setPointSize(8)
-        self.override_parameters.setFont(font)
+        font1 = QFont()
+        font1.setPointSize(8)
+        self.override_parameters.setFont(font1)
         self.override_parameters.setCheckable(True)
         self.override_parameters.setChecked(True)
         self.gridLayout_12 = QGridLayout(self.override_parameters)
@@ -338,7 +347,7 @@ class Ui_llm_settings_widget(object):
 
         self.label_5 = QLabel(self.widget_8)
         self.label_5.setObjectName(u"label_5")
-        self.label_5.setFont(font)
+        self.label_5.setFont(font1)
 
         self.gridLayout_11.addWidget(self.label_5, 0, 0, 1, 1)
 
@@ -359,7 +368,7 @@ class Ui_llm_settings_widget(object):
 
         self.label = QLabel(self.widget_14)
         self.label.setObjectName(u"label")
-        self.label.setFont(font)
+        self.label.setFont(font1)
 
         self.gridLayout_17.addWidget(self.label, 0, 0, 1, 1)
 
@@ -368,7 +377,7 @@ class Ui_llm_settings_widget(object):
 
         self.widget_7 = QWidget(self.scrollAreaWidgetContents)
         self.widget_7.setObjectName(u"widget_7")
-        self.widget_7.setFont(font)
+        self.widget_7.setFont(font1)
         self.gridLayout_10 = QGridLayout(self.widget_7)
         self.gridLayout_10.setObjectName(u"gridLayout_10")
         self.gridLayout_10.setHorizontalSpacing(0)
@@ -389,16 +398,14 @@ class Ui_llm_settings_widget(object):
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
-        self.gridLayout_4.addWidget(self.scrollArea, 1, 0, 1, 1)
+        self.gridLayout_4.addWidget(self.scrollArea, 2, 0, 1, 1)
 
-        self.label_2 = QLabel(llm_settings_widget)
-        self.label_2.setObjectName(u"label_2")
-        font1 = QFont()
-        font1.setPointSize(11)
-        font1.setBold(True)
-        self.label_2.setFont(font1)
+        self.line_2 = QFrame(llm_settings_widget)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setFrameShape(QFrame.Shape.HLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
 
-        self.gridLayout_4.addWidget(self.label_2, 0, 0, 1, 1)
+        self.gridLayout_4.addWidget(self.line_2, 1, 0, 1, 1)
 
         QWidget.setTabOrder(self.model, self.model_version)
         QWidget.setTabOrder(self.model_version, self.seed)
@@ -419,6 +426,7 @@ class Ui_llm_settings_widget(object):
 
     def retranslateUi(self, llm_settings_widget):
         llm_settings_widget.setWindowTitle(QCoreApplication.translate("llm_settings_widget", u"Form", None))
+        self.label_2.setText(QCoreApplication.translate("llm_settings_widget", u"LLM Settings", None))
         self.override_parameters.setTitle(QCoreApplication.translate("llm_settings_widget", u"Override Prameters", None))
         self.random_seed.setText(QCoreApplication.translate("llm_settings_widget", u"Random seed", None))
         self.length_penalty.setProperty("settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.generator_settings.length_penalty", None))
@@ -448,6 +456,5 @@ class Ui_llm_settings_widget(object):
         self.label_5.setText(QCoreApplication.translate("llm_settings_widget", u"Model Version", None))
         self.label.setText(QCoreApplication.translate("llm_settings_widget", u"Prompt Tempalte", None))
         self.label_3.setText(QCoreApplication.translate("llm_settings_widget", u"Model Type", None))
-        self.label_2.setText(QCoreApplication.translate("llm_settings_widget", u"LLM Settings", None))
     # retranslateUi
 

@@ -24,10 +24,12 @@ class Ui_loading_message(object):
             loading_message.setObjectName(u"loading_message")
         loading_message.resize(605, 707)
         self.gridLayout = QGridLayout(loading_message)
+        self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.label = QLabel(loading_message)
         self.label.setObjectName(u"label")
-        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
 

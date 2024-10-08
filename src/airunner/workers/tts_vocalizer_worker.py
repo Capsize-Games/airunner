@@ -1,9 +1,8 @@
-import random
 import sounddevice as sd
 
 from queue import Queue
 
-from PySide6.QtCore import QThread, Slot
+from PySide6.QtCore import QThread
 
 from airunner.enums import SignalCode
 from airunner.settings import SLEEP_TIME_IN_MS
@@ -18,7 +17,11 @@ class TTSVocalizerWorker(Worker):
     reader_mode_active = False
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, signals = (
+            (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
+            (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
+            (SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, self.on_TTSGeneratorWorker_add_to_stream_signal),
+        ), **kwargs)
         self.queue = Queue()
         # check if speakers are available
         self.stream = None
@@ -26,9 +29,6 @@ class TTSVocalizerWorker(Worker):
         self.started = False
         self.do_interrupt = False
         self.accept_message = True
-        self.register(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, self.on_TTSGeneratorWorker_add_to_stream_signal)
-        self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
-        self.register(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal)
 
     def on_interrupt_process_signal(self):
         self.stream.abort()
