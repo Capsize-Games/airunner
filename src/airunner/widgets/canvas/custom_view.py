@@ -300,7 +300,8 @@ class CustomGraphicsView(
 
         self.do_draw(True)
 
-        self._scene.showEvent(event)
+        self._scene.initialize_image()
+
         self.toggle_drag_mode()
 
         # Ensure the viewport is aligned to the top-left corner
