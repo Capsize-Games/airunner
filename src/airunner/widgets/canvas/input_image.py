@@ -32,7 +32,7 @@ class InputImage(BaseWidget):
             settings = self.image_to_image_settings
         elif self.settings_key == "outpaint_settings":
             settings = self.outpaint_settings
-        elif self.settings_key == "brush":
+        elif self.settings_key == "drawing_pad_settings":
             settings = self.drawing_pad_settings
 
         if not settings:
@@ -51,7 +51,7 @@ class InputImage(BaseWidget):
             self.update_image_to_image_settings(key, value)
         elif self.settings_key == "outpaint_settings":
             self.update_outpaint_settings(key, value)
-        elif self.settings_key == "brush":
+        elif self.settings_key == "drawing_pad_settings":
             self.update_drawing_pad_settings(key, value)
 
     def showEvent(self, event):
