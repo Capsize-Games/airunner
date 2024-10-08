@@ -329,11 +329,9 @@
    <addaction name="actionExport_3"/>
    <addaction name="separator"/>
    <addaction name="actionToggle_Active_Grid_Area"/>
-   <addaction name="actionToggle_Selection"/>
    <addaction name="actionToggle_Brush"/>
    <addaction name="actionToggle_Eraser"/>
    <addaction name="actionToggle_Grid"/>
-   <addaction name="actionRecenter"/>
    <addaction name="actionMask_toggle"/>
   </widget>
   <widget class="QToolBar" name="model_toolbar">
