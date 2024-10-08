@@ -1,7 +1,9 @@
 import os
 
+from airunner.aihandler.models.settings_models import PathSettings
 
-def create_airunner_paths(path_settings: dict):
+
+def create_airunner_paths(path_settings: PathSettings):
     """
     This function creates directories based on the paths provided in the path_settings dictionary.
 

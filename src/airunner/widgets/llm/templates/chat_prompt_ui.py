@@ -15,32 +15,44 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFormLayout, QFrame,
-    QGridLayout, QHBoxLayout, QLabel, QPlainTextEdit,
-    QProgressBar, QPushButton, QScrollArea, QSizePolicy,
-    QSplitter, QTextEdit, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
+    QHBoxLayout, QPlainTextEdit, QProgressBar, QPushButton,
+    QScrollArea, QSizePolicy, QSplitter, QTextEdit,
+    QVBoxLayout, QWidget)
 
 class Ui_chat_prompt(object):
     def setupUi(self, chat_prompt):
         if not chat_prompt.objectName():
             chat_prompt.setObjectName(u"chat_prompt")
-        chat_prompt.resize(597, 986)
+        chat_prompt.resize(597, 691)
         self.gridLayout_3 = QGridLayout(chat_prompt)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setHorizontalSpacing(0)
         self.gridLayout_3.setVerticalSpacing(10)
         self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setSpacing(0)
+        self.horizontalLayout.setSpacing(5)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.progressBar = QProgressBar(chat_prompt)
-        self.progressBar.setObjectName(u"progressBar")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.action = QComboBox(chat_prompt)
+        self.action.setObjectName(u"action")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.progressBar.sizePolicy().hasHeightForWidth())
-        self.progressBar.setSizePolicy(sizePolicy)
+        sizePolicy.setHeightForWidth(self.action.sizePolicy().hasHeightForWidth())
+        self.action.setSizePolicy(sizePolicy)
+        self.action.setMinimumSize(QSize(100, 30))
+        self.action.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+
+        self.horizontalLayout.addWidget(self.action)
+
+        self.progressBar = QProgressBar(chat_prompt)
+        self.progressBar.setObjectName(u"progressBar")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.progressBar.sizePolicy().hasHeightForWidth())
+        self.progressBar.setSizePolicy(sizePolicy1)
         self.progressBar.setMinimumSize(QSize(0, 30))
         self.progressBar.setValue(0)
 
@@ -48,11 +60,11 @@ class Ui_chat_prompt(object):
 
         self.send_button = QPushButton(chat_prompt)
         self.send_button.setObjectName(u"send_button")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.send_button.sizePolicy().hasHeightForWidth())
-        self.send_button.setSizePolicy(sizePolicy1)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.send_button.sizePolicy().hasHeightForWidth())
+        self.send_button.setSizePolicy(sizePolicy2)
         self.send_button.setMinimumSize(QSize(30, 30))
         self.send_button.setMaximumSize(QSize(30, 30))
         icon = QIcon(QIcon.fromTheme(u"mail-reply-sender"))
@@ -62,8 +74,8 @@ class Ui_chat_prompt(object):
 
         self.clear_conversatiion_button = QPushButton(chat_prompt)
         self.clear_conversatiion_button.setObjectName(u"clear_conversatiion_button")
-        sizePolicy1.setHeightForWidth(self.clear_conversatiion_button.sizePolicy().hasHeightForWidth())
-        self.clear_conversatiion_button.setSizePolicy(sizePolicy1)
+        sizePolicy2.setHeightForWidth(self.clear_conversatiion_button.sizePolicy().hasHeightForWidth())
+        self.clear_conversatiion_button.setSizePolicy(sizePolicy2)
         self.clear_conversatiion_button.setMinimumSize(QSize(30, 30))
         self.clear_conversatiion_button.setMaximumSize(QSize(30, 30))
         icon1 = QIcon(QIcon.fromTheme(u"document-new"))
@@ -73,8 +85,8 @@ class Ui_chat_prompt(object):
 
         self.pushButton = QPushButton(chat_prompt)
         self.pushButton.setObjectName(u"pushButton")
-        sizePolicy1.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
-        self.pushButton.setSizePolicy(sizePolicy1)
+        sizePolicy2.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
+        self.pushButton.setSizePolicy(sizePolicy2)
         self.pushButton.setMinimumSize(QSize(30, 30))
         self.pushButton.setMaximumSize(QSize(30, 30))
         icon2 = QIcon(QIcon.fromTheme(u"media-playback-stop"))
@@ -83,21 +95,14 @@ class Ui_chat_prompt(object):
         self.horizontalLayout.addWidget(self.pushButton)
 
 
-        self.gridLayout_3.addLayout(self.horizontalLayout, 3, 0, 1, 1)
-
-        self.action = QComboBox(chat_prompt)
-        self.action.setObjectName(u"action")
-        self.action.setMinimumSize(QSize(0, 30))
-        self.action.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-
-        self.gridLayout_3.addWidget(self.action, 1, 0, 1, 1)
+        self.gridLayout_3.addLayout(self.horizontalLayout, 2, 0, 1, 1)
 
         self.scrollArea = QScrollArea(chat_prompt)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 595, 873))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 595, 647))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -118,7 +123,7 @@ class Ui_chat_prompt(object):
         self.chat_container.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 593, 435))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 593, 321))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
@@ -138,11 +143,11 @@ class Ui_chat_prompt(object):
         self.chat_prompt_splitter.addWidget(self.verticalLayoutWidget)
         self.prompt = QPlainTextEdit(self.chat_prompt_splitter)
         self.prompt.setObjectName(u"prompt")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.prompt.sizePolicy().hasHeightForWidth())
-        self.prompt.setSizePolicy(sizePolicy2)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.prompt.sizePolicy().hasHeightForWidth())
+        self.prompt.setSizePolicy(sizePolicy3)
         self.prompt.setMinimumSize(QSize(0, 150))
         self.prompt.setMaximumSize(QSize(16777215, 16777215))
         self.chat_prompt_splitter.addWidget(self.prompt)
@@ -152,28 +157,6 @@ class Ui_chat_prompt(object):
         self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
 
         self.gridLayout_3.addWidget(self.scrollArea, 0, 0, 1, 1)
-
-        self.formLayout = QFormLayout()
-        self.formLayout.setObjectName(u"formLayout")
-        self.formLayout.setHorizontalSpacing(10)
-        self.formLayout.setVerticalSpacing(0)
-        self.formLayout.setContentsMargins(0, 0, 0, 0)
-        self.label = QLabel(chat_prompt)
-        self.label.setObjectName(u"label")
-        font1 = QFont()
-        font1.setBold(True)
-        self.label.setFont(font1)
-
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label)
-
-        self.mood_label = QLabel(chat_prompt)
-        self.mood_label.setObjectName(u"mood_label")
-        self.mood_label.setWordWrap(True)
-
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.mood_label)
-
-
-        self.gridLayout_3.addLayout(self.formLayout, 2, 0, 1, 1)
 
 
         self.retranslateUi(chat_prompt)
@@ -200,7 +183,5 @@ class Ui_chat_prompt(object):
         self.pushButton.setToolTip(QCoreApplication.translate("chat_prompt", u"Cancel message", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton.setText("")
-        self.label.setText(QCoreApplication.translate("chat_prompt", u"Chatbot Mood:", None))
-        self.mood_label.setText(QCoreApplication.translate("chat_prompt", u"TextLabel", None))
     # retranslateUi
 

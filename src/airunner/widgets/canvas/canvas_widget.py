@@ -8,7 +8,6 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.mixins.clipboard_handler_mixin import ClipboardHandlerMixin
 from airunner.widgets.canvas.mixins.image_handler_mixin import ImageHandlerMixin
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
-from airunner.workers.image_data_worker import ImageDataWorker
 
 
 class CanvasWidget(
@@ -38,16 +37,10 @@ class CanvasWidget(
         self.draggable_pixmaps_in_scene = {}
         self.drag_pos: QPoint = Optional[None]
         self._grid_settings = {}
-        self._canvas_settings = {}
         self._active_grid_settings = {}
-        self.image_data_worker = None
-        self.canvas_resize_worker = None
         self.signal_handlers = {
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
             SignalCode.CANVAS_APPLY_FILTER_SIGNAL: self.apply_filter,
-        }
-        self.worker_class_map = {
-            "image_data_worker": ImageDataWorker,
         }
 
     @property
@@ -71,7 +64,7 @@ class CanvasWidget(
         self.update_application_settings("pivot_point_y", value.y())
 
     def on_canvas_update_cursor_signal(self, message: dict):
-        event = message["event"]
+        event = message.get("event", None)
         if self.current_tool in (
             CanvasToolName.BRUSH,
             CanvasToolName.ERASER
@@ -82,7 +75,7 @@ class CanvasWidget(
                 self.brush_settings.size,
             )
         elif self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
-            if event.buttons() == Qt.MouseButton.LeftButton:
+            if event and event.buttons() == Qt.MouseButton.LeftButton:
                 cursor = Qt.CursorShape.ClosedHandCursor
             else:
                 cursor = Qt.CursorShape.OpenHandCursor
@@ -105,6 +98,3 @@ class CanvasWidget(
             "force_draw": force_draw
         })
         self.ui.canvas_container_size = self.ui.canvas_container.viewport().size()
-
-    def save_image(self, image_path, image=None):
-        self.save_image(image_path, image, self.scene.items())

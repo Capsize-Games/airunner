@@ -38,7 +38,7 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="1" column="0">
+   <item row="2" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="widgetResizable">
       <bool>true</bool>
@@ -49,7 +49,7 @@
         <x>0</x>
         <y>0</y>
         <width>409</width>
-        <height>935</height>
+        <height>922</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -72,10 +72,50 @@
         <number>10</number>
        </property>
        <item row="6" column="0" colspan="2">
-        <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <layout class="QVBoxLayout" name="verticalLayout_3">
          <property name="spacing">
           <number>10</number>
          </property>
+         <item>
+          <widget class="SliderWidget" name="scale_widget" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="label_text" stdset="0">
+            <string>Guidance Scale</string>
+           </property>
+           <property name="current_value" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>10000</number>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>100.000000000000000</double>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string notr="true">generator_settings.scale</string>
+           </property>
+          </widget>
+         </item>
          <item>
           <widget class="SliderWidget" name="steps_widget" native="true">
            <property name="sizePolicy">
@@ -122,46 +162,6 @@
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="SliderWidget" name="scale_widget" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="label_text" stdset="0">
-            <string>Guidance Scale</string>
-           </property>
-           <property name="current_value" stdset="0">
-            <number>0</number>
-           </property>
-           <property name="slider_maximum" stdset="0">
-            <number>10000</number>
-           </property>
-           <property name="spinbox_maximum" stdset="0">
-            <double>100.000000000000000</double>
-           </property>
-           <property name="display_as_float" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="spinbox_single_step" stdset="0">
-            <double>0.010000000000000</double>
-           </property>
-           <property name="spinbox_page_step" stdset="0">
-            <double>0.010000000000000</double>
-           </property>
-           <property name="settings_property" stdset="0">
-            <string notr="true">generator_settings.scale</string>
-           </property>
-          </widget>
-         </item>
         </layout>
        </item>
        <item row="3" column="0" colspan="2">
@@ -195,56 +195,10 @@
         </layout>
        </item>
        <item row="5" column="0" colspan="2">
-        <layout class="QHBoxLayout" name="horizontalLayout">
+        <layout class="QVBoxLayout" name="verticalLayout">
          <property name="spacing">
           <number>10</number>
          </property>
-         <item>
-          <widget class="SliderWidget" name="ddim_eta_slider_widget" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="label_text" stdset="0">
-            <string>DDIM ETA</string>
-           </property>
-           <property name="current_value" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="slider_maximum" stdset="0">
-            <number>10</number>
-           </property>
-           <property name="spinbox_maximum" stdset="0">
-            <number>10</number>
-           </property>
-           <property name="display_as_float" stdset="0">
-            <bool>false</bool>
-           </property>
-           <property name="spinbox_single_step" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="spinbox_page_step" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="spinbox_minimum" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="slider_minimum" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="settings_property" stdset="0">
-            <string notr="true">generator_settings.ddim_eta</string>
-           </property>
-          </widget>
-         </item>
          <item>
           <widget class="SliderWidget" name="frames_slider_widget" native="true">
            <property name="sizePolicy">
@@ -288,6 +242,52 @@
            </property>
            <property name="settings_property" stdset="0">
             <string notr="true">generator_settings.n_samples</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="SliderWidget" name="ddim_eta_slider_widget" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="label_text" stdset="0">
+            <string>DDIM ETA</string>
+           </property>
+           <property name="current_value" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>10</number>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <number>10</number>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>false</bool>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_minimum" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string notr="true">generator_settings.ddim_eta</string>
            </property>
           </widget>
          </item>
@@ -480,6 +480,13 @@
      </property>
      <property name="text">
       <string>Stable Diffusion</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>

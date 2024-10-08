@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.0.0.dev19",
+    version="3.0.0",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -22,12 +22,16 @@ setup(
         "PySide6_Addons==6.7.0",
         "PySide6_Essentials==6.7.0",
         "tokenizers==0.19.1",
-        "torch==2.4.0",
-        "torchaudio==2.4.0",
-        "torchvision==0.19.0",
+        "torch==2.4.1",
+        "torchaudio==2.4.1",
+        "torchvision==0.19.1",
         "optimum==1.21.4",
         "numpy==1.26.4",
-        "pillow=10.4.0",
+        "pillow==10.4.0",
+        "xformers==0.0.28.post1",
+        "tensorflow==2.17.0",
+        "DeepCache==0.1.1",
+        "alembic==1.13.3",
 
         # LLM Dependencies
         "transformers==4.43.4",

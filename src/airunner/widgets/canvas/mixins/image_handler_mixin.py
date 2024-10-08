@@ -5,27 +5,21 @@ from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 
 class ImageHandlerMixin:
     def __init__(self, image=None):
-        self.image = image
+        self._image = image
         self.image_backup = None
         self.previewing_filter = False
+
+    @property
+    def image(self):
+        return self._image
+
+    @image.setter
+    def image(self, value):
+        self._image = value
 
     def load_image(self, image_path: str) -> Image:
         image = Image.open(image_path)
         return image
-
-    def save_image(
-        self,
-        image_path: str,
-        image: Image = None,
-        scene_items: list = None
-    ):
-        if image is None and scene_items is not None:
-            for item in scene_items:
-                if isinstance(item, DraggablePixmap):
-                    image = item.pixmap.toImage()
-                    image.save(image_path)
-        else:
-            image.save(image_path)
 
     def rotate_image(
         self,
