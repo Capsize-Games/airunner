@@ -72,11 +72,6 @@ class BrushScene(CustomScene):
     def on_brush_color_changed(self, data):
         self._brush_color = QColor(data["color"])
 
-    def on_image_generated_signal(self, response):
-        super().on_image_generated_signal(response)
-        if self.drawing_pad_settings.mask_layer_enabled:
-            self.initialize_image()
-
     def on_canvas_clear_signal(self):
         self.update_drawing_pad_settings("mask", None)
         super().on_canvas_clear_signal()
