@@ -4,7 +4,6 @@ from PySide6.QtCore import Qt
 
 from airunner.enums import SignalCode, LLMActionType, ModelType, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
@@ -162,10 +161,6 @@ class ChatPromptWidget(BaseWidget):
 
     def interrupt_button_clicked(self):
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
-
-    @property
-    def current_active_scene(self) -> CustomScene:
-        return
 
     @property
     def action(self) -> str:
