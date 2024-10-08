@@ -74,9 +74,6 @@ class FilterWindow(BaseWindow):
                 )
                 self.ui.content.layout().addWidget(slider_spinbox_widget)
 
-        self.ui.auto_apply.setChecked(self.image_filter.auto_apply)
-        self.ui.auto_apply.clicked.connect(partial(self.handle_auto_apply_toggle))
-
         self.setWindowTitle(self.window_title)
 
         self.preview_filter()
@@ -102,10 +99,6 @@ class FilterWindow(BaseWindow):
             kwargs[image_filter_value.name] = val
         self._filter = class_(**kwargs)
         return self._filter
-
-    def handle_auto_apply_toggle(self):
-        self.image_filter.auto_apply = self.ui.auto_apply.isChecked()
-        self.session.commit()
 
     def reject(self):
         self.emit_signal(
