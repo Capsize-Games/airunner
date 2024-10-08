@@ -37,7 +37,6 @@ class ApplicationSettings(Base):
     latest_version_check = Column(Boolean, default=True)
     app_version = Column(String, default="")
     allow_online_mode = Column(Boolean, default=True)
-    current_version_stablediffusion = Column(String, default="SD 1.5")
     current_tool = Column(String, default=CanvasToolName.BRUSH.value)
     image_export_type = Column(String, default="png")
     auto_export_images = Column(Boolean, default=True)
@@ -50,8 +49,6 @@ class ApplicationSettings(Base):
     hf_api_key_read_key = Column(String, default="")
     hf_api_key_write_key = Column(String, default="")
     civit_ai_api_key = Column(String, default="")
-    pipeline = Column(String, default="txt2img")
-    pipeline_version = Column(String, default="")
     is_maximized = Column(Boolean, default=False)
     pivot_point_x = Column(Integer, default=0)
     pivot_point_y = Column(Integer, default=0)
@@ -153,7 +150,7 @@ class MetadataSettings(Base):
 class GeneratorSettings(Base):
     __tablename__ = 'generator_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    section = Column(String, default="txt2img")
+    pipeline_action = Column(String, default="txt2img")
     generator_name = Column(String, default="stablediffusion")
     quality_effects = Column(String, default="")
     image_preset = Column(String, default="")

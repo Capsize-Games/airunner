@@ -40,6 +40,10 @@ class SettingsWindow(BaseWindow):
         self.highlight_delegate = None
         self.emit_signal(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.setWindowTitle("AI Runner Preferences")
+
     def available_widgets(self, name):
         if name == "paths":
             from airunner.widgets.paths.paths_widget import PathsWidget
@@ -59,9 +63,6 @@ class SettingsWindow(BaseWindow):
         if name == "bot_preferences":
             from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
             return BotPreferencesWidget
-        if name == "civitai":
-            from airunner.widgets.civitai_preferences.civitai_preferences_widget import CivitAIPreferencesWidget
-            return CivitAIPreferencesWidget
         if name == "export_preferences":
             from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
             return ExportPreferencesWidget
@@ -142,16 +143,6 @@ class SettingsWindow(BaseWindow):
                         "checkable": True,
                         "description": "If enabled, AI Runner will check for updates on startup."
                     }
-                ]
-            },
-            {
-                "section": "Civitai.com settings",
-                "files": [
-                    {
-                        "name": "civitai",
-                        "display_name": "CivitAI Settings",
-                        "checkable": False,
-                    },
                 ]
             }
         ]

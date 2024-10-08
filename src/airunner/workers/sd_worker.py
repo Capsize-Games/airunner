@@ -209,7 +209,7 @@ class SDWorker(Worker):
 
     def on_change_scheduler_signal(self, data: dict):
         if self.sd:
-            self.sd.load_scheduler(force_scheduler_name=data["scheduler"])
+            self.sd.load_scheduler(data["scheduler"])
 
     def on_model_status_changed_signal(self, message: dict):
         if self.sd and message["model"] == ModelType.SD:
