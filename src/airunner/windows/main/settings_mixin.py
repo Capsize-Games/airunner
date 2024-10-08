@@ -149,8 +149,6 @@ class SettingsMixin:
 
     @property
     def img2img_image(self):
-        if self.image_to_image_settings.use_grid_image_as_input:
-            return self.drawing_pad_image
         base_64_image = self.image_to_image_settings.image
         image = convert_base64_to_image(base_64_image)
         if image is not None:

@@ -118,15 +118,15 @@ class GeneratorForm(BaseWidget):
 
     @property
     def is_txt2img(self):
-        return self.generator_section == GeneratorSection.TXT2IMG.value
+        return self.pipeline_action == GeneratorSection.TXT2IMG.value
 
     @property
     def is_outpaint(self):
-        return self.generator_section == GeneratorSection.OUTPAINT.value
+        return self.pipeline_action == GeneratorSection.OUTPAINT.value
 
     @property
-    def generator_section(self):
-        return self.application_settings.pipeline
+    def pipeline_action(self):
+        return self.generator_settings.pipeline_action
 
     @property
     def generator_name(self):
