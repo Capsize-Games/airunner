@@ -342,7 +342,7 @@ class InstallWorker(
     def set_page(self):
         if (
             self.application_settings.stable_diffusion_agreement_checked and
-            self.current_step is -1
+            self.current_step == -1
         ):
             self.parent.on_set_downloading_status_label({
                 "label": f"Downloading Stable Diffusion"
