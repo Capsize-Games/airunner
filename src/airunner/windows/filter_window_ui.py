@@ -15,9 +15,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractButton, QApplication, QCheckBox, QDialog,
-    QDialogButtonBox, QFrame, QGridLayout, QSizePolicy,
-    QSpacerItem, QWidget)
+from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog, QDialogButtonBox,
+    QFrame, QGridLayout, QSizePolicy, QSpacerItem,
+    QWidget)
 
 class Ui_filter_window(object):
     def setupUi(self, filter_window):
@@ -46,15 +46,6 @@ class Ui_filter_window(object):
 
         self.gridLayout.addWidget(self.content, 0, 0, 1, 2)
 
-        self.auto_apply = QCheckBox(filter_window)
-        self.auto_apply.setObjectName(u"auto_apply")
-        font1 = QFont()
-        font1.setPointSize(8)
-        font1.setBold(True)
-        self.auto_apply.setFont(font1)
-
-        self.gridLayout.addWidget(self.auto_apply, 1, 0, 1, 1)
-
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.gridLayout.addItem(self.verticalSpacer, 2, 1, 1, 1)
@@ -69,6 +60,5 @@ class Ui_filter_window(object):
 
     def retranslateUi(self, filter_window):
         filter_window.setWindowTitle(QCoreApplication.translate("filter_window", u"Dialog", None))
-        self.auto_apply.setText(QCoreApplication.translate("filter_window", u"Auto Apply Filter", None))
     # retranslateUi
 
