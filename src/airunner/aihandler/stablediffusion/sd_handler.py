@@ -273,7 +273,7 @@ class SDHandler(BaseHandler):
         if (
             self.drawing_pad_settings.mask is not None and
             self.drawing_pad_settings.image is not None and
-            self.generator_settings_cached.section == "inpaint" and
+            self.generator_settings_cached.pipeline_action == "inpaint" and
             self.outpaint_settings_cached.enabled
         ):
             section = GeneratorSection.OUTPAINT
@@ -439,6 +439,10 @@ class SDHandler(BaseHandler):
 
     def load(self):
         if self.sd_is_loading or self.sd_is_loaded:
+            return
+        if self.generator_settings_cached.model is None:
+            self.logger.error("No model selected")
+            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
         self.unload()
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
