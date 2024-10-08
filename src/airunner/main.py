@@ -49,9 +49,13 @@ def setup_database():
     command.upgrade(alembic_cfg, "head")
 
 
-if __name__ == "__main__":
+def main():
     setup_database()
     App(
         restrict_os_access=None,
         defendatron=facehuggershield.huggingface.defendatron
     )
+
+
+if __name__ == "__main__":
+    main()
