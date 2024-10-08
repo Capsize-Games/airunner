@@ -116,7 +116,7 @@ class DrawingPadSettings(Base):
     image = Column(String, nullable=True)
     mask = Column(String, nullable=True)
     enabled = Column(Boolean, default=True)
-    enable_automatic_drawing = Column(Boolean, default=True)
+    enable_automatic_drawing = Column(Boolean, default=False)
     mask_layer_enabled = Column(Boolean, default=False)
     x_pos = Column(Integer, default=0)
     y_pos = Column(Integer, default=0)
