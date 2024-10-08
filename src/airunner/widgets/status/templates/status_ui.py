@@ -34,26 +34,11 @@ class Ui_status_widget(object):
 
         self.horizontalLayout.addWidget(self.system_message)
 
-        self.nsfw_line = QFrame(status_widget)
-        self.nsfw_line.setObjectName(u"nsfw_line")
+        self.line_4 = QFrame(status_widget)
+        self.line_4.setObjectName(u"line_4")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.nsfw_line.sizePolicy().hasHeightForWidth())
-        self.nsfw_line.setSizePolicy(sizePolicy)
-        self.nsfw_line.setFrameShape(QFrame.Shape.VLine)
-        self.nsfw_line.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.horizontalLayout.addWidget(self.nsfw_line)
-
-        self.nsfw_status = QLabel(status_widget)
-        self.nsfw_status.setObjectName(u"nsfw_status")
-        self.nsfw_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        self.horizontalLayout.addWidget(self.nsfw_status)
-
-        self.line_4 = QFrame(status_widget)
-        self.line_4.setObjectName(u"line_4")
         sizePolicy.setHeightForWidth(self.line_4.sizePolicy().hasHeightForWidth())
         self.line_4.setSizePolicy(sizePolicy)
         self.line_4.setFrameShape(QFrame.Shape.VLine)
@@ -75,6 +60,21 @@ class Ui_status_widget(object):
         self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.horizontalLayout.addWidget(self.line)
+
+        self.nsfw_status = QLabel(status_widget)
+        self.nsfw_status.setObjectName(u"nsfw_status")
+        self.nsfw_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.horizontalLayout.addWidget(self.nsfw_status)
+
+        self.nsfw_line = QFrame(status_widget)
+        self.nsfw_line.setObjectName(u"nsfw_line")
+        sizePolicy.setHeightForWidth(self.nsfw_line.sizePolicy().hasHeightForWidth())
+        self.nsfw_line.setSizePolicy(sizePolicy)
+        self.nsfw_line.setFrameShape(QFrame.Shape.VLine)
+        self.nsfw_line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.horizontalLayout.addWidget(self.nsfw_line)
 
         self.sd_status = QLabel(status_widget)
         self.sd_status.setObjectName(u"sd_status")
@@ -106,13 +106,6 @@ class Ui_status_widget(object):
 
         self.horizontalLayout.addWidget(self.llm_status)
 
-        self.stt_status = QLabel(status_widget)
-        self.stt_status.setObjectName(u"stt_status")
-        self.stt_status.setFont(font)
-        self.stt_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        self.horizontalLayout.addWidget(self.stt_status)
-
         self.tts_status = QLabel(status_widget)
         self.tts_status.setObjectName(u"tts_status")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
@@ -125,6 +118,13 @@ class Ui_status_widget(object):
 
         self.horizontalLayout.addWidget(self.tts_status)
 
+        self.stt_status = QLabel(status_widget)
+        self.stt_status.setObjectName(u"stt_status")
+        self.stt_status.setFont(font)
+        self.stt_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.horizontalLayout.addWidget(self.stt_status)
+
 
         self.retranslateUi(status_widget)
 
@@ -134,12 +134,12 @@ class Ui_status_widget(object):
     def retranslateUi(self, status_widget):
         status_widget.setWindowTitle(QCoreApplication.translate("status_widget", u"Form", None))
         self.system_message.setText(QCoreApplication.translate("status_widget", u"system message", None))
-        self.nsfw_status.setText(QCoreApplication.translate("status_widget", u"Safety Checker", None))
         self.cuda_status.setText(QCoreApplication.translate("status_widget", u"NVIDIA", None))
+        self.nsfw_status.setText(QCoreApplication.translate("status_widget", u"Safety Checker", None))
         self.sd_status.setText(QCoreApplication.translate("status_widget", u"SD", None))
         self.controlnet_status.setText(QCoreApplication.translate("status_widget", u"CN", None))
         self.llm_status.setText(QCoreApplication.translate("status_widget", u"LLM", None))
-        self.stt_status.setText(QCoreApplication.translate("status_widget", u"STT", None))
         self.tts_status.setText(QCoreApplication.translate("status_widget", u"TTS", None))
+        self.stt_status.setText(QCoreApplication.translate("status_widget", u"STT", None))
     # retranslateUi
 

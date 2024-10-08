@@ -14,7 +14,6 @@ class ModelScannerWorker(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         PipelineMixin.__init__(self)
-        self.logger = Logger(prefix=self.__class__.__name__)
 
     def handle_message(self):
         self.scan_for_models()
@@ -44,6 +43,8 @@ class ModelScannerWorker(
                 with os.scandir(path) as action_object:
                     for action_item in action_object:
                         action = action_item.name
+                        if "controlnet_processors" in action_item.path:
+                            continue
                         with os.scandir(action_item.path) as file_object:
                             for file_item in file_object:
                                 model = AIModels()

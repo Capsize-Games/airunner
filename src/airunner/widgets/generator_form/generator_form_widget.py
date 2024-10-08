@@ -6,10 +6,11 @@ from PIL import Image
 from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot
 from PySide6.QtWidgets import QApplication
 
-from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion
+from airunner.aihandler.models.settings_models import ShortcutKeys
+from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion, \
+    ModelStatus, ModelType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
-from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.random_seed import random_seed
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -76,7 +77,10 @@ class SaveGeneratorSettingsWorker(
                 generator_settings.negative_prompt = self.current_negative_prompt_value
                 generator_settings.second_prompt = self.current_secondary_prompt_value
                 generator_settings.second_negative_prompt = self.current_secondary_negative_prompt_value
-                generator_settings.crops_coord_top_left = (self.crops_coord_top_left_x, self.crops_coord_top_left_y)
+                generator_settings.crops_coord_top_left = dict(
+                    x=self.crops_coord_top_left_x,
+                    y=self.crops_coord_top_left_y
+                )
                 self.save_generator_settings(generator_settings)
 
             time.sleep(0.1)
@@ -103,6 +107,9 @@ class GeneratorForm(BaseWidget):
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
             SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
+            SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated,
+            SignalCode.KEYBOARD_SHORTCUTS_UPDATED: self.on_keyboard_shortcuts_updated,
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
         }
         self.thread = QThread()
         self.worker = SaveGeneratorSettingsWorker(parent=self)
@@ -111,15 +118,15 @@ class GeneratorForm(BaseWidget):
 
     @property
     def is_txt2img(self):
-        return self.generator_section == GeneratorSection.TXT2IMG.value
+        return self.pipeline_action == GeneratorSection.TXT2IMG.value
 
     @property
     def is_outpaint(self):
-        return self.generator_section == GeneratorSection.OUTPAINT.value
+        return self.pipeline_action == GeneratorSection.OUTPAINT.value
 
     @property
-    def generator_section(self):
-        return self.application_settings.pipeline
+    def pipeline_action(self):
+        return self.generator_settings.pipeline_action
 
     @property
     def generator_name(self):
@@ -141,12 +148,18 @@ class GeneratorForm(BaseWidget):
             self.application_settings.working_width,
             self.application_settings.working_height
         )
-        rect.translate(-self.canvas_settings.pos_x, -self.canvas_settings.pos_y)
+        rect.translate(-self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos)
 
         return rect
 
+    def on_keyboard_shortcuts_updated(self):
+        self._set_keyboard_shortcuts()
+
     def on_application_settings_changed_signal(self, _data):
         self.toggle_secondary_prompts()
+
+    def on_bot_mood_updated(self):
+        self._set_chatbot_mood()
 
     def on_generate_image_signal(self, _data):
         self.handle_generate_button_clicked()
@@ -157,10 +170,36 @@ class GeneratorForm(BaseWidget):
     def on_progress_signal(self, message):
         self.handle_progress_bar(message)
 
+    ##########################################################################
+    # LLM Generated Image handlers
+    ##########################################################################
     def on_llm_image_prompt_generated_signal(self, data):
+        """
+        This slot is called after an LLM has generated the prompts for an image.
+        It sets the prompts in the generator form UI and continues the image generation process.
+        """
+
+        # Send a messagae to the user as chatbot letting them know that the image is generating
+        self.emit_signal(
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+            dict(
+                message="Your image is generating...",
+                is_first_message=True,
+                is_end_of_message=True,
+                name=self.chatbot.name
+            )
+        )
+
+        # Unload the LLM
+        if self.application_settings.llm_enabled:
+            self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, dict(
+                callback=self.unload_llm_callback
+            ))
+
+        # Set the prompts in the generator form UI
         data = self.extract_json_from_message(data["message"])
-        prompt = data.get("description", None)
-        secondary_prompt = data.get("composition", None)
+        prompt = data.get("composition", None)
+        secondary_prompt = data.get("description", None)
         prompt_type = data.get("type", ImageCategory.PHOTO.value)
         if prompt_type == "photo":
             negative_prompt = PHOTO_REALISTIC_NEGATIVE_PROMPT
@@ -170,7 +209,81 @@ class GeneratorForm(BaseWidget):
         self.ui.negative_prompt.setPlainText(negative_prompt)
         self.ui.secondary_prompt.setPlainText(secondary_prompt)
         self.ui.secondary_negative_prompt.setPlainText(negative_prompt)
-        self.handle_generate_button_clicked()
+
+    def unload_llm_callback(self, data:dict=None):
+        """
+        Callback function to be called after the LLM has been unloaded.
+        """
+        if not self.application_settings.sd_enabled:
+            # If SD is not enabled, enable it and then emit a signal to generate the image
+            # The callback function is handled by the signal handler for the SD_LOAD_SIGNAL.
+            # The finalize function is a callback which is called after the image has been generated.
+            self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
+                callback=self.handle_generate_button_clicked,
+                finalize=self.finalize_image_generated_by_llm
+            ))
+        else:
+            # If SD is already enabled, emit a signal to generate the image.
+            # The finalize function is a callback which is called after the image has been generated.
+            self.handle_generate_button_clicked(dict(
+                finalize=self.finalize_image_generated_by_llm
+            ))
+
+    def finalize_image_generated_by_llm(self, data):
+        """
+        Callback function to be called after the image has been generated.
+        """
+
+        # Create a message to be sent to the user as a chatbot message
+        image_generated_message = dict(
+            message="Your image has been generated",
+            is_first_message=True,
+            is_end_of_message=True,
+            name=self.chatbot.name
+        )
+
+        # If SD is enabled, emit a signal to unload SD.
+        if self.application_settings.sd_enabled:
+            # If LLM is disabled, emit a signal to load it.
+            if not self.application_settings.llm_enabled:
+                self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
+                    callback=lambda d: self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, dict(
+                        callback=lambda d: self.emit_signal(
+                            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                            image_generated_message
+                        )
+                    ))
+                ))
+            else:
+                self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
+                    callback=lambda d: self.emit_signal(
+                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                        image_generated_message
+                    )
+                ))
+        else:
+            # If SD is disabled and LLM is disabled, emit a signal to load LLM
+            # with a callback to add the image generated message to the conversation.
+            if not self.application_settings.llm_enabled:
+                self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, dict(
+                    callback=lambda d: self.emit_signal(
+                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                        image_generated_message
+                    )
+                ))
+            else:
+                # If SD is disabled and LLM is enabled, emit a signal to add
+                # the image generated message to the conversation.
+                self.emit_signal(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    image_generated_message
+                )
+    ##########################################################################
+    # End LLM Generated Image handlers
+    ##########################################################################
+
+    def _set_chatbot_mood(self):
+        self.ui.mood_label.setText(self.chatbot.bot_mood)
 
     def handle_generate_image_from_image(self, image):
         pass
@@ -180,21 +293,9 @@ class GeneratorForm(BaseWidget):
 
     def toggle_secondary_prompts(self):
         if self.generator_settings.version != StableDiffusionVersion.SDXL1_0.value:
-            if self.generator_settings.version == StableDiffusionVersion.SDXL_TURBO.value:
-                self.ui.negative_prompt_label.hide()
-                self.ui.negative_prompt.hide()
-            else:
-                self.ui.negative_prompt_label.show()
-                self.ui.negative_prompt.show()
             self.ui.croops_coord_top_left_groupbox.hide()
-            self.ui.secondary_prompt.hide()
-            self.ui.secondary_negative_prompt.hide()
         else:
             self.ui.croops_coord_top_left_groupbox.show()
-            self.ui.negative_prompt_label.show()
-            self.ui.negative_prompt.show()
-            self.ui.secondary_prompt.show()
-            self.ui.secondary_negative_prompt.show()
 
     def on_load_saved_stablediffuion_prompt_signal(self, data: dict):
         saved_prompt = data.get("saved_prompt")
@@ -217,8 +318,16 @@ class GeneratorForm(BaseWidget):
     def do_generate_image_from_image_signal_handler(self, _data):
         self.do_generate()
 
-    def do_generate(self):
-        self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
+    def do_generate(self, data=None):
+        if data:
+            finalize = data.get("finalize", None)
+            if finalize:
+                data = dict(
+                    callback=finalize
+                )
+            else:
+                data = None
+        self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, data)
 
     def activate_ai_mode(self):
         ai_mode = self.application_settings.ai_mode
@@ -244,58 +353,23 @@ class GeneratorForm(BaseWidget):
     def handle_second_negative_prompt_changed(self):
         pass
 
-    def handle_generate_button_clicked(self):
+    def handle_generate_button_clicked(self, data=None):
         self.start_progress_bar()
-        self.generate()
+        self.generate(data)
 
     @Slot()
     def handle_interrupt_button_clicked(self):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
-    def generate(self):
+    def generate(self, data=None):
         if self.generator_settings.random_seed:
             self.seed = random_seed()
-        if self.generator_settings.n_samples > 1:
-            self.emit_signal(SignalCode.ENGINE_STOP_PROCESSING_QUEUE_SIGNAL)
-        self.do_generate()
+        self.do_generate(data)
         self.seed_override = None
-        self.emit_signal(SignalCode.ENGINE_START_PROCESSING_QUEUE_SIGNAL)
 
     def do_generate_image(self):
         time.sleep(0.1)
-
-        if self.generator_settings.section == GeneratorSection.OUTPAINT.value:
-            image = convert_base64_to_image(self.canvas_settings.image)
-            mask = convert_base64_to_image(self.outpaint_settings.image)
-
-            active_rect = self.active_rect
-            overlap_left = max(0, active_rect.left())
-            overlap_right = min(self.application_settings.working_width, active_rect.right())
-            overlap_top = max(0, active_rect.top())
-            overlap_bottom = min(self.application_settings.working_height, active_rect.bottom())
-
-            crop_rect = (overlap_left, overlap_top, overlap_right, overlap_bottom)
-
-            # Crop the image at the overlap position
-            cropped_image = image.crop(crop_rect)
-
-            # Create a new black image of the same size as the input image
-            new_image = Image.new('RGB', (self.application_settings.working_width, self.application_settings.working_height))
-
-            # Paste the cropped image to the top of the new image
-            position = (0, 0)
-            if active_rect.left() < 0:
-                position = (abs(active_rect.left()), 0)
-            if active_rect.top() < 0:
-                position = (0, abs(active_rect.top()))
-            new_image.paste(cropped_image, position)
-
-            self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {
-                "mask_image": mask.convert("RGB"),
-                "image": new_image.convert("RGB")
-            })
-        else:
-            self.do_generate()
+        self.do_generate()
 
     def extract_json_from_message(self, message):
         # Regular expression to find the JSON block
@@ -364,6 +438,17 @@ class GeneratorForm(BaseWidget):
         self.ui.progress_bar.setRange(0, 0)
         self.ui.progress_bar.show()
 
+    def on_model_status_changed_signal(self, data):
+        if data["model"] is ModelType.SD:
+            if data["status"] is not ModelStatus.LOADING:
+                self.stop_progress_bar(do_clear=True)
+                self.ui.generate_button.setEnabled(True)
+                self.ui.interrupt_button.setEnabled(True)
+            else:
+                self.start_progress_bar()
+                self.ui.generate_button.setEnabled(False)
+                self.ui.interrupt_button.setEnabled(False)
+
     def showEvent(self, event):
         super().showEvent(event)
         self.activate_ai_mode()
@@ -371,6 +456,7 @@ class GeneratorForm(BaseWidget):
         self.toggle_secondary_prompts()
         self.initialized = True
         self.thread.start()
+        self._set_chatbot_mood()
 
     def set_form_values(self, _data=None):
         self.ui.prompt.blockSignals(True)
@@ -386,8 +472,8 @@ class GeneratorForm(BaseWidget):
         self.ui.negative_prompt.setPlainText(self.generator_settings.negative_prompt)
         self.ui.secondary_prompt.setPlainText(self.generator_settings.second_prompt)
         self.ui.secondary_negative_prompt.setPlainText(self.generator_settings.second_negative_prompt)
-        self.ui.crops_coord_top_left_x.setText(str(self.generator_settings.crops_coord_top_left[0]))
-        self.ui.crops_coord_top_left_y.setText(str(self.generator_settings.crops_coord_top_left[0]))
+        self.ui.crops_coord_top_left_x.setText(str(self.generator_settings.crops_coord_top_left["x"]))
+        self.ui.crops_coord_top_left_y.setText(str(self.generator_settings.crops_coord_top_left["y"]))
 
         image_presets = [""] + [preset.value for preset in ImagePreset]
         self.ui.image_presets.addItems(image_presets)
@@ -412,12 +498,26 @@ class GeneratorForm(BaseWidget):
         self.ui.secondary_prompt.setPlainText("")
         self.ui.secondary_negative_prompt.setPlainText("")
 
-    def stop_progress_bar(self):
+    def stop_progress_bar(self, do_clear=False):
         progressbar = self.ui.progress_bar
         if not progressbar:
             return
         progressbar.setRange(0, 100)
-        progressbar.setValue(100)
+        if do_clear:
+            progressbar.setValue(0)
+            progressbar.setFormat("")
+        else:
+            progressbar.setValue(100)
+            progressbar.setFormat("Complete")
 
-        # set text of progressbar to "complete"
-        progressbar.setFormat("Complete")
+    def _set_keyboard_shortcuts(self):
+        session = self.db_handler.get_db_session()
+        generate_image_key = session.query(ShortcutKeys).filter_by(display_name="Generate Image").first()
+        interrupt_key = session.query(ShortcutKeys).filter_by(display_name="Interrupt").first()
+        if generate_image_key:
+            self.ui.generate_button.setShortcut(generate_image_key.key)
+            self.ui.generate_button.setToolTip(f"{generate_image_key.display_name} ({generate_image_key.text})")
+        if interrupt_key:
+            self.ui.interrupt_button.setShortcut(interrupt_key.key)
+            self.ui.interrupt_button.setToolTip(f"{interrupt_key.display_name} ({interrupt_key.text})")
+        session.close()

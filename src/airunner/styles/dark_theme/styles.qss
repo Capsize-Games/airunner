@@ -94,6 +94,14 @@ QCheckBox:indicator:checked {
     height: 12px;
 }
 
+QCheckBox:disabled {
+    color: #333;
+}
+
+QCheckBox:indicator:disabled {
+    border: 1px solid #333;
+}
+
 QPushButton {
     border-radius: none;
     padding: 4px 4px 3px 4px;
@@ -219,7 +227,9 @@ QWidget#scrollAreaWidgetContents {
 }
 
 QStatusBar {
-    border-top: 1px solid #333;
+    border-top: 1px solid #111;
+    border-bottom: 1px solid #111;
+    border-left: 1px solid #111;
 }
 
 QStatusBar QLabel {
@@ -708,4 +718,15 @@ QPushButton#size_lock_button {
 
 QGraphicsView#image_container {
     background-color: #000;
+}
+
+#content_splitter {
+    border: 1px solid #101010;
+}
+
+QMenu, QToolBar, QMenuBar {
+    border: 1px solid #111;
+}
+QMenu {
+    padding: 10px;
 }

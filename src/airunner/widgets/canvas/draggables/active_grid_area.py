@@ -1,6 +1,6 @@
 from PIL.ImageQt import QImage
 
-from PySide6.QtCore import QRect
+from PySide6.QtCore import QRect, QPoint
 from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, Qt
 from PySide6.QtWidgets import QGraphicsItem
 
@@ -30,7 +30,11 @@ class ActiveGridArea(DraggablePixmap):
         painter = self.draw_border()
         super().paint(painter, None, None)
 
-        self.update_position()
+        self.snap_to_grid(
+            x=min(self.rect.x(), self.rect.x() + self.rect.width()),
+            y=min(self.rect.y(), self.rect.y() + self.rect.height()),
+            save=True
+        )
         self.setFlag(
             QGraphicsItem.GraphicsItemFlag.ItemIsMovable,
             True
@@ -40,6 +44,12 @@ class ActiveGridArea(DraggablePixmap):
             self.render_fill
         )
 
+    def update_position(self, x: int, y: int, save: bool = True):
+        self.setPos(QPoint(x, y))
+        if save:
+            self.update_active_grid_settings("pos_x", x)
+            self.update_active_grid_settings("pos_y", y)
+
     @property
     def rect(self):
         return QRect(
@@ -47,12 +57,6 @@ class ActiveGridArea(DraggablePixmap):
             self.active_grid_settings.pos_y,
             self.application_settings.working_width,
             self.application_settings.working_height
-        )
-
-    def update_position(self):
-        self.setPos(
-            min(self.rect.x(), self.rect.x() + self.rect.width()),
-            min(self.rect.y(), self.rect.y() + self.rect.height())
         )
 
     def render_fill(self):
@@ -154,6 +158,7 @@ class ActiveGridArea(DraggablePixmap):
             self.mouse_press_pos.y() != event.pos().y()
         ):
             self.emit_signal(SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL)
+            self.emit_signal(SignalCode.GENERATE_MASK)
         self.mouse_press_pos = None
 
     def mouseMoveEvent(self, event):

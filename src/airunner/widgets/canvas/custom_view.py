@@ -8,6 +8,8 @@ from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsLineIt
 from airunner.aihandler.logger import Logger
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
+from airunner.utils.convert_image_to_base64 import convert_image_to_base64
+from airunner.utils.create_worker import create_worker
 from airunner.utils.snap_to_grid import snap_to_grid
 from airunner.widgets.canvas.brush_scene import BrushScene
 from airunner.widgets.canvas.custom_scene import CustomScene
@@ -48,6 +50,7 @@ class CustomGraphicsView(
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL: self.handle_active_grid_area_moved_signal,
+            SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
         }
 
         for k, v in signal_handlers.items():
@@ -80,7 +83,13 @@ class CustomGraphicsView(
         )
 
     def handle_active_grid_area_moved_signal(self):
-        self.active_grid_area.update_position()
+        self.active_grid_area.snap_to_grid()
+
+    def on_mask_generator_worker_response_signal(self, message: dict):
+        mask = message["mask"]
+        if mask is not None:
+            mask = convert_image_to_base64(mask)
+            self.update_drawing_pad_settings("mask", mask)
 
     def on_main_window_loaded_signal(self):
         self.initialized = True
@@ -258,7 +267,7 @@ class CustomGraphicsView(
         # and add it to the scene
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea()
-            self.active_grid_area.setZValue(1)
+            self.active_grid_area.setZValue(10)
             self._scene.addItem(self.active_grid_area)
 
     def on_zoom_level_changed_signal(self):
@@ -348,6 +357,7 @@ class CustomGraphicsView(
         This is used to adjust the selection tool to the grid
         in real time during rubberband mode.
         :param event:
+        :param use_floor:
         :return:
         """
         if self.current_tool is CanvasToolName.SELECTION:
@@ -372,6 +382,5 @@ class CustomGraphicsView(
         return new_event
 
     def mousePressEvent(self, event: QMouseEvent):
-        self.update_canvas_settings("active_canvas", self.canvas_type)
         new_event = self.snap_to_grid(event)
         super().mousePressEvent(new_event)

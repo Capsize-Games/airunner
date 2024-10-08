@@ -40,95 +40,32 @@ class SettingsWindow(BaseWindow):
         self.highlight_delegate = None
         self.emit_signal(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.setWindowTitle("AI Runner Preferences")
+
     def available_widgets(self, name):
-        if name == "image_generator_preferences":
-            from airunner.widgets.image_generator_preferences.image_generator_preferences_widget import \
-                ImageGeneratorPreferencesWidget
-            return ImageGeneratorPreferencesWidget
-        if name == "stable_diffusion_preferences":
-            from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
-            return StableDiffusionSettingsWidget
-        if name == "lora_settings":
-            from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
-            return LoraContainerWidget
-        if name == "embeddings_settings":
-            from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
-            return EmbeddingsContainerWidget
         if name == "paths":
             from airunner.widgets.paths.paths_widget import PathsWidget
             return PathsWidget
         if name == "keyboard_shortcuts":
             from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
             return KeyboardShortcutsWidget
-        if name == "grid":
-            from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
-            return GridPreferencesWidget
         if name == "memory":
             from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
             return MemoryPreferencesWidget
         if name == "hf_api_key":
             from airunner.widgets.api_token.api_token_widget import APITokenWidget
             return APITokenWidget
-        if name == "translation_preferences":
-            from airunner.widgets.translation_preferences.translation_preferences_widget import \
-                TranslationPreferencesWidget
-            return TranslationPreferencesWidget
         if name == "tts_preferences":
             from airunner.widgets.tts.tts_preferences_widget import TTSPreferencesWidget
             return TTSPreferencesWidget
         if name == "bot_preferences":
             from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
             return BotPreferencesWidget
-        if name == "font_settings":
-            from airunner.widgets.font_settings.font_settings_widget import FontSettingsWidget
-            return FontSettingsWidget
-        if name == "civitai":
-            from airunner.widgets.civitai_preferences.civitai_preferences_widget import CivitAIPreferencesWidget
-            return CivitAIPreferencesWidget
         if name == "export_preferences":
             from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
             return ExportPreferencesWidget
-
-    def handle_value_change(self, attr_name, value=None, widget=None):
-        """
-        Slider widget callback - this is connected via dynamic properties in the
-        qt widget. This function is then called when the value of a SliderWidget
-        is changed.
-        :param attr_name: the name of the attribute to change
-        :param value: the value to set the attribute to
-        :param widget: the widget that triggered the callback
-        :return:
-        """
-        print("TODO: handle_value_change")
-        if attr_name is None:
-            return
-
-        # keys = attr_name.split(".")
-        # if len(keys) > 0:
-        #     settings = self.settings
-        #
-        #     object_key = "settings"
-        #     if len(keys) == 1:
-        #         property_key = keys[0]
-        #     elif len(keys) == 2:
-        #         object_key = keys[0]
-        #         property_key = keys[1]
-        #     elif len(keys) == 3:
-        #         object_key = keys[0]
-        #         property_key = keys[1]
-        #         sub_property_key = keys[2]
-        #
-        #     if object_key != "settings":
-        #         if len(keys) == 3:
-        #             settings[object_key][property_key][sub_property_key] = value
-        #         else:
-        #             settings[object_key][property_key] = value
-        #         self.update_settings(object_key, settings[object_key])
-        #     else:
-        #         settings[property_key] = value
-        #         self.update_settings(property_key, settings[property_key])
-        print("HANDLE VALUE CHANGE", attr_name, value, widget)
-
 
     def get_callback_for_slider(self, callback_name):
         return getattr(self, callback_name)
@@ -141,46 +78,11 @@ class SettingsWindow(BaseWindow):
 
         directory = [
             {
-                "section": "Image Generator Preferences",
-                "files": [
-                    {
-                        "name": "image_generator_preferences",
-                        "display_name": "Image Generator Preferences",
-                        "checkable": False,
-                        "description": (
-                            "Choose default models to use for creating images "
-                            "in various categories. These are used to generate "
-                            "images when using various tools, including the LLM."
-                        )
-                    },
-                    {
-                        "name": "lora_settings",
-                        "display_name": "LoRA",
-                        "checkable": False
-                    },
-                    {
-                        "name": "embeddings_settings",
-                        "display_name": "Embeddings",
-                        "checkable": False
-                    }
-                ]
-            },
-            {
                 "section": "Image Export Preferences",
                 "files": [
                     {
                         "name": "export_preferences",
                         "display_name": "Export Preferences",
-                        "checkable": False
-                    }
-                ]
-            },
-            {
-                "section": "Grid & Canvas Preferences",
-                "files": [
-                    {
-                        "name": "grid",
-                        "display_name": "Grid",
                         "checkable": False
                     }
                 ]
@@ -206,7 +108,7 @@ class SettingsWindow(BaseWindow):
                 ]
             },
             {
-                "section": "LLM, TTS, Translation, Chatbot",
+                "section": "LLM, TTS, Chatbot",
                 "files": [
                     {
                         "name": "bot_preferences",
@@ -216,12 +118,6 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "tts_preferences",
                         "display_name": "Text-to-Speech",
-                        "checkable": False
-                    },
-                    {
-                        "name": "translation_preferences",
-                        "display_name": "Translation Preferences",
-                        "description": "Set your preferred translation and override the TTS voice settings.",
                         "checkable": False
                     },
                 ]
@@ -247,43 +143,6 @@ class SettingsWindow(BaseWindow):
                         "checkable": True,
                         "description": "If enabled, AI Runner will check for updates on startup."
                     }
-                ]
-            },
-            {
-                "section": "Font Settings",
-                "files": [
-                    {
-                        "name": "font_settings",
-                        "display_name": "Fonts",
-                        "checkable": False,
-                        "description": "Change the default font settings for various sections of the application."
-                    },
-                ]
-            },
-            {
-                "section": "Huggingface.co settings",
-                "files": [
-                    {
-                        "name": "allow_online_mode",
-                        "display_name": "Allow online connection",
-                        "checkable": True,
-                        "description": "Allow online connection to Huggingface.co to download missing models. If disabled, you will only be able to use models that are already downloaded. Requires a restart."
-                    },
-                    {
-                        "name": "hf_api_key",
-                        "display_name": "API Key",
-                        "checkable": False
-                    },
-                ]
-            },
-            {
-                "section": "Civitai.com settings",
-                "files": [
-                    {
-                        "name": "civitai",
-                        "display_name": "CivitAI Settings",
-                        "checkable": False,
-                    },
                 ]
             }
         ]

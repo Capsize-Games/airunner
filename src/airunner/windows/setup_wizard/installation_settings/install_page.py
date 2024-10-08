@@ -2,6 +2,10 @@ import os.path
 
 import nltk
 from PySide6.QtCore import QObject, QThread, Slot, Signal
+from sqlalchemy import func
+
+from airunner.aihandler.models.settings_models import AIModels, ControlnetModel
+from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
 from airunner.data.bootstrap.llm_file_bootstrap_data import LLM_FILE_BOOTSTRAP_DATA
@@ -55,10 +59,12 @@ class InstallWorker(
     file_download_finished = Signal()
     progress_updated = Signal(int, int)
 
-    def __init__(self, parent, setup_settings):
+    def __init__(self, parent):
+        MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
         super(InstallWorker, self).__init__()
         self.parent = parent
-        self.setup_settings = setup_settings
+        self.current_step = -1
         self.total_models_in_current_step = 0
         self.hf_downloader = HuggingfaceDownloader(
             lambda a, b: self.progress_updated.emit(a, b)
@@ -73,105 +79,40 @@ class InstallWorker(
             "label": "Downloading Stable Diffusion models..."
         })
 
-        model_path = None
-        model_name = None
-        model_version = None
-        using_custom_model = self.setup_settings["using_custom_model"]
-        if using_custom_model:
-            model_path = self.setup_settings["custom_model"]
-        else:
-            model_name = self.setup_settings["model"]
-            model_version = self.setup_settings["model_version"]
+        session = self.db_handler.get_db_session()
+        models = session.query(AIModels).filter(
+            AIModels.category == "stablediffusion",
+            AIModels.is_default == 1,
+            AIModels.version != "SDXL Turbo"
+        ).all()
+        session.close()
 
-        models_to_download = []
-        if using_custom_model:
-            # TODO: test custom case
-            models_to_download.append({
-                "model": {
-                    "name": "Stable Diffusion 1.5",
-                    "path": model_path,
-                    "branch": "fp16",
-                    "version": "SD 1.5",
-                    "category": "stablediffusion",
-                    "pipeline_action": "txt2img",
-                    "enabled": True,
-                    "model_type": "art",
-                    "is_default": True
-                }
-            })
-        else:
-            for model_version, data in SD_FILE_BOOTSTRAP_DATA.items():
-                for action in data:
-                    for model in model_bootstrap_data:
-                        if (
-                            model["pipeline_action"] != action or
-                            model["category"] != "stablediffusion" or
-                            model["version"] != model_version or
-                            model["enabled"] is False
-                        ):
-                            continue
-
-                        # add pipeline_files to models_to_download
-                        if action in ["datasets", "safety_checker", "feature_extractor"]:
-                            requested_file_path = os.path.expanduser(
-                                os.path.join(
-                                    self.settings["path_settings"][f"{model['pipeline_action']}_model_path"],
-                                    model["path"]
-                                )
-                            )
-                        else:
-                            requested_file_path = os.path.expanduser(
-                                os.path.join(
-                                    self.settings["path_settings"][f"{model['pipeline_action']}_model_path"],
-                                    model["version"],
-                                )
-                            )
-                        model["files"] = data[action]
-                        model["requested_file_path"] = requested_file_path
-                        models_to_download.append(model)
-                        self.total_models_in_current_step += len(model["files"])
-                        self.parent.total_steps += len(model["files"])
-
-            for model in models_to_download:
-                for filename in model["files"]:
-                    try:
-                        self.hf_downloader.download_model(
-                            requested_path=model["path"],
-                            requested_file_name=filename,
-                            requested_file_path=model["requested_file_path"],
-                            requested_callback=self.progress_updated.emit
-                        )
-                    except Exception as e:
-                        print(f"Error downloading {filename}: {e}")
-
-    def download_controlnet(self):
-        self.parent.on_set_downloading_status_label({
-            "label": "Downloading Controlnet models..."
-        })
-        model_version = self.setup_settings["model_version"]
-
-        if "controlnet" not in SD_FILE_BOOTSTRAP_DATA[model_version]:
-            self.download_finished()
-            return
-        controlnet_files = SD_FILE_BOOTSTRAP_DATA[model_version]["controlnet"]
-        total_controlnet_files = len(CONTROLNET_PATHS * len(controlnet_files))
-        self.total_models_in_current_step += total_controlnet_files
-
-        if total_controlnet_files == 0:
-            self.download_finished()
-            return
-
-        for path in CONTROLNET_PATHS:
-            for filename in controlnet_files:
-                try:
-                    requested_file_path = os.path.expanduser(
-                        os.path.join(
-                            self.settings["path_settings"][f"controlnet_model_path"],
-                            path
-                        )
+        self.total_models_in_current_step += len(models)
+        for model in models:
+            if model.name == "CompVis Safety Checker":
+                action_key = "safety_checker"
+                action = f"{model.pipeline_action}/{action_key}"
+            elif model.name == "OpenAI Feature Extractor":
+                action_key = "feature_extractor"
+                action = f"{model.pipeline_action}/{action_key}"
+            else:
+                action = model.pipeline_action
+                action_key = model.pipeline_action
+            files = SD_FILE_BOOTSTRAP_DATA[model.version][action_key]
+            self.parent.total_steps += len(files)
+            for filename in files:
+                requested_file_path = os.path.expanduser(
+                    os.path.join(
+                        self.path_settings.base_path,
+                        model.model_type,
+                        "models",
+                        model.version,
+                        action
                     )
+                )
+                try:
                     self.hf_downloader.download_model(
-                        requested_path=path,
+                        requested_path=model.path,
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
                         requested_callback=self.progress_updated.emit
@@ -179,87 +120,184 @@ class InstallWorker(
                 except Exception as e:
                     print(f"Error downloading {filename}: {e}")
 
-    def download_llms(self):
-        if self.setup_settings["enable_llm"]:
-            self.parent.on_set_downloading_status_label({
-                "label": "Downloading LLM models..."
-            })
-            for k, v in LLM_FILE_BOOTSTRAP_DATA.items():
-                self.total_models_in_current_step += len(v["files"])
+    def download_controlnet(self):
+        self.parent.on_set_downloading_status_label({
+            "label": "Downloading Controlnet models..."
+        })
+        self.total_models_in_current_step += len(controlnet_bootstrap_data)
+        for controlnet_model in controlnet_bootstrap_data:
+            files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]]["controlnet"]
+            self.parent.total_steps += len(files)
+            for filename in files:
+                requested_file_path = os.path.expanduser(
+                    os.path.join(
+                        self.path_settings.base_path,
+                        "art",
+                        "models",
+                        controlnet_model["version"],
+                        "controlnet",
+                        controlnet_model["path"]
+                    )
+                )
+                try:
+                    self.hf_downloader.download_model(
+                        requested_path=controlnet_model["path"],
+                        requested_file_name=filename,
+                        requested_file_path=requested_file_path,
+                        requested_callback=self.progress_updated.emit
+                    )
+                except Exception as e:
+                    print(f"Error downloading {filename}: {e}")
 
-            for k, v in LLM_FILE_BOOTSTRAP_DATA.items():
-                for filename in v["files"]:
-                    try:
-                        requested_file_path = os.path.expanduser(
-                            os.path.join(
-                                self.settings["path_settings"][v["path_settings"]],
-                                k
-                            )
-                        )
-                        self.hf_downloader.download_model(
-                            requested_path=k,
-                            requested_file_name=filename,
-                            requested_file_path=requested_file_path,
-                            requested_callback=self.progress_updated.emit
-                        )
-                    except Exception as e:
-                        print(f"Error downloading {filename}: {e}")
+    def download_controlnet_processors(self):
+        self.parent.on_set_downloading_status_label({
+            "label": "Downloading Controlnet processors..."
+        })
+        controlnet_processor_files = [
+            "150_16_swin_l_oneformer_coco_100ep.pth",
+            "250_16_swin_l_oneformer_ade20k_160k.pth",
+            "ControlNetHED.pth",
+            "ControlNetLama.pth",
+            "RealESRGAN_x4plus.pth",
+            "ZoeD_M12_N.pt",
+            "body_pose_model.pth",
+            "clip_g.pth",
+            "dpt_hybrid-midas-501f0c75.pt",
+            "erika.pth",
+            "facenet.pth",
+            "hand_pose_model.pth",
+            "lama.ckpt",
+            "latest_net_G.pth",
+            "mlsd_large_512_fp32.pth",
+            "netG.pth",
+            "network-bsds500.pth",
+            "res101.pth",
+            "scannet.pt",
+            "sk_model.pth",
+            "sk_model2.pth",
+            "table5_pidinet.pth",
+            "upernet_global_small.pth",
+        ]
+        self.parent.total_steps += len(controlnet_processor_files)
+        for filename in controlnet_processor_files:
+            requested_file_path = os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "art",
+                    "models",
+                    "controlnet_processors"
+                )
+            )
+            try:
+                self.hf_downloader.download_model(
+                    requested_path=f"lllyasviel/Annotators",
+                    requested_file_name=filename,
+                    requested_file_path=requested_file_path,
+                    requested_callback=self.progress_updated.emit
+                )
+            except Exception as e:
+                print(f"Error downloading {filename}: {e}")
+
+    def download_llms(self):
+        session = self.db_handler.get_db_session()
+        models = session.query(AIModels).filter(
+            AIModels.category == "llm",
+            AIModels.is_default == 1
+        ).all()
+        session.close()
+        self.total_models_in_current_step += len(models)
+        for model in models:
+            files = LLM_FILE_BOOTSTRAP_DATA[model.path]["files"]
+            self.parent.total_steps += len(files)
+            for filename in files:
+                requested_file_path = os.path.expanduser(
+                    os.path.join(
+                        self.path_settings.base_path,
+                        "text",
+                        "models",
+                        model.category,
+                        model.pipeline_action,
+                        model.path
+                    )
+                )
+                try:
+                    self.hf_downloader.download_model(
+                        requested_path=model.path,
+                        requested_file_name=filename,
+                        requested_file_path=requested_file_path,
+                        requested_callback=self.progress_updated.emit
+                    )
+                except Exception as e:
+                    print(f"Error downloading {filename}: {e}")
 
     def download_stt(self):
-        if self.setup_settings["enable_stt"]:
-            self.parent.on_set_downloading_status_label({
-                "label": "Downloading STT models..."
-            })
-            for k, v in WHISPER_FILES.items():
-                self.total_models_in_current_step += len(v)
-            for k, v in WHISPER_FILES.items():
-                for filename in v:
-                    requested_file_path = os.path.expanduser(
-                        os.path.join(
-                            self.settings["path_settings"]["stt_model_path"],
-                            k
-                        )
+        self.parent.on_set_downloading_status_label({
+            "label": "Downloading STT models..."
+        })
+        for k, v in WHISPER_FILES.items():
+            self.total_models_in_current_step += len(v)
+        for k, v in WHISPER_FILES.items():
+            for filename in v:
+                requested_file_path = os.path.expanduser(
+                    os.path.join(
+                        self.path_settings.base_path,
+                        "text",
+                        "models",
+                        "stt",
+                        k
                     )
-                    try:
-                        self.hf_downloader.download_model(
-                            requested_path=k,
-                            requested_file_name=filename,
-                            requested_file_path=requested_file_path,
-                            requested_callback=self.progress_updated.emit
-                        )
-                    except Exception as e:
-                        print(f"Error downloading {filename}: {e}")
+                )
+                try:
+                    self.hf_downloader.download_model(
+                        requested_path=k,
+                        requested_file_name=filename,
+                        requested_file_path=requested_file_path,
+                        requested_callback=self.progress_updated.emit
+                    )
+                except Exception as e:
+                    print(f"Error downloading {filename}: {e}")
 
     def download_tts(self):
-        if self.setup_settings["enable_tts"]:
-            self.parent.on_set_downloading_status_label({
-                "label": "Downloading TTS models..."
-            })
-            for k, v in SPEECH_T5_FILES.items():
-                self.total_models_in_current_step += len(v)
-
-            for k, v in SPEECH_T5_FILES.items():
-                for filename in v:
-                    requested_file_path = os.path.expanduser(
-                        os.path.join(
-                            self.settings["path_settings"]["tts_model_path"],
-                            k
-                        )
+        self.parent.on_set_downloading_status_label({
+            "label": "Downloading TTS models..."
+        })
+        for k, v in SPEECH_T5_FILES.items():
+            self.total_models_in_current_step += len(v)
+            for filename in v:
+                requested_file_path = os.path.expanduser(
+                    os.path.join(
+                        self.path_settings.base_path,
+                        "text",
+                        "models",
+                        "tts",
+                        k
                     )
-                    try:
-                        self.hf_downloader.download_model(
-                            requested_path=k,
-                            requested_file_name=filename,
-                            requested_file_path=requested_file_path,
-                            requested_callback=self.progress_updated.emit
-                        )
-                    except Exception as e:
-                        print(f"Error downloading {filename}: {e}")
+                )
+                try:
+                    self.hf_downloader.download_model(
+                        requested_path=k,
+                        requested_file_name=filename,
+                        requested_file_path=requested_file_path,
+                        requested_callback=self.progress_updated.emit
+                    )
+                except Exception as e:
+                    print(f"Error downloading {filename}: {e}")
 
     def download_nltk_files(self):
         self.parent.on_set_downloading_status_label({
             "label": "Downloading NLTK models..."
         })
+        path = os.path.expanduser(os.path.join(
+            NLTK_DOWNLOAD_DIR,
+            "corpora"
+        ))
+        os.makedirs(path, exist_ok=True)
+        path = os.path.expanduser(os.path.join(
+            NLTK_DOWNLOAD_DIR,
+            "tokenizers",
+            "punkt"
+        ))
+        os.makedirs(path, exist_ok=True)
         nltk.download(
             "stopwords",
             download_dir=NLTK_DOWNLOAD_DIR,
@@ -276,7 +314,7 @@ class InstallWorker(
         )
         self.download_finished()
 
-    def finalize_installation(self):
+    def finalize_installation(self, *args):
         self.parent.on_set_downloading_status_label({
             "label": "Installation complete."
         })
@@ -294,68 +332,74 @@ class InstallWorker(
 
     def run(self):
         if (
-            self.setup_settings["user_agreement_completed"] and
-            self.setup_settings["airunner_license_completed"] and
-            self.setup_settings["llama_license_completed"]
+            self.application_settings.user_agreement_checked and
+            self.application_settings.stable_diffusion_agreement_checked and
+            self.application_settings.airunner_agreement_checked
         ):
             self.current_step = -1
             self.set_page()
 
     def set_page(self):
-        has_model = (
-            self.setup_settings["model_version"] and
-            self.setup_settings["model"]
-        ) or (
-            self.setup_settings["using_custom_model"] and
-            self.setup_settings["custom_model"]
-        )
-        model_path = self.setup_settings["model"] if not self.setup_settings["using_custom_model"] \
-            else self.setup_settings["custom_model"]
-
         if (
-            self.setup_settings["enable_sd"] and
-            self.setup_settings["sd_license_completed"] and
-            has_model and
+            self.application_settings.stable_diffusion_agreement_checked and
             self.current_step is -1
         ):
             self.parent.on_set_downloading_status_label({
-                "label": f"Downloading {model_path}"
+                "label": f"Downloading Stable Diffusion"
             })
-            print(f"Dowloading {model_path}...")
             self.current_step = 0
             self.download_stable_diffusion()
         elif (
-            self.setup_settings["enable_sd"] and
-            self.setup_settings["sd_license_completed"] and
-            self.setup_settings["enable_controlnet"] and
+            self.application_settings.stable_diffusion_agreement_checked and
             self.current_step == 0
         ):
+            self.parent.on_set_downloading_status_label({
+                "label": f"Downloading Controlnet"
+            })
             self.current_step = 1
             self.download_controlnet()
-        elif self.setup_settings["enable_llm"] and self.current_step < 2:
+        elif (
+            self.application_settings.stable_diffusion_agreement_checked and
+            self.current_step < 2
+        ):
             self.current_step = 2
-            self.download_llms()
-        elif self.setup_settings["enable_tts"] and self.current_step < 3:
+            self.download_controlnet_processors()
+        elif self.current_step < 3:
+            self.parent.on_set_downloading_status_label({
+                "label": f"Downloading LLM"
+            })
             self.current_step = 3
-            self.download_tts()
-        elif self.setup_settings["enable_stt"] and self.current_step < 4:
+            self.download_llms()
+        elif self.current_step < 4:
+            self.parent.on_set_downloading_status_label({
+                "label": f"Downloading Text-to-Speech"
+            })
             self.current_step = 4
-            self.download_stt()
+            self.download_tts()
         elif self.current_step < 5:
+            self.parent.on_set_downloading_status_label({
+                "label": f"Downloading Speech-to-Text"
+            })
             self.current_step = 5
+            self.download_stt()
+        elif self.current_step < 6:
+            self.current_step = 6
             self.download_nltk_files()
         else:
-            self.current_step = 6
-            self.finalize_installation()
+             self.hf_downloader.download_model(
+                 requested_path="",
+                 requested_file_name="",
+                 requested_file_path="",
+                 requested_callback=self.finalize_installation
+             )
 
 
 class InstallPage(BaseWizard):
     class_name_ = Ui_install_page
 
-    def __init__(self, parent, setup_settings):
+    def __init__(self, parent):
         super(InstallPage, self).__init__(parent)
         self.steps_completed = 0
-        self.setup_settings = setup_settings
 
         # reset the progress bar
         self.ui.progress_bar.setValue(0)
@@ -363,20 +407,20 @@ class InstallPage(BaseWizard):
 
         # These will increase
         self.total_steps = 0
-        if self.setup_settings["enable_sd"] and self.setup_settings["sd_license_completed"]:
+        if self.application_settings.stable_diffusion_agreement_checked:
             self.total_steps += 1
-        if self.setup_settings["enable_controlnet"]:
-            if "controlnet" in SD_FILE_BOOTSTRAP_DATA[self.setup_settings["model_version"]]:
-                self.total_steps += len(CONTROLNET_PATHS) * len(SD_FILE_BOOTSTRAP_DATA[self.setup_settings["model_version"]]["controlnet"])
-        if self.setup_settings["enable_llm"]:
-            for k, v in LLM_FILE_BOOTSTRAP_DATA.items():
-                self.total_steps += len(v)
-        if self.setup_settings["enable_tts"]:
-            for k, v in SPEECH_T5_FILES.items():
-                self.total_steps += len(v)
-        if self.setup_settings["enable_stt"]:
-            for k, v in WHISPER_FILES.items():
-                self.total_steps += len(v)
+
+        session = self.db_handler.get_db_session()
+
+        controlnet_model_count = session.query(func.count(ControlnetModel.id.distinct())).scalar()
+        controlnet_version_count = session.query(func.count(ControlnetModel.version.distinct())).scalar()
+
+        llm_model_count = session.query(func.count(AIModels.id)).filter(AIModels.category == 'llm').scalar()
+
+        self.total_steps += controlnet_model_count * controlnet_version_count
+        self.total_steps += llm_model_count
+        self.total_steps += len(SPEECH_T5_FILES["microsoft/speecht5_tts"])
+        self.total_steps += len(WHISPER_FILES["openai/whisper-tiny"])
 
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.update_progress_bar)
         self.register(SignalCode.DOWNLOAD_PROGRESS, self.download_progress)
@@ -385,7 +429,7 @@ class InstallPage(BaseWizard):
         self.register(SignalCode.SET_DOWNLOAD_STATUS_LABEL, self.on_set_downloading_status_label)
 
         self.thread = QThread()
-        self.worker = InstallWorker(self, setup_settings)
+        self.worker = InstallWorker(self)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.thread.start()

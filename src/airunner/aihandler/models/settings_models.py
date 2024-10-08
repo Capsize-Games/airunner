@@ -1,12 +1,15 @@
 import os
 
-from sqlalchemy import Column, Integer, String, JSON, Boolean, TupleType, Float, Text, ForeignKey, LargeBinary
+from sqlalchemy import create_engine, Column, Integer, String, JSON, Boolean, Float, Text, ForeignKey, LargeBinary, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-from airunner.enums import Gender, ImageGenerator, GeneratorSection, CanvasToolName, Mode
-from airunner.settings import SD_DEFAULT_VAE_PATH, DEFAULT_SCHEDULER, DEFAULT_BARK_MODEL_PATHS, \
+from airunner.enums import ImageGenerator, GeneratorSection, CanvasToolName, Mode
+from airunner.settings import SD_DEFAULT_VAE_PATH, DEFAULT_SCHEDULER, \
     DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, BASE_PATH
+
+
+import datetime
 
 Base = declarative_base()
 
@@ -16,13 +19,13 @@ class ApplicationSettings(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     use_cuda = Column(Boolean, default=True)
     sd_enabled = Column(Boolean, default=False)
-    controlnet_enabled = Column(Boolean, default=False)
     llm_enabled = Column(Boolean, default=False)
     tts_enabled = Column(Boolean, default=False)
     stt_enabled = Column(Boolean, default=False)
+    controlnet_enabled = Column(Boolean, default=False)
     ai_mode = Column(Boolean, default=True)
     active_grid_size_lock = Column(Boolean, default=False)
-    installation_path = Column(String, default="~/.airunner")
+    installation_path = Column(String, default="~/.local/share/airunner")
     current_layer_index = Column(Integer, default=0)
     paths_initialized = Column(Boolean, default=False)
     trust_remote_code = Column(Boolean, default=False)  # Leave this hardcoded. We will never trust remote code.
@@ -34,7 +37,6 @@ class ApplicationSettings(Base):
     latest_version_check = Column(Boolean, default=True)
     app_version = Column(String, default="")
     allow_online_mode = Column(Boolean, default=True)
-    current_version_stablediffusion = Column(String, default="SD 1.5")
     current_tool = Column(String, default=CanvasToolName.BRUSH.value)
     image_export_type = Column(String, default="png")
     auto_export_images = Column(Boolean, default=True)
@@ -47,8 +49,6 @@ class ApplicationSettings(Base):
     hf_api_key_read_key = Column(String, default="")
     hf_api_key_write_key = Column(String, default="")
     civit_ai_api_key = Column(String, default="")
-    pipeline = Column(String, default="txt2img")
-    pipeline_version = Column(String, default="")
     is_maximized = Column(Boolean, default=False)
     pivot_point_x = Column(Integer, default=0)
     pivot_point_y = Column(Integer, default=0)
@@ -58,10 +58,10 @@ class ApplicationSettings(Base):
     show_nsfw_warning = Column(Boolean, default=True)
     run_setup_wizard = Column(Boolean, default=True)
     download_wizard_completed = Column(Boolean, default=False)
-    stable_diffusion_agreement_checked = False,
-    airunner_agreement_checked = False,
-    user_agreement_checked = False,
-    llama_license_agreement_checked = False,
+    stable_diffusion_agreement_checked = Column(Boolean, default=True)
+    airunner_agreement_checked = Column(Boolean, default=True)
+    user_agreement_checked = Column(Boolean, default=True)
+    llama_license_agreement_checked = Column(Boolean, default=True)
 
 
 class ActiveGridSettings(Base):
@@ -80,26 +80,17 @@ class ActiveGridSettings(Base):
     height = Column(Integer, default=512)
 
 
-class CanvasSettings(Base):
-    __tablename__ = 'canvas_settings'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pos_x = Column(Integer, default=0)
-    pos_y = Column(Integer, default=0)
-    mask = Column(String, nullable=True)
-    image = Column(String, nullable=True)
-    active_canvas = Column(String, default="")
-    document_outline_color = Column(String, default="(255, 0, 255, 144)")
-    document_outline_width = Column(Integer, default=2)
-
-
 class ControlnetSettings(Base):
     __tablename__ = 'controlnet_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     image = Column(String, nullable=True)
+    generated_image = Column(String, nullable=True)
     enabled = Column(Boolean, default=False)
     use_grid_image_as_input = Column(Boolean, default=False)
     strength = Column(Integer, default=50)
     conditioning_scale = Column(Integer, default=100)
+    guidance_scale = Column(Integer, default=750)
+    controlnet = Column(String, default="Canny")
 
 
 class ImageToImageSettings(Base):
@@ -115,6 +106,8 @@ class OutpaintSettings(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     image = Column(String, nullable=True)
     enabled = Column(Boolean, default=True)
+    strength = Column(Integer, default=50)
+    mask_blur = Column(Integer, default=0)
 
 
 class DrawingPadSettings(Base):
@@ -124,6 +117,9 @@ class DrawingPadSettings(Base):
     mask = Column(String, nullable=True)
     enabled = Column(Boolean, default=True)
     enable_automatic_drawing = Column(Boolean, default=True)
+    mask_layer_enabled = Column(Boolean, default=False)
+    x_pos = Column(Integer, default=0)
+    y_pos = Column(Integer, default=0)
 
 
 class MetadataSettings(Base):
@@ -140,6 +136,13 @@ class MetadataSettings(Base):
     image_export_metadata_model = Column(Boolean, default=True)
     image_export_metadata_model_branch = Column(Boolean, default=True)
     image_export_metadata_scheduler = Column(Boolean, default=True)
+    image_export_metadata_strength = Column(Boolean, default=True)
+    image_export_metadata_clip_skip = Column(Boolean, default=True)
+    image_export_metadata_version = Column(Boolean, default=True)
+    image_export_metadata_lora = Column(Boolean, default=True)
+    image_export_metadata_embeddings = Column(Boolean, default=True)
+    image_export_metadata_timestamp = Column(Boolean, default=True)
+    image_export_metadata_controlnet = Column(Boolean, default=True)
     export_metadata = Column(Boolean, default=True)
     import_metadata = Column(Boolean, default=True)
 
@@ -147,7 +150,7 @@ class MetadataSettings(Base):
 class GeneratorSettings(Base):
     __tablename__ = 'generator_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    section = Column(String, default="txt2img")
+    pipeline_action = Column(String, default="txt2img")
     generator_name = Column(String, default="stablediffusion")
     quality_effects = Column(String, default="")
     image_preset = Column(String, default="")
@@ -157,14 +160,14 @@ class GeneratorSettings(Base):
     second_negative_prompt = Column(String, default="")
     random_seed = Column(Boolean, default=True)
     model_name = Column(String, default="")
-    model = Column(String, default="")
+    model = Column(Integer, ForeignKey('aimodels.id'), nullable=True)
+    aimodel = relationship("AIModels", back_populates="generator_settings")
     vae = Column(String, default=SD_DEFAULT_VAE_PATH)
     scheduler = Column(String, default=DEFAULT_SCHEDULER)
     variation = Column(Boolean, default=False)
     use_prompt_builder = Column(Boolean, default=False)
     version = Column(String, default="SD 1.5")
     is_preset = Column(Boolean, default=False)
-    input_image = Column(String, nullable=True)
     use_compel = Column(Boolean, default=True)
 
     steps = Column(Integer, default=20)
@@ -181,21 +184,7 @@ class GeneratorSettings(Base):
     negative_original_size = Column(JSON, default={"width": 512, "height": 512})
     negative_target_size = Column(JSON, default={"width": 512, "height": 512})
 
-
-class ControlnetImageSettings(Base):
-    __tablename__ = 'controlnet_image_settings'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    imported_image_base64 = Column(String, nullable=True)
-    link_to_input_image = Column(Boolean, default=True)
-    use_imported_image = Column(Boolean, default=False)
-    use_grid_image = Column(Boolean, default=False)
-    recycle_grid_image = Column(Boolean, default=False)
-    mask_link_input_image = Column(Boolean, default=False)
-    mask_use_imported_image = Column(Boolean, default=False)
-    controlnet = Column(String, default="canny")  # Adjust default value as needed
-    conditioning_scale = Column(Integer, default=100)
-    guidance_scale = Column(Integer, default=750)
-    controlnet_image_base64 = Column(String, nullable=True)
+    lora_scale = Column(Integer, default=100)
 
 
 class LLMGeneratorSettings(Base):
@@ -205,12 +194,12 @@ class LLMGeneratorSettings(Base):
     use_tool_filter = Column(Boolean, default=False)
     seed = Column(Integer, default=0)
     random_seed = Column(Boolean, default=False)
-    model_version = Column(String, default="mistralai/Mistral-7B-Instruct-v0.3")
+    model_version = Column(String, default="w4ffl35/Mistral-7B-Instruct-v0.3-4bit")
     dtype = Column(String, default="4bit")
     use_gpu = Column(Boolean, default=True)
     message_type = Column(String, default="chat")
     override_parameters = Column(Boolean, default=True)
-    current_chatbot = Column(String, default="Chatbot")
+    current_chatbot = Column(Integer, default=0)
     prompt_template = Column(String, default="Mistral 7B Instruct: Default Chatbot")
     batch_size = Column(Integer, default=1)
     use_api = Column(Boolean, default=False)
@@ -243,8 +232,6 @@ class TTSSettings(Base):
     cuda_index = Column(Integer, default=0)
     word_chunks = Column(Integer, default=1)
     sentence_chunks = Column(Integer, default=1)
-    play_queue_buffer_length = Column(Integer, default=1)
-    enable_cpu_offload = Column(Boolean, default=True)
     model = Column(String, default="SpeechT5")
 
 
@@ -255,25 +242,15 @@ class SpeechT5Settings(Base):
     processor_path = Column(String, default="microsoft/speecht5_tts")
     vocoder_path = Column(String, default="microsoft/speecht5_hifigan")
     model_path = Column(String, default="microsoft/speecht5_tts")
-
-
-class BarkSettings(Base):
-    __tablename__ = 'bark_settings'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    language = Column(String, default="English")
-    voice = Column(String, default="v2/en_speaker_6")
-    gender = Column(String, default="Male")
-    fine_temperature = Column(Integer, default=80)
-    coarse_temperature = Column(Integer, default=40)
-    semantic_temperature = Column(Integer, default=80)
-    processor_path = Column(String, default=DEFAULT_BARK_MODEL_PATHS["processor"])
-    model_path = Column(String, default=DEFAULT_BARK_MODEL_PATHS["model"])
+    rate = Column(Integer, default=100)
+    pitch = Column(Integer, default=100)
+    volume = Column(Integer, default=100)
 
 
 class EspeakSettings(Base):
     __tablename__ = 'espeak_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    gender = Column(String, default="male")
+    gender = Column(String, default="Male")
     voice = Column(String, default="male1")
     language = Column(String, default="en-US")
     rate = Column(Integer, default=100)
@@ -298,16 +275,6 @@ class Schedulers(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=True)
     display_name = Column(String, nullable=True)
-
-
-class TranslationSettings(Base):
-    __tablename__ = 'translation_settings'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    language = Column(String, default="English")
-    gender = Column(String, default=Gender.MALE.value)
-    voice = Column(String, default="")
-    translation_model = Column(String, default="")
-    enabled = Column(Boolean, default=False)
 
 
 class BrushSettings(Base):
@@ -345,7 +312,9 @@ class PathSettings(Base):
     image_path = Column(String, default=os.path.expanduser(os.path.join(BASE_PATH, "art/other", "images")))
     llama_index_path = Column(String, default=os.path.expanduser(os.path.join(BASE_PATH, "text/rag", "db")))
     webpages_path = Column(String, default=os.path.expanduser(os.path.join(BASE_PATH, "text/other", "webpages")))
-    stt_model_path = Column(String, default=os.path.expanduser(os.path.join(BASE_PATH, "text/models/tts", "models")))
+    stt_model_path = Column(String, default=os.path.expanduser(os.path.join(BASE_PATH, "text/models/stt", "models")))
+    tts_model_path = Column(String, default=os.path.expanduser(os.path.join(BASE_PATH, "text/models/tts", "models")))
+
 
 class MemorySettings(Base):
     __tablename__ = 'memory_settings'
@@ -391,7 +360,7 @@ class Chatbot(Base):
     sequences = Column(Integer, default=1)
     seed = Column(Integer, default=42)
     random_seed = Column(Boolean, default=True)
-    model_version = Column(String, default="mistralai/Mistral-7B-Instruct-v0.3")
+    model_version = Column(String, default="w4ffl35/Mistral-7B-Instruct-v0.3-4bit")
     model_type = Column(String, default="llm")
     dtype = Column(String, default="4bit")
     return_result = Column(Boolean, default=True)
@@ -436,6 +405,7 @@ class Chatbot(Base):
 
     target_files = relationship("TargetFiles", back_populates="chatbot")
     target_directories = relationship("TargetDirectories", back_populates="chatbot")
+    messages = relationship("Message", back_populates="chatbot")
 
 
 class TargetFiles(Base):
@@ -468,6 +438,7 @@ class AIModels(Base):
     enabled = Column(Boolean, nullable=False)
     model_type = Column(String, nullable=False)
     is_default = Column(Boolean, nullable=False)
+    generator_settings = relationship("GeneratorSettings", back_populates="aimodel")
 
 
 class ShortcutKeys(Base):
@@ -485,7 +456,7 @@ class Lora(Base):
     __tablename__ = 'lora'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
-    scale = Column(Float, nullable=False)
+    scale = Column(Integer, nullable=False)
     enabled = Column(Boolean, nullable=False)
     loaded = Column(Boolean, default=False, nullable=False)
     trigger_word = Column(String, nullable=True)
@@ -529,6 +500,7 @@ class ControlnetModel(Base):
     name = Column(String, nullable=False)
     path = Column(String, nullable=False)
     display_name = Column(String, nullable=False)
+    version = Column(String, nullable=False)
 
 
 class FontSetting(Base):
@@ -564,3 +536,64 @@ class WindowSettings(Base):
     x_pos = Column(Integer, default=0)
     y_pos = Column(Integer, default=0)
     mode_tab_widget_index = Column(Integer, default=0)
+
+
+class Conversation(Base):
+    __tablename__ = 'conversations'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
+    title = Column(String, nullable=True)  # New column added
+    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+
+
+class Message(Base):
+    __tablename__ = 'messages'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    role = Column(String, nullable=False)
+    content = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
+    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+    conversation = relationship("Conversation", back_populates="messages")
+    name = Column(String, nullable=True)  # New column added
+    is_bot = Column(Boolean, default=False)  # New column added
+    chatbot_id = Column(Integer, ForeignKey('chatbots.id'))
+
+    chatbot = relationship("Chatbot", back_populates="messages")
+
+
+class Summary(Base):
+    __tablename__ = 'summaries'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    content = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
+    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+    conversation = relationship("Conversation", back_populates="summaries")
+
+
+Conversation.messages = relationship("Message", order_by=Message.id, back_populates="conversation")
+Conversation.summaries = relationship("Summary", order_by=Summary.id, back_populates="conversation")
+Message.chatbot = relationship("Chatbot", back_populates="messages")
+
+
+class ImageFilter(Base):
+    __tablename__ = 'image_filter_settings'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    display_name = Column(String, nullable=False)
+    auto_apply = Column(Boolean, default=False)
+    filter_class = Column(String, nullable=False)
+
+
+class ImageFilterValue(Base):
+    __tablename__ = 'image_filter_values'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    value = Column(String, nullable=False)
+    value_type = Column(String, nullable=False)
+    min_value = Column(Float, nullable=True)
+    max_value = Column(Float, nullable=True)
+    image_filter_id = Column(Integer, ForeignKey('image_filter_settings.id'))
+    image_filter = relationship("ImageFilter", back_populates="image_filter_values")
+
+ImageFilter.image_filter_values = relationship("ImageFilterValue", order_by=ImageFilterValue.id, back_populates="image_filter")
+ImageFilterValue.image_filter = relationship("ImageFilter", back_populates="image_filter_values")

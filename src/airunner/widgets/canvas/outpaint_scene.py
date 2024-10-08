@@ -1,10 +1,8 @@
 from PySide6.QtWidgets import QFileDialog
 
-from airunner.enums import SignalCode, WorkerType
+from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES
-from airunner.utils.create_worker import create_worker
 from airunner.widgets.canvas.custom_scene import CustomScene
-
 
 
 class OutpaintScene(CustomScene):
@@ -12,7 +10,6 @@ class OutpaintScene(CustomScene):
 
     def __init__(self, canvas_type: str):
         super().__init__(canvas_type)
-        self.mask_generator_worker = create_worker(WorkerType.MaskGeneratorWorker)
 
     def register_signals(self):
         signals = [
@@ -30,24 +27,6 @@ class OutpaintScene(CustomScene):
 
     def on_mask_generator_worker_response_signal(self, message: dict):
         self.create_image(message["mask"])
-
-    def export_image(self):
-        image = self.current_active_image()
-        if image:
-            file_path, _ = QFileDialog.getSaveFileName(
-                None,
-                "Save Image",
-                "",
-                f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
-            )
-            if file_path == "":
-                return
-
-            # If missing file extension, add it
-            if not file_path.endswith(VALID_IMAGE_FILES):
-                file_path = f"{file_path}.png"
-
-            image.save(file_path)
 
     def import_image(self):
         file_path, _ = QFileDialog.getOpenFileName(

@@ -129,7 +129,7 @@
            <item row="0" column="0">
             <widget class="CanvasWidget" name="canvas_widget_2" native="true">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+              <sizepolicy hsizetype="Ignored" vsizetype="MinimumExpanding">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -201,7 +201,7 @@
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="tearOffEnabled">
-     <bool>true</bool>
+     <bool>false</bool>
     </property>
     <property name="title">
      <string>File</string>
@@ -211,11 +211,12 @@
     </property>
     <addaction name="actionNew"/>
     <addaction name="separator"/>
+    <addaction name="actionImport"/>
     <addaction name="actionExport_3"/>
     <addaction name="separator"/>
-    <addaction name="actionQuit"/>
-    <addaction name="separator"/>
     <addaction name="actionReset_Settings_2"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -255,8 +256,6 @@
      <string>Canvas</string>
     </property>
     <addaction name="separator"/>
-    <addaction name="actionImport"/>
-    <addaction name="actionExport"/>
     <addaction name="separator"/>
     <addaction name="actionToggle_Active_Grid_Area"/>
     <addaction name="actionToggle_Selection"/>
@@ -280,20 +279,17 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionRun_setup_wizard_2"/>
-    <addaction name="separator"/>
-    <addaction name="actionModel_Manager_3"/>
-    <addaction name="separator"/>
-    <addaction name="actionStats"/>
-    <addaction name="separator"/>
     <addaction name="actionSafety_Checker"/>
+    <addaction name="actionToggle_Stable_Diffusion"/>
+    <addaction name="actionToggle_Controlnet"/>
     <addaction name="separator"/>
     <addaction name="actionToggle_LLM"/>
     <addaction name="actionToggle_Text_to_Speech"/>
     <addaction name="actionToggle_Speech_to_Text"/>
-    <addaction name="actionToggle_Stable_Diffusion"/>
-    <addaction name="actionToggle_Controlnet"/>
     <addaction name="separator"/>
+    <addaction name="actionStats"/>
+    <addaction name="separator"/>
+    <addaction name="actionRun_setup_wizard_2"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -307,6 +303,9 @@
   <widget class="QToolBar" name="toolBar">
    <property name="windowTitle">
     <string>toolBar</string>
+   </property>
+   <property name="toolTip">
+    <string>Export Image</string>
    </property>
    <property name="movable">
     <bool>true</bool>
@@ -335,6 +334,7 @@
    <addaction name="actionToggle_Eraser"/>
    <addaction name="actionToggle_Grid"/>
    <addaction name="actionRecenter"/>
+   <addaction name="actionMask_toggle"/>
   </widget>
   <widget class="QToolBar" name="model_toolbar">
    <property name="windowTitle">
@@ -366,12 +366,12 @@
    </attribute>
    <addaction name="actionSettings"/>
    <addaction name="separator"/>
-   <addaction name="actionToggle_Stable_Diffusion"/>
-   <addaction name="actionToggle_Controlnet"/>
-   <addaction name="separator"/>
-   <addaction name="actionToggle_Text_to_Speech"/>
    <addaction name="actionToggle_Speech_to_Text"/>
+   <addaction name="actionToggle_Text_to_Speech"/>
    <addaction name="actionToggle_LLM"/>
+   <addaction name="separator"/>
+   <addaction name="actionToggle_Controlnet"/>
+   <addaction name="actionToggle_Stable_Diffusion"/>
   </widget>
   <action name="actionNew">
    <property name="icon">
@@ -385,6 +385,9 @@
    </property>
   </action>
   <action name="actionImport">
+   <property name="icon">
+    <iconset theme="document-open"/>
+   </property>
    <property name="text">
     <string>Import image</string>
    </property>
@@ -1175,7 +1178,7 @@
     <iconset theme="document-save"/>
    </property>
    <property name="text">
-    <string>Export</string>
+    <string>Export Image</string>
    </property>
   </action>
   <action name="actionToggle_Active_Grid_Area">
@@ -1245,6 +1248,24 @@
    </property>
    <property name="text">
     <string>Toggle Eraser</string>
+   </property>
+  </action>
+  <action name="actionMask_toggle">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../resources_light.qrc">
+     <normaloff>:/icons/light/layer-icon.svg</normaloff>:/icons/light/layer-icon.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Mask</string>
+   </property>
+   <property name="toolTip">
+    <string>Toggle Mask</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
    </property>
   </action>
  </widget>
@@ -1993,6 +2014,38 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionExport_3</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_export_image_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>414</x>
+     <y>367</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionMask_toggle</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_mask_layer(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>414</x>
+     <y>367</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -2089,5 +2142,6 @@
   <slot>action_stats_triggered()</slot>
   <slot>action_invert_image()</slot>
   <slot>action_film_image()</slot>
+  <slot>action_toggle_mask_layer(bool)</slot>
  </slots>
 </ui>

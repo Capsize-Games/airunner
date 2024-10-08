@@ -12,8 +12,8 @@ SKIP_RELOAD_CONSTS = (
 
 
 class LatentsWorker(Worker):
-    def __init__(self, prefix="LatentsWorker"):
-        super().__init__(prefix=prefix)
+    def __init__(self):
+        super().__init__()
         self.register(SignalCode.HANDLE_LATENTS_SIGNAL, self.on_handle_latents_signal)
 
     def on_handle_latents_signal(self, data: dict):

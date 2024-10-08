@@ -1,9 +1,12 @@
+import queue
+import threading
 import time
 
 import sounddevice as sd
 import numpy as np
-from PySide6.QtCore import QThread, Slot
-from airunner.enums import SignalCode, ModelStatus
+from PySide6.QtCore import QThread
+
+from airunner.enums import SignalCode
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
@@ -14,27 +17,39 @@ class AudioCaptureWorker(Worker):
     It will capture audio when it detects voice activity and then send the audio to the audio_processor_worker.
     """
 
-    def __init__(self, prefix):
-        super().__init__(prefix)
+    def __init__(self):
+        super().__init__(signals=(
+            (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal),
+            (SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal),
+            (SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal),
+        ))
         self.listening: bool = False
         self.voice_input_start_time: time.time = None
         self.chunk_duration = self.stt_settings.chunk_duration  # duration of chunks in milliseconds
         self.fs = self.stt_settings.fs
-        self.register(
-            SignalCode.STT_STOP_CAPTURE_SIGNAL,
-            self.stop_listening
-        )
-        self.register(
-            SignalCode.STT_START_CAPTURE_SIGNAL,
-            self.start_listening
-        )
         self.stream = None
+        self.running = False
+        self._audio_process_queue = queue.Queue()
+        self._capture_thread = None
+
+    def on_AudioCaptureWorker_response_signal(self, message: dict):
+        item: np.ndarray = message["item"]
+        self.logger.debug("Heard signal")
+        self.add_to_queue(item)
+
+    def on_stt_start_capture_signal(self):
+        if self._capture_thread is not None and self._capture_thread.is_alive():
+            return
+        self._capture_thread = threading.Thread(target=self._start_listening)
+        self._capture_thread.start()
+
+    def on_stt_stop_capture_signal(self):
+        if self._capture_thread is not None and self._capture_thread.is_alive():
+            self._stop_listening()
 
     def start(self):
         self.logger.debug("Starting audio capture worker")
-        running = True
-        if self.application_settings.stt_enabled:
-            self.start_listening()
+        self.running = True
         chunk_duration = self.stt_settings.chunk_duration
         fs = self.stt_settings.fs
         volume_input_threshold = self.stt_settings.volume_input_threshold
@@ -42,8 +57,8 @@ class AudioCaptureWorker(Worker):
         voice_input_start_time = None
         recording = []
         is_receiving_input = False
-        while running:
-            while self.listening and running and self.stream:
+        while self.running:
+            while self.listening and self.running and self.stream:
                 try:
                     chunk, overflowed = self.stream.read(int(chunk_duration * fs))
                 except sd.PortAudioError as e:
@@ -70,13 +85,10 @@ class AudioCaptureWorker(Worker):
                     chunk_bytes = np.int16(chunk * 32767).tobytes()  # convert to bytes
                     recording.append(chunk_bytes)
 
-            while not self.listening and running:
+            while not self.listening and self.running:
                 QThread.msleep(SLEEP_TIME_IN_MS)
 
-    def handle_message(self, message):
-        pass
-
-    def start_listening(self):
+    def _start_listening(self):
         self.logger.debug("Start listening")
         self.listening = True
         fs = self.stt_settings.fs
@@ -89,15 +101,16 @@ class AudioCaptureWorker(Worker):
         except Exception as e:
             self.logger.error(e)
 
-    def stop_listening(self):
+    def _stop_listening(self):
         self.logger.debug("Stop listening")
         self.listening = False
+        self.running = False
         try:
             self.stream.stop()
         except Exception as e:
             self.logger.error(e)
-
         try:
             self.stream.close()
         except Exception as e:
             self.logger.error(e)
+        self._capture_thread.join()
