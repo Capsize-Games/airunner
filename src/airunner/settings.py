@@ -49,18 +49,6 @@ DEFAULT_IMAGE_SYSTEM_PROMPT = "\n".join([
         "You should also describe the lighting (well-lit, dim, "
         "dark etc), the color, the composition and the mood."
     ),
-    # (
-    #     "When returning prompts you must choose either "
-    #     "\"art\" or \"photo\" and you absolutely must include "
-    #     "the following JSON format:\n"
-    #     "```json\n{"
-    #     "\"prompt\": \"your prompt here\", "
-    #     "\"type\": \"your type here\""
-    #     "}\n```\n"
-    #     "You must **NEVER** deviate from that format. You must "
-    #     "always return the prompt and type as JSON format. "
-    #     "This is **MANDATORY**."
-    # )
 ])
 DEFAULT_IMAGE_LLM_GUARDRAILS = (
     "Avoid generating images that are illegal, "
