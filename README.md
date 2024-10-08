@@ -147,6 +147,38 @@ cd airunner/src/airunner
 
 ---
 
+## Models
+
+AI Runner installs all of the models required to run a chatbot with text-to-speech and speech-to-text capabilities,
+as well as the core models required for Stable Diffusion. However, you must supply your own art generator models.
+
+You can download models from Huggingface.co or civitai.com.
+
+The supported Stable Diffusion models are:
+
+- SD 1.5
+- SDXL 1.0
+- SDXL Turbo
+
+Models must be placed in their respective directories in the `airunner` directory.
+    
+```bash
+~/.local/share/airunner
+├── art
+│   ├── models
+│   │   ├── SD 1.5
+│   │   │   ├── lora
+│   │   │   └── embeddings
+│   │   ├── SDXL 1.0
+│   │   │   ├── lora
+│   │   │   └── embeddings
+│   │   └── SDXL Turbo
+│   │       ├── lora
+│   │       └── embeddings
+```
+
+---
+
 ### Privacy and Security
 
 Although AI Runner v3.0 is built with Huggingface libraries, we have taken
