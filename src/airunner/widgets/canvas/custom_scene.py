@@ -353,6 +353,8 @@ class CustomScene(
         width = existing_image_copy.width
         height = existing_image_copy.height
 
+        mask_image = self.drawing_pad_mask
+
         pivot_point = self.image_pivot_point
         root_point = QPoint(0, 0)
         current_image_position = QPoint(0, 0)
@@ -385,8 +387,13 @@ class CustomScene(
         new_image_a.paste(outpainted_image, (int(outpaint_box_rect.x()), int(outpaint_box_rect.y())))
         new_image_b.paste(existing_image_copy, (current_image_position.x(), current_image_position.y()))
 
-        new_image = Image.alpha_composite(new_image, new_image_b)
+        # Convert mask to binary mask
+        mask = mask_image.convert("L").point(lambda p: p > 128 and 255)
+        inverted_mask = Image.eval(mask, lambda p: 255 - p)
+        new_image_b = Image.composite(new_image_b, Image.new("RGBA", new_image_b.size), inverted_mask)
+
         new_image = Image.alpha_composite(new_image, new_image_a)
+        new_image = Image.alpha_composite(new_image, new_image_b)
 
         return new_image, image_root_point, image_pivot_point
 
