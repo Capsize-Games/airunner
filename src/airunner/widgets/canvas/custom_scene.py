@@ -371,6 +371,10 @@ class CustomScene(
         view = self.views()[0]
         current_viewport_rect = view.mapToScene(view.viewport().rect()).boundingRect()
 
+        # End the painter if it is active
+        if self.painter and self.painter.isActive():
+            self.painter.end()
+
         # Update the pixmap item, image+painter and scene
         try:
             item_scene = self.item.scene()
@@ -378,13 +382,9 @@ class CustomScene(
             item_scene = None
         if item_scene is not None:
             item_scene.removeItem(self.item)
-        if self.painter and self.painter.isActive():
-            self.painter.end()
         self.initialize_image(image)
         # Restore the viewport position
-        view.setSceneRect(current_viewport_rect)
 
-        # Restore the viewport position
         view.setSceneRect(current_viewport_rect)
 
     def history_set_image(self, data: dict):
@@ -623,16 +623,14 @@ class CustomScene(
                 image,
                 action=GeneratorSection.OUTPAINT.value
             )
-        self._set_current_active_image(image)
+        # self._set_current_active_image(image)
         base64_image = convert_image_to_base64(image)
         self._update_current_settings("image", base64_image)
         q_image = ImageQt.ImageQt(image)
         self.item.setPixmap(QPixmap.fromImage(q_image))
         self.item.setZValue(0)
         self.update()
-
-        # Add the mask to the scene
-        self.set_mask()
+        self.initialize_image(image)
 
     def _handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None) -> [Image, QPoint, QPoint]:
         if self.current_active_image is None:
@@ -690,7 +688,7 @@ class CustomScene(
 
     def _set_current_active_image(self, image: Image):
         self.logger.debug("Setting current active image")
-        self.refresh_image(image)
+        self.initialize_image(image)
 
     def _rotate_90_clockwise(self):
         self.rotate_image(-90)
