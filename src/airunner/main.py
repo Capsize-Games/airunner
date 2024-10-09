@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 ----------------------------------------------------------------
 Import order is crucial for AI Runner to work as expected.
