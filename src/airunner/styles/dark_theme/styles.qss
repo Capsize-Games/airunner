@@ -730,3 +730,7 @@ QMenu, QToolBar, QMenuBar {
 QMenu {
     padding: 10px;
 }
+
+SwitchWidget:enabled[checked="true"] {
+    background-color: rgba(0, 132, 185, 100);
+}
