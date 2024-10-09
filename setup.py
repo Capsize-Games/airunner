@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.0.13",
+    version="3.0.14",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -68,8 +68,18 @@ setup(
         "EbookLib==0.18",
         "html2text==2024.2.26"
     ],
-    dependency_links=[
-    ],
+    package_data={
+        "airunner": [
+            "cursors/*",
+            "filters/*",
+            "icons/*",
+            "images/*",
+            "styles/*",
+            "widgets/**/*.ui",
+            "windows/**/*.ui",
+        ],
+    },
+    include_package_data=True,
     entry_points={
         'console_scripts': [
             'airunner=airunner.main:main',
