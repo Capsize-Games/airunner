@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.0.15",
+    version="3.0.16",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -70,6 +70,7 @@ setup(
     ],
     package_data={
         "airunner": [
+            "alembic/*",
             "cursors/*",
             "filters/*",
             "icons/*",
