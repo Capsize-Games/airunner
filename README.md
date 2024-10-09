@@ -12,17 +12,20 @@
 
 ---
 
-# AI RUNNER 
+# AI Runner 
 
----
 
-## Run AI models on your own hardware 
+AI Runner is an interface which allows you to run open-source large language models (LLM) and AI image generators (Stable Diffusion) on your own hardware.
 
-### Stable Diffusion
+It is designed to be easy to use, with a simple and intuitive interface that allows you to run AI models without the need for a web server or cloud service.
+
+It has been optimized for speed and efficiency, allowing you to generate images and have conversations with chatbots in real-time.
+
+## Stable Diffusion
 
 ![img.png](img.png)
 
-### Customizable Chatbots with Moods and Personalities
+## Customizable Chatbots with Moods and Personalities
 
 ![img_1.png](img_1.png)
 
@@ -33,36 +36,36 @@
 AI Runner is an AI interface which allows you to run open-source 
 large language models (LLM) and AI image generators (Stable Diffusion) on your own hardware.
 
-| Feature                                | Description                                              |
-|----------------------------------------|----------------------------------------------------------|
-| 🗣️ **LLMs and communication**         |
-| ✅ Voice-based chatbot conversations    | Have conversations with a chatbot using your voice       |
-| ✅ Text-to-speech                       | Convert text to spoken audio                             |
-| ✅ Speech-to-text                       | Convert spoken audio to text                             |
-| ✅ Customizable chatbots with LLMs      | Generate text using large language models                |
-| ✅ RAG on local documents and websites  | Interact with your local documents using an LLM          |
-| 🎨 **Image Generation**                |
-| ✅ Stable Diffusion (all versions)      | Generate images using Stable Diffusion                   |
-| ✅ Drawing tools                        | Turn sketches into art                                   |
-| ✅ Text-to-Image                        | Generate images from textual descriptions                |
-| ✅ Image-to-Image                       | Generate images based on input images                    |
-| 🖼️ **Image Manipulation**             |
-| ✅ Inpaint and Outpaint                 | Modify parts of an image while maintaining context       |
-| ✅ Controlnet                           | Control image generation with additional input           |
-| ✅ LoRA                                 | Efficiently fine-tune models with LoRA                   |
-| ✅ Textual Embeddings                   | Use textual embeddings for image generation control      |
-| ✅ Image Filters                        | Blur, film grain, pixel art and more                     |
-| 🔧 **Utility**                         |
-| ✅ Run offline, locally                 | Run on your own hardware without internet                |
-| ✅ Fast generation                      | Generate images in ~2 seconds (RTX 2080s)                |
-| ✅ Run multiple models at once          | Utilize multiple models simultaneously                   |
-| ✅ Dark mode                            | Comfortable viewing experience in low-light environments |
-| ✅ Infinite scrolling canvas            | Seamlessly scroll through generated images               |
-| ✅ NSFW filter toggle                   | Help control the visibility of NSFW content              |
-| ✅ NSFW guardrails toggle               | Help prevent generation of LLM harmful content           |
-| ✅ Fully customizable                   | Easily adjust all parameters                             |
-| ✅ Fast load time, responsive interface | Enjoy a smooth and responsive user experience            |
-| ✅ Pure python                          | No reliance on a webserver, pure python implementation   |
+| Feature                              | Description                                              |
+|--------------------------------------|----------------------------------------------------------|
+| 🗣️ **LLMs and communication**       |
+| Voice-based chatbot conversations    | Have conversations with a chatbot using your voice       |
+| Text-to-speech                       | Convert text to spoken audio                             |
+| Speech-to-text                       | Convert spoken audio to text                             |
+| Customizable chatbots with LLMs      | Generate text using large language models                |
+| RAG on local documents and websites  | Interact with your local documents using an LLM          |
+| 🎨 **Image Generation**              |
+| Stable Diffusion (all versions)      | Generate images using Stable Diffusion                   |
+| Drawing tools                        | Turn sketches into art                                   |
+| Text-to-Image                        | Generate images from textual descriptions                |
+| Image-to-Image                       | Generate images based on input images                    |
+| 🖼️ **Image Manipulation**           |
+| Inpaint and Outpaint                 | Modify parts of an image while maintaining context       |
+| Controlnet                           | Control image generation with additional input           |
+| LoRA                                 | Efficiently fine-tune models with LoRA                   |
+| Textual Embeddings                   | Use textual embeddings for image generation control      |
+| Image Filters                        | Blur, film grain, pixel art and more                     |
+| 🔧 **Utility**                       |
+| Run offline, locally                 | Run on your own hardware without internet                |
+| Fast generation                      | Generate images in ~2 seconds (RTX 2080s)                |
+| Run multiple models at once          | Utilize multiple models simultaneously                   |
+| Dark mode                            | Comfortable viewing experience in low-light environments |
+| Infinite scrolling canvas            | Seamlessly scroll through generated images               |
+| NSFW filter toggle                   | Help control the visibility of NSFW content              |
+| NSFW guardrails toggle               | Help prevent generation of LLM harmful content           |
+| Fully customizable                   | Easily adjust all parameters                             |
+| Fast load time, responsive interface | Enjoy a smooth and responsive user experience            |
+| Pure python                          | No reliance on a webserver, pure python implementation   |
 
 ---
 
@@ -88,7 +91,9 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 ---
 
-## 🔧 Installation
+## 🔧 Running AI Runner from source
+
+Running AI Runner from source is recommended for developers and users who want to test the latest features.
 
 ### Linux
 
@@ -120,30 +125,39 @@ python3 -m venv airunner
 source airunner/bin/activate
 ```
 
-Install AI Runner
+Install the required packages
 
 ```bash
 pip install -e .
 ```
 
----
-
-## 🚀 Running AI Runner
-
-### Linux
-
-Activate the virtual environment
-
-```bash
-source airunner/bin/activate
-```
-
 Run AI Runner
 
 ```bash
-cd airunner/src/airunner
-./main.py
+airunner
 ```
+
+---
+
+## Using AI Runner as a Python library
+
+AI Runner can be used as a Python library in order to extend its functionality.
+
+```bash
+pip install airunner
+```
+
+Now you can import AI Runner into your Python scripts.
+
+```python
+from airunner import airunner
+```
+
+---
+
+## Packaging AI Runner
+
+[Detailed packaging instructions can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
 ---
 
@@ -179,7 +193,7 @@ Models must be placed in their respective directories in the `airunner` director
 
 ---
 
-### Privacy and Security
+## Privacy and Security
 
 Although AI Runner v3.0 is built with Huggingface libraries, we have taken
 care to strip the application of any telemetry or tracking features.
@@ -211,9 +225,7 @@ For more information see `src/security/restrict_os_access.py`.
 
 ### Huggingface Hub
 
-The Huggingface Hub is installed so that Transformers, Diffusers and other Huggingface libraries
-will continue to function as expected, however it has been neutered to prevent it from accessing 
-the internet.
+**_Huggingface Hub  contains telemetry and tracking features that have been completely disabled in AI Runner._**
 
 The security measures taken for this library are as follows
 
@@ -223,3 +235,7 @@ The security measures taken for this library are as follows
 - All telemetry disabled
 
 See [Facehuggershield](https://github.com/capsize-games/facehuggershield) for more information.
+
+---
+
+sudo groupadd docker
