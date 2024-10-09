@@ -1,7 +1,6 @@
 import os
 import re
 import subprocess
-import time
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
@@ -9,7 +8,6 @@ from PySide6.QtCore import QObject, Signal
 
 def build_ui(path):
     """Build the UI for the application."""
-    # venv_python = get_venv_python_executable()
     # recursively iterate over directories in path
     print("Building UI at path", path)
     ui_files = Path(__file__).parent.parent.joinpath(path).glob("**/*.ui")
