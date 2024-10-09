@@ -7,7 +7,7 @@ from transformers.models.whisper.modeling_whisper import WhisperForConditionalGe
 from transformers.models.whisper.processing_whisper import WhisperProcessor
 from transformers.models.whisper.feature_extraction_whisper import WhisperFeatureExtractor
 
-from airunner.aihandler.base_handler import BaseHandler
+from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMChatRole
 from airunner.exceptions import NaNException
 from airunner.settings import DEFAULT_STT_HF_PATH

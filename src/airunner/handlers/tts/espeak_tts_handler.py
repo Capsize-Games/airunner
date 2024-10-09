@@ -1,5 +1,5 @@
 import pyttsx3
-from airunner.aihandler.tts.tts_handler import TTSHandler
+from airunner.handlers.tts.tts_handler import TTSHandler
 from airunner.enums import ModelType, ModelStatus, Gender
 
 
