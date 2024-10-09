@@ -4,7 +4,7 @@ import nltk
 from PySide6.QtCore import QObject, QThread, Slot, Signal
 from sqlalchemy import func
 
-from airunner.aihandler.models.settings_models import AIModels, ControlnetModel
+from airunner.handlers.models.settings_models import AIModels, ControlnetModel
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA

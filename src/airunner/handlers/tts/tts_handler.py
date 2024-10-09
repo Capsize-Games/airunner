@@ -1,4 +1,4 @@
-from airunner.aihandler.base_handler import BaseHandler
+from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import ModelType
 
 

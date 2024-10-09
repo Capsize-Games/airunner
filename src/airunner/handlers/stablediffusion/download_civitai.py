@@ -2,9 +2,9 @@ import os
 import requests
 from json.decoder import JSONDecodeError
 from PySide6.QtCore import QThread
-from airunner.aihandler.logger import Logger
-from airunner.aihandler.stablediffusion.civit_ai_download_worker import CivitAIDownloadWorker
-from airunner.aihandler.stablediffusion.download_worker import DownloadWorker
+from airunner.handlers.logger import Logger
+from airunner.handlers.stablediffusion.civit_ai_download_worker import CivitAIDownloadWorker
+from airunner.handlers.stablediffusion.download_worker import DownloadWorker
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin

@@ -6,7 +6,7 @@ from PIL import Image
 from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot
 from PySide6.QtWidgets import QApplication
 
-from airunner.aihandler.models.settings_models import ShortcutKeys
+from airunner.handlers.models.settings_models import ShortcutKeys
 from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion, \
     ModelStatus, ModelType
 from airunner.mediator_mixin import MediatorMixin

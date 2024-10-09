@@ -2,7 +2,7 @@ import torch
 from PySide6.QtCore import QObject
 from airunner.enums import HandlerType, SignalCode, ModelType, ModelStatus, ModelAction
 from airunner.mediator_mixin import MediatorMixin
-from airunner.aihandler.logger import Logger
+from airunner.handlers.logger import Logger
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.windows.main.settings_mixin import SettingsMixin
 

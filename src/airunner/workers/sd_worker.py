@@ -161,7 +161,7 @@ class SDWorker(Worker):
             self.sd.sd_load_tokenizer(data)
 
     def start_worker_thread(self):
-        from airunner.aihandler.stablediffusion.sd_handler import SDHandler
+        from airunner.handlers.stablediffusion.sd_handler import SDHandler
         self.sd = SDHandler()
         if self.application_settings.sd_enabled:
             self.sd.load()
