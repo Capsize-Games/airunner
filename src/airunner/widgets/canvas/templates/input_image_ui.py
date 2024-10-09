@@ -15,12 +15,15 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QGraphicsView, QGridLayout,
-    QHBoxLayout, QPushButton, QScrollArea, QSizePolicy,
-    QSpacerItem, QWidget)
+from PySide6.QtWidgets import (QApplication, QGraphicsView, QGridLayout, QHBoxLayout,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QWidget)
 
 from airunner.widgets.controlnet.controlnet_settings_widget import ControlnetSettingsWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
+from airunner.widgets.switch_widget.switch_widget import SwitchWidget
+import airunner.resources_dark_rc
+import airunner.resources_light_rc
 
 class Ui_input_image(object):
     def setupUi(self, input_image):
@@ -105,38 +108,53 @@ class Ui_input_image(object):
         self.horizontalLayout.setSpacing(10)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(10, -1, 10, 10)
-        self.use_grid_image_as_input_checkbox = QCheckBox(input_image)
-        self.use_grid_image_as_input_checkbox.setObjectName(u"use_grid_image_as_input_checkbox")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.use_grid_image_as_input_checkbox.sizePolicy().hasHeightForWidth())
-        self.use_grid_image_as_input_checkbox.setSizePolicy(sizePolicy2)
+        self.link_to_grid_image_button = QPushButton(input_image)
+        self.link_to_grid_image_button.setObjectName(u"link_to_grid_image_button")
+        icon = QIcon(QIcon.fromTheme(u"insert-link"))
+        self.link_to_grid_image_button.setIcon(icon)
+        self.link_to_grid_image_button.setCheckable(True)
 
-        self.horizontalLayout.addWidget(self.use_grid_image_as_input_checkbox)
+        self.horizontalLayout.addWidget(self.link_to_grid_image_button)
 
-        self.enable_checkbox = QCheckBox(input_image)
-        self.enable_checkbox.setObjectName(u"enable_checkbox")
-        sizePolicy2.setHeightForWidth(self.enable_checkbox.sizePolicy().hasHeightForWidth())
-        self.enable_checkbox.setSizePolicy(sizePolicy2)
+        self.lock_input_image_button = QPushButton(input_image)
+        self.lock_input_image_button.setObjectName(u"lock_input_image_button")
+        self.lock_input_image_button.setMinimumSize(QSize(24, 24))
+        self.lock_input_image_button.setMaximumSize(QSize(24, 24))
+        icon1 = QIcon(QIcon.fromTheme(u"emblem-readonly"))
+        self.lock_input_image_button.setIcon(icon1)
+        self.lock_input_image_button.setCheckable(True)
 
-        self.horizontalLayout.addWidget(self.enable_checkbox)
+        self.horizontalLayout.addWidget(self.lock_input_image_button)
+
+        self.pushButton_3 = QPushButton(input_image)
+        self.pushButton_3.setObjectName(u"pushButton_3")
+        icon2 = QIcon(QIcon.fromTheme(u"view-refresh"))
+        self.pushButton_3.setIcon(icon2)
+
+        self.horizontalLayout.addWidget(self.pushButton_3)
 
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
+        self.EnableSwitch = SwitchWidget(input_image)
+        self.EnableSwitch.setObjectName(u"EnableSwitch")
+        self.EnableSwitch.setMinimumSize(QSize(45, 20))
+        self.EnableSwitch.setMaximumSize(QSize(45, 20))
+
+        self.horizontalLayout.addWidget(self.EnableSwitch)
+
         self.import_button = QPushButton(input_image)
         self.import_button.setObjectName(u"import_button")
-        icon = QIcon(QIcon.fromTheme(u"folder"))
-        self.import_button.setIcon(icon)
+        icon3 = QIcon(QIcon.fromTheme(u"folder"))
+        self.import_button.setIcon(icon3)
 
         self.horizontalLayout.addWidget(self.import_button)
 
         self.delete_button = QPushButton(input_image)
         self.delete_button.setObjectName(u"delete_button")
-        icon1 = QIcon(QIcon.fromTheme(u"user-trash"))
-        self.delete_button.setIcon(icon1)
+        icon4 = QIcon(QIcon.fromTheme(u"user-trash"))
+        self.delete_button.setIcon(icon4)
 
         self.horizontalLayout.addWidget(self.delete_button)
 
@@ -145,10 +163,11 @@ class Ui_input_image(object):
 
 
         self.retranslateUi(input_image)
-        self.use_grid_image_as_input_checkbox.toggled.connect(input_image.use_grid_image_as_input_toggled)
-        self.enable_checkbox.toggled.connect(input_image.enabled_toggled)
         self.import_button.clicked.connect(input_image.import_clicked)
         self.delete_button.clicked.connect(input_image.delete_clicked)
+        self.link_to_grid_image_button.toggled.connect(input_image.use_grid_image_as_input_toggled)
+        self.lock_input_image_button.toggled.connect(input_image.lock_input_image)
+        self.pushButton_3.clicked.connect(input_image.refresh_input_image_from_grid)
 
         QMetaObject.connectSlotsByName(input_image)
     # setupUi
@@ -160,13 +179,17 @@ class Ui_input_image(object):
         self.mask_blur_slider_widget.setProperty("label_text", QCoreApplication.translate("input_image", u"Mask Blur", None))
         self.mask_blur_slider_widget.setProperty("settings_property", QCoreApplication.translate("input_image", u"outpaint_settings.mask_blur", None))
 #if QT_CONFIG(tooltip)
-        self.use_grid_image_as_input_checkbox.setToolTip(QCoreApplication.translate("input_image", u"Use grid image as input", None))
+        self.link_to_grid_image_button.setToolTip(QCoreApplication.translate("input_image", u"Link to Grid image", None))
 #endif // QT_CONFIG(tooltip)
-        self.use_grid_image_as_input_checkbox.setText(QCoreApplication.translate("input_image", u"Grid Image", None))
+        self.link_to_grid_image_button.setText("")
 #if QT_CONFIG(tooltip)
-        self.enable_checkbox.setToolTip(QCoreApplication.translate("input_image", u"Enable", None))
+        self.lock_input_image_button.setToolTip(QCoreApplication.translate("input_image", u"Lock current input image", None))
 #endif // QT_CONFIG(tooltip)
-        self.enable_checkbox.setText(QCoreApplication.translate("input_image", u"Enable ", None))
+        self.lock_input_image_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.pushButton_3.setToolTip(QCoreApplication.translate("input_image", u"Refresh from grid image", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_3.setText("")
 #if QT_CONFIG(tooltip)
         self.import_button.setToolTip(QCoreApplication.translate("input_image", u"Import", None))
 #endif // QT_CONFIG(tooltip)

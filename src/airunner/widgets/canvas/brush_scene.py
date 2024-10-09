@@ -217,6 +217,7 @@ class BrushScene(CustomScene):
                 self.emit_signal(SignalCode.GENERATE_MASK)
         session.commit()
         session.close()
+        self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
         if self.drawing_pad_settings.mask_layer_enabled:
             self.initialize_image()
             self.emit_signal(SignalCode.MASK_UPDATED)
