@@ -10,7 +10,6 @@ class ESpeakPreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.initialize_form()
 
     def initialize_form(self):
         elements = [
@@ -22,9 +21,9 @@ class ESpeakPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(True)
 
-        language = self.settings["tts_settings"]["espeak"]["language"]
-        gender = self.settings["tts_settings"]["espeak"]["gender"]
-        voice = self.settings["tts_settings"]["espeak"]["voice"]
+        language = self.espeak_settings.language
+        gender = self.espeak_settings.gender
+        voice = self.espeak_settings.voice
         iso_codes = [country.alpha_2 for country in pycountry.countries]
 
         engine = pyttsx3.init()
@@ -44,22 +43,27 @@ class ESpeakPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(False)
 
+        self.ui.rate.init(slider_callback=self.callback, current_value=self.espeak_settings.rate)
+        self.ui.volume.init(slider_callback=self.callback, current_value=self.espeak_settings.volume)
+        self.ui.pitch.init(slider_callback=self.callback, current_value=self.espeak_settings.pitch)
+
+    def callback(self, attr_name, value, widget=None):
+        self.update_espeak_settings(attr_name, value)
+
     def language_changed(self, text):
-        settings = self.settings
-        settings["tts_settings"]["espeak"]["language"] = text
-        settings["tts_settings"]["espeak"]["gender"] = self.ui.gender_combobox.currentText()
-        settings["tts_settings"]["espeak"]["voice"] = self.ui.voice_combobox.currentText()
-        self.settings = settings
+        self.update_espeak_settings("language", text)
+        self.update_espeak_settings("gender", self.ui.gender_combobox.currentText())
+        self.update_espeak_settings("voice", self.ui.voice_combobox.currentText())
+
+        self.update_espeak_settings("language", text)
+        self.update_espeak_settings("gender", self.ui.gender_combobox.currentText())
+        self.update_espeak_settings("voice", self.ui.voice_combobox.currentText())
 
     def voice_changed(self, text):
-        settings = self.settings
-        settings["tts_settings"]["espeak"]["voice"] = text
-        self.settings = settings
+        self.update_espeak_settings("voice", text)
 
     def gender_changed(self, text):
-        settings = self.settings
-        settings["tts_settings"]["espeak"]["gender"] = text
+        self.update_espeak_settings("gender", text)
         self.ui.voice_combobox.clear()
         self.ui.voice_combobox.addItems(ESPEAK_SETTINGS["voices"][text.lower()])
-        settings["tts_settings"]["espeak"]["voice"] = self.ui.voice_combobox.currentText()
-        self.settings = settings
+        self.update_espeak_settings("voice", self.ui.voice_combobox.currentText())

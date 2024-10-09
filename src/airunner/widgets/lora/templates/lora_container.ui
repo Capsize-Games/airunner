@@ -7,43 +7,39 @@
     <x>0</x>
     <y>0</y>
     <width>583</width>
-    <height>775</height>
+    <height>831</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" colspan="2">
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QLineEdit" name="lineEdit">
-       <property name="placeholderText">
-        <string>Search</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="toggleAllLora">
-       <property name="font">
-        <font>
-         <pointsize>9</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Toggle all</string>
-       </property>
-       <property name="checked">
-        <bool>false</bool>
-       </property>
-       <property name="tristate">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="horizontalSpacing">
+    <number>0</number>
+   </property>
+   <property name="verticalSpacing">
+    <number>10</number>
+   </property>
+   <item row="8" column="0">
+    <widget class="QPushButton" name="pushButton">
+     <property name="text">
+      <string>Scan for LoRA</string>
+     </property>
+    </widget>
    </item>
-   <item row="1" column="0">
+   <item row="7" column="0">
     <widget class="QScrollArea" name="lora_scroll_area">
      <property name="font">
       <font>
@@ -51,10 +47,10 @@
       </font>
      </property>
      <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
+      <enum>QFrame::Shape::NoFrame</enum>
      </property>
      <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
+      <enum>QFrame::Shadow::Plain</enum>
      </property>
      <property name="widgetResizable">
       <bool>true</bool>
@@ -64,24 +60,227 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>559</width>
-        <height>693</height>
+        <width>583</width>
+        <height>665</height>
        </rect>
       </property>
-      <layout class="QGridLayout" name="gridLayout_2"/>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="horizontalSpacing">
+        <number>0</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
+       </property>
+      </layout>
      </widget>
     </widget>
    </item>
-   <item row="2" column="0" colspan="2">
-    <widget class="QPushButton" name="pushButton">
-     <property name="text">
-      <string>Scan for LoRA</string>
+   <item row="2" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="spacing">
+      <number>10</number>
      </property>
-    </widget>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>10</number>
+     </property>
+     <property name="bottomMargin">
+      <number>10</number>
+     </property>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="label">
+         <property name="font">
+          <font>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Lora</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="LoadingWidget" name="loading_icon" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="apply_lora_button">
+         <property name="text">
+          <string>Apply Changes</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="SliderWidget" name="lora_scale_slider" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="slider_minimum" stdset="0">
+        <number>0</number>
+       </property>
+       <property name="slider_maximum" stdset="0">
+        <number>100</number>
+       </property>
+       <property name="spinbox_minimum" stdset="0">
+        <double>0.000000000000000</double>
+       </property>
+       <property name="spinbox_maximum" stdset="0">
+        <double>1.000000000000000</double>
+       </property>
+       <property name="display_as_float" stdset="0">
+        <bool>true</bool>
+       </property>
+       <property name="settings_property" stdset="0">
+        <string>generator_settings.lora_scale</string>
+       </property>
+       <property name="slider_single_step" stdset="0">
+        <number>1</number>
+       </property>
+       <property name="slider_page_step" stdset="0">
+        <number>5</number>
+       </property>
+       <property name="spinbox_single_step" stdset="0">
+        <double>0.010000000000000</double>
+       </property>
+       <property name="spinbox_page_step" stdset="0">
+        <double>0.100000000000000</double>
+       </property>
+       <property name="label_text" stdset="0">
+        <string>Scale</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QLineEdit" name="lineEdit">
+         <property name="placeholderText">
+          <string>Search</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="toggleAllLora">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Toggle all</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+         <property name="tristate">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="Line" name="line_2">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
- <resources/>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LoadingWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/llm/loading_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../../../resources_light.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>toggleAllLora</sender>
@@ -90,8 +289,8 @@
    <slot>toggle_all(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>547</x>
-     <y>17</y>
+     <x>562</x>
+     <y>91</y>
     </hint>
     <hint type="destinationlabel">
      <x>52</x>
@@ -106,8 +305,8 @@
    <slot>search_text_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>190</x>
-     <y>20</y>
+     <x>192</x>
+     <y>92</y>
     </hint>
     <hint type="destinationlabel">
      <x>277</x>
@@ -123,11 +322,27 @@
    <hints>
     <hint type="sourcelabel">
      <x>399</x>
-     <y>752</y>
+     <y>830</y>
     </hint>
     <hint type="destinationlabel">
      <x>486</x>
      <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>apply_lora_button</sender>
+   <signal>clicked()</signal>
+   <receiver>lora_container</receiver>
+   <slot>apply_lora()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>532</x>
+     <y>17</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>474</x>
+     <y>-7</y>
     </hint>
    </hints>
   </connection>
@@ -136,5 +351,6 @@
   <slot>toggle_all(bool)</slot>
   <slot>search_text_changed(QString)</slot>
   <slot>scan_for_lora()</slot>
+  <slot>apply_lora()</slot>
  </slots>
 </ui>

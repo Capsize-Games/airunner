@@ -1,11 +1,12 @@
 import os
 from urllib.parse import urlparse
 
+from airunner.data.models.settings_models import Lora, AIModels
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
-from airunner.aihandler.stablediffusion.download_civitai import DownloadCivitAI
-from airunner.aihandler.stablediffusion.download_huggingface import DownloadHuggingface
+from airunner.handlers.stablediffusion.download_civitai import DownloadCivitAI
+from airunner.handlers.stablediffusion.download_huggingface import DownloadHuggingface
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 
@@ -97,19 +98,20 @@ class ImportWidget(
             trained_words = [trained_words]
         trained_words = ",".join(trained_words)
         if model_type == "Checkpoint":
-            self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {
-                'name': name,
-                'path': file_path,
-                'branch': "main",
-                'version': diffuser_model_version,
-                'category': category,
-                'pipeline_action': pipeline_action,
-                'enabled': True,
-                'is_default': False
-            })
+            model = AIModels()
+            model.name = name
+            model.path = file_path
+            model.branch = "main"
+            model.version = diffuser_model_version
+            model.category = category
+            model.pipeline_action = pipeline_action
+            model.enabled = True
+            model.model_type = "art"
+            model.is_default = False
+            self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {"models": [model]})
         elif model_type == "LORA":
             name = file["name"].replace(".ckpt", "").replace(".safetensors", "").replace(".pt", "")
-            lora_data = dict(
+            new_lora = Lora(
                 name=name,
                 path=file_path,
                 scale=1,
@@ -118,7 +120,7 @@ class ImportWidget(
                 trigger_word=trained_words,
                 version=model_version["baseModel"]
             )
-            self.emit_signal(SignalCode.LORA_ADD_SIGNAL, lora_data)
+            self.create_lora(new_lora)
         elif model_type == "TextualInversion":
             # name = file_path.split("/")[-1].split(".")[0]
             # embedding_exists = session.query(Embedding).filter_by(
@@ -145,7 +147,7 @@ class ImportWidget(
             # todo save poses here
             pass
         
-        self.logger.debug("starting download")
+        self.logger.debug("Starting download")
         self.ui.downloading_label.setText(f"Downloading {name}")
         self.download_model_thread(download_url, file_path, size_kb)
         # self.thread = threading.Thread(target=self.download_model_thread, args=(download_url, file_path, size_kb))
@@ -162,9 +164,7 @@ class ImportWidget(
         self.ui.download_progress_bar.setValue(current_size)
         if current_size >= total_size:
             self.reset_form()
-            self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL, {
-                "models": self.current_model_data
-            })
+            self.emit_signal(SignalCode.AI_MODELS_CREATE_SIGNAL)
             self.show_items_in_scrollarea()
 
     def reset_form(self):
@@ -182,29 +182,43 @@ class ImportWidget(
 
     def parse_url(self) -> str:
         url = self.ui.import_url.text()
+        model_id = None
+
         try:
-            model_id = url.split("models/")[1]
-        except IndexError:
-            model_id = None
+            model_id = int(url.split("models/")[1])
+        except Exception as e:
+            print(f"Failed to parse model id from url: {url}")
+            print(e)
+
+        if model_id is None:
+            try:
+                print("setting model id")
+                model_id = int(url.split("models/")[1].split("/")[0])
+                print("model id set to ", model_id)
+            except Exception as e:
+                print(f"2 Failed to parse model id from url: {url}")
+                print(e)
+
         parsed_url = urlparse(url)
-        self.is_civitai = "civitai.com" in parsed_url.netloc
-        return model_id
+        host = parsed_url.hostname
+        self.is_civitai = host and host.endswith(".civitai.com")
+        return str(model_id)
 
     def import_models(self):
         data = None
         model_id = self.parse_url()
 
         if model_id:
-            data = DownloadCivitAI.get_json(model_id)
+            data = DownloadCivitAI().get_json(model_id=model_id)
 
         self.current_model_data = data
 
-        if data is not None:
-            model_name = data["name"]
-            model_versions = data["modelVersions"]
-        else:
-            model_name = ""
-            model_versions = []
+        model_name = ""
+        model_versions = []
+        if data:
+            if "name" in data:
+                model_name = data["name"]
+                model_versions = data["modelVersions"]
 
         self.ui.model_choices.clear()
         for model_version in model_versions:
@@ -251,34 +265,28 @@ class ImportWidget(
         self.set_model_form_data()
     
     def download_path(self, file, version, pipeline_action, model_type):
-
+        base_path = self.path_settings.base_path
         if model_type == "LORA":
-            path = self.settings["path_settings"]["lora_model_path"]
+            action = "lora"
         elif model_type == "Checkpoint":
-            if pipeline_action == "txt2img":
-                path = self.settings["path_settings"]["txt2img_model_path"]
-            elif pipeline_action == "outpaint":
-                path = self.settings["path_settings"]["inpaint_model_path"]
-            elif pipeline_action == "upscale":
-                path = self.settings["path_settings"]["upscale_model_path"]
-            elif pipeline_action == "depth2img":
-                path = self.settings["path_settings"]["depth2img_model_path"]
-            elif pipeline_action == "pix2pix":
-                path = self.settings["path_settings"]["pix2pix_model_path"]
+            action = pipeline_action
+            if action == "img2img":
+                action = "txt2img"
         elif model_type == "TextualInversion":
-            path = self.settings["path_settings"]["embeddings_model_path"]
+            action = "embeddings"
         elif model_type == "VAE":
-            # todo save vae here
-            pass
+            action = "vae"
         elif model_type == "Controlnet":
-            # todo save controlnet here
-            pass
-        elif model_type == "Poses":
-            # todo save poses here
-            pass
-
-        file_name = file["name"]
-        return f"{path}/{version}/{file_name}"
+            action = "controlnet"
+        return os.path.expanduser(
+            os.path.join(
+                base_path,
+                "art/models",
+                version,
+                action,
+                file["name"]
+            )
+        )
 
     def get_pipeline_classname(self, pipeline_action, version, category):
         pipelines = self.get_pipelines(pipeline_action, version, category)
@@ -295,7 +303,7 @@ class ImportWidget(
         model_version_name = model_version["name"]
 
         categories = self.ai_model_categories()
-        actions = [pipeline["pipeline_action"] for pipeline in self.settings["pipelines"]]
+        actions = [pipeline.pipeline_action for pipeline in self.pipelines]
         category = "stablediffusion"
         pipeline_action = "txt2img"
         if "inpaint" in model_version_name:

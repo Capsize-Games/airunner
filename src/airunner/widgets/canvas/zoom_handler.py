@@ -14,40 +14,38 @@ class ZoomHandler(
 
     @property
     def zoom_in_step(self) -> float:
-        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        zoom_level = self.grid_settings.zoom_level
         if zoom_level > 6:
             return 2
         elif zoom_level > 4:
             return 1
-        return self.settings["grid_settings"]["zoom_in_step"]
+        return self.grid_settings.zoom_in_step
 
     @property
     def zoom_out_step(self) -> float:
-        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        zoom_level = self.grid_settings.zoom_level
         if zoom_level > 6:
             return 2
         elif zoom_level > 4:
             return 1
         if zoom_level <= 1.0:
             return 0.05
-        return self.settings["grid_settings"]["zoom_out_step"]
+        return self.grid_settings.zoom_out_step
 
     @property
     def zoom_level(self) -> float:
-        zoom = self.settings["grid_settings"]["zoom_level"]
+        zoom = self.grid_settings.zoom_level
         if zoom <= 0:
             zoom = 0.1
         return zoom
 
     @zoom_level.setter
     def zoom_level(self, value):
-        settings = self.settings
-        settings["grid_settings"]["zoom_level"] = value
-        self.settings = settings
+        self.update_grid_settings("zoom_level", value)
 
     def on_zoom_level_changed(self) -> QTransform:
         # Create a QTransform object and scale it
-        zoom_level = self.settings["grid_settings"]["zoom_level"]
+        zoom_level = self.grid_settings.zoom_level
         transform = QTransform()
         transform.scale(zoom_level, zoom_level)
         return transform

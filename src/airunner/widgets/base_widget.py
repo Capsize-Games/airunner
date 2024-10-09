@@ -1,14 +1,14 @@
 import os
-from typing import Callable
 
 from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget
 
-from airunner.aihandler.logger import Logger
+from airunner.handlers.logger import Logger
+from airunner.enums import CanvasToolName
+from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import DARK_THEME_NAME, LIGHT_THEME_NAME
 from airunner.utils.create_worker import create_worker
-from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class BaseWidget(
@@ -23,10 +23,12 @@ class BaseWidget(
     threads = []
 
     @property
+    def current_tool(self):
+        return CanvasToolName(self.application_settings.current_tool)
+
+    @property
     def is_dark(self):
-        if not "dark_mode_enabled" in self.settings:
-            return False
-        return self.settings["dark_mode_enabled"]
+        return self.application_settings.dark_mode_enabled
 
     def __init__(self, *args, **kwargs):
         self.logger = Logger(prefix=self.__class__.__name__)
@@ -50,6 +52,7 @@ class BaseWidget(
         """
         self.register_signals()
         self.initialize_workers()
+        self.initialize_form()
 
     def register_signals(self):
         """
@@ -81,6 +84,9 @@ class BaseWidget(
             worker = create_worker(worker_class_name_)
             setattr(self, property_name, worker)
 
+    def initialize_form(self):
+        pass
+
     def add_to_grid(self, widget, row, column, row_span=1, column_span=1):
         self.layout().addWidget(widget, row, column, row_span, column_span)
     
@@ -92,7 +98,7 @@ class BaseWidget(
         using __init__.
         """
         self.initialize()
-    
+
     def set_icons(self):
         theme = "dark" if self.is_dark else "light"
         for icon_data in self.icons:
@@ -188,8 +194,8 @@ class BaseWidget(
         Sets the stylesheet for the application based on the current theme
         """
         ui = ui or self
-        if self.settings["override_system_theme"]:
-            theme_name = DARK_THEME_NAME if self.settings["dark_mode_enabled"] else LIGHT_THEME_NAME
+        if self.application_settings.override_system_theme:
+            theme_name = DARK_THEME_NAME if self.application_settings.dark_mode_enabled else LIGHT_THEME_NAME
             here = os.path.dirname(os.path.realpath(__file__))
             with open(os.path.join(here, "..", "styles", theme_name, "styles.qss"), "r") as f:
                 stylesheet = f.read()

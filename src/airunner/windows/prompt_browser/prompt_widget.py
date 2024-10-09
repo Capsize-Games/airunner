@@ -7,11 +7,20 @@ class PromptWidget(BaseWidget):
     widget_class_ = Ui_prompt_widget
 
     def __init__(self, *args, **kwargs):
-        self.index = kwargs.pop("index")
-        self.prompt_data = kwargs.pop("prompt_data")
+        self.saved_prompt = kwargs.pop("saved_prompt")
         super().__init__(*args, **kwargs)
-        self.ui.prompt.setPlainText(self.prompt_data["prompt"])
-        self.ui.negative_prompt.setPlainText(self.prompt_data["negative_prompt"])
+        self.ui.prompt.blockSignals(True)
+        self.ui.negative_prompt.blockSignals(True)
+        self.ui.secondary_prompt.blockSignals(True)
+        self.ui.secondary_negative_prompt.blockSignals(True)
+        self.ui.prompt.setPlainText(self.saved_prompt.prompt)
+        self.ui.negative_prompt.setPlainText(self.saved_prompt.negative_prompt)
+        self.ui.secondary_prompt.setPlainText(self.saved_prompt.secondary_prompt)
+        self.ui.secondary_negative_prompt.setPlainText(self.saved_prompt.secondary_negative_prompt)
+        self.ui.prompt.blockSignals(False)
+        self.ui.negative_prompt.blockSignals(False)
+        self.ui.secondary_prompt.blockSignals(False)
+        self.ui.secondary_negative_prompt.blockSignals(False)
 
     def action_text_changed_prompt(self):
         self.save_prompt()
@@ -20,14 +29,20 @@ class PromptWidget(BaseWidget):
         self.save_prompt()
 
     def action_clicked_button_load(self):
-        self.emit_signal(SignalCode.SD_LOAD_PROMPT_SIGNAL, self.index)
+        self.emit_signal(SignalCode.SD_LOAD_PROMPT_SIGNAL, {
+            "saved_prompt": self.saved_prompt
+        })
 
     def action_clicked_button_delete(self):
+        session = self.db_handler.get_db_session()
+        session.delete(self.saved_prompt)
+        session.commit()
+        session.close()
         self.deleteLater()
 
     def save_prompt(self):
-        self.emit_signal(SignalCode.SD_UPDATE_SAVED_PROMPT_SIGNAL, (
-            self.index,
-            self.ui.prompt.toPlainText(), 
-            self.ui.negative_prompt.toPlainText()
-        ))
+        self.saved_prompt.prompt = self.ui.prompt.toPlainText()
+        self.saved_prompt.negative_prompt = self.ui.negative_prompt.toPlainText()
+        self.saved_prompt.secondary_prompt = self.ui.secondary_prompt.toPlainText()
+        self.saved_prompt.secondary_negative_prompt = self.ui.secondary_negative_prompt.toPlainText()
+        self.update_saved_prompt(self.saved_prompt)

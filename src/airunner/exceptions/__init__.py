@@ -32,3 +32,13 @@ class PromptTemplateNotFoundExeption(Exception):
     def __init__(self, message="Prompt template not found"):
         self.message = message
         super().__init__(self.message)
+
+
+class ThreadInterruptException(Exception):
+    pass
+
+
+class NaNException(Exception):
+    def __init__(self, message="NaN values found"):
+        self.message = message
+        super().__init__(self.message)
