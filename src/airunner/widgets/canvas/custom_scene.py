@@ -71,7 +71,7 @@ class CustomScene(
             (SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, self.on_image_generated_signal),
             (SignalCode.UNDO_SIGNAL, self.on_action_undo_signal),
             (SignalCode.REDO_SIGNAL, self.on_action_redo_signal),
-            (SignalCode.HISTORY_CLEAR_SIGNAL, self.clear_history),
+            (SignalCode.HISTORY_CLEAR_SIGNAL, self.on_clear_history_signal),
             (SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal),
             (SignalCode.MASK_LAYER_TOGGLED, self.on_mask_layer_toggled),
         ]:
@@ -127,6 +127,9 @@ class CustomScene(
             "pivot_point_y": value.y()
         })
 
+    def on_clear_history_signal(self):
+        self._clear_history()
+
     def on_export_image_signal(self):
         image = self.current_active_image
         if image:
@@ -171,7 +174,7 @@ class CustomScene(
             image = self._resize_image(image)
         image = convert_image_to_base64(image)
         self._update_current_settings("image", image)
-        self.refresh_image()
+        self.refresh_image(self.current_active_image)
 
     def on_load_image_from_path(self, message):
         image_path = message["image_path"]
@@ -181,6 +184,7 @@ class CustomScene(
         self._load_image_from_object(image)
 
     def on_load_image_signal(self, image_path: str):
+        self._add_image_to_undo()
         image = self._load_image(image_path)
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
@@ -228,6 +232,7 @@ class CustomScene(
     def on_canvas_clear_signal(self):
         self._update_current_settings("image", None)
         self.delete_image()
+        self._clear_history()
 
     def on_mask_layer_toggled(self):
         self.initialize_image()
@@ -239,7 +244,6 @@ class CustomScene(
         self._cut_image(self.current_active_image)
 
     def on_canvas_rotate_90_clockwise_signal(self):
-        print("on_canvas_rotate_90_clockwise_signal")
         self._rotate_90_clockwise()
 
     def on_canvas_rotate_90_counter_clockwise_signal(self):
@@ -250,14 +254,22 @@ class CustomScene(
             return
         data = self.undo_history.pop()
         self._add_image_to_redo()
-        self.history_set_image(data)
+        self._history_set_image(data)
 
     def on_action_redo_signal(self):
         if len(self.redo_history) == 0:
             return
         data = self.redo_history.pop()
         self._add_image_to_undo()
-        self.history_set_image(data)
+        self._history_set_image(data)
+
+    def _history_set_image(self, data: dict):
+        if data is not None:
+            if data["image"] is None:
+                self.delete_image()
+            else:
+                self.current_active_image = data["image"]
+                self.initialize_image()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -370,8 +382,6 @@ class CustomScene(
         super(CustomScene, self).leaveEvent(event)
 
     def refresh_image(self, image: Image = None):
-        image = image if image is not None else self.current_active_image
-
         # Save the current viewport position
         view = self.views()[0]
         current_viewport_rect = view.mapToScene(view.viewport().rect()).boundingRect()
@@ -391,13 +401,6 @@ class CustomScene(
         # Restore the viewport position
 
         view.setSceneRect(current_viewport_rect)
-
-    def history_set_image(self, data: dict):
-        if data is not None:
-            self.refresh_image(data["image"])
-
-    def clear_history(self):
-        self.__clear()
 
     def delete_image(self):
         self.logger.debug("Deleting image from canvas")
@@ -707,6 +710,7 @@ class CustomScene(
     ):
         image = self.current_active_image
         if image is not None:
+            self._add_image_to_undo()
             image = image.rotate(angle, expand=True)
             self._update_current_settings("image", convert_image_to_base64(image))
             self.initialize_image(image)
@@ -720,26 +724,36 @@ class CustomScene(
     def _clear_history(self):
         self.undo_history = []
         self.redo_history = []
+        self.emit_signal(SignalCode.HISTORY_UPDATED, {
+            "undo": 0,
+            "redo": 0
+        })
 
     def _cut_image(self, image: Image = None) -> Image:
         image = self._copy_image(image)
         if image is not None:
-            self._add_image_to_undo()
+            self._add_image_to_undo(image)
             self.delete_image()
 
-    def _add_image_to_undo(self):
-        image = self.current_active_image
-        if image is not None:
-            self._add_undo_history({
-                "image": image.copy()
-            })
+    def _add_image_to_undo(self, image: Image = None):
+        image = self.current_active_image if image is None else image
+        self._add_undo_history({
+            "image": image if image is not None else None
+        })
+        self.emit_signal(SignalCode.HISTORY_UPDATED, {
+            "undo": len(self.undo_history),
+            "redo": len(self.redo_history)
+        })
 
     def _add_image_to_redo(self):
         image = self.current_active_image
-        if image is not None:
-            self._add_redo_history({
-                "image": image.copy()
-            })
+        self._add_redo_history({
+            "image": image if image is not None else None
+        })
+        self.emit_signal(SignalCode.HISTORY_UPDATED, {
+            "undo": len(self.undo_history),
+            "redo": len(self.redo_history)
+        })
 
     def _handle_mouse_event(self, event, is_press_event) -> bool:
         if isinstance(event, QMouseEvent) and event.button() == Qt.MouseButton.LeftButton:
@@ -783,6 +797,7 @@ class CustomScene(
         return image
 
     def _apply_filter(self, _filter_object: ImageFilter.Filter):
+        self._add_image_to_undo(self.image_backup)
         self.previewing_filter = False
         self.image_backup = None
 

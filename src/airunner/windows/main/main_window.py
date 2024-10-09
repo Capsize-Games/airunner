@@ -561,6 +561,7 @@ class MainWindow(
         self.register(SignalCode.REFRESH_STYLESHEET_SIGNAL, self.refresh_stylesheet)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.KEYBOARD_SHORTCUTS_UPDATED, self.on_keyboard_shortcuts_updated)
+        self.register(SignalCode.HISTORY_UPDATED, self.on_history_updated)
 
     def on_reset_paths_signal(self):
         self.reset_path_settings()
@@ -612,6 +613,8 @@ class MainWindow(
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
         self.set_stylesheet()
         self.initialize_widget_elements()
+        self.ui.actionUndo.setEnabled(False)
+        self.ui.actionRedo.setEnabled(False)
 
     def initialize_widget_elements(self):
         for item in (
@@ -974,6 +977,10 @@ class MainWindow(
 
     def on_keyboard_shortcuts_updated(self):
         self._set_keyboard_shortcuts()
+
+    def on_history_updated(self, data):
+        self.ui.actionUndo.setEnabled(data["undo"] != 0)
+        self.ui.actionRedo.setEnabled(data["redo"] != 0)
 
     def _set_keyboard_shortcuts(self):
         session = self.db_handler.get_db_session()
