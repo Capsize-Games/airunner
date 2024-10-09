@@ -7,6 +7,8 @@ class PromptBrowser(BaseWindow):
     template_class_ = Ui_prompt_browser
 
     def initialize_window(self):
-        for index, prompt_data in enumerate(self.settings["saved_prompts"]):
-            widget = PromptWidget(prompt_data=prompt_data, index=index)
+        self.setWindowTitle("Prompt Browser")
+
+        for saved_prompt in self.saved_prompts:
+            widget = PromptWidget(saved_prompt=saved_prompt)
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)

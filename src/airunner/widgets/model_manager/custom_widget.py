@@ -1,4 +1,4 @@
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, QTimer
 
 from airunner.enums import SignalCode, StableDiffusionVersion, ImageGenerator, GeneratorSection
 from airunner.utils.create_worker import create_worker
@@ -18,7 +18,6 @@ class CustomModelWidget(
     PipelineMixin,
     AIModelMixin
 ):
-    initialized = False
     widget_class_ = Ui_custom_model_widget
     model_widgets = []
     spacer = None
@@ -27,10 +26,21 @@ class CustomModelWidget(
         super().__init__(*args, **kwargs)
         PipelineMixin.__init__(self)
         AIModelMixin.__init__(self)
-        self.show_items_in_scrollarea()
-        self.initialized = True
+        self.initialized = False
         self.model_scanner_worker = create_worker(ModelScannerWorker)
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.scan_for_models)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        QTimer.singleShot(
+            50,
+            self.__do_show
+        )
+
+    def __do_show(self):
+        if not self.initialized:
+            self.show_items_in_scrollarea()
+            self.initialized = True
 
     @Slot()
     def action_button_clicked_scan_for_models(self):

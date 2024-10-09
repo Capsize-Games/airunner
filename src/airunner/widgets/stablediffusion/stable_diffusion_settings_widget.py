@@ -1,7 +1,10 @@
+from airunner.data.models.settings_models import AIModels, GeneratorSettings
 from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 from airunner.windows.main.pipeline_mixin import PipelineMixin
+from airunner.utils.create_worker import create_worker
+from airunner.workers.model_scanner_worker import ModelScannerWorker
 
 
 class StableDiffusionSettingsWidget(
@@ -11,21 +14,19 @@ class StableDiffusionSettingsWidget(
     widget_class_ = Ui_stable_diffusion_settings_widget
 
     def __init__(self, *args, **kwargs):
-        self.icons = [
-            ("exchange-refresh-icon", "reload_selected_preset")
-        ]
-        PipelineMixin.__init__(self, *args, **kwargs)
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.APPLICATION_MODELS_CHANGED_SIGNAL, self.on_models_changed_signal)
-        self.load_presets()
-
-    def load_presets(self):
-        self.presets = self.settings["generator_settings"]["presets"]
+        PipelineMixin.__init__(self)
+        self.model_scanner_worker = create_worker(ModelScannerWorker)
+        self.register(SignalCode.AI_MODELS_CREATE_SIGNAL, self.on_models_changed_signal)
+        self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.update_form)
 
     def showEvent(self, event):
         super().showEvent(event)
-        steps = self.settings["generator_settings"]["steps"]
-        scale = self.settings["generator_settings"]["scale"]
+        self.update_form()
+
+    def update_form(self):
+        steps = self.generator_settings.steps
+        scale = self.generator_settings.scale
 
         current_steps = self.get_form_element("steps_widget").property("current_value")
         current_scale = self.get_form_element("scale_widget").property("current_value")
@@ -35,137 +36,170 @@ class StableDiffusionSettingsWidget(
 
         if scale != current_scale:
             self.get_form_element("scale_widget").setProperty("current_value", scale)
-        
-        self.ui.seed_widget.setProperty("generator_section", self.settings["pipeline"])
+
+        self.ui.seed_widget.setProperty("generator_section", self.generator_settings.pipeline_action)
         self.ui.seed_widget.setProperty("generator_name", ImageGenerator.STABLEDIFFUSION.value)
 
         self.ui.ddim_eta_slider_widget.hide()
         self.ui.frames_slider_widget.hide()
 
-        self.load_pipelines()
-        self.load_versions()
-        self.load_models()
-        self.load_schedulers()
+        self.model_scanner_worker.add_to_queue("scan_for_models")
 
-    def handle_model_changed(self, name):
-        settings = self.settings
-        settings["generator_settings"]["model_name"] = name
-        settings["generator_settings"]["model"] = ""
-        self.settings = settings
+        self.ui.use_compel.setChecked(self.generator_settings.use_compel)
+
+    def toggled_use_compel(self, val):
+        self.update_generator_settings("use_compel", val)
+
+    def handle_model_changed(self, model_name):
+        index = self.ui.model.currentIndex()
+        model_id = self.ui.model.itemData(index)
+        self.update_generator_settings("model", model_id)
+        if self.application_settings.sd_enabled:
+            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
+                "do_reload": True
+            })
 
     def handle_scheduler_changed(self, name):
-        settings = self.settings
-        settings["generator_settings"]["scheduler"] = name
-        self.settings = settings
+        self.update_generator_settings("scheduler", name)
         self.emit_signal(SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": name})
-    
+
     def handle_pipeline_changed(self, val):
         if val == f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}":
             val = GeneratorSection.TXT2IMG.value
         elif val == f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}":
-            val = GeneratorSection.OUTPAINT.value
-        settings = self.settings
-        settings["pipeline"] = val
-        settings["generator_settings"]["section"] = val
-        self.settings = settings
+            val = GeneratorSection.INPAINT.value
+        session = self.db_handler.get_db_session()
+        generator_settings = session.query(GeneratorSettings).first()
+        do_reload = False
+        if val == GeneratorSection.TXT2IMG.value:
+            model = session.query(AIModels).filter(
+                AIModels.id == generator_settings.model
+            ).first()
+            if model.pipeline_action == GeneratorSection.INPAINT.value:
+                model = session.query(AIModels).filter(
+                    AIModels.version == generator_settings.version,
+                    AIModels.pipeline_action == val,
+                    AIModels.enabled == True,
+                    AIModels.is_default == False
+                ).first()
+                if model is not None:
+                    generator_settings.model = model.id
+                else:
+                    generator_settings.model = None
+                do_reload = True
+        generator_settings.pipeline_action = val
+        session.commit()
+        session.close()
         self.load_versions()
         self.load_models()
+        if do_reload:
+            if self.application_settings.sd_enabled:
+                self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
+                    "do_reload": True
+                })
 
     def handle_version_changed(self, val):
-        settings = self.settings
-        settings["current_version_stablediffusion"] = val
-        settings["generator_settings"]["version"] = val
-        self.settings = settings
+        self.update_generator_settings("version", val)
+        session = self.db_handler.get_db_session()
+        generator_settings = session.query(GeneratorSettings).first()
+        model = session.query(AIModels).filter(
+            AIModels.version == val,
+            AIModels.pipeline_action == generator_settings.pipeline_action,
+            AIModels.enabled == True,
+            AIModels.is_default == False
+        ).first()
+        generator_settings.version = val
+        generator_settings.model = model.id
+        session.commit()
+        session.close()
         self.load_models()
+        if self.application_settings.sd_enabled:
+            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
+                "do_reload": True
+            })
 
     def load_pipelines(self):
-        self.logger.debug("load_pipelines")
         self.ui.pipeline.blockSignals(True)
         self.ui.pipeline.clear()
         pipeline_names = [
             f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}",
-            f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}",
-            GeneratorSection.DEPTH2IMG.value,
-            GeneratorSection.PIX2PIX.value,
-            GeneratorSection.UPSCALE.value,
+            f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}"
         ]
         self.ui.pipeline.addItems(pipeline_names)
-        current_pipeline = self.settings["pipeline"]
+        current_pipeline = self.generator_settings.pipeline_action
         if current_pipeline != "":
             if current_pipeline == GeneratorSection.TXT2IMG.value:
                 current_pipeline = f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}"
-            elif current_pipeline == GeneratorSection.OUTPAINT.value:
+            elif current_pipeline == GeneratorSection.INPAINT.value:
                 current_pipeline = f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}"
             self.ui.pipeline.setCurrentText(current_pipeline)
         self.ui.pipeline.blockSignals(False)
     
     def load_versions(self):
-        self.logger.debug("load_versions")
         self.ui.version.blockSignals(True)
         self.ui.version.clear()
         pipelines = self.get_pipelines(category=ImageGenerator.STABLEDIFFUSION.value)
         version_names = set([pipeline["version"] for pipeline in pipelines])
         self.ui.version.addItems(version_names)
-        current_version = self.settings["current_version_stablediffusion"]
+        current_version = self.generator_settings.version
         if current_version != "":
             self.ui.version.setCurrentText(current_version)
         self.ui.version.blockSignals(False)
 
-    def on_models_changed_signal(self, data: dict):
-        self.load_pipelines()
-        self.load_versions()
-        self.load_models(data["models"])
-        self.load_schedulers()
+    def on_models_changed_signal(self):
+        try:
+            self.load_pipelines()
+            self.load_versions()
+            self.load_models()
+            self.load_schedulers()
+        except RuntimeError as e:
+            self.logger.error(f"Error loading models: {e}")
 
     def clear_models(self):
         self.ui.model.clear()
 
-    def load_models(self, models=None):
-        models = models or self.settings["ai_models"]
-        self.logger.debug("load_models")
+    def load_models(self):
         self.ui.model.blockSignals(True)
         self.clear_models()
         image_generator = ImageGenerator.STABLEDIFFUSION.value
-        pipeline = self.settings["pipeline"]
-        version = self.settings["current_version_stablediffusion"]
-        models = self.ai_model_get_by_filter(models, {
-            'category': image_generator,
-            'pipeline_action': pipeline,
-            'version': version,
-            'enabled': True
-        })
-        model_names = [model["name"] for model in models]
-        self.ui.model.addItems(model_names)
-        settings = self.settings
-        current_model = settings["generator_settings"]["model"]
-        if current_model != "":
-            self.ui.model.setCurrentText(current_model)
-        settings["generator_settings"]["model_name"] = self.ui.model.currentText()
-        settings["generator_settings"]["model"] = ""
+        session = self.db_handler.get_db_session()
+        generator_settings = session.query(GeneratorSettings).first()
+        pipeline = generator_settings.pipeline_action
+        version = generator_settings.version
+        pipeline_actions = [GeneratorSection.TXT2IMG.value]
+        if pipeline == GeneratorSection.INPAINT.value:
+            pipeline_actions.append(GeneratorSection.INPAINT.value)
+        models = session.query(AIModels).filter(
+            AIModels.category == image_generator,
+            AIModels.pipeline_action.in_(pipeline_actions),
+            AIModels.version == version,
+            AIModels.enabled == True,
+            AIModels.is_default == False
+        ).all()
+        model_id = generator_settings.model
+        if model_id is None and len(models) > 0:
+            current_model = models[0]
+            generator_settings.model = current_model.id
+            session.commit()
+        for model in models:
+            self.ui.model.addItem(model.name, model.id)
+        session.close()
+        if model_id:
+            index = self.ui.model.findData(model_id)
+            if index != -1:
+                self.ui.model.setCurrentIndex(index)
         self.ui.model.blockSignals(False)
-        self.settings = settings
-
-    def ai_model_get_by_filter(self, models, filter_dict):
-        return [item for item in models if all(item.get(k) == v for k, v in filter_dict.items())]
 
     def load_schedulers(self):
-        self.logger.debug("load_schedulers")
         self.ui.scheduler.blockSignals(True)
-        scheduler_names = [s["display_name"] for s in self.settings["schedulers"]]
+        scheduler_names = [s.display_name for s in self.schedulers]
         self.ui.scheduler.clear()
         self.ui.scheduler.addItems(scheduler_names)
 
-        settings = self.settings
-        current_scheduler = settings["generator_settings"]["scheduler"]
+        current_scheduler = self.generator_settings.scheduler
         if current_scheduler != "":
             self.ui.scheduler.setCurrentText(current_scheduler)
         else:
-            settings["generator_settings"]["scheduler"] = self.ui.scheduler.currentText() 
-        self.settings = settings
+            self.generator_settings.scheduler = self.ui.scheduler.currentText()
+        self.update_generator_settings("scheduler", self.generator_settings.scheduler)
         self.ui.scheduler.blockSignals(False)
-
-    def reload_selected_preset(self):
-        print("TODO RELOAD SELECTED PRESET")
-
-    def selected_preset_changed(self, val):
-        print("TODO SELECTED PRESET CHANGED")

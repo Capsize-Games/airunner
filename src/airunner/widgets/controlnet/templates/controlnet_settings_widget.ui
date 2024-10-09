@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>controlnet_settings_widget</class>
+ <widget class="QWidget" name="controlnet_settings_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>694</width>
+    <height>763</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="horizontalSpacing">
+    <number>0</number>
+   </property>
+   <property name="verticalSpacing">
+    <number>10</number>
+   </property>
+   <item row="1" column="0">
+    <widget class="QWidget" name="widget_3" native="true">
+     <layout class="QGridLayout" name="gridLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <property name="horizontalSpacing">
+       <number>0</number>
+      </property>
+      <property name="verticalSpacing">
+       <number>10</number>
+      </property>
+      <item row="1" column="0">
+       <widget class="QWidget" name="widget" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="SliderWidget" name="controlnet_conditioning_scale" native="true">
+           <property name="slider_minimum" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>100</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="slider_tick_interval" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_single_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_page_step" stdset="0">
+            <number>2</number>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.200000000000000</double>
+           </property>
+           <property name="label_text" stdset="0">
+            <string>Conditioning Scale</string>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string notr="true">controlnet_settings.conditioning_scale</string>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="SliderWidget" name="strength_slider" native="true">
+           <property name="slider_minimum" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>100</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="slider_tick_interval" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_single_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_page_step" stdset="0">
+            <number>10</number>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.200000000000000</double>
+           </property>
+           <property name="label_text" stdset="0">
+            <string>Strength</string>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string notr="true">controlnet_settings.strength</string>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QComboBox" name="controlnet"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QWidget" name="section_header" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>controlnet</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>controlnet_settings_widget</receiver>
+   <slot>controlnet_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>94</x>
+     <y>16</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>3</x>
+     <y>5</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>color_button_clicked()</slot>
+  <slot>controlnet_changed(QString)</slot>
+  <slot>toggle_auto_generate_while_drawing(bool)</slot>
+ </slots>
+</ui>

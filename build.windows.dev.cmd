@@ -1,4 +1,0 @@
-C:\Users\j\Projects\imagetopixel\airunner\venv\Scripts\python.exe -m PyInstaller --log-level=INFO --noconfirm  ./build.airunner.windows.dev.spec
-xcopy /E /I /Y C:\Users\j\Projects\imagetopixel\airunner\venv\Lib\site-packages\timm C:\Users\j\Projects\imagetopixel\airunner\dist\airunner\timm
-xcopy /E /I /Y C:\Users\j\Projects\imagetopixel\airunner\venv\Lib\site-packages\torch\lib\libtorch_cuda_linalg.so C:\Users\j\Projects\imagetopixel\airunner\dist\airunner\libtorch_cuda_linalg.so
-xcopy /E /I /Y C:\Users\j\Projects\imagetopixel\airunner\venv\Lib\site-packages\Pillow-9.5.0.dist-info C:\Users\j\Projects\imagetopixel\airunner\dist\airunner\Pillow-9.5.0.dist-info

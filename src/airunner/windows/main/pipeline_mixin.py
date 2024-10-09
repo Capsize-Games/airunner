@@ -1,29 +1,9 @@
+from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
+
+
 class PipelineMixin:
-    def __init__(self, *args, **kwargs):
-        self.settings = None
-        self.settings = None
-        self.settings = None
-
     def pipeline_get_by_filter(self, filter_dict):
-        return [item for item in self.settings["pipelines"] if all(item.get(k) == v for k, v in filter_dict.items())]
-
-    def pipeline_create(self, item):
-        settings = self.settings
-        settings["pipelines"].append(item)
-        self.settings = settings
-
-    def pipeline_update(self, item):
-        settings = self.settings
-        for i, existing_item in enumerate(settings["pipelines"]):
-            if existing_item['name'] == item['name']:
-                settings["pipelines"][i] = item
-                self.settings = settings
-                break
-
-    def pipeline_delete(self, item):
-        settings = self.settings
-        settings["pipelines"] = [existing_item for existing_item in self.settings["pipelines"] if existing_item['name'] != item['name']]
-        self.settings = settings
+        return [item for item in pipeline_bootstrap_data if all(item.get(k) == v for k, v in filter_dict.items())]
 
     def get_pipeline_classname(self, pipeline_action, version, category):
         pipelines = self.get_pipelines(pipeline_action, version, category)
@@ -33,7 +13,7 @@ class PipelineMixin:
             return None
     
     def get_pipelines(self, pipeline_action=None, version=None, category=None):
-        pipelines = self.settings["pipelines"]
+        pipelines = pipeline_bootstrap_data
         if pipeline_action:
             pipelines = self.pipeline_get_by_filter({"pipeline_action": pipeline_action})
         if version:
@@ -43,10 +23,10 @@ class PipelineMixin:
         return pipelines
 
     def available_pipeline_by_section(self, section):
-        return [pipeline["name"] for pipeline in self.settings["pipelines"] if pipeline["section"] == section]
+        return [pipeline["name"] for pipeline in pipeline_bootstrap_data if pipeline["section"] == section]
 
     def available_pipeline_by_action_version_category(self, pipeline_action, version, category):
-        return [pipeline["name"] for pipeline in self.settings["pipelines"] if pipeline["pipeline_action"] == pipeline_action and pipeline["version"] == version and pipeline["category"] == category]
+        return [pipeline["name"] for pipeline in pipeline_bootstrap_data if pipeline["pipeline_action"] == pipeline_action and pipeline["version"] == version and pipeline["category"] == category]
 
     def pipeline_actions(self):
-        return [pipeline["pipeline_action"] for pipeline in self.settings["pipelines"]]
+        return [pipeline["pipeline_action"] for pipeline in pipeline_bootstrap_data]

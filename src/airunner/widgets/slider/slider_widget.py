@@ -1,7 +1,8 @@
-from typing import Any, List
+from typing import Any
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QDoubleSpinBox
-from airunner.enums import SignalCode
+
+from airunner.data.models.settings_models import Lora
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget
 
@@ -10,6 +11,18 @@ class SliderWidget(BaseWidget):
     widget_class_ = Ui_slider_widget
     display_as_float = False
     divide_by = 1.0
+    is_loading = False
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.settings_property = None
+        self.table_id = None
+        self.table_name = None
+        self.table_column = None
+        self.table_item = None
+        self.ui.slider.sliderReleased.connect(self.handle_slider_release)  # Connect valueChanged signal
+        self.ui.slider_spinbox.valueChanged.connect(self.handle_spinbox_change)  # Connect valueChanged signal
+        self._callback = None
 
     @property
     def slider_single_step(self):
@@ -92,25 +105,24 @@ class SliderWidget(BaseWidget):
     def spinbox_minimum(self, val):
         self.ui.slider_spinbox.setMinimum(val)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.settings_property = None
-        self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
-        self.register(SignalCode.WINDOW_LOADED_SIGNAL, self.on_main_window_loaded_signal)
-        self.ui.slider.sliderReleased.connect(self.handle_slider_release)
-        self._callback = None
-
-    def on_main_window_loaded_signal(self, _message):
+    def showEvent(self, event):
         self.init()
+        super().showEvent(event)
 
     def init(self, **kwargs):
-        self._callback = kwargs.get("callback", None)
+        self.is_loading = True
+        self._callback = kwargs.get("slider_callback", None)
+        if self._callback is None:
+            self._callback = self.property("slider_callback") or None
         slider_minimum = kwargs.get("slider_minimum", self.property("slider_minimum") or 0)
         slider_maximum = kwargs.get("slider_maximum", self.property("slider_maximum") or 100)
         spinbox_minimum = kwargs.get("spinbox_minimum", self.property("spinbox_minimum") or 0.0)
         spinbox_maximum = kwargs.get("spinbox_maximum", self.property("spinbox_maximum") or 100.0)
-        current_value = kwargs.get("current_value", self.property("current_value") or None)
+        current_value = None
         settings_property = kwargs.get("settings_property", self.property("settings_property") or None)
+        self.table_id = self.property("table_id") or None
+        if self.table_id is not None:
+            self.table_name, self.table_column = settings_property.split(".")
         label_text = kwargs.get("label_text", self.property("label_text") or "")
         display_as_float = kwargs.get("display_as_float", self.property("display_as_float") or False)
 
@@ -126,7 +138,13 @@ class SliderWidget(BaseWidget):
 
         divide_by = self.property("divide_by") or 1.0
 
-        if current_value is None:
+        if self.table_id is not None and self.table_name is not None and self.table_column is not None:
+            session = self.db_handler.get_db_session()
+            if self.table_name == "lora":
+                self.table_item = session.query(Lora).filter_by(id=self.table_id).first()
+                current_value = getattr(self.table_item, self.table_column)
+            session.close()
+        elif current_value is None:
             if settings_property is not None:
                 current_value = self.get_settings_value(settings_property)
             else:
@@ -163,6 +181,8 @@ class SliderWidget(BaseWidget):
             decimals = len(str(spinbox_single_step).split(".")[1])
             self.ui.slider_spinbox.setDecimals(2 if decimals < 2 else decimals)
 
+        self.is_loading = False
+
     def slider_callback(self, attr_name, value=None, widget=None):
         """
         Slider widget callback - this is connected via dynamic properties in the
@@ -174,52 +194,41 @@ class SliderWidget(BaseWidget):
         :return:
         """
         if self._callback:
-            self._callback(attr_name, value, widget)
+            self._callback(attr_name, value)
         else:
             self.set_settings_value(attr_name, value)
 
     def get_settings_value(self, settings_property):
+        if self.table_item is not None:
+            return getattr(self.table_item, self.table_column)
         keys = settings_property.split(".")
-        data = self.settings
 
-        for key in keys:
-            if isinstance(data, dict) and key in data:
-                data = data[key]
-            else:
-                return None
+        if len(keys) == 1:
+            keys = ["application_settings", keys[0]]
 
-        return data
+        obj = getattr(self, keys[0])
+
+        if keys[0] == "llm_generator_settings":
+            return getattr(obj, keys[2])
+
+        return getattr(obj, keys[1])
 
     def set_settings_value(self, settings_property: str, val: Any):
-        if settings_property is None:
-            self.logger.debug("settings_property is None")
-            return
-        keys = settings_property.split(".")
-        self.settings = self._update_dict_recursively(self.settings, keys, val)
-
-    def _update_dict_recursively(self, data: dict, keys: List[str], val: Any) -> dict:
-        if len(keys) == 1:
-            data[keys[0]] = val
-            return data
-
-        key = keys[0]
-        if key not in data:
-            data[key] = {}
-
-        data[key] = self._update_dict_recursively(data[key], keys[1:], val)
-        return data
+        if self.table_item is not None:
+            session = self.db_handler.get_db_session()
+            setattr(self.table_item, self.table_column, val)
+            session.add(self.table_item)
+            session.commit()
+            session.close()
+        elif settings_property is not None:
+            keys = settings_property.split(".")
+            self.update_settings_by_name(keys[0], keys[1], val)
 
     def set_slider_and_spinbox_values(self, val):
         if val is None:
             val = 0
 
-        single_step = self.ui.slider.singleStep()
-        adjusted_value = val
-        if single_step > 0:
-            val = float(val)
-            single_step = float(single_step)
-            adjusted_value = round(val / single_step) * single_step
-        normalized = adjusted_value / self.slider_maximum
+        normalized = val / self.slider_maximum
         spinbox_val = normalized * self.spinbox_maximum
         spinbox_val = round(spinbox_val, 2)
 
@@ -244,6 +253,8 @@ class SliderWidget(BaseWidget):
 
     @Slot(int)
     def handle_slider_change(self, val):
+        if self.is_loading:
+            return
         position = val
         single_step = self.ui.slider.singleStep()
         adjusted_value = round(position / single_step) * single_step
@@ -267,6 +278,8 @@ class SliderWidget(BaseWidget):
 
     @Slot()
     def handle_slider_release(self):
+        if self.is_loading:
+            return
         if self.slider_callback:
             self.slider_callback(self.settings_property, self.current_value)
 
@@ -283,3 +296,9 @@ class SliderWidget(BaseWidget):
         self.spinbox_single_step = val
         self.spinbox_page_step = val
         self.spinbox_minimum = val
+
+    def closeEvent(self, event):
+        self.ui.slider.sliderReleased.disconnect(self.handle_slider_release)
+        self.ui.slider.valueChanged.disconnect(self.handle_slider_change)
+        self.ui.slider_spinbox.valueChanged.disconnect(self.handle_spinbox_change)
+        super().closeEvent(event)

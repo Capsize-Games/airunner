@@ -58,6 +58,42 @@ imagefilter_bootstrap_data = {
             }
         }
     },
+    'film': {
+        'display_name': 'Film',
+        'auto_apply': False,
+        'name': 'film',
+        'filter_class': 'FilmFilter',
+        'image_filter_values': {
+            'radius': {
+                'name': 'radius',
+                'value': '0.0',
+                'value_type': 'float',
+                'min_value': None,
+                'max_value': None
+            },
+            'red': {
+                'name': 'red',
+                'value': '0.0',
+                'value_type': 'float',
+                'min_value': None,
+                'max_value': None
+            },
+            'green': {
+                'name': 'green',
+                'value': '0.0',
+                'value_type': 'float',
+                'min_value': None,
+                'max_value': None
+            },
+            'blue': {
+                'name': 'blue',
+                'value': '0.0',
+                'value_type': 'float',
+                'min_value': None,
+                'max_value': None
+            },
+        }
+    },
     'color_balance': {
         'display_name': 'Color Balance',
         'auto_apply': False,
@@ -209,6 +245,13 @@ imagefilter_bootstrap_data = {
                 'max_value': None
             },
         }
+    },
+    'invert': {
+        'display_name': 'Invert',
+        'auto_apply': False,
+        'name': 'invert',
+        'filter_class': 'Invert',
+        'image_filter_values': {}
     },
     'rgb_noise': {
         'display_name': 'RGB Noise Filter',

@@ -2,6 +2,7 @@
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
+import os.path
 import sys
 import signal
 import traceback
@@ -21,10 +22,14 @@ from PySide6.QtWidgets import (
     QApplication,
     QSplashScreen
 )
+from sqlalchemy import distinct
+
+from airunner.app_installer import AppInstaller
+from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.main_window import MainWindow
+from airunner.plugins.plugin_manager import PluginManager
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.aihandler.logger import Logger
+from airunner.data.models.settings_models import ApplicationSettings, AIModels
 
 
 class App(
@@ -46,12 +51,15 @@ class App(
         Initialize the application and run as a GUI application or a socket server.
         :param main_window_class: The main window class to use for the application.
         """
+        from airunner.windows.main.main_window import MainWindow
+        from airunner.handlers.logger import Logger
 
         self.main_window_class_ = main_window_class or MainWindow
         self.app = None
         self.logger = Logger(prefix=self.__class__.__name__)
         self.restrict_os_access = restrict_os_access
         self.defendatron = defendatron
+        self.splash = None
 
         """
         Mediator and Settings mixins are initialized here, enabling the application
@@ -61,13 +69,58 @@ class App(
         SettingsMixin.__init__(self)
         super(App, self).__init__()
 
-        if (
-            "txt2img_model_path" not in self.settings["path_settings"]
-        ):
-            self.reset_paths()
+        self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
 
+        self.create_paths()
         self.start()
+        self.run_setup_wizard()
         self.run()
+
+    def create_paths(self):
+        self.logger.debug("Creating paths")
+        art_path = os.path.expanduser((
+            os.path.join(
+                self.path_settings.base_path,
+                "art",
+            )
+        ))
+        models_path = os.path.expanduser((
+            os.path.join(
+                art_path,
+                "models",
+            )
+        ))
+        images_path = os.path.expanduser((
+            os.path.join(
+                art_path,
+                "other",
+                "images"
+            )
+        ))
+        session = self.db_handler.get_db_session()
+        versions = session.query(distinct(AIModels.version)).filter(AIModels.category == 'stablediffusion').all()
+        session.close()
+        for version in versions:
+            os.makedirs(
+                os.path.join(models_path, version[0], "embeddings"),
+                exist_ok=True
+            )
+            os.makedirs(
+                os.path.join(models_path, version[0], "lora"),
+                exist_ok=True
+            )
+        os.makedirs(images_path, exist_ok=True)
+
+    def run_setup_wizard(self):
+        session = self.db_handler.get_db_session()
+        application_settings = session.query(ApplicationSettings).first()
+        session.close()
+        if application_settings.run_setup_wizard:
+            AppInstaller()
+
+    def on_log_logged_signal(self, data: dict):
+        message = data["message"].split(" - ")
+        self.update_splash_message(self.splash, message[4])
 
     def start(self):
         """
@@ -88,7 +141,7 @@ class App(
         """
 
         # Continue with application execution
-        splash = self.display_splash_screen(self.app)
+        self.splash = self.display_splash_screen(self.app)
 
         # Show the main application window
         QTimer.singleShot(
@@ -96,7 +149,7 @@ class App(
             partial(
                 self.show_main_application,
                 self.app,
-                splash
+                self.splash
             )
         )
         sys.exit(self.app.exec())
@@ -140,13 +193,17 @@ class App(
             QtCore.Qt.WindowType.WindowStaysOnTopHint
         )
         splash.show()
+        App.update_splash_message(splash, f"Loading AI Runner")
+        app.processEvents()
+        return splash
+
+    @staticmethod
+    def update_splash_message(splash, message: str):
         splash.showMessage(
-            f"Loading AI Runner",
+            message,
             QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignCenter,
             QtCore.Qt.GlobalColor.white
         )
-        app.processEvents()
-        return splash
 
     def show_main_application(
         self,
@@ -169,7 +226,7 @@ class App(
             print(e)
             splash.finish(None)
             sys.exit("""
-                An error occurred while initializing the application. 
+                An error occurred while initializing the application.
                 Please report this issue on GitHub or Discord."
             """)
         app.main_window = window

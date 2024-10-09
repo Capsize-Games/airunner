@@ -1,7 +1,9 @@
 import os
 
+from airunner.data.models.settings_models import PathSettings
 
-def create_airunner_paths(path_settings: dict):
+
+def create_airunner_paths(path_settings: PathSettings):
     """
     This function creates directories based on the paths provided in the path_settings dictionary.
 
@@ -17,7 +19,15 @@ def create_airunner_paths(path_settings: dict):
     None
     """
     print("Creating directories...")
-    for k, path in path_settings.items():
+    for attr in (
+        "base_path",
+        "documents_path",
+        "ebook_path",
+        "image_path",
+        "llama_index_path",
+        "webpages_path",
+    ):
+        path = getattr(path_settings, attr)
         # Path sanitization
         path = path.replace('..', '')
 

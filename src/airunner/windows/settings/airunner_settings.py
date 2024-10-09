@@ -3,20 +3,6 @@ from PySide6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPa
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
 from airunner.enums import SignalCode
-from airunner.widgets.api_token.api_token_widget import APITokenWidget
-from airunner.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
-from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
-from airunner.widgets.font_settings.font_settings_widget import FontSettingsWidget
-from airunner.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
-from airunner.widgets.image_generator_preferences.image_generator_preferences_widget import ImageGeneratorPreferencesWidget
-from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
-from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
-from airunner.widgets.lora.lora_container_widget import LoraContainerWidget
-from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
-from airunner.widgets.paths.paths_widget import PathsWidget
-from airunner.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
-from airunner.widgets.translation_preferences.translation_preferences_widget import TranslationPreferencesWidget
-from airunner.widgets.tts.tts_preferences_widget import TTSPreferencesWidget
 from airunner.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
 
@@ -46,6 +32,7 @@ class SettingsWindow(BaseWindow):
     template_class_ = Ui_airunner_settings
 
     def __init__(self, **kwargs):
+        self.widgets = {}
         super().__init__(**kwargs)
         self.model = None
         self.scroll_widget = None
@@ -53,44 +40,32 @@ class SettingsWindow(BaseWindow):
         self.highlight_delegate = None
         self.emit_signal(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
 
-    def handle_value_change(self, attr_name, value=None, widget=None):
-        """
-        Slider widget callback - this is connected via dynamic properties in the
-        qt widget. This function is then called when the value of a SliderWidget
-        is changed.
-        :param attr_name: the name of the attribute to change
-        :param value: the value to set the attribute to
-        :param widget: the widget that triggered the callback
-        :return:
-        """
-        print("handle_value_change")
-        if attr_name is None:
-            return
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.setWindowTitle("AI Runner Preferences")
 
-        keys = attr_name.split(".")
-        if len(keys) > 0:
-            settings = self.settings
-
-            object_key = "settings"
-            if len(keys) == 1:
-                property_key = keys[0]
-            elif len(keys) == 2:
-                object_key = keys[0]
-                property_key = keys[1]
-            elif len(keys) == 3:
-                object_key = keys[0]
-                property_key = keys[1]
-                sub_property_key = keys[2]
-
-            if object_key != "settings":
-                if len(keys) == 3:
-                    settings[object_key][property_key][sub_property_key] = value
-                else:
-                    settings[object_key][property_key] = value
-            else:
-                settings[property_key] = value
-
-            self.settings = settings
+    def available_widgets(self, name):
+        if name == "paths":
+            from airunner.widgets.paths.paths_widget import PathsWidget
+            return PathsWidget
+        if name == "keyboard_shortcuts":
+            from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
+            return KeyboardShortcutsWidget
+        if name == "memory":
+            from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
+            return MemoryPreferencesWidget
+        if name == "hf_api_key":
+            from airunner.widgets.api_token.api_token_widget import APITokenWidget
+            return APITokenWidget
+        if name == "tts_preferences":
+            from airunner.widgets.tts.tts_preferences_widget import TTSPreferencesWidget
+            return TTSPreferencesWidget
+        if name == "bot_preferences":
+            from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
+            return BotPreferencesWidget
+        if name == "export_preferences":
+            from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
+            return ExportPreferencesWidget
 
     def get_callback_for_slider(self, callback_name):
         return getattr(self, callback_name)
@@ -103,63 +78,11 @@ class SettingsWindow(BaseWindow):
 
         directory = [
             {
-                "section": "Image Generator Preferences",
+                "section": "Image Export Preferences",
                 "files": [
-                    {
-                        "name": "image_generator_preferences",
-                        "display_name": "Image Generator Preferences",
-                        "checkable": False,
-                        "description": (
-                            "Choose default models to use for creating images "
-                            "in various categories. These are used to generate "
-                            "images when using various tools, including the LLM."
-                        )
-                    },
-                    {
-                        "name": "lora_settings",
-                        "display_name": "LoRA",
-                        "checkable": False
-                    },
-                    {
-                        "name": "embeddings_settings",
-                        "display_name": "Embeddings",
-                        "checkable": False
-                    }
-                ]
-            },
-            {
-                "section": "Import / Export Preferences",
-                "files": [
-                    {
-                        "name": "paths",
-                        "display_name": "Paths",
-                        "checkable": False
-                    },
                     {
                         "name": "export_preferences",
-                        "display_name": "Image import / export",
-                        "checkable": False
-                    },
-                    {
-                        "name": "resize_on_import",
-                        "display_name": "Resize on import",
-                        "checkable": True,
-                        "description": "If enabled, images will be resized to the active grid area size when pasted."
-                    },
-                    {
-                        "name": "image_to_new_layer",
-                        "display_name": "Image to new layer",
-                        "checkable": True,
-                        "description": "If enabled, images will be pasted to a new layer."
-                    }
-                ]
-            },
-            {
-                "section": "Grid & Canvas Preferences",
-                "files": [
-                    {
-                        "name": "grid",
-                        "display_name": "Grid",
+                        "display_name": "Export Preferences",
                         "checkable": False
                     }
                 ]
@@ -185,7 +108,7 @@ class SettingsWindow(BaseWindow):
                 ]
             },
             {
-                "section": "LLM, TTS, Translation, Chatbot",
+                "section": "LLM, TTS, Chatbot",
                 "files": [
                     {
                         "name": "bot_preferences",
@@ -195,12 +118,6 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "tts_preferences",
                         "display_name": "Text-to-Speech",
-                        "checkable": False
-                    },
-                    {
-                        "name": "translation_preferences",
-                        "display_name": "Translation Preferences",
-                        "description": "Set your preferred translation and override the TTS voice settings.",
                         "checkable": False
                     },
                 ]
@@ -226,33 +143,6 @@ class SettingsWindow(BaseWindow):
                         "checkable": True,
                         "description": "If enabled, AI Runner will check for updates on startup."
                     }
-                ]
-            },
-            {
-                "section": "Font Settings",
-                "files": [
-                    {
-                        "name": "font_settings",
-                        "display_name": "Fonts",
-                        "checkable": False,
-                        "description": "Change the default font settings for various sections of the application."
-                    },
-                ]
-            },
-            {
-                "section": "Huggingface.co settings",
-                "files": [
-                    {
-                        "name": "allow_online_mode",
-                        "display_name": "Allow online connection",
-                        "checkable": True,
-                        "description": "Allow online connection to Huggingface.co to download missing models. If disabled, you will only be able to use models that are already downloaded. Requires a restart."
-                    },
-                    {
-                        "name": "hf_api_key",
-                        "display_name": "API Key",
-                        "checkable": False
-                    },
                 ]
             }
         ]
@@ -298,17 +188,17 @@ class SettingsWindow(BaseWindow):
         if checkable:
             checked = False
             if name == "resize_on_import":
-                checked = self.settings["resize_on_paste"]
+                checked = self.application_settings.resize_on_paste
             elif name == "image_to_new_layer":
-                checked = self.settings["image_to_new_layer"] is True
+                checked = self.application_settings.image_to_new_layer is True
             elif name == "dark_mode":
-                checked = self.settings["dark_mode_enabled"]
+                checked = self.application_settings.dark_mode_enabled
             elif name == "override_system_theme":
-                checked = self.settings["override_system_theme"]
+                checked = self.application_settings.override_system_theme
             elif name == "check_for_updates":
-                checked = self.settings["latest_version_check"]
+                checked = self.application_settings.latest_version_check
             elif name == "allow_online_mode":
-                checked = self.settings["allow_online_mode"]
+                checked = self.application_settings.allow_online_mode
 
             file_item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
         # prevent file_item from being edited
@@ -329,30 +219,27 @@ class SettingsWindow(BaseWindow):
         display_name = item.data(Qt.ItemDataRole.DisplayRole)
         description = item.data(Qt.ItemDataRole.ToolTipRole)
 
-        settings = self.settings
-
         if name == "resize_on_import":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["resize_on_paste"] = checked
+            self.update_application_settings("resize_on_paste", checked)
         elif name == "image_to_new_layer":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["image_to_new_layer"] = checked
+            self.update_application_settings("image_to_new_layer", checked)
         elif name == "dark_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["dark_mode_enabled"] = checked
+            self.update_application_settings("dark_mode_enabled", checked)
         elif name == "override_system_theme":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["override_system_theme"] = checked
+            self.update_application_settings("override_system_theme", checked)
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["latest_version_check"] = checked
+            self.update_application_settings("latest_version_check", checked)
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            settings["allow_online_mode"] = checked
+            self.update_application_settings("allow_online_mode", checked)
         elif name == "reset_settings":
             self.emit_signal(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
-        
-        self.settings = settings
+
         self.show_content(section, display_name, name, description)
         self.set_stylesheet()
 
@@ -361,24 +248,13 @@ class SettingsWindow(BaseWindow):
         label = QLabel(f"<p><b>{section} > {display_name}</b></p>")
 
         widget_object = None
-        widgets = {
-            "image_generator_preferences": ImageGeneratorPreferencesWidget,
-            "stable_diffusion_preferences": StableDiffusionSettingsWidget,
-            "lora_settings": LoraContainerWidget,
-            "embeddings_settings": EmbeddingsContainerWidget,
-            "paths": PathsWidget,
-            "keyboard_shortcuts": KeyboardShortcutsWidget,
-            "export_preferences": ExportPreferencesWidget,
-            "grid": GridPreferencesWidget,
-            "memory": MemoryPreferencesWidget,
-            "hf_api_key": APITokenWidget,
-            "translation_preferences": TranslationPreferencesWidget,
-            "tts_preferences": TTSPreferencesWidget,
-            "bot_preferences": BotPreferencesWidget,
-            "font_settings": FontSettingsWidget,
-        }
-        if name in widgets:
-            widget_object = widgets[name]()
+        if widget_object is None:
+            _widget_class = self.available_widgets(name)
+            if _widget_class is not None:
+                widget_object = _widget_class()
+        if widget_object is None:
+            print(f"Unable to load widget {name}")
+            return
 
         self.clear_scroll_area()
         self.scroll_layout.addWidget(label)

@@ -1,12 +1,12 @@
 from PySide6.QtCore import QThread
 
+
 WORKERS = []
 THREADS = []
 
 
 def create_worker(worker_class_, **kwargs):
-    prefix = worker_class_.__name__
-    worker = worker_class_(prefix=prefix, **kwargs)
+    worker = worker_class_(**kwargs)
     worker_thread = QThread()
     worker.moveToThread(worker_thread)
     worker.finished.connect(worker_thread.quit)

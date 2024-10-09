@@ -203,33 +203,33 @@ Please be aware that AI-generated content could unintentionally replicate copyri
  <connections>
   <connection>
    <sender>checkBox</sender>
-   <signal>clicked(bool)</signal>
+   <signal>toggled(bool)</signal>
    <receiver>age_restriction_warning</receiver>
    <slot>age_agreement_clicked(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>105</x>
-     <y>550</y>
+     <x>17</x>
+     <y>411</y>
     </hint>
     <hint type="destinationlabel">
-     <x>71</x>
-     <y>0</y>
+     <x>-4</x>
+     <y>378</y>
     </hint>
    </hints>
   </connection>
   <connection>
    <sender>checkBox_2</sender>
-   <signal>clicked(bool)</signal>
+   <signal>toggled(bool)</signal>
    <receiver>age_restriction_warning</receiver>
    <slot>read_agreement_clicked(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>366</x>
-     <y>576</y>
+     <x>14</x>
+     <y>454</y>
     </hint>
     <hint type="destinationlabel">
-     <x>571</x>
-     <y>-3</y>
+     <x>-2</x>
+     <y>447</y>
     </hint>
    </hints>
   </connection>

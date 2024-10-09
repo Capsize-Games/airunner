@@ -1,11 +1,12 @@
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QInputDialog, QMessageBox, QLabel, QPushButton, QHBoxLayout, QWidget
+from PySide6.QtWidgets import QInputDialog, QMessageBox
 
+from airunner.data.models.settings_models import TargetFiles, Chatbot
 from airunner.enums import SignalCode
-from airunner.settings import DEFAULT_CHATBOT
 from airunner.utils.open_file_path import open_file_path
 from airunner.utils.toggle_signals import toggle_signals
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.llm.document_widget import DocumentWidget
 from airunner.widgets.llm.templates.bot_preferences_ui import Ui_bot_preferences
 
 
@@ -14,34 +15,9 @@ class BotPreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def showEvent(self, event):
         self.load_saved_chatbots()
-
-    @property
-    def llm_generator_settings(self):
-        return self.settings["llm_generator_settings"]
-
-    @property
-    def current_chatbot_name(self):
-        chatbot = self.llm_generator_settings["current_chatbot"]
-        if chatbot == "":
-            chatbot = "Default"
-        return chatbot
-
-    @current_chatbot_name.setter
-    def current_chatbot_name(self, val):
-        if val == "":
-            val = "Default"
-        settings = self.settings
-        settings["llm_generator_settings"]["current_chatbot"] = val
-        self.settings = settings
-
-    @property
-    def current_chatbot(self):
-        try:
-            return self.llm_generator_settings["saved_chatbots"][self.current_chatbot_name]
-        except KeyError:
-            self.current_chatbot_name = "Default"
-            return self.llm_generator_settings["saved_chatbots"][self.current_chatbot_name]
 
     def load_form_elements(self):
         elements = [
@@ -59,26 +35,19 @@ class BotPreferencesWidget(BaseWidget):
             "target_files",
         ]
         toggle_signals(self.ui, elements)
-        self.ui.username.setText(self.current_chatbot.get("username", "User"))
-        self.ui.botname.setText(self.current_chatbot.get("botname", "AIRunner"))
-        self.ui.bot_personality.setPlainText(self.current_chatbot.get("bot_personality", ""))
-        self.ui.bot_mood.setPlainText(self.current_chatbot.get("bot_mood", ""))
-        self.ui.names_groupbox.setChecked(self.current_chatbot.get("assign_names", True))
-        self.ui.personality_groupbox.setChecked(self.current_chatbot.get("use_personality", True))
-        self.ui.mood_groupbox.setChecked(self.current_chatbot.get("use_mood", True))
-        self.ui.system_instructions.setPlainText(self.current_chatbot.get("system_instructions", ""))
-        self.ui.system_instructions_groupbox.setChecked(self.current_chatbot.get("use_system_instructions", True))
-        self.ui.guardrails_prompt.setPlainText(self.current_chatbot.get("guardrails_prompt", ""))
-        self.ui.guardrails_groupbox.setChecked(self.current_chatbot.get("use_guardrails", True))
+        self.ui.username.setText(self.chatbot.username)
+        self.ui.botname.setText(self.chatbot.botname)
+        self.ui.bot_personality.setPlainText(self.chatbot.bot_personality)
+        self.ui.bot_mood.setPlainText(self.chatbot.bot_mood)
+        self.ui.names_groupbox.setChecked(self.chatbot.assign_names)
+        self.ui.personality_groupbox.setChecked(self.chatbot.use_personality)
+        self.ui.mood_groupbox.setChecked(self.chatbot.use_mood)
+        self.ui.system_instructions.setPlainText(self.chatbot.system_instructions)
+        self.ui.system_instructions_groupbox.setChecked(self.chatbot.use_system_instructions)
+        self.ui.guardrails_prompt.setPlainText(self.chatbot.guardrails_prompt)
+        self.ui.guardrails_groupbox.setChecked(self.chatbot.use_guardrails)
         self.load_documents()
         toggle_signals(self.ui, elements, False)
-
-    def update_chatbot(self, key, val):
-        settings = self.settings
-        chatbot = self.current_chatbot
-        chatbot[key] = val
-        settings["llm_generator_settings"]["saved_chatbots"][self.current_chatbot_name] = chatbot
-        self.settings = settings
 
     def username_changed(self, val):
         self.update_chatbot("username", val)
@@ -119,37 +88,37 @@ class BotPreferencesWidget(BaseWidget):
 
         # If the user clicked "OK" and entered a name
         if ok and chatbot_name:
-            settings = self.settings
-            settings["llm_generator_settings"]["saved_chatbots"][chatbot_name] = DEFAULT_CHATBOT
-            self.settings = settings
-            self.current_chatbot_name = chatbot_name
+            self.create_chatbot(chatbot_name)
+            self.update_llm_generator_settings("current_chatbot", chatbot_name)
             self.load_saved_chatbots()
 
     def saved_chatbots_changed(self, val):
-        self.current_chatbot_name = val
+        session = self.db_handler.get_db_session()
+        chatbot = session.query(Chatbot).filter(Chatbot.name == val).first()
+        chatbot_id = chatbot.id
+        session.close()
+        self.update_llm_generator_settings("current_chatbot", chatbot_id)
         self.load_form_elements()
-        self.ui.llm_settings_widget.initialize_form()
+        self.emit_signal(SignalCode.CHATBOT_CHANGED)
 
     def load_saved_chatbots(self):
-        names = self.settings["llm_generator_settings"]["saved_chatbots"].keys()
+        names = [chatbot.name for chatbot in self.chatbots]
         self.ui.saved_chatbots.blockSignals(True)
         self.ui.saved_chatbots.clear()
         self.ui.saved_chatbots.addItems(names)
-        self.ui.saved_chatbots.setCurrentIndex(self.ui.saved_chatbots.findText(self.current_chatbot_name))
+        self.ui.saved_chatbots.setCurrentIndex(self.ui.saved_chatbots.findText(self.chatbot.name))
         self.load_form_elements()
         self.ui.saved_chatbots.blockSignals(False)
 
     def delete_clicked(self):
         # show confirmation before deleting
-        if self.current_chatbot_name == "Default":
+        if self.chatbot.name == "Default":
             return
-        msg = f"Are you sure you want to delete {self.current_chatbot_name}?"
+        msg = f"Are you sure you want to delete {self.chatbot.name}?"
         reply = self.show_confirmation_dialog(msg)
         if reply == 0:
-            settings = self.settings
-            del settings["llm_generator_settings"]["saved_chatbots"][self.current_chatbot_name]
-            self.settings = settings
-            self.current_chatbot_name = "Default"
+            self.delete_chatbot_by_name(self.chatbot.name)
+            self.chatbot.name = "Chatbot"
             self.load_saved_chatbots()
 
     def show_confirmation_dialog(self, msg):
@@ -175,7 +144,7 @@ class BotPreferencesWidget(BaseWidget):
 
     @Slot()
     def browse_documents(self):
-        file_path = open_file_path(file_type="Text Files (*.md *.html *.htm *.epub *.pdf)")
+        file_path = open_file_path(self, file_type="Text Files (*.md *.html *.htm *.epub *.pdf *.txt)")
 
         # validate file path
         if not file_path or not file_path[0] or not file_path[0].strip() or not file_path[0].endswith((
@@ -184,16 +153,13 @@ class BotPreferencesWidget(BaseWidget):
             ".htm",
             ".epub",
             ".pdf",
+            ".txt",
         )):
             self.logger.error(f"Invalid file path: {file_path}")
             return
 
-        documents = self.current_chatbot.get("target_files", [])
-        documents.append(file_path[0])
-        self.update_chatbot("target_files", documents)
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
-            "target_files": documents
-        })
+        self.add_chatbot_document_to_chatbot(self.chatbot, file_path[0])
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
         self.load_documents()
 
     def load_documents(self):
@@ -204,31 +170,23 @@ class BotPreferencesWidget(BaseWidget):
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
 
-        documents = self.current_chatbot.get("target_files", [])
-        for doc in documents:
-            # Create a label with the document name
-            label = QLabel(doc)
-
-            # Create a delete button
-            delete_button = QPushButton("Delete")
-            delete_button.clicked.connect(lambda checked, d=doc: self.delete_document(d))
-
-            # Create a horizontal layout and add the label and button to it
-            h_layout = QHBoxLayout()
-            h_layout.addWidget(label)
-            h_layout.addWidget(delete_button)
-
-            # Create a widget to hold the layout and add it to the scroll area
-            widget = QWidget()
-            widget.setLayout(h_layout)
+        for target_file in self.chatbot.target_files:
+            widget = DocumentWidget(target_file, self.delete_document)
             layout.addWidget(widget)
 
-    def delete_document(self, document):
-        documents = self.current_chatbot.get("target_files", [])
-        if document in documents:
-            documents.remove(document)
-            self.update_chatbot("target_files", documents)
-            self.load_documents()  # Refresh the document list
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
-            "target_files": documents
-        })
+    def delete_document(self, target_file:TargetFiles):
+        session = self.db_handler.get_db_session()
+        session.delete(target_file)
+        session.commit()
+        session.close()
+        self.load_documents()
+        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+
+    def update_chatbot(self, key, val):
+        chatbot = self.chatbot
+        try:
+            setattr(chatbot, key, val)
+        except TypeError:
+            self.logger.error(f"Attribute {key} does not exist in Chatbot")
+            return
+        self.db_handler.save_object(chatbot)

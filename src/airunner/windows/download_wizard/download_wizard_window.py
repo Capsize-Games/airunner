@@ -11,7 +11,7 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
     The download wizard window class for AI Runner.
     This class is used to download models and other resources required for AI Runner.
     """
-    def __init__(self, setup_settings: dict):
+    def __init__(self):
         """
         Initialize the download wizard window.
         :param setup_settings: The setup settings dictionary.
@@ -19,14 +19,24 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super(DownloadWizardWindow, self).__init__()
-
-        self.setup_settings = setup_settings
-
         self.setWindowTitle("AI Runner Download Wizard")
-        self.setWizardStyle(QWizard.ModernStyle)
-        self.setOption(QWizard.IndependentPages, True)
+        self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
+        self.setOption(QWizard.WizardOption.IndependentPages, True)
+
+        self.button(
+            QWizard.WizardButton.FinishButton
+        ).clicked.connect(self.save_settings)
 
         self.init_pages()
+
+    def save_settings(self):
+        """
+        Override this function to save settings based on specific page in question.
+        Do not call this function directly.
+        :return:
+        """
+        self.update_application_settings("run_setup_wizard", False)
+        self.update_application_settings("download_wizard_completed", True)
 
     def init_pages(self):
         """
@@ -34,21 +44,16 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
         """
         failed = True
 
-        if self.setup_settings["user_agreement_completed"] and self.setup_settings["airunner_license_completed"]:
-            self.construct_paths(self.settings["path_settings"]["base_path"])
-            create_airunner_paths(self.settings["path_settings"])
+        if (
+            self.application_settings.user_agreement_checked and
+            self.application_settings.stable_diffusion_agreement_checked and
+            self.application_settings.airunner_agreement_checked
+        ):
+            create_airunner_paths(self.path_settings)
 
-            self.enable_sd = self.setup_settings["enable_sd"]
-            self.enable_controlnet = self.setup_settings["enable_controlnet"]
-
-            if not self.enable_sd or (self.enable_sd and self.setup_settings["sd_license_completed"]):
-                self.enable_llm = self.setup_settings["enable_llm"]
-                self.enable_tts = self.setup_settings["enable_tts"]
-                self.enable_stt = self.setup_settings["enable_stt"]
-
-                self.setPage(1, InstallSuccessPage(self))
-                self.setPage(0, InstallPage(self, self.setup_settings))
-                failed = False
+            self.setPage(0, InstallPage(self))
+            self.setPage(1, InstallSuccessPage(self))
+            failed = False
 
         if failed:
             self.setPage(2, InstallFailedPage(self))

@@ -1,11 +1,13 @@
+import inspect
 import queue
+import threading
 
-from PySide6.QtCore import Signal, QThread, QSettings, QObject, Slot
+from PySide6.QtCore import Signal, QThread, QObject
 
 from airunner.enums import QueueType, SignalCode, WorkerState
-from airunner.aihandler.logger import Logger
+from airunner.handlers.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import SLEEP_TIME_IN_MS, ORGANIZATION, APPLICATION_NAME
+from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 
@@ -14,53 +16,49 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
     finished = Signal()
     prefix = "Worker"
 
-    def __init__(self, prefix=None):
-        self.prefix = prefix or self.__class__.__name__
+    def __init__(self, signals=None):
+        self.signals = signals or []
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__()
         self.state = WorkerState.HALTED
-        self.logger = Logger(prefix=prefix)
+        self.logger = Logger(prefix=self.__class__.__name__)
         self.running = False
         self.queue = queue.Queue()
         self.items = {}
         self.current_index = 0
         self.paused = False
-        self.application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
-        self.update_properties()
-        self.register(
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
-            self.on_application_settings_changed_signal
-        )
-        self.register(
-            SignalCode.QUIT_APPLICATION,
-            self.stop
-        )
+        self.register(SignalCode.QUIT_APPLICATION, self.stop)
         self.register_signals()
 
-    def on_application_settings_changed_signal(self, _message: dict):
-        self.update_properties()
-    
-    def update_properties(self):
+        threading.Thread(target=self.start_worker_thread).start()
+
+    def start_worker_thread(self):
         pass
 
     def register_signals(self):
-        pass
+        for signal in self.signals:
+            self.register(signal[0], signal[1])
 
     def start(self):
+        import traceback
+        traceback.format_exc()
         self.run()
 
     def run(self):
         if self.queue_type == QueueType.NONE:
             return
-        self.logger.debug("Starting")
+        self.logger.debug("Starting worker")
         self.running = True
         while self.running:
             self.preprocess()
             try:
                 msg = self.get_item_from_queue()
                 if msg is not None:
-                    self.handle_message(msg)
+                    if len(inspect.signature(self.handle_message).parameters) == 0:
+                        self.handle_message()
+                    else:
+                        self.handle_message(msg)
             except queue.Empty:
                 msg = None
             if self.paused:
@@ -106,10 +104,10 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         except queue.Empty:
             return None
 
-    def pause(self, _message: None):
+    def pause(self):
         self.state = WorkerState.PAUSED
 
-    def unpause(self, _message: dict):
+    def unpause(self):
         if self.state == WorkerState.PAUSED:
             self.state = WorkerState.RUNNING
 
@@ -141,7 +139,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         self.items = {}
         self.current_index = 0
 
-    def stop(self, _message: dict=None):
+    def stop(self):
         self.logger.debug("Stopping")
         self.running = False
         self.finished.emit()

@@ -1,7 +1,8 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog
+
+from airunner.data.models.settings_models import AIModels
 from airunner.enums import SignalCode
-from airunner.models.modeldata import ModelData
 from airunner.widgets.model_manager.templates.model_manager_ui import Ui_model_manager
 from airunner.windows.base_window import BaseWindow
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -31,7 +32,7 @@ class ModelManagerWidget(
     @property
     def current_model_object(self):
         if not self._current_model_object:
-            self._current_model_object = ModelData()
+            self._current_model_object = AIModels()
         return self._current_model_object
 
     @Slot()
@@ -108,7 +109,7 @@ class ModelManagerWidget(
         setattr(self.current_model_object, key, value)
 
     def add_new_model(self):
-        self.save_model(self.current_model_object)
+        self.update_ai_model(self.current_model_object)
 
     @Slot()
     def tab_changed(self, val):
@@ -125,7 +126,7 @@ class ModelManagerWidget(
 
     def update_generator_model_dropdown(self):
         self.ui.generator_model_dropdown.clear()
-        self.ui.generator_model_dropdown.addItems(self.settings["ai_models"])
+        self.ui.generator_model_dropdown.addItems(self.ai_models)
     
     def handle_edit_model(self, model, index):
         self.toggle_model_form_frame(show=True)
