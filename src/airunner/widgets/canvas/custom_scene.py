@@ -10,7 +10,7 @@ from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent
 
-from airunner.aihandler.logger import Logger
+from airunner.handlers.logger import Logger
 from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import VALID_IMAGE_FILES

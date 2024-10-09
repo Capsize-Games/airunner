@@ -1,7 +1,7 @@
 import base64
 import io
 from PIL import Image
-from airunner.aihandler.logger import Logger
+from airunner.handlers.logger import Logger
 
 
 def convert_image_to_base64(image: Image) -> str:
