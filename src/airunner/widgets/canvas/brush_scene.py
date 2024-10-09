@@ -94,7 +94,7 @@ class BrushScene(CustomScene):
 
     def drawBackground(self, painter, rect):
         if self.painter is None:
-            self.refresh_image()
+            self.refresh_image(self.current_active_image)
         if self.painter is not None and self.painter.isActive():
             #self.painter.drawImage(0, 0, self.active_image)
 
@@ -193,6 +193,8 @@ class BrushScene(CustomScene):
     def mousePressEvent(self, event):
         if self.drawing_pad_settings.mask_layer_enabled and self.mask_image is None:
             self._create_mask_image()
+        elif self.is_brush_or_eraser:
+            self._add_image_to_undo()
         return super().mousePressEvent(event)
 
     def _handle_left_mouse_release(self, event) -> bool:
