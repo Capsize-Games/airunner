@@ -1,7 +1,7 @@
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QInputDialog, QMessageBox, QLabel, QPushButton, QHBoxLayout, QWidget
+from PySide6.QtWidgets import QInputDialog, QMessageBox
 
-from airunner.handlers.models.settings_models import TargetFiles, Chatbot
+from airunner.data.models.settings_models import TargetFiles, Chatbot
 from airunner.enums import SignalCode
 from airunner.utils.open_file_path import open_file_path
 from airunner.utils.toggle_signals import toggle_signals

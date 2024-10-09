@@ -1,6 +1,4 @@
-from sqlalchemy import false
-
-from airunner.handlers.models.settings_models import AIModels, GeneratorSettings
+from airunner.data.models.settings_models import AIModels, GeneratorSettings
 from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
