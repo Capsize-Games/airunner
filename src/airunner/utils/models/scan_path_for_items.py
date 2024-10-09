@@ -1,8 +1,7 @@
 import os
-from typing import List, Any
 
-from airunner.handlers.models.settings_db_handler import SettingsDBHandler
-from airunner.handlers.models.settings_models import Lora, Embedding
+from airunner.data.models.settings_db_handler import SettingsDBHandler
+from airunner.data.models.settings_models import Lora, Embedding
 
 def scan_path_for_lora(base_path) -> bool:
     lora_added = False
