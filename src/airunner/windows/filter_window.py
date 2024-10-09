@@ -3,7 +3,7 @@ from functools import partial
 
 from sqlalchemy.orm import joinedload
 
-from airunner.aihandler.models.settings_models import ImageFilter
+from airunner.handlers.models.settings_models import ImageFilter
 from airunner.enums import SignalCode
 from airunner.widgets.slider.filter_slider_widget import FilterSliderWidget
 from airunner.windows.base_window import BaseWindow

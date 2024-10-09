@@ -3,7 +3,7 @@ import os
 from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget
 
-from airunner.aihandler.logger import Logger
+from airunner.handlers.logger import Logger
 from airunner.enums import CanvasToolName
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.mediator_mixin import MediatorMixin

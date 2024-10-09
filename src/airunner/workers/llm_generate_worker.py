@@ -1,4 +1,4 @@
-from airunner.aihandler.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
+from airunner.handlers.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
