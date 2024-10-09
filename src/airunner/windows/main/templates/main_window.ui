@@ -326,6 +326,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionNew"/>
+   <addaction name="actionImport"/>
    <addaction name="actionExport_3"/>
    <addaction name="separator"/>
    <addaction name="actionToggle_Active_Grid_Area"/>
@@ -333,6 +334,9 @@
    <addaction name="actionToggle_Eraser"/>
    <addaction name="actionToggle_Grid"/>
    <addaction name="actionMask_toggle"/>
+   <addaction name="separator"/>
+   <addaction name="actionUndo"/>
+   <addaction name="actionRedo"/>
   </widget>
   <widget class="QToolBar" name="model_toolbar">
    <property name="windowTitle">
@@ -2033,6 +2037,38 @@
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
    <slot>action_toggle_mask_layer(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>414</x>
+     <y>367</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionUndo</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_undo_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>414</x>
+     <y>367</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionRedo</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_redo_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
