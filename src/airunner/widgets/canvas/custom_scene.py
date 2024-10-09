@@ -117,8 +117,11 @@ class CustomScene(
 
     @current_active_image.setter
     def current_active_image(self, image: Image):
-        self._update_current_settings("image", convert_image_to_base64(image))
-        self.initialize_image(image)
+        if image is not None:
+            image = convert_image_to_base64(image)
+        self._update_current_settings("image", image)
+        if self.settings_key == "drawing_pad_settings":
+            self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
@@ -173,7 +176,7 @@ class CustomScene(
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
         image = convert_image_to_base64(image)
-        self._update_current_settings("image", image)
+        self.current_active_image = image
         self.refresh_image(self.current_active_image)
 
     def on_load_image_from_path(self, message):
@@ -189,6 +192,7 @@ class CustomScene(
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
         self.current_active_image = image
+        self.initialize_image(image)
 
     def on_apply_filter_signal(self, message):
         self._apply_filter(message)
@@ -230,7 +234,7 @@ class CustomScene(
             callback(response)
 
     def on_canvas_clear_signal(self):
-        self._update_current_settings("image", None)
+        self.current_active_image = None
         self.delete_image()
         self._clear_history()
 
@@ -269,7 +273,7 @@ class CustomScene(
                 self.delete_image()
             else:
                 self.current_active_image = data["image"]
-                self.initialize_image()
+                self.initialize_image(self.current_active_image)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -411,7 +415,7 @@ class CustomScene(
 
         if self.painter and self.painter.isActive():
             self.painter.end()
-        self._update_current_settings("image", None)
+        self.current_active_image = None
         self.image = None
         self.initialize_image()
 
@@ -632,8 +636,7 @@ class CustomScene(
                 action=GeneratorSection.OUTPAINT.value
             )
         # self._set_current_active_image(image)
-        base64_image = convert_image_to_base64(image)
-        self._update_current_settings("image", base64_image)
+        self.current_active_image = image
         q_image = ImageQt.ImageQt(image)
         self.item.setPixmap(QPixmap.fromImage(q_image))
         self.item.setZValue(0)
@@ -712,7 +715,7 @@ class CustomScene(
         if image is not None:
             self._add_image_to_undo()
             image = image.rotate(angle, expand=True)
-            self._update_current_settings("image", convert_image_to_base64(image))
+            self.current_active_image = image
             self.initialize_image(image)
 
     def _add_undo_history(self, data: dict):

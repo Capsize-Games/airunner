@@ -192,34 +192,59 @@
       <number>10</number>
      </property>
      <item>
-      <widget class="QCheckBox" name="use_grid_image_as_input_checkbox">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
+      <widget class="QPushButton" name="link_to_grid_image_button">
        <property name="toolTip">
-        <string>Use grid image as input</string>
+        <string>Link to Grid image</string>
        </property>
        <property name="text">
-        <string>Grid Image</string>
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="insert-link"/>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="enable_checkbox">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
+      <widget class="QPushButton" name="lock_input_image_button">
+       <property name="minimumSize">
+        <size>
+         <width>24</width>
+         <height>24</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>24</width>
+         <height>24</height>
+        </size>
        </property>
        <property name="toolTip">
-        <string>Enable</string>
+        <string>Lock current input image</string>
        </property>
        <property name="text">
-        <string>Enable </string>
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="emblem-readonly"/>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_3">
+       <property name="toolTip">
+        <string>Refresh from grid image</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="view-refresh"/>
        </property>
       </widget>
      </item>
@@ -235,6 +260,22 @@
         </size>
        </property>
       </spacer>
+     </item>
+     <item>
+      <widget class="SwitchWidget" name="EnableSwitch" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>45</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>45</width>
+         <height>20</height>
+        </size>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="import_button">
@@ -279,41 +320,18 @@
    <header>airunner/widgets/controlnet/controlnet_settings_widget</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>SwitchWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/switch_widget/switch_widget</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../../../resources_dark.qrc"/>
+  <include location="../../../resources_light.qrc"/>
+ </resources>
  <connections>
-  <connection>
-   <sender>use_grid_image_as_input_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>input_image</receiver>
-   <slot>use_grid_image_as_input_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>108</x>
-     <y>737</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>748</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>input_image</receiver>
-   <slot>enabled_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>193</x>
-     <y>737</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>4</x>
-     <y>748</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>import_button</sender>
    <signal>clicked()</signal>
@@ -321,8 +339,8 @@
    <slot>import_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>513</x>
-     <y>738</y>
+     <x>532</x>
+     <y>557</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -337,12 +355,60 @@
    <slot>delete_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>551</x>
-     <y>738</y>
+     <x>570</x>
+     <y>557</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
      <y>748</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>link_to_grid_image_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>use_grid_image_as_input_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>29</x>
+     <y>542</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>488</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lock_input_image_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>input_image</receiver>
+   <slot>lock_input_image(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>58</x>
+     <y>544</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-8</x>
+     <y>443</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_3</sender>
+   <signal>clicked()</signal>
+   <receiver>input_image</receiver>
+   <slot>refresh_input_image_from_grid()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>98</x>
+     <y>546</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-6</x>
+     <y>384</y>
     </hint>
    </hints>
   </connection>
@@ -352,5 +418,7 @@
   <slot>delete_clicked()</slot>
   <slot>enabled_toggled(bool)</slot>
   <slot>use_grid_image_as_input_toggled(bool)</slot>
+  <slot>lock_input_image(bool)</slot>
+  <slot>refresh_input_image_from_grid()</slot>
  </slots>
 </ui>
