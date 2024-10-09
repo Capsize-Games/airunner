@@ -27,7 +27,6 @@ from sqlalchemy import distinct
 from airunner.app_installer import AppInstaller
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.plugins.plugin_manager import PluginManager
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models.settings_models import ApplicationSettings, AIModels
 
