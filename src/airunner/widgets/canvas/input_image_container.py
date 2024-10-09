@@ -12,6 +12,7 @@ class InputImageContainer(BaseWidget):
         self.register(SignalCode.MASK_UPDATED, self.on_mask_generator_worker_response_signal)
         self.register(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL, self.on_load_image_from_grid_signal)
         self.input_image = None
+        self.generated_image = None
 
     def on_mask_generator_worker_response_signal(self, message):
         if self.input_image:
@@ -29,8 +30,8 @@ class InputImageContainer(BaseWidget):
             label = "Image-to-Image"
             if settings_key == "controlnet_settings":
                 label = "Controlnet"
-                self.input_image = InputImage(settings_key=self.settings_key, use_generated_image=True)
-                self.ui.tabWidget.addTab(self.input_image, "Generated Image")
+                self.generated_image = InputImage(settings_key=self.settings_key, use_generated_image=True)
+                self.ui.tabWidget.addTab(self.generated_image, "Generated Image")
             elif settings_key == "outpaint_settings":
                 label = "Inpaint / Outpaint"
             self.ui.label.setText(label)
