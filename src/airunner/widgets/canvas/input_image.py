@@ -7,6 +7,7 @@ from PIL.ImageQt import ImageQt
 from PySide6.QtGui import QPixmap, QImage, Qt, QPen
 from PySide6.QtWidgets import QGraphicsScene
 
+from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
@@ -69,19 +70,31 @@ class InputImage(BaseWidget):
         else:
             self.ui.mask_blur_slider_widget.hide()
 
-        self.ui.enable_checkbox.blockSignals(True)
-        self.ui.use_grid_image_as_input_checkbox.blockSignals(True)
-        self.ui.enable_checkbox.setChecked(self.current_settings.enabled)
+        self.ui.EnableSwitch.toggled.connect(self.enabled_toggled)
         if self.settings_key == "outpaint_settings":
             self.ui.import_button.hide()
-            self.ui.use_grid_image_as_input_checkbox.hide()
-            self.ui.use_grid_image_as_input_checkbox.hide()
+            self.ui.link_to_grid_image_button.hide()
+            self.ui.link_to_grid_image_button.hide()
+            self.ui.lock_input_image_button.hide()
         else:
-            self.ui.use_grid_image_as_input_checkbox.setChecked(
+            self.ui.EnableSwitch.blockSignals(True)
+            self.ui.link_to_grid_image_button.blockSignals(True)
+            self.ui.lock_input_image_button.blockSignals(True)
+            self.ui.EnableSwitch.checked = self.current_settings.enabled
+            self.ui.EnableSwitch.setChecked(self.current_settings.enabled)
+            self.ui.link_to_grid_image_button.setChecked(
                 self.current_settings.use_grid_image_as_input
             )
-        self.ui.enable_checkbox.blockSignals(False)
-        self.ui.use_grid_image_as_input_checkbox.blockSignals(False)
+            self.ui.lock_input_image_button.setChecked(
+                self.current_settings.lock_input_image or False  # Provide a default value
+            )
+            self.ui.EnableSwitch.blockSignals(False)
+            self.ui.link_to_grid_image_button.blockSignals(False)
+            self.ui.lock_input_image_button.blockSignals(False)
+
+            if self.current_settings.use_grid_image_as_input:
+                self.load_image_from_grid()
+                return
         self.load_image_from_settings()
 
     @Slot(bool)
@@ -89,12 +102,18 @@ class InputImage(BaseWidget):
         self.update_current_settings("enabled", val)
 
     @Slot(bool)
+    def lock_input_image(self, val):
+        self.update_current_settings("lock_input_image", val)
+
+    @Slot(bool)
+    def refresh_input_image_from_grid(self):
+        self.load_image_from_grid(forced=True)
+
+    @Slot(bool)
     def use_grid_image_as_input_toggled(self, val):
         self.update_current_settings("use_grid_image_as_input", val)
         if val is True:
-            base64_image = self.drawing_pad_settings.image
-            self.update_current_settings("image", base64_image)
-            self.load_image_from_settings()
+            self.load_image_from_grid()
 
     @Slot()
     def import_clicked(self):
@@ -123,6 +142,16 @@ class InputImage(BaseWidget):
         if image is not None:
             self.update_current_settings("image", convert_image_to_base64(image))
 
+    def load_image_from_grid(self, forced=False):
+        if self.settings_key == "outpaint_settings":
+            return
+        if not forced and not self.current_settings.use_grid_image_as_input:
+            return
+        if not forced and self.current_settings.lock_input_image:
+            return
+        self.update_current_settings("image", self.drawing_pad_settings.image)
+        self.load_image_from_settings()
+
     def load_image_from_settings(self):
         if self.use_generated_image:
             image = self.current_settings.generated_image
@@ -136,8 +165,8 @@ class InputImage(BaseWidget):
             image = convert_base64_to_image(image)
             if image is not None:
                 self.load_image_from_object(image)
-            else:
-                print("image is none")
+                return
+        self.ui.image_container.setScene(None)
 
     def load_image_from_object(self, image: Image):
         if image is None:

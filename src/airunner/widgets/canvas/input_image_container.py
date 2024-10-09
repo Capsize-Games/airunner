@@ -10,11 +10,16 @@ class InputImageContainer(BaseWidget):
         super().__init__(*args, **kwargs)
         self.register(SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL, self.on_mask_generator_worker_response_signal)
         self.register(SignalCode.MASK_UPDATED, self.on_mask_generator_worker_response_signal)
+        self.register(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL, self.on_load_image_from_grid_signal)
         self.input_image = None
 
     def on_mask_generator_worker_response_signal(self, message):
         if self.input_image:
             self.input_image.on_mask_generator_worker_response_signal()
+
+    def on_load_image_from_grid_signal(self):
+        if self.input_image:
+            self.input_image.load_image_from_grid()
 
     def showEvent(self, event):
         if self.input_image is None:
