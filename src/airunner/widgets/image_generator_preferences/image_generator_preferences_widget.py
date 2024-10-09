@@ -18,7 +18,7 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
         self.ui.category.clear()
         for item in ImageGenerator:
             self.ui.category.addItem(item.value)
-        self.ui.category.setCurrentText(self.settings["current_image_generator"])
+        self.ui.category.setCurrentText(self.application_settings.current_image_generator)
         self.ui.category.blockSignals(False)
 
     def initialize_pipeline(self):
@@ -26,7 +26,7 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
         self.ui.pipeline.clear()
         for item in ImageGenerator:
             self.ui.pipeline.addItem(item.value)
-        self.ui.pipeline.setCurrentText(self.settings["current_image_generator"])
+        self.ui.pipeline.setCurrentText(self.application_settings.current_image_generator)
         self.ui.pipeline.blockSignals(False)
 
     def initialize_action(self):
@@ -34,37 +34,26 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
         self.ui.action.clear()
         for item in GeneratorSection:
             self.ui.action.addItem(item.value)
-        self.ui.action.setCurrentText(self.settings["current_image_generator"])
+        self.ui.action.setCurrentText(self.application_settings.current_image_generator)
         self.ui.action.blockSignals(False)
+
     def stablediffusion_toggled(self, val):
         if val:
-            settings = self.settings
-            settings["current_image_generator"] = ImageGenerator.STABLEDIFFUSION.value
-            settings["generator_section"] = GeneratorSection.TXT2IMG.value
-            self.settings = settings
+            self.update_application_settings("current_image_generator", ImageGenerator.STABLEDIFFUSION.value)
+            self.update_application_settings("generator_section", GeneratorSection.TXT2IMG.value)
 
     def category_changed(self, val):
-        settings = self.settings
-        settings["generator_section"] = val
-        self.settings = settings
+        self.update_application_settings("generator_section", val)
 
     def pipeline_changed(self, val):
-        settings = self.settings
-        settings["current_image_generator"] = val
-        self.settings = settings
+        self.update_application_settings("current_image_generator", val)
 
     def version_changed(self, val):
-        settings = self.settings
-        settings["current_image_generator"] = val
-        self.settings = settings
+        self.update_application_settings("current_image_generator", val)
 
     def action_changed(self, val):
-        settings = self.settings
-        settings["current_image_generator"] = val
-        self.settings = settings
+        self.update_application_settings("current_image_generator", val)
 
     def model_changed(self, val):
-        settings = self.settings
-        settings["current_image_generator"] = val
-        self.settings = settings
+        self.update_application_settings("current_image_generator", val)
 

@@ -6,8 +6,7 @@ def parse_template(template: dict) -> str:
     parsed_template = ""
     if llm_category == "causallm":
         if model in [
-            "mistralai/Mistral-7B-Instruct-v0.1",
-            "mistralai/Mistral-7B-Instruct-v0.2"
+            "w4ffl35/Mistral-7B-Instruct-v0.3-4bit"
         ]:
             parsed_template = "\n".join((
                 "[INST]<<SYS>>",

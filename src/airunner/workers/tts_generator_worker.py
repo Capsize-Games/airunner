@@ -1,14 +1,8 @@
 import queue
+import threading
 
-from PySide6.QtCore import QThread
-
-from airunner.aihandler.tts.bark_tts_handler import BarkTTSHandler
-from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
-from airunner.aihandler.tts.speecht5_tts_handler import SpeechT5TTSHandler
-from airunner.enums import SignalCode, QueueType, TTSModel
-from airunner.settings import SLEEP_TIME_IN_MS
+from airunner.enums import SignalCode, TTSModel, ModelStatus
 from airunner.workers.worker import Worker
-from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
 
 
 class TTSGeneratorWorker(Worker):
@@ -18,64 +12,80 @@ class TTSGeneratorWorker(Worker):
     tokens = []
 
     def __init__(self, *args, **kwargs):
-        tts_model = self.settings["tts_settings"]["tts_model"]
-        if tts_model == TTSModel.ESPEAK:
-            tts_handler_class_ = EspeakTTSHandler
-        elif tts_model == TTSModel.SPEECHT5:
-            tts_handler_class_ = SpeechT5TTSHandler
-        elif tts_model == TTSModel.BARK:
-            tts_handler_class_ = BarkTTSHandler
-        super().__init__(*args, **kwargs)
-        self.tts = tts_handler_class_()
-        self.tts.run()
+        self.tts = None
         self.play_queue = []
         self.play_queue_started = False
         self.do_interrupt = False
-        self.register(SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal)
-        self.register(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal)
+        super().__init__(*args, signals=(
+            (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
+            (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
+            (SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal),
+            (SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal),
+            (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal),
+        ), **kwargs)
 
-    def add_to_queue(self, message):
-        if self.do_interrupt:
+    def on_llm_text_streamed_signal(self, data):
+        if not self.application_settings.tts_enabled:
             return
-        super().add_to_queue(message)
-    
-    def run(self):
-        if self.queue_type == QueueType.NONE:
-            return
-        self.logger.debug("Starting")
-        self.running = True
-        while self.running:
-            self.preprocess()
-            try:
-                msg = self.get_item_from_queue()
-                if msg is not None:
-                    self.handle_message(msg)
-            except queue.Empty:
-                msg = None
-            if self.paused:
-                self.logger.debug("Paused")
-                while self.paused:
-                    QThread.msleep(SLEEP_TIME_IN_MS)
-                self.logger.debug("Resumed")
-            QThread.msleep(SLEEP_TIME_IN_MS)
 
-    def get_item_from_queue(self):
-        if self.do_interrupt:
-            return None
-        return super().get_item_from_queue()
+        if self.tts.model_status is not ModelStatus.LOADED:
+            self.tts.load()
 
-    def on_interrupt_process_signal(self, _message: dict):
+        message = data.get("message", "")
+        is_end_of_message = data.get("is_end_of_message", False)
+        self.add_to_queue({
+            'message': message.replace("</s>", "") + ("." if is_end_of_message else ""),
+            'tts_settings': self.tts_settings,
+            'is_end_of_message': is_end_of_message,
+        })
+
+    def on_interrupt_process_signal(self):
         self.play_queue = []
         self.play_queue_started = False
         self.tokens = []
         self.queue = queue.Queue()
         self.do_interrupt = True
         self.paused = True
+        self.tts.interrupt_process_signal()
 
-    def on_unblock_tts_generator_signal(self, _ignore: dict):
+    def on_unblock_tts_generator_signal(self):
         self.logger.debug("Unblocking TTS generation...")
         self.do_interrupt = False
         self.paused = False
+        self.tts.unblock_tts_generator_signal()
+
+    def on_enable_tts_signal(self):
+        if self.tts:
+            thread = threading.Thread(target=self._load_tts)
+            thread.start()
+
+    def on_disable_tts_signal(self):
+        if self.tts:
+            thread = threading.Thread(target=self._unload_tts)
+            thread.start()
+
+    def start_worker_thread(self):
+        tts_model = self.tts_settings.model.lower()
+
+        if tts_model == TTSModel.ESPEAK.value:
+            from airunner.handlers.tts.espeak_tts_handler import EspeakTTSHandler
+            tts_handler_class_ = EspeakTTSHandler
+        else:
+            from airunner.handlers.tts.speecht5_tts_handler import SpeechT5TTSHandler
+            tts_handler_class_ = SpeechT5TTSHandler
+        self.tts = tts_handler_class_()
+        if self.application_settings.tts_enabled:
+            self.tts.load()
+
+    def add_to_queue(self, message):
+        if self.do_interrupt:
+            return
+        super().add_to_queue(message)
+
+    def get_item_from_queue(self):
+        if self.do_interrupt:
+            return None
+        return super().get_item_from_queue()
 
     def handle_message(self, data):
         if self.do_interrupt:
@@ -90,16 +100,12 @@ class TTSGeneratorWorker(Worker):
         text = "".join(self.tokens)
 
         if finalize:
-            self.generate(text)
+            self._generate(text)
             self.play_queue_started = True
             self.tokens = []
         else:
             # Split text at punctuation
-            if self.tts.target_model == "bark":
-                punctuation = ["\n"]
-            else:
-                punctuation = [".", "?", "!", ";", ":", "\n", ","]
-
+            punctuation = [".", "?", "!", ";", ":", "\n", ","]
             for p in punctuation:
                 if self.do_interrupt:
                     return
@@ -108,7 +114,7 @@ class TTSGeneratorWorker(Worker):
                     split_text = text.split(p, 1)  # Split at the first occurrence of punctuation
                     if len(split_text) > 1:
                         sentence = split_text[0]
-                        self.generate(sentence)
+                        self._generate(sentence)
                         self.play_queue_started = True
 
                         # Convert the remaining string back to a list of tokens
@@ -117,20 +123,25 @@ class TTSGeneratorWorker(Worker):
                             self.tokens = list(remaining_text)
                             break
         if self.do_interrupt:
-            self.on_interrupt_process_signal({})
+            self.on_interrupt_process_signal()
 
-    def generate(self, message):
+    def _load_tts(self):
+        self.tts.load()
+
+    def _unload_tts(self):
+        self.tts.unload()
+
+    def _generate(self, message):
         if self.do_interrupt:
             return
-
         self.logger.debug("Generating TTS...")
 
         if type(message) == dict:
             message = message.get("message", "")
-        
-        self.logger.debug(message)
-        
-        response = self.tts.generate(message)
+
+        response = None
+        if self.tts:
+            response = self.tts.generate(message)
 
         if self.do_interrupt:
             return
@@ -142,3 +153,4 @@ class TTSGeneratorWorker(Worker):
                     "message": response
                 }
             )
+
