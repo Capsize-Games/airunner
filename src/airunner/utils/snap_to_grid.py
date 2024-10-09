@@ -1,9 +1,11 @@
 import math
 
+from airunner.data.models.settings_models import GridSettings
 
-def snap_to_grid(settings: dict, x: int, y: int, use_floor: bool = True):
-    cell_size = settings["grid_settings"]["cell_size"]
-    if settings["grid_settings"]["snap_to_grid"]:
+
+def snap_to_grid(settings: GridSettings, x: int, y: int, use_floor: bool = True):
+    cell_size = settings.cell_size
+    if settings.snap_to_grid:
         x_is_negative = x < 0
         y_is_negative = y < 0
 

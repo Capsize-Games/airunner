@@ -27,8 +27,6 @@ class MessageWidget(BaseWidget):
         self.ui.content.setReadOnly(True)
         self.ui.content.insertPlainText(self.message)
         self.ui.content.document().contentsChanged.connect(self.sizeChange)
-        # self.ui.content.sizeHint = self.sizeHint
-        # self.ui.content.minimumSizeHint = self.minimumSizeHint
         name = self.name
         if self.is_bot:
             self.ui.bot_name.show()
@@ -48,14 +46,16 @@ class MessageWidget(BaseWidget):
         self.font_size = None
         self.set_chat_font()
 
-    def on_application_settings_changed_signal(self, _message):
+    def on_application_settings_changed_signal(self):
         self.set_chat_font()
 
     def set_chat_font(self):
-        if self.font_family != self.settings["font_settings"]["chat"]["font_family"] or self.font_size != \
-                self.settings["font_settings"]["chat"]["font_size"]:
-            self.font_family = self.settings["font_settings"]["chat"]["font_family"]
-            self.font_size = self.settings["font_settings"]["chat"]["font_size"]
+        font_setting = self.get_font_setting_by_name("chat")
+        font_family = font_setting.font_family
+        font_size = font_setting.font_size
+        if self.font_family != font_family or self.font_size != font_size:
+            self.font_family = font_family
+            self.font_size = font_size
             # Check if the font family is available
             if self.font_family in QFontDatabase().families():
                 font = QFont(self.font_family, self.font_size)
@@ -89,5 +89,9 @@ class MessageWidget(BaseWidget):
 
     def update_message(self, text):
         self.message += text
+
+        # strip double spaces from self.message
+        self.message = self.message.replace("  ", " ")
+
         self.ui.content.setPlainText(self.message)
 
