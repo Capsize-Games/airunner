@@ -79,6 +79,7 @@ setup(
             "widgets/**/*.ui",
             "windows/**/*.ui",
             "*.qrc",
+            "*.ini",
         ],
     },
     include_package_data=True,
