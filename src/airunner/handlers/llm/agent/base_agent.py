@@ -18,11 +18,11 @@ from llama_index.core.chat_engine import ContextChatEngine
 from llama_index.core import SimpleKeywordTableIndex
 from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
 
-from airunner.aihandler.llm.huggingface_llm import HuggingFaceLLM
-from airunner.aihandler.llm.custom_embedding import CustomEmbedding
-from airunner.aihandler.llm.agent.html_file_reader import HtmlFileReader
-from airunner.aihandler.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
-from airunner.aihandler.logger import Logger
+from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
+from airunner.handlers.llm.custom_embedding import CustomEmbedding
+from airunner.handlers.llm.agent.html_file_reader import HtmlFileReader
+from airunner.handlers.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
+from airunner.handlers.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import (
     SignalCode,

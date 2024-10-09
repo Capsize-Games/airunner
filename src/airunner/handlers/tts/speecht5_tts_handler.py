@@ -7,7 +7,7 @@ import inflect
 import torch
 from transformers import AutoTokenizer
 
-from airunner.aihandler.tts.tts_handler import TTSHandler
+from airunner.handlers.tts.tts_handler import TTSHandler
 from airunner.enums import SignalCode, LLMChatRole, ModelType, ModelStatus
 from airunner.utils.clear_memory import clear_memory
 

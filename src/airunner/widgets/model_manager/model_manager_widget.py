@@ -1,7 +1,7 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog
 
-from airunner.aihandler.models.settings_models import AIModels
+from airunner.handlers.models.settings_models import AIModels
 from airunner.enums import SignalCode
 from airunner.widgets.model_manager.templates.model_manager_ui import Ui_model_manager
 from airunner.windows.base_window import BaseWindow

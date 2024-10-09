@@ -5,7 +5,7 @@ from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
 from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsLineItem
 
-from airunner.aihandler.logger import Logger
+from airunner.handlers.logger import Logger
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
