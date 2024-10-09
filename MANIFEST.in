@@ -1,7 +1,9 @@
 recursive-include src/airunner/cursors **/*
+recursive-include src/airunner/data **/*
 recursive-include src/airunner/filters **/*
 recursive-include src/airunner/icons **/*
 recursive-include src/airunner/images **/*
 recursive-include src/airunner/styles **/*
 recursive-include src/airunner/widgets **/*.ui
 recursive-include src/airunner/windows **/*.ui
+recursive-include src/airunner *.qrc
