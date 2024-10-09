@@ -554,6 +554,7 @@ class Ui_MainWindow(object):
         self.menuTools.addSeparator()
         self.menuTools.addAction(self.actionRun_setup_wizard_2)
         self.toolBar.addAction(self.actionNew)
+        self.toolBar.addAction(self.actionImport)
         self.toolBar.addAction(self.actionExport_3)
         self.toolBar.addSeparator()
         self.toolBar.addAction(self.actionToggle_Active_Grid_Area)
@@ -561,6 +562,9 @@ class Ui_MainWindow(object):
         self.toolBar.addAction(self.actionToggle_Eraser)
         self.toolBar.addAction(self.actionToggle_Grid)
         self.toolBar.addAction(self.actionMask_toggle)
+        self.toolBar.addSeparator()
+        self.toolBar.addAction(self.actionUndo)
+        self.toolBar.addAction(self.actionRedo)
         self.model_toolbar.addAction(self.actionSettings)
         self.model_toolbar.addSeparator()
         self.model_toolbar.addAction(self.actionToggle_Speech_to_Text)
@@ -618,6 +622,8 @@ class Ui_MainWindow(object):
         self.actionToggle_LLM.toggled.connect(MainWindow.action_toggle_llm)
         self.actionExport_3.triggered.connect(MainWindow.action_export_image_triggered)
         self.actionMask_toggle.toggled.connect(MainWindow.action_toggle_mask_layer)
+        self.actionUndo.triggered.connect(MainWindow.action_undo_triggered)
+        self.actionRedo.triggered.connect(MainWindow.action_redo_triggered)
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi

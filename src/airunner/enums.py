@@ -241,6 +241,7 @@ class SignalCode(Enum):
 
     MASK_LAYER_TOGGLED = enum.auto()
     MASK_UPDATED = enum.auto()
+    HISTORY_UPDATED = enum.auto()
 
 class EngineResponseCode(Enum):
     STATUS = 100
