@@ -9,11 +9,11 @@ from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfi
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
 
-from airunner.aihandler.base_handler import BaseHandler
+from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import MAX_SEED
 from airunner.utils.clear_memory import clear_memory
-from airunner.aihandler.llm.agent.base_agent import BaseAgent
+from airunner.handlers.llm.agent.base_agent import BaseAgent
 
 
 class CausalLMTransformerBaseHandler(
