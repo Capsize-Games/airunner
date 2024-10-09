@@ -91,6 +91,7 @@ class ControlnetSettings(Base):
     conditioning_scale = Column(Integer, default=100)
     guidance_scale = Column(Integer, default=750)
     controlnet = Column(String, default="Canny")
+    lock_input_image = Column(Boolean, default=False)
 
 
 class ImageToImageSettings(Base):
@@ -99,6 +100,7 @@ class ImageToImageSettings(Base):
     image = Column(String, nullable=True)
     enabled = Column(Boolean, default=False)
     use_grid_image_as_input = Column(Boolean, default=False)
+    lock_input_image = Column(Boolean, default=False)
 
 
 class OutpaintSettings(Base):
