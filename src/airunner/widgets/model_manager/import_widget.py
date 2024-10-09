@@ -1,12 +1,12 @@
 import os
 from urllib.parse import urlparse
 
-from airunner.aihandler.models.settings_models import Lora, AIModels
+from airunner.data.models.settings_models import Lora, AIModels
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
-from airunner.aihandler.stablediffusion.download_civitai import DownloadCivitAI
-from airunner.aihandler.stablediffusion.download_huggingface import DownloadHuggingface
+from airunner.handlers.stablediffusion.download_civitai import DownloadCivitAI
+from airunner.handlers.stablediffusion.download_huggingface import DownloadHuggingface
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 
