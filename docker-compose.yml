@@ -1,0 +1,26 @@
+version: "3.6"
+services:
+  linux:
+    restart: always
+    container_name: airunner_linux
+    image: ghcr.io/capsize-games/airunner/airunner:linux
+    user: root
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    environment:
+      - DEV_ENV=0
+      - AIRUNNER_ENVIRONMENT=prod
+      - AIRUNNER_OS=linux
+      - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512
+      - NUMBA_CACHE_DIR=/tmp/numba_cache
+      - LD_LIBRARY_PATH=/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
+      - DISABLE_TELEMETRY=1
+      - TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/
+      - TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/
+    command: /bin/bash
+    volumes:
+      - ./dist:/app/dist
+      - ./build:/app/build
+    working_dir: /app
+    runtime: nvidia

@@ -12,10 +12,12 @@ Do not change the order of the imports.
 ################################################################
 import facehuggershield
 from airunner.settings import NLTK_DOWNLOAD_DIR
+import os
+base_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
 facehuggershield.huggingface.activate(
     show_stdout=True,
     darklock_os_whitelisted_directories=[
-        "~/.local/share/airunner",
+        base_path,
         NLTK_DOWNLOAD_DIR,
         "/tmp"
     ]
@@ -24,13 +26,12 @@ facehuggershield.huggingface.activate(
 ################################################################
 # Set the environment variable for PyTorch to use expandable
 ################################################################
-import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 ################################################################
 # Ensure that the base directory exists.
 ################################################################
-base_dir = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner", "data")
+base_dir = os.path.join(base_path, "data")
 os.makedirs(base_dir, exist_ok=True)
 
 ################################################################
