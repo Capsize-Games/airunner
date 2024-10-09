@@ -1,7 +1,7 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from airunner.handlers.models.settings_models import Base
+from airunner.data.models.settings_models import Base
 
 class DatabaseHandler:
     def __init__(self, db_path=os.path.expanduser(

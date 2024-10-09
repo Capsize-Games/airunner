@@ -1,7 +1,7 @@
 import os
 from urllib.parse import urlparse
 
-from airunner.handlers.models.settings_models import Lora, AIModels
+from airunner.data.models.settings_models import Lora, AIModels
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.import_ui import Ui_import_model_widget
