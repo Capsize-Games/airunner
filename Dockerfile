@@ -100,7 +100,7 @@ WORKDIR /app
 RUN pip install --upgrade pip
 RUN pip install --upgrade setuptools
 RUN pip install --upgrade wheel
-RUN pip install requests aihandler cmake
+RUN pip install requests cmake
 RUN pip uninstall torch torchvision -y
 RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade
 
@@ -142,7 +142,9 @@ RUN git clone https://github.com/Capsize-Games/airunner.git /app/airunner \
     && cd /app/airunner \
     && git checkout master \
     && git pull \
-    && python3 -m pip install .
+    && python3 -m pip install build \
+    && python3 -m build \
+    && python3 -m pip install build dist/airunner-3.0.16-py3-none-any.whl
 
 FROM build_airunner as build_airunner_executable
 USER appuser
