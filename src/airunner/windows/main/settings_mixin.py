@@ -3,8 +3,8 @@ from typing import List
 
 from sqlalchemy.orm import joinedload
 
-from airunner.handlers.models.settings_db_handler import SettingsDBHandler
-from airunner.handlers.models.settings_models import ApplicationSettings, LLMGeneratorSettings, GeneratorSettings, \
+from airunner.data.models.settings_db_handler import SettingsDBHandler
+from airunner.data.models.settings_models import ApplicationSettings, LLMGeneratorSettings, GeneratorSettings, \
     ControlnetSettings, BrushSettings, DrawingPadSettings, GridSettings, ActiveGridSettings, \
     ImageToImageSettings, OutpaintSettings, PathSettings, MemorySettings, Chatbot, \
     AIModels, Schedulers, Lora, ShortcutKeys, SavedPrompt, SpeechT5Settings, TTSSettings, EspeakSettings, \

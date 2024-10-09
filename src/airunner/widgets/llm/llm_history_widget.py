@@ -2,7 +2,7 @@
 
 from PySide6.QtWidgets import QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QHBoxLayout, QWidget, QLabel
 
-from airunner.handlers.models.settings_models import Message, LLMGeneratorSettings
+from airunner.data.models.settings_models import Message, LLMGeneratorSettings
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_history_widget_ui import Ui_llm_history_widget

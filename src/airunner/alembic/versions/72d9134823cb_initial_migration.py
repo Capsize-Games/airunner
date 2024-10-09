@@ -11,8 +11,8 @@ import sqlalchemy
 from alembic import op
 import sqlalchemy as sa
 
-from airunner.handlers.models import settings_models
-from airunner.handlers.models.settings_models import Base
+from airunner.data.models import settings_models
+from airunner.data.models.settings_models import Base
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.font_settings_bootstrap_data import font_settings_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data

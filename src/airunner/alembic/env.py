@@ -10,7 +10,7 @@ db_path = os.path.expanduser("~/.local/share/airunner/data/airunner.db")
 config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
 
 # Import your models here
-from airunner.handlers.models.settings_models import (
+from airunner.data.models.settings_models import (
     Conversation, Message, Summary,
     ApplicationSettings, ActiveGridSettings, ControlnetSettings,
     ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings,

@@ -1,8 +1,8 @@
-from typing import Any, List
+from typing import Any
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QDoubleSpinBox
 
-from airunner.handlers.models.settings_models import Lora
+from airunner.data.models.settings_models import Lora
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget
 

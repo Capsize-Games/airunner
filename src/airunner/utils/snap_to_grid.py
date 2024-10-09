@@ -1,6 +1,6 @@
 import math
 
-from airunner.handlers.models.settings_models import GridSettings
+from airunner.data.models.settings_models import GridSettings
 
 
 def snap_to_grid(settings: GridSettings, x: int, y: int, use_floor: bool = True):

@@ -29,7 +29,7 @@ from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.plugins.plugin_manager import PluginManager
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.handlers.models.settings_models import ApplicationSettings, AIModels
+from airunner.data.models.settings_models import ApplicationSettings, AIModels
 
 
 class App(

@@ -1,6 +1,6 @@
 from PySide6.QtCore import Slot
 
-from airunner.handlers.models.settings_models import Embedding
+from airunner.data.models.settings_models import Embedding
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_trigger_word_widget import EmbeddingTriggerWordWidget
