@@ -200,7 +200,8 @@ class ImportWidget(
                 print(e)
 
         parsed_url = urlparse(url)
-        self.is_civitai = "civitai.com" in parsed_url.netloc
+        host = parsed_url.hostname
+        self.is_civitai = host and host.endswith(".civitai.com")
         return str(model_id)
 
     def import_models(self):
