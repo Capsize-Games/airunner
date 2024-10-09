@@ -1,7 +1,6 @@
 import os
 
-from airunner.aihandler.logger import Logger
-from airunner.aihandler.models.settings_models import AIModels
+from airunner.data.models.settings_models import AIModels
 from airunner.enums import SignalCode
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.workers.worker import Worker

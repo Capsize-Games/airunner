@@ -27,8 +27,9 @@ from sqlalchemy import distinct
 from airunner.app_installer import AppInstaller
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
+from airunner.plugins.plugin_manager import PluginManager
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.aihandler.models.settings_models import ApplicationSettings, AIModels
+from airunner.data.models.settings_models import ApplicationSettings, AIModels
 
 
 class App(
@@ -51,7 +52,7 @@ class App(
         :param main_window_class: The main window class to use for the application.
         """
         from airunner.windows.main.main_window import MainWindow
-        from airunner.aihandler.logger import Logger
+        from airunner.handlers.logger import Logger
 
         self.main_window_class_ = main_window_class or MainWindow
         self.app = None

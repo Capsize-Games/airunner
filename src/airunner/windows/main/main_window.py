@@ -21,10 +21,10 @@ from PySide6.QtWidgets import (
 )
 from bs4 import BeautifulSoup
 
-from airunner.aihandler.llm.agent.actions.bash_execute import bash_execute
-from airunner.aihandler.llm.agent.actions.show_path import show_path
-from airunner.aihandler.logger import Logger
-from airunner.aihandler.models.settings_models import ShortcutKeys, ImageFilter, DrawingPadSettings
+from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
+from airunner.handlers.llm.agent.actions.show_path import show_path
+from airunner.handlers.logger import Logger
+from airunner.data.models.settings_models import ShortcutKeys, ImageFilter, DrawingPadSettings
 from airunner.app_installer import AppInstaller
 from airunner.settings import (
     STATUS_ERROR_COLOR,

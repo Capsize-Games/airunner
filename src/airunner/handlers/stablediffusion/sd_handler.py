@@ -23,10 +23,10 @@ from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, S
     StableDiffusionXLInpaintPipeline, StableDiffusionXLControlNetPipeline, StableDiffusionXLControlNetImg2ImgPipeline, \
     StableDiffusionXLControlNetInpaintPipeline, ControlNetModel
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-from transformers import CLIPFeatureExtractor, CLIPTokenizerFast
+from transformers import CLIPFeatureExtractor
 
-from airunner.aihandler.base_handler import BaseHandler
-from airunner.aihandler.models.settings_models import Schedulers, Lora, Embedding, ControlnetModel, AIModels, \
+from airunner.handlers.base_handler import BaseHandler
+from airunner.data.models.settings_models import Schedulers, Lora, Embedding, ControlnetModel, AIModels, \
     GeneratorSettings
 from airunner.enums import (
     SDMode, StableDiffusionVersion, GeneratorSection, ModelStatus, ModelType, SignalCode, HandlerState,

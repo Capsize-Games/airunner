@@ -2,7 +2,7 @@ from PySide6.QtCore import QObject, Signal
 
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.aihandler.logger import Logger
+from airunner.handlers.logger import Logger
 from airunner.utils.create_worker import create_worker
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker

@@ -4,16 +4,15 @@ import nltk
 from PySide6.QtCore import QObject, QThread, Slot, Signal
 from sqlalchemy import func
 
-from airunner.aihandler.models.settings_models import AIModels, ControlnetModel
+from airunner.data.models.settings_models import AIModels, ControlnetModel
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
-from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
 from airunner.data.bootstrap.llm_file_bootstrap_data import LLM_FILE_BOOTSTRAP_DATA
 from airunner.data.bootstrap.whisper import WHISPER_FILES
 from airunner.data.bootstrap.speech_t5 import SPEECH_T5_FILES
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import DEFAULT_LLM_HF_PATH, NLTK_DOWNLOAD_DIR
+from airunner.settings import NLTK_DOWNLOAD_DIR
 from airunner.utils.network.huggingface_downloader import HuggingfaceDownloader
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.base_wizard import BaseWizard

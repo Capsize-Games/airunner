@@ -1,6 +1,6 @@
 import threading
 
-from airunner.aihandler.stt.whisper_handler import WhisperHandler
+from airunner.handlers.stt.whisper_handler import WhisperHandler
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
