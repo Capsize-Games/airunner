@@ -68,10 +68,10 @@ class TTSGeneratorWorker(Worker):
         tts_model = self.tts_settings.model.lower()
 
         if tts_model == TTSModel.ESPEAK.value:
-            from airunner.aihandler.tts.espeak_tts_handler import EspeakTTSHandler
+            from airunner.handlers.tts.espeak_tts_handler import EspeakTTSHandler
             tts_handler_class_ = EspeakTTSHandler
         else:
-            from airunner.aihandler.tts.speecht5_tts_handler import SpeechT5TTSHandler
+            from airunner.handlers.tts.speecht5_tts_handler import SpeechT5TTSHandler
             tts_handler_class_ = SpeechT5TTSHandler
         self.tts = tts_handler_class_()
         if self.application_settings.tts_enabled:
