@@ -100,7 +100,7 @@ WORKDIR /app
 RUN pip install --upgrade pip
 RUN pip install --upgrade setuptools
 RUN pip install --upgrade wheel
-RUN pip install requests cmake
+RUN pip install requests accelerate cmake
 RUN pip uninstall torch torchvision -y
 RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade
 
@@ -111,8 +111,6 @@ ENV HOME=/app
 ENV PATH="/home/appuser/.local/bin:${PATH}"
 ENV PYTHONUSERBASE=/home/appuser/.local
 RUN python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
-RUN pip uninstall nvidia-cublas-cu11 nvidia-cublas-cu12 -y
-RUN pip uninstall xformers -y
 
 FROM install_apps as more_env
 USER appuser
