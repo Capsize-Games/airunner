@@ -189,22 +189,22 @@ for source_dir in source_dirs:
             # Copy the .ui file to the destination directory
             shutil.copy(ui_file, destination_dir)
 
+# Ensure the destination directories exist
 os.makedirs('/app/dist/airunner/diffusers/pipelines/stable_diffusion', exist_ok=True)
 os.makedirs('/app/dist/airunner/images', exist_ok=True)
 
-# copy files for distribution
-# shutil.copyfile('/app/linux.itch.toml', './dist/airunner/.itch.toml')
+# Copy files for distribution
 shutil.copyfile('/app/airunner/src/airunner/images/splashscreen.png', '/app/dist/airunner/images/splashscreen.png')
-shutil.copytree('/app/airunner/src/airunner/styles/icons/dark/', '/app/dist/airunner/icons/dark/')
-shutil.copytree('/app/airunner/src/airunner/styles/icons/light/', '/app/dist/airunner/icons/light/')
+shutil.copytree('/app/airunner/src/airunner/styles/icons/dark/', '/app/dist/airunner/styles/icons/dark/')
+shutil.copytree('/app/airunner/src/airunner/styles/icons/light/', '/app/dist/airunner/styles/icons/light/')
 
-# copy alembic files
+# Copy alembic files
 shutil.copytree('/app/airunner/src/airunner/alembic/', '/app/dist/airunner/_internal/alembic/')
 shutil.copyfile('/app/airunner/src/airunner/alembic.ini', '/app/dist/airunner/_internal/alembic.ini')
 
-# copy bootstrap data
+# Copy bootstrap data
 shutil.copytree('/app/airunner/src/airunner/data/', '/app/dist/airunner/data/')
 
-# copy llamaindex nltk cache requirements
+# Copy llamaindex nltk cache requirements
 shutil.copytree('/app/airunner/lib/corpora', '/app/dist/airunner/_internal/llama_index/core/_static/nltk_cache/corpora')
 shutil.copytree('/app/airunner/lib/tokenizers', '/app/dist/airunner/_internal/llama_index/core/_static/nltk_cache/tokenizers')
