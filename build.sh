@@ -2,6 +2,11 @@
 # this should be called from within docker to kick off a build
 DISABLE_TELEMETRY=1
 cd /app
+
+# Ensure the build directory exists and set permissions
+mkdir -p /app/build
+chmod -R 777 /app/build
+
 echo ""
 echo "============================================"
 echo "Installing dependencies"
@@ -13,19 +18,19 @@ echo "============================================"
 echo "Build airunner for linux"
 echo "============================================"
 echo ""
-DEV_ENV=0 AIRUNNER_ENVIRONMENT="prod" PYTHONOPTIMIZE=0 python3 -m PyInstaller --log-level=INFO --noconfirm  /app/build.airunner.linux.prod.spec 2>&1 | tee build.log
+DEV_ENV=0 AIRUNNER_ENVIRONMENT="prod" PYTHONOPTIMIZE=0 python3 -m PyInstaller --log-level=INFO --noconfirm /app/build.airunner.linux.prod.spec 2>&1 | tee build.log
 echo ""
 echo "============================================"
 echo "Copy timm to dist"
 echo "============================================"
 echo ""
-cp -R /usr/local/lib/python3.10/dist-packages/timm ./dist/airunner/
+cp -R /home/appuser/.local/lib/python3.10/site-packages/timm ./dist/airunner/
 echo ""
 echo "============================================"
 echo "Copy libtorch_cuda_linalg.so to dist"
 echo "============================================"
 echo ""
-cp /usr/local/lib/python3.10/dist-packages/torch/lib/libtorch_cuda_linalg.so ./dist/airunner/
+cp /home/appuser/.local/lib/python3.10/site-packages/torch/lib/libtorch_cuda_linalg.so ./dist/airunner/
 echo ""
 echo "============================================"
 echo "Copy setup.py to dist"
@@ -34,10 +39,10 @@ echo ""
 cp /app/setup.py ./dist/airunner/
 echo ""
 echo "============================================"
-echo "Copy /usr/local/lib/python3.10/dist-packages/Pillow-9.5.0.dist-info to ./dist/airunner/Pillow-9.5.0.dist-info"
+echo "Copy pillow to dist"
 echo "============================================"
 echo ""
-cp -R /usr/local/lib/python3.10/dist-packages/Pillow-9.5.0.dist-info ./dist/airunner/
+cp -R /home/appuser/.local/lib/python3.10/site-packages/pillow-10.4.0.dist-info ./dist/airunner/
 echo ""
 echo "============================================"
 echo "Deploying airunner to itch.io"
