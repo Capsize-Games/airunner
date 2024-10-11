@@ -20,29 +20,6 @@ class BotPreferencesWidget(BaseWidget):
         self.load_saved_chatbots()
         super().showEvent(event)
 
-    def apply_demo_lock(self):
-        elements = [
-            self.ui.username,
-            self.ui.botname,
-            self.ui.bot_personality,
-            self.ui.bot_mood,
-            self.ui.names_groupbox,
-            self.ui.personality_groupbox,
-            self.ui.mood_groupbox,
-            self.ui.system_instructions,
-            self.ui.system_instructions_groupbox,
-            self.ui.guardrails_prompt,
-            self.ui.guardrails_groupbox,
-            self.ui.target_files,
-            self.ui.create_new_button,
-            self.ui.delete_button,
-            self.ui.saved_chatbots,
-            self.ui.comboBox,
-        ]
-
-        for element in elements:
-            element.setEnabled(False)
-
     def load_form_elements(self):
         elements = [
             "username",
