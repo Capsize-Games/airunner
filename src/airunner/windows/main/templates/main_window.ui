@@ -262,7 +262,6 @@
     <addaction name="actionToggle_Brush"/>
     <addaction name="actionToggle_Eraser"/>
     <addaction name="actionToggle_Grid"/>
-    <addaction name="actionRecenter"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
