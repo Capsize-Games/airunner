@@ -178,28 +178,3 @@ class BaseWidget(
             return True
         except AttributeError:
             return False
-
-    def set_form_value(self, element, settings_key_name):
-        val = self.get_plain_text(element)
-        if val is None:
-            val = self.get_text(element)
-        if val is None:
-            val = self.get_value(element)
-        if val is None:
-            val = self.get_is_checked(element)
-        print("TODO: finish this")
-
-    def set_stylesheet(self, ui=None):
-        """
-        Sets the stylesheet for the application based on the current theme
-        """
-        ui = ui or self
-        if self.application_settings.override_system_theme:
-            theme_name = DARK_THEME_NAME if self.application_settings.dark_mode_enabled else LIGHT_THEME_NAME
-            here = os.path.dirname(os.path.realpath(__file__))
-            with open(os.path.join(here, "..", "styles", theme_name, "styles.qss"), "r") as f:
-                stylesheet = f.read()
-            ui.setStyleSheet(stylesheet)
-        else:
-            ui.setStyleSheet("")
-        ui.update()
