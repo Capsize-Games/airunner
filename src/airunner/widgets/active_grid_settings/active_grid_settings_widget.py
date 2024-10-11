@@ -78,9 +78,6 @@ class ActiveGridSettingsWidget(BaseWidget):
             self.update_application_settings("working_width", width)
             self.update_application_settings("working_height", height)
 
-    def update_active_grid_settings(self, setting_key, checked):
-        self.update_active_grid_settings(setting_key, checked)
-
     def action_clicked_checkbox_toggle_active_grid_border(self, checked):
         self.update_active_grid_settings("render_border", checked)
 

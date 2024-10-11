@@ -18,6 +18,7 @@ class BotPreferencesWidget(BaseWidget):
 
     def showEvent(self, event):
         self.load_saved_chatbots()
+        super().showEvent(event)
 
     def load_form_elements(self):
         elements = [

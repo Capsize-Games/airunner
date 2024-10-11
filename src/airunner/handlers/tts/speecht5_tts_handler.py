@@ -235,6 +235,7 @@ class SpeechT5TTSHandler(TTSHandler):
     def _do_generate(self, message):
         self.logger.debug("Generating text-to-speech with T5")
         text = self._replace_unspeakable_characters(message)
+        text = self._roman_to_int(text)
         text = self._replace_numbers_with_words(text)
         text = text.strip()
 
@@ -242,6 +243,8 @@ class SpeechT5TTSHandler(TTSHandler):
             return None
 
         self.logger.debug("Processing inputs...")
+
+        print(text)
 
         inputs = self._processor(
             text=text,
@@ -302,13 +305,16 @@ class SpeechT5TTSHandler(TTSHandler):
         # strip things like eplisis, etc
         text = text.replace("...", " ")
         text = text.replace("…", " ")
-        text = text.replace("’", "'")
-        text = text.replace("“", '"')
-        text = text.replace("”", '"')
-        text = text.replace("‘", "'")
-        text = text.replace("’", "'")
-        text = text.replace("–", "-")
-        text = text.replace("—", "-")
+        text = text.replace("’", "")
+        text = text.replace("“", "")
+        text = text.replace("”", "")
+        text = text.replace("‘", "")
+        text = text.replace("–", "")
+        text = text.replace("—", "")
+        text = text.replace("'", "")
+        text = text.replace('"', "")
+        text = text.replace("-", "")
+        text = text.replace("-", "")
 
         # replace windows newlines
         text = text.replace("\r\n", " ")
@@ -324,16 +330,49 @@ class SpeechT5TTSHandler(TTSHandler):
         return text
 
     @staticmethod
+    def _roman_to_int(text):
+        roman_numerals = {
+            'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000
+        }
+
+        def convert_roman_to_int(roman):
+            total = 0
+            prev_value = 0
+            for char in reversed(roman):
+                value = roman_numerals[char]
+                if value < prev_value:
+                    total -= value
+                else:
+                    total += value
+                prev_value = value
+            return str(total)
+
+        # Replace Roman numerals with their integer values
+        result = re.sub(r'\b[IVXLCDM]+\b', lambda match: convert_roman_to_int(match.group(0)), text)
+        return result
+
+    @staticmethod
     def _replace_numbers_with_words(text):
         p = inflect.engine()
-        words = text.split()
-        for i in range(len(words)):
-            if re.search(r'\d', words[i]):  # check if the word contains a digit
-                parts = words[i].split(':')
-                parts_in_words = [p.number_to_words(part) if part.isdigit() else part for part in parts]
-                words[i] = ':'.join(parts_in_words)
 
-        return ' '.join(words)
+        # Handle time formats separately
+        text = re.sub(r'(\d+):(\d+)([APap][Mm])', lambda m: f"{p.number_to_words(m.group(1))} {p.number_to_words(m.group(2)).replace('zero', '').replace('-', ' ')} {m.group(3)[0].upper()} {m.group(3)[1].upper()}", text)
+        text = re.sub(r'(\d+):(\d+)', lambda m: f"{p.number_to_words(m.group(1))} {p.number_to_words(m.group(2)).replace('-', ' ')}", text)
+
+        # Split text into words and non-word characters
+        words = re.findall(r'\d+|\D+', text)
+
+        for i in range(len(words)):
+            if words[i].isdigit():  # check if the word is a digit
+                words[i] = p.number_to_words(words[i]).replace('-', ' ')
+
+        # Join words with a space to ensure proper spacing
+        result = ' '.join(words).replace('  ', ' ')
+
+        # Ensure "PM" and "AM" are correctly spaced
+        result = re.sub(r'\b([AP])M\b', r'\1 M', result)
+
+        return result
 
     def _unload_model(self):
         self._model = None
