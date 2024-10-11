@@ -5,6 +5,7 @@ import torch
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QTableWidgetItem, QApplication
 from airunner.enums import SignalCode, ModelStatus
+from airunner.styles_mixin import StylesMixin
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stats.templates.stats_ui import Ui_stats_widget
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -12,7 +13,8 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 
 class StatsWidget(
     BaseWidget,
-    PipelineMixin
+    PipelineMixin,
+    StylesMixin
 ):
     widget_class_ = Ui_stats_widget
 
@@ -27,6 +29,10 @@ class StatsWidget(
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_memory_stats)
         self.timer.start(500)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.set_stylesheet()
 
     def update_memory_stats(self):
         # Clear the table

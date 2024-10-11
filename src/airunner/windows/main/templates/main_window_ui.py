@@ -535,7 +535,6 @@ class Ui_MainWindow(object):
         self.menuImage.addAction(self.actionToggle_Brush)
         self.menuImage.addAction(self.actionToggle_Eraser)
         self.menuImage.addAction(self.actionToggle_Grid)
-        self.menuImage.addAction(self.actionRecenter)
         self.menuView.addAction(self.actionPrompt_Browser)
         self.menuView.addSeparator()
         self.menuView.addAction(self.actionBrowse_AI_Runner_Path)
