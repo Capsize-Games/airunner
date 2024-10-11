@@ -3,6 +3,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import DARK_THEME_NAME, LIGHT_THEME_NAME
+from airunner.styles_mixin import StylesMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 
@@ -11,6 +12,7 @@ class BaseWindow(
     QDialog,
     MediatorMixin,
     SettingsMixin,
+    StylesMixin,
     AIModelMixin
 ):
     template_class_ = None
@@ -39,17 +41,3 @@ class BaseWindow(
 
     def initialize_window(self):
         pass
-
-    def set_stylesheet(self):
-        """
-        Sets the stylesheet for the application based on the current theme
-        """
-        if self.application_settings.override_system_theme:
-            theme_name = DARK_THEME_NAME if self.application_settings.dark_mode_enabled else LIGHT_THEME_NAME
-            here = os.path.dirname(os.path.realpath(__file__))
-            with open(os.path.join(here, "..", "styles", theme_name, "styles.qss"), "r") as f:
-                stylesheet = f.read()
-            self.setStyleSheet(stylesheet)
-        else:
-            self.setStyleSheet("")
-        self.update()

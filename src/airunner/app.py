@@ -7,6 +7,8 @@ import sys
 import signal
 import traceback
 from functools import partial
+from pathlib import Path
+
 from PySide6 import QtCore
 from PySide6.QtCore import (
     QObject,
@@ -29,6 +31,8 @@ from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models.settings_models import ApplicationSettings, AIModels
+from airunner.windows.main.main_window import MainWindow
+from airunner.handlers.logger import Logger
 
 
 class App(
@@ -43,20 +47,15 @@ class App(
     def __init__(
         self,
         main_window_class: QWindow = None,
-        restrict_os_access=None,
         defendatron=None
     ):
         """
         Initialize the application and run as a GUI application or a socket server.
         :param main_window_class: The main window class to use for the application.
         """
-        from airunner.windows.main.main_window import MainWindow
-        from airunner.handlers.logger import Logger
-
         self.main_window_class_ = main_window_class or MainWindow
         self.app = None
         self.logger = Logger(prefix=self.__class__.__name__)
-        self.restrict_os_access = restrict_os_access
         self.defendatron = defendatron
         self.splash = None
 
@@ -185,7 +184,10 @@ class App(
             screen = screens.at(0)
         except AttributeError:
             screen = screens[0]
-        pixmap = QPixmap("images/splashscreen.png")
+
+        base_dir = Path(os.path.dirname(os.path.realpath(__file__)))
+        stylesheet_path = base_dir / "images" / "splashscreen.png"
+        pixmap = QPixmap(stylesheet_path)
         splash = QSplashScreen(
             screen,
             pixmap,
@@ -217,7 +219,6 @@ class App(
         """
         try:
             window = self.main_window_class_(
-                restrict_os_access=self.restrict_os_access,
                 defendatron=self.defendatron
             )
         except Exception as e:
