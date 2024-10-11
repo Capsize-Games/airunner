@@ -666,7 +666,6 @@ class MainWindow(
         self.logger.debug("Quitting")
         self.save_state()
         self.emit_signal(SignalCode.QUIT_APPLICATION)
-        # super().closeEvent(event)
 
 
     def show_settings_path(self, name, default_path=None):
