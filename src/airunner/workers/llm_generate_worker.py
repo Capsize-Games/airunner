@@ -1,3 +1,5 @@
+import threading
+
 from airunner.handlers.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
@@ -31,6 +33,9 @@ class LLMGenerateWorker(Worker):
             callback(data)
 
     def on_llm_load_model_signal(self, data):
+        threading.Thread(target=self._load_llm, args=(data,)).start()
+
+    def _load_llm(self, data):
         self.llm.load()
         callback = data.get("callback", None)
         if callback:
