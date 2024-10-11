@@ -58,16 +58,6 @@ class ActiveGridSettingsWidget(BaseWidget):
     def size_lock_toggled(self, val):
         self.update_application_settings("active_grid_size_lock", val)
 
-    def apply_demo_lock(self):
-        elements = [
-            self.ui.width_slider_widget,
-            self.ui.height_slider_widget
-        ]
-
-        for element in elements:
-            element.ui.slider.setEnabled(False)
-            element.ui.slider_spinbox.setEnabled(False)
-
     def update_size(self, message: dict):
         width = self.application_settings.working_width
         height = self.application_settings.working_height
