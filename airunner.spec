@@ -3,24 +3,28 @@
 import site
 import os
 
-# Get the site-packages path
-site_packages_path = site.getsitepackages()[0]
+# Get the directory of the spec file
+if os.getenv('DOCKER_ENV') == 'true':
+    root_path = os.path.dirname(os.path.abspath('airunner.spec'))
+    base_path = os.path.join(root_path, 'airunner')
+    site_packages_path = "/home/appuser/.local/lib/python3.10/site-packages/"
+    dist = "/app/dist"
+else:
+    root_path = os.path.dirname(os.path.abspath('airunner.spec'))
+    base_path = root_path
+    site_packages_path = site.getsitepackages()[0]
+    dist = "./dist"
+
+# Set the path to the airunner package
+airunner_path = os.path.join(base_path, "src/airunner")
 
 a = Analysis(
-    ['./src/airunner/main.py'],
+    [os.path.join(airunner_path, 'main.py')],
     pathex=[
-        './src',
+        os.path.join(base_path, 'src'),
     ],
     binaries=[
-        ('/usr/lib/x86_64-linux-gnu/libpython3.10.so', '.'),
-        ('./venv/lib/python3.10/site-packages/tiktoken/_tiktoken.cpython-310-x86_64-linux-gnu.so', '.'),
-        ('/usr/lib/x86_64-linux-gnu/libcudnn.so.8', '.'),  # Add libcudnn shared libraries
-        ('/usr/lib/x86_64-linux-gnu/libcudnn_adv_infer.so.8', '.'),
-        ('/usr/lib/x86_64-linux-gnu/libcudnn_adv_train.so.8', '.'),
-        ('/usr/lib/x86_64-linux-gnu/libcudnn_cnn_infer.so.8', '.'),
-        ('/usr/lib/x86_64-linux-gnu/libcudnn_cnn_train.so.8', '.'),
-        ('/usr/lib/x86_64-linux-gnu/libcudnn_ops_infer.so.8', '.'),
-        ('/usr/lib/x86_64-linux-gnu/libcudnn_ops_train.so.8', '.'),
+        (os.path.join(site_packages_path, 'tiktoken/_tiktoken.cpython-310-x86_64-linux-gnu.so'), '.'),
         (os.path.join(site_packages_path, 'nvidia/cudnn/lib/libcudnn_adv.so.9'), '.'),
         (os.path.join(site_packages_path, 'nvidia/cudnn/lib/libcudnn_cnn.so.9'), '.'),
         (os.path.join(site_packages_path, 'nvidia/cudnn/lib/libcudnn_engines_precompiled.so.9'), '.'),
@@ -29,10 +33,17 @@ a = Analysis(
         (os.path.join(site_packages_path, 'nvidia/cudnn/lib/libcudnn_heuristic.so.9'), '.'),
         (os.path.join(site_packages_path, 'nvidia/cudnn/lib/libcudnn_ops.so.9'), '.'),
         (os.path.join(site_packages_path, 'nvidia/cudnn/lib/libcudnn.so.9'), '.'),
-
+        (os.path.join(site_packages_path, 'PySide6/Qt/lib/libQt6XcbQpa.so.6'), '.'),
+        (os.path.join(site_packages_path, 'PySide6/Qt/lib/libQt6DBus.so.6'), '.'),
+        (os.path.join(site_packages_path, 'PySide6/Qt/lib/libQt6Widgets.so.6'), '.'),
+        (os.path.join(site_packages_path, 'PySide6/Qt/lib/libQt6Gui.so.6'), '.'),
+        (os.path.join(site_packages_path, 'PySide6/Qt/lib/libQt6Core.so.6'), '.'),
+        ('/usr/lib/x86_64-linux-gnu/libpython3.10.so', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libxkbcommon-x11.so.0.0.0', '.'),
     ],
     datas=[
-        ('./src/airunner/alembic.ini', '.'),
+        (os.path.join(airunner_path, 'alembic.ini'), '.'),
         (os.path.join(site_packages_path, 'inflect'), 'inflect'),
         (os.path.join(site_packages_path, 'controlnet_aux'), 'controlnet_aux'),
         (os.path.join(site_packages_path, 'diffusers'), 'diffusers'),
@@ -42,6 +53,8 @@ a = Analysis(
         (os.path.join(site_packages_path, 'xformers'), 'xformers'),
         (os.path.join(site_packages_path, 'nvidia'), 'nvidia'),
         (os.path.join(site_packages_path, 'llama_index'), 'llama_index'),
+        (os.path.join(site_packages_path, 'PySide6'), 'PySide6'),
+        (os.path.join(site_packages_path, 'PySide6/Qt/plugins/platforms'), 'platforms'),
         # Add other data files or directories here
     ],
     hiddenimports=[
@@ -83,6 +96,7 @@ a = Analysis(
         'llama_index.core.chat_engine',
         'llama_index.core.indices.keyword_table',
         'llama_index.core.base.llms.types',
+        'PySide6',
     ],
     hookspath=[],
     hooksconfig={},
@@ -122,8 +136,18 @@ coll = COLLECT(
 )
 
 import shutil
-shutil.copytree('./src/airunner/images/', './dist/airunner/_internal/airunner/images/')
-shutil.copytree('./src/airunner/styles/', './dist/airunner/_internal/airunner/styles/')
-shutil.copytree('./src/airunner/alembic/', './dist/airunner/_internal/alembic/')
-shutil.copytree('./src/airunner/data/', './dist/airunner/data/')
-shutil.copytree('./lib/tokenizers/punkt', './dist/airunner/_internal/llama_index/core/_static/nltk_cache/tokenizers/punkt')
+images_path = os.path.join(airunner_path, 'images/')
+styles_path = os.path.join(airunner_path, 'styles/')
+alembic_path = os.path.join(airunner_path, 'alembic/')
+data_path = os.path.join(airunner_path, 'data/')
+punkt_path = os.path.join(root_path, 'lib/tokenizers/punkt/')
+print(f"Copy images from {images_path}...")
+shutil.copytree(images_path, os.path.join(base_path, os.path.join(dist, 'airunner/_internal/airunner/images/')))
+print(f"Copy styles from {styles_path}...")
+shutil.copytree(styles_path, os.path.join(base_path, os.path.join(dist, 'airunner/_internal/airunner/styles/')))
+print(f"Copy alembic from {alembic_path}...")
+shutil.copytree(alembic_path, os.path.join(base_path, os.path.join(dist, 'airunner/_internal/alembic/')))
+print(f"Copy data from {data_path}...")
+shutil.copytree(data_path, os.path.join(base_path, os.path.join(dist, 'airunner/data/')))
+print(f"Copy punkt from {punkt_path}...")
+shutil.copytree(punkt_path, os.path.join(base_path, os.path.join(dist, 'airunner/_internal/llama_index/core/_static/nltk_cache/tokenizers/punkt')))
