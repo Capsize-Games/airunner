@@ -151,3 +151,4 @@ ENV HOME=/app
 ENV PATH="/home/appuser/.local/bin:${PATH}"
 ENV PYTHONUSERBASE=/home/appuser/.local
 COPY build.airunner.linux.prod.spec build.airunner.linux.prod.spec
+RUN echo "test"

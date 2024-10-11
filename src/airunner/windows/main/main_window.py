@@ -4,6 +4,7 @@ import sys
 import urllib
 import webbrowser
 from functools import partial
+from pathlib import Path
 
 import requests
 from PIL import Image
@@ -32,7 +33,7 @@ from airunner.settings import (
     STATUS_NORMAL_COLOR_DARK,
     NSFW_CONTENT_DETECTED_MESSAGE,
     ORGANIZATION,
-    APPLICATION_NAME
+    APPLICATION_NAME, DARK_THEME_NAME, LIGHT_THEME_NAME
 )
 from airunner.enums import (
     SignalCode,
@@ -41,14 +42,13 @@ from airunner.enums import (
     LLMAction, ModelType, ModelStatus
 )
 from airunner.mediator_mixin import MediatorMixin
-from airunner.resources_dark_rc import *
 from airunner.settings import (
     BASE_PATH,
     BUG_REPORT_LINK,
     VULNERABILITY_REPORT_LINK
 )
+from airunner.styles_mixin import StylesMixin
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
-from airunner.utils.file_system.operations import FileSystemOperations
 
 from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
@@ -71,6 +71,7 @@ class MainWindow(
     QMainWindow,
     MediatorMixin,
     SettingsMixin,
+    StylesMixin,
     PipelineMixin,
     AIModelMixin
 ):
@@ -111,7 +112,6 @@ class MainWindow(
         tts_enabled: bool = False,
         stt_enabled: bool = False,
         ai_mode: bool = True,
-        restrict_os_access=None,
         defendatron=None,
         **kwargs
     ):
@@ -121,11 +121,8 @@ class MainWindow(
         self.disable_tts = disable_tts
         self.disable_stt = disable_stt
 
-        self.restrict_os_access = restrict_os_access
         self.defendatron = defendatron
         self.quitting = False
-        self._override_system_theme = None
-        self._dark_mode_enabled = None
         self.update_popup = None
         self._document_path = None
         self.prompt = None
@@ -177,10 +174,6 @@ class MainWindow(
         self._updating_settings = False
 
         self.register_signals()
-        self.register(
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
-            self.on_application_settings_changed_signal
-        )
 
         self.initialize_ui()
         self.worker_manager = None
@@ -558,10 +551,10 @@ class MainWindow(
         self.register(SignalCode.TOGGLE_LLM_SIGNAL, self.on_toggle_llm)
         self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.action_reset_settings)
         self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal)
-        self.register(SignalCode.REFRESH_STYLESHEET_SIGNAL, self.refresh_stylesheet)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.KEYBOARD_SHORTCUTS_UPDATED, self.on_keyboard_shortcuts_updated)
-        self.register(SignalCode.HISTORY_UPDATED, self.on_history_updated)
+        self.register(SignalCode.HISTORY_UPDATED, self.on_history_updated),
+        self.register(SignalCode.REFRESH_STYLESHEET_SIGNAL, self.on_theme_changed_signal)
 
     def on_reset_paths_signal(self):
         self.reset_path_settings()
@@ -600,18 +593,17 @@ class MainWindow(
         args = data["args"]
         return bash_execute(args[0])
 
-    def on_application_settings_changed_signal(self):
-        if not self._updating_settings:
-            self.set_stylesheet()
+    def on_theme_changed_signal(self):
+        self.set_stylesheet()
 
     def initialize_ui(self):
         self.logger.debug("Loading UI")
         self.ui.setupUi(self)
+        self.set_stylesheet()
         self.restore_state()
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
-        self.set_stylesheet()
         self.initialize_widget_elements()
         self.ui.actionUndo.setEnabled(False)
         self.ui.actionRedo.setEnabled(False)
@@ -917,8 +909,6 @@ class MainWindow(
         self.toggle_nsfw_filter()
         self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL)
 
-    def action_toggle_darkmode(self):
-        self.set_stylesheet()
     ###### End window handlers ######
 
     def show_update_message(self):
@@ -929,31 +919,6 @@ class MainWindow(
 
     def show_update_popup(self):
         self.update_popup = UpdateWindow()
-
-    def refresh_stylesheet(self):
-        self.set_stylesheet(force=True)
-
-    def set_stylesheet(self, ui=None, force=False):
-        """
-        Sets the stylesheet for the application based on the current theme
-        """
-        if (
-            self._override_system_theme is not self.application_settings.override_system_theme or
-            self._dark_mode_enabled is not self.application_settings.dark_mode_enabled or
-            force
-        ):
-            ui = ui or self
-            self._override_system_theme = self.application_settings.override_system_theme
-            self._dark_mode_enabled = self.application_settings.dark_mode_enabled
-
-            if self._override_system_theme:
-                self.logger.debug("Setting stylesheet")
-
-                stylesheet = FileSystemOperations().read_stylesheet()
-                ui.setStyleSheet(stylesheet)
-            else:
-                self.logger.debug("Using system theme")
-                ui.setStyleSheet("")
 
     def show_setup_wizard(self):
         AppInstaller(close_on_cancel=False)
@@ -1092,12 +1057,6 @@ class MainWindow(
     def _initialize_window(self):
         self.center()
         self.set_window_title()
-
-    def display(self):
-        self.logger.debug("Displaying window")
-        self.set_stylesheet()
-        self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Window)
-        self.show()
 
     def center(self):
         availableGeometry = QGuiApplication.primaryScreen().availableGeometry()

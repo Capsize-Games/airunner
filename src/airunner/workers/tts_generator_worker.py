@@ -2,6 +2,8 @@ import queue
 import threading
 
 from airunner.enums import SignalCode, TTSModel, ModelStatus
+from airunner.handlers.tts.espeak_tts_handler import EspeakTTSHandler
+from airunner.handlers.tts.speecht5_tts_handler import SpeechT5TTSHandler
 from airunner.workers.worker import Worker
 
 
@@ -68,10 +70,8 @@ class TTSGeneratorWorker(Worker):
         tts_model = self.tts_settings.model.lower()
 
         if tts_model == TTSModel.ESPEAK.value:
-            from airunner.handlers.tts.espeak_tts_handler import EspeakTTSHandler
             tts_handler_class_ = EspeakTTSHandler
         else:
-            from airunner.handlers.tts.speecht5_tts_handler import SpeechT5TTSHandler
             tts_handler_class_ = SpeechT5TTSHandler
         self.tts = tts_handler_class_()
         if self.application_settings.tts_enabled:
