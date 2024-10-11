@@ -98,8 +98,6 @@ class BaseWidget(
         using __init__.
         """
         self.initialize()
-        if os.getenv("DEMO_MODE") == "True":
-            self.apply_demo_lock()
 
     def set_icons(self):
         theme = "dark" if self.is_dark else "light"
@@ -180,6 +178,3 @@ class BaseWidget(
             return True
         except AttributeError:
             return False
-
-    def apply_demo_lock(self):
-        pass
