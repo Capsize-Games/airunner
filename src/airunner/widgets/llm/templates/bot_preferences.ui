@@ -111,7 +111,7 @@
            <widget class="QComboBox" name="saved_chatbots"/>
           </item>
           <item row="0" column="2">
-           <widget class="QPushButton" name="pushButton">
+           <widget class="QPushButton" name="delete_button">
             <property name="maximumSize">
              <size>
               <width>40</width>
@@ -593,7 +593,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton</sender>
+   <sender>delete_button</sender>
    <signal>clicked()</signal>
    <receiver>bot_preferences</receiver>
    <slot>delete_clicked()</slot>

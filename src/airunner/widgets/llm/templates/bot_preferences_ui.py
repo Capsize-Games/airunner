@@ -70,13 +70,13 @@ class Ui_bot_preferences(object):
 
         self.gridLayout_3.addWidget(self.saved_chatbots, 0, 0, 1, 1)
 
-        self.pushButton = QPushButton(self.groupBox)
-        self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setMaximumSize(QSize(40, 16777215))
+        self.delete_button = QPushButton(self.groupBox)
+        self.delete_button.setObjectName(u"delete_button")
+        self.delete_button.setMaximumSize(QSize(40, 16777215))
         icon1 = QIcon(QIcon.fromTheme(u"process-stop"))
-        self.pushButton.setIcon(icon1)
+        self.delete_button.setIcon(icon1)
 
-        self.gridLayout_3.addWidget(self.pushButton, 0, 2, 1, 1)
+        self.gridLayout_3.addWidget(self.delete_button, 0, 2, 1, 1)
 
 
         self.gridLayout.addWidget(self.groupBox, 1, 0, 1, 1)
@@ -242,7 +242,7 @@ class Ui_bot_preferences(object):
         self.system_instructions_groupbox.toggled.connect(bot_preferences.toggle_use_system_instructions)
         self.saved_chatbots.currentTextChanged.connect(bot_preferences.saved_chatbots_changed)
         self.create_new_button.clicked.connect(bot_preferences.create_new_chatbot_clicked)
-        self.pushButton.clicked.connect(bot_preferences.delete_clicked)
+        self.delete_button.clicked.connect(bot_preferences.delete_clicked)
         self.comboBox.currentTextChanged.connect(bot_preferences.agent_type_changed)
         self.browse_documents_button.clicked.connect(bot_preferences.browse_documents)
 
@@ -261,9 +261,9 @@ class Ui_bot_preferences(object):
 #endif // QT_CONFIG(tooltip)
         self.create_new_button.setText("")
 #if QT_CONFIG(tooltip)
-        self.pushButton.setToolTip(QCoreApplication.translate("bot_preferences", u"Delete agent", None))
+        self.delete_button.setToolTip(QCoreApplication.translate("bot_preferences", u"Delete agent", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton.setText("")
+        self.delete_button.setText("")
         self.groupBox_3.setTitle(QCoreApplication.translate("bot_preferences", u"Documents", None))
         self.browse_documents_button.setText(QCoreApplication.translate("bot_preferences", u"Browse", None))
         self.names_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Use names", None))

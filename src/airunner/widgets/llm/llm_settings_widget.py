@@ -32,6 +32,31 @@ class LLMSettingsWidget(
         super().showEvent(event)
         self.emit_signal(SignalCode.WINDOW_LOADED_SIGNAL)
 
+    def apply_demo_lock(self):
+        elements = [
+            self.ui.prompt_template,
+            self.ui.model,
+            self.ui.model_version,
+            self.ui.random_seed,
+            self.ui.do_sample,
+            self.ui.early_stopping,
+            self.ui.override_parameters,
+            self.ui.use_cache,
+            self.ui.top_p,
+            self.ui.max_new_tokens,
+            self.ui.repetition_penalty,
+            self.ui.min_length,
+            self.ui.length_penalty,
+            self.ui.num_beams,
+            self.ui.ngram_size,
+            self.ui.temperature,
+            self.ui.sequences,
+            self.ui.top_k
+        ]
+
+        for element in elements:
+            element.setEnabled(False)
+
     def early_stopping_toggled(self, val):
         self.update_chatbot("early_stopping", val)
 
