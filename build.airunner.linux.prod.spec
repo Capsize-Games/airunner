@@ -56,6 +56,7 @@ a = Analysis(
         f'/app/airunner/src/airunner/main.py',
     ],
     pathex=[
+        "/app/airunner/src",
         "/home/appuser/.local/lib/python3.10/site-packages/",
         "/home/appuser/.local/lib/python3.10/site-packages/torch/lib/",
         "/home/appuser/.local/lib/python3.10/site-packages/tokenizers/",
@@ -195,8 +196,8 @@ os.makedirs('/app/dist/airunner/images', exist_ok=True)
 
 # Copy files for distribution
 shutil.copyfile('/app/airunner/src/airunner/images/splashscreen.png', '/app/dist/airunner/images/splashscreen.png')
-shutil.copytree('/app/airunner/src/airunner/styles/icons/dark/', '/app/dist/airunner/styles/icons/dark/')
-shutil.copytree('/app/airunner/src/airunner/styles/icons/light/', '/app/dist/airunner/styles/icons/light/')
+# shutil.copytree('/app/airunner/src/airunner/styles/icons/dark/', '/app/dist/airunner/styles/icons/dark/')
+# shutil.copytree('/app/airunner/src/airunner/styles/icons/light/', '/app/dist/airunner/styles/icons/light/')
 
 # Copy alembic files
 shutil.copytree('/app/airunner/src/airunner/alembic/', '/app/dist/airunner/_internal/alembic/')
@@ -206,5 +207,5 @@ shutil.copyfile('/app/airunner/src/airunner/alembic.ini', '/app/dist/airunner/_i
 shutil.copytree('/app/airunner/src/airunner/data/', '/app/dist/airunner/data/')
 
 # Copy llamaindex nltk cache requirements
-shutil.copytree('/app/airunner/lib/corpora', '/app/dist/airunner/_internal/llama_index/core/_static/nltk_cache/corpora')
-shutil.copytree('/app/airunner/lib/tokenizers', '/app/dist/airunner/_internal/llama_index/core/_static/nltk_cache/tokenizers')
+# shutil.copytree('/app/airunner/lib/corpora', '/app/dist/airunner/_internal/llama_index/core/_static/nltk_cache/corpora')
+# shutil.copytree('/app/airunner/lib/tokenizers', '/app/dist/airunner/_internal/llama_index/core/_static/nltk_cache/tokenizers')

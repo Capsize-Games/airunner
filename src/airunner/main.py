@@ -38,28 +38,24 @@ os.makedirs(base_dir, exist_ok=True)
 ################################################################
 from airunner.app import App
 
-################################################################
+###############################################################
 # Import Alembic modules to run migrations.
 ################################################################
 from alembic.config import Config
 from alembic import command
+from pathlib import Path
 
 def setup_database():
-    here = os.path.dirname(os.path.abspath(__file__))
-    alembic_file = os.path.join(
-        here,
-        "alembic.ini"
-    )
+    base_path = Path(os.path.dirname(os.path.realpath(__file__)))
+    alembic_file = base_path / "alembic.ini"
+    alembic_dir = base_path / "alembic"
     alembic_cfg = Config(alembic_file)
-    # set he script_location to the current directory
-    alembic_cfg.set_main_option("script_location", os.path.join(here, "alembic"))
+    alembic_cfg.set_main_option("script_location", str(alembic_dir))
     command.upgrade(alembic_cfg, "head")
-
 
 def main():
     setup_database()
     App(
-        restrict_os_access=None,
         defendatron=facehuggershield.huggingface.defendatron
     )
 

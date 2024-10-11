@@ -9,7 +9,6 @@ import torch
 from PySide6.QtCore import QObject
 
 from llama_index.core import Settings
-
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
@@ -830,10 +829,12 @@ class BaseAgent(
 
     def __load_rag_tokenizer(self):
         self.logger.debug("Loading RAG tokenizer...")
+        # TODO
         pass
 
     def __load_rag_model(self):
         self.logger.debug("Loading RAG model...")
+        # TODO
         pass
 
     def __load_embeddings(self):
@@ -856,6 +857,8 @@ class BaseAgent(
         }
 
     def __load_document_reader(self):
+        if self.target_files is None or len(self.target_files) == 0:
+            return
         self.logger.debug("Loading document reader...")
         try:
             self.__document_reader = SimpleDirectoryReader(
