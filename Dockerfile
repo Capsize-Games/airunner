@@ -74,10 +74,12 @@ RUN cd qt-everywhere-src-6.7.0/build \
     && rm -rf qt-everywhere-src-6.7.0 qt-everywhere-src-6.7.0.tar.xz
 
 FROM install_qt as create_user
+ENV DEBIAN_FRONTEND=noninteractive
 RUN useradd -ms /bin/bash appuser \
     && chown -R appuser:appuser /app \
     && apt-get update \
     && apt-get install -y libxkbcommon-x11-0 \
+    && apt-get install -y nvidia-cudnn \
     && rm -rf /var/lib/apt/lists/*
 
 USER appuser
@@ -142,7 +144,9 @@ RUN git clone https://github.com/Capsize-Games/airunner.git /app/airunner \
     && git pull \
     && python3 -m pip install build \
     && python3 -m build \
-    && python3 -m pip install build dist/airunner-3.0.16-py3-none-any.whl
+    && cd /app/airunner/dist \
+    && WHL_FILE=$(ls airunner-*.whl) \
+    && python3 -m pip install build $WHL_FILE
 
 FROM build_airunner as build_airunner_executable
 USER appuser
@@ -150,5 +154,6 @@ WORKDIR /app
 ENV HOME=/app
 ENV PATH="/home/appuser/.local/bin:${PATH}"
 ENV PYTHONUSERBASE=/home/appuser/.local
-COPY build.airunner.linux.prod.spec build.airunner.linux.prod.spec
-RUN echo "test"
+ENV DOCKER_ENV=true
+COPY airunner.spec airunner.spec
+COPY ./lib/tokenizers/punkt /app/lib/tokenizers/punkt
