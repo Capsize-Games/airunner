@@ -228,9 +228,11 @@ class SettingsWindow(BaseWindow):
         elif name == "dark_mode":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("dark_mode_enabled", checked)
+            self.emit_signal(SignalCode.REFRESH_STYLESHEET_SIGNAL)
         elif name == "override_system_theme":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("override_system_theme", checked)
+            self.emit_signal(SignalCode.REFRESH_STYLESHEET_SIGNAL)
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("latest_version_check", checked)
