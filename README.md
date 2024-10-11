@@ -89,73 +89,11 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 ---
 
-## 🔧 Running AI Runner from source
+## 🚀 Installation
 
-Running AI Runner from source is recommended for developers and users who want to test the latest features.
+There are several ways to get started with AI Runner such as packaged, from source and as a library.
 
-### Linux
-
-Install prerequisites
-
-```bash
-sudo apt update
-sudo apt install -y fonts-noto-color-emoji
-sudo apt install -y libportaudio2
-sudo apt install -y libxcb-cursor0
-sudo apt install -y espeak
-sudo apt install -y xclip
-sudo apt install -y git
-sudo apt install -y python3-pip
-sudo apt install -y python3.10-venv
-```
-
-Clone the repository
-
-```bash
-git clone https://github.com/Capsize-Games/airunner.git
-cd airunner
-```
-
-Create a virtual environment
-
-```bash
-python3 -m venv airunner
-source airunner/bin/activate
-```
-
-Install the required packages
-
-```bash
-pip install -e .
-```
-
-Run AI Runner
-
-```bash
-airunner
-```
-
----
-
-## Using AI Runner as a Python library
-
-AI Runner can be used as a Python library in order to extend its functionality.
-
-```bash
-pip install airunner
-```
-
-Now you can import AI Runner into your Python scripts.
-
-```python
-from airunner import airunner
-```
-
----
-
-## Packaging AI Runner
-
-[Detailed packaging instructions can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
+[Detailed packaging and installation instructions can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
 ---
 
