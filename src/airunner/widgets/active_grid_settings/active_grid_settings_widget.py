@@ -58,6 +58,16 @@ class ActiveGridSettingsWidget(BaseWidget):
     def size_lock_toggled(self, val):
         self.update_application_settings("active_grid_size_lock", val)
 
+    def apply_demo_lock(self):
+        elements = [
+            self.ui.width_slider_widget,
+            self.ui.height_slider_widget
+        ]
+
+        for element in elements:
+            element.ui.slider.setEnabled(False)
+            element.ui.slider_spinbox.setEnabled(False)
+
     def update_size(self, message: dict):
         width = self.application_settings.working_width
         height = self.application_settings.working_height
@@ -77,9 +87,6 @@ class ActiveGridSettingsWidget(BaseWidget):
             self.ui.height_slider_widget.blockSignals(False)
             self.update_application_settings("working_width", width)
             self.update_application_settings("working_height", height)
-
-    def update_active_grid_settings(self, setting_key, checked):
-        self.update_active_grid_settings(setting_key, checked)
 
     def action_clicked_checkbox_toggle_active_grid_border(self, checked):
         self.update_active_grid_settings("render_border", checked)
