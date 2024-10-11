@@ -3,10 +3,6 @@
 DISABLE_TELEMETRY=1
 cd /app
 
-# Ensure the build directory exists and set permissions
-mkdir -p /app/build
-chmod -R 777 /app/build
-
 echo ""
 echo "============================================"
 echo "Installing dependencies"
@@ -18,7 +14,7 @@ echo "============================================"
 echo "Build airunner for linux"
 echo "============================================"
 echo ""
-DEV_ENV=0 AIRUNNER_ENVIRONMENT="prod" PYTHONOPTIMIZE=0 python3 -m PyInstaller --log-level=INFO --noconfirm /app/build.airunner.linux.prod.spec 2>&1 | tee build.log
+DEV_ENV=0 AIRUNNER_ENVIRONMENT="prod" PYTHONOPTIMIZE=0 python3 -m PyInstaller --log-level=INFO --noconfirm /app/airunner.spec 2>&1 | tee build.log
 echo ""
 echo "============================================"
 echo "Copy timm to dist"
