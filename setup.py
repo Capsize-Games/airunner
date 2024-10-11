@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.0.17",
+    version="3.0.18",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -28,7 +28,6 @@ setup(
         "optimum==1.21.4",
         "numpy==1.26.4",
         "pillow==10.4.0",
-        "xformers==0.0.28.post1",
         "tensorflow==2.17.0",
         "DeepCache==0.1.1",
         "alembic==1.13.3",
