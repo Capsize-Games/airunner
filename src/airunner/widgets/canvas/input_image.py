@@ -76,12 +76,18 @@ class InputImage(BaseWidget):
             self.ui.link_to_grid_image_button.hide()
             self.ui.link_to_grid_image_button.hide()
             self.ui.lock_input_image_button.hide()
+            self.ui.EnableSwitch.blockSignals(True)
+            self.ui.EnableSwitch.checked = self.current_settings.enabled
+            self.ui.EnableSwitch.setChecked(self.current_settings.enabled)
+            self.ui.EnableSwitch.dPtr.animate(self.current_settings.enabled)
+            self.ui.EnableSwitch.blockSignals(False)
         else:
             self.ui.EnableSwitch.blockSignals(True)
             self.ui.link_to_grid_image_button.blockSignals(True)
             self.ui.lock_input_image_button.blockSignals(True)
             self.ui.EnableSwitch.checked = self.current_settings.enabled
             self.ui.EnableSwitch.setChecked(self.current_settings.enabled)
+            self.ui.EnableSwitch.dPtr.animate(self.current_settings.enabled)
             self.ui.link_to_grid_image_button.setChecked(
                 self.current_settings.use_grid_image_as_input
             )
