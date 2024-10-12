@@ -98,11 +98,10 @@ class WhisperHandler(BaseHandler):
         self.change_model_status(ModelType.STT, ModelStatus.UNLOADED)
 
     def _load_model(self):
-        model_path = self.model_path
-        self.logger.debug(f"Loading model from {model_path}")
+        self.logger.debug(f"Loading model from {self.model_path}")
         try:
             self._model = WhisperForConditionalGeneration.from_pretrained(
-                model_path,
+                self.model_path,
                 local_files_only=True,
                 torch_dtype=torch.bfloat16,
                 device_map=self.device,
