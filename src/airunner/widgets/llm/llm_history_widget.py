@@ -41,20 +41,19 @@ class LLMHistoryWidget(BaseWidget):
             layout = QVBoxLayout(self.ui.scrollAreaWidgetContents)
             self.ui.scrollAreaWidgetContents.setLayout(layout)
 
+        session = self.db_handler.get_db_session()
         for conversation in conversations:
             h_layout = QHBoxLayout()
             button = QPushButton(conversation.title)
             button.clicked.connect(lambda _, c=conversation: self.on_conversation_click(c))
 
             # Extract chatbot_id from the first message of the conversation
-            session = self.db_handler.get_db_session()
             first_message = session.query(Message).filter_by(conversation_id=conversation.id).first()
             chatbot_name = "Unknown"
             if first_message and first_message.chatbot_id:
                 chatbot = self.db_handler.get_chatbot_by_id(first_message.chatbot_id)
                 if chatbot:
                     chatbot_name = chatbot.name
-            session.close()
 
             chatbot_label = QLabel(f"Chatbot: {chatbot_name}")
             delete_button = QPushButton("Delete")
@@ -66,6 +65,7 @@ class LLMHistoryWidget(BaseWidget):
             container_widget = QWidget()
             container_widget.setLayout(h_layout)
             layout.addWidget(container_widget)
+        session.close()
 
         # Add a vertical spacer at the end
         layout.addItem(self.spacer)
