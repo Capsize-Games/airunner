@@ -81,10 +81,8 @@ class SwitchWidget(QAbstractButton):
         self.clicked.connect(self.dPtr.animate)
         self.clicked.connect(self.emitToggled)
         self._backgroundColor = QColor("blue")  # Initialize the internal attribute
-
-        # Initialize the checked state
-        self.setChecked(True)
-        self.dPtr.animate(True)
+        self.setChecked(False)
+        self.dPtr.animate(False)
 
     def emitToggled(self, checked):
         self.toggled.emit(checked)
