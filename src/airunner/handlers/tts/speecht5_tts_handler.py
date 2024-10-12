@@ -328,10 +328,10 @@ class SpeechT5TTSHandler(TTSHandler):
     def _prepare_text(self, text) -> str:
         text = self._replace_unspeakable_characters(text)
         text = self._strip_emoji_characters(text)
-        text = self._roman_to_int(text)
+        # the following function is currently disabled because we must first find a
+        # reliable way to handle the word "I" and distinguish it from the Roman numeral "I"
+        # text = self._roman_to_int(text)
         text = self._replace_numbers_with_words(text)
-        text = re.sub(r"\s+", " ", text)  # Remove extra spaces
-        text = text.strip()
         return text
 
     @staticmethod
@@ -339,13 +339,12 @@ class SpeechT5TTSHandler(TTSHandler):
         # strip things like ellipsis, etc
         text = text.replace("...", " ")
         text = text.replace("…", " ")
-        text = text.replace("’", "")
+        text = text.replace("’", "'")
         text = text.replace("“", "")
         text = text.replace("”", "")
         text = text.replace("‘", "")
         text = text.replace("–", "")
         text = text.replace("—", "")
-        text = text.replace("'", "")
         text = text.replace('"', "")
         text = text.replace("-", "")
         text = text.replace("-", "")

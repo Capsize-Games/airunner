@@ -10,9 +10,3 @@ class ToolTabWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
-
-    def showEvent(self, event):
-        self.ui.tool_tab_widget_container.setCurrentIndex(
-            int(self.__application_settings.value("tool_tab_widget_index", defaultValue=0))
-        )
