@@ -18,6 +18,7 @@ from llama_index.core import SimpleKeywordTableIndex
 from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
 from transformers import TextIteratorStreamer
 
+from airunner.data.models.settings_models import Conversation
 from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from airunner.handlers.llm.custom_embedding import CustomEmbedding
 from airunner.handlers.llm.agent.html_file_reader import HtmlFileReader
@@ -87,6 +88,7 @@ class BaseAgent(
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
         self.conversation_id = None
+        self.conversation_title = None
         self.history = self.db_handler.load_history_from_db(self.conversation_id)  # Load history by conversation ID
         super().__init__(*args, **kwargs)
         self.prompt = ""
@@ -140,8 +142,10 @@ class BaseAgent(
         self.history = []
         self.reload_rag()
         self.conversation_id = None
+        self.conversation_title = None
 
     def update_conversation_title(self, title):
+        self.conversation_title = title
         self.db_handler.update_conversation_title(self.conversation_id, title)
 
     def create_conversation(self):
@@ -492,12 +496,16 @@ class BaseAgent(
             self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL)
             return
 
+        if action is LLMActionType.CHAT and (self.conversation_title is None or self.conversation_title == ""):
+            action = LLMActionType.SUMMARIZE
+
         self.logger.debug("Running...")
         self.prompt = prompt
         streamer = self.streamer
 
         if self.conversation_id is None:
             self.create_conversation()
+            self.set_conversation_title()
 
         # Add the user's message to history
         if action not in (
@@ -715,6 +723,11 @@ class BaseAgent(
 
             elif action is LLMActionType.SUMMARIZE:
                 self.update_conversation_title(streamed_template)
+                return self.run(
+                    prompt=self.prompt,
+                    action=LLMActionType.CHAT,
+                    **kwargs,
+                )
 
             elif action is LLMActionType.GENERATE_IMAGE:
                 self.emit_signal(
@@ -789,9 +802,15 @@ class BaseAgent(
         self.history = []
         self.conversation_id = message["conversation_id"]
         self.history = self.db_handler.load_history_from_db(self.conversation_id)
+        self.set_conversation_title()
         self.emit_signal(SignalCode.SET_CONVERSATION, {
             "messages": self.history
         })
+
+    def set_conversation_title(self):
+        session = self.db_handler.get_db_session()
+        self.conversation_title = session.query(Conversation).filter_by(id=self.conversation_id).first().title
+        session.close()
 
     def load_rag(self, model, tokenizer):
         self.__model = model
