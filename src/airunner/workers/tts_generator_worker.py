@@ -92,7 +92,6 @@ class TTSGeneratorWorker(Worker):
             return
 
         # Add the incoming tokens to the list
-        self.logger.debug("Adding tokens to list...")
         self.tokens.extend(data["message"])
         finalize = data.get("finalize", False)
 
