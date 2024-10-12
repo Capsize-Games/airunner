@@ -33,6 +33,7 @@ from airunner.enums import (
     EngineResponseCode, ModelAction
 )
 from airunner.exceptions import PipeNotLoadedException, InterruptedException
+from airunner.handlers.stablediffusion.prompt_weight_bridge import PromptWeightBridge
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
@@ -389,6 +390,26 @@ class SDHandler(BaseHandler):
     @property
     def mask_blur(self) -> int:
         return self.outpaint_settings_cached.mask_blur
+
+    @property
+    def prompt(self):
+        prompt = self.generator_settings_cached.prompt
+        return PromptWeightBridge.convert(prompt)
+
+    @property
+    def second_prompt(self):
+        prompt = self.generator_settings_cached.second_prompt
+        return PromptWeightBridge.convert(prompt)
+
+    @property
+    def negative_prompt(self):
+        prompt = self.generator_settings_cached.negative_prompt
+        return PromptWeightBridge.convert(prompt)
+
+    @property
+    def second_negative_prompt(self):
+        prompt = self.generator_settings_cached.second_negative_prompt
+        return PromptWeightBridge.convert(prompt)
 
     def load_safety_checker(self):
         """
@@ -1330,43 +1351,43 @@ class SDHandler(BaseHandler):
         self.logger.debug("Loading prompt embeds")
         if not self.generator_settings_cached.use_compel:
             return
-        prompt = self.generator_settings_cached.prompt
-        negative_prompt = self.generator_settings_cached.negative_prompt
-        prompt_2 = self.generator_settings_cached.second_prompt
-        negative_prompt_2 = self.generator_settings_cached.second_negative_prompt
 
+        prompt = self.prompt
+        negative_prompt = self.negative_prompt
+        second_prompt = self.second_prompt
+        second_negative_prompt = self.second_negative_prompt
 
         if (
             self._current_prompt != prompt
             or self._current_negative_prompt != negative_prompt
-            or self._current_prompt_2 != prompt_2
-            or self._current_negative_prompt_2 != negative_prompt_2
+            or self._current_prompt_2 != second_prompt
+            or self._current_negative_prompt_2 != second_negative_prompt
         ):
             self._unload_latents()
             self._current_prompt = prompt
             self._current_negative_prompt = negative_prompt
-            self._current_prompt_2 = prompt_2
-            self._current_negative_prompt_2 = negative_prompt_2
+            self._current_prompt_2 = second_prompt
+            self._current_negative_prompt_2 = second_negative_prompt
             self._unload_prompt_embeds()
 
         pooled_prompt_embeds = None
         negative_pooled_prompt_embeds = None
 
-        if prompt != "" and prompt_2 != "":
-            compel_prompt = f'("{prompt}", "{prompt_2}").and()'
-        elif prompt != "" and prompt_2 == "":
+        if prompt != "" and second_prompt != "":
+            compel_prompt = f'("{prompt}", "{second_prompt}").and()'
+        elif prompt != "" and second_prompt == "":
             compel_prompt = prompt
-        elif prompt == "" and prompt_2 != "":
-            compel_prompt = prompt_2
+        elif prompt == "" and second_prompt != "":
+            compel_prompt = second_prompt
         else:
             compel_prompt = ""
 
-        if negative_prompt != "" and negative_prompt_2 != "":
-            compel_negative_prompt = f'("{negative_prompt}", "{negative_prompt_2}").and()'
-        elif negative_prompt != "" and negative_prompt_2 == "":
+        if negative_prompt != "" and second_negative_prompt != "":
+            compel_negative_prompt = f'("{negative_prompt}", "{second_negative_prompt}").and()'
+        elif negative_prompt != "" and second_negative_prompt == "":
             compel_negative_prompt = negative_prompt
-        elif negative_prompt == "" and negative_prompt_2 != "":
-            compel_negative_prompt = negative_prompt_2
+        elif negative_prompt == "" and second_negative_prompt != "":
+            compel_negative_prompt = second_negative_prompt
         else:
             compel_negative_prompt = ""
 
@@ -1442,8 +1463,8 @@ class SDHandler(BaseHandler):
                 ))
         else:
             args.update(dict(
-                prompt=self.generator_settings_cached.prompt,
-                negative_prompt=self.generator_settings_cached.negative_prompt
+                prompt=self.prompt,
+                negative_prompt=self.negative_prompt
             ))
 
         width = int(self.application_settings_cached.working_width)
