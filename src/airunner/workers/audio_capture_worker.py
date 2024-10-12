@@ -1,5 +1,4 @@
 import queue
-import threading
 import time
 
 import sounddevice as sd
@@ -30,7 +29,9 @@ class AudioCaptureWorker(Worker):
         self.stream = None
         self.running = False
         self._audio_process_queue = queue.Queue()
-        self._capture_thread = None
+        #self._capture_thread = None
+        if self.application_settings.stt_enabled:
+            self._start_listening()
 
     def on_AudioCaptureWorker_response_signal(self, message: dict):
         item: np.ndarray = message["item"]
@@ -38,13 +39,11 @@ class AudioCaptureWorker(Worker):
         self.add_to_queue(item)
 
     def on_stt_start_capture_signal(self):
-        if self._capture_thread is not None and self._capture_thread.is_alive():
-            return
-        self._capture_thread = threading.Thread(target=self._start_listening)
-        self._capture_thread.start()
+        if not self.listening:
+            self._start_listening()
 
     def on_stt_stop_capture_signal(self):
-        if self._capture_thread is not None and self._capture_thread.is_alive():
+        if self.listening:
             self._stop_listening()
 
     def start(self):
@@ -62,9 +61,11 @@ class AudioCaptureWorker(Worker):
                 try:
                     chunk, overflowed = self.stream.read(int(chunk_duration * fs))
                 except sd.PortAudioError as e:
+                    self.logger.error(f"PortAudioError: {e}")
                     QThread.msleep(SLEEP_TIME_IN_MS)
                     continue
                 if np.max(np.abs(chunk)) > volume_input_threshold:  # check if chunk is not silence
+                    self.logger.debug("Heard voice")
                     is_receiving_input = True
                     self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
                     voice_input_start_time = time.time()
@@ -73,6 +74,7 @@ class AudioCaptureWorker(Worker):
                     end_time = voice_input_start_time + silence_buffer_seconds
                     if time.time() >= end_time:
                         if len(recording) > 0:
+                            self.logger.debug("Sending audio to audio_processor_worker")
                             self.emit_signal(
                                 SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
                                 {
@@ -113,4 +115,4 @@ class AudioCaptureWorker(Worker):
             self.stream.close()
         except Exception as e:
             self.logger.error(e)
-        self._capture_thread.join()
+        # self._capture_thread.join()

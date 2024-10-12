@@ -22,14 +22,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
     request_signal_status = Signal(str)
     image_generated_signal = Signal(dict)
 
-    def __init__(
-        self,
-        disable_sd: bool = False,
-        disable_llm: bool = False,
-        disable_tts: bool = False,
-        disable_stt: bool = False,
-        agent_options: dict = None
-    ):
+    def __init__(self):
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__()
@@ -42,32 +35,7 @@ class WorkerManager(QObject, MediatorMixin, SettingsMixin):
         self._stt_audio_capture_worker = None
         self._stt_audio_processor_worker = None
 
-        self.agent_options = agent_options
-
-        if not disable_sd:
-            self.register_sd_workers()
-
-        if not disable_llm:
-            self.register_llm_workers(self.agent_options)
-
-        if not disable_tts:
-            self.register_tts_workers()
-
-        if not disable_stt:
-            self.register_stt_workers()
-
-        self.mask_generator_worker = create_worker(MaskGeneratorWorker)
-
-    def register_sd_workers(self):
-        self._sd_worker = create_worker(SDWorker)
-
-    def register_llm_workers(self, agent_options):
-        self._llm_generate_worker = create_worker(LLMGenerateWorker, agent_options=agent_options)
-
-    def register_tts_workers(self):
-        self._tts_generator_worker = create_worker(TTSGeneratorWorker)
-        self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
-
-    def register_stt_workers(self):
-        self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-        self._stt_audio_processor_worker = create_worker(AudioProcessorWorker)
+        self.register_sd_workers()
+        self.register_llm_workers()
+        self.register_tts_workers()
+        self.register_stt_workers()

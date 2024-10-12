@@ -226,6 +226,8 @@ class CausalLMTransformerBaseHandler(
         """
         Public method to clear the chat agent history
         """
+        if not self._chat_agent:
+            return
         self.logger.debug("Clearing chat history")
         self._chat_agent.clear_history()
 
@@ -301,7 +303,6 @@ class CausalLMTransformerBaseHandler(
         self._chat_agent = BaseAgent(
             model=self._model,
             tokenizer=self._tokenizer,
-            streamer=self._streamer,
             chat_template=self.chat_template,
             is_mistral=self.is_mistral,
         )
@@ -378,8 +379,7 @@ class CausalLMTransformerBaseHandler(
 
     def _do_generate(self, prompt: str, action: LLMActionType):
         self.logger.debug("Generating response")
-        model_path = self.model_path
-        if self._current_model_path != model_path:
+        if self._current_model_path != self.model_path:
             self.unload()
             self.load()
         if action is LLMActionType.CHAT and self.chatbot.use_mood:

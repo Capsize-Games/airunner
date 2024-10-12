@@ -98,8 +98,8 @@ class ChatPromptWidget(BaseWidget):
 
     def on_hear_signal(self, data: dict):
         transcription = data["transcription"]
-        self.respond_to_voice(transcription)
         self.ui.prompt.setPlainText(transcription)
+        self.ui.send_button.click()
 
     def on_add_to_conversation_signal(self, name, text, is_bot):
         self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
@@ -161,6 +161,9 @@ class ChatPromptWidget(BaseWidget):
 
     def interrupt_button_clicked(self):
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+        self.stop_progress_bar()
+        self.generating = False
+        self.enable_send_button()
 
     @property
     def action(self) -> str:
@@ -289,12 +292,6 @@ class ChatPromptWidget(BaseWidget):
 
     def insert_newline(self):
         self.ui.prompt.insertPlainText("\n")
-
-    def respond_to_voice(self, transcript: str):
-        transcript = transcript.strip()
-        if transcript == "." or transcript is None or transcript == "":
-            return
-        self.do_generate(prompt_override=transcript)
     
     def describe_image(self, image, callback):
         self.do_generate(
