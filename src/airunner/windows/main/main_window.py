@@ -49,6 +49,14 @@ from airunner.settings import (
 )
 from airunner.styles_mixin import StylesMixin
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
+from airunner.utils.create_worker import create_worker
+from airunner.workers.audio_capture_worker import AudioCaptureWorker
+from airunner.workers.audio_processor_worker import AudioProcessorWorker
+from airunner.workers.llm_generate_worker import LLMGenerateWorker
+from airunner.workers.mask_generator_worker import MaskGeneratorWorker
+from airunner.workers.sd_worker import SDWorker
+from airunner.workers.tts_generator_worker import TTSGeneratorWorker
+from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 
 from airunner.utils.get_version import get_version
 from airunner.utils.set_widget_state import set_widget_state
@@ -64,7 +72,6 @@ from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
-from airunner.worker_manager import WorkerManager
 
 
 class MainWindow(
@@ -104,23 +111,10 @@ class MainWindow(
     def __init__(
         self,
         *args,
-        disable_sd: bool = False,
-        disable_llm: bool = False,
-        disable_tts: bool = False,
-        disable_stt: bool = False,
-        use_cuda: bool = True,
-        tts_enabled: bool = False,
-        stt_enabled: bool = False,
-        ai_mode: bool = True,
         defendatron=None,
         **kwargs
     ):
         self.ui = self.ui_class_()
-        self.disable_sd = disable_sd
-        self.disable_llm = disable_llm
-        self.disable_tts = disable_tts
-        self.disable_stt = disable_stt
-
         self.defendatron = defendatron
         self.quitting = False
         self.update_popup = None
@@ -146,7 +140,6 @@ class MainWindow(
         self.status_error_color = STATUS_ERROR_COLOR
         self.status_normal_color_light = STATUS_NORMAL_COLOR_LIGHT
         self.status_normal_color_dark = STATUS_NORMAL_COLOR_DARK
-        self.is_started = False
         self._themes = None
         self.button_clicked_signal = Signal(dict)
         self.status_widget = None
@@ -158,35 +151,19 @@ class MainWindow(
         self.listening = False
         self.initialized = False
         self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
-
         self.logger = Logger(prefix=self.__class__.__name__)
         self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
-
         super().__init__(*args, **kwargs)
-
         self._updating_settings = True
-        self.__application_settings = QSettings(ORGANIZATION, APPLICATION_NAME)
-
         PipelineMixin.__init__(self)
         AIModelMixin.__init__(self)
         self._updating_settings = False
-
+        self._worker_manager = None
         self.register_signals()
-
         self.initialize_ui()
-        self.worker_manager = None
-        self.is_started = True
-        self.image_window = None
-
-        for item in (
-            (SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal),
-            (SignalCode.NAVIGATE_TO_URL, self.on_navigate_to_url),
-        ):
-            self.register(item[0], item[1])
-
-        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, { "main_window": self })
+        self._initialize_workers()
 
     @property
     def generator_tab_widget(self):
@@ -536,25 +513,30 @@ class MainWindow(
 
     def register_signals(self):
         self.logger.debug("Connecting signals")
-        self.register(SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal)
-        self.register(SignalCode.QUIT_APPLICATION, self.action_quit_triggered)
-        self.register(SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal)
-        self.register(SignalCode.ENABLE_BRUSH_TOOL_SIGNAL, lambda _message: self.action_toggle_brush(True))
-        self.register(SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda _message: self.action_toggle_eraser(True))
-        self.register(SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True))
-        self.register(SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True))
-        self.register(SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal)
-        self.register(SignalCode.WRITE_FILE, self.on_write_file_signal)
-        self.register(SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal)
-        self.register(SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts)
-        self.register(SignalCode.TOGGLE_SD_SIGNAL, self.on_toggle_sd)
-        self.register(SignalCode.TOGGLE_LLM_SIGNAL, self.on_toggle_llm)
-        self.register(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.action_reset_settings)
-        self.register(SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal)
-        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
-        self.register(SignalCode.KEYBOARD_SHORTCUTS_UPDATED, self.on_keyboard_shortcuts_updated)
-        self.register(SignalCode.HISTORY_UPDATED, self.on_history_updated),
-        self.register(SignalCode.REFRESH_STYLESHEET_SIGNAL, self.on_theme_changed_signal)
+        for item in (
+            (SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal),
+            (SignalCode.QUIT_APPLICATION, self.action_quit_triggered),
+            (SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal),
+            (SignalCode.ENABLE_BRUSH_TOOL_SIGNAL, lambda _message: self.action_toggle_brush(True)),
+            (SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda _message: self.action_toggle_eraser(True)),
+            (SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True)),
+            (SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True)),
+            (SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal),
+            (SignalCode.WRITE_FILE, self.on_write_file_signal),
+            (SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal),
+            (SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts),
+            (SignalCode.TOGGLE_SD_SIGNAL, self.on_toggle_sd),
+            (SignalCode.TOGGLE_LLM_SIGNAL, self.on_toggle_llm),
+            (SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.action_reset_settings),
+            (SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal),
+            (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
+            (SignalCode.KEYBOARD_SHORTCUTS_UPDATED, self.on_keyboard_shortcuts_updated),
+            (SignalCode.HISTORY_UPDATED, self.on_history_updated),
+            (SignalCode.REFRESH_STYLESHEET_SIGNAL, self.on_theme_changed_signal),
+            (SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal),
+            (SignalCode.NAVIGATE_TO_URL, self.on_navigate_to_url),
+        ):
+            self.register(item[0], item[1])
 
     def on_reset_paths_signal(self):
         self.reset_path_settings()
@@ -607,6 +589,7 @@ class MainWindow(
         self.initialize_widget_elements()
         self.ui.actionUndo.setEnabled(False)
         self.ui.actionRedo.setEnabled(False)
+        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, {"main_window": self})
 
     def initialize_widget_elements(self):
         for item in (
@@ -935,7 +918,6 @@ class MainWindow(
                 icon_data[1],
                 "dark" if self.application_settings.dark_mode_enabled else "light"
             )
-        self._initialize_worker_manager()
         self.logger.debug("Showing window")
         self._set_keyboard_shortcuts()
 
@@ -981,14 +963,15 @@ class MainWindow(
 
         session.close()
 
-    def _initialize_worker_manager(self):
+    def _initialize_workers(self):
         self.logger.debug("Initializing worker manager")
-        self.worker_manager = WorkerManager(
-            disable_sd=self.disable_sd,
-            disable_llm=self.disable_llm,
-            disable_tts=self.disable_tts,
-            disable_stt=self.disable_stt
-        )
+        self._mask_generator_worker = create_worker(MaskGeneratorWorker)
+        self._sd_worker = create_worker(SDWorker)
+        self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
+        self._stt_audio_processor_worker = create_worker(AudioProcessorWorker)
+        self._tts_generator_worker = create_worker(TTSGeneratorWorker)
+        self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
+        self._llm_generate_worker = create_worker(LLMGenerateWorker)
 
     def _initialize_filter_actions(self):
         # add more filters:

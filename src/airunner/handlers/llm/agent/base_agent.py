@@ -16,6 +16,7 @@ from llama_index.core import PromptHelper
 from llama_index.core.chat_engine import ContextChatEngine
 from llama_index.core import SimpleKeywordTableIndex
 from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
+from transformers import TextIteratorStreamer
 
 from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from airunner.handlers.llm.custom_embedding import CustomEmbedding
@@ -82,7 +83,7 @@ class BaseAgent(
         self.action = LLMActionType.CHAT
         self.rendered_template = None
         self.tokenizer = kwargs.pop("tokenizer", None)
-        self.streamer = kwargs.pop("streamer", None)
+        self.streamer = TextIteratorStreamer(self.tokenizer)
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
         self.conversation_id = None
@@ -97,12 +98,11 @@ class BaseAgent(
     @property
     def available_actions(self):
         return {
-            0: LLMActionType.QUIT_APPLICATION,
-            1: LLMActionType.TOGGLE_FULLSCREEN,
-            2: LLMActionType.TOGGLE_TTS,
-            3: LLMActionType.GENERATE_IMAGE,
-            4: LLMActionType.PERFORM_RAG_SEARCH,
-            5: LLMActionType.CHAT,
+            0: LLMActionType.TOGGLE_FULLSCREEN,
+            1: LLMActionType.TOGGLE_TTS,
+            2: LLMActionType.GENERATE_IMAGE,
+            3: LLMActionType.PERFORM_RAG_SEARCH,
+            4: LLMActionType.CHAT,
         }
 
     @property
@@ -163,7 +163,7 @@ class BaseAgent(
 
     def do_interrupt_process(self):
         interrupt = self.do_interrupt
-        self.do_interrupt = False
+        self.streamer = TextIteratorStreamer(self.tokenizer)
         return interrupt
 
     @property
@@ -303,9 +303,7 @@ class BaseAgent(
                 self.names_prompt(use_names, botname, username),
                 self.mood(botname, bot_mood, use_mood),
                 system_instructions,
-                "------\n",
-                "Chat History:\n",
-                f"{self.username}: {self.prompt}\n",
+                self.history_prompt(),
             ]
 
         elif action is LLMActionType.SUMMARIZE:
@@ -502,10 +500,9 @@ class BaseAgent(
             self.create_conversation()
 
         # Add the user's message to history
-        if action in (
-            LLMActionType.CHAT,
-            LLMActionType.PERFORM_RAG_SEARCH,
-            LLMActionType.GENERATE_IMAGE,
+        if action not in (
+            LLMActionType.APPLICATION_COMMAND,
+            LLMActionType.UPDATE_MOOD
         ):
             self.add_message_to_history(self.prompt, LLMChatRole.HUMAN)
 

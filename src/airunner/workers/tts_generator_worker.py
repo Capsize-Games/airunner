@@ -1,4 +1,5 @@
 import queue
+import re
 import threading
 
 from airunner.enums import SignalCode, TTSModel, ModelStatus
@@ -51,10 +52,11 @@ class TTSGeneratorWorker(Worker):
         self.tts.interrupt_process_signal()
 
     def on_unblock_tts_generator_signal(self):
-        self.logger.debug("Unblocking TTS generation...")
-        self.do_interrupt = False
-        self.paused = False
-        self.tts.unblock_tts_generator_signal()
+        if self.application_settings.tts_enabled:
+            self.logger.debug("Unblocking TTS generation...")
+            self.do_interrupt = False
+            self.paused = False
+            self.tts.unblock_tts_generator_signal()
 
     def on_enable_tts_signal(self):
         if self.tts:
@@ -92,12 +94,20 @@ class TTSGeneratorWorker(Worker):
             return
 
         # Add the incoming tokens to the list
-        self.logger.debug("Adding tokens to list...")
         self.tokens.extend(data["message"])
         finalize = data.get("finalize", False)
 
         # Convert the tokens to a string
         text = "".join(self.tokens)
+
+        # Regular expression to match timestamps in the format HH:MM
+        timestamp_pattern = re.compile(r'\b(\d{1,2}):(\d{2})\b')
+
+        # Replace the colon in the matched timestamps with a space
+        text = timestamp_pattern.sub(r'\1 \2', text)
+
+        def word_count(s):
+            return len(s.split())
 
         if finalize:
             self._generate(text)
@@ -113,12 +123,16 @@ class TTSGeneratorWorker(Worker):
                 if p in text:
                     split_text = text.split(p, 1)  # Split at the first occurrence of punctuation
                     if len(split_text) > 1:
-                        sentence = split_text[0]
+                        before, after = split_text[0], split_text[1]
+                        if p == ",":
+                            if word_count(before) < 3 or word_count(after) < 3:
+                                continue  # Skip splitting if there are not enough words around the comma
+                        sentence = before
                         self._generate(sentence)
                         self.play_queue_started = True
 
                         # Convert the remaining string back to a list of tokens
-                        remaining_text = split_text[1].strip()
+                        remaining_text = after.strip()
                         if not self.do_interrupt:
                             self.tokens = list(remaining_text)
                             break

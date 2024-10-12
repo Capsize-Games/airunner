@@ -36,9 +36,10 @@ class TTSVocalizerWorker(Worker):
         self.queue = Queue()
 
     def on_unblock_tts_generator_signal(self):
-        self.logger.debug("Starting TTS stream...")
-        self.accept_message = True
-        self.stream.start()
+        if self.application_settings.tts_enabled:
+            self.logger.debug("Starting TTS stream...")
+            self.accept_message = True
+            self.stream.start()
 
     def start_stream(self):
         if sd.query_devices(kind='output'):
