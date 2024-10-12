@@ -43,7 +43,7 @@ class TestSpeechT5TTSHandler(unittest.TestCase):
             "M": "1000",
             "MMXXI": "2021",
             "This is a IV test": "This is a 4 test",
-            "A test with no roman numerals": "A test with no roman numerals"
+            "A test with no roman numerals": "A test with no roman numerals",
         }
 
         for roman, expected in test_cases.items():
