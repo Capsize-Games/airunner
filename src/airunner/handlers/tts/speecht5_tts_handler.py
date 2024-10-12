@@ -297,6 +297,34 @@ class SpeechT5TTSHandler(TTSHandler):
                 self.logger.error(e)
         return inputs
 
+    def _unload_model(self):
+        self._model = None
+        self._current_model = None
+        clear_memory(self.memory_settings.default_gpu_tts)
+
+    def _unload_processor(self):
+        self._processor = None
+        clear_memory(self.memory_settings.default_gpu_tts)
+
+    def _unload_vocoder(self):
+        self._vocoder = None
+        clear_memory(self.memory_settings.default_gpu_tts)
+
+    def _unload_tokenizer(self):
+        self.tokenizer = None
+        clear_memory(self.memory_settings.default_gpu_tts)
+
+    def unblock_tts_generator_signal(self):
+        self.logger.debug("Unblocking text-to-speech generation...")
+        self._do_interrupt = False
+        self._paused = False
+
+    def interrupt_process_signal(self):
+        self._do_interrupt = True
+        self._cancel_generated_speech = False
+        self._paused = True
+        self._text_queue = Queue()
+
     def _prepare_text(self, text) -> str:
         text = self._replace_unspeakable_characters(text)
         text = self._strip_emoji_characters(text)
@@ -398,31 +426,3 @@ class SpeechT5TTSHandler(TTSHandler):
         result = re.sub(r'\b([AP])M\b', r'\1 M', result)
 
         return result
-
-    def _unload_model(self):
-        self._model = None
-        self._current_model = None
-        clear_memory(self.memory_settings.default_gpu_tts)
-
-    def _unload_processor(self):
-        self._processor = None
-        clear_memory(self.memory_settings.default_gpu_tts)
-
-    def _unload_vocoder(self):
-        self._vocoder = None
-        clear_memory(self.memory_settings.default_gpu_tts)
-
-    def _unload_tokenizer(self):
-        self.tokenizer = None
-        clear_memory(self.memory_settings.default_gpu_tts)
-
-    def unblock_tts_generator_signal(self):
-        self.logger.debug("Unblocking text-to-speech generation...")
-        self._do_interrupt = False
-        self._paused = False
-
-    def interrupt_process_signal(self):
-        self._do_interrupt = True
-        self._cancel_generated_speech = False
-        self._paused = True
-        self._text_queue = Queue()
