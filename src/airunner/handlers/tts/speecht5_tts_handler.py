@@ -234,10 +234,7 @@ class SpeechT5TTSHandler(TTSHandler):
 
     def _do_generate(self, message):
         self.logger.debug("Generating text-to-speech with T5")
-        text = self._replace_unspeakable_characters(message)
-        text = self._roman_to_int(text)
-        text = self._replace_numbers_with_words(text)
-        text = text.strip()
+        text = self._prepare_text(message)
 
         if text == "":
             return None
@@ -300,9 +297,18 @@ class SpeechT5TTSHandler(TTSHandler):
                 self.logger.error(e)
         return inputs
 
+    def _prepare_text(self, text) -> str:
+        text = self._replace_unspeakable_characters(text)
+        text = self._strip_emoji_characters(text)
+        text = self._roman_to_int(text)
+        text = self._replace_numbers_with_words(text)
+        text = re.sub(r"\s+", " ", text)  # Remove extra spaces
+        text = text.strip()
+        return text
+
     @staticmethod
-    def _replace_unspeakable_characters(text):
-        # strip things like eplisis, etc
+    def _replace_unspeakable_characters(text) -> str:
+        # strip things like ellipsis, etc
         text = text.replace("...", " ")
         text = text.replace("…", " ")
         text = text.replace("’", "")
@@ -325,12 +331,31 @@ class SpeechT5TTSHandler(TTSHandler):
         # replace tabs
         text = text.replace("\t", " ")
 
-        # replace excessive spaces
-        text = re.sub(r"\s+", " ", text)
         return text
 
     @staticmethod
-    def _roman_to_int(text):
+    def _strip_emoji_characters(text) -> str:
+        # strip emojis
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs
+            "\U0001F680-\U0001F6FF"  # transport & map symbols
+            "\U0001F700-\U0001F77F"  # alchemical symbols
+            "\U0001F780-\U0001F7FF"  # Geometric Shapes Extended
+            "\U0001F800-\U0001F8FF"  # Supplemental Arrows-C
+            "\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
+            "\U0001FA00-\U0001FA6F"  # Chess Symbols
+            "\U0001FA70-\U0001FAFF"  # Symbols and Pictographs Extended-A
+            "\U00002702-\U000027B0"  # Dingbats
+            "\U000024C2-\U0001F251"
+            "]+", flags=re.UNICODE
+        )
+        text = emoji_pattern.sub(r'', text)
+        return text
+
+    @staticmethod
+    def _roman_to_int(text) -> str:
         roman_numerals = {
             'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000
         }
@@ -352,7 +377,7 @@ class SpeechT5TTSHandler(TTSHandler):
         return result
 
     @staticmethod
-    def _replace_numbers_with_words(text):
+    def _replace_numbers_with_words(text) -> str:
         p = inflect.engine()
 
         # Handle time formats separately
