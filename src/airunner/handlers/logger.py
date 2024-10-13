@@ -24,7 +24,8 @@ class Logger:
         name = kwargs.pop("name", "AI Runner")
         super().__init__()
         self.logger = logging.getLogger(f"{name}::{prefix}")
-        self.set_level(LOG_LEVEL)
+        log_level = kwargs.pop("log_level", None)
+        self.set_level(log_level)
 
     @property
     def date_time(self):
@@ -34,7 +35,7 @@ class Logger:
         """
         return time.strftime("%Y-%m-%d %H:%M:%S")
 
-    def set_level(self, level):
+    def set_level(self, level=None):
         """
         Set the logging level
         :param level:
