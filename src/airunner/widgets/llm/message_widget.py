@@ -57,13 +57,16 @@ class MessageWidget(BaseWidget):
             self.font_family = font_family
             self.font_size = font_size
             # Check if the font family is available
-            if self.font_family in QFontDatabase().families():
+            available_families = QFontDatabase().families()
+            if self.font_family in available_families:
                 font = QFont(self.font_family, self.font_size)
-                font.setFamilies([
-                    self.font_family,
-                    "Noto Color Emoji",
-                ])
-                self.ui.content.setFont(font)
+            else:
+                font = QFont("Ubuntu", self.font_size)  # Fallback to Ubuntu if Arial is not available
+            font.setFamilies([
+                font.family(),
+                "Noto Color Emoji",
+            ])
+            self.ui.content.setFont(font)
 
     def set_content_size(self):
         doc_height = self.ui.content.document().size().height()
