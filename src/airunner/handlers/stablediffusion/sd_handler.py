@@ -998,7 +998,10 @@ class SDHandler(BaseHandler):
             self.logger.error("Pipe is None, unable to load embeddings")
             return
         self.logger.debug("Loading embeddings")
-        self._pipe.unload_textual_inversion()
+        try:
+            self._pipe.unload_textual_inversion()
+        except RuntimeError as e:
+            self.logger.error(f"Failed to unload embeddings: {e}")
         session = self.db_handler.get_db_session()
         embeddings = session.query(Embedding).filter_by(
             version=self.generator_settings_cached.version

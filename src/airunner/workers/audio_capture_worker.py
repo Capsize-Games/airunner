@@ -5,7 +5,7 @@ import sounddevice as sd
 import numpy as np
 from PySide6.QtCore import QThread
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ModelStatus
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
@@ -21,6 +21,7 @@ class AudioCaptureWorker(Worker):
             (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal),
             (SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal),
             (SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal),
+            (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
         ))
         self.listening: bool = False
         self.voice_input_start_time: time.time = None
@@ -29,9 +30,6 @@ class AudioCaptureWorker(Worker):
         self.stream = None
         self.running = False
         self._audio_process_queue = queue.Queue()
-        #self._capture_thread = None
-        if self.application_settings.stt_enabled:
-            self._start_listening()
 
     def on_AudioCaptureWorker_response_signal(self, message: dict):
         item: np.ndarray = message["item"]
@@ -44,6 +42,14 @@ class AudioCaptureWorker(Worker):
 
     def on_stt_stop_capture_signal(self):
         if self.listening:
+            self._stop_listening()
+
+    def on_model_status_changed_signal(self, message: dict):
+        model = message["model"]
+        status = message["status"]
+        if model == "stt" and status is ModelStatus.LOADED:
+            self._start_listening()
+        elif model == "stt" and status in (ModelStatus.UNLOADED, ModelStatus.FAILED):
             self._stop_listening()
 
     def start(self):
@@ -62,6 +68,10 @@ class AudioCaptureWorker(Worker):
                     chunk, overflowed = self.stream.read(int(chunk_duration * fs))
                 except sd.PortAudioError as e:
                     self.logger.error(f"PortAudioError: {e}")
+                    QThread.msleep(SLEEP_TIME_IN_MS)
+                    continue
+                except Exception as e:
+                    self.logger.error(e)
                     QThread.msleep(SLEEP_TIME_IN_MS)
                     continue
                 if np.max(np.abs(chunk)) > volume_input_threshold:  # check if chunk is not silence
@@ -92,21 +102,19 @@ class AudioCaptureWorker(Worker):
 
     def _start_listening(self):
         self.logger.debug("Start listening")
+        if self.stream is not None:
+            self._end_stream()
+        self._initialize_stream()
         self.listening = True
-        fs = self.stt_settings.fs
-        channels = self.stt_settings.channels
-        if self.stream is None:
-            self.stream = sd.InputStream(samplerate=fs, channels=channels)
-
-        try:
-            self.stream.start()
-        except Exception as e:
-            self.logger.error(e)
 
     def _stop_listening(self):
         self.logger.debug("Stop listening")
         self.listening = False
         self.running = False
+        self._end_stream()
+        # self._capture_thread.join()
+
+    def _end_stream(self):
         try:
             self.stream.stop()
         except Exception as e:
@@ -115,4 +123,13 @@ class AudioCaptureWorker(Worker):
             self.stream.close()
         except Exception as e:
             self.logger.error(e)
-        # self._capture_thread.join()
+        self.stream = None
+
+    def _initialize_stream(self):
+        fs = self.stt_settings.fs
+        channels = self.stt_settings.channels
+        self.stream = sd.InputStream(samplerate=fs, channels=channels)
+        try:
+            self.stream.start()
+        except Exception as e:
+            self.logger.error(e)

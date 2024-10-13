@@ -35,7 +35,8 @@ class LLMGenerateWorker(Worker):
     def on_llm_request_worker_response_signal(self, message: dict):
         self.add_to_queue(message)
 
-    def on_llm_on_unload_signal(self, data):
+    def on_llm_on_unload_signal(self, data=None):
+        data = data or {}
         self.logger.debug("Unloading LLM")
         self.llm.unload()
         callback = data.get("callback", None)
@@ -80,7 +81,10 @@ class LLMGenerateWorker(Worker):
         self._llm_thread = threading.Thread(target=self._load_llm, args=(data,))
         self._llm_thread.start()
 
-    def _load_llm(self, data):
+    def load(self):
+        self._load_llm()
+
+    def _load_llm(self, data=None):
         data = data or {}
         if self.llm is None:
             self.llm = CausalLMTransformerBaseHandler(agent_options=self.agent_options)
