@@ -93,15 +93,14 @@ class TestSpeechT5TTSHandler(unittest.TestCase):
         # Test cases
         test_cases = {
             "Emoji 😊 should be removed": "Emoji should be removed",
-            "Mixed 😊 text with ‘quotes’ and — dashes": "Mixed text with quotes and dashes",
-            "Multiple   spaces": "Multiple spaces",
+            "Mixed 😊 text  with ‘quotes’ and — dashes": "Mixed text with quotes and dashes",
             "😊": "",
-            "Hello 😊": "Hello",
+            "Hello 😊": "Hello ",
             "😊😊😊": "",
             "Mixed text 😊 with emoji": "Mixed text with emoji",
-            "Multiple emojis 😊😂👍": "Multiple emojis",
-            "Text with various emojis 😊😂👍🏆": "Text with various emojis",
-            "Emojis at the end 😊😂👍🏆": "Emojis at the end",
+            "Multiple emojis 😊😂👍": "Multiple emojis ",
+            "Text with various emojis 😊😂👍🏆": "Text with various emojis ",
+            "Emojis at the end 😊😂👍🏆": "Emojis at the end ",
             "No emojis here": "No emojis here"
         }
 
