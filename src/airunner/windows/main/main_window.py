@@ -809,6 +809,10 @@ class MainWindow(
             int(self.window_settings.mode_tab_widget_index)
         )
 
+        self.ui.tool_tab_widget.ui.tool_tab_widget_container.setCurrentIndex(
+            int(self.window_settings.tool_tab_widget_index)
+        )
+
         self.resize(width, height)
         self.move(x_pos, y_pos)
         self.raise_()
