@@ -9,7 +9,7 @@ from airunner.data.models.settings_models import ApplicationSettings, LLMGenerat
     ImageToImageSettings, OutpaintSettings, PathSettings, MemorySettings, Chatbot, \
     AIModels, Schedulers, Lora, ShortcutKeys, SavedPrompt, SpeechT5Settings, TTSSettings, EspeakSettings, \
     MetadataSettings, Embedding, STTSettings, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, TargetFiles, \
-    ImageFilterValue
+    ImageFilterValue, WhisperSettings
 from airunner.enums import SignalCode
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 
@@ -28,8 +28,18 @@ class SettingsMixin:
         return self.db_handler.load_settings_from_db(ApplicationSettings)
 
     @property
+    def whisper_settings(self) -> WhisperSettings:
+        return self.db_handler.load_settings_from_db(WhisperSettings)
+
+    @property
     def llm_generator_settings(self) -> LLMGeneratorSettings:
-        return self.db_handler.load_settings_from_db(LLMGeneratorSettings)
+        settings = self.db_handler.load_settings_from_db(LLMGeneratorSettings)
+        if settings.current_chatbot == 0:
+            chatbots = self.chatbots
+            if len(chatbots) > 0:
+                settings.current_chatbot = self.chatbots[0].id
+                self.update_settings_by_name("llm_generator_settings", "current_chatbot", settings.current_chatbot)
+        return settings
 
     @property
     def generator_settings(self) -> GeneratorSettings:
@@ -305,6 +315,8 @@ class SettingsMixin:
             self.update_memory_settings(column_name, val)
         elif setting_name == "llm_generator_settings":
             self.update_llm_generator_settings(column_name, val)
+        elif setting_name == "whisper_settings":
+            self.update_whisper_settings(column_name, val)
         else:
             logging.error(f"Invalid setting name: {setting_name}")
 
@@ -379,6 +391,10 @@ class SettingsMixin:
 
     def update_llm_generator_settings(self, column_name, val):
         self.db_handler.update_setting(LLMGeneratorSettings, column_name, val)
+        self.__settings_updated()
+
+    def update_whisper_settings(self, column_name, val):
+        self.db_handler.update_setting(WhisperSettings, column_name, val)
         self.__settings_updated()
 
     def __settings_updated(self):

@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>whisper_settings</class>
+ <widget class="QWidget" name="whisper_settings">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="horizontalSpacing">
+    <number>0</number>
+   </property>
+   <property name="verticalSpacing">
+    <number>10</number>
+   </property>
+   <item row="0" column="0">
+    <widget class="QWidget" name="whisper_settings_container" native="true">
+     <layout class="QGridLayout" name="gridLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <property name="horizontalSpacing">
+       <number>0</number>
+      </property>
+      <property name="verticalSpacing">
+       <number>10</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="is_multilingual">
+        <property name="text">
+         <string>Is Multilingual</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="SliderWidget" name="temperature" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>10</height>
+         </size>
+        </property>
+        <property name="slider_minimum" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_maximum" stdset="0">
+         <number>1000</number>
+        </property>
+        <property name="spinbox_minimum" stdset="0">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="spinbox_maximum" stdset="0">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="display_as_float" stdset="0">
+         <bool>true</bool>
+        </property>
+        <property name="settings_property" stdset="0">
+         <string>whisper_settings.temperature</string>
+        </property>
+        <property name="slider_single_step" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_page_step" stdset="0">
+         <number>10</number>
+        </property>
+        <property name="spinbox_single_step" stdset="0">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="spinbox_page_step" stdset="0">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="label_text" stdset="0">
+         <string>Temperature</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="SliderWidget" name="compression_ratio_threshold" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>10</height>
+         </size>
+        </property>
+        <property name="slider_minimum" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_maximum" stdset="0">
+         <number>5000</number>
+        </property>
+        <property name="spinbox_minimum" stdset="0">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="spinbox_maximum" stdset="0">
+         <double>5.000000000000000</double>
+        </property>
+        <property name="display_as_float" stdset="0">
+         <bool>true</bool>
+        </property>
+        <property name="settings_property" stdset="0">
+         <string>whisper_settings.compression_ratio_threshold</string>
+        </property>
+        <property name="slider_single_step" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_page_step" stdset="0">
+         <number>10</number>
+        </property>
+        <property name="spinbox_single_step" stdset="0">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="spinbox_page_step" stdset="0">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="label_text" stdset="0">
+         <string>Compression ratio threshold</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="SliderWidget" name="logprob_threshold" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>10</height>
+         </size>
+        </property>
+        <property name="slider_minimum" stdset="0">
+         <number>-1000</number>
+        </property>
+        <property name="slider_maximum" stdset="0">
+         <number>1000</number>
+        </property>
+        <property name="spinbox_minimum" stdset="0">
+         <double>-1.000000000000000</double>
+        </property>
+        <property name="spinbox_maximum" stdset="0">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="display_as_float" stdset="0">
+         <bool>true</bool>
+        </property>
+        <property name="settings_property" stdset="0">
+         <string>whisper_settings.logprob_threshold</string>
+        </property>
+        <property name="slider_single_step" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_page_step" stdset="0">
+         <number>10</number>
+        </property>
+        <property name="spinbox_single_step" stdset="0">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="spinbox_page_step" stdset="0">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="label_text" stdset="0">
+         <string>Logprob threshold</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="SliderWidget" name="no_speech_threshold" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>10</height>
+         </size>
+        </property>
+        <property name="slider_minimum" stdset="0">
+         <number>0</number>
+        </property>
+        <property name="slider_maximum" stdset="0">
+         <number>1000</number>
+        </property>
+        <property name="spinbox_minimum" stdset="0">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="spinbox_maximum" stdset="0">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="display_as_float" stdset="0">
+         <bool>true</bool>
+        </property>
+        <property name="settings_property" stdset="0">
+         <string>whisper_settings.no_speech_threshold</string>
+        </property>
+        <property name="slider_single_step" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_page_step" stdset="0">
+         <number>10</number>
+        </property>
+        <property name="spinbox_single_step" stdset="0">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="spinbox_page_step" stdset="0">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="label_text" stdset="0">
+         <string>No speech threshold</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="SliderWidget" name="time_precision" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>10</height>
+         </size>
+        </property>
+        <property name="slider_minimum" stdset="0">
+         <number>0</number>
+        </property>
+        <property name="slider_maximum" stdset="0">
+         <number>1000</number>
+        </property>
+        <property name="spinbox_minimum" stdset="0">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="spinbox_maximum" stdset="0">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="display_as_float" stdset="0">
+         <bool>true</bool>
+        </property>
+        <property name="settings_property" stdset="0">
+         <string>whisper_settings.time_precision</string>
+        </property>
+        <property name="slider_single_step" stdset="0">
+         <number>1</number>
+        </property>
+        <property name="slider_page_step" stdset="0">
+         <number>10</number>
+        </property>
+        <property name="spinbox_single_step" stdset="0">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="spinbox_page_step" stdset="0">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="label_text" stdset="0">
+         <string>Time precision</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="QWidget" name="widget" native="true">
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Language</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="language"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QWidget" name="widget_2" native="true">
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Task</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="task"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton">
+           <property name="text">
+            <string>Reset to Default</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>language</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>whisper_settings</receiver>
+   <slot>on_language_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>110</x>
+     <y>177</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>104</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>task</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>whisper_settings</receiver>
+   <slot>on_task_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>59</x>
+     <y>262</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-2</x>
+     <y>215</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>is_multilingual</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>whisper_settings</receiver>
+   <slot>is_multilingual_changed(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>90</x>
+     <y>16</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>41</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>whisper_settings</receiver>
+   <slot>on_reset_default_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>15</x>
+     <y>279</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-2</x>
+     <y>260</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>on_language_changed(QString)</slot>
+  <slot>on_task_changed(QString)</slot>
+  <slot>is_multilingual_changed(bool)</slot>
+  <slot>on_reset_default_clicked()</slot>
+ </slots>
+</ui>

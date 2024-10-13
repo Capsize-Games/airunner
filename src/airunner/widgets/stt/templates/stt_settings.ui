@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>stt_settings</class>
+ <widget class="QWidget" name="stt_settings">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>809</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_3">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>LLM Settings</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>398</width>
+        <height>787</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="horizontalSpacing">
+        <number>0</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="SliderWidget" name="volume_input_threshold_slider" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>10</height>
+          </size>
+         </property>
+         <property name="slider_minimum" stdset="0">
+          <number>1</number>
+         </property>
+         <property name="slider_maximum" stdset="0">
+          <number>2000</number>
+         </property>
+         <property name="spinbox_minimum" stdset="0">
+          <double>0.000000000000000</double>
+         </property>
+         <property name="spinbox_maximum" stdset="0">
+          <double>2.000000000000000</double>
+         </property>
+         <property name="display_as_float" stdset="0">
+          <bool>true</bool>
+         </property>
+         <property name="settings_property" stdset="0">
+          <string>stt_settings.volume_input_threshold</string>
+         </property>
+         <property name="slider_single_step" stdset="0">
+          <number>1</number>
+         </property>
+         <property name="slider_page_step" stdset="0">
+          <number>10</number>
+         </property>
+         <property name="spinbox_single_step" stdset="0">
+          <double>0.010000000000000</double>
+         </property>
+         <property name="spinbox_page_step" stdset="0">
+          <double>0.100000000000000</double>
+         </property>
+         <property name="label_text" stdset="0">
+          <string>Input Volume</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="SliderWidget" name="silence_buffer_seconds" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>10</height>
+          </size>
+         </property>
+         <property name="slider_minimum" stdset="0">
+          <number>1</number>
+         </property>
+         <property name="slider_maximum" stdset="0">
+          <number>5000</number>
+         </property>
+         <property name="spinbox_minimum" stdset="0">
+          <double>0.000000000000000</double>
+         </property>
+         <property name="spinbox_maximum" stdset="0">
+          <double>5.000000000000000</double>
+         </property>
+         <property name="display_as_float" stdset="0">
+          <bool>true</bool>
+         </property>
+         <property name="settings_property" stdset="0">
+          <string>stt_settings.silence_buffer_seconds</string>
+         </property>
+         <property name="slider_single_step" stdset="0">
+          <number>1</number>
+         </property>
+         <property name="slider_page_step" stdset="0">
+          <number>10</number>
+         </property>
+         <property name="spinbox_single_step" stdset="0">
+          <double>0.010000000000000</double>
+         </property>
+         <property name="spinbox_page_step" stdset="0">
+          <double>0.100000000000000</double>
+         </property>
+         <property name="label_text" stdset="0">
+          <string>Silence Buffer</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>724</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="2" column="0">
+        <widget class="WhisperSettingsWidget" name="widget" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>WhisperSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/stt/whisper_settings_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
