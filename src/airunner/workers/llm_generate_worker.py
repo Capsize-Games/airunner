@@ -20,8 +20,17 @@ class LLMGenerateWorker(Worker):
             (SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.on_llm_add_chatbot_response_to_history),
             (SignalCode.LOAD_CONVERSATION, self.on_llm_load_conversation),
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.llm_on_interrupt_process_signal),
+            (SignalCode.QUIT_APPLICATION, self.on_quit_application_signal),
         ):
             self.register(signal[0], signal[1])
+        self._llm_thread = None
+
+    def on_quit_application_signal(self):
+        self.logger.debug("Quitting LLM")
+        if self.llm:
+            self.llm.unload()
+        if self._llm_thread is not None:
+            self._llm_thread.join()
 
     def on_llm_request_worker_response_signal(self, message: dict):
         self.add_to_queue(message)
@@ -34,13 +43,7 @@ class LLMGenerateWorker(Worker):
             callback(data)
 
     def on_llm_load_model_signal(self, data):
-        threading.Thread(target=self._load_llm, args=(data,)).start()
-
-    def _load_llm(self, data):
-        self.llm.load()
-        callback = data.get("callback", None)
-        if callback:
-            callback(data)
+        self._load_llm_thread(data)
 
     def on_llm_clear_history_signal(self):
         if self.llm:
@@ -67,9 +70,23 @@ class LLMGenerateWorker(Worker):
             self.logger.error(f"Error in on_load_conversation: {e}")
 
     def start_worker_thread(self):
-        self.llm = CausalLMTransformerBaseHandler(agent_options=self.agent_options)
         if self.application_settings.llm_enabled:
-            self.llm.load()
+            self._load_llm_thread()
 
     def handle_message(self, message):
         self.llm.handle_request(message)
+
+    def _load_llm_thread(self, data=None):
+        self._llm_thread = threading.Thread(target=self._load_llm, args=(data,))
+        self._llm_thread.start()
+
+    def _load_llm(self, data):
+        data = data or {}
+        if self.llm is None:
+            self.llm = CausalLMTransformerBaseHandler(agent_options=self.agent_options)
+
+        self.llm.load()
+
+        callback = data.get("callback", None)
+        if callback:
+            callback(data)
