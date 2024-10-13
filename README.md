@@ -95,6 +95,22 @@ There are several ways to get started with AI Runner such as packaged, from sour
 
 [Detailed packaging and installation instructions can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
+### Install as a library
+
+Installation
+
+```bash
+pip install airunner
+```
+
+Running
+
+```bash
+airunner
+```
+
+
+
 ---
 
 ## Models
@@ -125,6 +141,23 @@ Models must be placed in their respective directories in the `airunner` director
 │   │   └── SDXL Turbo
 │   │       ├── lora
 │   │       └── embeddings
+```
+
+---
+
+## Unit tests
+
+Run all unit tests
+
+```bash
+python -m unittest discover -s src/airunner/tests
+```
+
+Run a single unit tests `python -m unittest src/airunner/tests/<file_name>`
+
+Example
+```bash
+python -m unittest src/airunner/tests/test_prompt_weight_convert.py
 ```
 
 ---
