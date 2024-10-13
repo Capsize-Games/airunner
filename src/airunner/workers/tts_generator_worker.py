@@ -2,7 +2,7 @@ import queue
 import re
 import threading
 
-from airunner.enums import SignalCode, TTSModel, ModelStatus
+from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
 from airunner.handlers.tts.espeak_tts_handler import EspeakTTSHandler
 from airunner.handlers.tts.speecht5_tts_handler import SpeechT5TTSHandler
 from airunner.workers.worker import Worker
@@ -29,6 +29,10 @@ class TTSGeneratorWorker(Worker):
 
     def on_llm_text_streamed_signal(self, data):
         if not self.application_settings.tts_enabled:
+            return
+
+        action = data.get("action", LLMActionType.CHAT)
+        if action is LLMActionType.GENERATE_IMAGE:
             return
 
         if self.tts.model_status is not ModelStatus.LOADED:
@@ -69,15 +73,17 @@ class TTSGeneratorWorker(Worker):
             thread.start()
 
     def start_worker_thread(self):
-        tts_model = self.tts_settings.model.lower()
+        self._initialize_tts_handler()
+        if self.application_settings.tts_enabled:
+            self.tts.load()
 
+    def _initialize_tts_handler(self):
+        tts_model = self.tts_settings.model.lower()
         if tts_model == TTSModel.ESPEAK.value:
             tts_handler_class_ = EspeakTTSHandler
         else:
             tts_handler_class_ = SpeechT5TTSHandler
         self.tts = tts_handler_class_()
-        if self.application_settings.tts_enabled:
-            self.tts.load()
 
     def add_to_queue(self, message):
         if self.do_interrupt:
@@ -140,10 +146,20 @@ class TTSGeneratorWorker(Worker):
             self.on_interrupt_process_signal()
 
     def _load_tts(self):
-        self.tts.load()
+        if self.tts:
+            self.tts.load()
+
+    def load(self):
+        if not self.tts:
+            self._initialize_tts_handler()
+        self._load_tts()
+
+    def unload(self):
+        self._unload_tts()
 
     def _unload_tts(self):
-        self.tts.unload()
+        if self.tts:
+            self.tts.unload()
 
     def _generate(self, message):
         if self.do_interrupt:
