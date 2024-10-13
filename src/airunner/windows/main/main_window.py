@@ -527,6 +527,8 @@ class MainWindow(
             (SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts),
             (SignalCode.TOGGLE_SD_SIGNAL, self.on_toggle_sd),
             (SignalCode.TOGGLE_LLM_SIGNAL, self.on_toggle_llm),
+            (SignalCode.UNLOAD_NON_SD_MODELS, self.on_unload_non_sd_models),
+            (SignalCode.LOAD_NON_SD_MODELS, self.on_load_non_sd_models),
             (SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.action_reset_settings),
             (SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal),
             (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
@@ -681,6 +683,22 @@ class MainWindow(
             self.showNormal()
         else:
             self.showFullScreen()
+
+    def on_unload_non_sd_models(self, data:dict=None):
+        self._llm_generate_worker.on_llm_on_unload_signal()
+        self._tts_generator_worker.unload()
+        self._stt_audio_processor_worker.unload()
+        callback = data.get("callback", None)
+        if callback:
+            callback(data)
+
+    def on_load_non_sd_models(self, data:dict=None):
+        self._llm_generate_worker.load()
+        self._tts_generator_worker.load()
+        self._stt_audio_processor_worker.load()
+        callback = data.get("callback", None)
+        if callback:
+            callback(data)
 
     def on_toggle_llm(self, data:dict=None, val=None):
         if val is None:
