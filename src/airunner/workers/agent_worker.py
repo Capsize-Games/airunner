@@ -1,7 +1,7 @@
 import traceback
 import torch
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, LLMActionType
 from airunner.workers.worker import Worker
 
 
@@ -44,6 +44,7 @@ class AgentWorker(Worker):
                         is_first_message=True,
                         is_end_of_message=True,
                         name=message["botname"],
+                        action=LLMActionType.CHAT
                     )
                 )
             else:
@@ -58,6 +59,7 @@ class AgentWorker(Worker):
                             is_first_message=True,
                             is_end_of_message=True,
                             name=message["botname"],
+                            action=LLMActionType.CHAT
                         )
                     )
 

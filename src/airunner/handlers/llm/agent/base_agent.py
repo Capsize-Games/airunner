@@ -545,6 +545,7 @@ class BaseAgent(
                     is_first_message=True,
                     is_end_of_message=True,
                     name=self.botname,
+                    action=action
                 )
             )
 
@@ -614,6 +615,7 @@ class BaseAgent(
                     is_first_message=is_first_message,
                     is_end_of_message=False,
                     name=self.botname,
+                    action=LLMActionType.CHAT
                 )
             )
             is_first_message = False
@@ -668,6 +670,7 @@ class BaseAgent(
                                 is_first_message=is_first_message,
                                 is_end_of_message=is_end_of_message,
                                 name=self.botname,
+                                action=action
                             )
                         )
                     else:
@@ -678,6 +681,7 @@ class BaseAgent(
                                 is_first_message=is_first_message,
                                 is_end_of_message=is_end_of_message,
                                 name=self.botname,
+                                action=action
                             )
                         )
                     is_first_message = False
@@ -702,6 +706,7 @@ class BaseAgent(
                         is_first_message=is_first_message,
                         is_end_of_message=is_end_of_message,
                         name=self.botname,
+                        action=action
                     )
                 )
                 is_first_message = False
