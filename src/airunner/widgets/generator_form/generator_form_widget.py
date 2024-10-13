@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QApplication
 
 from airunner.data.models.settings_models import ShortcutKeys
 from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion, \
-    ModelStatus, ModelType
+    ModelStatus, ModelType, LLMActionType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import PHOTO_REALISTIC_NEGATIVE_PROMPT, ILLUSTRATION_NEGATIVE_PROMPT
 from airunner.utils.random_seed import random_seed
@@ -185,15 +185,15 @@ class GeneratorForm(BaseWidget):
                 message="Your image is generating...",
                 is_first_message=True,
                 is_end_of_message=True,
-                name=self.chatbot.name
+                name=self.chatbot.name,
+                action=LLMActionType.GENERATE_IMAGE
             )
         )
 
-        # Unload the LLM
-        if self.application_settings.llm_enabled:
-            self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, dict(
-                callback=self.unload_llm_callback
-            ))
+        # Unload non-Stable Diffusion models
+        self.emit_signal(SignalCode.UNLOAD_NON_SD_MODELS, dict(
+            callback=self.unload_llm_callback
+        ))
 
         # Set the prompts in the generator form UI
         data = self.extract_json_from_message(data["message"])
@@ -238,45 +238,18 @@ class GeneratorForm(BaseWidget):
             message="Your image has been generated",
             is_first_message=True,
             is_end_of_message=True,
-            name=self.chatbot.name
+            name=self.chatbot.name,
+            action=LLMActionType.GENERATE_IMAGE
         )
 
-        # If SD is enabled, emit a signal to unload SD.
-        if self.application_settings.sd_enabled:
-            # If LLM is disabled, emit a signal to load it.
-            if not self.application_settings.llm_enabled:
-                self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
-                    callback=lambda d: self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, dict(
-                        callback=lambda d: self.emit_signal(
-                            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                            image_generated_message
-                        )
-                    ))
-                ))
-            else:
-                self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
-                    callback=lambda d: self.emit_signal(
-                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                        image_generated_message
-                    )
-                ))
-        else:
-            # If SD is disabled and LLM is disabled, emit a signal to load LLM
-            # with a callback to add the image generated message to the conversation.
-            if not self.application_settings.llm_enabled:
-                self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, dict(
-                    callback=lambda d: self.emit_signal(
-                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                        image_generated_message
-                    )
-                ))
-            else:
-                # If SD is disabled and LLM is enabled, emit a signal to add
-                # the image generated message to the conversation.
-                self.emit_signal(
+        self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
+            callback=lambda d: self.emit_signal(SignalCode.LOAD_NON_SD_MODELS, dict(
+                callback=lambda d: self.emit_signal(
                     SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                     image_generated_message
                 )
+            ))
+        ))
     ##########################################################################
     # End LLM Generated Image handlers
     ##########################################################################
@@ -382,10 +355,10 @@ class GeneratorForm(BaseWidget):
                 json_dict = json.loads(json_block)
                 return json_dict
             except json.JSONDecodeError as e:
-                print(f"Error decoding JSON: {e}")
+                self.logger.error(f"Error decoding JSON block: {e}")
                 return {}
         else:
-            print("No JSON block found in the message.")
+            self.logger.error("No JSON block found in message")
             return {}
 
     def get_memory_options(self):
