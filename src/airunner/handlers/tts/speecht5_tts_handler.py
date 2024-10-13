@@ -336,27 +336,29 @@ class SpeechT5TTSHandler(TTSHandler):
 
     @staticmethod
     def _replace_unspeakable_characters(text) -> str:
-        # strip things like ellipsis, etc
+        # Replace ellipsis and other unspeakable characters
         text = text.replace("...", " ")
         text = text.replace("…", " ")
-        text = text.replace("’", "'")
         text = text.replace("“", "")
         text = text.replace("”", "")
-        text = text.replace("‘", "")
         text = text.replace("–", "")
         text = text.replace("—", "")
         text = text.replace('"', "")
         text = text.replace("-", "")
         text = text.replace("-", "")
 
-        # replace windows newlines
+        # Replace windows newlines
         text = text.replace("\r\n", " ")
 
-        # replace newlines
+        # Replace newlines
         text = text.replace("\n", " ")
 
-        # replace tabs
+        # Replace tabs
         text = text.replace("\t", " ")
+
+        # Remove single quotes used as quotes but keep apostrophes
+        text = re.sub(r"(?<=\W)'|'(?=\W)", "", text)
+        text = re.sub(r"‘|’", "", text)
 
         return text
 

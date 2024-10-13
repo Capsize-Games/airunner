@@ -201,7 +201,7 @@ class LLMGeneratorSettings(Base):
     use_gpu = Column(Boolean, default=True)
     message_type = Column(String, default="chat")
     override_parameters = Column(Boolean, default=True)
-    current_chatbot = Column(Integer, default=0)
+    current_chatbot = Column(Integer, default=1)
     prompt_template = Column(String, default="Mistral 7B Instruct: Default Chatbot")
     batch_size = Column(Integer, default=1)
     use_api = Column(Boolean, default=False)
@@ -267,9 +267,9 @@ class STTSettings(Base):
     duration = Column(Integer, default=10)
     fs = Column(Integer, default=16000)
     channels = Column(Integer, default=1)
-    volume_input_threshold = Column(Integer, default=0.08)
-    silence_buffer_seconds = Column(Integer, default=1.0)
-    chunk_duration = Column(Integer, default=0.03)
+    volume_input_threshold = Column(Float, default=0.08)
+    silence_buffer_seconds = Column(Float, default=1.0)
+    chunk_duration = Column(Float, default=0.03)
 
 
 class Schedulers(Base):
@@ -599,3 +599,16 @@ class ImageFilterValue(Base):
 
 ImageFilter.image_filter_values = relationship("ImageFilterValue", order_by=ImageFilterValue.id, back_populates="image_filter")
 ImageFilterValue.image_filter = relationship("ImageFilter", back_populates="image_filter_values")
+
+
+class WhisperSettings(Base):
+    __tablename__ = "whisper_settings"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    is_multilingual = Column(Boolean, default=False)
+    temperature = Column(Float, default=0.8)
+    compression_ratio_threshold = Column(Float, default=1.35)
+    logprob_threshold = Column(Float, default=-1.0)
+    no_speech_threshold = Column(Float, default=0.2)
+    time_precision = Column(Float, default=0.02)
+    language = Column(String, default="en")
+    task = Column(String, default="transcribe")
