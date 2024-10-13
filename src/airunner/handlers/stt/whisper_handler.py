@@ -210,9 +210,23 @@ class WhisperHandler(BaseHandler):
         if torch.isnan(input_features).any():
             raise NaNException
 
+        data = dict(
+            input_features=input_features,
+            is_multilingual=self.whisper_settings.is_multilingual,
+            temperature=self.whisper_settings.temperature,
+            compression_ratio_threshold=self.whisper_settings.compression_ratio_threshold,
+            logprob_threshold=self.whisper_settings.logprob_threshold,
+            no_speech_threshold=self.whisper_settings.no_speech_threshold,
+            time_precision=self.whisper_settings.time_precision,
+        )
+
+        if self.whisper_settings.is_multilingual:
+            data["language"] = self.whisper_settings.language
+            data["task"] = self.whisper_settings.task
+
         try:
             generated_ids = self._model.generate(
-                input_features=input_features,
+                **data
                 # generation_config=None,
                 # logits_processor=None,
                 # stopping_criteria=None,
@@ -221,17 +235,11 @@ class WhisperHandler(BaseHandler):
                 # return_timestamps=None,
                 # task="transcribe",
                 # language="en",
-                is_multilingual=False,
                 # prompt_ids=None,
                 # prompt_condition_type=None,
                 # condition_on_prev_tokens=None,
-                temperature=0.8,
-                compression_ratio_threshold=1.35,
-                logprob_threshold=-1.0,
-                no_speech_threshold=0.2,
                 # num_segment_frames=None,
                 # attention_mask=None,
-                time_precision=0.02,
                 # return_token_timestamps=None,
                 # return_segments=False,
                 # return_dict_in_generate=None,

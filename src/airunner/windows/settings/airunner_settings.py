@@ -3,6 +3,14 @@ from PySide6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPa
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
 
 from airunner.enums import SignalCode
+from airunner.widgets.api_token.api_token_widget import APITokenWidget
+from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
+from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
+from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
+from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
+from airunner.widgets.paths.paths_widget import PathsWidget
+from airunner.widgets.stt.stt_settings_widget import STTSettingsWidget
+from airunner.widgets.tts.tts_preferences_widget import TTSPreferencesWidget
 from airunner.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
 
@@ -46,26 +54,21 @@ class SettingsWindow(BaseWindow):
 
     def available_widgets(self, name):
         if name == "paths":
-            from airunner.widgets.paths.paths_widget import PathsWidget
             return PathsWidget
-        if name == "keyboard_shortcuts":
-            from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
+        elif name == "keyboard_shortcuts":
             return KeyboardShortcutsWidget
-        if name == "memory":
-            from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
+        elif name == "memory":
             return MemoryPreferencesWidget
-        if name == "hf_api_key":
-            from airunner.widgets.api_token.api_token_widget import APITokenWidget
+        elif name == "hf_api_key":
             return APITokenWidget
-        if name == "tts_preferences":
-            from airunner.widgets.tts.tts_preferences_widget import TTSPreferencesWidget
+        elif name == "tts_preferences":
             return TTSPreferencesWidget
-        if name == "bot_preferences":
-            from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
+        elif name == "bot_preferences":
             return BotPreferencesWidget
-        if name == "export_preferences":
-            from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
+        elif name == "export_preferences":
             return ExportPreferencesWidget
+        # elif name == "stt_preferences":
+        #     return STTSettingsWidget
 
     def get_callback_for_slider(self, callback_name):
         return getattr(self, callback_name)
@@ -108,7 +111,7 @@ class SettingsWindow(BaseWindow):
                 ]
             },
             {
-                "section": "LLM, TTS, Chatbot",
+                "section": "Chatbot, text-to-speech",
                 "files": [
                     {
                         "name": "bot_preferences",
@@ -120,6 +123,11 @@ class SettingsWindow(BaseWindow):
                         "display_name": "Text-to-Speech",
                         "checkable": False
                     },
+                    # {
+                    #     "name": "stt_preferences",
+                    #     "display_name": "Speech-to-Text",
+                    #     "checkable": False
+                    # },
                 ]
             },
             {
