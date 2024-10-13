@@ -33,7 +33,13 @@ class SettingsMixin:
 
     @property
     def llm_generator_settings(self) -> LLMGeneratorSettings:
-        return self.db_handler.load_settings_from_db(LLMGeneratorSettings)
+        settings = self.db_handler.load_settings_from_db(LLMGeneratorSettings)
+        if settings.current_chatbot == 0:
+            chatbots = self.chatbots
+            if len(chatbots) > 0:
+                settings.current_chatbot = self.chatbots[0].id
+                self.update_settings_by_name("llm_generator_settings", "current_chatbot", settings.current_chatbot)
+        return settings
 
     @property
     def generator_settings(self) -> GeneratorSettings:
