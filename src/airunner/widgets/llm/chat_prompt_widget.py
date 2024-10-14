@@ -123,7 +123,8 @@ class ChatPromptWidget(BaseWidget):
             name=name,
             message=message,
             is_bot=True, 
-            first_message=is_first_message
+            first_message=is_first_message,
+            action=data["action"]
         )
 
         if is_end_of_message:
@@ -303,6 +304,7 @@ class ChatPromptWidget(BaseWidget):
         )
 
     def add_loading_widget(self):
+        self._has_loading_widget = True
         self.ui.scrollAreaWidgetContents.layout().addWidget(
             LoadingWidget()
         )
@@ -314,6 +316,7 @@ class ChatPromptWidget(BaseWidget):
             if isinstance(current_widget, LoadingWidget):
                 self.ui.scrollAreaWidgetContents.layout().removeWidget(current_widget)
                 current_widget.deleteLater()
+                self._has_loading_widget = False
                 break
 
     def add_message_to_conversation(
@@ -322,7 +325,8 @@ class ChatPromptWidget(BaseWidget):
         message,
         is_bot, 
         first_message=True,
-        use_loading_widget=True
+        use_loading_widget=True,
+        action:LLMActionType=LLMActionType.CHAT
     ):
         if not first_message:
             # get the last widget from the scrollAreaWidgetContents.layout()
