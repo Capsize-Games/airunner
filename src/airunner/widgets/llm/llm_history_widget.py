@@ -70,7 +70,7 @@ class LLMHistoryWidget(BaseWidget):
         # Add a vertical spacer at the end
         layout.addItem(self.spacer)
 
-        self.ui.conversations_scroll_area.setLayout(layout)
+        self.ui.scrollAreaWidgetContents.setLayout(layout)
 
     def on_conversation_click(self, conversation):
         session = self.db_handler.get_db_session()
@@ -80,7 +80,8 @@ class LLMHistoryWidget(BaseWidget):
         session.commit()
         session.close()
         self.emit_signal(SignalCode.LOAD_CONVERSATION, {
-            "conversation_id": conversation.id
+            "conversation_id": conversation.id,
+            "chatbot_id": chatbot_id
         })
 
     def on_delete_conversation(self, layout, conversation):
