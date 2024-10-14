@@ -33,7 +33,7 @@ setup(
         "alembic==1.13.3",
 
         # LLM Dependencies
-        "transformers==4.43.4",
+        "transformers==4.45.2",
         "auto-gptq==0.7.1",
         "bitsandbytes==0.43.3",
         "datasets==2.21.0",
