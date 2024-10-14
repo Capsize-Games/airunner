@@ -29,6 +29,7 @@ class ChatPromptWidget(BaseWidget):
         self.messages_spacer = None
         self.chat_loaded = False
         self.conversation_id = None
+        self._has_loading_widget = False
 
         self.ui.action.blockSignals(True)
         self.ui.action.addItem("Auto")
@@ -339,7 +340,7 @@ class ChatPromptWidget(BaseWidget):
 
         self.remove_spacer()
 
-        if is_bot and use_loading_widget:
+        if is_bot and use_loading_widget and self._has_loading_widget and action == LLMActionType.CHAT:
             self.remove_loading_widget()
 
         if message != "":
