@@ -86,6 +86,7 @@ class ChatPromptWidget(BaseWidget):
         if len(message["messages"]) > 0:
             self.conversation_id = message["messages"][0]["conversation_id"]
         QTimer.singleShot(0, lambda: self._set_conversation_widgets(message["messages"]))
+        self.scroll_to_bottom()
 
     def _set_conversation_widgets(self, messages):
         for message in messages:
