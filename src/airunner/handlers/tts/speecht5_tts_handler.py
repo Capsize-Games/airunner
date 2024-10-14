@@ -241,8 +241,6 @@ class SpeechT5TTSHandler(TTSHandler):
 
         self.logger.debug("Processing inputs...")
 
-        print(text)
-
         inputs = self._processor(
             text=text,
             return_tensors="pt",
