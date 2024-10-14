@@ -139,11 +139,11 @@ class SliderWidget(BaseWidget):
         divide_by = self.property("divide_by") or 1.0
 
         if self.table_id is not None and self.table_name is not None and self.table_column is not None:
-            session = self.db_handler.get_db_session()
+            
             if self.table_name == "lora":
-                self.table_item = session.query(Lora).filter_by(id=self.table_id).first()
+                self.table_item = self.session.query(Lora).filter_by(id=self.table_id).first()
                 current_value = getattr(self.table_item, self.table_column)
-            session.close()
+            
         elif current_value is None:
             if settings_property is not None:
                 current_value = self.get_settings_value(settings_property)
@@ -215,11 +215,11 @@ class SliderWidget(BaseWidget):
 
     def set_settings_value(self, settings_property: str, val: Any):
         if self.table_item is not None:
-            session = self.db_handler.get_db_session()
+            
             setattr(self.table_item, self.table_column, val)
-            session.add(self.table_item)
-            session.commit()
-            session.close()
+            self.session.add(self.table_item)
+            self.session.commit()
+            
         elif settings_property is not None:
             keys = settings_property.split(".")
             self.update_settings_by_name(keys[0], keys[1], val)

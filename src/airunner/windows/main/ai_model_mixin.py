@@ -4,9 +4,6 @@ from airunner.enums import SignalCode
 
 
 class AIModelMixin:
-    def ai_model_get_by_filter(self, filter_dict):
-        return [item for item in self.ai_models if all(item.get(k) == v for k, v in filter_dict.items())]
-
     def on_ai_model_delete_signal(self, item: dict):
         self.ai_models = [existing_item for existing_item in self.ai_models if existing_item.name != item.name]
         self.update_settings("ai_models", self.ai_models)

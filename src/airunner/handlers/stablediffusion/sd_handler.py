@@ -50,7 +50,6 @@ SKIP_RELOAD_CONSTS = (
 class SDHandler(BaseHandler):
     def  __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._session = self.db_handler.get_db_session()
         self._controlnet_model = None
         self._controlnet: ControlNetModel = None
         self._controlnet_processor: Any = None
@@ -206,7 +205,7 @@ class SDHandler(BaseHandler):
     @property
     def generator_settings_cached(self):
         if self._generator_settings is None:
-            self._generator_settings = self._session.query(
+            self._generator_settings = self.session.query(
                 GeneratorSettings
             ).first()
         return self._generator_settings
@@ -235,12 +234,12 @@ class SDHandler(BaseHandler):
             self._controlnet_model.version != self.generator_settings_cached.version or
             self._controlnet_model.display_name != self.controlnet_settings_cached.controlnet
         ):
-            session = self.db_handler.get_db_session()
-            self._controlnet_model = session.query(ControlnetModel).filter_by(
+            
+            self._controlnet_model = self.session.query(ControlnetModel).filter_by(
                 display_name=self.controlnet_settings_cached.controlnet,
                 version=self.generator_settings_cached.version
             ).first()
-            session.close()
+            
         return self._controlnet_model
 
     @property
@@ -866,8 +865,8 @@ class SDHandler(BaseHandler):
                 "scheduler_config.json"
             )
         )
-        session = self.db_handler.get_db_session()
-        scheduler = session.query(Schedulers).filter_by(display_name=scheduler_name).first()
+        
+        scheduler = self.session.query(Schedulers).filter_by(display_name=scheduler_name).first()
         if not scheduler:
             self.logger.error(f"Failed to find scheduler {scheduler_name}")
             return None
@@ -941,8 +940,8 @@ class SDHandler(BaseHandler):
                 self.logger.error(f"Failed to load model to device: {e}")
 
     def _load_lora(self):
-        session = self.db_handler.get_db_session()
-        enabled_lora = session.query(Lora).filter_by(
+        
+        enabled_lora = self.session.query(Lora).filter_by(
             version=self.generator_settings_cached.version,
             enabled=True
         ).all()
@@ -979,9 +978,9 @@ class SDHandler(BaseHandler):
 
     def _set_lora_adapters(self):
         self.logger.debug("Setting LORA adapters")
-        session = self.db_handler.get_db_session()
+        
         loaded_lora_id = [l.id for l in self._loaded_lora.values()]
-        enabled_lora = session.query(Lora).filter(Lora.id.in_(loaded_lora_id)).all()
+        enabled_lora = self.session.query(Lora).filter(Lora.id.in_(loaded_lora_id)).all()
         adapter_weights = []
         adapter_names = []
         for lora in enabled_lora:
@@ -1002,11 +1001,11 @@ class SDHandler(BaseHandler):
             self._pipe.unload_textual_inversion()
         except RuntimeError as e:
             self.logger.error(f"Failed to unload embeddings: {e}")
-        session = self.db_handler.get_db_session()
-        embeddings = session.query(Embedding).filter_by(
+        
+        embeddings = self.session.query(Embedding).filter_by(
             version=self.generator_settings_cached.version
         ).all()
-        session.close()
+        
         for embedding in embeddings:
             embedding_path = embedding.path
             if embedding.active and embedding_path not in self._loaded_embeddings:

@@ -29,6 +29,7 @@ class ChatPromptWidget(BaseWidget):
         self.messages_spacer = None
         self.chat_loaded = False
         self.conversation_id = None
+        self._has_loading_widget = False
 
         self.ui.action.blockSignals(True)
         self.ui.action.addItem("Auto")
@@ -85,6 +86,7 @@ class ChatPromptWidget(BaseWidget):
         if len(message["messages"]) > 0:
             self.conversation_id = message["messages"][0]["conversation_id"]
         QTimer.singleShot(0, lambda: self._set_conversation_widgets(message["messages"]))
+        self.scroll_to_bottom()
 
     def _set_conversation_widgets(self, messages):
         for message in messages:
@@ -122,7 +124,8 @@ class ChatPromptWidget(BaseWidget):
             name=name,
             message=message,
             is_bot=True, 
-            first_message=is_first_message
+            first_message=is_first_message,
+            action=data["action"]
         )
 
         if is_end_of_message:
@@ -145,7 +148,7 @@ class ChatPromptWidget(BaseWidget):
         self._create_conversation()
 
     def _create_conversation(self):
-        conversation_id = self.db_handler.create_conversation()
+        conversation_id = self.create_conversation()
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
             "conversation_id": conversation_id
         })
@@ -302,6 +305,7 @@ class ChatPromptWidget(BaseWidget):
         )
 
     def add_loading_widget(self):
+        self._has_loading_widget = True
         self.ui.scrollAreaWidgetContents.layout().addWidget(
             LoadingWidget()
         )
@@ -313,6 +317,7 @@ class ChatPromptWidget(BaseWidget):
             if isinstance(current_widget, LoadingWidget):
                 self.ui.scrollAreaWidgetContents.layout().removeWidget(current_widget)
                 current_widget.deleteLater()
+                self._has_loading_widget = False
                 break
 
     def add_message_to_conversation(
@@ -321,7 +326,8 @@ class ChatPromptWidget(BaseWidget):
         message,
         is_bot, 
         first_message=True,
-        use_loading_widget=True
+        use_loading_widget=True,
+        action:LLMActionType=LLMActionType.CHAT
     ):
         if not first_message:
             # get the last widget from the scrollAreaWidgetContents.layout()
@@ -339,7 +345,7 @@ class ChatPromptWidget(BaseWidget):
 
         self.remove_spacer()
 
-        if is_bot and use_loading_widget:
+        if is_bot and use_loading_widget and self._has_loading_widget and action == LLMActionType.CHAT:
             self.remove_loading_widget()
 
         if message != "":

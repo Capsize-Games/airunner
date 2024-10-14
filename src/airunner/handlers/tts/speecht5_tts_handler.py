@@ -241,8 +241,6 @@ class SpeechT5TTSHandler(TTSHandler):
 
         self.logger.debug("Processing inputs...")
 
-        print(text)
-
         inputs = self._processor(
             text=text,
             return_tensors="pt",
@@ -262,7 +260,7 @@ class SpeechT5TTSHandler(TTSHandler):
                 vocoder=self._vocoder,
                 max_length=100
             )
-        except RuntimeError as e:
+        except Exception as e:
             self.logger.error("Failed to generate speech")
             self.logger.error(e)
             self._cancel_generated_speech = False

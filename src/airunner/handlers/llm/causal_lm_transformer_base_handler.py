@@ -388,7 +388,8 @@ class CausalLMTransformerBaseHandler(
             prompt,
             action
         )
-        self._send_final_message()
+        if action is LLMActionType.CHAT:
+            self._send_final_message()
 
     def _emit_streamed_text_signal(self, **kwargs):
         self.logger.debug("Emitting streamed text signal")

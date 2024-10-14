@@ -25,7 +25,7 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.register(SignalCode.EMBEDDING_UPDATED_SIGNAL, self.on_embedding_updated_signal)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.EMBEDDING_STATUS_CHANGED, self.on_embedding_modified)
-        self.register(SignalCode.EMBEDDING_DELETE_SIGNAL, self.delete_embedding)
+        self.register(SignalCode.EMBEDDING_DELETE_SIGNAL, self._delete_embedding)
         self.ui.loading_icon.hide()
         self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
         self._apply_button_enabled = False
@@ -92,7 +92,7 @@ class EmbeddingsContainerWidget(BaseWidget):
     def on_embedding_updated_signal(self):
         self._enable_form()
 
-    def delete_embedding(self, data):
+    def _delete_embedding(self, data):
         self._deleting = True
         embedding_widget = data["embedding_widget"]
 
@@ -113,10 +113,10 @@ class EmbeddingsContainerWidget(BaseWidget):
                     break
 
         # Remove lora from database
-        session = self.db_handler.get_db_session()
-        session.delete(embedding_widget.embedding)
-        session.commit()
-        session.close()
+        
+        self.session.delete(embedding_widget.embedding)
+        self.session.commit()
+        
 
         self._apply_button_enabled = True
         self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
@@ -143,7 +143,7 @@ class EmbeddingsContainerWidget(BaseWidget):
                     if self.search_filter.lower() in embedding.name.lower()
                 ]
                 for embedding in filtered_embeddings:
-                    self.add_embedding(embedding)
+                    self._add_embedding(embedding)
                 self.add_spacer()
 
     def remove_spacer(self):
@@ -160,7 +160,7 @@ class EmbeddingsContainerWidget(BaseWidget):
             self.remove_spacer()
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
 
-    def add_embedding(self, embedding):
+    def _add_embedding(self, embedding):
         if embedding is None:
             return
         embedding_widget = EmbeddingWidget(embedding=embedding)

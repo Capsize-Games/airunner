@@ -23,11 +23,10 @@ class ControlnetSettingsWidget(BaseWidget):
         if self._version is None or self._version != self.generator_settings.version:
             self._version = self.generator_settings.version
             current_index = 0
-            session = self.db_handler.get_db_session()
-            controlnet_models = session.query(ControlnetModel).filter_by(
+            
+            controlnet_models = self.session.query(ControlnetModel).filter_by(
                 version=self.generator_settings.version
             ).all()
-            session.close()
             self.ui.controlnet.blockSignals(True)
             self.ui.controlnet.clear()
             for index, item in enumerate(controlnet_models):

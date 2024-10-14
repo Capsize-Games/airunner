@@ -94,10 +94,10 @@ class BotPreferencesWidget(BaseWidget):
             self.load_saved_chatbots()
 
     def saved_chatbots_changed(self, val):
-        session = self.db_handler.get_db_session()
-        chatbot = session.query(Chatbot).filter(Chatbot.name == val).first()
+        
+        chatbot = self.session.query(Chatbot).filter(Chatbot.name == val).first()
         chatbot_id = chatbot.id
-        session.close()
+        
         self.update_llm_generator_settings("current_chatbot", chatbot_id)
         self.load_form_elements()
         self.emit_signal(SignalCode.CHATBOT_CHANGED)
@@ -176,10 +176,10 @@ class BotPreferencesWidget(BaseWidget):
             layout.addWidget(widget)
 
     def delete_document(self, target_file:TargetFiles):
-        session = self.db_handler.get_db_session()
-        session.delete(target_file)
-        session.commit()
-        session.close()
+        
+        self.session.delete(target_file)
+        self.session.commit()
+        
         self.load_documents()
         self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
 
@@ -190,4 +190,4 @@ class BotPreferencesWidget(BaseWidget):
         except TypeError:
             self.logger.error(f"Attribute {key} does not exist in Chatbot")
             return
-        self.db_handler.save_object(chatbot)
+        self.save_object(chatbot)
