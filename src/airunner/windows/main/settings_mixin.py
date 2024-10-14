@@ -648,7 +648,7 @@ class SettingsMixin:
         ]
         return results
 
-    def save_message(self, content, role, name, is_bot, conversation_id):
+    def save_message(self, content, role, name, is_bot, conversation_id) -> Message:
         timestamp = datetime.datetime.now()  # Ensure timestamp is a datetime object
         llm_generator_settings = self.session.query(LLMGeneratorSettings).first()
         message = Message(
@@ -662,6 +662,7 @@ class SettingsMixin:
         )
         self.session.add(message)
         self.session.commit()
+        return message
 
     def get_chatbot_by_id(self, chatbot_id) -> Type[Chatbot]:
         chatbot = self.session.query(Chatbot).filter_by(id=chatbot_id).options(joinedload(Chatbot.target_files)).first()
