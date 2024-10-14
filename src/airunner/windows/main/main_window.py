@@ -951,12 +951,12 @@ class MainWindow(
         self.ui.actionRedo.setEnabled(data["redo"] != 0)
 
     def _set_keyboard_shortcuts(self):
-        session = self.db_handler.get_db_session()
-        quit_key = session.query(ShortcutKeys).filter_by(display_name="Quit").first()
-        brush_key = session.query(ShortcutKeys).filter_by(display_name="Brush").first()
-        eraser_key = session.query(ShortcutKeys).filter_by(display_name="Eraser").first()
-        move_tool_key = session.query(ShortcutKeys).filter_by(display_name="Move Tool").first()
-        select_tool_key = session.query(ShortcutKeys).filter_by(display_name="Select Tool").first()
+        
+        quit_key = self.session.query(ShortcutKeys).filter_by(display_name="Quit").first()
+        brush_key = self.session.query(ShortcutKeys).filter_by(display_name="Brush").first()
+        eraser_key = self.session.query(ShortcutKeys).filter_by(display_name="Eraser").first()
+        move_tool_key = self.session.query(ShortcutKeys).filter_by(display_name="Move Tool").first()
+        select_tool_key = self.session.query(ShortcutKeys).filter_by(display_name="Select Tool").first()
 
         if quit_key is not None:
             key_sequence = QKeySequence(quit_key.key | quit_key.modifiers)
@@ -983,7 +983,7 @@ class MainWindow(
             self.ui.actionToggle_Selection.setShortcut(key_sequence)
             self.ui.actionToggle_Selection.setToolTip(f"{select_tool_key.display_name} ({select_tool_key.text})")
 
-        session.close()
+        
 
     def _initialize_workers(self):
         self.logger.debug("Initializing worker manager")
@@ -997,12 +997,12 @@ class MainWindow(
 
     def _initialize_filter_actions(self):
         # add more filters:
-        session = self.db_handler.get_db_session()
-        image_filters = session.query(ImageFilter).all()
+        
+        image_filters = self.session.query(ImageFilter).all()
         for image_filter in image_filters:
             action = self.ui.menuFilters.addAction(image_filter.display_name)
             action.triggered.connect(partial(self.display_filter_window, image_filter))
-        session.close()
+        
 
     def display_filter_window(self, image_filter):
         FilterWindow(image_filter.id)
@@ -1115,8 +1115,8 @@ class MainWindow(
         height = self.active_grid_settings.height
         img = Image.new("RGB", (width, height), (0, 0, 0))
         base64_image = convert_image_to_base64(img)
-        session = self.db_handler.get_db_session()
-        drawing_pad_settings = session.query(DrawingPadSettings).first()
+        
+        drawing_pad_settings = self.session.query(DrawingPadSettings).first()
         drawing_pad_settings.mask = base64_image
-        session.commit()
-        session.close()
+        self.session.commit()
+        
