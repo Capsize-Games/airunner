@@ -25,7 +25,7 @@ setup(
         "torch==2.4.1",
         "torchaudio==2.4.1",
         "torchvision==0.19.1",
-        "optimum==1.21.4",
+        "optimum==1.23.1",
         "numpy==1.26.4",
         "pillow==10.4.0",
         "tensorflow==2.17.0",
