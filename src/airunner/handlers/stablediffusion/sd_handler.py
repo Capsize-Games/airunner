@@ -205,7 +205,7 @@ class SDHandler(BaseHandler):
     @property
     def generator_settings_cached(self):
         if self._generator_settings is None:
-            self._generator_settings = self._session.query(
+            self._generator_settings = self.session.query(
                 GeneratorSettings
             ).first()
         return self._generator_settings
