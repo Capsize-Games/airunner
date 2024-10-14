@@ -136,6 +136,78 @@ class BaseAgent(
     def bot_personality(self) -> str:
         return self.chatbot.bot_personality
 
+    @property
+    def override_parameters(self):
+        generate_kwargs = prepare_llm_generate_kwargs(self.llm_generator_settings)
+        return generate_kwargs if self.llm_generator_settings.override_parameters else {}
+
+    @property
+    def system_instructions(self):
+        return self.chatbot.system_instructions
+
+    @property
+    def generator_settings(self) -> dict:
+        return prepare_llm_generate_kwargs(self.chatbot)
+
+    @property
+    def device(self):
+        return get_torch_device(self.memory_settings.default_gpu_llm)
+
+    @property
+    def target_files(self):
+        return [
+            target_file.file_path for target_file in self.chatbot.target_files
+        ]
+
+    @property
+    def query_instruction(self):
+        if self.__state == AgentState.SEARCH:
+            return self.__query_instruction
+        elif self.__state == AgentState.CHAT:
+            return "Search through the chat history for anything relevant to the query."
+
+    @property
+    def text_instruction(self):
+        if self.__state == AgentState.SEARCH:
+            return self.__text_instruction
+        elif self.__state == AgentState.CHAT:
+            return "Use the text to respond to the user"
+
+    @property
+    def index(self):
+        if self.__state == AgentState.SEARCH:
+            return self.__index
+        elif self.__state == AgentState.CHAT:
+            return self.__chat_history_index
+
+    @property
+    def llm(self):
+        if self.__llm is None:
+            try:
+                if self.llm_generator_settings.use_api:
+                    self.__llm = self.__model
+                else:
+                    self.__llm = HuggingFaceLLM(model=self.__model, tokenizer=self.__tokenizer)
+            except Exception as e:
+                self.logger.error(f"Error loading LLM: {str(e)}")
+        return self.__llm
+
+    @property
+    def chat_engine(self):
+        return self.__chat_engine
+
+    @property
+    def is_llama_instruct(self):
+        return True
+
+    @property
+    def use_cuda(self):
+        return torch.cuda.is_available()
+
+    @property
+    def cuda_index(self):
+        return 0
+
     def unload(self):
         self.unload_rag()
         del self.model
@@ -174,14 +246,6 @@ class BaseAgent(
     def do_interrupt_process(self):
         interrupt = self.do_interrupt
         return interrupt
-
-    @property
-    def use_cuda(self):
-        return torch.cuda.is_available()
-
-    @property
-    def cuda_index(self):
-        return 0
 
     def mood(self, botname: str, bot_mood: str, use_mood: bool) -> str:
         return (
@@ -423,70 +487,6 @@ class BaseAgent(
             value = value or ""
             rendered_template = rendered_template.replace("{{ " + key + " }}", value)
         return rendered_template
-
-    @property
-    def override_parameters(self):
-        generate_kwargs = prepare_llm_generate_kwargs(self.llm_generator_settings)
-        return generate_kwargs if self.llm_generator_settings.override_parameters else {}
-
-    @property
-    def system_instructions(self):
-        return self.chatbot.system_instructions
-
-    @property
-    def generator_settings(self) -> dict:
-        return prepare_llm_generate_kwargs(self.chatbot)
-
-    @property
-    def device(self):
-        return get_torch_device(self.memory_settings.default_gpu_llm)
-
-    @property
-    def target_files(self):
-        return [
-            target_file.file_path for target_file in self.chatbot.target_files
-        ]
-
-    @property
-    def query_instruction(self):
-        if self.__state == AgentState.SEARCH:
-            return self.__query_instruction
-        elif self.__state == AgentState.CHAT:
-            return "Search through the chat history for anything relevant to the query."
-
-    @property
-    def text_instruction(self):
-        if self.__state == AgentState.SEARCH:
-            return self.__text_instruction
-        elif self.__state == AgentState.CHAT:
-            return "Use the text to respond to the user"
-
-    @property
-    def index(self):
-        if self.__state == AgentState.SEARCH:
-            return self.__index
-        elif self.__state == AgentState.CHAT:
-            return self.__chat_history_index
-
-    @property
-    def llm(self):
-        if self.__llm is None:
-            try:
-                if self.llm_generator_settings.use_api:
-                    self.__llm = self.__model
-                else:
-                    self.__llm = HuggingFaceLLM(model=self.__model, tokenizer=self.__tokenizer)
-            except Exception as e:
-                self.logger.error(f"Error loading LLM: {str(e)}")
-        return self.__llm
-
-    @property
-    def chat_engine(self):
-        return self.__chat_engine
-
-    @property
-    def is_llama_instruct(self):
-        return True
 
     def run(
         self,
