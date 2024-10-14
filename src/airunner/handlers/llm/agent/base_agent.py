@@ -89,7 +89,7 @@ class BaseAgent(
         self.is_mistral = kwargs.pop("is_mistral", True)
         self.conversation_id = None
         self.conversation_title = None
-        self.history = self.db_handler.load_history_from_db(self.conversation_id)  # Load history by conversation ID
+        self.history = self.load_history_from_db(self.conversation_id)  # Load history by conversation ID
         super().__init__(*args, **kwargs)
         self.prompt = ""
         self.thread = None
@@ -129,7 +129,7 @@ class BaseAgent(
     def bot_mood(self, value: str):
         chatbot = self.chatbot
         chatbot.bot_mood = value
-        self.db_handler.save_object(chatbot)
+        self.save_object(chatbot)
         self.emit_signal(SignalCode.BOT_MOOD_UPDATED)
 
     @property
@@ -150,23 +150,23 @@ class BaseAgent(
         self.conversation_id = None
         self.conversation_title = None
 
-    def update_conversation_title(self, title):
+    def _update_conversation_title(self, title):
         self.conversation_title = title
-        self.db_handler.update_conversation_title(self.conversation_id, title)
+        self.update_conversation_title(self.conversation_id, title)
 
-    def create_conversation(self):
+    def _create_conversation(self):
         # Get the most recent conversation ID
-        recent_conversation_id = self.db_handler.get_most_recent_conversation_id()
+        recent_conversation_id = self.get_most_recent_conversation_id()
 
         # Check if there are messages for the most recent conversation ID
         if recent_conversation_id is not None:
-            messages = self.db_handler.load_history_from_db(recent_conversation_id)
+            messages = self.load_history_from_db(recent_conversation_id)
             if not messages:
                 self.conversation_id = recent_conversation_id
                 return
 
         # If there are messages or no recent conversation ID, create a new conversation
-        self.conversation_id = self.db_handler.create_conversation()
+        self.conversation_id = self.create_conversation()
 
     def interrupt_process(self):
         self.do_interrupt = True
@@ -507,7 +507,7 @@ class BaseAgent(
         self.prompt = prompt
 
         if self.conversation_id is None:
-            self.create_conversation()
+            self._create_conversation()
             self.set_conversation_title()
 
         # Add the user's message to history
@@ -722,7 +722,7 @@ class BaseAgent(
                 )
 
             elif action is LLMActionType.SUMMARIZE:
-                self.update_conversation_title(streamed_template)
+                self._update_conversation_title(streamed_template)
                 return self.run(
                     prompt=self.prompt,
                     action=LLMActionType.CHAT,
@@ -782,7 +782,7 @@ class BaseAgent(
             is_bot = True
             name = self.botname
 
-        message = self.db_handler.add_message_to_history(
+        message = self.save_message(
             content,
             role.value,
             name,
@@ -802,16 +802,16 @@ class BaseAgent(
     def on_load_conversation(self, message):
         self.history = []
         self.conversation_id = message["conversation_id"]
-        self.history = self.db_handler.load_history_from_db(self.conversation_id)
+        self.history = self.load_history_from_db(self.conversation_id)
         self.set_conversation_title()
         self.emit_signal(SignalCode.SET_CONVERSATION, {
             "messages": self.history
         })
 
     def set_conversation_title(self):
-        session = self.db_handler.get_db_session()
-        self.conversation_title = session.query(Conversation).filter_by(id=self.conversation_id).first().title
-        session.close()
+        
+        self.conversation_title = self.session.query(Conversation).filter_by(id=self.conversation_id).first().title
+        
 
     def load_rag(self, model, tokenizer):
         self.__model = model

@@ -184,4 +184,4 @@ class LLMSettingsWidget(
         except TypeError:
             self.logger.error(f"Attribute {key} does not exist in Chatbot")
             return
-        self.db_handler.save_object(chatbot)
+        self.save_object(chatbot)

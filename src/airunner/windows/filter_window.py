@@ -24,7 +24,6 @@ class FilterWindow(BaseWindow):
         """
         super().__init__(exec=False)
 
-        self.session = self.db_handler.get_db_session()
         self.image_filter = self.session.query(ImageFilter).options(joinedload(ImageFilter.image_filter_values)).get(
             image_filter_id)
         self.image_filter_model_name = self.image_filter.name

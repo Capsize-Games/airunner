@@ -30,12 +30,12 @@ class EmbeddingMixin:
         embeddings = self.get_embeddings()
         for embedding in embeddings:
             if not os.path.exists(embedding["path"]):
-                self.delete_embedding(embedding)
+                self._delete_embedding(embedding)
     
-    def delete_embedding(self, embedding):
+    def _delete_embedding(self, embedding):
         for index, _embedding in enumerate(self.embeddings):
             if _embedding.name == embedding.name and _embedding.path == embedding.path:
-                self.delete_embedding(embedding)
+                self._delete_embedding(embedding)
                 return
 
     def scan_for_embeddings(self):

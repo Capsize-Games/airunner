@@ -1,13 +1,14 @@
 import os
 
-from airunner.data.models.settings_db_handler import SettingsDBHandler
 from airunner.data.models.settings_models import Lora, Embedding
+from airunner.windows.main.settings_mixin import SettingsMixin
+
 
 def scan_path_for_lora(base_path) -> bool:
     lora_added = False
     lora_deleted = False
 
-    db_handler = SettingsDBHandler()
+    db_handler = SettingsMixin()
     for versionpath, versionnames, versionfiles in os.walk(os.path.expanduser(os.path.join(base_path, "art/models"))):
         version = versionpath.split("/")[-1]
         lora_path = os.path.expanduser(
@@ -21,11 +22,10 @@ def scan_path_for_lora(base_path) -> bool:
         if not os.path.exists(lora_path):
             continue
 
-        session = db_handler.get_db_session()
-        existing_lora = session.query(Lora).all()
+        existing_lora = db_handler.session.query(Lora).all()
         for lora in existing_lora:
             if not os.path.exists(lora.path):
-                session.delete(lora)
+                db_handler.session.delete(lora)
                 lora_deleted = True
         for dirpath, dirnames, filenames in os.walk(lora_path):
             for file in filenames:
@@ -43,17 +43,16 @@ def scan_path_for_lora(base_path) -> bool:
                             trigger_word="",
                             version=version
                         )
-                        session.add(item)
+                        db_handler.session.add(item)
                         lora_added = True
         if lora_deleted or lora_added:
-            session.commit()
-            session.close()
+            db_handler.session.commit()
     return lora_deleted or lora_added
 
 def scan_path_for_embeddings(base_path) -> bool:
     embedding_added = False
     embedding_deleted = False
-    db_handler = SettingsDBHandler()
+    db_handler = SettingsMixin()
     items = []
     for versionpath, versionnames, versionfiles in os.walk(os.path.expanduser(os.path.join(base_path, "art/models"))):
         version = versionpath.split("/")[-1]
@@ -67,11 +66,10 @@ def scan_path_for_embeddings(base_path) -> bool:
         )
         if not os.path.exists(embedding_path):
             continue
-        session = db_handler.get_db_session()
-        existing_embeddings = session.query(Embedding).all()
+        existing_embeddings = db_handler.session.query(Embedding).all()
         for embedding in existing_embeddings:
             if not os.path.exists(embedding.path):
-                session.delete(embedding)
+                db_handler.session.delete(embedding)
                 embedding_deleted = True
         for dirpath, dirnames, filenames in os.walk(embedding_path):
             for file in filenames:
@@ -88,9 +86,8 @@ def scan_path_for_embeddings(base_path) -> bool:
                             active=False,
                             trigger_word=""
                         )
-                        session.add(item)
+                        db_handler.session.add(item)
                         embedding_added = True
         if embedding_deleted or embedding_added:
-            session.commit()
-            session.close()
+            db_handler.session.commit()
     return embedding_deleted or embedding_added
