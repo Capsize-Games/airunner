@@ -68,15 +68,15 @@ class StableDiffusionSettingsWidget(
             val = GeneratorSection.TXT2IMG.value
         elif val == f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}":
             val = GeneratorSection.INPAINT.value
-        session = self.db_handler.get_db_session()
-        generator_settings = session.query(GeneratorSettings).first()
+        
+        generator_settings = self.session.query(GeneratorSettings).first()
         do_reload = False
         if val == GeneratorSection.TXT2IMG.value:
-            model = session.query(AIModels).filter(
+            model = self.session.query(AIModels).filter(
                 AIModels.id == generator_settings.model
             ).first()
             if model.pipeline_action == GeneratorSection.INPAINT.value:
-                model = session.query(AIModels).filter(
+                model = self.session.query(AIModels).filter(
                     AIModels.version == generator_settings.version,
                     AIModels.pipeline_action == val,
                     AIModels.enabled == True,
@@ -88,8 +88,8 @@ class StableDiffusionSettingsWidget(
                     generator_settings.model = None
                 do_reload = True
         generator_settings.pipeline_action = val
-        session.commit()
-        session.close()
+        self.session.commit()
+        
         self.load_versions()
         self.load_models()
         if do_reload:
@@ -100,9 +100,9 @@ class StableDiffusionSettingsWidget(
 
     def handle_version_changed(self, val):
         self.update_generator_settings("version", val)
-        session = self.db_handler.get_db_session()
-        generator_settings = session.query(GeneratorSettings).first()
-        model = session.query(AIModels).filter(
+        
+        generator_settings = self.session.query(GeneratorSettings).first()
+        model = self.session.query(AIModels).filter(
             AIModels.version == val,
             AIModels.pipeline_action == generator_settings.pipeline_action,
             AIModels.enabled == True,
@@ -110,15 +110,15 @@ class StableDiffusionSettingsWidget(
         ).first()
         generator_settings.version = val
         generator_settings.model = model.id
-        session.commit()
-        session.close()
+        self.session.commit()
+        
         self.load_models()
         if self.application_settings.sd_enabled:
             self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
                 "do_reload": True
             })
 
-    def load_pipelines(self):
+    def _load_pipelines(self):
         self.ui.pipeline.blockSignals(True)
         self.ui.pipeline.clear()
         pipeline_names = [
@@ -148,7 +148,7 @@ class StableDiffusionSettingsWidget(
 
     def on_models_changed_signal(self):
         try:
-            self.load_pipelines()
+            self._load_pipelines()
             self.load_versions()
             self.load_models()
             self.load_schedulers()
@@ -162,14 +162,14 @@ class StableDiffusionSettingsWidget(
         self.ui.model.blockSignals(True)
         self.clear_models()
         image_generator = ImageGenerator.STABLEDIFFUSION.value
-        session = self.db_handler.get_db_session()
-        generator_settings = session.query(GeneratorSettings).first()
+        
+        generator_settings = self.session.query(GeneratorSettings).first()
         pipeline = generator_settings.pipeline_action
         version = generator_settings.version
         pipeline_actions = [GeneratorSection.TXT2IMG.value]
         if pipeline == GeneratorSection.INPAINT.value:
             pipeline_actions.append(GeneratorSection.INPAINT.value)
-        models = session.query(AIModels).filter(
+        models = self.session.query(AIModels).filter(
             AIModels.category == image_generator,
             AIModels.pipeline_action.in_(pipeline_actions),
             AIModels.version == version,
@@ -180,10 +180,10 @@ class StableDiffusionSettingsWidget(
         if model_id is None and len(models) > 0:
             current_model = models[0]
             generator_settings.model = current_model.id
-            session.commit()
+            self.session.commit()
         for model in models:
             self.ui.model.addItem(model.name, model.id)
-        session.close()
+        
         if model_id:
             index = self.ui.model.findData(model_id)
             if index != -1:

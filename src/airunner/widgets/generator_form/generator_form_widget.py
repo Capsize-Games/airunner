@@ -483,13 +483,13 @@ class GeneratorForm(BaseWidget):
             progressbar.setFormat("Complete")
 
     def _set_keyboard_shortcuts(self):
-        session = self.db_handler.get_db_session()
-        generate_image_key = session.query(ShortcutKeys).filter_by(display_name="Generate Image").first()
-        interrupt_key = session.query(ShortcutKeys).filter_by(display_name="Interrupt").first()
+        
+        generate_image_key = self.session.query(ShortcutKeys).filter_by(display_name="Generate Image").first()
+        interrupt_key = self.session.query(ShortcutKeys).filter_by(display_name="Interrupt").first()
         if generate_image_key:
             self.ui.generate_button.setShortcut(generate_image_key.key)
             self.ui.generate_button.setToolTip(f"{generate_image_key.display_name} ({generate_image_key.text})")
         if interrupt_key:
             self.ui.interrupt_button.setShortcut(interrupt_key.key)
             self.ui.interrupt_button.setToolTip(f"{interrupt_key.display_name} ({interrupt_key.text})")
-        session.close()
+        
