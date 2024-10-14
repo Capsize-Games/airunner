@@ -22,7 +22,7 @@ class Ui_message(object):
     def setupUi(self, message):
         if not message.objectName():
             message.setObjectName(u"message")
-        message.resize(418, 902)
+        message.resize(464, 433)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -30,12 +30,16 @@ class Ui_message(object):
         message.setSizePolicy(sizePolicy)
         message.setMinimumSize(QSize(0, 40))
         self.gridLayout = QGridLayout(message)
+        self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setSpacing(10)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(-1, -1, -1, 10)
         self.user_name = QLabel(message)
         self.user_name.setObjectName(u"user_name")
-        self.user_name.setAlignment(Qt.AlignBottom|Qt.AlignLeading|Qt.AlignLeft)
+        self.user_name.setAlignment(Qt.AlignmentFlag.AlignBottom|Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft)
 
         self.horizontalLayout.addWidget(self.user_name)
 
@@ -48,16 +52,16 @@ class Ui_message(object):
         self.content.setSizePolicy(sizePolicy1)
         self.content.setMinimumSize(QSize(0, 40))
         self.content.setStyleSheet(u"border-radius: 5px; border: 5px solid #1f1f1f; background-color: #1f1f1f; color: #ffffff;")
-        self.content.setFrameShape(QFrame.NoFrame)
-        self.content.setFrameShadow(QFrame.Plain)
-        self.content.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.content.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.content.setFrameShape(QFrame.Shape.NoFrame)
+        self.content.setFrameShadow(QFrame.Shadow.Plain)
+        self.content.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.content.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         self.horizontalLayout.addWidget(self.content)
 
         self.bot_name = QLabel(message)
         self.bot_name.setObjectName(u"bot_name")
-        self.bot_name.setAlignment(Qt.AlignBottom|Qt.AlignLeading|Qt.AlignLeft)
+        self.bot_name.setAlignment(Qt.AlignmentFlag.AlignBottom|Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft)
 
         self.horizontalLayout.addWidget(self.bot_name)
 
