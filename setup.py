@@ -58,7 +58,7 @@ setup(
         "facehuggershield==0.1.11",
 
         # Llama index
-        "llama-index==0.11.7",
+        "llama-index==0.11.17",
         "llama-index-readers-file==0.2.0",
         "llama-index-readers-web==0.2.1",
         "llama-index-llms-huggingface==0.3.1",
