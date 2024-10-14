@@ -84,7 +84,7 @@ class BaseAgent(
         self.action = LLMActionType.CHAT
         self.rendered_template = None
         self.tokenizer = kwargs.pop("tokenizer", None)
-        self.streamer = TextIteratorStreamer(self.tokenizer)
+        self._streamer = None
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
         self.conversation_id = None
@@ -96,6 +96,12 @@ class BaseAgent(
         self.do_interrupt = False
         self.response_worker = create_worker(AgentWorker)
         self.load_rag(model=self.model, tokenizer=self.tokenizer)
+
+    @property
+    def streamer(self):
+        if self._streamer is None:
+            self._streamer = TextIteratorStreamer(self.tokenizer)
+        return self._streamer
 
     @property
     def available_actions(self):
@@ -167,7 +173,6 @@ class BaseAgent(
 
     def do_interrupt_process(self):
         interrupt = self.do_interrupt
-        self.streamer = TextIteratorStreamer(self.tokenizer)
         return interrupt
 
     @property
@@ -322,7 +327,6 @@ class BaseAgent(
             prompt_template = self.get_prompt_template_by_name("update_mood")
             system_instructions = prompt_template.system
             system_prompt = [
-                guardrails_prompt,
                 system_instructions,
                 self.names_prompt(use_names, botname, username),
                 self.mood(botname, bot_mood, use_mood),
@@ -501,7 +505,6 @@ class BaseAgent(
 
         self.logger.debug("Running...")
         self.prompt = prompt
-        streamer = self.streamer
 
         if self.conversation_id is None:
             self.create_conversation()
@@ -512,7 +515,10 @@ class BaseAgent(
             LLMActionType.APPLICATION_COMMAND,
             LLMActionType.UPDATE_MOOD
         ):
-            self.add_message_to_history(self.prompt, LLMChatRole.HUMAN)
+            self.add_message_to_history(
+                self.prompt,
+                LLMChatRole.HUMAN
+            )
 
         self.rendered_template = self.get_rendered_template(action)
 
@@ -522,34 +528,14 @@ class BaseAgent(
         ).to(self.device)
 
         kwargs.update(
-            streamer=streamer,
             action=action,
             do_emit_response=True
         )
 
-        if streamer:
-            self.run_with_thread(
-                model_inputs,
-                **kwargs
-            )
-        else:
-            self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
-            stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
-            data = self.prepare_generate_data(model_inputs, stopping_criteria)
-            res = self.model.generate(**data)
-            response = self.tokenizer.decode(res[0])
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                dict(
-                    message=response,
-                    is_first_message=True,
-                    is_end_of_message=True,
-                    name=self.botname,
-                    action=action
-                )
-            )
-
-            return response
+        self.run_with_thread(
+            model_inputs,
+            **kwargs
+        )
 
     def prepare_generate_data(self, model_inputs, stopping_criteria):
         data = dict(
@@ -574,13 +560,22 @@ class BaseAgent(
         stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
 
         data = self.prepare_generate_data(model_inputs, stopping_criteria)
-        streamer = kwargs.get("streamer", self.streamer)
-        data["streamer"] = streamer
 
-        # if "attention_mask" in data:
-        #     del data["attention_mask"]
+        if self.do_interrupt:
+            self.do_interrupt = False
+            self.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                dict(
+                    message="",
+                    is_first_message=False,
+                    is_end_of_message=False,
+                    name=self.botname,
+                    action=LLMActionType.CHAT
+                )
+            )
+            return
 
-        self.do_interrupt = False
+        data["streamer"] = kwargs.get("streamer", self.streamer)
 
         if action is not LLMActionType.PERFORM_RAG_SEARCH:
             try:
@@ -620,14 +615,14 @@ class BaseAgent(
             )
             is_first_message = False
 
-        if streamer and action in (
+        if action in (
             LLMActionType.CHAT,
             LLMActionType.GENERATE_IMAGE,
             LLMActionType.UPDATE_MOOD,
             LLMActionType.SUMMARIZE,
             LLMActionType.APPLICATION_COMMAND
         ):
-            for new_text in streamer:
+            for new_text in self.streamer:
                 # strip all newlines from new_text
                 streamed_template += new_text
                 if self.is_mistral:
@@ -780,28 +775,29 @@ class BaseAgent(
 
         name = self.username
         is_bot = False
+
         if role is LLMChatRole.ASSISTANT and content:
             content = content.replace(f"{self.botname}:", "")
             content = content.replace(f"{self.botname}", "")
             is_bot = True
             name = self.botname
 
-        self.history.append({
-            "role": role.value,
-            "content": content,
-            "name": name,
-            "is_bot": is_bot,
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "conversation_id": self.conversation_id  # Use the stored conversation ID
-        })
-
-        self.db_handler.add_message_to_history(
+        message = self.db_handler.add_message_to_history(
             content,
             role.value,
             name,
             is_bot,
             self.conversation_id
         )
+
+        self.history.append({
+            "role": message.role,
+            "content": message.content,
+            "name": name,
+            "is_bot": message.is_bot,
+            "timestamp": message.timestamp,
+            "conversation_id": message.conversation_id
+        })
 
     def on_load_conversation(self, message):
         self.history = []
