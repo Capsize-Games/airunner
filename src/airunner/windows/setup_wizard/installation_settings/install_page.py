@@ -78,13 +78,13 @@ class InstallWorker(
             "label": "Downloading Stable Diffusion models..."
         })
 
-        session = self.db_handler.get_db_session()
-        models = session.query(AIModels).filter(
+        
+        models = self.session.query(AIModels).filter(
             AIModels.category == "stablediffusion",
             AIModels.is_default == 1,
             AIModels.version != "SDXL Turbo"
         ).all()
-        session.close()
+        
 
         self.total_models_in_current_step += len(models)
         for model in models:
@@ -198,12 +198,12 @@ class InstallWorker(
                 print(f"Error downloading {filename}: {e}")
 
     def download_llms(self):
-        session = self.db_handler.get_db_session()
-        models = session.query(AIModels).filter(
+        
+        models = self.session.query(AIModels).filter(
             AIModels.category == "llm",
             AIModels.is_default == 1
         ).all()
-        session.close()
+        
         self.total_models_in_current_step += len(models)
         for model in models:
             files = LLM_FILE_BOOTSTRAP_DATA[model.path]["files"]
@@ -409,12 +409,12 @@ class InstallPage(BaseWizard):
         if self.application_settings.stable_diffusion_agreement_checked:
             self.total_steps += 1
 
-        session = self.db_handler.get_db_session()
+        
 
-        controlnet_model_count = session.query(func.count(ControlnetModel.id.distinct())).scalar()
-        controlnet_version_count = session.query(func.count(ControlnetModel.version.distinct())).scalar()
+        controlnet_model_count = self.session.query(func.count(ControlnetModel.id.distinct())).scalar()
+        controlnet_version_count = self.session.query(func.count(ControlnetModel.version.distinct())).scalar()
 
-        llm_model_count = session.query(func.count(AIModels.id)).filter(AIModels.category == 'llm').scalar()
+        llm_model_count = self.session.query(func.count(AIModels.id)).filter(AIModels.category == 'llm').scalar()
 
         self.total_steps += controlnet_model_count * controlnet_version_count
         self.total_steps += llm_model_count

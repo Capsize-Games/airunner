@@ -95,9 +95,7 @@ class App(
                 "images"
             )
         ))
-        session = self.db_handler.get_db_session()
-        versions = session.query(distinct(AIModels.version)).filter(AIModels.category == 'stablediffusion').all()
-        session.close()
+        versions = self.session.query(distinct(AIModels.version)).filter(AIModels.category == 'stablediffusion').all()
         for version in versions:
             os.makedirs(
                 os.path.join(models_path, version[0], "embeddings"),
@@ -110,9 +108,7 @@ class App(
         os.makedirs(images_path, exist_ok=True)
 
     def run_setup_wizard(self):
-        session = self.db_handler.get_db_session()
-        application_settings = session.query(ApplicationSettings).first()
-        session.close()
+        application_settings = self.session.query(ApplicationSettings).first()
         if application_settings.run_setup_wizard:
             AppInstaller()
 

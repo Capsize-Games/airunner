@@ -25,7 +25,7 @@ class LoraContainerWidget(BaseWidget):
         self.register(SignalCode.LORA_UPDATED_SIGNAL, self.on_lora_updated_signal)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.LORA_STATUS_CHANGED, self.on_lora_modified)
-        self.register(SignalCode.LORA_DELETE_SIGNAL, self.delete_lora)
+        self.register(SignalCode.LORA_DELETE_SIGNAL, self._delete_lora)
         self.ui.loading_icon.hide()
         self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
         self._apply_button_enabled = False
@@ -44,13 +44,13 @@ class LoraContainerWidget(BaseWidget):
 
     @Slot(bool)
     def on_scan_completed(self, force_reload: bool):
-        self.load_lora(force_reload=force_reload)
+        self._load_lora(force_reload=force_reload)
 
     @Slot()
     def scan_for_lora(self):
         # clear all lora widgets
         force_reload = scan_path_for_lora(self.path_settings.base_path)
-        self.load_lora(force_reload=force_reload)
+        self._load_lora(force_reload=force_reload)
 
     @Slot()
     def apply_lora(self):
@@ -94,7 +94,7 @@ class LoraContainerWidget(BaseWidget):
                     lora_widget.disable_lora_widget()
 
     def on_application_settings_changed_signal(self):
-        self.load_lora()
+        self._load_lora()
 
     def on_lora_updated_signal(self):
         self._enable_form()
@@ -114,9 +114,9 @@ class LoraContainerWidget(BaseWidget):
         if not self.initialized:
             self.scan_for_lora()
             self.initialized = True
-        self.load_lora()
+        self._load_lora()
 
-    def load_lora(self, force_reload=False):
+    def _load_lora(self, force_reload=False):
         version = self.generator_settings.version
 
         if self._version is None or self._version != version or force_reload:
@@ -130,7 +130,7 @@ class LoraContainerWidget(BaseWidget):
                     if self.search_filter.lower() in lora.name.lower()
                 ]
                 for lora in filtered_loras:
-                    self.add_lora(lora)
+                    self._add_lora(lora)
                 self.add_spacer()
 
     def remove_spacer(self):
@@ -147,13 +147,13 @@ class LoraContainerWidget(BaseWidget):
             self.remove_spacer()
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
 
-    def add_lora(self, lora):
+    def _add_lora(self, lora):
         if lora is None:
             return
         lora_widget = LoraWidget(lora=lora)
         self.ui.scrollAreaWidgetContents.layout().addWidget(lora_widget)
 
-    def delete_lora(self, data: dict):
+    def _delete_lora(self, data: dict):
         self._deleting = True
         lora_widget = data["lora_widget"]
 
@@ -174,14 +174,14 @@ class LoraContainerWidget(BaseWidget):
                     break
 
         # Remove lora from database
-        session = self.db_handler.get_db_session()
-        session.delete(lora_widget.current_lora)
-        session.commit()
-        session.close()
+        
+        self.session.delete(lora_widget.current_lora)
+        self.session.commit()
+        
 
         self._apply_button_enabled = True
         self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
-        self.load_lora(force_reload=True)
+        self._load_lora(force_reload=True)
         self._deleting = False
 
     def available_lora(self, action):
@@ -235,7 +235,7 @@ class LoraContainerWidget(BaseWidget):
 
     def search_text_changed(self, val):
         self.search_filter = val
-        self.load_lora(force_reload=True)
+        self._load_lora(force_reload=True)
     
     def clear_lora_widgets(self):
         if self.spacer:

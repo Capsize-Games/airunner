@@ -147,7 +147,7 @@ class ChatPromptWidget(BaseWidget):
         self._create_conversation()
 
     def _create_conversation(self):
-        conversation_id = self.db_handler.create_conversation()
+        conversation_id = self.create_conversation()
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
             "conversation_id": conversation_id
         })
