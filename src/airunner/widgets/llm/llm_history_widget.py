@@ -19,7 +19,7 @@ class LLMHistoryWidget(BaseWidget):
         self.load_conversations()
 
     def load_conversations(self):
-        conversations = self.db_handler.get_all_conversations()
+        conversations = self.get_all_conversations()
         layout = self.ui.gridLayout_2
 
         if layout is None:
@@ -41,17 +41,16 @@ class LLMHistoryWidget(BaseWidget):
             layout = QVBoxLayout(self.ui.scrollAreaWidgetContents)
             self.ui.scrollAreaWidgetContents.setLayout(layout)
 
-        session = self.db_handler.get_db_session()
         for conversation in conversations:
             h_layout = QHBoxLayout()
             button = QPushButton(conversation.title)
             button.clicked.connect(lambda _, c=conversation: self.on_conversation_click(c))
 
             # Extract chatbot_id from the first message of the conversation
-            first_message = session.query(Message).filter_by(conversation_id=conversation.id).first()
+            first_message = self.session.query(Message).filter_by(conversation_id=conversation.id).first()
             chatbot_name = "Unknown"
             if first_message and first_message.chatbot_id:
-                chatbot = self.db_handler.get_chatbot_by_id(first_message.chatbot_id)
+                chatbot = self.get_chatbot_by_id(first_message.chatbot_id)
                 if chatbot:
                     chatbot_name = chatbot.name
 
@@ -65,27 +64,25 @@ class LLMHistoryWidget(BaseWidget):
             container_widget = QWidget()
             container_widget.setLayout(h_layout)
             layout.addWidget(container_widget)
-        session.close()
 
         # Add a vertical spacer at the end
         layout.addItem(self.spacer)
 
-        self.ui.conversations_scroll_area.setLayout(layout)
+        self.ui.scrollAreaWidgetContents.setLayout(layout)
 
     def on_conversation_click(self, conversation):
-        session = self.db_handler.get_db_session()
-        first_message = session.query(Message).filter_by(conversation_id=conversation.id).first()
+        first_message = self.session.query(Message).filter_by(conversation_id=conversation.id).first()
         chatbot_id = first_message.chatbot_id
-        session.query(LLMGeneratorSettings).update({"current_chatbot": chatbot_id})
-        session.commit()
-        session.close()
+        self.session.query(LLMGeneratorSettings).update({"current_chatbot": chatbot_id})
+        self.session.commit()
         self.emit_signal(SignalCode.LOAD_CONVERSATION, {
-            "conversation_id": conversation.id
+            "conversation_id": conversation.id,
+            "chatbot_id": chatbot_id
         })
 
     def on_delete_conversation(self, layout, conversation):
         conversation_id = conversation.id
-        self.db_handler.delete_conversation(conversation_id)
+        self.delete_conversation(conversation_id)
         for i in reversed(range(layout.count())):
             widget = layout.itemAt(i).widget()
             if widget:

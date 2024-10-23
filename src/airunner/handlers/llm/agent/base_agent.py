@@ -9,6 +9,7 @@ import torch
 from PySide6.QtCore import QObject
 
 from llama_index.core import Settings
+from llama_index.core.base.llms.types import ChatMessage
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
@@ -23,7 +24,6 @@ from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from airunner.handlers.llm.custom_embedding import CustomEmbedding
 from airunner.handlers.llm.agent.html_file_reader import HtmlFileReader
 from airunner.handlers.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
-from airunner.handlers.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import (
     SignalCode,
@@ -38,13 +38,19 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.agent_worker import AgentWorker
 
 
+class RefreshContextChatEngine(ContextChatEngine):
+    def stream_chat(self, *args, system_prompt:str=None, **kwargs):
+        if system_prompt:
+            self._prefix_messages[0] = ChatMessage(content=system_prompt, role=self._llm.metadata.system_role)
+        return super().stream_chat(*args, **kwargs)
+
+
 class BaseAgent(
     QObject,
     MediatorMixin,
     SettingsMixin
 ):
     def __init__(self, *args, **kwargs):
-        self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         self.model = kwargs.pop("model", None)
@@ -84,18 +90,32 @@ class BaseAgent(
         self.action = LLMActionType.CHAT
         self.rendered_template = None
         self.tokenizer = kwargs.pop("tokenizer", None)
-        self.streamer = TextIteratorStreamer(self.tokenizer)
+        self._streamer = None
         self.chat_template = kwargs.pop("chat_template", "")
         self.is_mistral = kwargs.pop("is_mistral", True)
         self.conversation_id = None
         self.conversation_title = None
-        self.history = self.db_handler.load_history_from_db(self.conversation_id)  # Load history by conversation ID
+        self.history = self.load_history_from_db(self.conversation_id)  # Load history by conversation ID
         super().__init__(*args, **kwargs)
         self.prompt = ""
         self.thread = None
-        self.do_interrupt = False
+        self._do_interrupt = False
         self.response_worker = create_worker(AgentWorker)
         self.load_rag(model=self.model, tokenizer=self.tokenizer)
+
+    @property
+    def do_interrupt(self):
+        return self._do_interrupt
+
+    @do_interrupt.setter
+    def do_interrupt(self, value):
+        self._do_interrupt = value
+
+    @property
+    def streamer(self):
+        if self._streamer is None:
+            self._streamer = TextIteratorStreamer(self.tokenizer)
+        return self._streamer
 
     @property
     def available_actions(self):
@@ -123,12 +143,84 @@ class BaseAgent(
     def bot_mood(self, value: str):
         chatbot = self.chatbot
         chatbot.bot_mood = value
-        self.db_handler.save_object(chatbot)
+        self.save_object(chatbot)
         self.emit_signal(SignalCode.BOT_MOOD_UPDATED)
 
     @property
     def bot_personality(self) -> str:
         return self.chatbot.bot_personality
+
+    @property
+    def override_parameters(self):
+        generate_kwargs = prepare_llm_generate_kwargs(self.llm_generator_settings)
+        return generate_kwargs if self.llm_generator_settings.override_parameters else {}
+
+    @property
+    def system_instructions(self):
+        return self.chatbot.system_instructions
+
+    @property
+    def generator_settings(self) -> dict:
+        return prepare_llm_generate_kwargs(self.chatbot)
+
+    @property
+    def device(self):
+        return get_torch_device(self.memory_settings.default_gpu_llm)
+
+    @property
+    def target_files(self):
+        return [
+            target_file.file_path for target_file in self.chatbot.target_files
+        ]
+
+    @property
+    def query_instruction(self):
+        if self.__state == AgentState.SEARCH:
+            return self.__query_instruction
+        elif self.__state == AgentState.CHAT:
+            return "Search through the chat history for anything relevant to the query."
+
+    @property
+    def text_instruction(self):
+        if self.__state == AgentState.SEARCH:
+            return self.__text_instruction
+        elif self.__state == AgentState.CHAT:
+            return "Use the text to respond to the user"
+
+    @property
+    def index(self):
+        if self.__state == AgentState.SEARCH:
+            return self.__index
+        elif self.__state == AgentState.CHAT:
+            return self.__chat_history_index
+
+    @property
+    def llm(self):
+        if self.__llm is None:
+            try:
+                if self.llm_generator_settings.use_api:
+                    self.__llm = self.__model
+                else:
+                    self.__llm = HuggingFaceLLM(model=self.__model, tokenizer=self.__tokenizer)
+            except Exception as e:
+                self.logger.error(f"Error loading LLM: {str(e)}")
+        return self.__llm
+
+    @property
+    def chat_engine(self):
+        return self.__chat_engine
+
+    @property
+    def is_llama_instruct(self):
+        return True
+
+    @property
+    def use_cuda(self):
+        return torch.cuda.is_available()
+
+    @property
+    def cuda_index(self):
+        return 0
 
     def unload(self):
         self.unload_rag()
@@ -144,39 +236,29 @@ class BaseAgent(
         self.conversation_id = None
         self.conversation_title = None
 
-    def update_conversation_title(self, title):
+    def _update_conversation_title(self, title):
         self.conversation_title = title
-        self.db_handler.update_conversation_title(self.conversation_id, title)
+        self.update_conversation_title(self.conversation_id, title)
 
-    def create_conversation(self):
+    def _create_conversation(self):
         # Get the most recent conversation ID
-        recent_conversation_id = self.db_handler.get_most_recent_conversation_id()
+        recent_conversation_id = self.get_most_recent_conversation_id()
 
         # Check if there are messages for the most recent conversation ID
         if recent_conversation_id is not None:
-            messages = self.db_handler.load_history_from_db(recent_conversation_id)
+            messages = self.load_history_from_db(recent_conversation_id)
             if not messages:
                 self.conversation_id = recent_conversation_id
                 return
 
         # If there are messages or no recent conversation ID, create a new conversation
-        self.conversation_id = self.db_handler.create_conversation()
+        self.conversation_id = self.create_conversation()
 
     def interrupt_process(self):
         self.do_interrupt = True
 
     def do_interrupt_process(self):
-        interrupt = self.do_interrupt
-        self.streamer = TextIteratorStreamer(self.tokenizer)
-        return interrupt
-
-    @property
-    def use_cuda(self):
-        return torch.cuda.is_available()
-
-    @property
-    def cuda_index(self):
-        return 0
+        return self.do_interrupt
 
     def mood(self, botname: str, bot_mood: str, use_mood: bool) -> str:
         return (
@@ -261,12 +343,6 @@ class BaseAgent(
             ]
 
         elif action is LLMActionType.GENERATE_IMAGE:
-            prompt_template = self.get_prompt_template_by_name("image")
-            # system_prompt = [
-            #     prompt_template.guardrails,
-            #     prompt_template.system,
-            #     self.history_prompt()
-            # ]
             system_prompt = [
                 (
                     "You are an image generator. "
@@ -285,7 +361,7 @@ class BaseAgent(
                     "You will only return JSON strings.\n"
                     "You will not return any other data types.\n"
                     "You are an artist, so use your imagination and keep things interesting.\n"
-                    "You will not respond in a conversational manner or with additonal notes or information.\n"
+                    "You will not respond in a conversational manner or with additional notes or information.\n"
                     f"Only return one JSON block. Do not generate instructions or additional information.\n"
                     "You must never break the rules.\n"
                     "Here is a description of the attributes: \n"
@@ -322,7 +398,6 @@ class BaseAgent(
             prompt_template = self.get_prompt_template_by_name("update_mood")
             system_instructions = prompt_template.system
             system_prompt = [
-                guardrails_prompt,
                 system_instructions,
                 self.names_prompt(use_names, botname, username),
                 self.mood(botname, bot_mood, use_mood),
@@ -339,7 +414,7 @@ class BaseAgent(
                 self.names_prompt(use_names, botname, username),
                 self.mood(botname, bot_mood, use_mood),
                 self.personality_prompt(bot_personality, use_personality),
-                self.history_prompt(),
+                # self.history_prompt(),
             ]
 
         elif action is LLMActionType.QUIT_APPLICATION:
@@ -420,70 +495,6 @@ class BaseAgent(
             rendered_template = rendered_template.replace("{{ " + key + " }}", value)
         return rendered_template
 
-    @property
-    def override_parameters(self):
-        generate_kwargs = prepare_llm_generate_kwargs(self.llm_generator_settings)
-        return generate_kwargs if self.llm_generator_settings.override_parameters else {}
-
-    @property
-    def system_instructions(self):
-        return self.chatbot.system_instructions
-
-    @property
-    def generator_settings(self) -> dict:
-        return prepare_llm_generate_kwargs(self.chatbot)
-
-    @property
-    def device(self):
-        return get_torch_device(self.memory_settings.default_gpu_llm)
-
-    @property
-    def target_files(self):
-        return [
-            target_file.file_path for target_file in self.chatbot.target_files
-        ]
-
-    @property
-    def query_instruction(self):
-        if self.__state == AgentState.SEARCH:
-            return self.__query_instruction
-        elif self.__state == AgentState.CHAT:
-            return "Search through the chat history for anything relevant to the query."
-
-    @property
-    def text_instruction(self):
-        if self.__state == AgentState.SEARCH:
-            return self.__text_instruction
-        elif self.__state == AgentState.CHAT:
-            return "Use the text to respond to the user"
-
-    @property
-    def index(self):
-        if self.__state == AgentState.SEARCH:
-            return self.__index
-        elif self.__state == AgentState.CHAT:
-            return self.__chat_history_index
-
-    @property
-    def llm(self):
-        if self.__llm is None:
-            try:
-                if self.llm_generator_settings.use_api:
-                    self.__llm = self.__model
-                else:
-                    self.__llm = HuggingFaceLLM(model=self.__model, tokenizer=self.__tokenizer)
-            except Exception as e:
-                self.logger.error(f"Error loading LLM: {str(e)}")
-        return self.__llm
-
-    @property
-    def chat_engine(self):
-        return self.__chat_engine
-
-    @property
-    def is_llama_instruct(self):
-        return True
-
     def run(
         self,
         prompt: str,
@@ -501,10 +512,9 @@ class BaseAgent(
 
         self.logger.debug("Running...")
         self.prompt = prompt
-        streamer = self.streamer
 
         if self.conversation_id is None:
-            self.create_conversation()
+            self._create_conversation()
             self.set_conversation_title()
 
         # Add the user's message to history
@@ -512,7 +522,10 @@ class BaseAgent(
             LLMActionType.APPLICATION_COMMAND,
             LLMActionType.UPDATE_MOOD
         ):
-            self.add_message_to_history(self.prompt, LLMChatRole.HUMAN)
+            self.add_message_to_history(
+                self.prompt,
+                LLMChatRole.HUMAN
+            )
 
         self.rendered_template = self.get_rendered_template(action)
 
@@ -522,34 +535,14 @@ class BaseAgent(
         ).to(self.device)
 
         kwargs.update(
-            streamer=streamer,
             action=action,
             do_emit_response=True
         )
 
-        if streamer:
-            self.run_with_thread(
-                model_inputs,
-                **kwargs
-            )
-        else:
-            self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
-            stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
-            data = self.prepare_generate_data(model_inputs, stopping_criteria)
-            res = self.model.generate(**data)
-            response = self.tokenizer.decode(res[0])
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                dict(
-                    message=response,
-                    is_first_message=True,
-                    is_end_of_message=True,
-                    name=self.botname,
-                    action=action
-                )
-            )
-
-            return response
+        self.run_with_thread(
+            model_inputs,
+            **kwargs
+        )
 
     def prepare_generate_data(self, model_inputs, stopping_criteria):
         data = dict(
@@ -574,13 +567,22 @@ class BaseAgent(
         stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
 
         data = self.prepare_generate_data(model_inputs, stopping_criteria)
-        streamer = kwargs.get("streamer", self.streamer)
-        data["streamer"] = streamer
 
-        # if "attention_mask" in data:
-        #     del data["attention_mask"]
+        if self.do_interrupt:
+            self.do_interrupt = False
+            self.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                dict(
+                    message="",
+                    is_first_message=False,
+                    is_end_of_message=False,
+                    name=self.botname,
+                    action=LLMActionType.CHAT
+                )
+            )
+            return
 
-        self.do_interrupt = False
+        data["streamer"] = kwargs.get("streamer", self.streamer)
 
         if action is not LLMActionType.PERFORM_RAG_SEARCH:
             try:
@@ -620,14 +622,14 @@ class BaseAgent(
             )
             is_first_message = False
 
-        if streamer and action in (
+        if action in (
             LLMActionType.CHAT,
             LLMActionType.GENERATE_IMAGE,
             LLMActionType.UPDATE_MOOD,
             LLMActionType.SUMMARIZE,
             LLMActionType.APPLICATION_COMMAND
         ):
-            for new_text in streamer:
+            for new_text in self.streamer:
                 # strip all newlines from new_text
                 streamed_template += new_text
                 if self.is_mistral:
@@ -693,7 +695,10 @@ class BaseAgent(
             )
             data.update(self.override_parameters)
             self.llm.generate_kwargs = data
-            response = self.chat_engine.stream_chat(message=self.prompt)
+            response = self.chat_engine.stream_chat(
+                message=self.prompt,
+                system_prompt=self.rendered_template
+            )
             is_first_message = True
             is_end_of_message = False
             for new_text in response.response_gen:
@@ -710,6 +715,16 @@ class BaseAgent(
                     )
                 )
                 is_first_message = False
+            self.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                dict(
+                    message="",
+                    is_first_message=False,
+                    is_end_of_message=True,
+                    name=self.botname,
+                    action=action
+                )
+            )
 
         if streamed_template is not None:
             if action is LLMActionType.CHAT:
@@ -727,7 +742,7 @@ class BaseAgent(
                 )
 
             elif action is LLMActionType.SUMMARIZE:
-                self.update_conversation_title(streamed_template)
+                self._update_conversation_title(streamed_template)
                 return self.run(
                     prompt=self.prompt,
                     action=LLMActionType.CHAT,
@@ -780,22 +795,14 @@ class BaseAgent(
 
         name = self.username
         is_bot = False
+
         if role is LLMChatRole.ASSISTANT and content:
             content = content.replace(f"{self.botname}:", "")
             content = content.replace(f"{self.botname}", "")
             is_bot = True
             name = self.botname
 
-        self.history.append({
-            "role": role.value,
-            "content": content,
-            "name": name,
-            "is_bot": is_bot,
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "conversation_id": self.conversation_id  # Use the stored conversation ID
-        })
-
-        self.db_handler.add_message_to_history(
+        message = self.save_message(
             content,
             role.value,
             name,
@@ -803,19 +810,28 @@ class BaseAgent(
             self.conversation_id
         )
 
+        self.history.append({
+            "role": message.role,
+            "content": message.content,
+            "name": name,
+            "is_bot": message.is_bot,
+            "timestamp": message.timestamp,
+            "conversation_id": message.conversation_id
+        })
+
     def on_load_conversation(self, message):
         self.history = []
         self.conversation_id = message["conversation_id"]
-        self.history = self.db_handler.load_history_from_db(self.conversation_id)
+        self.history = self.load_history_from_db(self.conversation_id)
         self.set_conversation_title()
         self.emit_signal(SignalCode.SET_CONVERSATION, {
             "messages": self.history
         })
 
     def set_conversation_title(self):
-        session = self.db_handler.get_db_session()
-        self.conversation_title = session.query(Conversation).filter_by(id=self.conversation_id).first().title
-        session.close()
+        
+        self.conversation_title = self.session.query(Conversation).filter_by(id=self.conversation_id).first().title
+        
 
     def load_rag(self, model, tokenizer):
         self.__model = model
@@ -913,7 +929,7 @@ class BaseAgent(
 
     def __load_context_chat_engine(self):
         try:
-            self.__chat_engine = ContextChatEngine.from_defaults(
+            self.__chat_engine = RefreshContextChatEngine.from_defaults(
                 retriever=self.__retriever,
                 chat_history=self.history,
                 memory=None,

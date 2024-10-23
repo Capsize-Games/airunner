@@ -1,4 +1,4 @@
-from PySide6.QtCore import Slot, QTimer
+from PySide6.QtCore import Slot, QTimer, QPropertyAnimation
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
 
@@ -14,6 +14,8 @@ class ChatPromptWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
+        self.scroll_bar = None
+        self._loading_widget = None
         self.conversation = None
         self.is_modal = True
         self.generating = False
@@ -29,11 +31,13 @@ class ChatPromptWidget(BaseWidget):
         self.messages_spacer = None
         self.chat_loaded = False
         self.conversation_id = None
+        self._has_loading_widget = False
 
         self.ui.action.blockSignals(True)
         self.ui.action.addItem("Auto")
         self.ui.action.addItem("Chat")
         self.ui.action.addItem("Image")
+        self.ui.action.addItem("RAG")
         action = LLMActionType[self.action]
         if action is LLMActionType.APPLICATION_COMMAND:
             self.ui.action.setCurrentIndex(0)
@@ -41,6 +45,8 @@ class ChatPromptWidget(BaseWidget):
             self.ui.action.setCurrentIndex(1)
         elif action is LLMActionType.GENERATE_IMAGE:
             self.ui.action.setCurrentIndex(2)
+        elif action is LLMActionType.PERFORM_RAG_SEARCH:
+            self.ui.action.setCurrentIndex(3)
         self.ui.action.blockSignals(False)
         self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
@@ -51,6 +57,7 @@ class ChatPromptWidget(BaseWidget):
         self.register(SignalCode.CONVERSATION_DELETED, self.on_conversation_deleted)
         self.held_message = None
         self._disabled = False
+        self.scroll_animation = None
 
     @Slot(str)
     def handle_token_signal(self, val: str):
@@ -95,6 +102,7 @@ class ChatPromptWidget(BaseWidget):
                 first_message=True,
                 use_loading_widget=False
             )
+        self.scroll_to_bottom()
 
     def on_hear_signal(self, data: dict):
         transcription = data["transcription"]
@@ -122,7 +130,8 @@ class ChatPromptWidget(BaseWidget):
             name=name,
             message=message,
             is_bot=True, 
-            first_message=is_first_message
+            first_message=is_first_message,
+            action=data["action"]
         )
 
         if is_end_of_message:
@@ -143,9 +152,10 @@ class ChatPromptWidget(BaseWidget):
         self.conversation_history = []
         self._clear_conversation_widgets()
         self._create_conversation()
+        self.remove_loading_widget()
 
     def _create_conversation(self):
-        conversation_id = self.db_handler.create_conversation()
+        conversation_id = self.create_conversation()
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
             "conversation_id": conversation_id
         })
@@ -163,6 +173,7 @@ class ChatPromptWidget(BaseWidget):
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
         self.stop_progress_bar()
         self.generating = False
+        self.remove_loading_widget()
         self.enable_send_button()
 
     @property
@@ -203,6 +214,7 @@ class ChatPromptWidget(BaseWidget):
                 }
             }
         )
+        self.scroll_to_bottom()
 
     def on_token_signal(self, val):
         self.handle_token_signal(val)
@@ -243,6 +255,8 @@ class ChatPromptWidget(BaseWidget):
             llm_action_value = LLMActionType.CHAT
         elif val == "Image":
             llm_action_value = LLMActionType.GENERATE_IMAGE
+        elif val == "RAG":
+            llm_action_value = LLMActionType.PERFORM_RAG_SEARCH
         else:
             llm_action_value = LLMActionType.APPLICATION_COMMAND
         self.update_llm_generator_settings("action", llm_action_value.name)
@@ -302,18 +316,21 @@ class ChatPromptWidget(BaseWidget):
         )
 
     def add_loading_widget(self):
-        self.ui.scrollAreaWidgetContents.layout().addWidget(
-            LoadingWidget()
-        )
+        if not self._has_loading_widget:
+            self._has_loading_widget = True
+            if self._loading_widget is None:
+                self._loading_widget = LoadingWidget()
+            self.ui.scrollAreaWidgetContents.layout().addWidget(
+                self._loading_widget
+            )
 
     def remove_loading_widget(self):
-        # remove the last LoadingWidget from scrollAreaWidgetContents.layout()
-        for i in range(self.ui.scrollAreaWidgetContents.layout().count()):
-            current_widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
-            if isinstance(current_widget, LoadingWidget):
-                self.ui.scrollAreaWidgetContents.layout().removeWidget(current_widget)
-                current_widget.deleteLater()
-                break
+        if self._has_loading_widget:
+            try:
+                self.ui.scrollAreaWidgetContents.layout().removeWidget(self._loading_widget)
+            except RuntimeError:
+                pass
+            self._has_loading_widget = False
 
     def add_message_to_conversation(
         self,
@@ -321,7 +338,8 @@ class ChatPromptWidget(BaseWidget):
         message,
         is_bot, 
         first_message=True,
-        use_loading_widget=True
+        use_loading_widget=True,
+        action:LLMActionType=LLMActionType.CHAT
     ):
         if not first_message:
             # get the last widget from the scrollAreaWidgetContents.layout()
@@ -370,6 +388,17 @@ class ChatPromptWidget(BaseWidget):
         pass
 
     def scroll_to_bottom(self):
-        self.ui.chat_container.verticalScrollBar().setValue(
-            self.ui.chat_container.verticalScrollBar().maximum()
-        )
+        if self.scroll_bar is None:
+            self.scroll_bar = self.ui.chat_container.verticalScrollBar()
+
+        if self.scroll_animation is None:
+            self.scroll_animation = QPropertyAnimation(self.scroll_bar, b"value")
+            self.scroll_animation.setDuration(500)
+
+        # Stop any ongoing animation
+        if self.scroll_animation and self.scroll_animation.state() == QPropertyAnimation.State.Running:
+            self.scroll_animation.stop()
+
+        self.scroll_animation.setStartValue(self.scroll_bar.value())
+        self.scroll_animation.setEndValue(self.scroll_bar.maximum())
+        self.scroll_animation.start()

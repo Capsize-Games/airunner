@@ -4,14 +4,14 @@ import sys
 import urllib
 import webbrowser
 from functools import partial
-from pathlib import Path
 
 import requests
 from PIL import Image
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
-    Signal, QProcess, QSettings
+    Signal,
+    QProcess
 )
 from PySide6.QtGui import QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
@@ -24,7 +24,6 @@ from bs4 import BeautifulSoup
 
 from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
 from airunner.handlers.llm.agent.actions.show_path import show_path
-from airunner.handlers.logger import Logger
 from airunner.data.models.settings_models import ShortcutKeys, ImageFilter, DrawingPadSettings
 from airunner.app_installer import AppInstaller
 from airunner.settings import (
@@ -32,8 +31,6 @@ from airunner.settings import (
     STATUS_NORMAL_COLOR_LIGHT,
     STATUS_NORMAL_COLOR_DARK,
     NSFW_CONTENT_DETECTED_MESSAGE,
-    ORGANIZATION,
-    APPLICATION_NAME, DARK_THEME_NAME, LIGHT_THEME_NAME
 )
 from airunner.enums import (
     SignalCode,
@@ -151,10 +148,9 @@ class MainWindow(
         self.listening = False
         self.initialized = False
         self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
-        self.logger = Logger(prefix=self.__class__.__name__)
-        self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        self.logger.debug("Starting AI Runnner")
         super().__init__(*args, **kwargs)
         self._updating_settings = True
         PipelineMixin.__init__(self)
@@ -951,12 +947,12 @@ class MainWindow(
         self.ui.actionRedo.setEnabled(data["redo"] != 0)
 
     def _set_keyboard_shortcuts(self):
-        session = self.db_handler.get_db_session()
-        quit_key = session.query(ShortcutKeys).filter_by(display_name="Quit").first()
-        brush_key = session.query(ShortcutKeys).filter_by(display_name="Brush").first()
-        eraser_key = session.query(ShortcutKeys).filter_by(display_name="Eraser").first()
-        move_tool_key = session.query(ShortcutKeys).filter_by(display_name="Move Tool").first()
-        select_tool_key = session.query(ShortcutKeys).filter_by(display_name="Select Tool").first()
+        
+        quit_key = self.session.query(ShortcutKeys).filter_by(display_name="Quit").first()
+        brush_key = self.session.query(ShortcutKeys).filter_by(display_name="Brush").first()
+        eraser_key = self.session.query(ShortcutKeys).filter_by(display_name="Eraser").first()
+        move_tool_key = self.session.query(ShortcutKeys).filter_by(display_name="Move Tool").first()
+        select_tool_key = self.session.query(ShortcutKeys).filter_by(display_name="Select Tool").first()
 
         if quit_key is not None:
             key_sequence = QKeySequence(quit_key.key | quit_key.modifiers)
@@ -983,7 +979,7 @@ class MainWindow(
             self.ui.actionToggle_Selection.setShortcut(key_sequence)
             self.ui.actionToggle_Selection.setToolTip(f"{select_tool_key.display_name} ({select_tool_key.text})")
 
-        session.close()
+        
 
     def _initialize_workers(self):
         self.logger.debug("Initializing worker manager")
@@ -997,12 +993,12 @@ class MainWindow(
 
     def _initialize_filter_actions(self):
         # add more filters:
-        session = self.db_handler.get_db_session()
-        image_filters = session.query(ImageFilter).all()
+        
+        image_filters = self.session.query(ImageFilter).all()
         for image_filter in image_filters:
             action = self.ui.menuFilters.addAction(image_filter.display_name)
             action.triggered.connect(partial(self.display_filter_window, image_filter))
-        session.close()
+        
 
     def display_filter_window(self, image_filter):
         FilterWindow(image_filter.id)
@@ -1115,8 +1111,8 @@ class MainWindow(
         height = self.active_grid_settings.height
         img = Image.new("RGB", (width, height), (0, 0, 0))
         base64_image = convert_image_to_base64(img)
-        session = self.db_handler.get_db_session()
-        drawing_pad_settings = session.query(DrawingPadSettings).first()
+        
+        drawing_pad_settings = self.session.query(DrawingPadSettings).first()
         drawing_pad_settings.mask = base64_image
-        session.commit()
-        session.close()
+        self.session.commit()
+        

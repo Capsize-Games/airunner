@@ -32,7 +32,6 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models.settings_models import ApplicationSettings, AIModels
 from airunner.windows.main.main_window import MainWindow
-from airunner.handlers.logger import Logger
 
 
 class App(
@@ -55,7 +54,6 @@ class App(
         """
         self.main_window_class_ = main_window_class or MainWindow
         self.app = None
-        self.logger = Logger(prefix=self.__class__.__name__)
         self.defendatron = defendatron
         self.splash = None
 
@@ -95,9 +93,7 @@ class App(
                 "images"
             )
         ))
-        session = self.db_handler.get_db_session()
-        versions = session.query(distinct(AIModels.version)).filter(AIModels.category == 'stablediffusion').all()
-        session.close()
+        versions = self.session.query(distinct(AIModels.version)).filter(AIModels.category == 'stablediffusion').all()
         for version in versions:
             os.makedirs(
                 os.path.join(models_path, version[0], "embeddings"),
@@ -110,9 +106,7 @@ class App(
         os.makedirs(images_path, exist_ok=True)
 
     def run_setup_wizard(self):
-        session = self.db_handler.get_db_session()
-        application_settings = session.query(ApplicationSettings).first()
-        session.close()
+        application_settings = self.session.query(ApplicationSettings).first()
         if application_settings.run_setup_wizard:
             AppInstaller()
 

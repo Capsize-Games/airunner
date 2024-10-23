@@ -71,13 +71,16 @@ class WhisperHandler(BaseHandler):
             if transcription:
                 self._send_transcription(transcription)
 
-    def load(self):
+    def load(self, retry:bool = False):
         if self.stt_is_loading or self.stt_is_loaded:
             return
         self.logger.debug("Loading Whisper (text-to-speech)")
         self.unload()
         self.change_model_status(ModelType.STT, ModelStatus.LOADING)
         self._load_model()
+        # unsure why this is failing to load occasionally - this is a hack
+        if self._model is None and retry is False:
+            return self.load(retry=True)
         self._load_processor()
         self._load_feature_extractor()
         if (

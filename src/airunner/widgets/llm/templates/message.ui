@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>418</width>
-    <height>902</height>
+    <width>464</width>
+    <height>433</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -26,15 +26,36 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
    <item row="0" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <property name="bottomMargin">
+      <number>10</number>
+     </property>
      <item>
       <widget class="QLabel" name="user_name">
        <property name="text">
         <string>TextLabel</string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+        <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
        </property>
       </widget>
      </item>
@@ -56,16 +77,16 @@
         <string notr="true">border-radius: 5px; border: 5px solid #1f1f1f; background-color: #1f1f1f; color: #ffffff;</string>
        </property>
        <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
+        <enum>QFrame::Shape::NoFrame</enum>
        </property>
        <property name="frameShadow">
-        <enum>QFrame::Plain</enum>
+        <enum>QFrame::Shadow::Plain</enum>
        </property>
        <property name="verticalScrollBarPolicy">
-        <enum>Qt::ScrollBarAlwaysOff</enum>
+        <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
        </property>
        <property name="horizontalScrollBarPolicy">
-        <enum>Qt::ScrollBarAlwaysOff</enum>
+        <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
        </property>
       </widget>
      </item>
@@ -75,7 +96,7 @@
         <string>TextLabel</string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+        <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
        </property>
       </widget>
      </item>

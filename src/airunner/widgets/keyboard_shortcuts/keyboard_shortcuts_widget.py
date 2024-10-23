@@ -69,12 +69,12 @@ class KeyboardShortcutsWidget(BaseWidget):
             shortcut_key.key = event.key()
             shortcut_key.modifiers = event.modifiers().value
 
-            session = self.db_handler.get_db_session()
-            session.add(shortcut_key)
+            
+            self.session.add(shortcut_key)
 
 
             # clear existing key if it exists
-            existing_keys = session.query(ShortcutKeys).filter(
+            existing_keys = self.session.query(ShortcutKeys).filter(
                 ShortcutKeys.text == shortcut_key.text,
                 ShortcutKeys.id != shortcut_key.id
             ).all()
@@ -82,7 +82,7 @@ class KeyboardShortcutsWidget(BaseWidget):
                 existing_key.text = ""
                 existing_key.key = 0
                 existing_key.modifiers = 0
-                session.add(existing_key)
+                self.session.add(existing_key)
 
             for i, widget in enumerate(self.shortcut_key_widgets):
                 if i == index:
@@ -91,8 +91,8 @@ class KeyboardShortcutsWidget(BaseWidget):
                     widget.line_edit.setText("")
 
             line_edit.setText(shortcut_key.text)
-            session.commit()
-            session.close()
+            self.session.commit()
+            
 
             self.pressed_keys.clear()
             self.emit_signal(SignalCode.KEYBOARD_SHORTCUTS_UPDATED)
@@ -102,18 +102,18 @@ class KeyboardShortcutsWidget(BaseWidget):
         return key_sequence.toString(QtGui.QKeySequence.SequenceFormat.NativeText)
 
     def save_shortcuts(self):
-        session = self.db_handler.get_db_session()
+        
         for k, v in enumerate(self.shortcut_keys):
             # Ensure v.modifiers is a list
             if not isinstance(v.modifiers, list):
                 v.modifiers = []
-            session.query(ShortcutKeys).filter(ShortcutKeys.id == v.id).update({
+            self.session.query(ShortcutKeys).filter(ShortcutKeys.id == v.id).update({
                 "text": v.text,
                 "key": v.key,
                 "modifiers": ",".join(v.modifiers)  # Convert list to comma-separated string
             })
-        session.commit()
-        session.close()
+        self.session.commit()
+        
 
     def clear_shortcut_setting(self, key=""):
         for index, v in enumerate(self.shortcut_keys):
