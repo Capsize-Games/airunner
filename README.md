@@ -204,7 +204,3 @@ The security measures taken for this library are as follows
 - All telemetry disabled
 
 See [Facehuggershield](https://github.com/capsize-games/facehuggershield) for more information.
-
----
-
-sudo groupadd docker
