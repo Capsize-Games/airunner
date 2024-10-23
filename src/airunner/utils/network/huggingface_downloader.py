@@ -1,6 +1,5 @@
 from typing import Callable
 from PySide6.QtCore import QObject, QThread, Signal
-from airunner.handlers.logger import Logger
 from airunner.handlers.stablediffusion.download_worker import DownloadWorker
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
@@ -20,7 +19,6 @@ class HuggingfaceDownloader(
         super(HuggingfaceDownloader, self).__init__()
         self.thread = None
         self.worker = None
-        self.logger = Logger(prefix="HuggingfaceDownloader")
         self.downloading = False
 
         self.thread = QThread()

@@ -19,7 +19,6 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.download_wizard.download_wizard_window import DownloadWizardWindow
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.setup_wizard_window import SetupWizardWindow
-from airunner.handlers.logger import Logger
 
 
 class AppInstaller(
@@ -43,7 +42,6 @@ class AppInstaller(
         self.download_wizard = None
         self.app = None
         self.close_on_cancel = close_on_cancel
-        self.logger = Logger(prefix=self.__class__.__name__)
 
         """
         Mediator and Settings mixins are initialized here, enabling the application

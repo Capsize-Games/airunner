@@ -9,7 +9,6 @@ from airunner.handlers.logger import Logger
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
 from airunner.utils.convert_image_to_base64 import convert_image_to_base64
-from airunner.utils.create_worker import create_worker
 from airunner.utils.snap_to_grid import snap_to_grid
 from airunner.widgets.canvas.brush_scene import BrushScene
 from airunner.widgets.canvas.custom_scene import CustomScene

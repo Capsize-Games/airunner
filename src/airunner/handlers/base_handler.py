@@ -2,7 +2,6 @@ import torch
 from PySide6.QtCore import QObject
 from airunner.enums import HandlerType, SignalCode, ModelType, ModelStatus, ModelAction
 from airunner.mediator_mixin import MediatorMixin
-from airunner.handlers.logger import Logger
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.windows.main.settings_mixin import SettingsMixin
 
@@ -23,7 +22,6 @@ class BaseHandler(
     def __init__(self, *args, **kwargs):
         self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
         self.use_gpu = True
-        self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
