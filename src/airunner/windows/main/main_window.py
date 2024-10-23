@@ -10,7 +10,8 @@ from PIL import Image
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
-    Signal, QProcess, QSettings
+    Signal,
+    QProcess
 )
 from PySide6.QtGui import QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
