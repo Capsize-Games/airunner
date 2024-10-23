@@ -5,7 +5,6 @@ import threading
 from PySide6.QtCore import Signal, QThread, QObject
 
 from airunner.enums import QueueType, SignalCode, WorkerState
-from airunner.handlers.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -22,7 +21,6 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         SettingsMixin.__init__(self)
         super().__init__()
         self.state = WorkerState.HALTED
-        self.logger = Logger(prefix=self.__class__.__name__)
         self.running = False
         self.queue = queue.Queue()
         self.items = {}

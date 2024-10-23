@@ -4,7 +4,6 @@ import sys
 import urllib
 import webbrowser
 from functools import partial
-from pathlib import Path
 
 import requests
 from PIL import Image
@@ -24,7 +23,6 @@ from bs4 import BeautifulSoup
 
 from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
 from airunner.handlers.llm.agent.actions.show_path import show_path
-from airunner.handlers.logger import Logger
 from airunner.data.models.settings_models import ShortcutKeys, ImageFilter, DrawingPadSettings
 from airunner.app_installer import AppInstaller
 from airunner.settings import (
@@ -32,8 +30,6 @@ from airunner.settings import (
     STATUS_NORMAL_COLOR_LIGHT,
     STATUS_NORMAL_COLOR_DARK,
     NSFW_CONTENT_DETECTED_MESSAGE,
-    ORGANIZATION,
-    APPLICATION_NAME, DARK_THEME_NAME, LIGHT_THEME_NAME
 )
 from airunner.enums import (
     SignalCode,
@@ -151,10 +147,9 @@ class MainWindow(
         self.listening = False
         self.initialized = False
         self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
-        self.logger = Logger(prefix=self.__class__.__name__)
-        self.logger.debug("Starting AI Runnner")
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
+        self.logger.debug("Starting AI Runnner")
         super().__init__(*args, **kwargs)
         self._updating_settings = True
         PipelineMixin.__init__(self)
