@@ -9,6 +9,7 @@ import torch
 from PySide6.QtCore import QObject
 
 from llama_index.core import Settings
+from llama_index.core.base.llms.types import ChatMessage
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
@@ -23,7 +24,6 @@ from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from airunner.handlers.llm.custom_embedding import CustomEmbedding
 from airunner.handlers.llm.agent.html_file_reader import HtmlFileReader
 from airunner.handlers.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
-from airunner.handlers.logger import Logger
 from airunner.mediator_mixin import MediatorMixin
 from airunner.enums import (
     SignalCode,
@@ -38,13 +38,19 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.agent_worker import AgentWorker
 
 
+class RefreshContextChatEngine(ContextChatEngine):
+    def stream_chat(self, *args, system_prompt:str=None, **kwargs):
+        if system_prompt:
+            self._prefix_messages[0] = ChatMessage(content=system_prompt, role=self._llm.metadata.system_role)
+        return super().stream_chat(*args, **kwargs)
+
+
 class BaseAgent(
     QObject,
     MediatorMixin,
     SettingsMixin
 ):
     def __init__(self, *args, **kwargs):
-        self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         self.model = kwargs.pop("model", None)
@@ -93,9 +99,17 @@ class BaseAgent(
         super().__init__(*args, **kwargs)
         self.prompt = ""
         self.thread = None
-        self.do_interrupt = False
+        self._do_interrupt = False
         self.response_worker = create_worker(AgentWorker)
         self.load_rag(model=self.model, tokenizer=self.tokenizer)
+
+    @property
+    def do_interrupt(self):
+        return self._do_interrupt
+
+    @do_interrupt.setter
+    def do_interrupt(self, value):
+        self._do_interrupt = value
 
     @property
     def streamer(self):
@@ -244,8 +258,7 @@ class BaseAgent(
         self.do_interrupt = True
 
     def do_interrupt_process(self):
-        interrupt = self.do_interrupt
-        return interrupt
+        return self.do_interrupt
 
     def mood(self, botname: str, bot_mood: str, use_mood: bool) -> str:
         return (
@@ -330,12 +343,6 @@ class BaseAgent(
             ]
 
         elif action is LLMActionType.GENERATE_IMAGE:
-            prompt_template = self.get_prompt_template_by_name("image")
-            # system_prompt = [
-            #     prompt_template.guardrails,
-            #     prompt_template.system,
-            #     self.history_prompt()
-            # ]
             system_prompt = [
                 (
                     "You are an image generator. "
@@ -354,7 +361,7 @@ class BaseAgent(
                     "You will only return JSON strings.\n"
                     "You will not return any other data types.\n"
                     "You are an artist, so use your imagination and keep things interesting.\n"
-                    "You will not respond in a conversational manner or with additonal notes or information.\n"
+                    "You will not respond in a conversational manner or with additional notes or information.\n"
                     f"Only return one JSON block. Do not generate instructions or additional information.\n"
                     "You must never break the rules.\n"
                     "Here is a description of the attributes: \n"
@@ -407,7 +414,7 @@ class BaseAgent(
                 self.names_prompt(use_names, botname, username),
                 self.mood(botname, bot_mood, use_mood),
                 self.personality_prompt(bot_personality, use_personality),
-                self.history_prompt(),
+                # self.history_prompt(),
             ]
 
         elif action is LLMActionType.QUIT_APPLICATION:
@@ -688,7 +695,10 @@ class BaseAgent(
             )
             data.update(self.override_parameters)
             self.llm.generate_kwargs = data
-            response = self.chat_engine.stream_chat(message=self.prompt)
+            response = self.chat_engine.stream_chat(
+                message=self.prompt,
+                system_prompt=self.rendered_template
+            )
             is_first_message = True
             is_end_of_message = False
             for new_text in response.response_gen:
@@ -705,6 +715,16 @@ class BaseAgent(
                     )
                 )
                 is_first_message = False
+            self.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                dict(
+                    message="",
+                    is_first_message=False,
+                    is_end_of_message=True,
+                    name=self.botname,
+                    action=action
+                )
+            )
 
         if streamed_template is not None:
             if action is LLMActionType.CHAT:
@@ -909,7 +929,7 @@ class BaseAgent(
 
     def __load_context_chat_engine(self):
         try:
-            self.__chat_engine = ContextChatEngine.from_defaults(
+            self.__chat_engine = RefreshContextChatEngine.from_defaults(
                 retriever=self.__retriever,
                 chat_history=self.history,
                 memory=None,
