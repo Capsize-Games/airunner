@@ -123,7 +123,7 @@ class ImportWidget(
             self.create_lora(new_lora)
         elif model_type == "TextualInversion":
             # name = file_path.split("/")[-1].split(".")[0]
-            # embedding_exists = session.query(Embedding).filter_by(
+            # embedding_exists = self.session.query(Embedding).filter_by(
             #     name=name,
             #     path=file_path,
             # ).first()
@@ -134,7 +134,7 @@ class ImportWidget(
             #         active=True,
             #         tags=trained_words,
             #     )
-            #     session.add(new_embedding)
+            #     self.session.add(new_embedding)
             # TODO: handle textual inversion
             pass
         elif model_type == "VAE":

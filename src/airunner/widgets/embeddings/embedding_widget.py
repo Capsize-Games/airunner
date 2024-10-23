@@ -40,7 +40,7 @@ class EmbeddingWidget(BaseWidget):
         )
 
     def update_embedding(self, embedding: Embedding):
-        self.db_handler.save_object(embedding)
+        self.save_object(embedding)
 
     @Slot(bool)
     def action_toggled_embedding(self, val, emit_signal=True):
