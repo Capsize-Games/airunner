@@ -246,6 +246,8 @@ class ChatPromptWidget(BaseWidget):
             llm_action_value = LLMActionType.CHAT
         elif val == "Image":
             llm_action_value = LLMActionType.GENERATE_IMAGE
+        elif val == "RAG":
+            llm_action_value = LLMActionType.PERFORM_RAG_SEARCH
         else:
             llm_action_value = LLMActionType.APPLICATION_COMMAND
         self.update_llm_generator_settings("action", llm_action_value.name)
