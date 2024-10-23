@@ -13,6 +13,8 @@ from airunner.data.models.settings_models import Chatbot, AIModels, Schedulers, 
     LLMGeneratorSettings, TTSSettings, SpeechT5Settings, EspeakSettings, STTSettings, BrushSettings, GridSettings, \
     MemorySettings, Message, Conversation, Summary, ImageFilterValue, TargetFiles, WhisperSettings, Base
 from airunner.enums import SignalCode
+from airunner.handlers.logger import Logger
+from airunner.settings import LOG_LEVEL
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 
 
@@ -34,6 +36,7 @@ class SettingsMixin:
         self._session = None
         self.Session = sessionmaker(bind=self.engine)
         self.conversation_id = None
+        self.logger = Logger(prefix=self.__class__.__name__, log_level=LOG_LEVEL)
 
     @property
     def session(self):
