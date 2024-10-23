@@ -4,7 +4,6 @@ from PySide6.QtCore import Qt
 
 from airunner.enums import SignalCode, LLMActionType, ModelType, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
 
@@ -15,7 +14,6 @@ class ChatPromptWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.scroll_bar = None
-        self._loading_widget = None
         self.conversation = None
         self.is_modal = True
         self.generating = False
@@ -31,7 +29,6 @@ class ChatPromptWidget(BaseWidget):
         self.messages_spacer = None
         self.chat_loaded = False
         self.conversation_id = None
-        self._has_loading_widget = False
 
         self.ui.action.blockSignals(True)
         self.ui.action.addItem("Auto")
@@ -99,10 +96,8 @@ class ChatPromptWidget(BaseWidget):
                 name=message["name"],
                 message=message["content"],
                 is_bot=message["is_bot"],
-                first_message=True,
-                use_loading_widget=False
+                first_message=True
             )
-        self.scroll_to_bottom()
 
     def on_hear_signal(self, data: dict):
         transcription = data["transcription"]
@@ -130,8 +125,7 @@ class ChatPromptWidget(BaseWidget):
             name=name,
             message=message,
             is_bot=True, 
-            first_message=is_first_message,
-            action=data["action"]
+            first_message=is_first_message
         )
 
         if is_end_of_message:
@@ -152,7 +146,6 @@ class ChatPromptWidget(BaseWidget):
         self.conversation_history = []
         self._clear_conversation_widgets()
         self._create_conversation()
-        self.remove_loading_widget()
 
     def _create_conversation(self):
         conversation_id = self.create_conversation()
@@ -173,7 +166,6 @@ class ChatPromptWidget(BaseWidget):
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
         self.stop_progress_bar()
         self.generating = False
-        self.remove_loading_widget()
         self.enable_send_button()
 
     @property
@@ -214,7 +206,6 @@ class ChatPromptWidget(BaseWidget):
                 }
             }
         )
-        self.scroll_to_bottom()
 
     def on_token_signal(self, val):
         self.handle_token_signal(val)
@@ -315,31 +306,12 @@ class ChatPromptWidget(BaseWidget):
             generator_name="visualqa"
         )
 
-    def add_loading_widget(self):
-        if not self._has_loading_widget:
-            self._has_loading_widget = True
-            if self._loading_widget is None:
-                self._loading_widget = LoadingWidget()
-            self.ui.scrollAreaWidgetContents.layout().addWidget(
-                self._loading_widget
-            )
-
-    def remove_loading_widget(self):
-        if self._has_loading_widget:
-            try:
-                self.ui.scrollAreaWidgetContents.layout().removeWidget(self._loading_widget)
-            except RuntimeError:
-                pass
-            self._has_loading_widget = False
-
     def add_message_to_conversation(
         self,
         name,
         message,
         is_bot, 
-        first_message=True,
-        use_loading_widget=True,
-        action:LLMActionType=LLMActionType.CHAT
+        first_message=True
     ):
         if not first_message:
             # get the last widget from the scrollAreaWidgetContents.layout()
@@ -357,15 +329,9 @@ class ChatPromptWidget(BaseWidget):
 
         self.remove_spacer()
 
-        if is_bot and use_loading_widget:
-            self.remove_loading_widget()
-
         if message != "":
             widget = MessageWidget(name=name, message=message, is_bot=is_bot)
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
-
-        if not is_bot and use_loading_widget:
-            self.add_loading_widget()
 
         self.add_spacer()
 

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.1.0",
+    version="3.1.1",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -65,7 +65,8 @@ setup(
         "llama-index-llms-groq==0.2.0",
         "llama-index-embeddings-mistralai==0.2.0",
         "EbookLib==0.18",
-        "html2text==2024.2.26"
+        "html2text==2024.2.26",
+        "rake_nltk==1.0.6"
     ],
     package_data={
         "airunner": [
