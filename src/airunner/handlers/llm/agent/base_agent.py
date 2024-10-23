@@ -8,14 +8,13 @@ from typing import AnyStr
 import torch
 from PySide6.QtCore import QObject
 
-from llama_index.core import Settings
+from llama_index.core import Settings, RAKEKeywordTableIndex
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core import PromptHelper
 from llama_index.core.chat_engine import ContextChatEngine
-from llama_index.core import SimpleKeywordTableIndex
 from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
 from transformers import TextIteratorStreamer
 
@@ -258,6 +257,17 @@ class BaseAgent(
         self.do_interrupt = True
 
     def do_interrupt_process(self):
+        if self.do_interrupt:
+            self.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                dict(
+                    message="",
+                    is_first_message=False,
+                    is_end_of_message=False,
+                    name=self.botname,
+                    action=LLMActionType.CHAT
+                )
+            )
         return self.do_interrupt
 
     def mood(self, botname: str, bot_mood: str, use_mood: bool) -> str:
@@ -564,23 +574,11 @@ class BaseAgent(
 
         self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
 
-        stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
-
-        data = self.prepare_generate_data(model_inputs, stopping_criteria)
-
         if self.do_interrupt:
             self.do_interrupt = False
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                dict(
-                    message="",
-                    is_first_message=False,
-                    is_end_of_message=False,
-                    name=self.botname,
-                    action=LLMActionType.CHAT
-                )
-            )
-            return
+
+        stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
+        data = self.prepare_generate_data(model_inputs, stopping_criteria)
 
         data["streamer"] = kwargs.get("streamer", self.streamer)
 
@@ -657,6 +655,8 @@ class BaseAgent(
                     if eos_token in new_text:
                         streamed_template = streamed_template.replace(eos_token, "")
                         new_text = new_text.replace(eos_token, "")
+                        streamed_template = streamed_template.replace("<</SYS>>", "")
+                        new_text = new_text.replace("<</SYS>>", "")
                         is_end_of_message = True
                     # strip botname from new_text
                     new_text = new_text.replace(f"{self.botname}:", "")
@@ -727,7 +727,10 @@ class BaseAgent(
             )
 
         if streamed_template is not None:
-            if action is LLMActionType.CHAT:
+            if action in (
+                LLMActionType.CHAT,
+                LLMActionType.PERFORM_RAG_SEARCH,
+            ):
                 self.add_message_to_history(
                     streamed_template,
                     LLMChatRole.ASSISTANT
@@ -775,12 +778,6 @@ class BaseAgent(
                         action=action,
                     )
         return streamed_template
-
-    def add_chatbot_response_to_history(self, response: dict):
-        self.add_message_to_history(
-            response["message"],
-            response["role"]
-        )
 
     def get_db_connection(self):
         return sqlite3.connect('airunner.db')
@@ -951,7 +948,7 @@ class BaseAgent(
         self.logger.debug("Loading index...")
         documents = self.__documents or []
         try:
-            self.__index = SimpleKeywordTableIndex.from_documents(
+            self.__index = RAKEKeywordTableIndex.from_documents(
                 documents,
                 llm=self.__llm
             )
