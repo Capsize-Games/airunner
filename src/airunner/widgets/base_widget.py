@@ -3,11 +3,9 @@ import os
 from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget
 
-from airunner.handlers.logger import Logger
 from airunner.enums import CanvasToolName
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import DARK_THEME_NAME, LIGHT_THEME_NAME
 from airunner.utils.create_worker import create_worker
 
 
@@ -31,7 +29,6 @@ class BaseWidget(
         return self.application_settings.dark_mode_enabled
 
     def __init__(self, *args, **kwargs):
-        self.logger = Logger(prefix=self.__class__.__name__)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
         super().__init__(*args, **kwargs)
