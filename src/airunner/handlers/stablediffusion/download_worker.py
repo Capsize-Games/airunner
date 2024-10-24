@@ -3,13 +3,11 @@ from queue import Queue
 import time
 import requests
 from PySide6.QtCore import QObject, Signal
-from airunner.handlers.logger import Logger
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from facehuggershield.huggingface.settings import DEFAULT_HF_ENDPOINT
 from airunner.windows.main.settings_mixin import SettingsMixin
 
-logger = Logger(prefix="DownloadWorker")
 
 
 class DownloadWorker(
@@ -26,7 +24,6 @@ class DownloadWorker(
 
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
         super(DownloadWorker, self).__init__(*args, **kwargs)
 
     def add_to_queue(self, data: tuple):

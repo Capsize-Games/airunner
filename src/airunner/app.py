@@ -62,7 +62,6 @@ class App(
         to easily access the application settings dictionary.
         """
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
         super(App, self).__init__()
 
         self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)

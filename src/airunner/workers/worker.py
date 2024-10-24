@@ -18,7 +18,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
     def __init__(self, signals=None):
         self.signals = signals or []
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         super().__init__()
         self.state = WorkerState.HALTED
         self.running = False

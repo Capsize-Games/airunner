@@ -15,7 +15,7 @@ class HuggingfaceDownloader(
 
     def __init__(self, callback=None):
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         super(HuggingfaceDownloader, self).__init__()
         self.thread = None
         self.worker = None

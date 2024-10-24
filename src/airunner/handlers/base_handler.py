@@ -23,7 +23,7 @@ class BaseHandler(
         self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
         self.use_gpu = True
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         super().__init__(*args, **kwargs)
         self._requested_action:ModelAction = ModelAction.NONE
 

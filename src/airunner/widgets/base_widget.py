@@ -30,7 +30,7 @@ class BaseWidget(
 
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         super().__init__(*args, **kwargs)
         if self.widget_class_:
             self.ui = self.widget_class_()

@@ -5,10 +5,9 @@ from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
 from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsLineItem
 
-from airunner.handlers.logger import Logger
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
-from airunner.utils.convert_image_to_base64 import convert_image_to_base64
+from airunner.utils.convert_image_to_binary import convert_image_to_binary
 from airunner.utils.snap_to_grid import snap_to_grid
 from airunner.widgets.canvas.brush_scene import BrushScene
 from airunner.widgets.canvas.custom_scene import CustomScene
@@ -25,7 +24,7 @@ class CustomGraphicsView(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         self._scene = None
         self.current_background_color = None
         self.active_grid_area = None
@@ -86,7 +85,7 @@ class CustomGraphicsView(
     def on_mask_generator_worker_response_signal(self, message: dict):
         mask = message["mask"]
         if mask is not None:
-            mask = convert_image_to_base64(mask)
+            mask = convert_image_to_binary(mask)
             self.update_drawing_pad_settings("mask", mask)
 
     def on_main_window_loaded_signal(self):

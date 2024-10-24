@@ -37,7 +37,7 @@ class SDWorker(Worker):
     def __init__(self):
         self.sd = None
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         super().__init__(
             signals=(
                 (SignalCode.RESET_APPLIED_MEMORY_SETTINGS, self.on_reset_applied_memory_settings),

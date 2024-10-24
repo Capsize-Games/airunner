@@ -9,8 +9,8 @@ from PySide6.QtWidgets import QGraphicsPixmapItem
 
 from airunner.data.models.settings_models import DrawingPadSettings
 from airunner.enums import SignalCode, CanvasToolName
-from airunner.utils.convert_base64_to_image import convert_base64_to_image
-from airunner.utils.convert_image_to_base64 import convert_image_to_base64
+from airunner.utils.convert_binary_to_image import convert_binary_to_image
+from airunner.utils.convert_image_to_binary import convert_image_to_binary
 from airunner.widgets.canvas.custom_scene import CustomScene
 
 
@@ -112,9 +112,9 @@ class BrushScene(CustomScene):
         mask_updated = False
         mask = self.drawing_pad_settings.mask
         if mask is not None:
-            mask = convert_base64_to_image(mask)
+            mask = convert_binary_to_image(mask)
             mask = mask.rotate(angle, expand=True)
-            self.update_drawing_pad_settings("mask", convert_image_to_base64(mask))
+            self.update_drawing_pad_settings("mask", convert_image_to_binary(mask))
             mask_updated = True
         super().rotate_image(angle)
         if mask_updated:
@@ -204,11 +204,11 @@ class BrushScene(CustomScene):
             mask_image: Image = ImageQt.fromqimage(self.mask_image)
             # Ensure mask is fully opaque
             mask_image = mask_image.convert("L").point(lambda p: 255 if p > 128 else 0)
-            base_64_image = convert_image_to_base64(mask_image)
+            base_64_image = convert_image_to_binary(mask_image)
             drawing_pad_settings.mask = base_64_image
         else:
             image = ImageQt.fromqimage(self.active_image)
-            base_64_image = convert_image_to_base64(image)
+            base_64_image = convert_image_to_binary(image)
             drawing_pad_settings.image = base_64_image
             if ((
                 self.current_tool is CanvasToolName.BRUSH or
@@ -228,7 +228,7 @@ class BrushScene(CustomScene):
         if self.drawing_pad_settings.mask_layer_enabled:
             mask = self.drawing_pad_settings.mask
             if mask is not None:
-                mask = convert_base64_to_image(mask)
+                mask = convert_binary_to_image(mask)
         if mask is not None:
             # Convert the mask to RGBA
             mask = mask.convert("RGBA")
@@ -267,7 +267,7 @@ class BrushScene(CustomScene):
 
     def _create_mask_image(self):
         mask_image = PIL.Image.new("RGBA", (self.active_grid_settings.width, self.active_grid_settings.height), (0, 0, 0, 255))
-        self.update_drawing_pad_settings("mask", convert_image_to_base64(mask_image))
+        self.update_drawing_pad_settings("mask", convert_image_to_binary(mask_image))
         self.mask_image = ImageQt.ImageQt(mask_image)
         self.initialize_image()
         self.emit_signal(SignalCode.MASK_UPDATED)
