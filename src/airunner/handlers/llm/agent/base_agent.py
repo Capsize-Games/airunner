@@ -51,7 +51,8 @@ class BaseAgent(
 ):
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
-        
+
+        self._requested_action = None
         self.model = kwargs.pop("model", None)
         self.__documents = None
         self.__document_reader: SimpleDirectoryReader = None
@@ -508,13 +509,18 @@ class BaseAgent(
         action: LLMActionType,
         **kwargs
     ):
+        self._requested_action = None
         self.action = action
 
         if action is LLMActionType.TOGGLE_TTS:
             self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL)
             return
 
-        if action is LLMActionType.CHAT and (self.conversation_title is None or self.conversation_title == ""):
+        if action in (
+            LLMActionType.CHAT,
+            LLMActionType.PERFORM_RAG_SEARCH
+        ) and (self.conversation_title is None or self.conversation_title == ""):
+            self._requested_action = action
             action = LLMActionType.SUMMARIZE
 
         self.logger.debug("Running...")
@@ -652,8 +658,6 @@ class BaseAgent(
                     if eos_token in new_text:
                         streamed_template = streamed_template.replace(eos_token, "")
                         new_text = new_text.replace(eos_token, "")
-                        streamed_template = streamed_template.replace("<</SYS>>", "")
-                        new_text = new_text.replace("<</SYS>>", "")
                         is_end_of_message = True
                     # strip botname from new_text
                     new_text = new_text.replace(f"{self.botname}:", "")
@@ -745,7 +749,7 @@ class BaseAgent(
                 self._update_conversation_title(streamed_template)
                 return self.run(
                     prompt=self.prompt,
-                    action=LLMActionType.CHAT,
+                    action=self._requested_action,
                     **kwargs,
                 )
 
