@@ -59,7 +59,7 @@ setup(
 
         # Llama index
         "llama-index==0.11.7",
-        "llama-index-readers-file==0.2.0",
+        "llama-index-readers-file==0.2.2",
         "llama-index-readers-web==0.2.1",
         "llama-index-llms-huggingface==0.3.1",
         "llama-index-llms-groq==0.2.0",
