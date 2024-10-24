@@ -5,7 +5,6 @@ from airunner.widgets.slider.slider_widget import SliderWidget
 
 class FilterSliderWidget(SliderWidget):
     def __init__(self, *args, session, filter_value, preview_filter, **kwargs):
-        self.session = session
         self._filter_value = filter_value
         self.preview_filter = preview_filter
         super().__init__(*args, **kwargs)
