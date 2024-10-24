@@ -45,7 +45,7 @@ from airunner.settings import (
     VULNERABILITY_REPORT_LINK
 )
 from airunner.styles_mixin import StylesMixin
-from airunner.utils.convert_image_to_base64 import convert_image_to_base64
+from airunner.utils.convert_image_to_binary import convert_image_to_binary
 from airunner.utils.create_worker import create_worker
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
@@ -149,7 +149,7 @@ class MainWindow(
         self.initialized = False
         self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         self.logger.debug("Starting AI Runnner")
         super().__init__(*args, **kwargs)
         self._updating_settings = True
@@ -1110,7 +1110,7 @@ class MainWindow(
         width = self.active_grid_settings.width
         height = self.active_grid_settings.height
         img = Image.new("RGB", (width, height), (0, 0, 0))
-        base64_image = convert_image_to_base64(img)
+        base64_image = convert_image_to_binary(img)
         
         drawing_pad_settings = self.session.query(DrawingPadSettings).first()
         drawing_pad_settings.mask = base64_image

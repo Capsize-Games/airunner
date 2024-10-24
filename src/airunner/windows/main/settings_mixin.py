@@ -13,14 +13,21 @@ from airunner.data.models.settings_models import Chatbot, AIModels, Schedulers, 
     LLMGeneratorSettings, TTSSettings, SpeechT5Settings, EspeakSettings, STTSettings, BrushSettings, GridSettings, \
     MemorySettings, Message, Conversation, Summary, ImageFilterValue, TargetFiles, WhisperSettings, Base
 from airunner.enums import SignalCode
-from airunner.handlers.logger import Logger
-from airunner.settings import LOG_LEVEL
-from airunner.utils.convert_base64_to_image import convert_base64_to_image
+from airunner.utils.convert_binary_to_image import convert_binary_to_image
 
 
 class SettingsMixinSharedInstance:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(SettingsMixinSharedInstance, cls).__new__(cls, *args, **kwargs)
+            cls._instance._initialized = False
+        return cls._instance
+
     def __init__(self):
-        logging.debug("Initializing SettingsMixin instance")
+        if self._initialized:
+            return
         self.db_path = os.path.expanduser(
             os.path.join(
                 "~",
@@ -35,7 +42,24 @@ class SettingsMixinSharedInstance:
         Base.metadata.create_all(self.engine)
         self.Session = scoped_session(sessionmaker(bind=self.engine))
         self.conversation_id = None
-        self.logger = Logger(prefix=self.__class__.__name__, log_level=LOG_LEVEL)
+
+        # Configure the logger
+        self.logger = logging.getLogger("AI Runner")
+        self.logger.setLevel(logging.DEBUG)
+
+        # Remove all existing handlers
+        if self.logger.hasHandlers():
+            self.logger.handlers.clear()
+
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(filename)s - %(funcName)s - %(lineno)d - %(message)s'))
+        self.logger.addHandler(handler)
+
+        # Disable propagation to the root logger
+        self.logger.propagate = False
+
+        self._initialized = True
 
     @property
     def session(self):
@@ -45,12 +69,10 @@ class SettingsMixinSharedInstance:
         self.Session.remove()
 
 
-settings_mixin_shared_instance = SettingsMixinSharedInstance()
-
-
 class SettingsMixin:
-    def __init__(self):
-        self.settings_mixin_shared_instance = settings_mixin_shared_instance
+    @property
+    def settings_mixin_shared_instance(self):
+        return SettingsMixinSharedInstance()
 
     @property
     def logger(self):
@@ -188,7 +210,7 @@ class SettingsMixin:
     @property
     def drawing_pad_image(self):
         base_64_image = self.drawing_pad_settings.image
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
@@ -196,7 +218,7 @@ class SettingsMixin:
     @property
     def drawing_pad_mask(self):
         base_64_image = self.drawing_pad_settings.mask
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
@@ -204,7 +226,7 @@ class SettingsMixin:
     @property
     def img2img_image(self):
         base_64_image = self.image_to_image_settings.image
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
@@ -212,7 +234,7 @@ class SettingsMixin:
     @property
     def controlnet_image(self):
         base_64_image = self.controlnet_settings.image
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
@@ -220,7 +242,7 @@ class SettingsMixin:
     @property
     def controlnet_generated_image(self):
         base_64_image = self.controlnet_settings.imported_image_base64
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
@@ -228,7 +250,7 @@ class SettingsMixin:
     @property
     def outpaint_mask(self):
         base_64_image = self.drawing_pad_settings.mask
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image

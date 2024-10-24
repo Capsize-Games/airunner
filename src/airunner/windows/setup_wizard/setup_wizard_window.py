@@ -18,7 +18,7 @@ class SetupWizardWindow(
 ):
     def __init__(self, *args):
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         super(SetupWizardWindow, self).__init__(*args)
 
         self.canceled = False
