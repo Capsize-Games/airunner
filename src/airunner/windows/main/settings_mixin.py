@@ -4,7 +4,7 @@ import os
 from typing import List, Type
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import joinedload, sessionmaker
+from sqlalchemy.orm import joinedload, sessionmaker, scoped_session
 
 from airunner.data.models.settings_models import Chatbot, AIModels, Schedulers, Lora, PathSettings, SavedPrompt, \
     Embedding, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, ShortcutKeys, \
@@ -18,7 +18,7 @@ from airunner.settings import LOG_LEVEL
 from airunner.utils.convert_base64_to_image import convert_base64_to_image
 
 
-class SettingsMixin:
+class SettingsMixinSharedInstance:
     def __init__(self):
         logging.debug("Initializing SettingsMixin instance")
         self.db_path = os.path.expanduser(
@@ -33,21 +33,35 @@ class SettingsMixin:
         )
         self.engine = create_engine(f'sqlite:///{self.db_path}')
         Base.metadata.create_all(self.engine)
-        self._session = None
-        self.Session = sessionmaker(bind=self.engine)
+        self.Session = scoped_session(sessionmaker(bind=self.engine))
         self.conversation_id = None
         self.logger = Logger(prefix=self.__class__.__name__, log_level=LOG_LEVEL)
 
     @property
     def session(self):
-        if self._session is None:
-            self._session = self.Session()
-        return self._session
+        return self.Session()
 
     def close_session(self):
-        if self._session is not None:
-            self._session.close()
-            self._session = None
+        self.Session.remove()
+
+
+settings_mixin_shared_instance = SettingsMixinSharedInstance()
+
+
+class SettingsMixin:
+    def __init__(self):
+        self.settings_mixin_shared_instance = settings_mixin_shared_instance
+
+    @property
+    def logger(self):
+        return self.settings_mixin_shared_instance.logger
+
+    @property
+    def session(self):
+        return self.settings_mixin_shared_instance.session
+
+    def close_session(self):
+        self.settings_mixin_shared_instance.close_session()
 
     @property
     def stt_settings(self) -> STTSettings:
@@ -697,19 +711,6 @@ class SettingsMixin:
         )
         self.session.add(summary)
         self.session.commit()
-
-    def create_conversation_with_messages(self, messages):
-        conversation = self.create_conversation()
-        conversation_id = conversation.id
-        for message in messages:
-            self.add_message_to_history(
-                content=message["content"],
-                role=message["role"],
-                name=message["name"],
-                is_bot=message["is_bot"],
-                conversation_id=conversation_id
-            )
-        return conversation_id
 
     def get_all_conversations(self):
         conversations = self.session.query(Conversation).all()

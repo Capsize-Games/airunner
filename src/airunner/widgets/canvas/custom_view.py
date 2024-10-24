@@ -26,7 +26,6 @@ class CustomGraphicsView(
         super().__init__(*args, **kwargs)
         MediatorMixin.__init__(self)
         SettingsMixin.__init__(self)
-        self.logger = Logger(prefix=self.__class__.__name__)
         self._scene = None
         self.current_background_color = None
         self.active_grid_area = None
