@@ -39,7 +39,6 @@ class BotPreferencesWidget(BaseWidget):
         self.ui.username.setText(self.chatbot.username)
         self.ui.botname.setText(self.chatbot.botname)
         self.ui.bot_personality.setPlainText(self.chatbot.bot_personality)
-        self.ui.bot_mood.setPlainText(self.chatbot.bot_mood)
         self.ui.names_groupbox.setChecked(self.chatbot.assign_names)
         self.ui.personality_groupbox.setChecked(self.chatbot.use_personality)
         self.ui.mood_groupbox.setChecked(self.chatbot.use_mood)
@@ -55,9 +54,6 @@ class BotPreferencesWidget(BaseWidget):
 
     def botname_changed(self, val):
         self.update_chatbot("botname", val)
-    
-    def bot_mood_changed(self):
-        self.update_chatbot("bot_mood", self.ui.bot_mood.toPlainText())
 
     def bot_personality_changed(self):
         self.update_chatbot("bot_personality", self.ui.bot_personality.toPlainText())
