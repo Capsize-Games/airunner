@@ -14,10 +14,10 @@ imagefilter_bootstrap_data = {
             },
             'smoothing': {
                 'name': 'smoothing',
-                'value': '1',
+                'value': '0',
                 'value_type': 'int',
-                'min_value': None,
-                'max_value': None
+                'min_value': '0',
+                'max_value': '100'
             },
             'base_size': {
                 'name': 'base_size',
