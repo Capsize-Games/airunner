@@ -25,7 +25,6 @@ class BotPreferencesWidget(BaseWidget):
             "username",
             "botname",
             "bot_personality",
-            "bot_mood",
             "names_groupbox",
             "personality_groupbox",
             "mood_groupbox",
