@@ -60,7 +60,7 @@ class InstallWorker(
 
     def __init__(self, parent):
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         super(InstallWorker, self).__init__()
         self.parent = parent
         self.current_step = -1

@@ -17,7 +17,7 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
         :param setup_settings: The setup settings dictionary.
         """
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         super(DownloadWizardWindow, self).__init__()
         self.setWindowTitle("AI Runner Download Wizard")
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
