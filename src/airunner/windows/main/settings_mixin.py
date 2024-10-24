@@ -680,7 +680,7 @@ class SettingsMixin:
         )
         self.session.add(conversation)
         self.session.commit()
-        return conversation.id
+        return conversation
 
     def update_conversation_title(self, conversation_id, title):
         conversation = self.session.query(Conversation).filter_by(id=conversation_id).first()
@@ -699,7 +699,8 @@ class SettingsMixin:
         self.session.commit()
 
     def create_conversation_with_messages(self, messages):
-        conversation_id = self.create_conversation()
+        conversation = self.create_conversation()
+        conversation_id = conversation.id
         for message in messages:
             self.add_message_to_history(
                 content=message["content"],
@@ -720,9 +721,9 @@ class SettingsMixin:
         self.session.query(Conversation).filter_by(id=conversation_id).delete()
         self.session.commit()
 
-    def get_most_recent_conversation_id(self):
+    def get_most_recent_conversation(self):
         conversation = self.session.query(Conversation).order_by(Conversation.timestamp.desc()).first()
-        return conversation.id if conversation else None
+        return conversation
 
     def __settings_updated(self):
         self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)

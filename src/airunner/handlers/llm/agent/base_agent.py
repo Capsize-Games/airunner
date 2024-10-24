@@ -94,6 +94,7 @@ class BaseAgent(
         self.is_mistral = kwargs.pop("is_mistral", True)
         self.conversation_id = None
         self.conversation_title = None
+        self.conversation = None
         self.history = self.load_history_from_db(self.conversation_id)  # Load history by conversation ID
         super().__init__(*args, **kwargs)
         self.prompt = ""
@@ -136,14 +137,16 @@ class BaseAgent(
 
     @property
     def bot_mood(self) -> str:
-        return self.chatbot.bot_mood
+        return self.conversation.bot_mood if self.conversation else ""
 
     @bot_mood.setter
     def bot_mood(self, value: str):
-        chatbot = self.chatbot
-        chatbot.bot_mood = value
-        self.save_object(chatbot)
-        self.emit_signal(SignalCode.BOT_MOOD_UPDATED)
+        conversation = self.conversation
+        conversation.bot_mood = value
+        self.save_object(conversation)
+        self.emit_signal(SignalCode.BOT_MOOD_UPDATED, {
+            "mood": value
+        })
 
     @property
     def bot_personality(self) -> str:
@@ -241,17 +244,11 @@ class BaseAgent(
 
     def _create_conversation(self):
         # Get the most recent conversation ID
-        recent_conversation_id = self.get_most_recent_conversation_id()
-
-        # Check if there are messages for the most recent conversation ID
-        if recent_conversation_id is not None:
-            messages = self.load_history_from_db(recent_conversation_id)
-            if not messages:
-                self.conversation_id = recent_conversation_id
-                return
-
-        # If there are messages or no recent conversation ID, create a new conversation
-        self.conversation_id = self.create_conversation()
+        self.conversation = self.get_most_recent_conversation()
+        if not self.conversation:
+            self.conversation = self.create_conversation()
+        self.conversation_id = self.conversation.id
+        self.history = self.load_history_from_db(self.conversation_id)
 
     def interrupt_process(self):
         self.do_interrupt = True
@@ -818,7 +815,12 @@ class BaseAgent(
 
     def on_load_conversation(self, message):
         self.history = []
+        self.conversation = message["conversation"]
         self.conversation_id = message["conversation_id"]
+
+        # Merge the conversation object into the current session
+        self.conversation = self.session.merge(self.conversation)
+
         self.history = self.load_history_from_db(self.conversation_id)
         self.set_conversation_title()
         self.emit_signal(SignalCode.SET_CONVERSATION, {
