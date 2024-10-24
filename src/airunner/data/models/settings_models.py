@@ -354,7 +354,6 @@ class Chatbot(Base):
     use_datetime = Column(Boolean, default=True)
     assign_names = Column(Boolean, default=True)
     bot_personality = Column(Text, default="happy. He loves {{ username }}")
-    bot_mood = Column(Text, default="")
     prompt_template = Column(Text, default="Mistral 7B Instruct: Default Chatbot")
     use_tool_filter = Column(Boolean, default=False)
     use_gpu = Column(Boolean, default=True)
@@ -546,6 +545,7 @@ class Conversation(Base):
     timestamp = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
     title = Column(String, nullable=True)  # New column added
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+    bot_mood = Column(Text, default="")
 
 
 class Message(Base):

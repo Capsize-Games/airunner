@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy
 from airunner.data.models.settings_models import Message, LLMGeneratorSettings
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.llm.llm_history_item_widget import LLMHistoryItemWidget
 from airunner.widgets.llm.templates.llm_history_widget_ui import Ui_llm_history_widget
 
 class LLMHistoryWidget(BaseWidget):
@@ -42,28 +43,11 @@ class LLMHistoryWidget(BaseWidget):
             self.ui.scrollAreaWidgetContents.setLayout(layout)
 
         for conversation in conversations:
-            h_layout = QHBoxLayout()
-            button = QPushButton(conversation.title)
-            button.clicked.connect(lambda _, c=conversation: self.on_conversation_click(c))
-
-            # Extract chatbot_id from the first message of the conversation
-            first_message = self.session.query(Message).filter_by(conversation_id=conversation.id).first()
-            chatbot_name = "Unknown"
-            if first_message and first_message.chatbot_id:
-                chatbot = self.get_chatbot_by_id(first_message.chatbot_id)
-                if chatbot:
-                    chatbot_name = chatbot.name
-
-            chatbot_label = QLabel(f"Chatbot: {chatbot_name}")
-            delete_button = QPushButton("Delete")
-            delete_button.clicked.connect(lambda _, widget=h_layout, c=conversation: self.on_delete_conversation(widget, c))
-            h_layout.addWidget(button)
-            h_layout.addWidget(chatbot_label)
-            h_layout.addWidget(delete_button)
-
-            container_widget = QWidget()
-            container_widget.setLayout(h_layout)
-            layout.addWidget(container_widget)
+            llm_history_item_widget = LLMHistoryItemWidget(
+                conversation=conversation
+            )
+            # add to layout
+            layout.addWidget(llm_history_item_widget)
 
         # Add a vertical spacer at the end
         layout.addItem(self.spacer)
@@ -77,6 +61,7 @@ class LLMHistoryWidget(BaseWidget):
         self.session.commit()
         self.emit_signal(SignalCode.LOAD_CONVERSATION, {
             "conversation_id": conversation.id,
+            "conversation": conversation,
             "chatbot_id": chatbot_id
         })
 

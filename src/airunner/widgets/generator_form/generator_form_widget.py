@@ -91,6 +91,7 @@ class GeneratorForm(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.conversation = None
         self.seed_override = None
         self.parent = None
         self.initialized = False
@@ -157,8 +158,8 @@ class GeneratorForm(BaseWidget):
     def on_application_settings_changed_signal(self, _data):
         self.toggle_secondary_prompts()
 
-    def on_bot_mood_updated(self):
-        self._set_chatbot_mood()
+    def on_bot_mood_updated(self, data):
+        self._set_chatbot_mood(data["mood"])
 
     def on_generate_image_signal(self, _data):
         self.handle_generate_button_clicked()
@@ -254,13 +255,15 @@ class GeneratorForm(BaseWidget):
     # End LLM Generated Image handlers
     ##########################################################################
 
-    def _set_chatbot_mood(self):
-        self.ui.mood_label.setText(self.chatbot.bot_mood)
+    def _set_chatbot_mood(self, mood=None):
+        self.ui.mood_label.setText(mood if mood else self.conversation.bot_mood if self.conversation else "")
 
     def handle_generate_image_from_image(self, image):
         pass
 
-    def on_load_conversation(self, _data):
+    def on_load_conversation(self, data):
+        self.conversation = data["conversation"]
+        self._set_chatbot_mood()
         self.ui.generator_form_tabs.setCurrentIndex(1)
 
     def toggle_secondary_prompts(self):
