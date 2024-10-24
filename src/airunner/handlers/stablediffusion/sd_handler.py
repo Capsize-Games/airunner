@@ -698,6 +698,8 @@ class SDHandler(BaseHandler):
         if not self._feature_extractor or not self._safety_checker:
             return images, [False] * len(images)
 
+        self._safety_checker.to(self._device)
+
         safety_checker_input = self._feature_extractor(images, return_tensors="pt").to(self._device)
         _, has_nsfw_concepts = self._safety_checker(
             images=[np.array(img) for img in images],
@@ -730,6 +732,8 @@ class SDHandler(BaseHandler):
 
                 images[i] = img
 
+        self._safety_checker.to("cpu")
+
         return images, has_nsfw_concepts
 
     def _load_safety_checker(self):
@@ -755,7 +759,7 @@ class SDHandler(BaseHandler):
             self._safety_checker = StableDiffusionSafetyChecker.from_pretrained(
                 safety_checker_path,
                 torch_dtype=self.data_type,
-                device_map=self._device,
+                device_map="cpu",
                 local_files_only=True,
                 use_safetensors=False
             )
@@ -781,7 +785,6 @@ class SDHandler(BaseHandler):
             self._feature_extractor = CLIPFeatureExtractor.from_pretrained(
                 feature_extractor_path,
                 torch_dtype=self.data_type,
-                device_map=self._device,
                 local_files_only=True,
                 use_safetensors=True
             )
