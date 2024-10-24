@@ -2,7 +2,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 from PySide6.QtCore import QRect
 from airunner.enums import SignalCode
-from airunner.utils.convert_base64_to_image import convert_base64_to_image
+from airunner.utils.convert_binary_to_image import convert_binary_to_image
 from airunner.workers.worker import Worker
 
 
@@ -32,7 +32,7 @@ class MaskGeneratorWorker(Worker):
         base_64_image = self.drawing_pad_settings.image
         if base_64_image is None:
             return
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         image = image.convert('RGBA')
         if image is not None:
             image_width = image.width

@@ -4,7 +4,7 @@ import os
 from typing import List, Type
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import joinedload, sessionmaker
+from sqlalchemy.orm import joinedload, sessionmaker, scoped_session
 
 from airunner.data.models.settings_models import Chatbot, AIModels, Schedulers, Lora, PathSettings, SavedPrompt, \
     Embedding, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, ShortcutKeys, \
@@ -13,14 +13,21 @@ from airunner.data.models.settings_models import Chatbot, AIModels, Schedulers, 
     LLMGeneratorSettings, TTSSettings, SpeechT5Settings, EspeakSettings, STTSettings, BrushSettings, GridSettings, \
     MemorySettings, Message, Conversation, Summary, ImageFilterValue, TargetFiles, WhisperSettings, Base
 from airunner.enums import SignalCode
-from airunner.handlers.logger import Logger
-from airunner.settings import LOG_LEVEL
-from airunner.utils.convert_base64_to_image import convert_base64_to_image
+from airunner.utils.convert_binary_to_image import convert_binary_to_image
 
 
-class SettingsMixin:
+class SettingsMixinSharedInstance:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(SettingsMixinSharedInstance, cls).__new__(cls, *args, **kwargs)
+            cls._instance._initialized = False
+        return cls._instance
+
     def __init__(self):
-        logging.debug("Initializing SettingsMixin instance")
+        if self._initialized:
+            return
         self.db_path = os.path.expanduser(
             os.path.join(
                 "~",
@@ -33,21 +40,50 @@ class SettingsMixin:
         )
         self.engine = create_engine(f'sqlite:///{self.db_path}')
         Base.metadata.create_all(self.engine)
-        self._session = None
-        self.Session = sessionmaker(bind=self.engine)
+        self.Session = scoped_session(sessionmaker(bind=self.engine))
         self.conversation_id = None
-        self.logger = Logger(prefix=self.__class__.__name__, log_level=LOG_LEVEL)
+
+        # Configure the logger
+        self.logger = logging.getLogger("AI Runner")
+        self.logger.setLevel(logging.DEBUG)
+
+        # Remove all existing handlers
+        if self.logger.hasHandlers():
+            self.logger.handlers.clear()
+
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(filename)s - %(funcName)s - %(lineno)d - %(message)s'))
+        self.logger.addHandler(handler)
+
+        # Disable propagation to the root logger
+        self.logger.propagate = False
+
+        self._initialized = True
 
     @property
     def session(self):
-        if self._session is None:
-            self._session = self.Session()
-        return self._session
+        return self.Session()
 
     def close_session(self):
-        if self._session is not None:
-            self._session.close()
-            self._session = None
+        self.Session.remove()
+
+
+class SettingsMixin:
+    @property
+    def settings_mixin_shared_instance(self):
+        return SettingsMixinSharedInstance()
+
+    @property
+    def logger(self):
+        return self.settings_mixin_shared_instance.logger
+
+    @property
+    def session(self):
+        return self.settings_mixin_shared_instance.session
+
+    def close_session(self):
+        self.settings_mixin_shared_instance.close_session()
 
     @property
     def stt_settings(self) -> STTSettings:
@@ -174,7 +210,7 @@ class SettingsMixin:
     @property
     def drawing_pad_image(self):
         base_64_image = self.drawing_pad_settings.image
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
@@ -182,7 +218,7 @@ class SettingsMixin:
     @property
     def drawing_pad_mask(self):
         base_64_image = self.drawing_pad_settings.mask
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
@@ -190,7 +226,7 @@ class SettingsMixin:
     @property
     def img2img_image(self):
         base_64_image = self.image_to_image_settings.image
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
@@ -198,7 +234,7 @@ class SettingsMixin:
     @property
     def controlnet_image(self):
         base_64_image = self.controlnet_settings.image
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
@@ -206,7 +242,7 @@ class SettingsMixin:
     @property
     def controlnet_generated_image(self):
         base_64_image = self.controlnet_settings.imported_image_base64
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
@@ -214,7 +250,7 @@ class SettingsMixin:
     @property
     def outpaint_mask(self):
         base_64_image = self.drawing_pad_settings.mask
-        image = convert_base64_to_image(base_64_image)
+        image = convert_binary_to_image(base_64_image)
         if image is not None:
             image = image.convert("RGB")
         return image
@@ -697,19 +733,6 @@ class SettingsMixin:
         )
         self.session.add(summary)
         self.session.commit()
-
-    def create_conversation_with_messages(self, messages):
-        conversation = self.create_conversation()
-        conversation_id = conversation.id
-        for message in messages:
-            self.add_message_to_history(
-                content=message["content"],
-                role=message["role"],
-                name=message["name"],
-                is_bot=message["is_bot"],
-                conversation_id=conversation_id
-            )
-        return conversation_id
 
     def get_all_conversations(self):
         conversations = self.session.query(Conversation).all()

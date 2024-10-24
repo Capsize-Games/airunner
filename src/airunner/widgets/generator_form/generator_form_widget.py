@@ -23,7 +23,7 @@ class SaveGeneratorSettingsWorker(
 ):
     def __init__(self, parent):
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         super().__init__()
         self.parent = parent
         self.current_prompt_value = None

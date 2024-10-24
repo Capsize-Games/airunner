@@ -10,7 +10,7 @@ class ZoomHandler(
 ):
     def __init__(self):
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
 
     @property
     def zoom_in_step(self) -> float:

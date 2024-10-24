@@ -16,8 +16,8 @@ from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils import platform_info
 from airunner.utils.export_image import export_image
 from airunner.utils.snap_to_grid import snap_to_grid
-from airunner.utils.convert_base64_to_image import convert_base64_to_image
-from airunner.utils.convert_image_to_base64 import convert_image_to_base64
+from airunner.utils.convert_binary_to_image import convert_binary_to_image
+from airunner.utils.convert_image_to_binary import convert_image_to_binary
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.windows.main.settings_mixin import SettingsMixin
 
@@ -30,7 +30,7 @@ class CustomScene(
     def __init__(self, canvas_type: str):
         self.canvas_type = canvas_type
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         self.image_backup = None
         self.previewing_filter = False
         self.painter = None
@@ -109,14 +109,14 @@ class CustomScene(
     def current_active_image(self) -> Image:
         base_64_image = self.current_settings.image
         try:
-            return convert_base64_to_image(base_64_image)
+            return convert_binary_to_image(base_64_image)
         except PIL.UnidentifiedImageError:
             return None
 
     @current_active_image.setter
     def current_active_image(self, image: Image):
         if image is not None:
-            image = convert_image_to_base64(image)
+            image = convert_image_to_binary(image)
         self._update_current_settings("image", image)
         if self.settings_key == "drawing_pad_settings":
             self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
@@ -173,7 +173,7 @@ class CustomScene(
             return
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
-        image = convert_image_to_base64(image)
+        image = convert_image_to_binary(image)
         self.current_active_image = image
         self.refresh_image(self.current_active_image)
 
@@ -424,7 +424,7 @@ class CustomScene(
 
         if base64image is not None:
             try:
-                pil_image = convert_base64_to_image(base64image).convert("RGBA")
+                pil_image = convert_binary_to_image(base64image).convert("RGBA")
             except AttributeError:
                 self.logger.warning("Failed to convert base64 to image")
             except PIL.UnidentifiedImageError:

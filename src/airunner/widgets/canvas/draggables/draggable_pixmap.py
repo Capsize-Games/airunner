@@ -16,7 +16,7 @@ class DraggablePixmap(
     def __init__(self, pixmap):
         super().__init__(pixmap)
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         self.pixmap = pixmap
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.last_pos = QPoint(0, 0)
