@@ -16,7 +16,7 @@ setup(
     python_requires=">=3.10.0",
     install_requires=[
         # Core application dependencies
-        "accelerate==0.33.0",
+        "accelerate==1.0.1",
         "huggingface-hub==0.23.5",
         "PySide6==6.7.0",
         "PySide6_Addons==6.7.0",
