@@ -36,11 +36,12 @@ from transformers import (
     StoppingCriteriaList,
 )
 
+from airunner.windows.main.settings_mixin import SettingsMixin
+
 DEFAULT_HUGGINGFACE_MODEL = "StabilityAI/stablelm-tuned-alpha-3b"
 
-logger = logging.getLogger(__name__)
 
-class HuggingFaceLLM(CustomLLM):
+class HuggingFaceLLM(CustomLLM, SettingsMixin):
     r"""HuggingFace LLM.
 
     Examples:
@@ -217,7 +218,7 @@ class HuggingFaceLLM(CustomLLM):
             config_dict.get("max_position_embeddings", context_window)
         )
         if model_context_window and model_context_window < context_window:
-            logger.warning(
+            self.logger.warning(
                 f"Supplied context_window {context_window} is greater "
                 f"than the model's max input size {model_context_window}. "
                 "Disable this warning by setting a lower context_window."
@@ -231,7 +232,7 @@ class HuggingFaceLLM(CustomLLM):
         )
 
         if tokenizer.name_or_path != model_name:
-            logger.warning(
+            self.logger.warning(
                 f"The model `{model_name}` and tokenizer `{tokenizer.name_or_path}` "
                 f"are different, please ensure that they are compatible."
             )
