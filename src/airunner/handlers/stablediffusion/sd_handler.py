@@ -36,8 +36,8 @@ from airunner.exceptions import PipeNotLoadedException, InterruptedException
 from airunner.handlers.stablediffusion.prompt_weight_bridge import PromptWeightBridge
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils.clear_memory import clear_memory
-from airunner.utils.convert_base64_to_image import convert_base64_to_image
-from airunner.utils.convert_image_to_base64 import convert_image_to_base64
+from airunner.utils.convert_binary_to_image import convert_binary_to_image
+from airunner.utils.convert_image_to_binary import convert_image_to_binary
 from airunner.utils.export_image import export_images
 from airunner.utils.get_torch_device import get_torch_device
 
@@ -224,7 +224,7 @@ class SDHandler(BaseHandler):
     def controlnet_image(self) -> Image:
         img = self.controlnet_settings_cached.image
         if img is not None:
-            img = convert_base64_to_image(img)
+            img = convert_binary_to_image(img)
         return img
 
     @property
@@ -574,7 +574,8 @@ class SDHandler(BaseHandler):
     def _generate(self):
         self.logger.debug("Generating image")
         model = self.generator_settings_cached.aimodel
-        if self._current_model != model:
+        if self._current_model.path != model.path:
+            self.logger.debug(f"Model has changed from {self._current_model.path} to {model.path}")
             if self._pipe is not None:
                 self.reload()
         if self._pipe is None:
@@ -1525,7 +1526,7 @@ class SDHandler(BaseHandler):
                     self.update_settings_by_name(
                         "controlnet_settings",
                         "generated_image",
-                        convert_image_to_base64(control_image)
+                        convert_image_to_binary(control_image)
                     )
                     if self.is_txt2img:
                         image = control_image

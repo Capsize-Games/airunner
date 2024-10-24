@@ -9,8 +9,8 @@ from PySide6.QtWidgets import QGraphicsScene
 
 from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES
-from airunner.utils.convert_base64_to_image import convert_base64_to_image
-from airunner.utils.convert_image_to_base64 import convert_image_to_base64
+from airunner.utils.convert_binary_to_image import convert_binary_to_image
+from airunner.utils.convert_image_to_binary import convert_image_to_binary
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.input_image_ui import Ui_input_image
 
@@ -146,7 +146,7 @@ class InputImage(BaseWidget):
         image = Image.open(file_path)
         self.load_image_from_object(image)
         if image is not None:
-            self.update_current_settings("image", convert_image_to_base64(image))
+            self.update_current_settings("image", convert_image_to_binary(image))
 
     def load_image_from_grid(self, forced=False):
         if self.settings_key == "outpaint_settings":
@@ -168,7 +168,7 @@ class InputImage(BaseWidget):
             image = self.drawing_pad_settings.mask
 
         if image is not None:
-            image = convert_base64_to_image(image)
+            image = convert_binary_to_image(image)
             if image is not None:
                 self.load_image_from_object(image)
                 return

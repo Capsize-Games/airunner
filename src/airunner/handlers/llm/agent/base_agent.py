@@ -51,7 +51,7 @@ class BaseAgent(
 ):
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         self.model = kwargs.pop("model", None)
         self.__documents = None
         self.__document_reader: SimpleDirectoryReader = None

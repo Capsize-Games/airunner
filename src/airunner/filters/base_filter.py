@@ -1,12 +1,11 @@
 from PIL import ImageFilter
 
-from airunner.handlers.logger import Logger
+from airunner.windows.main.settings_mixin import SettingsMixin
 
 
-class BaseFilter(ImageFilter.Filter):
+class BaseFilter(ImageFilter.Filter, SettingsMixin):
     def __init__(self, **kwargs):
         super().__init__()
-        self.logger = Logger(prefix=self.__class__.__name__)
         self.image = None
         self.image_id = None
 

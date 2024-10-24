@@ -22,7 +22,7 @@ class BaseWindow(
 
     def __init__(self, **kwargs):
         MediatorMixin.__init__(self)
-        SettingsMixin.__init__(self)
+        
         AIModelMixin.__init__(self)
         super().__init__()
         self.do_exec = kwargs.get("exec", True)
