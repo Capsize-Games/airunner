@@ -61,6 +61,7 @@ class LLMHistoryWidget(BaseWidget):
         self.session.commit()
         self.emit_signal(SignalCode.LOAD_CONVERSATION, {
             "conversation_id": conversation.id,
+            "conversation": conversation,
             "chatbot_id": chatbot_id
         })
 
