@@ -225,6 +225,9 @@
          </property>
          <widget class="QWidget" name="verticalLayoutWidget">
           <layout class="QVBoxLayout" name="verticalLayout">
+           <property name="spacing">
+            <number>0</number>
+           </property>
            <item>
             <widget class="QScrollArea" name="chat_container">
              <property name="frameShape">
@@ -253,6 +256,9 @@
                 <number>0</number>
                </property>
                <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <property name="spacing">
                 <number>0</number>
                </property>
                <item row="0" column="0">

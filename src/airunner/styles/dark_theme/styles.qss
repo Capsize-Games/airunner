@@ -560,13 +560,6 @@ QTableWidget::item:selected {
     border: 1px solid rgba(0, 132, 185, 50);
 }
 
-QWidget#message QPlainTextEdit {
-    border-radius: 5px;
-    border: 5px solid #1f1f1f;
-    background-color: #1f1f1f;
-    color: #ffffff;
-}
-
 QSplitter::handle::vertical {
     border-top: 4px solid rgba(0, 132, 185, 50);
 }
@@ -733,4 +726,29 @@ QMenu {
 
 SwitchWidget:enabled[checked="true"] {
     background-color: rgba(0, 132, 185, 100);
+}
+
+QScrollArea#chat_container #message_container {
+    background-color: #1f1f1f;
+}
+
+QScrollArea#chat_container #message_container[class="alternate"] {
+    background-color: #000;
+}
+
+QScrollArea#chat_container #message_container QTextEdit {
+    border: none;
+    background-color: transparent;
+    color: #ffffff;
+}
+
+QScrollArea#chat_container #message_container QPushButton {
+    border: none;
+    background-color: transparent;
+    color: #ffffff;
+}
+
+QScrollArea#chat_container #message_container QPushButton:hover {
+    background-color: #000;
+    border: 1px solid #1f1f1f;
 }

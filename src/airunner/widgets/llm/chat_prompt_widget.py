@@ -96,8 +96,10 @@ class ChatPromptWidget(BaseWidget):
                 name=message["name"],
                 message=message["content"],
                 is_bot=message["is_bot"],
+                message_id=message["id"],
                 first_message=True
             )
+        QTimer.singleShot(100, self.scroll_to_bottom)
 
     def on_hear_signal(self, data: dict):
         transcription = data["transcription"]
@@ -189,11 +191,14 @@ class ChatPromptWidget(BaseWidget):
             return
         self.generating = True
 
-        self.add_message_to_conversation(
+        widget = self.add_message_to_conversation(
             name=self.chatbot.username,
             message=self.prompt,
             is_bot=False
         )
+        if widget is not None:
+            QTimer.singleShot(100, widget.set_content_size)
+            QTimer.singleShot(100, self.scroll_to_bottom)
 
         self.clear_prompt()
         self.start_progress_bar()
@@ -312,7 +317,8 @@ class ChatPromptWidget(BaseWidget):
         name,
         message,
         is_bot, 
-        first_message=True
+        first_message=True,
+        message_id=None
     ):
         if not first_message:
             # get the last widget from the scrollAreaWidgetContents.layout()
@@ -330,14 +336,17 @@ class ChatPromptWidget(BaseWidget):
 
         self.remove_spacer()
 
+        widget = None
         if message != "":
-            widget = MessageWidget(name=name, message=message, is_bot=is_bot)
+            widget = MessageWidget(name=name, message=message, is_bot=is_bot, message_id=message_id, conversation_id=self.conversation_id)
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
 
         self.add_spacer()
 
         # automatically scroll to the bottom of the scrollAreaWidgetContents
         self.scroll_to_bottom()
+
+        return widget
 
     def remove_spacer(self):
         if self.spacer is not None:
