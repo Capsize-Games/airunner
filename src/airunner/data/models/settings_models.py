@@ -6,8 +6,8 @@ from sqlalchemy.orm import relationship
 
 from airunner.enums import ImageGenerator, GeneratorSection, CanvasToolName, Mode
 from airunner.settings import SD_DEFAULT_VAE_PATH, DEFAULT_SCHEDULER, \
-    DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, BASE_PATH
-
+    DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR, BASE_PATH, DEFAULT_CHATBOT_SYSTEM_PROMPT, \
+    DEFAULT_CHATBOT_GUARDRAILS_PROMPT
 
 import datetime
 
@@ -365,27 +365,8 @@ class Chatbot(Base):
     model_type = Column(String, default="llm")
     dtype = Column(String, default="4bit")
     return_result = Column(Boolean, default=True)
-    guardrails_prompt = Column(Text, default=(
-        "Always assist with care, respect, and truth. "
-        "Respond with utmost utility yet securely. "
-        "Avoid harmful, unethical, prejudiced, or negative content. "
-        "Ensure replies promote fairness and positivity."
-    ))
-    system_instructions = Column(Text, default=(
-        "You are a dialogue generator. "
-        "You will follow all of the rules in order to generate compelling and intriguing dialogue for a given character.\n"
-        "The Rules:\n"
-        "You will ONLY return dialogue, nothing more.\n"
-        "Limit responses to a single sentence.\n"
-        "Only generate responses in pure dialogue form without including any actions, descriptions or stage directions in parentheses. Only return spoken words.\n"
-        "Do not generate redundant dialogue. Examine the conversation and context close and keep responses interesting and creative.\n"
-        "Do not format the response with the character's name or any other text. Only return the dialogue.\n"
-        "Respond with dialogue that is appropriate for a character named {{ speaker_name }}.\n"
-        "{{ speaker_name }} and {{ listener_name }} are having a conversation. \n"
-        "Avoid repeating {{ speaker_name }}'s previous dialogue or {{ listener_name }}'s previous dialogue.\n"
-        "You will generate responses which are appropriate for your personality and given character.\n"
-        "------\n"
-    ))
+    guardrails_prompt = Column(Text, default=DEFAULT_CHATBOT_GUARDRAILS_PROMPT)
+    system_instructions = Column(Text, default=DEFAULT_CHATBOT_SYSTEM_PROMPT)
     top_p = Column(Integer, default=900)
     min_length = Column(Integer, default=1)
     max_new_tokens = Column(Integer, default=1000)

@@ -677,6 +677,7 @@ class SettingsMixin:
         ).order_by(Message.timestamp).all()
         results = [
             {
+                "id": message.id,
                 "role": message.role,
                 "content": message.content,
                 "name": message.name,

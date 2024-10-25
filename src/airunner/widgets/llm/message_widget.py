@@ -1,11 +1,12 @@
+from airunner.data.models.settings_models import Message, Conversation
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.message_ui import Ui_message
 
 from PySide6.QtGui import QTextCursor, QFontDatabase, QFont
-from PySide6.QtWidgets import QTextEdit
+from PySide6.QtWidgets import QTextEdit, QApplication, QWidget
 from PySide6.QtGui import QFontMetrics
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer
 from PySide6.QtCore import Signal
 
 
@@ -22,29 +23,47 @@ class MessageWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         self.name = kwargs.pop("name")
         self.message = kwargs.pop("message")
+        self.conversation_id = kwargs.pop("conversation_id")
+        self.message_id = kwargs.pop("message_id")
+        if self.message_id is None:
+            session = self.session
+            message = session.query(Message).filter(Message.conversation_id == self.conversation_id).order_by(
+                Message.id.desc()).first()
+            if message is not None:
+                self.message_id = message.id
         self.is_bot = kwargs.pop("is_bot")
         super().__init__(*args, **kwargs)
         self.ui.content.setReadOnly(True)
         self.ui.content.insertPlainText(self.message)
         self.ui.content.document().contentsChanged.connect(self.sizeChange)
-        name = self.name
-        if self.is_bot:
-            self.ui.bot_name.show()
-            self.ui.bot_name.setText(f"{name}")
-            self.ui.bot_name.setStyleSheet("font-weight: normal;")
-            self.ui.user_name.hide()
-        else:
-            self.ui.user_name.show()
-            self.ui.user_name.setText(f"{name}")
-            self.ui.user_name.setStyleSheet("font-weight: normal;")
-            self.ui.bot_name.hide()
-
-        self.ui.content.setStyleSheet("border-radius: 5px; border: 5px solid #1f1f1f; background-color: #1f1f1f; color: #ffffff;")
-
+        self.ui.user_name.setText(f"{self.name}")
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
         self.font_family = None
         self.font_size = None
         self.set_chat_font()
+
+        if self.is_bot:
+            self.ui.message_container.setProperty("class", "alternate")
+
+        self.ui.copy_button.setVisible(False)
+        self.ui.delete_button.setVisible(False)
+        self.ui.message_container.installEventFilter(self)
+        self.set_cursor(Qt.CursorShape.ArrowCursor)
+
+    def set_cursor(self, cursor_type):
+        self.ui.message_container.setCursor(cursor_type)
+        for child in self.ui.message_container.findChildren(QWidget):
+            child.setCursor(cursor_type)
+
+    def eventFilter(self, obj, event):
+        if obj == self.ui.message_container:
+            if event.type() == QEvent.Type.Enter:
+                self.ui.copy_button.setVisible(True)
+                self.ui.delete_button.setVisible(True)
+            elif event.type() == QEvent.Type.Leave:
+                self.ui.copy_button.setVisible(False)
+                self.ui.delete_button.setVisible(False)
+        return super().eventFilter(obj, event)
 
     def on_application_settings_changed_signal(self):
         self.set_chat_font()
@@ -71,7 +90,7 @@ class MessageWidget(BaseWidget):
     def set_content_size(self):
         doc_height = self.ui.content.document().size().height()
         doc_width = self.ui.content.document().size().width()
-        self.setMinimumHeight(int(doc_height) + 25)
+        self.setMinimumHeight(int(doc_height) + 45)
         self.setMinimumWidth(int(doc_width))
 
     def sizeChange(self):
@@ -98,3 +117,16 @@ class MessageWidget(BaseWidget):
 
         self.ui.content.setPlainText(self.message)
 
+    @Slot()
+    def delete(self):
+        session = self.session
+        message = session.query(Message).filter(Message.id == self.message_id).first()
+        session.delete(message)
+        session.commit()
+        self.setParent(None)
+        self.deleteLater()
+
+    @Slot()
+    def copy(self):
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.message)
