@@ -15,61 +15,77 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
-    QLabel, QSizePolicy, QTextEdit, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QLabel,
+    QPushButton, QSizePolicy, QSpacerItem, QTextEdit,
+    QWidget)
+import airunner.resources_dark_rc
 
 class Ui_message(object):
     def setupUi(self, message):
         if not message.objectName():
             message.setObjectName(u"message")
-        message.resize(464, 433)
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
+        message.resize(497, 456)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(message.sizePolicy().hasHeightForWidth())
         message.setSizePolicy(sizePolicy)
-        message.setMinimumSize(QSize(0, 40))
-        self.gridLayout = QGridLayout(message)
+        message.setMinimumSize(QSize(0, 0))
+        message.setStyleSheet(u"")
+        self.gridLayout_2 = QGridLayout(message)
+        self.gridLayout_2.setSpacing(0)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.message_container = QWidget(message)
+        self.message_container.setObjectName(u"message_container")
+        self.gridLayout = QGridLayout(self.message_container)
         self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout.setContentsMargins(10, 10, 10, 10)
         self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setSpacing(10)
+        self.horizontalLayout.setSpacing(5)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(-1, -1, -1, 10)
-        self.user_name = QLabel(message)
+        self.user_name = QLabel(self.message_container)
         self.user_name.setObjectName(u"user_name")
-        self.user_name.setAlignment(Qt.AlignmentFlag.AlignBottom|Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft)
+        self.user_name.setMinimumSize(QSize(0, 25))
 
         self.horizontalLayout.addWidget(self.user_name)
 
-        self.content = QTextEdit(message)
-        self.content.setObjectName(u"content")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.content.sizePolicy().hasHeightForWidth())
-        self.content.setSizePolicy(sizePolicy1)
-        self.content.setMinimumSize(QSize(0, 40))
-        self.content.setStyleSheet(u"border-radius: 5px; border: 5px solid #1f1f1f; background-color: #1f1f1f; color: #ffffff;")
-        self.content.setFrameShape(QFrame.Shape.NoFrame)
-        self.content.setFrameShadow(QFrame.Shadow.Plain)
-        self.content.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.content.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        self.horizontalLayout.addWidget(self.content)
+        self.horizontalLayout.addItem(self.horizontalSpacer)
 
-        self.bot_name = QLabel(message)
-        self.bot_name.setObjectName(u"bot_name")
-        self.bot_name.setAlignment(Qt.AlignmentFlag.AlignBottom|Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft)
+        self.copy_button = QPushButton(self.message_container)
+        self.copy_button.setObjectName(u"copy_button")
+        icon = QIcon(QIcon.fromTheme(u"edit-copy"))
+        self.copy_button.setIcon(icon)
 
-        self.horizontalLayout.addWidget(self.bot_name)
+        self.horizontalLayout.addWidget(self.copy_button)
+
+        self.delete_button = QPushButton(self.message_container)
+        self.delete_button.setObjectName(u"delete_button")
+        icon1 = QIcon(QIcon.fromTheme(u"edit-delete"))
+        self.delete_button.setIcon(icon1)
+
+        self.horizontalLayout.addWidget(self.delete_button)
 
 
         self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
 
+        self.content = QTextEdit(self.message_container)
+        self.content.setObjectName(u"content")
+        self.content.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.content.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        self.gridLayout.addWidget(self.content, 1, 0, 1, 1)
+
+
+        self.gridLayout_2.addWidget(self.message_container, 0, 0, 1, 1)
+
 
         self.retranslateUi(message)
+        self.delete_button.clicked.connect(message.delete)
+        self.copy_button.clicked.connect(message.copy)
 
         QMetaObject.connectSlotsByName(message)
     # setupUi
@@ -77,6 +93,13 @@ class Ui_message(object):
     def retranslateUi(self, message):
         message.setWindowTitle(QCoreApplication.translate("message", u"Form", None))
         self.user_name.setText(QCoreApplication.translate("message", u"TextLabel", None))
-        self.bot_name.setText(QCoreApplication.translate("message", u"TextLabel", None))
+#if QT_CONFIG(tooltip)
+        self.copy_button.setToolTip(QCoreApplication.translate("message", u"Copy message", None))
+#endif // QT_CONFIG(tooltip)
+        self.copy_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.delete_button.setToolTip(QCoreApplication.translate("message", u"Delete message", None))
+#endif // QT_CONFIG(tooltip)
+        self.delete_button.setText("")
     # retranslateUi
 
