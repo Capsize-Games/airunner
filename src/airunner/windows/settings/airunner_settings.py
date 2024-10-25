@@ -7,6 +7,7 @@ from airunner.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
 from airunner.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
 from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
+from airunner.widgets.llm.prompt_templates_widget import PromptTemplatesWidget
 from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
 from airunner.widgets.paths.paths_widget import PathsWidget
 from airunner.widgets.stt.stt_settings_widget import STTSettingsWidget
@@ -63,6 +64,8 @@ class SettingsWindow(BaseWindow):
             return APITokenWidget
         elif name == "tts_preferences":
             return TTSPreferencesWidget
+        elif name == "prompt_templates":
+            return PromptTemplatesWidget
         elif name == "bot_preferences":
             return BotPreferencesWidget
         elif name == "export_preferences":
@@ -111,7 +114,7 @@ class SettingsWindow(BaseWindow):
                 ]
             },
             {
-                "section": "Chatbot, text-to-speech",
+                "section": "Chatbot, prompt templates, text-to-speech",
                 "files": [
                     {
                         "name": "bot_preferences",
@@ -121,6 +124,11 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "tts_preferences",
                         "display_name": "Text-to-Speech",
+                        "checkable": False
+                    },
+                    {
+                        "name": "prompt_templates",
+                        "display_name": "Prompt Templates",
                         "checkable": False
                     },
                     # {

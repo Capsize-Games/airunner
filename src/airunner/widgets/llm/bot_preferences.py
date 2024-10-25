@@ -25,10 +25,8 @@ class BotPreferencesWidget(BaseWidget):
             "username",
             "botname",
             "bot_personality",
-            "bot_mood",
             "names_groupbox",
             "personality_groupbox",
-            "mood_groupbox",
             "system_instructions",
             "system_instructions_groupbox",
             "guardrails_prompt",
@@ -41,7 +39,6 @@ class BotPreferencesWidget(BaseWidget):
         self.ui.bot_personality.setPlainText(self.chatbot.bot_personality)
         self.ui.names_groupbox.setChecked(self.chatbot.assign_names)
         self.ui.personality_groupbox.setChecked(self.chatbot.use_personality)
-        self.ui.mood_groupbox.setChecked(self.chatbot.use_mood)
         self.ui.system_instructions.setPlainText(self.chatbot.system_instructions)
         self.ui.system_instructions_groupbox.setChecked(self.chatbot.use_system_instructions)
         self.ui.guardrails_prompt.setPlainText(self.chatbot.guardrails_prompt)
@@ -69,9 +66,6 @@ class BotPreferencesWidget(BaseWidget):
 
     def toggle_use_personality(self, val):
         self.update_chatbot("use_personality", val)
-
-    def toggle_use_mood(self, val):
-        self.update_chatbot("use_mood", val)
 
     def toggle_use_guardrails(self, val):
         self.update_chatbot("use_guardrails", val)

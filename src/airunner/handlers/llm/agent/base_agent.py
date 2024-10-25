@@ -51,7 +51,8 @@ class BaseAgent(
 ):
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
-        
+
+        self._requested_action = None
         self.model = kwargs.pop("model", None)
         self.__documents = None
         self.__document_reader: SimpleDirectoryReader = None
@@ -351,30 +352,7 @@ class BaseAgent(
 
         elif action is LLMActionType.GENERATE_IMAGE:
             system_prompt = [
-                (
-                    "You are an image generator. "
-                    "You will be provided with a JSON string and it is your goal to replace the PLACEHOLDER "
-                    "text with text appropriate for the given attribute in the JSON string. "
-                    "You will follow all of the rules to generate descriptions for an image. "
-                    "\n------\n"
-                    "RULES:\n"
-                    "When available, use the Additional Context to keep your generated content in line with the existing context.\n"
-                    "You will be given instructions on what type of image to generate and you will do your best to follow those instructions.\n"
-                    "You will only generate a value for the given attribute.\n"
-                    "Never respond in a conversational manner. Never provide additional information, details or information.\n"
-                    "You will only provide the requested information by replacing the PLACEHOLDER.\n"
-                    "Never change the attribute\n"
-                    "You must not change the structure of the data.\n"
-                    "You will only return JSON strings.\n"
-                    "You will not return any other data types.\n"
-                    "You are an artist, so use your imagination and keep things interesting.\n"
-                    "You will not respond in a conversational manner or with additional notes or information.\n"
-                    f"Only return one JSON block. Do not generate instructions or additional information.\n"
-                    "You must never break the rules.\n"
-                    "Here is a description of the attributes: \n"
-                    "`description`: This should describe the overall subject and look and feel of the image\n"
-                    "`composition`: This should describe the attributes of the image such as color, composition and other details\n"
-                ),
+                system_instructions,
                 self.history_prompt()
             ]
 
@@ -487,8 +465,7 @@ class BaseAgent(
             tokenize=False
         )
 
-        # HACK: current version of transformers does not allow us to pass
-        # variables to the chat template function, so we apply those here
+        # replace variables in chat template
         variables = {
             "speaker_name": self.botname,
             "listener_name": self.username,
@@ -508,13 +485,18 @@ class BaseAgent(
         action: LLMActionType,
         **kwargs
     ):
+        self._requested_action = None
         self.action = action
 
         if action is LLMActionType.TOGGLE_TTS:
             self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL)
             return
 
-        if action is LLMActionType.CHAT and (self.conversation_title is None or self.conversation_title == ""):
+        if action in (
+            LLMActionType.CHAT,
+            LLMActionType.PERFORM_RAG_SEARCH
+        ) and (self.conversation_title is None or self.conversation_title == ""):
+            self._requested_action = action
             action = LLMActionType.SUMMARIZE
 
         self.logger.debug("Running...")
@@ -652,8 +634,6 @@ class BaseAgent(
                     if eos_token in new_text:
                         streamed_template = streamed_template.replace(eos_token, "")
                         new_text = new_text.replace(eos_token, "")
-                        streamed_template = streamed_template.replace("<</SYS>>", "")
-                        new_text = new_text.replace("<</SYS>>", "")
                         is_end_of_message = True
                     # strip botname from new_text
                     new_text = new_text.replace(f"{self.botname}:", "")
@@ -745,7 +725,7 @@ class BaseAgent(
                 self._update_conversation_title(streamed_template)
                 return self.run(
                     prompt=self.prompt,
-                    action=LLMActionType.CHAT,
+                    action=self._requested_action,
                     **kwargs,
                 )
 
