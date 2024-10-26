@@ -166,32 +166,6 @@
             </item>
            </layout>
           </item>
-          <item>
-           <layout class="QVBoxLayout" name="verticalLayout_5">
-            <item>
-             <widget class="QLabel" name="label_3">
-              <property name="font">
-               <font>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>User name</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLineEdit" name="username">
-              <property name="text">
-               <string>User</string>
-              </property>
-              <property name="placeholderText">
-               <string>User name</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
          </layout>
         </widget>
        </item>
@@ -354,22 +328,6 @@
  <resources/>
  <connections>
   <connection>
-   <sender>username</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>bot_preferences</receiver>
-   <slot>username_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>674</x>
-     <y>460</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>55</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>botname</sender>
    <signal>textChanged(QString)</signal>
    <receiver>bot_preferences</receiver>
@@ -392,8 +350,8 @@
    <slot>bot_personality_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>392</x>
-     <y>971</y>
+     <x>404</x>
+     <y>1105</y>
     </hint>
     <hint type="destinationlabel">
      <x>292</x>
@@ -425,7 +383,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>108</x>
-     <y>916</y>
+     <y>995</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -440,8 +398,8 @@
    <slot>guardrails_prompt_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>202</x>
-     <y>765</y>
+     <x>214</x>
+     <y>836</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -579,7 +537,6 @@
   </connection>
  </connections>
  <slots>
-  <slot>username_changed(QString)</slot>
   <slot>botname_changed(QString)</slot>
   <slot>bot_personality_changed()</slot>
   <slot>toggle_use_names(bool)</slot>

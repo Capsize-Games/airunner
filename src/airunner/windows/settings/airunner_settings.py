@@ -10,8 +10,8 @@ from airunner.widgets.llm.bot_preferences import BotPreferencesWidget
 from airunner.widgets.llm.prompt_templates_widget import PromptTemplatesWidget
 from airunner.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
 from airunner.widgets.paths.paths_widget import PathsWidget
-from airunner.widgets.stt.stt_settings_widget import STTSettingsWidget
 from airunner.widgets.tts.tts_preferences_widget import TTSPreferencesWidget
+from airunner.widgets.user.user_settings_widget import UserSettingsWidget
 from airunner.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
 from airunner.windows.base_window import BaseWindow
 
@@ -68,6 +68,8 @@ class SettingsWindow(BaseWindow):
             return PromptTemplatesWidget
         elif name == "bot_preferences":
             return BotPreferencesWidget
+        elif name == "user_settings":
+            return UserSettingsWidget
         elif name == "export_preferences":
             return ExportPreferencesWidget
         # elif name == "stt_preferences":
@@ -119,6 +121,11 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "bot_preferences",
                         "display_name": "Agent Preferences",
+                        "checkable": False
+                    },
+                    {
+                        "name": "user_settings",
+                        "display_name": "User Settings",
                         "checkable": False
                     },
                     {

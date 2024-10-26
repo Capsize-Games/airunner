@@ -147,8 +147,8 @@
    <slot>delete()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>435</x>
-     <y>19</y>
+     <x>485</x>
+     <y>30</y>
     </hint>
     <hint type="destinationlabel">
      <x>391</x>
@@ -163,8 +163,8 @@
    <slot>copy()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>469</x>
-     <y>28</y>
+     <x>452</x>
+     <y>34</y>
     </hint>
     <hint type="destinationlabel">
      <x>451</x>

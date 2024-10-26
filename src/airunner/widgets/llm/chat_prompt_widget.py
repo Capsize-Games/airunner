@@ -192,7 +192,7 @@ class ChatPromptWidget(BaseWidget):
         self.generating = True
 
         widget = self.add_message_to_conversation(
-            name=self.chatbot.username,
+            name=self.user.username,
             message=self.prompt,
             is_bot=False
         )
@@ -338,7 +338,13 @@ class ChatPromptWidget(BaseWidget):
 
         widget = None
         if message != "":
-            widget = MessageWidget(name=name, message=message, is_bot=is_bot, message_id=message_id, conversation_id=self.conversation_id)
+            widget = MessageWidget(
+                name=name,
+                message=message,
+                is_bot=is_bot,
+                message_id=message_id,
+                conversation_id=self.conversation_id
+            )
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
 
         self.add_spacer()
