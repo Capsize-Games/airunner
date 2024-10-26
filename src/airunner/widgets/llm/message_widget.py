@@ -1,12 +1,12 @@
-from airunner.data.models.settings_models import Message, Conversation
+from airunner.data.models.settings_models import Message
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.message_ui import Ui_message
 
-from PySide6.QtGui import QTextCursor, QFontDatabase, QFont
+from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit, QApplication, QWidget
 from PySide6.QtGui import QFontMetrics
-from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer
+from PySide6.QtCore import Qt, QSize, Slot, QEvent
 from PySide6.QtCore import Signal
 
 

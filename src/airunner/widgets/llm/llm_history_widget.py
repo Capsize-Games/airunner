@@ -43,6 +43,8 @@ class LLMHistoryWidget(BaseWidget):
             self.ui.scrollAreaWidgetContents.setLayout(layout)
 
         for conversation in conversations:
+            if conversation.title == "":
+                continue
             llm_history_item_widget = LLMHistoryItemWidget(
                 conversation=conversation
             )

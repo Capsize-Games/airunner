@@ -103,22 +103,6 @@ class Ui_bot_preferences(object):
 
         self.horizontalLayout.addLayout(self.verticalLayout_6)
 
-        self.verticalLayout_5 = QVBoxLayout()
-        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
-        self.label_3 = QLabel(self.names_groupbox)
-        self.label_3.setObjectName(u"label_3")
-        self.label_3.setFont(font)
-
-        self.verticalLayout_5.addWidget(self.label_3)
-
-        self.username = QLineEdit(self.names_groupbox)
-        self.username.setObjectName(u"username")
-
-        self.verticalLayout_5.addWidget(self.username)
-
-
-        self.horizontalLayout.addLayout(self.verticalLayout_5)
-
 
         self.gridLayout.addWidget(self.names_groupbox, 3, 0, 1, 1)
 
@@ -213,7 +197,6 @@ class Ui_bot_preferences(object):
 
 
         self.retranslateUi(bot_preferences)
-        self.username.textChanged.connect(bot_preferences.username_changed)
         self.botname.textChanged.connect(bot_preferences.botname_changed)
         self.bot_personality.textChanged.connect(bot_preferences.bot_personality_changed)
         self.names_groupbox.toggled.connect(bot_preferences.toggle_use_names)
@@ -242,9 +225,6 @@ class Ui_bot_preferences(object):
         self.label.setText(QCoreApplication.translate("bot_preferences", u"Assistant name", None))
         self.botname.setText(QCoreApplication.translate("bot_preferences", u"AI Runner", None))
         self.botname.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"Bot name", None))
-        self.label_3.setText(QCoreApplication.translate("bot_preferences", u"User name", None))
-        self.username.setText(QCoreApplication.translate("bot_preferences", u"User", None))
-        self.username.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"User name", None))
         self.guardrails_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Guardrails", None))
         self.guardrails_prompt.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"The guardrails prompt is used to moderate results.", None))
         self.groupBox.setTitle(QCoreApplication.translate("bot_preferences", u"Existing Agents", None))
