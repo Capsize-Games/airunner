@@ -11,7 +11,7 @@ from airunner.data.models.settings_models import Chatbot, AIModels, Schedulers, 
     GeneratorSettings, WindowSettings, ApplicationSettings, ActiveGridSettings, ControlnetSettings, \
     ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings, \
     LLMGeneratorSettings, TTSSettings, SpeechT5Settings, EspeakSettings, STTSettings, BrushSettings, GridSettings, \
-    MemorySettings, Message, Conversation, Summary, ImageFilterValue, TargetFiles, WhisperSettings, Base
+    MemorySettings, Message, Conversation, Summary, ImageFilterValue, TargetFiles, WhisperSettings, Base, User
 from airunner.enums import SignalCode
 from airunner.utils.convert_binary_to_image import convert_binary_to_image
 
@@ -270,6 +270,10 @@ class SettingsMixin:
         return self.get_chatbot_by_id(
             self.llm_generator_settings.current_chatbot
         )
+
+    @property
+    def user(self) -> Type[User]:
+        return self.session.query(User).first()
 
     @property
     def window_settings(self):
@@ -711,6 +715,13 @@ class SettingsMixin:
         return chatbot
 
     def create_conversation(self):
+        # find conversation which has no title, bot_mood or messages
+        conversation = self.session.query(Conversation).filter_by(title="", bot_mood="").first()
+        if conversation:
+            # ensure there are no messages in the conversation
+            message = self.session.query(Message).filter_by(conversation_id=conversation.id).first()
+            if message is None:
+                return conversation
         conversation = Conversation(
             timestamp=datetime.datetime.now(datetime.timezone.utc),
             title=""
