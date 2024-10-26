@@ -45,7 +45,7 @@ from airunner.settings import (
     VULNERABILITY_REPORT_LINK
 )
 from airunner.styles_mixin import StylesMixin
-from airunner.utils.convert_image_to_binary import convert_image_to_binary
+from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
 from airunner.utils.create_worker import create_worker
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
