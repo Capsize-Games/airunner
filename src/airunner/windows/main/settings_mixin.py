@@ -13,7 +13,7 @@ from airunner.data.models.settings_models import Chatbot, AIModels, Schedulers, 
     LLMGeneratorSettings, TTSSettings, SpeechT5Settings, EspeakSettings, STTSettings, BrushSettings, GridSettings, \
     MemorySettings, Message, Conversation, Summary, ImageFilterValue, TargetFiles, WhisperSettings, Base, User
 from airunner.enums import SignalCode
-from airunner.utils.convert_binary_to_image import convert_binary_to_image
+from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
 
 
 class SettingsMixinSharedInstance:
