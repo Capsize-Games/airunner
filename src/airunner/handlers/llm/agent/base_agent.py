@@ -130,7 +130,7 @@ class BaseAgent(
 
     @property
     def username(self) -> str:
-        return self.chatbot.username
+        return self.user.username
 
     @property
     def botname(self) -> str:
@@ -327,7 +327,7 @@ class BaseAgent(
         use_guardrails = self.chatbot.use_guardrails
         bot_mood = self.bot_mood
         bot_personality = self.chatbot.bot_personality
-        username = self.chatbot.username
+        username = self.user.username
         botname = self.chatbot.botname
         if use_system_instructions:
             system_instructions = self.chatbot.system_instructions

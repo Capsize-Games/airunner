@@ -4,7 +4,6 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 from airunner.data.models.settings_models import TargetFiles, Chatbot
 from airunner.enums import SignalCode
 from airunner.utils.open_file_path import open_file_path
-from airunner.utils.toggle_signals import toggle_signals
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.document_widget import DocumentWidget
 from airunner.widgets.llm.templates.bot_preferences_ui import Ui_bot_preferences
@@ -22,7 +21,6 @@ class BotPreferencesWidget(BaseWidget):
 
     def load_form_elements(self):
         elements = [
-            "username",
             "botname",
             "bot_personality",
             "names_groupbox",
@@ -33,8 +31,7 @@ class BotPreferencesWidget(BaseWidget):
             "guardrails_groupbox",
             "target_files",
         ]
-        toggle_signals(self.ui, elements)
-        self.ui.username.setText(self.chatbot.username)
+        self.toggle_signals(self.ui, elements)
         self.ui.botname.setText(self.chatbot.botname)
         self.ui.bot_personality.setPlainText(self.chatbot.bot_personality)
         self.ui.names_groupbox.setChecked(self.chatbot.assign_names)
@@ -44,10 +41,12 @@ class BotPreferencesWidget(BaseWidget):
         self.ui.guardrails_prompt.setPlainText(self.chatbot.guardrails_prompt)
         self.ui.guardrails_groupbox.setChecked(self.chatbot.use_guardrails)
         self.load_documents()
-        toggle_signals(self.ui, elements, False)
+        self.toggle_signals(self.ui, elements, False)
 
-    def username_changed(self, val):
-        self.update_chatbot("username", val)
+    @staticmethod
+    def toggle_signals(ui: object, elements: list, block: bool = True):
+        for element in elements:
+            getattr(ui, element).blockSignals(block)
 
     def botname_changed(self, val):
         self.update_chatbot("botname", val)
