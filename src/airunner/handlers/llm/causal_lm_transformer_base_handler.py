@@ -103,9 +103,7 @@ class CausalLMTransformerBaseHandler(
 
     @property
     def username(self):
-        if self.chatbot.assign_names:
-            return self.chatbot.username
-        return "User"
+        return self.user.username
 
     @property
     def botname(self):

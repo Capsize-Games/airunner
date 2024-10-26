@@ -345,7 +345,6 @@ class Chatbot(Base):
     __tablename__ = 'chatbots'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, default="Chatbot")
-    username = Column(String, default="User")
     botname = Column(String, default="Computer")
     use_personality = Column(Boolean, default=True)
     use_mood = Column(Boolean, default=True)
@@ -388,6 +387,12 @@ class Chatbot(Base):
     target_files = relationship("TargetFiles", back_populates="chatbot")
     target_directories = relationship("TargetDirectories", back_populates="chatbot")
     messages = relationship("Message", back_populates="chatbot")
+
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String, nullable=False)
 
 
 class TargetFiles(Base):

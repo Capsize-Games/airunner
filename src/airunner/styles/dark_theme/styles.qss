@@ -752,3 +752,7 @@ QScrollArea#chat_container #message_container QPushButton:hover {
     background-color: #000;
     border: 1px solid #1f1f1f;
 }
+
+#image {
+    border: 1px solid #1f1f1f;
+}
