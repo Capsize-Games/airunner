@@ -715,6 +715,13 @@ class SettingsMixin:
         return chatbot
 
     def create_conversation(self):
+        # find conversation which has no title, bot_mood or messages
+        conversation = self.session.query(Conversation).filter_by(title="", bot_mood="").first()
+        if conversation:
+            # ensure there are no messages in the conversation
+            message = self.session.query(Message).filter_by(conversation_id=conversation.id).first()
+            if message is None:
+                return conversation
         conversation = Conversation(
             timestamp=datetime.datetime.now(datetime.timezone.utc),
             title=""
