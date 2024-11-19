@@ -548,213 +548,214 @@ class BaseAgent(
         action: LLMActionType,
         **kwargs,
     ):
-        # Generate the response
-        self.logger.debug("Generating...")
+        with torch.no_grad():
+            # Generate the response
+            self.logger.debug("Generating...")
 
-        self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
+            self.emit_signal(SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL)
 
-        if self.do_interrupt:
-            self.do_interrupt = False
+            if self.do_interrupt:
+                self.do_interrupt = False
 
-        stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
-        data = self.prepare_generate_data(model_inputs, stopping_criteria)
+            stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
+            data = self.prepare_generate_data(model_inputs, stopping_criteria)
 
-        data["streamer"] = kwargs.get("streamer", self.streamer)
+            data["streamer"] = kwargs.get("streamer", self.streamer)
 
-        if action is not LLMActionType.PERFORM_RAG_SEARCH:
-            try:
-                self.response_worker.add_to_queue({
-                    "model": self.model,
-                    "kwargs": data,
-                    "prompt": self.prompt,
-                    "botname": self.botname,
-                })
-            except Exception as e:
-                self.logger.error("545: An error occurred in model.generate:")
-                self.logger.error(str(e))
-                self.logger.error(traceback.format_exc())
+            if action is not LLMActionType.PERFORM_RAG_SEARCH:
+                try:
+                    self.response_worker.add_to_queue({
+                        "model": self.model,
+                        "kwargs": data,
+                        "prompt": self.prompt,
+                        "botname": self.botname,
+                    })
+                except Exception as e:
+                    self.logger.error("545: An error occurred in model.generate:")
+                    self.logger.error(str(e))
+                    self.logger.error(traceback.format_exc())
 
-        # strip all new lines from rendered_template:
-        #self.rendered_template = self.rendered_template.replace("\n", " ")
-        eos_token = self.tokenizer.eos_token
-        bos_token = self.tokenizer.bos_token
-        if self.is_mistral:
-            self.rendered_template = bos_token + self.rendered_template
-        skip = True
-        streamed_template = ""
-        replaced = False
-        is_end_of_message = False
-        is_first_message = True
-
-        if action == LLMActionType.GENERATE_IMAGE:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                dict(
-                    message="Generating image prompt.\n",
-                    is_first_message=is_first_message,
-                    is_end_of_message=False,
-                    name=self.botname,
-                    action=LLMActionType.CHAT
-                )
-            )
-            is_first_message = False
-
-        if action in (
-            LLMActionType.CHAT,
-            LLMActionType.GENERATE_IMAGE,
-            LLMActionType.UPDATE_MOOD,
-            LLMActionType.SUMMARIZE,
-            LLMActionType.APPLICATION_COMMAND
-        ):
-            for new_text in self.streamer:
-                # strip all newlines from new_text
-                streamed_template += new_text
-                if self.is_mistral:
-                    streamed_template = streamed_template.replace(f"{bos_token} [INST]", f"{bos_token}[INST]")
-                    streamed_template = streamed_template.replace("  [INST]", " [INST]")
-                # iterate over every character in rendered_template and
-                # check if we have the same character in streamed_template
-                if not replaced:
-                    for i, char in enumerate(self.rendered_template):
-                        try:
-                            if char == streamed_template[i]:
-                                skip = False
-                            else:
-                                skip = True
-                                break
-                        except IndexError:
-                            skip = True
-                            break
-                if skip:
-                    continue
-                elif not replaced:
-                    replaced = True
-                    streamed_template = streamed_template.replace(self.rendered_template, "")
-                else:
-                    if eos_token in new_text:
-                        streamed_template = streamed_template.replace(eos_token, "")
-                        new_text = new_text.replace(eos_token, "")
-                        is_end_of_message = True
-                    # strip botname from new_text
-                    new_text = new_text.replace(f"{self.botname}:", "")
-                    if action in (
-                        LLMActionType.CHAT,
-                        LLMActionType.PERFORM_RAG_SEARCH,
-                        LLMActionType.GENERATE_IMAGE
-                    ):
-                        self.emit_signal(
-                            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                            dict(
-                                message=new_text,
-                                is_first_message=is_first_message,
-                                is_end_of_message=is_end_of_message,
-                                name=self.botname,
-                                action=action
-                            )
-                        )
-                    else:
-                        self.emit_signal(
-                            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                            dict(
-                                message="",
-                                is_first_message=is_first_message,
-                                is_end_of_message=is_end_of_message,
-                                name=self.botname,
-                                action=action
-                            )
-                        )
-                    is_first_message = False
-        elif action is LLMActionType.PERFORM_RAG_SEARCH:
+            # strip all new lines from rendered_template:
+            #self.rendered_template = self.rendered_template.replace("\n", " ")
+            eos_token = self.tokenizer.eos_token
+            bos_token = self.tokenizer.bos_token
+            if self.is_mistral:
+                self.rendered_template = bos_token + self.rendered_template
+            skip = True
             streamed_template = ""
-            data = dict(
-                **self.generator_settings,
-                stopping_criteria=[stopping_criteria]
-            )
-            data.update(self.override_parameters)
-            self.llm.generate_kwargs = data
-            response = self.chat_engine.stream_chat(
-                message=self.prompt,
-                system_prompt=self.rendered_template
-            )
-            is_first_message = True
+            replaced = False
             is_end_of_message = False
-            for new_text in response.response_gen:
-                streamed_template += new_text
+            is_first_message = True
 
+            if action == LLMActionType.GENERATE_IMAGE:
                 self.emit_signal(
                     SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                     dict(
-                        message=" " +new_text,
+                        message="Generating image prompt.\n",
                         is_first_message=is_first_message,
-                        is_end_of_message=is_end_of_message,
+                        is_end_of_message=False,
+                        name=self.botname,
+                        action=LLMActionType.CHAT
+                    )
+                )
+                is_first_message = False
+
+            if action in (
+                LLMActionType.CHAT,
+                LLMActionType.GENERATE_IMAGE,
+                LLMActionType.UPDATE_MOOD,
+                LLMActionType.SUMMARIZE,
+                LLMActionType.APPLICATION_COMMAND
+            ):
+                for new_text in self.streamer:
+                    # strip all newlines from new_text
+                    streamed_template += new_text
+                    if self.is_mistral:
+                        streamed_template = streamed_template.replace(f"{bos_token} [INST]", f"{bos_token}[INST]")
+                        streamed_template = streamed_template.replace("  [INST]", " [INST]")
+                    # iterate over every character in rendered_template and
+                    # check if we have the same character in streamed_template
+                    if not replaced:
+                        for i, char in enumerate(self.rendered_template):
+                            try:
+                                if char == streamed_template[i]:
+                                    skip = False
+                                else:
+                                    skip = True
+                                    break
+                            except IndexError:
+                                skip = True
+                                break
+                    if skip:
+                        continue
+                    elif not replaced:
+                        replaced = True
+                        streamed_template = streamed_template.replace(self.rendered_template, "")
+                    else:
+                        if eos_token in new_text:
+                            streamed_template = streamed_template.replace(eos_token, "")
+                            new_text = new_text.replace(eos_token, "")
+                            is_end_of_message = True
+                        # strip botname from new_text
+                        new_text = new_text.replace(f"{self.botname}:", "")
+                        if action in (
+                            LLMActionType.CHAT,
+                            LLMActionType.PERFORM_RAG_SEARCH,
+                            LLMActionType.GENERATE_IMAGE
+                        ):
+                            self.emit_signal(
+                                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                                dict(
+                                    message=new_text,
+                                    is_first_message=is_first_message,
+                                    is_end_of_message=is_end_of_message,
+                                    name=self.botname,
+                                    action=action
+                                )
+                            )
+                        else:
+                            self.emit_signal(
+                                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                                dict(
+                                    message="",
+                                    is_first_message=is_first_message,
+                                    is_end_of_message=is_end_of_message,
+                                    name=self.botname,
+                                    action=action
+                                )
+                            )
+                        is_first_message = False
+            elif action is LLMActionType.PERFORM_RAG_SEARCH:
+                streamed_template = ""
+                data = dict(
+                    **self.generator_settings,
+                    stopping_criteria=[stopping_criteria]
+                )
+                data.update(self.override_parameters)
+                self.llm.generate_kwargs = data
+                response = self.chat_engine.stream_chat(
+                    message=self.prompt,
+                    system_prompt=self.rendered_template
+                )
+                is_first_message = True
+                is_end_of_message = False
+                for new_text in response.response_gen:
+                    streamed_template += new_text
+
+                    self.emit_signal(
+                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                        dict(
+                            message=" " +new_text,
+                            is_first_message=is_first_message,
+                            is_end_of_message=is_end_of_message,
+                            name=self.botname,
+                            action=action
+                        )
+                    )
+                    is_first_message = False
+                self.emit_signal(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    dict(
+                        message="",
+                        is_first_message=False,
+                        is_end_of_message=True,
                         name=self.botname,
                         action=action
                     )
                 )
-                is_first_message = False
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                dict(
-                    message="",
-                    is_first_message=False,
-                    is_end_of_message=True,
-                    name=self.botname,
-                    action=action
-                )
-            )
 
-        if streamed_template is not None:
-            if action in (
-                LLMActionType.CHAT,
-                LLMActionType.PERFORM_RAG_SEARCH,
-            ):
-                self.add_message_to_history(
-                    streamed_template,
-                    LLMChatRole.ASSISTANT
-                )
+            if streamed_template is not None:
+                if action in (
+                    LLMActionType.CHAT,
+                    LLMActionType.PERFORM_RAG_SEARCH,
+                ):
+                    self.add_message_to_history(
+                        streamed_template,
+                        LLMChatRole.ASSISTANT
+                    )
 
-            elif action is LLMActionType.UPDATE_MOOD:
-                self.bot_mood = streamed_template
-                return self.run(
-                    prompt=self.prompt,
-                    action=LLMActionType.CHAT,
-                    **kwargs,
-                )
-
-            elif action is LLMActionType.SUMMARIZE:
-                self._update_conversation_title(streamed_template)
-                return self.run(
-                    prompt=self.prompt,
-                    action=self._requested_action,
-                    **kwargs,
-                )
-
-            elif action is LLMActionType.GENERATE_IMAGE:
-                self.emit_signal(
-                    SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
-                    {
-                        "message": streamed_template,
-                        "type": "photo"
-                    }
-                )
-            elif action is LLMActionType.APPLICATION_COMMAND:
-                index = ''.join(c for c in streamed_template if c.isdigit())
-                try:
-                    index = int(index)
-                except ValueError:
-                    index = 0
-
-                try:
-                    action = self.available_actions[index]
-                except KeyError:
-                    action = LLMActionType.CHAT
-
-                if action is not None:
+                elif action is LLMActionType.UPDATE_MOOD:
+                    self.bot_mood = streamed_template
                     return self.run(
                         prompt=self.prompt,
-                        action=action,
+                        action=LLMActionType.CHAT,
+                        **kwargs,
                     )
-        return streamed_template
+
+                elif action is LLMActionType.SUMMARIZE:
+                    self._update_conversation_title(streamed_template)
+                    return self.run(
+                        prompt=self.prompt,
+                        action=self._requested_action,
+                        **kwargs,
+                    )
+
+                elif action is LLMActionType.GENERATE_IMAGE:
+                    self.emit_signal(
+                        SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
+                        {
+                            "message": streamed_template,
+                            "type": "photo"
+                        }
+                    )
+                elif action is LLMActionType.APPLICATION_COMMAND:
+                    index = ''.join(c for c in streamed_template if c.isdigit())
+                    try:
+                        index = int(index)
+                    except ValueError:
+                        index = 0
+
+                    try:
+                        action = self.available_actions[index]
+                    except KeyError:
+                        action = LLMActionType.CHAT
+
+                    if action is not None:
+                        return self.run(
+                            prompt=self.prompt,
+                            action=action,
+                        )
+            return streamed_template
 
     def get_db_connection(self):
         return sqlite3.connect('airunner.db')

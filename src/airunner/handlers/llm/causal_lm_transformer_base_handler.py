@@ -366,11 +366,10 @@ class CausalLMTransformerBaseHandler(
             if config:
                 params["quantization_config"] = config
         try:
-            with torch.no_grad():
-                self._model = self.auto_class_.from_pretrained(
-                    path,
-                    **params
-                )
+            self._model = self.auto_class_.from_pretrained(
+                path,
+                **params
+            )
         except Exception as e:
             self.logger.error(f"Error loading model: {e}")
             self._model = None
