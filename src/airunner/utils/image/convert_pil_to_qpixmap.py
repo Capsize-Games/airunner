@@ -1,6 +1,6 @@
 from PIL.ImageQt import QPixmap
 
-from airunner.utils.convert_pil_to_qimage import pil_to_qimage
+from airunner.utils.image.convert_pil_to_qimage import pil_to_qimage
 
 
 def convert_pil_to_qpixmap(image):

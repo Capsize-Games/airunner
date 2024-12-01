@@ -151,7 +151,7 @@ class StableDiffusionSettingsWidget(
             self._load_pipelines()
             self.load_versions()
             self.load_models()
-            self.load_schedulers()
+            self.load_schedulers_dropdown()
         except RuntimeError as e:
             self.logger.error(f"Error loading models: {e}")
 
@@ -190,7 +190,7 @@ class StableDiffusionSettingsWidget(
                 self.ui.model.setCurrentIndex(index)
         self.ui.model.blockSignals(False)
 
-    def load_schedulers(self):
+    def load_schedulers_dropdown(self):
         self.ui.scheduler.blockSignals(True)
         scheduler_names = [s.display_name for s in self.schedulers]
         self.ui.scheduler.clear()

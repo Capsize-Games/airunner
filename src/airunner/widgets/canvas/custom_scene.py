@@ -14,10 +14,10 @@ from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, EngineR
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils import platform_info
-from airunner.utils.export_image import export_image
+from airunner.utils.image.export_image import export_image
 from airunner.utils.snap_to_grid import snap_to_grid
-from airunner.utils.convert_binary_to_image import convert_binary_to_image
-from airunner.utils.convert_image_to_binary import convert_image_to_binary
+from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
+from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.windows.main.settings_mixin import SettingsMixin
 
