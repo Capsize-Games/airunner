@@ -7,10 +7,9 @@ from PIL.ImageQt import ImageQt
 from PySide6.QtGui import QPixmap, QImage, Qt, QPen
 from PySide6.QtWidgets import QGraphicsScene
 
-from airunner.enums import SignalCode
 from airunner.settings import VALID_IMAGE_FILES
-from airunner.utils.convert_binary_to_image import convert_binary_to_image
-from airunner.utils.convert_image_to_binary import convert_image_to_binary
+from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
+from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.input_image_ui import Ui_input_image
 
