@@ -5,6 +5,8 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.installation_settings.install_failed_page import InstallFailedPage
 from airunner.windows.setup_wizard.installation_settings.install_page import InstallPage
 from airunner.windows.setup_wizard.installation_settings.install_success_page import InstallSuccessPage
+from airunner.windows.setup_wizard.path_settings.path_settings import PathSettings
+
 
 class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
     """
@@ -51,8 +53,9 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
         ):
             create_airunner_paths(self.path_settings)
 
-            self.setPage(0, InstallPage(self))
-            self.setPage(1, InstallSuccessPage(self))
+            self.setPage(0, PathSettings(self))
+            self.setPage(1, InstallPage(self))
+            self.setPage(2, InstallSuccessPage(self))
             failed = False
 
         if failed:
