@@ -9,6 +9,13 @@ config = context.config
 db_path = os.path.expanduser("~/.local/share/airunner/data/airunner.db")
 config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
 
+# check if db file exists
+print("*"*100)
+if not os.path.exists(db_path):
+    print(f"Database file not found at {db_path}")
+else:
+    print(f"Database file found at {db_path}")
+
 # Import your models here
 from airunner.data.models.settings_models import (
     Conversation, Message, Summary,
