@@ -77,6 +77,8 @@ class AppInstaller(
         signal.signal(signal.SIGINT, self.signal_handler)
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
         self.app = QApplication.instance()
+        if self.app is None:
+            self.app = QApplication([])
 
         self.wizard = SetupWizardWindow()
         self.wizard.exec()

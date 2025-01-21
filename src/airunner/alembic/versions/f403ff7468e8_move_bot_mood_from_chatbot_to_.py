@@ -10,6 +10,8 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import sqlite
+from sqlalchemy.engine.reflection import Inspector
+from sqlalchemy.exc import OperationalError
 
 # revision identifiers, used by Alembic.
 revision: str = 'f403ff7468e8'
@@ -18,25 +20,18 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade():
-    try:
-        # Add bot_mood column to conversation table
+    bind = op.get_bind()
+    inspector = Inspector.from_engine(bind)
+    columns = [col['name'] for col in inspector.get_columns('conversations')]
+
+    if 'bot_mood' not in columns:
         op.add_column('conversations', sa.Column('bot_mood', sa.Text(), nullable=True))
-    except sqlite.DatabaseError:
-        pass
 
     try:
-        # Remove bot_mood column from chatbot table
         op.drop_column('chatbots', 'bot_mood')
-    except sqlite.DatabaseError:
-        pass
+    except OperationalError as e:
+        print(f"Error dropping column 'bot_mood' from 'chatbots': {e}")
 
 def downgrade():
-    try:
-        op.add_column('chatbots', sa.Column('bot_mood', sa.Text(), nullable=True))
-    except sqlite.DatabaseError:
-        pass
-
-    try:
-        op.drop_column('conversations', 'bot_mood')
-    except sqlite.DatabaseError:
-        pass
+    op.add_column('chatbots', sa.Column('bot_mood', sa.Text(), nullable=True))
+    op.drop_column('conversations', 'bot_mood')
