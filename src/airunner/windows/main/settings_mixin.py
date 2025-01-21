@@ -273,7 +273,13 @@ class SettingsMixin:
 
     @property
     def user(self) -> Type[User]:
-        return self.session.query(User).first()
+        user = self.session.query(User).first()
+        if user is None:
+            user = User()
+            user.username = "User"
+            self.session.add(user)
+            self.session.commit()
+        return user
 
     @property
     def window_settings(self):
