@@ -54,9 +54,6 @@ setup(
         "inflect==7.3.1",
         "pycountry==24.6.1",
 
-        # Security
-        "facehuggershield==0.1.11",
-
         # Llama index
         "llama-index==0.11.7",
         "llama-index-readers-file==0.2.0",
