@@ -64,7 +64,7 @@ def main():
     engine = create_engine("sqlite:///" + os.path.join(base_dir, "airunner.db"))
     session = scoped_session(sessionmaker(bind=engine))
     application_settings = session.query(ApplicationSettings).first()
-    if application_settings.run_setup_wizard or True:
+    if application_settings.run_setup_wizard:
         from airunner.app_installer import AppInstaller
         AppInstaller()
     else:
