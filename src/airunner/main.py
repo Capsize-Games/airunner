@@ -68,7 +68,7 @@ def main():
         from airunner.app_installer import AppInstaller
         AppInstaller()
     else:
-        App(defendatron=facehuggershield.huggingface.defendatron)
+        App()
 
 
 if __name__ == "__main__":
