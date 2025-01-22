@@ -29,6 +29,8 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
             QWizard.WizardButton.FinishButton
         ).clicked.connect(self.save_settings)
 
+        self.button(QWizard.WizardButton.NextButton).clicked.connect(self.next_button_clicked)
+
         self.init_pages()
 
     def save_settings(self):
@@ -39,6 +41,16 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
         """
         self.update_application_settings("run_setup_wizard", False)
         self.update_application_settings("download_wizard_completed", True)
+
+    def next_button_clicked(self):
+        current_page = self.currentPage()
+        print("NEXT BUTTON CLICKED", current_page)
+        if hasattr(current_page, 'next'):
+            print("PAGE HAS NEXT")
+            current_page.next()
+        if hasattr(current_page, "start"):
+            print("PAGE HAS RUN")
+            current_page.start()
 
     def init_pages(self):
         """
@@ -51,8 +63,6 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
             self.application_settings.stable_diffusion_agreement_checked and
             self.application_settings.airunner_agreement_checked
         ):
-            create_airunner_paths(self.path_settings)
-
             self.setPage(0, PathSettings(self))
             self.setPage(1, InstallPage(self))
             self.setPage(2, InstallSuccessPage(self))

@@ -10,18 +10,18 @@ Do not change the order of the imports.
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
-import facehuggershield
+# import facehuggershield
 from airunner.settings import NLTK_DOWNLOAD_DIR
 import os
 base_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
-facehuggershield.huggingface.activate(
-    show_stdout=True,
-    darklock_os_whitelisted_directories=[
-        base_path,
-        NLTK_DOWNLOAD_DIR,
-        "/tmp"
-    ]
-)
+# facehuggershield.huggingface.activate(
+#     show_stdout=True,
+#     darklock_os_whitelisted_directories=[
+#         base_path,
+#         NLTK_DOWNLOAD_DIR,
+#         "/tmp"
+#     ]
+# )
 
 ################################################################
 # Set the environment variable for PyTorch to use expandable
@@ -64,7 +64,7 @@ def main():
     engine = create_engine("sqlite:///" + os.path.join(base_dir, "airunner.db"))
     session = scoped_session(sessionmaker(bind=engine))
     application_settings = session.query(ApplicationSettings).first()
-    if application_settings.run_setup_wizard:
+    if application_settings.run_setup_wizard or True:
         from airunner.app_installer import AppInstaller
         AppInstaller()
     else:
