@@ -17,6 +17,8 @@ from airunner.utils.network.huggingface_downloader import HuggingfaceDownloader
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.windows.setup_wizard.installation_settings.templates.install_page_ui import Ui_install_page
+from airunner.settings import DEFAULT_PATH_SETTINGS
+from airunner.utils.os.create_airunner_directory import create_airunner_paths
 
 nltk.data.path.append(NLTK_DOWNLOAD_DIR)
 
@@ -72,6 +74,7 @@ class InstallWorker(
             lambda: self.file_download_finished.emit()
         )
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.download_finished)
+        self.register(SignalCode.PATH_SET, self.path_set)
 
     def download_stable_diffusion(self):
         self.parent.on_set_downloading_status_label({
@@ -328,6 +331,10 @@ class InstallWorker(
         self.total_models_in_current_step -= 1
         if self.total_models_in_current_step <= 0:
             self.set_page()
+    
+    @Slot()
+    def path_set(self):
+        self.set_page()
 
     def run(self):
         if (
@@ -343,48 +350,50 @@ class InstallWorker(
             self.application_settings.stable_diffusion_agreement_checked and
             self.current_step == -1
         ):
+            """
+            Create the airunner paths
+            """
+            create_airunner_paths(self.path_settings)
+            self.update_application_settings("paths_initialized", True)
             self.parent.on_set_downloading_status_label({
                 "label": f"Downloading Stable Diffusion"
             })
-            self.current_step = 0
+            self.current_step = 1
             self.download_stable_diffusion()
         elif (
             self.application_settings.stable_diffusion_agreement_checked and
-            self.current_step == 0
+            self.current_step == 1
         ):
             self.parent.on_set_downloading_status_label({
                 "label": f"Downloading Controlnet"
             })
-            self.current_step = 1
+            self.current_step = 2
             self.download_controlnet()
         elif (
             self.application_settings.stable_diffusion_agreement_checked and
-            self.current_step < 2
+            self.current_step == 2
         ):
-            self.current_step = 2
+            self.current_step = 3
             self.download_controlnet_processors()
-        elif self.current_step < 3:
+        elif self.current_step == 3:
             self.parent.on_set_downloading_status_label({
                 "label": f"Downloading LLM"
             })
-            self.current_step = 3
+            self.current_step = 4
             self.download_llms()
-        elif self.current_step < 4:
+        elif self.current_step == 4:
             self.parent.on_set_downloading_status_label({
                 "label": f"Downloading Text-to-Speech"
             })
-            self.current_step = 4
+            self.current_step = 5
             self.download_tts()
-        elif self.current_step < 5:
+        elif self.current_step == 5:
             self.parent.on_set_downloading_status_label({
                 "label": f"Downloading Speech-to-Text"
             })
-            self.current_step = 5
-            self.download_stt()
-        elif self.current_step < 6:
             self.current_step = 6
             self.download_nltk_files()
-        else:
+        elif self.current_step == 6:
              self.hf_downloader.download_model(
                  requested_path="",
                  requested_file_name="",
@@ -430,6 +439,8 @@ class InstallPage(BaseWizard):
         self.thread = QThread()
         self.worker = InstallWorker(self)
         self.worker.moveToThread(self.thread)
+    
+    def start(self):
         self.thread.started.connect(self.worker.run)
         self.thread.start()
 

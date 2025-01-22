@@ -5,7 +5,7 @@ import requests
 from PySide6.QtCore import QObject, Signal
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-from facehuggershield.huggingface.settings import DEFAULT_HF_ENDPOINT
+DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 

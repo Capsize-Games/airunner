@@ -13,8 +13,8 @@ class BaseWizard(
 
     def __init__(self, parent: QWizard):
         MediatorMixin.__init__(self)
-        
         super(BaseWizard, self).__init__()
+        
         if self.class_name_:
             self.ui = self.class_name_()
             self.ui.setupUi(self)

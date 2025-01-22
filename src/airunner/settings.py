@@ -114,40 +114,46 @@ DEFAULT_CHATBOT_GUARDRAILS_PROMPT = (
 )
 BASE_PATH = "~/.local/share/airunner"
 DEFAULT_PATH_SETTINGS = {
-    "base_path": BASE_PATH,
     "documents_path": os.path.expanduser(
         os.path.join(
-            BASE_PATH,
             "text/other",
             "documents"
         )
     ),
     "ebook_path": os.path.expanduser(
         os.path.join(
-            BASE_PATH,
             "text/other",
             "ebooks"
         )
     ),
     "image_path": os.path.expanduser(
         os.path.join(
-            BASE_PATH,
             "art/other",
             "images"
         )
     ),
     "llama_index_path": os.path.expanduser(
         os.path.join(
-            BASE_PATH,
             "text/rag",
             "db"
         )
     ),
     "webpages_path": os.path.expanduser(
         os.path.join(
-            BASE_PATH,
             "text/other",
             "webpages"
+        )
+    ),
+    "stt_model_path": os.path.expanduser(
+        os.path.join(
+            "text/models/stt",
+            "models"
+        )
+    ),
+    "tts_model_path": os.path.expanduser(
+        os.path.join(
+            "text/models/tts",
+            "models"
         )
     ),
 }
