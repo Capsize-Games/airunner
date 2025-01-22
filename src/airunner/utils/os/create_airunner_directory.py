@@ -26,6 +26,8 @@ def create_airunner_paths(path_settings: PathSettings):
         "image_path",
         "llama_index_path",
         "webpages_path",
+        "stt_model_path",
+        "tts_model_path",
     ):
         path = getattr(path_settings, attr)
         # Path sanitization
