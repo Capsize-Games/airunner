@@ -1,6 +1,6 @@
 from typing import Optional
 
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QTimer
 
 from airunner.cursors.circle_brush import CircleCursor
 from airunner.enums import SignalCode, CanvasToolName
@@ -81,7 +81,8 @@ class CanvasWidget(
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.do_draw(force_draw=True)
+        # Delay the initial draw slightly to ensure viewport is properly sized
+        QTimer.singleShot(100, lambda: self.do_draw(force_draw=True))
 
     def do_draw(
         self,
