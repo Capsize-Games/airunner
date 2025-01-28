@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.1.7",
+    version="3.1.8",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -16,12 +16,12 @@ setup(
     python_requires=">=3.10.0",
     install_requires=[
         # Core application dependencies
-        "accelerate==0.33.0",
-        "huggingface-hub==0.23.5",
+        "accelerate==1.3.0",
+        "huggingface-hub==0.27.1",
         "PySide6==6.7.0",
         "PySide6_Addons==6.7.0",
         "PySide6_Essentials==6.7.0",
-        "tokenizers==0.19.1",
+        "tokenizers==0.21.0",
         "torch==2.4.1",
         "torchaudio==2.4.1",
         "torchvision==0.19.1",
@@ -33,10 +33,10 @@ setup(
         "alembic==1.13.3",
 
         # LLM Dependencies
-        "transformers==4.43.4",
+        "transformers==4.48.1",
         "auto-gptq==0.7.1",
-        "bitsandbytes==0.43.3",
-        "datasets==2.21.0",
+        "bitsandbytes==0.45.1",
+        "datasets==3.2.0",
         "sentence_transformers==3.0.1",
         "sounddevice==0.5.0",  # Required for tts and stt
         "pyttsx3==2.91",  # Required for tts
@@ -44,8 +44,9 @@ setup(
         "setuptools==75.1.0",
 
         # Stable Diffusion Dependencies
-        "diffusers==0.30.1",
+        "diffusers==0.32.2",
         "controlnet_aux==0.0.9",
+        "mediapipe==0.10.20",
         "safetensors==0.4.4",
         "compel==2.0.3",
         "tomesd==0.1.3",
