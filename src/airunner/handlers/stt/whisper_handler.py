@@ -105,17 +105,17 @@ class WhisperHandler(BaseHandler):
         self.change_model_status(ModelType.STT, ModelStatus.UNLOADED)
 
     def _load_model(self):
-        self.logger.debug(f"Loading model from {self.model_path}")
+        self.logger.debug(f"Loading model from {self.model_path} to device {self.device}")
         device = self.device
         try:
             self._model = WhisperForConditionalGeneration.from_pretrained(
                 self.model_path,
                 local_files_only=True,
                 torch_dtype=self.dtype,
-                device_map=device,
                 use_safetensors=True,
                 force_download=False
             )
+            self._model.to(device)
         except Exception as e:
             self.logger.error(f"Failed to load model: {e}")
             return None
