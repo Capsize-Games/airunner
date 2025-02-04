@@ -31,7 +31,7 @@ class Ui_tool_tab_widget(object):
     def setupUi(self, tool_tab_widget):
         if not tool_tab_widget.objectName():
             tool_tab_widget.setObjectName(u"tool_tab_widget")
-        tool_tab_widget.resize(654, 868)
+        tool_tab_widget.resize(654, 785)
         self.gridLayout_3 = QGridLayout(tool_tab_widget)
         self.gridLayout_3.setSpacing(0)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
@@ -72,10 +72,6 @@ class Ui_tool_tab_widget(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.image_to_image.sizePolicy().hasHeightForWidth())
         self.image_to_image.setSizePolicy(sizePolicy)
-        self.gridLayout_10 = QGridLayout(self.image_to_image)
-        self.gridLayout_10.setSpacing(0)
-        self.gridLayout_10.setObjectName(u"gridLayout_10")
-        self.gridLayout_10.setContentsMargins(10, 10, 10, 10)
 
         self.gridLayout_6.addWidget(self.image_to_image, 0, 0, 1, 1)
 
@@ -90,10 +86,6 @@ class Ui_tool_tab_widget(object):
         self.controlnet_image.setObjectName(u"controlnet_image")
         sizePolicy.setHeightForWidth(self.controlnet_image.sizePolicy().hasHeightForWidth())
         self.controlnet_image.setSizePolicy(sizePolicy)
-        self.gridLayout_9 = QGridLayout(self.controlnet_image)
-        self.gridLayout_9.setSpacing(0)
-        self.gridLayout_9.setObjectName(u"gridLayout_9")
-        self.gridLayout_9.setContentsMargins(10, 10, 10, 10)
 
         self.gridLayout_11.addWidget(self.controlnet_image, 0, 0, 1, 1)
 
