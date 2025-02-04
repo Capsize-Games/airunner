@@ -248,6 +248,8 @@ class SignalCode(Enum):
     UNLOAD_NON_SD_MODELS = enum.auto()
     LOAD_NON_SD_MODELS = enum.auto()
 
+    SD_PIPELINE_LOADED_SIGNAL = enum.auto()
+
 class EngineResponseCode(Enum):
     STATUS = 100
     ERROR = 200
