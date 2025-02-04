@@ -690,8 +690,10 @@ class MainWindow(
 
     def on_load_non_sd_models(self, data:dict=None):
         self._llm_generate_worker.load()
-        self._tts_generator_worker.load()
-        self._stt_audio_processor_worker.load()
+        if self.application_settings.tts_enabled:
+            self._tts_generator_worker.load()
+        if self.application_settings.stt_enabled:
+            self._stt_audio_processor_worker.load()
         callback = data.get("callback", None)
         if callback:
             callback(data)
