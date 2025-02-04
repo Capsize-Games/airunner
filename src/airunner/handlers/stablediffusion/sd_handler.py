@@ -574,7 +574,24 @@ class SDHandler(BaseHandler):
         if self._pipe.__class__ is pipeline_class_:  # noqa
             return
         self.logger.debug(f"Swapping pipeline from {self._pipe.__class__} to {pipeline_class_}")
-        self._pipe = pipeline_class_.from_pipe(self._pipe)
+        try:
+            kwargs = {}
+            if pipeline_class_ in (
+                StableDiffusionControlNetPipeline,
+                StableDiffusionControlNetImg2ImgPipeline,
+                StableDiffusionControlNetInpaintPipeline,
+                StableDiffusionXLControlNetPipeline,
+                StableDiffusionXLControlNetImg2ImgPipeline,
+                StableDiffusionXLControlNetInpaintPipeline
+            ):
+                kwargs.update({
+                    "controlnet": self._controlnet
+                })
+            self._pipe = pipeline_class_.from_pipe(self._pipe, **kwargs)
+        except Exception as e:
+            self.logger.error(f"Error swapping pipeline: {e}")
+        finally:
+            self._move_pipe_to_device()
 
     def _generate(self):
         self.logger.debug("Generating image")
@@ -942,7 +959,9 @@ class SDHandler(BaseHandler):
             self.logger.error(f"Failed to load model from {self.model_path}: {e}")
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
+        self._move_pipe_to_device()
 
+    def _move_pipe_to_device(self):
         if self._pipe is not None:
             try:
                 self._pipe.to(self._device)
