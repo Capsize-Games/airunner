@@ -5,6 +5,7 @@ from PySide6.QtCore import QObject, QThread, Slot, Signal
 from sqlalchemy import func
 
 from airunner.data.models.settings_models import AIModels, ControlnetModel
+from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
 from airunner.data.bootstrap.tiny_autoencoder import TINY_AUTOENCODER_FILES_SD, TINY_AUTOENCODER_FILES_SDXL
@@ -82,40 +83,37 @@ class InstallWorker(
             "label": "Downloading Stable Diffusion models..."
         })
 
-        
-        models = self.session.query(AIModels).filter(
-            AIModels.category == "stablediffusion",
-            AIModels.is_default == 1,
-            AIModels.version != "SDXL Turbo"
-        ).all()
-        
+        models = model_bootstrap_data        
 
         self.total_models_in_current_step += len(models)
         for model in models:
-            if model.name == "CompVis Safety Checker":
+            if model["name"] == "CompVis Safety Checker":
                 action_key = "safety_checker"
-                action = f"{model.pipeline_action}/{action_key}"
-            elif model.name == "OpenAI Feature Extractor":
+                action = f"{model['pipeline_action']}/{action_key}"
+            elif model["name"] == "OpenAI Feature Extractor":
                 action_key = "feature_extractor"
-                action = f"{model.pipeline_action}/{action_key}"
+                action = f"{model['pipeline_action']}/{action_key}"
             else:
-                action = model.pipeline_action
-                action_key = model.pipeline_action
-            files = SD_FILE_BOOTSTRAP_DATA[model.version][action_key]
+                action = model["pipeline_action"]
+                action_key = model["pipeline_action"]
+            try:
+                files = SD_FILE_BOOTSTRAP_DATA[model['version']][action_key]
+            except KeyError:
+                continue
             self.parent.total_steps += len(files)
             for filename in files:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
                         self.path_settings.base_path,
-                        model.model_type,
+                        model["model_type"],
                         "models",
-                        model.version,
+                        model["version"],
                         action
                     )
                 )
                 try:
                     self.hf_downloader.download_model(
-                        requested_path=model.path,
+                        requested_path=model["path"],
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
                         requested_callback=self.progress_updated.emit
