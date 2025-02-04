@@ -1513,13 +1513,15 @@ class SDHandler(BaseHandler):
         self._generator = None
 
     def _load_prompt_embeds(self):
+        if not self.use_compel:
+            if self._compel_proc is not None:
+                self._unload_compel()
+            return
+        
         if self._compel_proc is None:
             self.logger.debug("Compel proc is not loading - attempting to load")
             self._load_compel()
-        self.logger.debug("Loading prompt embeds")
-        if not self.use_compel:
-            return
-
+        
         prompt = self.prompt
         negative_prompt = self.negative_prompt
         second_prompt = self.second_prompt
@@ -1538,54 +1540,62 @@ class SDHandler(BaseHandler):
             self._current_negative_prompt_2 = second_negative_prompt
             self._unload_prompt_embeds()
 
-        pooled_prompt_embeds = None
-        negative_pooled_prompt_embeds = None
+        if (
+            self._prompt_embeds is None or 
+            self._negative_prompt_embeds is None or
+            self._pooled_prompt_embeds is None or
+            self._negative_pooled_prompt_embeds is None
+        ):
+            self.logger.debug("Loading prompt embeds")
 
-        if prompt != "" and second_prompt != "":
-            compel_prompt = f'("{prompt}", "{second_prompt}").and()'
-        elif prompt != "" and second_prompt == "":
-            compel_prompt = prompt
-        elif prompt == "" and second_prompt != "":
-            compel_prompt = second_prompt
-        else:
-            compel_prompt = ""
+            pooled_prompt_embeds = None
+            negative_pooled_prompt_embeds = None
 
-        if negative_prompt != "" and second_negative_prompt != "":
-            compel_negative_prompt = f'("{negative_prompt}", "{second_negative_prompt}").and()'
-        elif negative_prompt != "" and second_negative_prompt == "":
-            compel_negative_prompt = negative_prompt
-        elif negative_prompt == "" and second_negative_prompt != "":
-            compel_negative_prompt = second_negative_prompt
-        else:
-            compel_negative_prompt = ""
+            if prompt != "" and second_prompt != "":
+                compel_prompt = f'("{prompt}", "{second_prompt}").and()'
+            elif prompt != "" and second_prompt == "":
+                compel_prompt = prompt
+            elif prompt == "" and second_prompt != "":
+                compel_prompt = second_prompt
+            else:
+                compel_prompt = ""
 
-        if self.is_sd_xl or self.is_sd_xl_turbo:
-            prompt_embeds, pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
-            negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
-        else:
-            prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
-            negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
-        [
-            prompt_embeds,
-            negative_prompt_embeds
-        ] = self._compel_proc.pad_conditioning_tensors_to_same_length([
-            prompt_embeds,
-            negative_prompt_embeds
-        ])
+            if negative_prompt != "" and second_negative_prompt != "":
+                compel_negative_prompt = f'("{negative_prompt}", "{second_negative_prompt}").and()'
+            elif negative_prompt != "" and second_negative_prompt == "":
+                compel_negative_prompt = negative_prompt
+            elif negative_prompt == "" and second_negative_prompt != "":
+                compel_negative_prompt = second_negative_prompt
+            else:
+                compel_negative_prompt = ""
 
-        self._prompt_embeds = prompt_embeds
-        self._negative_prompt_embeds = negative_prompt_embeds
-        self._pooled_prompt_embeds = pooled_prompt_embeds
-        self._negative_pooled_prompt_embeds = negative_pooled_prompt_embeds
+            if self.is_sd_xl or self.is_sd_xl_turbo:
+                prompt_embeds, pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
+                negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
+            else:
+                prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
+                negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
+            [
+                prompt_embeds,
+                negative_prompt_embeds
+            ] = self._compel_proc.pad_conditioning_tensors_to_same_length([
+                prompt_embeds,
+                negative_prompt_embeds
+            ])
 
-        if self._prompt_embeds is not None:
-            self._prompt_embeds.half().to(self._device)
-        if self._negative_prompt_embeds is not None:
-            self._negative_prompt_embeds.half().to(self._device)
-        if self._pooled_prompt_embeds is not None:
-            self._pooled_prompt_embeds.half().to(self._device)
-        if self._negative_pooled_prompt_embeds is not None:
-            self._negative_pooled_prompt_embeds.half().to(self._device)
+            self._prompt_embeds = prompt_embeds
+            self._negative_prompt_embeds = negative_prompt_embeds
+            self._pooled_prompt_embeds = pooled_prompt_embeds
+            self._negative_pooled_prompt_embeds = negative_pooled_prompt_embeds
+
+            if self._prompt_embeds is not None:
+                self._prompt_embeds.half().to(self._device)
+            if self._negative_prompt_embeds is not None:
+                self._negative_prompt_embeds.half().to(self._device)
+            if self._pooled_prompt_embeds is not None:
+                self._pooled_prompt_embeds.half().to(self._device)
+            if self._negative_pooled_prompt_embeds is not None:
+                self._negative_pooled_prompt_embeds.half().to(self._device)
 
     def _clear_memory_efficient_settings(self):
         self.logger.debug("Clearing memory efficient settings")
