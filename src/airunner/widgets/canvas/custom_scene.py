@@ -247,7 +247,7 @@ class CustomScene(
         
         if msg_box.clickedButton() == enable_cpu_offload_button:
             self.enable_cpu_offload_callback()
-    
+        
     def enable_cpu_offload_callback(self):
         self.update_memory_settings("enable_model_cpu_offload", True)
 

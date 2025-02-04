@@ -533,6 +533,7 @@ class MainWindow(
             (SignalCode.REFRESH_STYLESHEET_SIGNAL, self.on_theme_changed_signal),
             (SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal),
             (SignalCode.NAVIGATE_TO_URL, self.on_navigate_to_url),
+            (SignalCode.MISSING_REQUIRED_MODELS, self.display_missing_models_error)
         ):
             self.register(item[0], item[1])
 
@@ -1097,14 +1098,24 @@ class MainWindow(
         self._model_status[model] = status
         if model is ModelType.SD:
             self.ui.actionToggle_Stable_Diffusion.setDisabled(status is ModelStatus.LOADING)
+            if status is ModelStatus.FAILED:
+                self.ui.actionToggle_Stable_Diffusion.setChecked(False)
         elif model is ModelType.CONTROLNET:
             self.ui.actionToggle_Controlnet.setDisabled(status is ModelStatus.LOADING)
+            if status is ModelStatus.FAILED:
+                self.ui.actionToggle_Controlnet.setChecked(False)
         elif model is ModelType.LLM:
             self.ui.actionToggle_LLM.setDisabled(status is ModelStatus.LOADING)
+            if status is ModelStatus.FAILED:
+                self.ui.actionToggle_LLM.setChecked(False)
         elif model is ModelType.TTS:
             self.ui.actionToggle_Text_to_Speech.setDisabled(status is ModelStatus.LOADING)
+            if status is ModelStatus.FAILED:
+                self.ui.actionToggle_Text_to_Speech.setChecked(False)
         elif model is ModelType.STT:
             self.ui.actionToggle_Speech_to_Text.setDisabled(status is ModelStatus.LOADING)
+            if status is ModelStatus.FAILED:
+                self.ui.actionToggle_Speech_to_Text.setChecked(False)
         self.initialize_widget_elements()
         QApplication.processEvents()
 
@@ -1118,3 +1129,16 @@ class MainWindow(
         drawing_pad_settings.mask = base64_image
         self.session.commit()
         
+    def display_missing_models_error(self):
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setWindowTitle("Error: Missing models")
+        msg_box.setText("You are missing some required models.")
+        
+        download_missing_models = msg_box.addButton("Download missing models", QMessageBox.AcceptRole)
+        cancel_button = msg_box.addButton(QMessageBox.Cancel)
+        
+        msg_box.exec()
+        
+        if msg_box.clickedButton() == download_missing_models:
+            self.show_setup_wizard()

@@ -43,7 +43,7 @@ setup(
         "cryptography==44.0.0",
         "setuptools==75.8.0",
 
-        # # Stable Diffusion Dependencies
+        # Stable Diffusion Dependencies
         "diffusers==0.32.2",
         "controlnet_aux==0.0.9",
         "safetensors==0.5.2",
