@@ -144,6 +144,10 @@ class SDHandler(BaseHandler):
         self._path_settings = None
 
     @property
+    def use_compel(self) -> bool:
+        return self.generator_settings_cached.use_compel
+
+    @property
     def controlnet_path(self):
         version: str = self.controlnet_model.version
         path: str = self.controlnet_model.path
@@ -190,6 +194,13 @@ class SDHandler(BaseHandler):
             self.logger.error("safetensors path is empty")
             return False
         return self.model_path.endswith(".safetensors")
+
+    @property
+    def version(self) -> str:
+        version = self.generator_settings_cached.version
+        if version == "SDXL Turbo":
+            version = "SDXL 1.0"
+        return version
 
     @property
     def is_sd_xl(self) -> bool:
@@ -258,13 +269,13 @@ class SDHandler(BaseHandler):
     def controlnet_model(self) -> ControlnetModel:
         if (
             self._controlnet_model is None or
-            self._controlnet_model.version != self.generator_settings_cached.version or
+            self._controlnet_model.version != self.version or
             self._controlnet_model.display_name != self.controlnet_settings_cached.controlnet
         ):
             
             self._controlnet_model = self.session.query(ControlnetModel).filter_by(
                 display_name=self.controlnet_settings_cached.controlnet,
-                version=self.generator_settings_cached.version
+                version=self.version
             ).first()
             
         return self._controlnet_model
@@ -320,7 +331,7 @@ class SDHandler(BaseHandler):
             os.path.join(
                 self.path_settings_cached.base_path,
                 "art/models",
-                self.generator_settings_cached.version,
+                self.version,
                 "lora"
             )
         )
@@ -909,7 +920,7 @@ class SDHandler(BaseHandler):
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
         scheduler_name = scheduler or self.generator_settings_cached.scheduler
         base_path:str = self.path_settings_cached.base_path
-        scheduler_version:str = self.generator_settings_cached.version
+        scheduler_version:str = self.version
         scheduler_path = os.path.expanduser(
             os.path.join(
                 base_path,
@@ -947,6 +958,9 @@ class SDHandler(BaseHandler):
         """
         Quantize the model if possible.
         """
+        if self.is_sd_xl_turbo:
+            return data
+        
         path = os.path.expanduser(os.path.join(
             self.path_settings_cached.base_path,
             "art",
@@ -1091,7 +1105,7 @@ class SDHandler(BaseHandler):
     def _load_lora(self):
         
         enabled_lora = self.session.query(Lora).filter_by(
-            version=self.generator_settings_cached.version,
+            version=self.version,
             enabled=True
         ).all()
         for lora in enabled_lora:
@@ -1152,7 +1166,7 @@ class SDHandler(BaseHandler):
             self.logger.error(f"Failed to unload embeddings: {e}")
         
         embeddings = self.session.query(Embedding).filter_by(
-            version=self.generator_settings_cached.version
+            version=self.version
         ).all()
         
         for embedding in embeddings:
@@ -1173,7 +1187,7 @@ class SDHandler(BaseHandler):
             self.logger.debug("No embeddings enabled")
 
     def _load_compel(self):
-        if self.generator_settings_cached.use_compel:
+        if self.use_compel:
             try:
                 self._load_textual_inversion_manager()
                 self._load_compel_proc()
@@ -1503,7 +1517,7 @@ class SDHandler(BaseHandler):
             self.logger.debug("Compel proc is not loading - attempting to load")
             self._load_compel()
         self.logger.debug("Loading prompt embeds")
-        if not self.generator_settings_cached.use_compel:
+        if not self.use_compel:
             return
 
         prompt = self.prompt
@@ -1604,7 +1618,7 @@ class SDHandler(BaseHandler):
             ))
             self._set_lora_adapters()
 
-        if self.generator_settings_cached.use_compel:
+        if self.use_compel:
             args.update(dict(
                 prompt_embeds=self._prompt_embeds,
                 negative_prompt_embeds=self._negative_prompt_embeds,

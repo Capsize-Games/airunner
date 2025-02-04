@@ -15,6 +15,21 @@ class ModelScannerWorker(
         PipelineMixin.__init__(self)
 
     def handle_message(self):
+        # ensure turbo path exists
+        turbo_paths = (
+            os.path.expanduser(os.path.join(
+                self.path_settings.base_path, "art/models", "SDXL 1.0", "txt2img", "turbo_models"
+            )),
+            os.path.expanduser(os.path.join(
+                self.path_settings.base_path, "art/models", "SDXL 1.0", "inpaint", "turbo_models"
+            ))
+        )
+        for turbo_path in turbo_paths:
+            if not os.path.exists(turbo_path):
+                os.makedirs(turbo_path)
+                with open(os.path.join(turbo_path, "README.txt"), "w") as f:
+                    f.write("Place Stable Diffusion XL Turbo, Lightning and Hyper models here")
+
         self.scan_for_models()
         self.remove_missing_models()
 
@@ -45,35 +60,41 @@ class ModelScannerWorker(
                         action = action_item.name
                         if "controlnet_processors" in action_item.path:
                             continue
-                        with os.scandir(action_item.path) as file_object:
-                            for file_item in file_object:
-                                model = AIModels()
-                                model.name = os.path.basename(file_item.path)
-                                model.path = file_item.path
-                                model.branch = "main"
-                                model.version = version
-                                model.category = "stablediffusion"
-                                model.pipeline_action = action
-                                model.enabled = True
-                                model.model_type = "art"
-                                model.is_default = False
-                                if file_item.is_file():  # ckpt or safetensors file
-                                    if file_item.name.endswith(".ckpt") or file_item.name.endswith(".safetensors"):
-                                        name = file_item.name.replace(".ckpt", "").replace(".safetensors", "")
-                                        model.name = name
-                                    else:
-                                        model = None
-                                elif file_item.is_dir():  # diffusers folder
-                                    is_diffusers_directory = True
-                                    for diffuser_folder in diffusers_folders:
-                                        if not os.path.exists(os.path.join(file_item.path, diffuser_folder)):
-                                            is_diffusers_directory = False
+                        paths = (action_item.path, os.path.join(action_item.path, "turbo_models"))
+                        for path in paths:
+                            if not os.path.exists(path):
+                                continue
+                            with os.scandir(path) as file_object:
+                                for file_item in file_object:
+                                    model = AIModels()
+                                    model.name = os.path.basename(file_item.path)
+                                    model.path = file_item.path
+                                    model.branch = "main"
+                                    if "turbo_models" in path:
+                                        version = "SDXL Turbo"
+                                    model.version = version
+                                    model.category = "stablediffusion"
+                                    model.pipeline_action = action
+                                    model.enabled = True
+                                    model.model_type = "art"
+                                    model.is_default = False
+                                    if file_item.is_file():  # ckpt or safetensors file
+                                        if file_item.name.endswith(".ckpt") or file_item.name.endswith(".safetensors"):
+                                            name = file_item.name.replace(".ckpt", "").replace(".safetensors", "")
+                                            model.name = name
+                                        else:
                                             model = None
-                                    if is_diffusers_directory:
-                                        model.name = file_item.name
+                                    elif file_item.is_dir():  # diffusers folder
+                                        is_diffusers_directory = True
+                                        for diffuser_folder in diffusers_folders:
+                                            if not os.path.exists(os.path.join(file_item.path, diffuser_folder)):
+                                                is_diffusers_directory = False
+                                                model = None
+                                        if is_diffusers_directory:
+                                            model.name = file_item.name
 
-                                if model:
-                                    models.append(model)
+                                    if model:
+                                        models.append(model)
         self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {"models": models})
 
     def remove_missing_models(self):
