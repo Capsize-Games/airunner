@@ -103,10 +103,33 @@ class SDHandler(BaseHandler):
         self._drawing_pad_settings = None
         self._outpaint_settings = None
         self._path_settings = None
+        self._current_memory_settings = None
     
     def on_application_settings_changed(self):
-        self._clear_memory_efficient_settings()
-        self._make_memory_efficient()
+        if self._pipe:
+            pipeline_class = self._pipe.__class__
+            print(pipeline_class)
+            if (
+                pipeline_class in (
+                    StableDiffusionXLImg2ImgPipeline,
+                    StableDiffusionXLControlNetImg2ImgPipeline,
+                    StableDiffusionImg2ImgPipeline,
+                    StableDiffusionControlNetImg2ImgPipeline
+                ) and not self.image_to_image_settings.enabled
+            ) or (
+                pipeline_class in (
+                    StableDiffusionXLPipeline,
+                    StableDiffusionXLControlNetPipeline,
+                    StableDiffusionPipeline,
+                    StableDiffusionControlNetPipeline
+                ) and self.image_to_image_settings.enabled
+            ):
+                self._swap_pipeline()
+
+        memory_settings = self.memory_settings.to_dict()
+        if self._pipe and self._current_memory_settings != memory_settings:
+            self._clear_memory_efficient_settings()
+            self._make_memory_efficient()
 
     def _clear_cached_properties(self):
         self._outpaint_image = None
@@ -596,6 +619,7 @@ class SDHandler(BaseHandler):
         except Exception as e:
             self.logger.error(f"Error swapping pipeline: {e}")
         finally:
+            self._send_pipeline_loaded_signal()
             self._move_pipe_to_device()
 
     def _generate(self):
@@ -964,7 +988,20 @@ class SDHandler(BaseHandler):
             self.logger.error(f"Failed to load model from {self.model_path}: {e}")
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
+        self._send_pipeline_loaded_signal()
         self._move_pipe_to_device()
+    
+    def _send_pipeline_loaded_signal(self):
+        pipeline_type = None
+        if self._pipe:
+            pipeline_class = self._pipe.__class__
+            if pipeline_class in (StableDiffusionXLPipeline, StableDiffusionPipeline, StableDiffusionControlNetPipeline):
+                pipeline_type = "txt2img"
+            elif pipeline_class in (StableDiffusionXLImg2ImgPipeline, StableDiffusionImg2ImgPipeline, StableDiffusionControlNetImg2ImgPipeline):
+                pipeline_type = "img2img"
+            elif pipeline_class in (StableDiffusionXLInpaintPipeline, StableDiffusionInpaintPipeline, StableDiffusionControlNetInpaintPipeline):
+                pipeline_type = "inpaint"
+        self.emit_signal(SignalCode.SD_PIPELINE_LOADED_SIGNAL, { "pipeline": pipeline_type })
 
     def _move_pipe_to_device(self):
         if self._pipe is not None:
@@ -1105,6 +1142,8 @@ class SDHandler(BaseHandler):
         self._compel_proc = Compel(**parameters)
 
     def _make_memory_efficient(self):
+        self._current_memory_settings = self.memory_settings.to_dict()
+
         if not self._pipe:
             self.logger.error("Pipe is None, unable to apply memory settings")
             return
@@ -1376,6 +1415,7 @@ class SDHandler(BaseHandler):
         del self._pipe
         self._pipe = None
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
+        self._send_pipeline_loaded_signal()
 
     def _unload_generator(self):
         self.logger.debug("Unloading generator")
