@@ -15,21 +15,6 @@ class ModelScannerWorker(
         PipelineMixin.__init__(self)
 
     def handle_message(self):
-        # ensure turbo path exists
-        turbo_paths = (
-            os.path.expanduser(os.path.join(
-                self.path_settings.base_path, "art/models", "SDXL 1.0", "txt2img", "turbo_models"
-            )),
-            os.path.expanduser(os.path.join(
-                self.path_settings.base_path, "art/models", "SDXL 1.0", "inpaint", "turbo_models"
-            ))
-        )
-        for turbo_path in turbo_paths:
-            if not os.path.exists(turbo_path):
-                os.makedirs(turbo_path)
-                with open(os.path.join(turbo_path, "README.txt"), "w") as f:
-                    f.write("Place Stable Diffusion XL Turbo, Lightning and Hyper models here")
-
         self.scan_for_models()
         self.remove_missing_models()
 
