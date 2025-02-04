@@ -16,6 +16,11 @@ class StatusWidget(BaseWidget):
         self.register(SignalCode.APPLICATION_STATUS_ERROR_SIGNAL, self.on_status_error_signal)
         self.register(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
+        self.register(SignalCode.SD_PIPELINE_LOADED_SIGNAL, self.set_sd_pipeline_label)
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed)
+
+        self.set_sd_pipeline_label({"pipeline": ""})
+        self.version = None
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_system_stats)
@@ -30,6 +35,18 @@ class StatusWidget(BaseWidget):
             self.feature_extractor_status = ModelStatus.LOADING
 
         self.update_system_stats()
+    
+    def on_application_settings_changed(self):
+        self.set_sd_status_text()
+    
+    def set_sd_pipeline_label(self, data):
+        if data["pipeline"]:
+            self.ui.pipeline_label.setText(data["pipeline"])
+            self.ui.pipeline_divider.show()
+        else:
+            self.ui.pipeline_label.setText("")
+            self.ui.pipeline_divider.hide()
+
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -118,7 +135,9 @@ class StatusWidget(BaseWidget):
         QApplication.processEvents()
 
     def set_sd_status_text(self):
-        self.ui.sd_status.setText(self.generator_settings.version)
+        if self.version != self.generator_settings.version:
+            version = self.generator_settings.version
+            self.ui.sd_status.setText(version)
 
     def on_model_status_changed_signal(self, data):
         self.update_model_status(data)

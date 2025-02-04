@@ -58,6 +58,7 @@ class SDWorker(Worker):
                 (SignalCode.SD_STATE_CHANGED_SIGNAL, self.handle_sd_state_changed_signal),
                 (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_load_safety_checker),
                 (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.on_unload_safety_checker),
+                (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed),
             )
         )
         self.__requested_action = ModelAction.NONE
@@ -77,6 +78,10 @@ class SDWorker(Worker):
         if self.sd:
             thread = threading.Thread(target=self._unload_safety_checker)
             thread.start()
+    
+    def on_application_settings_changed(self):
+        if self.sd:
+            self.sd.on_application_settings_changed()
 
     def scan_for_embeddings(self):
         if self.sd:

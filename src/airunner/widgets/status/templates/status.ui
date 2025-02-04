@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>493</width>
+    <width>1123</width>
     <height>84</height>
    </rect>
   </property>
@@ -96,6 +96,23 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="pipeline_label">
+     <property name="text">
+      <string>pipeline</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="Line" name="pipeline_divider">
      <property name="orientation">
       <enum>Qt::Orientation::Vertical</enum>
      </property>
