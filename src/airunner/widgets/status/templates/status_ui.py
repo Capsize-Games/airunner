@@ -22,7 +22,7 @@ class Ui_status_widget(object):
     def setupUi(self, status_widget):
         if not status_widget.objectName():
             status_widget.setObjectName(u"status_widget")
-        status_widget.resize(493, 84)
+        status_widget.resize(1123, 84)
         status_widget.setStyleSheet(u"font-size: 12px")
         self.horizontalLayout = QHBoxLayout(status_widget)
         self.horizontalLayout.setSpacing(5)
@@ -75,6 +75,19 @@ class Ui_status_widget(object):
         self.nsfw_line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.horizontalLayout.addWidget(self.nsfw_line)
+
+        self.pipeline_label = QLabel(status_widget)
+        self.pipeline_label.setObjectName(u"pipeline_label")
+        self.pipeline_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.horizontalLayout.addWidget(self.pipeline_label)
+
+        self.pipeline_divider = QFrame(status_widget)
+        self.pipeline_divider.setObjectName(u"pipeline_divider")
+        self.pipeline_divider.setFrameShape(QFrame.Shape.VLine)
+        self.pipeline_divider.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.horizontalLayout.addWidget(self.pipeline_divider)
 
         self.sd_status = QLabel(status_widget)
         self.sd_status.setObjectName(u"sd_status")
@@ -136,6 +149,7 @@ class Ui_status_widget(object):
         self.system_message.setText(QCoreApplication.translate("status_widget", u"system message", None))
         self.cuda_status.setText(QCoreApplication.translate("status_widget", u"NVIDIA", None))
         self.nsfw_status.setText(QCoreApplication.translate("status_widget", u"Safety Checker", None))
+        self.pipeline_label.setText(QCoreApplication.translate("status_widget", u"pipeline", None))
         self.sd_status.setText(QCoreApplication.translate("status_widget", u"SD", None))
         self.controlnet_status.setText(QCoreApplication.translate("status_widget", u"CN", None))
         self.llm_status.setText(QCoreApplication.translate("status_widget", u"LLM", None))

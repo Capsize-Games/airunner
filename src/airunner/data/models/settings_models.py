@@ -340,6 +340,28 @@ class MemorySettings(Base):
     default_gpu_tts = Column(Integer, default=0)
     default_gpu_stt = Column(Integer, default=0)
 
+    def to_dict(self):
+        return {
+            "use_last_channels": self.use_last_channels,
+            "use_attention_slicing": self.use_attention_slicing,
+            "use_tf32": self.use_tf32,
+            "use_enable_vae_slicing": self.use_enable_vae_slicing,
+            "use_accelerated_transformers": self.use_accelerated_transformers,
+            "use_tiled_vae": self.use_tiled_vae,
+            "enable_model_cpu_offload": self.enable_model_cpu_offload,
+            "use_enable_sequential_cpu_offload": self.use_enable_sequential_cpu_offload,
+            "use_cudnn_benchmark": self.use_cudnn_benchmark,
+            "use_torch_compile": self.use_torch_compile,
+            "use_tome_sd": self.use_tome_sd,
+            "tome_sd_ratio": self.tome_sd_ratio,
+            "move_unused_model_to_cpu": self.move_unused_model_to_cpu,
+            "unload_unused_models": self.unload_unused_models,
+            "default_gpu_sd": self.default_gpu_sd,
+            "default_gpu_llm": self.default_gpu_llm,
+            "default_gpu_tts": self.default_gpu_tts,
+            "default_gpu_stt": self.default_gpu_stt
+        }
+
 
 class Chatbot(Base):
     __tablename__ = 'chatbots'
