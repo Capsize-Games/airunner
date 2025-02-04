@@ -8,7 +8,7 @@ from PIL.ImageQt import QImage
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
-from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent
+from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent, QMessageBox
 
 from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
@@ -230,6 +230,26 @@ class CustomScene(
         callback = response.get("callback", None)
         if callback:
             callback(response)
+        
+        if code == EngineResponseCode.INSUFFICIENT_GPU_MEMORY:
+            self.display_gpu_memory_error()
+    
+    def display_gpu_memory_error(self):
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setWindowTitle("Error: Unable to Generate Image")
+        msg_box.setText("You are out of GPU memory (VRAM). Enable CPU offload and try again.")
+        
+        enable_cpu_offload_button = msg_box.addButton("Enable CPU offload", QMessageBox.AcceptRole)
+        cancel_button = msg_box.addButton(QMessageBox.Cancel)
+        
+        msg_box.exec()
+        
+        if msg_box.clickedButton() == enable_cpu_offload_button:
+            self.enable_cpu_offload_callback()
+    
+    def enable_cpu_offload_callback(self):
+        self.update_memory_settings("enable_model_cpu_offload", True)
 
     def on_canvas_clear_signal(self):
         self.current_active_image = None

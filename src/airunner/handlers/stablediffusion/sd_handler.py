@@ -103,6 +103,10 @@ class SDHandler(BaseHandler):
         self._drawing_pad_settings = None
         self._outpaint_settings = None
         self._path_settings = None
+    
+    def on_application_settings_changed(self):
+        self._clear_memory_efficient_settings()
+        self._make_memory_efficient()
 
     def _clear_cached_properties(self):
         self._outpaint_image = None
@@ -515,21 +519,22 @@ class SDHandler(BaseHandler):
             HandlerState.PREPARING_TO_GENERATE
         ):
             self._current_state = HandlerState.PREPARING_TO_GENERATE
+            response = None
             try:
                 response = self._generate()
+                code = EngineResponseCode.IMAGE_GENERATED
             except PipeNotLoadedException as e:
                 self.logger.error(e)
-                response = None
             except Exception as e:
-                print(e)
+                if "CUDA out of memory" in str(e):
+                    code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
                 self.logger.error(f"Error generating image: {e}")
-                response = None
             if message is not None:
                 callback = message.get("callback", None)
                 if callback:
                     callback(message)
             self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
-                'code': EngineResponseCode.IMAGE_GENERATED,
+                'code': code,
                 'message': response
             })
             self._current_state = HandlerState.READY

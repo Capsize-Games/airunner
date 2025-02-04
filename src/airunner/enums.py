@@ -263,6 +263,7 @@ class EngineResponseCode(Enum):
     ADD_TO_CONVERSATION = 900
     CLEAR_MEMORY = 1000
     NSFW_CONTENT_DETECTED = 1100
+    INSUFFICIENT_GPU_MEMORY = 1200
 
 
 class EngineRequestCode(Enum):
