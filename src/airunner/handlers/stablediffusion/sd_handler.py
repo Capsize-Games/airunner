@@ -21,7 +21,7 @@ from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, S
     StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
     StableDiffusionControlNetInpaintPipeline, StableDiffusionXLPipeline, StableDiffusionXLImg2ImgPipeline, \
     StableDiffusionXLInpaintPipeline, StableDiffusionXLControlNetPipeline, StableDiffusionXLControlNetImg2ImgPipeline, \
-    StableDiffusionXLControlNetInpaintPipeline, ControlNetModel
+    StableDiffusionXLControlNetInpaintPipeline, ControlNetModel, AutoencoderTiny, AutoencoderKL
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTextModelWithProjection
 from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
@@ -231,17 +231,11 @@ class SDHandler(BaseHandler):
 
     @property
     def _current_model(self) -> AIModels:
-        model = self.generator_settings_cached.aimodel
-        self.session.add(model)
-        return model
+        return self.generator_settings_cached.aimodel
 
     @property
     def generator_settings_cached(self):
-        if self._generator_settings is None:
-            self._generator_settings = self.session.query(
-                GeneratorSettings
-            ).first()
-        return self._generator_settings
+        return self.generator_settings
 
     @property
     def generator_settings_scale(self) -> int:
@@ -616,6 +610,7 @@ class SDHandler(BaseHandler):
                 kwargs.update({
                     "controlnet": self._controlnet
                 })
+            kwargs = self._prepare_tiny_autoencoder(kwargs)
             self._pipe = pipeline_class_.from_pipe(self._pipe, **kwargs)
         except Exception as e:
             self.logger.error(f"Error swapping pipeline: {e}")
@@ -996,6 +991,33 @@ class SDHandler(BaseHandler):
             )
         return data
 
+    def _prepare_tiny_autoencoder(self, data: dict) -> dict:
+        if not self.is_outpaint:
+            path = os.path.expanduser(os.path.join(
+                self.path_settings_cached.base_path,
+                "art",
+                "models",
+                StableDiffusionVersion.SDXL1_0.value if (self.is_sd_xl or self.is_sd_xl_turbo) else StableDiffusionVersion.SD1_5.value,
+                "tiny_autoencoder",
+                "madebyollin/sdxl-vae-fp16-fix" if (self.is_sd_xl or self.is_sd_xl_turbo) else "madebyollin/taesd"
+            ))
+            if not os.path.exists(path):
+                self.logger.error("Tiny autoencoder path does not exist")
+                self.emit_signal(SignalCode.MISSING_REQUIRED_MODELS)
+                self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.SD,
+                    "status": ModelStatus.FAILED
+                })
+                return None
+
+            autoencoder_class_ = AutoencoderKL if (self.is_sd_xl or self.is_sd_xl_turbo) else AutoencoderTiny
+            data["vae"] = autoencoder_class_.from_pretrained(
+                path,
+                torch_dtype=torch.float16,
+                use_safetensors=True
+            )
+        return data
+
     def _load_pipe(self):
         self.logger.debug("Loading pipe")
         data = dict(
@@ -1011,6 +1033,9 @@ class SDHandler(BaseHandler):
         pipeline_class_ = self._pipeline_class
 
         data = self._prepare_quantization_settings(data)
+        data = self._prepare_tiny_autoencoder(data)
+        if data is None:
+            return
         
         if self.is_sd_xl_turbo:
             config_path = os.path.expanduser(os.path.join(
