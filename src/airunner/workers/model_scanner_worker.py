@@ -16,6 +16,7 @@ class ModelScannerWorker(
 
     def handle_message(self):
         self.scan_for_models()
+        self.remove_missing_models()
 
     def scan_for_models(self):
         self.logger.debug("Scan for models")
@@ -74,3 +75,21 @@ class ModelScannerWorker(
                                 if model:
                                     models.append(model)
         self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {"models": models})
+
+    def remove_missing_models(self):
+        self.logger.debug("Remove missing models")
+        # remove all models that are not in the model path
+        model_path = os.path.expanduser(
+            os.path.join(
+                self.path_settings.base_path, "art/models",
+            )
+        )
+        if not os.path.exists(model_path):
+            self.logger.error(f"Model path does not exist: {model_path}")
+            return
+        existing_models = self.session.query(AIModels).all()
+        for model in existing_models:
+            if not os.path.exists(model.path):
+                self.session.delete(model)
+                self.session.commit()
+                self.logger.debug(f"Removed missing model: {model.name}")
