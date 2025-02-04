@@ -23,8 +23,9 @@ from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, S
     StableDiffusionXLInpaintPipeline, StableDiffusionXLControlNetPipeline, StableDiffusionXLControlNetImg2ImgPipeline, \
     StableDiffusionXLControlNetInpaintPipeline, ControlNetModel
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-from transformers import CLIPFeatureExtractor
-
+from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTextModelWithProjection
+from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
+from transformers import BitsAndBytesConfig as TransformersBitsAndBytesConfig
 from airunner.handlers.base_handler import BaseHandler
 from airunner.data.models.settings_models import Schedulers, Lora, Embedding, ControlnetModel, AIModels, \
     GeneratorSettings
@@ -947,6 +948,54 @@ class SDHandler(BaseHandler):
         if self._pipe:
             self._pipe.scheduler = self.scheduler
 
+    def _prepare_quantization_settings(self, data: dict) -> dict:
+        """
+        Quantize the model if possible.
+        """
+        path = os.path.expanduser(os.path.join(
+            self.path_settings_cached.base_path,
+            "art",
+            "models",
+            StableDiffusionVersion.SDXL1_0.value if (self.is_sd_xl or self.is_sd_xl_turbo) else StableDiffusionVersion.SD1_5.value,
+            "inpaint" if self.is_outpaint else "txt2img"
+        ))
+
+        existing_file_path = os.path.join(path, "text_encoder", "model.fp16.safetensors")
+        expected_file_path = os.path.join(path, "text_encoder", "model.safetensors")
+        if not os.path.exists(expected_file_path) and os.path.exists(existing_file_path):
+            os.rename(existing_file_path, expected_file_path)
+
+        quant_config = TransformersBitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True
+        )
+        data["text_encoder"] = CLIPTextModel.from_pretrained(
+            path,
+            subfolder="text_encoder",
+            quantization_config=quant_config,
+            torch_dtype=torch.float16,
+            use_safetensors=True
+        )
+        
+        if self.is_sd_xl or self.is_sd_xl_turbo:
+            """
+            text encoder 2 is downloaded with the name model.fp16.safetensors which worked when we
+            were not quantizing the model but now when we are loading from pretrained it is looking for
+            model.safetensors
+            """
+            existing_file_path = os.path.join(path, "text_encoder_2", "model.fp16.safetensors")
+            expected_file_path = os.path.join(path, "text_encoder_2", "model.safetensors")
+            if not os.path.exists(expected_file_path) and os.path.exists(existing_file_path):
+                os.rename(existing_file_path, expected_file_path)
+            data["text_encoder_2"] = CLIPTextModelWithProjection.from_pretrained(
+                path,
+                subfolder="text_encoder_2",
+                quantization_config=quant_config,
+                torch_dtype=torch.float16,
+                use_safetensors=True
+            )
+        return data
+
     def _load_pipe(self):
         self.logger.debug("Loading pipe")
         data = dict(
@@ -961,6 +1010,8 @@ class SDHandler(BaseHandler):
 
         pipeline_class_ = self._pipeline_class
 
+        data = self._prepare_quantization_settings(data)
+        
         if self.is_sd_xl_turbo:
             config_path = os.path.expanduser(os.path.join(
                 self.path_settings_cached.base_path,
