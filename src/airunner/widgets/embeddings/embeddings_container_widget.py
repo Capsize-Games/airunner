@@ -30,8 +30,7 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
         self._apply_button_enabled = False
         self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
-        self._scanner_worker = DirectoryWatcher(self.path_settings.base_path, self._scan_path_for_embeddings)
-        self._scanner_worker.scan_completed.connect(self.on_scan_completed)
+        self._scanner_worker = DirectoryWatcher(self.path_settings.base_path, self._scan_path_for_embeddings, self.on_scan_completed)
         self._scanner_thread = QThread()
         self._scanner_worker.moveToThread(self._scanner_thread)
         self._scanner_thread.started.connect(self._scanner_worker.run)
@@ -42,7 +41,6 @@ class EmbeddingsContainerWidget(BaseWidget):
             return False
         return scan_path_for_embeddings(path)
 
-    @Slot(bool)
     def on_scan_completed(self, force_reload: bool):
         self.load_embeddings(force_reload=force_reload)
 

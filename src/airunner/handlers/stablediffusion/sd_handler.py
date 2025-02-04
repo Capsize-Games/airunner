@@ -1,6 +1,6 @@
 import datetime
 import os
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional
 
 import PIL
 import diffusers
@@ -54,7 +54,6 @@ class SDHandler(BaseHandler):
         self._controlnet: ControlNetModel = None
         self._controlnet_processor: Any = None
         self.model_type = ModelType.SD
-        self._current_model:AIModels = None
         self._safety_checker:StableDiffusionSafetyChecker = None
         self._feature_extractor:CLIPFeatureExtractor = None
         self._memory_settings_flags:dict = {
@@ -201,6 +200,12 @@ class SDHandler(BaseHandler):
         if self._path_settings is None:
             self._path_settings = self.path_settings
         return self._path_settings
+
+    @property
+    def _current_model(self) -> AIModels:
+        model = self.generator_settings_cached.aimodel
+        self.session.add(model)
+        return model
 
     @property
     def generator_settings_cached(self):
@@ -626,16 +631,8 @@ class SDHandler(BaseHandler):
                 active_rect=active_rect,
                 is_outpaint=self.is_outpaint
             )
-
-    def _export_images(self, images: List[Any], data:Dict):
-        extension = self.application_settings_cached.image_export_type
-        filename = "image"
-        file_path = os.path.expanduser(
-            os.path.join(
-                self.path_settings_cached.image_path,
-                f"{filename}.{extension}"
-            )
-        )
+    
+    def _initialize_metadata(self, images: List[Any], data:Dict) -> Optional[dict]:
         metadata = None
         if self.metadata_settings.export_metadata:
             metadata_dict = dict()
@@ -693,6 +690,18 @@ class SDHandler(BaseHandler):
             metadata_dict["tome_sd"] = self._memory_settings_flags["use_tome_sd"]
             metadata_dict["tome_ratio"] = self._memory_settings_flags["tome_ratio"]
             metadata = [metadata_dict for _ in range(len(images))]
+        return metadata
+
+    def _export_images(self, images: List[Any], data:Dict):
+        extension = self.application_settings_cached.image_export_type
+        filename = "image"
+        file_path = os.path.expanduser(
+            os.path.join(
+                self.path_settings_cached.image_path,
+                f"{filename}.{extension}"
+            )
+        )
+        metadata = self._initialize_metadata(images, data)
         export_images(images, file_path, metadata)
 
     def _check_and_mark_nsfw_images(self, images) -> tuple:
@@ -894,7 +903,6 @@ class SDHandler(BaseHandler):
 
     def _load_pipe(self):
         self.logger.debug("Loading pipe")
-        self._current_model = self.generator_settings_cached.aimodel
         data = dict(
             torch_dtype=self.data_type,
             use_safetensors=True,

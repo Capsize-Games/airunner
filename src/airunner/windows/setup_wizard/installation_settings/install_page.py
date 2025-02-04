@@ -389,11 +389,17 @@ class InstallWorker(
             self.download_tts()
         elif self.current_step == 5:
             self.parent.on_set_downloading_status_label({
-                "label": f"Downloading Speech-to-Text"
+                "label": f"Downloading NLTK files"
             })
             self.current_step = 6
             self.download_nltk_files()
         elif self.current_step == 6:
+            self.parent.on_set_downloading_status_label({
+                "label": f"Downloading Speech-to-Text"
+            })
+            self.current_step = 7
+            self.download_stt()
+        elif self.current_step == 7:
              self.hf_downloader.download_model(
                  requested_path="",
                  requested_file_name="",
