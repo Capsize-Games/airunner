@@ -134,6 +134,7 @@ class App(
             self.application_settings.run_setup_wizard = True
             self.run_setup_wizard()
             self.application_settings.app_version = current_version
+            self.llm_generator_settings.model_version = "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
             self.session.commit()
 
     def run_setup_wizard(self):

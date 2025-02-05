@@ -193,6 +193,8 @@ class SliderWidget(BaseWidget):
         :param widget: the widget that triggered the callback
         :return:
         """
+        if not attr_name:
+            return
         if self._callback:
             self._callback(attr_name, value)
         else:
@@ -209,7 +211,7 @@ class SliderWidget(BaseWidget):
         obj = getattr(self, keys[0])
 
         if keys[0] == "llm_generator_settings":
-            return getattr(obj, keys[2])
+            return getattr(obj, keys[1])
 
         return getattr(obj, keys[1])
 
