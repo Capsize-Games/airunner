@@ -211,6 +211,10 @@ class SDHandler(BaseHandler):
         return self.generator_settings_cached.version == StableDiffusionVersion.SDXL_TURBO.value
 
     @property
+    def is_sd_xl_or_turbo(self) -> bool:
+        return self.is_sd_xl or self.is_sd_xl_turbo
+
+    @property
     def img2img_image_cached(self) -> Image:
         if self._img2img_image is None:
             self._img2img_image = self.img2img_image
@@ -404,7 +408,7 @@ class SDHandler(BaseHandler):
         if self.controlnet_enabled:
             operation_type = f"{operation_type}_controlnet"
 
-        if self.is_sd_xl or self.is_sd_xl_turbo:
+        if self.is_sd_xl_or_turbo:
             pipeline_map = {
                 "txt2img": StableDiffusionXLPipeline,
                 "img2img": StableDiffusionXLImg2ImgPipeline,
@@ -965,7 +969,7 @@ class SDHandler(BaseHandler):
             self.path_settings_cached.base_path,
             "art",
             "models",
-            StableDiffusionVersion.SDXL1_0.value if (self.is_sd_xl or self.is_sd_xl_turbo) else StableDiffusionVersion.SD1_5.value,
+            StableDiffusionVersion.SDXL1_0.value if self.is_sd_xl_or_turbo else StableDiffusionVersion.SD1_5.value,
             "inpaint" if self.is_outpaint else "txt2img"
         ))
 
@@ -986,7 +990,7 @@ class SDHandler(BaseHandler):
             use_safetensors=True
         )
         
-        if self.is_sd_xl or self.is_sd_xl_turbo:
+        if self.is_sd_xl_or_turbo:
             """
             text encoder 2 is downloaded with the name model.fp16.safetensors which worked when we
             were not quantizing the model but now when we are loading from pretrained it is looking for
@@ -1011,9 +1015,9 @@ class SDHandler(BaseHandler):
                 self.path_settings_cached.base_path,
                 "art",
                 "models",
-                StableDiffusionVersion.SDXL1_0.value if (self.is_sd_xl or self.is_sd_xl_turbo) else StableDiffusionVersion.SD1_5.value,
+                StableDiffusionVersion.SDXL1_0.value if self.is_sd_xl_or_turbo else StableDiffusionVersion.SD1_5.value,
                 "tiny_autoencoder",
-                "madebyollin/sdxl-vae-fp16-fix" if (self.is_sd_xl or self.is_sd_xl_turbo) else "madebyollin/taesd"
+                "madebyollin/sdxl-vae-fp16-fix" if self.is_sd_xl_or_turbo else "madebyollin/taesd"
             ))
             if not os.path.exists(path):
                 self.logger.error("Tiny autoencoder path does not exist")
@@ -1024,7 +1028,7 @@ class SDHandler(BaseHandler):
                 })
                 return None
 
-            autoencoder_class_ = AutoencoderKL if (self.is_sd_xl or self.is_sd_xl_turbo) else AutoencoderTiny
+            autoencoder_class_ = AutoencoderKL if self.is_sd_xl_or_turbo else AutoencoderTiny
             data["vae"] = autoencoder_class_.from_pretrained(
                 path,
                 torch_dtype=torch.float16,
@@ -1217,7 +1221,7 @@ class SDHandler(BaseHandler):
             truncate_long_prompts=False,
             textual_inversion_manager=self._textual_inversion_manager
         )
-        if self.is_sd_xl or self.is_sd_xl_turbo:
+        if self.is_sd_xl_or_turbo:
             tokenizer = [self._pipe.tokenizer, self._pipe.tokenizer_2]
             text_encoder = [self._pipe.text_encoder, self._pipe.text_encoder_2]
             parameters["returned_embeddings_type"] = ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED
@@ -1569,7 +1573,7 @@ class SDHandler(BaseHandler):
             else:
                 compel_negative_prompt = ""
 
-            if self.is_sd_xl or self.is_sd_xl_turbo:
+            if self.is_sd_xl_or_turbo:
                 prompt_embeds, pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
                 negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
             else:
@@ -1634,7 +1638,7 @@ class SDHandler(BaseHandler):
                 negative_prompt_embeds=self._negative_prompt_embeds,
             ))
 
-            if self.is_sd_xl or self.is_sd_xl_turbo:
+            if self.is_sd_xl_or_turbo:
                 args.update(dict(
                     pooled_prompt_embeds=self._pooled_prompt_embeds,
                     negative_pooled_prompt_embeds=self._negative_pooled_prompt_embeds
