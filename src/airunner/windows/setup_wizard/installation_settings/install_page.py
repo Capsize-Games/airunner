@@ -249,15 +249,10 @@ class InstallWorker(
                 print(f"Error downloading {filename}: {e}")
 
     def download_llms(self):
-        
-        models = self.session.query(AIModels).filter(
-            AIModels.category == "llm",
-            AIModels.is_default == 1
-        ).all()
-        
+        models = [model for model in model_bootstrap_data if model["category"] == "llm"]
         self.total_models_in_current_step += len(models)
         for model in models:
-            files = LLM_FILE_BOOTSTRAP_DATA[model.path]["files"]
+            files = LLM_FILE_BOOTSTRAP_DATA[model["path"]]["files"]
             self.parent.total_steps += len(files)
             for filename in files:
                 requested_file_path = os.path.expanduser(
@@ -265,14 +260,14 @@ class InstallWorker(
                         self.path_settings.base_path,
                         "text",
                         "models",
-                        model.category,
-                        model.pipeline_action,
-                        model.path
+                        model["category"],
+                        model["pipeline_action"],
+                        model["path"]
                     )
                 )
                 try:
                     self.hf_downloader.download_model(
-                        requested_path=model.path,
+                        requested_path=model["path"],
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
                         requested_callback=self.progress_updated.emit

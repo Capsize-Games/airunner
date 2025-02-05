@@ -89,7 +89,7 @@ model_bootstrap_data = [
     },
     {
         "name": "Mistral 7B Instruct v3",
-        "path": "w4ffl35/Mistral-7B-Instruct-v0.3-4bit",
+        "path": "w4ffl35/Ministral-8B-Instruct-2410-doublequant",
         "branch": "main",
         "version": "0.3",
         "category": "llm",

@@ -346,7 +346,7 @@ class BaseAgent(
                 self.names_prompt(use_names, botname, username),
                 self.mood(botname, bot_mood, use_mood),
                 self.personality_prompt(bot_personality, use_personality),
-                self.history_prompt(),
+                # self.history_prompt(),
                 self.date_time_prompt()
             ]
 
@@ -423,35 +423,20 @@ class BaseAgent(
         action
     ) -> list:
         system_prompt = self.build_system_prompt(action)
-        if action is LLMActionType.APPLICATION_COMMAND:
-            prompt = (
-                "Choose an action from THE LIST of commands for the text above. "
-                "Only return the number of the command."
-            )
-        elif action is LLMActionType.GENERATE_IMAGE:
-            prompt = (
-                f"Replace the placeholder values in the following JSON:\n"
-                "```json\n"+ json.dumps(dict(
-                    description="PLACEHOLDER",
-                    composition="PLACEHOLDER"
-                )) +"\n```\n"
-            )
-        elif action is LLMActionType.SUMMARIZE:
-            prompt = (
-                f"Summarize the conversation history"
-            )
-        else:
-            prompt = f"Respond to {self.username}"
-        messages = [
-            {
-                "content": system_prompt,
-                "role": LLMChatRole.SYSTEM.value
-            },
-            {
-                "content": prompt,
-                "role": LLMChatRole.HUMAN.value
-            }
-        ]
+        if action is LLMActionType.CHAT:
+            history = []
+            for message in self.history:
+                name = "{{ username }}" if message["role"] == LLMChatRole.HUMAN.value else "{{ botname }}"
+                history.append({
+                    "content": f"{name}: {message['content']}",
+                    "role": message["role"]
+                })
+            messages = [
+                {
+                    "content": system_prompt,
+                    "role": LLMChatRole.SYSTEM.value
+                }
+            ] + history
         return messages
 
     def get_rendered_template(
@@ -492,12 +477,12 @@ class BaseAgent(
             self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL)
             return
 
-        if action in (
-            LLMActionType.CHAT,
-            LLMActionType.PERFORM_RAG_SEARCH
-        ) and (self.conversation_title is None or self.conversation_title == ""):
-            self._requested_action = action
-            action = LLMActionType.SUMMARIZE
+        # if action in (
+        #     LLMActionType.CHAT,
+        #     LLMActionType.PERFORM_RAG_SEARCH
+        # ) and (self.conversation_title is None or self.conversation_title == ""):
+        #     self._requested_action = action
+        #     action = LLMActionType.SUMMARIZE
 
         self.logger.debug("Running...")
         self.prompt = prompt
@@ -517,6 +502,7 @@ class BaseAgent(
             )
 
         self.rendered_template = self.get_rendered_template(action)
+        print("RENDERED TEMPLATE", self.rendered_template)
 
         model_inputs = self.tokenizer(
             self.rendered_template,
@@ -590,13 +576,13 @@ class BaseAgent(
             if action == LLMActionType.GENERATE_IMAGE:
                 self.emit_signal(
                     SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    dict(
-                        message="Generating image prompt.\n",
-                        is_first_message=is_first_message,
-                        is_end_of_message=False,
-                        name=self.botname,
-                        action=LLMActionType.CHAT
-                    )
+                    {
+                        "message": "Generating image prompt.\n",
+                        "is_first_message": is_first_message,
+                        "is_end_of_message": False,
+                        "name": self.botname,
+                        "action": LLMActionType.CHAT
+                    }
                 )
                 is_first_message = False
 
@@ -611,8 +597,7 @@ class BaseAgent(
                     # strip all newlines from new_text
                     streamed_template += new_text
                     if self.is_mistral:
-                        streamed_template = streamed_template.replace(f"{bos_token} [INST]", f"{bos_token}[INST]")
-                        streamed_template = streamed_template.replace("  [INST]", " [INST]")
+                        streamed_template = streamed_template.replace(f"{bos_token}[INST]", f"{bos_token}[INST]")
                     # iterate over every character in rendered_template and
                     # check if we have the same character in streamed_template
                     if not replaced:

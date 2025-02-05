@@ -42,7 +42,7 @@ class CausalLMTransformerBaseHandler(
         self._return_agent_code: bool = False
         self._rag_tokenizer = None
         self._rag_retriever = None
-        self._do_quantize_model = kwargs.pop("do_quantize_model", True)
+        self._do_quantize_model = kwargs.pop("do_quantize_model", False)
         self.__model = None
         self._vocoder = None
         self._current_model_path = kwargs.get("current_model_path", "")
@@ -68,7 +68,7 @@ class CausalLMTransformerBaseHandler(
     @property
     def is_mistral(self) -> bool:
         path = self._current_model_path.lower()
-        return "mistral" in path
+        return "ministral" in path
 
     @property
     def is_llama_instruct(self):
@@ -142,18 +142,18 @@ class CausalLMTransformerBaseHandler(
 
     @property
     def model_path(self):
-        model_version:str = self.chatbot.model_version
+        model_version: str = self.chatbot.model_version
         if self.llm_generator_settings.override_parameters:
             model_version = self.llm_generator_settings.model_version
         current_llm_generator = self.application_settings.current_llm_generator
-        local_path:str = "misc"
+        local_path: str = "misc"
         if current_llm_generator == "causallm":
             local_path = "causallm"
         elif current_llm_generator == "seq2seq":
             local_path = "seq2seq"
         elif current_llm_generator == "visualqa":
             local_path = "visualqa"
-        base:str = self.path_settings.base_path
+        base: str = self.path_settings.base_path
         return os.path.expanduser(os.path.join(
             base,
             "text",
@@ -379,8 +379,8 @@ class CausalLMTransformerBaseHandler(
         if self._current_model_path != self.model_path:
             self.unload()
             self.load()
-        if action is LLMActionType.CHAT and self.chatbot.use_mood:
-            action = LLMActionType.UPDATE_MOOD
+        # if action is LLMActionType.CHAT and self.chatbot.use_mood:
+        #     action = LLMActionType.UPDATE_MOOD
         self._chat_agent.run(
             prompt,
             action
