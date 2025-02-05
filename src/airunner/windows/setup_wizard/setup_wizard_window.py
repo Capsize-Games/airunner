@@ -3,6 +3,9 @@ from PySide6.QtWidgets import QWizard
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.age_restriction.age_restriction_warning import AgeRestrictionWarning
+from airunner.windows.setup_wizard.model_setup.llm.mistral_license import MistralLicense
+from airunner.windows.setup_wizard.model_setup.stt.whisper_license import WhisperLicense
+from airunner.windows.setup_wizard.model_setup.tts.speecht5_license import SpeechT5License
 from airunner.windows.setup_wizard.welcome_page import WelcomePage
 from airunner.windows.setup_wizard.user_agreement.user_agreement import UserAgreement
 from airunner.windows.setup_wizard.model_setup.stable_diffusion_setup.stable_diffusion_license import (
@@ -66,6 +69,9 @@ class SetupWizardWindow(
             "user_agreement": UserAgreement(self),
             "airunner_license": AIRunnerLicense(self),
             "stable_diffusion_license": StableDiffusionLicense(self),
+            "mistral_license": MistralLicense(self),
+            "whisper_license": WhisperLicense(self),
+            "speech_t5_license": SpeechT5License(self),
         }
         for index, key in enumerate(self.pages.keys()):
             page_id = self.addPage(self.pages[key])
