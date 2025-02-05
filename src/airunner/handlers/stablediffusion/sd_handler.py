@@ -1,6 +1,6 @@
 import datetime
 import os
-from typing import Any, List, Dict, Optional, Tuple
+from typing import Any, List, Dict, Optional
 
 import PIL
 import diffusers
