@@ -388,8 +388,18 @@ class SettingsMixin:
         self.update_setting(MetadataSettings, column_name, val)
         self.__settings_updated()
 
-    def update_llm_generator_settings(self, column_name, val):
-        self.update_setting(LLMGeneratorSettings, column_name, val)
+    def update_llm_generator_settings(self, column_name: str, val):
+        # Retrieve the LLMGeneratorSettings instance
+        settings = self.session.query(LLMGeneratorSettings).first()
+        if settings:
+            setattr(settings, column_name, val)
+            # Explicitly mark the instance and merge changes
+            self.session.add(settings)
+            self.session.commit()  # Commit changes to the database
+            self.session.refresh(settings)
+            self.logger.debug(f"LLMGeneratorSettings updated in DB: {column_name} = {val}")
+        else:
+            self.logger.error("No LLMGeneratorSettings instance found.")
         self.__settings_updated()
 
     def update_whisper_settings(self, column_name, val):
