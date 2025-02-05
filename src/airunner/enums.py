@@ -252,6 +252,7 @@ class SignalCode(Enum):
     MISSING_REQUIRED_MODELS = enum.auto()
 
 class EngineResponseCode(Enum):
+    NONE = 0
     STATUS = 100
     ERROR = 200
     WARNING = 300
