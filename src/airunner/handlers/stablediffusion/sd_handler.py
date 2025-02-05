@@ -111,19 +111,9 @@ class SDHandler(BaseHandler):
             pipeline_class = self._pipe.__class__
             print(pipeline_class)
             if (
-                pipeline_class in (
-                    StableDiffusionXLImg2ImgPipeline,
-                    StableDiffusionXLControlNetImg2ImgPipeline,
-                    StableDiffusionImg2ImgPipeline,
-                    StableDiffusionControlNetImg2ImgPipeline
-                ) and not self.image_to_image_settings.enabled
+                pipeline_class in self.img2img_pipelines and not self.image_to_image_settings.enabled
             ) or (
-                pipeline_class in (
-                    StableDiffusionXLPipeline,
-                    StableDiffusionXLControlNetPipeline,
-                    StableDiffusionPipeline,
-                    StableDiffusionControlNetPipeline
-                ) and self.image_to_image_settings.enabled
+                pipeline_class in self.txt2img_pipelines and self.image_to_image_settings.enabled
             ):
                 self._swap_pipeline()
 
@@ -142,6 +132,33 @@ class SDHandler(BaseHandler):
         self._drawing_pad_settings = None
         self._outpaint_settings = None
         self._path_settings = None
+
+    @property
+    def img2img_pipelines(self):
+        return (
+            StableDiffusionXLImg2ImgPipeline,
+            StableDiffusionXLControlNetImg2ImgPipeline,
+            StableDiffusionImg2ImgPipeline,
+            StableDiffusionControlNetImg2ImgPipeline
+        )
+
+    @property
+    def txt2img_pipelines(self):
+        return (
+            StableDiffusionXLPipeline,
+            StableDiffusionXLControlNetPipeline,
+            StableDiffusionPipeline,
+            StableDiffusionControlNetPipeline
+        )
+
+    @property
+    def outpaint_pipelines(self):
+        return (
+            StableDiffusionXLInpaintPipeline,
+            StableDiffusionInpaintPipeline,
+            StableDiffusionControlNetInpaintPipeline,
+            StableDiffusionXLControlNetInpaintPipeline
+        )
 
     @property
     def use_compel(self) -> bool:
@@ -1089,11 +1106,11 @@ class SDHandler(BaseHandler):
         pipeline_type = None
         if self._pipe:
             pipeline_class = self._pipe.__class__
-            if pipeline_class in (StableDiffusionXLPipeline, StableDiffusionPipeline, StableDiffusionControlNetPipeline):
+            if pipeline_class in self.txt2img_pipelines:
                 pipeline_type = "txt2img"
-            elif pipeline_class in (StableDiffusionXLImg2ImgPipeline, StableDiffusionImg2ImgPipeline, StableDiffusionControlNetImg2ImgPipeline):
+            elif pipeline_class in self.img2img_pipelines:
                 pipeline_type = "img2img"
-            elif pipeline_class in (StableDiffusionXLInpaintPipeline, StableDiffusionInpaintPipeline, StableDiffusionControlNetInpaintPipeline):
+            elif pipeline_class in self.outpaint_pipelines:
                 pipeline_type = "inpaint"
         self.emit_signal(SignalCode.SD_PIPELINE_LOADED_SIGNAL, { "pipeline": pipeline_type })
 
