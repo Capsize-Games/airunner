@@ -50,12 +50,12 @@ class SDHandler(BaseHandler):
     def  __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._controlnet_model = None
-        self._controlnet: ControlNetModel = None
+        self._controlnet: Optional[ControlNetModel] = None
         self._controlnet_processor: Any = None
         self.model_type = ModelType.SD
-        self._safety_checker:StableDiffusionSafetyChecker = None
-        self._feature_extractor:CLIPFeatureExtractor = None
-        self._memory_settings_flags:dict = {
+        self._safety_checker: Optional[StableDiffusionSafetyChecker] = None
+        self._feature_extractor: Optional[CLIPFeatureExtractor] = None
+        self._memory_settings_flags: dict = {
             "torch_compile_applied": False,
             "vae_slicing_applied": None,
             "last_channels_applied": None,
@@ -75,19 +75,19 @@ class SDHandler(BaseHandler):
         self._pooled_prompt_embeds = None
         self._negative_pooled_prompt_embeds = None
         self._pipe = None
-        self._current_prompt:str = ""
+        self._current_prompt: str = ""
         self._current_negative_prompt: str = ""
         self._current_prompt_2: str = ""
         self._current_negative_prompt_2: str = ""
         self._generator = None
         self._latents = None
-        self._textual_inversion_manager: DiffusersTextualInversionManager = None
-        self._compel_proc: Compel = None
+        self._textual_inversion_manager: Optional[DiffusersTextualInversionManager] = None
+        self._compel_proc: Optional[Compel] = None
         self._loaded_lora: Dict = {}
         self._disabled_lora: List = []
         self._loaded_embeddings: List = []
         self._current_state: HandlerState = HandlerState.UNINITIALIZED
-        self._deep_cache_helper: DeepCacheSDHelper = None
+        self._deep_cache_helper: Optional[DeepCacheSDHelper] = None
         self.do_interrupt_image_generation = False
 
         # The following properties must be set to None before generating an image
