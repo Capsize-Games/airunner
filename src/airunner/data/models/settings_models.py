@@ -110,6 +110,8 @@ class OutpaintSettings(Base):
     enabled = Column(Boolean, default=True)
     strength = Column(Integer, default=50)
     mask_blur = Column(Integer, default=0)
+    use_grid_image_as_input = Column(Boolean, default=False)
+    lock_input_image = Column(Boolean, default=False)
 
 
 class DrawingPadSettings(Base):

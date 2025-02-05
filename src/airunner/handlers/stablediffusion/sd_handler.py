@@ -1661,7 +1661,9 @@ class SDHandler(BaseHandler):
             if args["num_inference_steps"] < MIN_NUM_INFERENCE_STEPS_IMG2IMG:
                 args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
         elif self.is_outpaint:
-            image = self.drawing_pad_image
+            image = self.outpaint_image
+            if not image:
+                image = self.drawing_pad_image
             mask = self.drawing_pad_mask
 
             # Crop the image based on the active grid location

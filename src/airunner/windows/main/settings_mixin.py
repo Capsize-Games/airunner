@@ -254,6 +254,14 @@ class SettingsMixin:
         if image is not None:
             image = image.convert("RGB")
         return image
+    
+    @property
+    def outpaint_image(self):
+        base_64_image = self.outpaint_settings.image
+        image = convert_binary_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
 
     @property
     def image_filter_values(self):
