@@ -24,11 +24,9 @@ from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, S
     StableDiffusionXLControlNetInpaintPipeline, ControlNetModel, AutoencoderTiny, AutoencoderKL
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTextModelWithProjection
-from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
 from transformers import BitsAndBytesConfig as TransformersBitsAndBytesConfig
 from airunner.handlers.base_handler import BaseHandler
-from airunner.data.models.settings_models import Schedulers, Lora, Embedding, ControlnetModel, AIModels, \
-    GeneratorSettings
+from airunner.data.models.settings_models import Schedulers, Lora, Embedding, ControlnetModel, AIModels
 from airunner.enums import (
     SDMode, StableDiffusionVersion, GeneratorSection, ModelStatus, ModelType, SignalCode, HandlerState,
     EngineResponseCode, ModelAction
