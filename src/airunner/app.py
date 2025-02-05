@@ -68,7 +68,73 @@ class App(
 
         self.start()
         self.run_setup_wizard()
+
+        def read_version():
+            version_file = os.path.join(os.path.dirname(__file__), "..", "..", "version.txt")
+            with open(version_file, "r") as f:
+                return f.read().strip()
+
+        current_version = read_version()
+        if self.do_upgrade(current_version):
+            self.handle_upgrade(current_version)
         self.run()
+    
+    def do_upgrade(self, current_version) -> bool:
+        current_version_tuple = tuple(map(int, current_version.split(".")))
+        try:
+            app_version_tuple = tuple(map(int, self.application_settings.app_version.split(".")))
+        except ValueError:
+            return True
+        except AttributeError:
+            return True
+        return app_version_tuple < current_version_tuple
+
+
+    def handle_upgrade(self, current_version):
+        from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
+        from airunner.data.models.settings_models import PipelineModel
+        for model in pipeline_bootstrap_data:
+            pipelinemodel = self.session.query(PipelineModel).filter_by(
+                pipeline_action= model["pipeline_action"],
+                version=model["version"],
+                category=model["category"],
+                classname=model["classname"],
+                default=model["default"]
+            ).first()
+            if pipelinemodel:
+                continue
+            pipelinemodel = PipelineModel()
+            pipelinemodel.pipeline_action = model["pipeline_action"]
+            pipelinemodel.version = model["version"]
+            pipelinemodel.category = model["category"]
+            pipelinemodel.classname = model["classname"]
+            pipelinemodel.default = model["default"]
+            self.session.add(pipelinemodel)
+        self.session.commit()
+        try:
+            app_version_tuple = tuple(map(int, self.application_settings.app_version.split(".")))
+        except ValueError:
+            app_version_tuple = None
+        except AttributeError:
+            app_version_tuple = None
+        if app_version_tuple is None or app_version_tuple < (3, 1, 10):
+            turbo_paths = (
+                os.path.expanduser(os.path.join(
+                    self.path_settings.base_path, "art/models", "SDXL 1.0", "txt2img", "turbo_models"
+                )),
+                os.path.expanduser(os.path.join(
+                    self.path_settings.base_path, "art/models", "SDXL 1.0", "inpaint", "turbo_models"
+                ))
+            )
+            for turbo_path in turbo_paths:
+                if not os.path.exists(turbo_path):
+                    os.makedirs(turbo_path)
+                    with open(os.path.join(turbo_path, "README.txt"), "w") as f:
+                        f.write("Place Stable Diffusion XL Turbo, Lightning and Hyper models here")
+            self.application_settings.run_setup_wizard = True
+            self.run_setup_wizard()
+            self.application_settings.app_version = current_version
+            self.session.commit()
 
     def run_setup_wizard(self):
         application_settings = self.session.query(ApplicationSettings).first()

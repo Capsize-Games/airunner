@@ -45,9 +45,10 @@ from airunner.app import App
 from alembic.config import Config
 from alembic import command
 from pathlib import Path
-from airunner.data.models.settings_models import ApplicationSettings
+from airunner.data.models.settings_models import ApplicationSettings, PathSettings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
+
 
 def setup_database():
     base_path = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -57,6 +58,12 @@ def setup_database():
     alembic_cfg.set_main_option("script_location", str(alembic_dir))
     command.upgrade(alembic_cfg, "head")
 
+
+def run_setup_wizard():
+    from airunner.app_installer import AppInstaller
+    AppInstaller()
+
+
 def main():
     setup_database()
 
@@ -64,9 +71,9 @@ def main():
     engine = create_engine("sqlite:///" + os.path.join(base_dir, "airunner.db"))
     session = scoped_session(sessionmaker(bind=engine))
     application_settings = session.query(ApplicationSettings).first()
+
     if application_settings.run_setup_wizard:
-        from airunner.app_installer import AppInstaller
-        AppInstaller()
+        run_setup_wizard()
     else:
         App()
 

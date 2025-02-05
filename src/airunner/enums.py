@@ -249,6 +249,7 @@ class SignalCode(Enum):
     LOAD_NON_SD_MODELS = enum.auto()
 
     SD_PIPELINE_LOADED_SIGNAL = enum.auto()
+    MISSING_REQUIRED_MODELS = enum.auto()
 
 class EngineResponseCode(Enum):
     STATUS = 100

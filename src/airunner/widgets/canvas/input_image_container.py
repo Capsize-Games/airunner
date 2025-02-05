@@ -12,30 +12,41 @@ class InputImageContainer(BaseWidget):
         self.register(SignalCode.MASK_UPDATED, self.on_mask_generator_worker_response_signal)
         self.register(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL, self.on_load_image_from_grid_signal)
         self.input_image = None
+        self.mask_image = None
         self.generated_image = None
 
+    @property
+    def settings_key(self):
+        return self.property("settings_key")    
+
     def on_mask_generator_worker_response_signal(self, message):
-        if self.input_image:
-            self.input_image.on_mask_generator_worker_response_signal()
+        if self.mask_image:
+            self.mask_image.on_mask_generator_worker_response_signal()
 
     def on_load_image_from_grid_signal(self):
         if self.input_image:
             self.input_image.load_image_from_grid()
 
     def showEvent(self, event):
+        settings_key = self.settings_key
+        self._set_label()
         if self.input_image is None:
-            settings_key = self.settings_key
             self.input_image = InputImage(settings_key=self.settings_key)
             self.ui.tabWidget.addTab(self.input_image, "Input Image")
+        
+        if self.generated_image is None and settings_key == "controlnet_settings":
+            self.generated_image = InputImage(settings_key=self.settings_key, use_generated_image=True)
+            self.ui.tabWidget.addTab(self.generated_image, "Generated Image")
+        elif self.mask_image is None and settings_key == "outpaint_settings":
+            self.mask_image = InputImage(settings_key=self.settings_key, is_mask=True)
+            self.ui.tabWidget.addTab(self.mask_image, "Mask")
+    
+    def _set_label(self):
+        settings_key = self.settings_key
+        if settings_key == "outpaint_settings":
+            label = "Inpaint / Outpaint"
+        elif settings_key == "controlnet_settings":
+            label = "Controlnet"
+        else:
             label = "Image-to-Image"
-            if settings_key == "controlnet_settings":
-                label = "Controlnet"
-                self.generated_image = InputImage(settings_key=self.settings_key, use_generated_image=True)
-                self.ui.tabWidget.addTab(self.generated_image, "Generated Image")
-            elif settings_key == "outpaint_settings":
-                label = "Inpaint / Outpaint"
-            self.ui.label.setText(label)
-
-    @property
-    def settings_key(self):
-        return self.property("settings_key")
+        self.ui.label.setText(label)

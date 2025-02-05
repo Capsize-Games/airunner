@@ -44,6 +44,17 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
+        "name": "SDXL Inpaint",
+        "path": "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+        "branch": "fp16",
+        "version": "SDXL 1.0",
+        "category": "stablediffusion",
+        "pipeline_action": "inpaint",
+        "enabled": True,
+        "model_type": "art",
+        "is_default": True
+    },
+    {
         "name": "CompVis Safety Checker",
         "path": "CompVis/stable-diffusion-safety-checker",
         "branch": "main",

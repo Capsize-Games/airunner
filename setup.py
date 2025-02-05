@@ -1,8 +1,12 @@
 from setuptools import setup, find_packages
 
+def read_version():
+    with open("version.txt", "r") as f:
+        return f.read().strip()
+
 setup(
     name="airunner",
-    version="3.1.9",
+    version=read_version(),
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -43,7 +47,7 @@ setup(
         "cryptography==44.0.0",
         "setuptools==75.8.0",
 
-        # # Stable Diffusion Dependencies
+        # Stable Diffusion Dependencies
         "diffusers==0.32.2",
         "controlnet_aux==0.0.9",
         "safetensors==0.5.2",
@@ -77,6 +81,7 @@ setup(
             "windows/**/*.ui",
             "*.qrc",
             "*.ini",
+            "version.txt",
         ],
     },
     include_package_data=True,

@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 as base_image
+FROM ubuntu:22.04 AS base_image
 USER root
 ENV TZ=America/Denver
 ENV HOME=/app
@@ -49,13 +49,13 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9 \
     && rm -rf /var/lib/apt/lists/*
 
-FROM base_image as download_qt
+FROM base_image AS download_qt
 USER root
 ENV TZ=America/Denver
 ENV HOME=/app
 RUN wget https://download.qt.io/archive/qt/6.7/6.7.0/single/qt-everywhere-src-6.7.0.tar.xz
 
-FROM download_qt as build_qt
+FROM download_qt AS build_qt
 USER root
 ENV TZ=America/Denver
 ENV HOME=/app
@@ -64,7 +64,7 @@ RUN tar -xf qt-everywhere-src-6.7.0.tar.xz \
     && cmake -G Ninja -B build -DCMAKE_INSTALL_PREFIX=/usr/local/qt6 \
     && cmake --build build --parallel
 
-FROM build_qt as install_qt
+FROM build_qt AS install_qt
 USER root
 ENV TZ=America/Denver
 ENV HOME=/app
@@ -73,7 +73,7 @@ RUN cd qt-everywhere-src-6.7.0/build \
     && cd ../.. \
     && rm -rf qt-everywhere-src-6.7.0 qt-everywhere-src-6.7.0.tar.xz
 
-FROM install_qt as create_user
+FROM install_qt AS create_user
 ENV DEBIAN_FRONTEND=noninteractive
 RUN useradd -ms /bin/bash appuser \
     && chown -R appuser:appuser /app \
@@ -91,7 +91,7 @@ ENV PYTHONUSERBASE=/home/appuser/.local
 ENV PATH="/usr/local/qt6/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/usr/local/qt6/lib:${LD_LIBRARY_PATH}"
 
-FROM create_user as install_requirements
+FROM create_user AS install_requirements
 USER appuser
 WORKDIR /app
 ENV HOME=/app
@@ -106,7 +106,7 @@ RUN pip install requests accelerate cmake
 RUN pip uninstall torch torchvision -y
 RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade
 
-FROM install_requirements as install_apps
+FROM install_requirements AS install_apps
 USER appuser
 WORKDIR /app
 ENV HOME=/app
@@ -114,7 +114,7 @@ ENV PATH="/home/appuser/.local/bin:${PATH}"
 ENV PYTHONUSERBASE=/home/appuser/.local
 RUN python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 
-FROM install_apps as more_env
+FROM install_apps AS more_env
 USER appuser
 WORKDIR /app
 ENV HOME=/app
@@ -122,7 +122,7 @@ ENV PATH="/home/appuser/.local/bin:${PATH}"
 ENV PYTHONUSERBASE=/home/appuser/.local
 RUN pip install pyinstaller
 
-FROM more_env as build_files
+FROM more_env AS build_files
 USER appuser
 WORKDIR /app
 ENV HOME=/app
@@ -132,7 +132,7 @@ COPY dobuild.py dobuild.py
 COPY build.sh build.sh
 COPY setup.py setup.py
 
-FROM build_files as build_airunner
+FROM build_files AS build_airunner
 USER appuser
 WORKDIR /app
 ENV HOME=/app
@@ -148,7 +148,7 @@ RUN git clone https://github.com/Capsize-Games/airunner.git /app/airunner \
     && WHL_FILE=$(ls airunner-*.whl) \
     && python3 -m pip install build $WHL_FILE
 
-FROM build_airunner as build_airunner_executable
+FROM build_airunner AS build_airunner_executable
 USER appuser
 WORKDIR /app
 ENV HOME=/app
@@ -156,4 +156,5 @@ ENV PATH="/home/appuser/.local/bin:${PATH}"
 ENV PYTHONUSERBASE=/home/appuser/.local
 ENV DOCKER_ENV=true
 COPY airunner.spec airunner.spec
+COPY version.txt version.txt
 COPY ./lib/tokenizers/punkt /app/lib/tokenizers/punkt
