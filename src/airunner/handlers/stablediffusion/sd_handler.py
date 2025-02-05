@@ -47,7 +47,7 @@ SKIP_RELOAD_CONSTS = (
 
 
 class SDHandler(BaseHandler):
-    def  __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._controlnet_model = None
         self._controlnet: Optional[ControlNetModel] = None
@@ -558,7 +558,7 @@ class SDHandler(BaseHandler):
         clear_memory()
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
 
-    def handle_generate_signal(self, message: dict=None):
+    def handle_generate_signal(self, message: Optional[Dict] = None):
         self.load()
         self._clear_cached_properties()
         self._swap_pipeline()
@@ -568,6 +568,7 @@ class SDHandler(BaseHandler):
         ):
             self._current_state = HandlerState.PREPARING_TO_GENERATE
             response = None
+            code = EngineResponseCode.NONE
             try:
                 response = self._generate()
                 code = EngineResponseCode.IMAGE_GENERATED
@@ -704,7 +705,7 @@ class SDHandler(BaseHandler):
                 is_outpaint=self.is_outpaint
             )
     
-    def _initialize_metadata(self, images: List[Any], data:Dict) -> Optional[dict]:
+    def _initialize_metadata(self, images: List[Any], data: Dict) -> Optional[dict]:
         metadata = None
         if self.metadata_settings.export_metadata:
             metadata_dict = dict()
@@ -764,7 +765,7 @@ class SDHandler(BaseHandler):
             metadata = [metadata_dict for _ in range(len(images))]
         return metadata
 
-    def _export_images(self, images: List[Any], data:Dict):
+    def _export_images(self, images: List[Any], data: Dict):
         extension = self.application_settings_cached.image_export_type
         filename = "image"
         file_path = os.path.expanduser(
@@ -923,7 +924,6 @@ class SDHandler(BaseHandler):
         if self._controlnet_processor is not None:
             return
         self.logger.debug(f"Loading controlnet processor {self.controlnet_model.name}")
-        #self._controlnet_processor = Processor(self.controlnet_model.name)
         controlnet_data = controlnet_aux_models[self.controlnet_model.name]
         controlnet_class_: Any = controlnet_data["class"]
         checkpoint: bool = controlnet_data["checkpoint"]
@@ -938,8 +938,8 @@ class SDHandler(BaseHandler):
     def _load_scheduler(self, scheduler=None):
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
         scheduler_name = scheduler or self.generator_settings_cached.scheduler
-        base_path:str = self.path_settings_cached.base_path
-        scheduler_version:str = self.version
+        base_path: str = self.path_settings_cached.base_path
+        scheduler_version: str = self.version
         scheduler_path = os.path.expanduser(
             os.path.join(
                 base_path,
@@ -1024,7 +1024,7 @@ class SDHandler(BaseHandler):
             )
         return data
 
-    def _prepare_tiny_autoencoder(self, data: dict) -> dict:
+    def _prepare_tiny_autoencoder(self, data: Dict) -> Optional[Dict]:
         if not self.is_outpaint:
             path = os.path.expanduser(os.path.join(
                 self.path_settings_cached.base_path,
@@ -1110,7 +1110,7 @@ class SDHandler(BaseHandler):
                 pipeline_type = "img2img"
             elif pipeline_class in self.outpaint_pipelines:
                 pipeline_type = "inpaint"
-        self.emit_signal(SignalCode.SD_PIPELINE_LOADED_SIGNAL, { "pipeline": pipeline_type })
+        self.emit_signal(SignalCode.SD_PIPELINE_LOADED_SIGNAL, {"pipeline": pipeline_type})
 
     def _move_pipe_to_device(self):
         if self._pipe is not None:
@@ -1161,7 +1161,7 @@ class SDHandler(BaseHandler):
     def _set_lora_adapters(self):
         self.logger.debug("Setting LORA adapters")
         
-        loaded_lora_id = [l.id for l in self._loaded_lora.values()]
+        loaded_lora_id = [lora.id for lora in self._loaded_lora.values()]
         enabled_lora = self.session.query(Lora).filter(Lora.id.in_(loaded_lora_id)).all()
         adapter_weights = []
         adapter_names = []
@@ -1196,7 +1196,11 @@ class SDHandler(BaseHandler):
                 else:
                     try:
                         self.logger.debug(f"Loading embedding {embedding_path}")
-                        self._pipe.load_textual_inversion(embedding_path, token=embedding.name, weight_name=embedding_path)
+                        self._pipe.load_textual_inversion(
+                            embedding_path,
+                            token=embedding.name,
+                            weight_name=embedding_path
+                        )
                         self._loaded_embeddings.append(embedding_path)
                     except Exception as e:
                         self.logger.error(f"Failed to load embedding {embedding_path}: {e}")
@@ -1273,7 +1277,6 @@ class SDHandler(BaseHandler):
 
     def _finalize_load_stable_diffusion(self):
         safety_checker_ready = True
-        tokenizer_ready = True
         if self.use_safety_checker:
             safety_checker_ready = (
                 self._safety_checker is not None and
@@ -1363,7 +1366,7 @@ class SDHandler(BaseHandler):
     def _apply_model_offload(self, attr_val):
         if attr_val and not self.memory_settings.use_enable_sequential_cpu_offload:
             self.logger.debug("Enabling model cpu offload")
-            #self._move_stable_diffusion_to_cpu()
+            # self._move_stable_diffusion_to_cpu()
             self._pipe.enable_model_cpu_offload()
         else:
             self.logger.debug("Model cpu offload disabled")
@@ -1454,7 +1457,7 @@ class SDHandler(BaseHandler):
         self._loaded_lora = {}
         self._disabled_lora = []
 
-    def _unload_lora(self, lora:Lora):
+    def _unload_lora(self, lora: Lora):
         if lora.path in self._loaded_lora:
             self.logger.debug(f"Unloading LORA {lora.path}")
             del self._loaded_lora[lora.path]
@@ -1590,7 +1593,9 @@ class SDHandler(BaseHandler):
 
             if self.is_sd_xl_or_turbo:
                 prompt_embeds, pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
-                negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
+                negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(
+                    compel_negative_prompt
+                )
             else:
                 prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
                 negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
@@ -1622,7 +1627,7 @@ class SDHandler(BaseHandler):
             if key.endswith("_applied"):
                 self._memory_settings_flags[key] = None
 
-    def _prepare_data(self, active_rect = None) -> dict:
+    def _prepare_data(self, active_rect=None) -> Dict:
         """
         Here we are loading the arguments for the Stable Diffusion generator.
         :return:
@@ -1755,7 +1760,7 @@ class SDHandler(BaseHandler):
             ))
         return args
 
-    def _resize_image(self, image: Image, max_width: int, max_height: int) -> Image:
+    def _resize_image(self, image: Image, max_width: int, max_height: int) -> Optional[Image]:
         """
         Resize the image to ensure it is not larger than max_width and max_height,
         while maintaining the aspect ratio.
