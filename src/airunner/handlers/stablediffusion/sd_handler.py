@@ -689,26 +689,26 @@ class SDHandler(BaseHandler):
             if self.application_settings_cached.auto_export_images:
                 self._export_images(images, args)
 
-            return dict(
-                images=images,
-                data=args,
-                nsfw_content_detected=any(nsfw_content_detected),
-                active_rect=active_rect,
-                is_outpaint=self.is_outpaint
-            )
+            return {
+                "images": images,
+                "data": args,
+                "nsfw_content_detected": any(nsfw_content_detected),
+                "active_rect": active_rect,
+                "is_outpaint": self.is_outpaint
+            }
         else:
-            return dict(
-                images=[],
-                data=args,
-                nsfw_content_detected=False,
-                active_rect=active_rect,
-                is_outpaint=self.is_outpaint
-            )
+            return {
+                "images": [],
+                "data": args,
+                "nsfw_content_detected": False,
+                "active_rect": active_rect,
+                "is_outpaint": self.is_outpaint
+            }
     
     def _initialize_metadata(self, images: List[Any], data: Dict) -> Optional[dict]:
         metadata = None
         if self.metadata_settings.export_metadata:
-            metadata_dict = dict()
+            metadata_dict = {}
             if self.metadata_settings.image_export_metadata_prompt:
                 metadata_dict["prompt"] = self._current_prompt
                 metadata_dict["prompt_2"] = self._current_prompt_2
@@ -1053,12 +1053,12 @@ class SDHandler(BaseHandler):
 
     def _load_pipe(self):
         self.logger.debug("Loading pipe")
-        data = dict(
-            torch_dtype=self.data_type,
-            use_safetensors=True,
-            local_files_only=True,
-            device=self._device,
-        )
+        data = {
+            "torch_dtype": self.data_type,
+            "use_safetensors": True,
+            "local_files_only": True,
+            "device": self._device,
+        }
 
         if self.controlnet_enabled:
             data["controlnet"] = self._controlnet
@@ -1236,10 +1236,10 @@ class SDHandler(BaseHandler):
 
     def _load_compel_proc(self):
         self.logger.debug("Loading compel proc")
-        parameters = dict(
-            truncate_long_prompts=False,
-            textual_inversion_manager=self._textual_inversion_manager
-        )
+        parameters = {
+            "truncate_long_prompts": False,
+            "textual_inversion_manager": self._textual_inversion_manager
+        }
         if self.is_sd_xl_or_turbo:
             tokenizer = [self._pipe.tokenizer, self._pipe.tokenizer_2]
             text_encoder = [self._pipe.text_encoder, self._pipe.text_encoder_2]
@@ -1248,10 +1248,10 @@ class SDHandler(BaseHandler):
         else:
             tokenizer = self._pipe.tokenizer
             text_encoder = self._pipe.text_encoder
-        parameters.update(dict(
-            tokenizer=tokenizer,
-            text_encoder=text_encoder
-        ))
+        parameters.update({
+            "tokenizer": tokenizer,
+            "text_encoder": text_encoder
+        })
         self._compel_proc = Compel(**parameters)
 
     def _make_memory_efficient(self):
@@ -1635,39 +1635,37 @@ class SDHandler(BaseHandler):
         self.logger.debug("Preparing data")
         self._set_seed()
 
-        args = dict(
-            width=int(self.application_settings_cached.working_width),
-            height=int(self.application_settings_cached.working_height),
-            clip_skip=int(self.generator_settings_cached.clip_skip),
-            num_inference_steps=int(self.generator_settings_cached.steps),
-            callback=self._callback,
-            callback_steps=1,
-            generator=self._generator,
-            callback_on_step_end=self.__interrupt_callback,
-        )
+        args = {
+            "width": int(self.application_settings_cached.working_width),
+            "height": int(self.application_settings_cached.working_height),
+            "clip_skip": int(self.generator_settings_cached.clip_skip),
+            "num_inference_steps": int(self.generator_settings_cached.steps),
+            "callback": self._callback,
+            "callback_steps": 1,
+            "generator": self._generator,
+            "callback_on_step_end": self.__interrupt_callback,
+        }
 
         if len(self._loaded_lora) > 0:
-            args.update(cross_attention_kwargs=dict(
-                scale=self.lora_scale,
-            ))
+            args["cross_attention_kwargs"] = {"scale": self.lora_scale}
             self._set_lora_adapters()
 
         if self.use_compel:
-            args.update(dict(
-                prompt_embeds=self._prompt_embeds,
-                negative_prompt_embeds=self._negative_prompt_embeds,
-            ))
+            args.update({
+                "prompt_embeds": self._prompt_embeds,
+                "negative_prompt_embeds": self._negative_prompt_embeds,
+            })
 
             if self.is_sd_xl_or_turbo:
-                args.update(dict(
-                    pooled_prompt_embeds=self._pooled_prompt_embeds,
-                    negative_pooled_prompt_embeds=self._negative_pooled_prompt_embeds
-                ))
+                args.update({
+                    "pooled_prompt_embeds": self._pooled_prompt_embeds,
+                    "negative_pooled_prompt_embeds": self._negative_pooled_prompt_embeds
+                })
         else:
-            args.update(dict(
-                prompt=self.prompt,
-                negative_prompt=self.negative_prompt
-            ))
+            args.update({
+                "prompt": self.prompt,
+                "negative_prompt": self.negative_prompt
+            })
 
         width = int(self.application_settings_cached.working_width)
         height = int(self.application_settings_cached.working_height)
@@ -1675,10 +1673,10 @@ class SDHandler(BaseHandler):
         mask = None
 
         if self.is_txt2img or self.is_outpaint or self.is_img2img:
-            args.update(dict(
-                width=width,
-                height=height,
-            ))
+            args.update({
+                "width": width,
+                "height": height
+            })
 
         if self.is_img2img:
             image = self.img2img_image
@@ -1700,19 +1698,13 @@ class SDHandler(BaseHandler):
             new_image.paste(cropped_image, (0, 0))
             image = new_image.convert("RGB")
 
-        args.update(dict(
-            guidance_scale=self.generator_settings_cached.scale / 100.0
-        ))
+        args["guidance_scale"] = self.generator_settings_cached.scale / 100.0
 
         if not self.controlnet_enabled:
             if self.is_img2img:
-                args.update(dict(
-                    strength=self.generator_settings_cached.strength / 100.0
-                ))
+                args["strength"] = self.generator_settings_cached.strength / 100.0
             elif self.is_outpaint:
-                args.update(dict(
-                    strength=self.outpaint_settings_cached.strength / 100.0
-                ))
+                args["strength"] = self.outpaint_settings_cached.strength / 100.0
 
         # set the image to controlnet image if controlnet is enabled
         if self.controlnet_enabled:
@@ -1729,35 +1721,28 @@ class SDHandler(BaseHandler):
                     if self.is_txt2img:
                         image = control_image
                     else:
-                        args.update(dict(
-                            control_image=control_image
-                        ))
+                        args["control_image"] = control_image
                 else:
                     raise ValueError("Controlnet image is None")
 
         if image is not None:
             image = self._resize_image(image, width, height)
-            args.update(dict(
-                image=image
-            ))
+            args["image"] = image
 
         if mask is not None and self.is_outpaint:
             mask = self._resize_image(mask, width, height)
-
             mask = self._pipe.mask_processor.blur(mask, blur_factor=self.mask_blur)
-            args.update(dict(
-                mask_image=mask
-            ))
+            args["mask_image"] = mask
 
         if self.controlnet_enabled:
-            args.update(dict(
-                guess_mode=False,
-                control_guidance_start=0.0,
-                control_guidance_end=1.0,
-                strength=self.controlnet_strength / 100.0,
-                guidance_scale=self.generator_settings_scale / 100.0,
-                controlnet_conditioning_scale=self.controlnet_conditioning_scale / 100.0
-            ))
+            args.update({
+                "guess_mode": False,
+                "control_guidance_start": 0.0,
+                "control_guidance_end": 1.0,
+                "strength": self.controlnet_strength / 100.0,
+                "guidance_scale": self.generator_settings_scale / 100.0,
+                "controlnet_conditioning_scale": self.controlnet_conditioning_scale / 100.0
+            })
         return args
 
     def _resize_image(self, image: Image, max_width: int, max_height: int) -> Optional[Image]:
