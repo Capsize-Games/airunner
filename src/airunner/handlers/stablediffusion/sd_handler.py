@@ -1,6 +1,6 @@
 import datetime
 import os
-from typing import Any, List, Dict, Optional
+from typing import Any, List, Dict, Optional, Tuple
 
 import PIL
 import diffusers
@@ -70,16 +70,16 @@ class SDHandler(BaseHandler):
             "enable_model_cpu_offload": None,
             "use_tome_sd": None,
         }
-        self._prompt_embeds = None
-        self._negative_prompt_embeds = None
-        self._pooled_prompt_embeds = None
-        self._negative_pooled_prompt_embeds = None
+        self._prompt_embeds: Optional[torch.Tensor] = None
+        self._negative_prompt_embeds: Optional[torch.Tensor] = None
+        self._pooled_prompt_embeds: Optional[torch.Tensor] = None
+        self._negative_pooled_prompt_embeds: Optional[torch.Tensor] = None
         self._pipe = None
         self._current_prompt: str = ""
         self._current_negative_prompt: str = ""
         self._current_prompt_2: str = ""
         self._current_negative_prompt_2: str = ""
-        self._generator = None
+        self._generator: Optional[torch.Generator] = None
         self._latents = None
         self._textual_inversion_manager: Optional[DiffusersTextualInversionManager] = None
         self._compel_proc: Optional[Compel] = None
@@ -88,7 +88,7 @@ class SDHandler(BaseHandler):
         self._loaded_embeddings: List = []
         self._current_state: HandlerState = HandlerState.UNINITIALIZED
         self._deep_cache_helper: Optional[DeepCacheSDHelper] = None
-        self.do_interrupt_image_generation = False
+        self.do_interrupt_image_generation: bool = False
 
         # The following properties must be set to None before generating an image
         # each time generate is called. These are cached properties that come from the
