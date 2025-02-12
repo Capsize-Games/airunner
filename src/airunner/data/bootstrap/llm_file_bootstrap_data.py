@@ -45,4 +45,18 @@ LLM_FILE_BOOTSTRAP_DATA = {
             "tokenizer_config.json",
         ]
     },
+    "intfloat/e5-large": {
+        "path_settings": "text_embedding",
+        "files": [
+            "1_Pooling/config.json",
+            "config.json",
+            "model.safetensors",
+            "modules.json",
+            "sentence_bert_config.json",
+            "special_tokens_map.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "vocab.txt"
+        ]
+    },
 }
