@@ -46,6 +46,9 @@ setup(
         "pyttsx3==2.91",  # Required for tts
         "cryptography==44.0.0",
         "setuptools==75.8.0",
+        "openmeteo_requests==1.3.0",
+        "requests-cache==1.2.1",
+        "retry-requests==2.0.0",
 
         # Stable Diffusion Dependencies
         "diffusers==0.32.2",
@@ -65,9 +68,15 @@ setup(
         "llama-index-llms-huggingface==0.4.2",
         "llama-index-llms-groq==0.3.1",
         "llama-index-embeddings-mistralai==0.3.0",
+        "llama-index-vector-stores-faiss==0.3.0",
+        "llama-index-embeddings-huggingface==0.5.1",
+        "langchain-community==0.3.34",
         "EbookLib==0.18",
         "html2text==2024.2.26",
-        "rake_nltk==1.0.6"
+        "rake_nltk==1.0.6",
+        "faiss-gpu==1.7.2",
+        "tf-keras==2.18.0",
+        "timm==1.0.14"
     ],
     package_data={
         "airunner": [
