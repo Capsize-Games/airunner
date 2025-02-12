@@ -27,6 +27,7 @@ class LLMGenerateWorker(Worker):
 
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")
+        self.running = False
         if self.llm:
             self.llm.unload()
         if self._llm_thread is not None:

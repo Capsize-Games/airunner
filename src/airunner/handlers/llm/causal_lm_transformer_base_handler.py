@@ -1,19 +1,15 @@
 import random
 import os
-
 import torch
-
 from llama_index.llms.groq import Groq
-
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
-
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import MAX_SEED
 from airunner.utils.clear_memory import clear_memory
-from airunner.handlers.llm.agent.base_agent import BaseAgent
+from airunner.handlers.llm.agent.mistral_agent import MistralAgentQObject
 
 
 class CausalLMTransformerBaseHandler(
@@ -43,7 +39,6 @@ class CausalLMTransformerBaseHandler(
         self._rag_tokenizer = None
         self._rag_retriever = None
         self._do_quantize_model = kwargs.pop("do_quantize_model", False)
-        self.__model = None
         self._vocoder = None
         self._current_model_path = kwargs.get("current_model_path", "")
         self._history = []
@@ -255,7 +250,7 @@ class CausalLMTransformerBaseHandler(
         kwargs = {
             "local_files_only": True,
             "device_map": self.device,
-            "trust_remote_code": True,
+            "trust_remote_code": False,
             "torch_dtype": self.torch_dtype,
             "attn_implementation": "flash_attention_2",
         }
@@ -298,11 +293,24 @@ class CausalLMTransformerBaseHandler(
         if self._chat_agent is not None:
             return
         self.logger.debug("Loading agent")
-        self._chat_agent = BaseAgent(
+        # def get_weather(
+        #     location: str = Field(
+        #         description="The location to get the weather for.",
+        #     )
+        # ) -> str:
+        #     """Get the weather report for a given location."""
+        #     return f"{location} is sunny today."
+
+        tools = [
+            # FunctionTool.from_defaults(
+            #     get_weather,
+            #     return_direct=True
+            # ),
+        ]
+        self._chat_agent = MistralAgentQObject(
             model=self._model,
             tokenizer=self._tokenizer,
-            chat_template=self.chat_template,
-            is_mistral=self.is_mistral,
+            default_tool_choice=None
         )
 
     def _unload_streamer(self):
@@ -342,7 +350,7 @@ class CausalLMTransformerBaseHandler(
         do_clear_memory = False
         if self._chat_agent is not None:
             self.logger.debug("Unloading chat agent")
-            self._chat_agent.unload()
+            #self._chat_agent.unload()
             del self._chat_agent
             self._chat_agent = None
             do_clear_memory = True
@@ -354,13 +362,13 @@ class CausalLMTransformerBaseHandler(
         is_quantized = os.path.exists(path)
         if not is_quantized:
             path = self.model_path
-        params = dict(
-            local_files_only=True,
-            use_cache=self.use_cache,
-            trust_remote_code=False,
-            torch_dtype=self.torch_dtype,
-            device_map=self.device,
-        )
+        params = {
+            "local_files_only": True,
+            "use_cache": self.use_cache,
+            "trust_remote_code": False,
+            "torch_dtype": self.torch_dtype,
+            "device_map": self.device,
+        }
         if self._do_quantize_model and self.use_cuda:
             config = self._quantization_config
             if config:
@@ -381,10 +389,7 @@ class CausalLMTransformerBaseHandler(
             self.load()
         # if action is LLMActionType.CHAT and self.chatbot.use_mood:
         #     action = LLMActionType.UPDATE_MOOD
-        self._chat_agent.run(
-            prompt,
-            action
-        )
+        self._chat_agent.chat(prompt, action)
         if action is LLMActionType.CHAT:
             self._send_final_message()
 
