@@ -98,4 +98,15 @@ model_bootstrap_data = [
         "model_type": "llm",
         "is_default": True
     },
+    {
+        "name": "Intfloat E5 Large",
+        "path": "intfloat/e5-large",
+        "branch": "main",
+        "version": "llm",
+        "category": "llm",
+        "pipeline_action": "embedding",
+        "enabled": True,
+        "model_type": "llm",
+        "is_default": True
+    },
 ]
