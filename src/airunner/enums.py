@@ -361,6 +361,7 @@ class LLMActionType(Enum):
     PERFORM_RAG_SEARCH = "SEARCH: If the user requests that you search for information, choose this action."
     SUMMARIZE = "SUMMARIZE"
     DO_NOTHING = "DO NOTHING: If the user's request is unclear or you are unable to determine the user's intent, choose this action."
+    GET_WEATHER = "get_weather"
 
 
 
