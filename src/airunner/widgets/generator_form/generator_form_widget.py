@@ -195,11 +195,10 @@ class GeneratorForm(BaseWidget):
         self.emit_signal(SignalCode.UNLOAD_NON_SD_MODELS, dict(
             callback=self.unload_llm_callback
         ))
-
         # Set the prompts in the generator form UI
-        data = self.extract_json_from_message(data["message"])
-        prompt = data.get("composition", None)
-        secondary_prompt = data.get("description", None)
+        data = data["message"]
+        prompt = data.get("prompt", None)
+        secondary_prompt = data.get("secondary_prompt", None)
         prompt_type = data.get("type", ImageCategory.PHOTO.value)
         if prompt_type == "photo":
             negative_prompt = PHOTO_REALISTIC_NEGATIVE_PROMPT
