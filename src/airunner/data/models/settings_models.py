@@ -410,7 +410,6 @@ class Chatbot(Base):
 
     target_files = relationship("TargetFiles", back_populates="chatbot")
     target_directories = relationship("TargetDirectories", back_populates="chatbot")
-    messages = relationship("Message", back_populates="chatbot")
 
 
 class User(Base):
@@ -561,25 +560,10 @@ class Conversation(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     timestamp = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
     title = Column(String, nullable=True)  # New column added
-    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
     bot_mood = Column(Text, default="")
     key = Column(String, nullable=True)
     value = Column(JSON, nullable=False)
-
-
-class Message(Base):
-    __tablename__ = 'messages'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    role = Column(String, nullable=False)
-    content = Column(String, nullable=False)
-    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
-    conversation_id = Column(Integer, ForeignKey('conversations.id'))
-    conversation = relationship("Conversation", back_populates="messages")
-    name = Column(String, nullable=True)  # New column added
-    is_bot = Column(Boolean, default=False)  # New column added
     chatbot_id = Column(Integer, ForeignKey('chatbots.id'))
-
-    chatbot = relationship("Chatbot", back_populates="messages")
 
 
 class Summary(Base):
@@ -591,9 +575,7 @@ class Summary(Base):
     conversation = relationship("Conversation", back_populates="summaries")
 
 
-Conversation.messages = relationship("Message", order_by=Message.id, back_populates="conversation")
 Conversation.summaries = relationship("Summary", order_by=Summary.id, back_populates="conversation")
-Message.chatbot = relationship("Chatbot", back_populates="messages")
 
 
 class ImageFilter(Base):
