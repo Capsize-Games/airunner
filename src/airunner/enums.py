@@ -351,6 +351,7 @@ class LLMActionType(Enum):
     based on the user's words.
     """
     # DO_NOT_RESPOND = "DO NOTHING: Choose this action if none of the other actions apply to the user's request."
+    NONE = "None"
     CHAT = "RESPOND: Choose this action if you want to respond to the user."
     GENERATE_IMAGE = "GENERATE IMAGE: Choose this action if you want to generate an image."
     APPLICATION_COMMAND = "APPLICATION_COMMAND"
