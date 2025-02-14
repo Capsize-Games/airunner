@@ -1,7 +1,7 @@
 from typing import (
     Optional,
 )
-from airunner.handlers.llm.agent.refresh_context_chat_engine import RefreshContextChatEngine
+from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import RefreshContextChatEngine
 from llama_index.core.tools.types import ToolMetadata
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 
