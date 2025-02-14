@@ -2,6 +2,7 @@ import random
 import os
 import torch
 from llama_index.llms.groq import Groq
+from typing import Optional
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
@@ -26,7 +27,7 @@ class CausalLMTransformerBaseHandler(
         self._model = None
         self._streamer = None
         self._chat_engine = None
-        self._chat_agent = None
+        self._chat_agent: Optional[MistralAgentQObject] = None
         self._llm_with_tools = None
         self._agent_executor = None
         self._embed_model = None
@@ -350,7 +351,7 @@ class CausalLMTransformerBaseHandler(
         do_clear_memory = False
         if self._chat_agent is not None:
             self.logger.debug("Unloading chat agent")
-            #self._chat_agent.unload()
+            self._chat_agent.unload()
             del self._chat_agent
             self._chat_agent = None
             do_clear_memory = True
