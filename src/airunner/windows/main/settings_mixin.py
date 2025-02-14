@@ -1,7 +1,7 @@
 import logging
 import datetime
 import json
-from typing import List, Type
+from typing import List, Type, Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import joinedload, sessionmaker, scoped_session
@@ -11,7 +11,7 @@ from airunner.data.models.settings_models import Chatbot, AIModels, Schedulers, 
     GeneratorSettings, WindowSettings, ApplicationSettings, ActiveGridSettings, ControlnetSettings, \
     ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings, \
     LLMGeneratorSettings, TTSSettings, SpeechT5Settings, EspeakSettings, STTSettings, BrushSettings, GridSettings, \
-    MemorySettings, Message, Conversation, Summary, ImageFilterValue, TargetFiles, WhisperSettings, Base, User
+    MemorySettings, Conversation, Summary, ImageFilterValue, TargetFiles, WhisperSettings, Base, User
 from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
 from airunner.settings import DB_PATH
@@ -62,6 +62,8 @@ class SettingsMixinSharedInstance:
 
 
 class SettingsMixin:
+    _chatbot: Optional[Chatbot] = None
+
     @property
     def settings_mixin_shared_instance(self):
         return SettingsMixinSharedInstance()
@@ -266,10 +268,21 @@ class SettingsMixin:
         return [embedding for embedding in self.embeddings if embedding.version == version]
 
     @property
-    def chatbot(self) -> Type[Chatbot]:
-        return self.get_chatbot_by_id(
-            self.llm_generator_settings.current_chatbot
-        )
+    def chatbot(self) -> Optional[Chatbot]:
+        if not type(self.llm_generator_settings.current_chatbot) is int:
+            chatbot = self.session.query(Chatbot).first()
+            if not chatbot is None:
+                self.update_settings_by_name(
+                    "llm_generator_settings", 
+                    "current_chatbot", 
+                    chatbot.id
+                )
+                self._chatbot = chatbot
+        if not self._chatbot or self._chatbot != self.llm_generator_settings.current_chatbot:
+            self._chatbot = self.get_chatbot_by_id(
+                self.llm_generator_settings.current_chatbot
+            )
+        return self._chatbot
 
     @property
     def user(self) -> Type[User]:
@@ -708,43 +721,25 @@ class SettingsMixin:
         ]
         return results
 
-    def save_message(self, content, role, name, is_bot, conversation_id) -> Message:
-        timestamp = datetime.datetime.now()  # Ensure timestamp is a datetime object
-        llm_generator_settings = self.session.query(LLMGeneratorSettings).first()
-        message = Message(
-            role=role,
-            content=content,
-            name=name,
-            is_bot=is_bot,
-            timestamp=timestamp,
-            conversation_id=conversation_id,
-            chatbot_id=llm_generator_settings.current_chatbot
-        )
-        self.session.add(message)
-        self.session.commit()
-        return message
-
-    def get_chatbot_by_id(self, chatbot_id) -> Type[Chatbot]:
+    def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
         chatbot = self.session.query(Chatbot).filter_by(id=chatbot_id).options(joinedload(Chatbot.target_files)).first()
         if chatbot is None:
-            chatbot = self.session.query(Chatbot).options(joinedload(Chatbot.target_files)).first()
+            chatbot = self.create_chatbot("Default")
         return chatbot
 
-    def create_conversation(self, chat_store_key: str):
+    def create_conversation(self, chat_store_key: str, chatbot_id: int):
         # find conversation which has no title, bot_mood or messages
         conversation = self.session.query(Conversation).filter_by(
             key=chat_store_key
         ).first()
         if conversation:
-            # ensure there are no messages in the conversation
-            message = self.session.query(Message).filter_by(conversation_id=conversation.id).first()
-            if message is None:
-                return conversation
+            return conversation
         conversation = Conversation(
             timestamp=datetime.datetime.now(datetime.timezone.utc),
             title="",
             key=chat_store_key,
-            value=json.dumps([])
+            value=json.dumps([]),
+            chatbot_id=chatbot_id
         )
         self.session.add(conversation)
         self.session.commit()
@@ -771,7 +766,6 @@ class SettingsMixin:
         return conversations
 
     def delete_conversation(self, conversation_id):
-        self.session.query(Message).filter_by(conversation_id=conversation_id).delete()
         self.session.query(Summary).filter_by(conversation_id=conversation_id).delete()
         self.session.query(Conversation).filter_by(id=conversation_id).delete()
         self.session.commit()

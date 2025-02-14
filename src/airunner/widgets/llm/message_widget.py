@@ -1,4 +1,4 @@
-from airunner.data.models.settings_models import Message
+import json
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.message_ui import Ui_message
@@ -23,14 +23,8 @@ class MessageWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         self.name = kwargs.pop("name")
         self.message = kwargs.pop("message")
-        self.conversation_id = kwargs.pop("conversation_id")
         self.message_id = kwargs.pop("message_id")
-        if self.message_id is None:
-            session = self.session
-            message = session.query(Message).filter(Message.conversation_id == self.conversation_id).order_by(
-                Message.id.desc()).first()
-            if message is not None:
-                self.message_id = message.id
+        self.conversation_id = kwargs.pop("conversation_id")
         self.is_bot = kwargs.pop("is_bot")
         super().__init__(*args, **kwargs)
         self.ui.content.setReadOnly(True)
@@ -120,8 +114,13 @@ class MessageWidget(BaseWidget):
     @Slot()
     def delete(self):
         session = self.session
-        message = session.query(Message).filter(Message.id == self.message_id).first()
-        session.delete(message)
+        messages = json.loads(self.conversation.messages)
+        for message in messages:
+            if message["id"] == self.message_id:
+                messages.remove(message)
+                self.conversation.messages = json.dumps(messages)
+                session.add(self.conversation)
+                break
         session.commit()
         self.setParent(None)
         self.deleteLater()
