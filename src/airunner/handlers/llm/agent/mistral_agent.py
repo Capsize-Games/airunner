@@ -2,20 +2,23 @@
 
 Simple wrapper around AgentRunner + MistralAgentWorker.
 """
+import os
 from typing import (
     Any,
     List,
     Optional,
     Union,
 )
+from pydantic import Field
 import datetime
 import platform
 from PySide6.QtCore import QObject
-from llama_index.core.tools import BaseTool
+from llama_index.core.tools import BaseTool, FunctionTool
 from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
-from llama_index.core.agent import ReActAgent
 from llama_index.core.chat_engine.types import AgentChatResponse
-from llama_index.core.chat_engine.simple import SimpleChatEngine
+from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import (
+    RefreshSimpleChatEngine
+)
 from llama_index.core.base.llms.types import ChatMessage
 from airunner.enums import LLMActionType, SignalCode
 from airunner.mediator_mixin import MediatorMixin
@@ -28,6 +31,11 @@ from airunner.handlers.llm.agent.external_condition_stopping_criteria import (
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 from airunner.handlers.llm.agent.tools.rag_engine_tool import RAGEngineTool
 from airunner.handlers.llm.agent.weather_mixin import WeatherMixin
+from airunner.handlers.llm.storage.chat_store.sqlite import SQLiteChatStore
+from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuffer
+from llama_index.core.memory import BaseMemory
+from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
+
 
 DEFAULT_MAX_FUNCTION_CALLS = 5
 
@@ -61,7 +69,7 @@ class MistralAgentQObject(
         self._chat_engine_tool: Optional[ChatEngineTool] = None
         self._rag_engine_tool: Optional[RAGEngineTool] = None
         self.load_rag()
-        self._tool_agent: Optional[ReActAgent] = None
+        self._react_tool_agent: Optional[ReActAgentTool] = None
         self.default_tool_choice: Optional[Union[str, dict]] = default_tool_choice
         self.max_function_calls: int = max_function_calls
         self._complete_response: str = ""
@@ -278,12 +286,24 @@ class MistralAgentQObject(
     ) -> AgentChatResponse:
         self._complete_response = ""
         self.do_interrupt = False
+        self.chat_engine_tool.update_system_prompt(self._system_prompt)
+        self.rag_engine_tool.update_system_prompt(self._rag_system_prompt)
+        kwargs = {
+            "input": message,
+            "chat_history": self._memory.get_all() if self._memory else None
+        }
         if action is LLMActionType.CHAT:
-            self.chat_engine_tool.call(input=message)
+            self.chat_engine_tool.call(**kwargs)
+            self._memory = self.chat_engine._memory
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            self.rag_engine_tool.call(input=message)
+            self.rag_engine_tool.call(**kwargs)
+            self._memory = self.rag_engine._memory
         else:
-            self.tool_agent.query(message)
+            self.react_tool_agent.call(**kwargs)
+            self._memory = self.react_tool_agent.chat_engine.memory
+        
+    def save_chat_history(self):
+        pass
     
     def interrupt_process(self):
         self.do_interrupt = True
