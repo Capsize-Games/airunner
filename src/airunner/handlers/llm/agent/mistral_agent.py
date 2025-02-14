@@ -77,23 +77,39 @@ class MistralAgentQObject(
         self.default_tool_choice: Optional[Union[str, dict]] = default_tool_choice
         self.max_function_calls: int = max_function_calls
         self._complete_response: str = ""
-        self.tools: List[BaseTool] = [
-            self.chat_engine_tool,
-            self.rag_engine_tool
-        ]
         super().__init__(**kwargs)
 
     @property
-    def tool_agent(self) -> ReActAgent:
-        if not self._tool_agent:
-            self._tool_agent = ReActAgent.from_tools(
+    def tools(self) -> List[BaseTool]:
+        def get_date_and_time(*args, **kwargs) -> str:
+            """Get the current date and time."""
+            return self._date_time_prompt
+
+        tools = [
+            FunctionTool.from_defaults(
+                get_date_and_time,
+                return_direct=False
+            ),
+        ]
+        return tools + [
+            self.chat_engine_tool,
+            self.rag_engine_tool
+        ]
+
+    @property
+    def react_tool_agent(self) -> ReActAgentTool:
+        if not self._react_tool_agent:
+            self._react_tool_agent = ReActAgentTool.from_tools(
                 self.tools, 
+                agent=self,
+                memory=self.chat_memory,
                 llm=self.llm, 
                 verbose=True,
                 max_function_calls=self.max_function_calls,
-                default_tool_choice=self.default_tool_choice
+                default_tool_choice=self.default_tool_choice,
+                return_direct=True
             )
-        return self._tool_agent
+        return self._react_tool_agent
 
     @property
     def llm(self) -> HuggingFaceLLM:
@@ -134,12 +150,6 @@ class MistralAgentQObject(
         return self._rag_engine_tool
 
 
-    @property
-    def target_files(self) -> Optional[List[str]]:
-        return [
-            target_file.file_path for target_file in self.chatbot.target_files
-        ]
-    
     @property
     def do_interrupt(self):
         return self._do_interrupt
