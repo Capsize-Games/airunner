@@ -39,7 +39,7 @@ class WeatherMixin:
     
     @property
     def _weather_prompt(self) -> str:
-        weather = self.get_weather(80111)
+        weather = self.get_weather()
         current_temperature_2m = weather.Variables(0).Value()
         current_precipitation = weather.Variables(1).Value()
         current_rain = weather.Variables(2).Value()
