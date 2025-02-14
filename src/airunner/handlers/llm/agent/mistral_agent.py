@@ -65,9 +65,13 @@ class MistralAgentQObject(
         self._llm: Optional[HuggingFaceLLM] = None
         # self.news_scraper_worker: NewsScraperWorker = create_worker(NewsScraperWorker)
         self._conversation: Optional[Conversation] = None
-        self._chat_engine: Optional[SimpleChatEngine] = None
+        self._chat_engine: Optional[RefreshSimpleChatEngine] = None
         self._chat_engine_tool: Optional[ChatEngineTool] = None
         self._rag_engine_tool: Optional[RAGEngineTool] = None
+        self._chat_store: Optional[SQLiteChatStore] = None
+        self._chat_memory: Optional[ChatMemoryBuffer] = None
+        self._current_action: LLMActionType = LLMActionType.NONE
+        self._memory: Optional[BaseMemory] = None
         self.load_rag()
         self._react_tool_agent: Optional[ReActAgentTool] = None
         self.default_tool_choice: Optional[Union[str, dict]] = default_tool_choice
@@ -102,10 +106,11 @@ class MistralAgentQObject(
         return self._llm
 
     @property
-    def chat_engine(self) -> SimpleChatEngine:
+    def chat_engine(self) -> RefreshSimpleChatEngine:
         if not self._chat_engine:
-            self._chat_engine = SimpleChatEngine.from_defaults(
+            self._chat_engine = RefreshSimpleChatEngine.from_defaults(
                 system_prompt=self._system_prompt,
+                memory=self.chat_memory,
                 llm=self.llm
             )
         return self._chat_engine
@@ -268,6 +273,52 @@ class MistralAgentQObject(
         prompt = prompt.replace("{{ botname }}", self.botname)
         return prompt
     
+    @property
+    def chat_store(self) -> SQLiteChatStore:
+        if not self._chat_store:
+            db_path = os.path.expanduser(
+                os.path.join(
+                    "~",
+                    ".local",
+                    "share",
+                    "airunner",
+                    "data",
+                    "chat_store.db"
+                )
+            )
+            self._chat_store = SQLiteChatStore.from_uri(f"sqlite:///{db_path}")
+        return self._chat_store
+    
+    @property
+    def chat_memory(self) -> ChatMemoryBuffer:
+        if not self._chat_memory:
+            self._chat_memory = ChatMemoryBuffer.from_defaults(
+                token_limit=3000,
+                chat_store=self.chat_store,
+                chat_store_key="user1"
+            )
+        return self._chat_memory
+
+    def unload(self):
+        self.unload_rag()
+        del self.model
+        del self.tokenizer
+        self.model = None
+        self.tokenizer = None
+        self.thread = None
+        del self._chat_engine
+        del self._chat_engine_tool
+        del self._rag_engine_tool
+        del self._react_tool_agent
+        self._chat_engine = None
+        self._chat_engine_tool = None
+        self._rag_engine_tool = None
+        self._react_tool_agent = None
+    
+    def reload_rag(self):
+        self._reload_rag()
+        self._rag_engine_tool = None
+
     def clear_history(self):
         pass
 
