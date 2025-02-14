@@ -12,7 +12,7 @@ from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from airunner.handlers.llm.agent.html_file_reader import HtmlFileReader
-from airunner.handlers.llm.agent.refresh_context_chat_engine import RefreshContextChatEngine
+from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import RefreshContextChatEngine
 from airunner.data.models.news import Article
 
 
@@ -21,7 +21,7 @@ class RAGMixin():
         self.__rag_engine: Optional[RefreshContextChatEngine] = None
         self.__document_reader: Optional[SimpleDirectoryReader] = None
         self.__prompt_helper: Optional[PromptHelper] = None
-        self.__documents: Optional[List[Document]] = None
+        self._news_documents: Optional[List[Article]] = None
         self.__text_splitter: Optional[SentenceSplitter] = None
         self.__index: Optional[RAKEKeywordTableIndex] = None
         self.__retriever: Optional[KeywordTableSimpleRetriever] = None
@@ -36,12 +36,17 @@ class RAGMixin():
     def rag_engine(self) -> RefreshContextChatEngine:
         return self.__rag_engine
 
+    @property
+    def target_files(self) -> Optional[List[str]]:
+        return [
+            target_file.file_path for target_file in self.chatbot.target_files
+        ]
+
     def load_rag(self):
         self.__load_embeddings()
         self.__load_readers()
         self.__load_file_extractor()
         self.__load_document_reader()
-        self.__load_documents()
         self.__load_text_splitter()
         self.__load_prompt_helper()
         self.__load_settings()
@@ -49,21 +54,46 @@ class RAGMixin():
         self.__load_retriever()
         self.__load_context_rag_engine()
     
-    def reload_rag(self):
-        self.logger.debug("Reloading RAG index...")
-        self.load_rag()
+    def unload_rag(self):
+        self.__unload_settings()
+        self.__rag_engine = None
+        self.__document_reader = None
+        self.__prompt_helper = None
+        self._news_articles = None
+        self.__text_splitter = None
+        self.__index = None
+        self.__retriever = None
+        self.__embedding = None
+        self.__pdf_reader = None
+        self.__epub_reader = None
+        self.__html_reader = None
+        self.__markdown_reader = None
+        self.__file_extractor = None
+    
+    def _reload_rag(self):
+        self.logger.debug("Reloading RAG...")
+        self.__retriever = None
+        self.__index = None
+        self.__rag_engine = None
+        self.__document_reader = None
+        self.__load_document_reader()
+        self.__load_document_index()
+        self.__load_retriever()
+        self.__load_context_rag_engine()
+        
 
     def __load_embeddings(self):
-        self.logger.debug("Loading embeddings...")
-        path = os.path.expanduser(os.path.join(
-            self.path_settings.base_path, 
-            "text", 
-            "models",
-            "llm", 
-            "embedding", 
-            "intfloat/e5-large"
-        ))
-        self.__embedding = HuggingFaceEmbedding(path)
+        if not self.__embedding:
+            self.logger.debug("Loading embeddings...")
+            path = os.path.expanduser(os.path.join(
+                self.path_settings.base_path, 
+                "text", 
+                "models",
+                "llm", 
+                "embedding", 
+                "intfloat/e5-large"
+            ))
+            self.__embedding = HuggingFaceEmbedding(path)
 
     def __load_readers(self):
         self.__pdf_reader = PDFReader()
@@ -94,21 +124,28 @@ class RAGMixin():
         except ValueError as e:
             self.logger.error(f"Error loading document reader: {str(e)}")
 
-    def __load_documents(self):
-        self.logger.debug("Loading documents...")
+    @property
+    def documents(self) -> List[Document]:
         documents = self.__document_reader.load_data() if self.__document_reader else []
-        articles = self.session.query(Article).filter(Article.status == "scraped").all()
-        documents += [
-            Document(
-                text=article.content,
-                metadata={
-                    "id": article.id,
-                    "title": article.title,
-                    #"description": article.description,
-                }
-            ) for article in articles[:50]
-        ]
-        self.__documents = documents
+        return documents + self.news_documents
+
+    @property
+    def news_documents(self) -> List[Document]:
+        if self._news_documents is None:
+            articles = self.session.query(Article).filter(
+                Article.status == "scraped"
+            ).all()[:50]
+            self._news_documents = [
+                # Document(
+                #     text=article.content,
+                #     metadata={
+                #         "id": article.id,
+                #         "title": article.title,
+                #         #"description": article.description,
+                #     }
+                # ) for article in articles[:50]
+            ]
+        return self._news_documents or []
 
     def __load_text_splitter(self):
         self.__text_splitter = SentenceSplitter(
@@ -126,14 +163,16 @@ class RAGMixin():
 
     def __load_context_rag_engine(self):
         try:
+            self.logger.debug("Loading chat engine...")
             self.__rag_engine = RefreshContextChatEngine.from_defaults(
                 retriever=self.__retriever,
-                chat_history=self.history,
-                memory=None,
+                #chat_history=self.history,
+                memory=self.chat_memory,
                 system_prompt=self._rag_system_prompt,
                 node_postprocessors=[],
                 llm=self.llm,
             )
+            self.logger.debug("Chat engine loaded successfully.")
         except Exception as e:
             self.logger.error(f"Error loading chat engine: {str(e)}")
 
@@ -143,13 +182,17 @@ class RAGMixin():
         Settings.node_parser = self.__text_splitter
         Settings.num_output = 512
         Settings.context_window = 3900
+    
+    def __unload_settings(self):
+        Settings.llm = None
+        Settings._embed_model = None
+        Settings.node_parser = None
 
     def __load_document_index(self):
         self.logger.debug("Loading index...")
-        documents = self.__documents or []
         try:
             self.__index = RAKEKeywordTableIndex.from_documents(
-                documents,
+                self.documents,
                 llm=self.llm
             )
             self.logger.debug("Index loaded successfully.")
@@ -158,6 +201,7 @@ class RAGMixin():
 
     def __load_retriever(self):
         try:
+            self.logger.debug("Loading retriever...")
             self.__retriever = KeywordTableSimpleRetriever(
                 index=self.__index,
             )
