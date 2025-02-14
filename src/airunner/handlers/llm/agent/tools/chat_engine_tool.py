@@ -3,10 +3,15 @@ from typing import (
     Optional,
     Union,
 )
-from llama_index.core.chat_engine.simple import SimpleChatEngine
-from airunner.handlers.llm.agent.refresh_context_chat_engine import RefreshContextChatEngine
+from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import (
+    RefreshContextChatEngine
+)
+from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import (
+    RefreshSimpleChatEngine
+)
 from llama_index.core.tools.types import AsyncBaseTool, ToolMetadata, ToolOutput
 from llama_index.core.langchain_helpers.agents.tools import IndexToolConfig, LlamaIndexTool
+from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 
 class ChatEngineTool(AsyncBaseTool):
@@ -17,7 +22,7 @@ class ChatEngineTool(AsyncBaseTool):
     
     def __init__(
         self,
-        chat_engine: Union[SimpleChatEngine, RefreshContextChatEngine],
+        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine],
         metadata: ToolMetadata,
         resolve_input_errors: bool = True,
         agent=None
@@ -30,7 +35,7 @@ class ChatEngineTool(AsyncBaseTool):
     @classmethod
     def from_defaults(
         cls,
-        chat_engine: Union[SimpleChatEngine, RefreshContextChatEngine],
+        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine],
         name: Optional[str] = None,
         description: Optional[str] = None,
         return_direct: bool = False,
@@ -51,7 +56,7 @@ class ChatEngineTool(AsyncBaseTool):
         )
 
     @property
-    def chat_engine(self) -> Union[SimpleChatEngine, RefreshContextChatEngine]:
+    def chat_engine(self) -> Union[RefreshSimpleChatEngine, RefreshContextChatEngine]:
         return self._chat_engine
     
     @property
@@ -60,7 +65,11 @@ class ChatEngineTool(AsyncBaseTool):
     
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
         query_str = self._get_query_str(*args, **kwargs)
-        streaming_response = self._chat_engine.stream_chat(query_str)
+        chat_history = kwargs.get("chat_history", None)
+        streaming_response = self._chat_engine.stream_chat(
+            query_str, 
+            chat_history=chat_history
+        )
 
         response = ""
         is_first_message = True
@@ -78,7 +87,11 @@ class ChatEngineTool(AsyncBaseTool):
 
     async def acall(self, *args: Any, **kwargs: Any) -> ToolOutput:
         query_str = self._get_query_str(*args, **kwargs)
-        streaming_response = await self._chat_engine.astream_chat(query_str)
+        chat_history = kwargs.get("chat_history", None)
+        streaming_response = await self._chat_engine.astream_chat(
+            query_str,
+            chat_history=chat_history
+        )
 
         response = ""
         is_first_message = True
@@ -115,3 +128,6 @@ class ChatEngineTool(AsyncBaseTool):
                 "Cannot call query engine without specifying `input` parameter."
             )
         return query_str
+
+    def update_system_prompt(self, system_prompt:str):
+        self._chat_engine.update_system_prompt(system_prompt)
