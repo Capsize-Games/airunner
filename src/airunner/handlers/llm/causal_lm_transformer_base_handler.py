@@ -2,7 +2,7 @@ import random
 import os
 import torch
 from llama_index.llms.groq import Groq
-from typing import Optional
+from typing import Optional, Dict
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
@@ -216,14 +216,14 @@ class CausalLMTransformerBaseHandler(
         if self._chat_agent:
             self._chat_agent.interrupt_process()
 
-    def clear_history(self):
+    def clear_history(self, data: Optional[Dict] = None):
         """
         Public method to clear the chat agent history
         """
         if not self._chat_agent:
             return
         self.logger.debug("Clearing chat history")
-        self._chat_agent.clear_history()
+        self._chat_agent.clear_history(data)
 
     def add_chatbot_response_to_history(self, message):
         """

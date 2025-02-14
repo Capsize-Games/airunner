@@ -1,6 +1,7 @@
 import json
 from typing import Any, Optional
 from urllib.parse import urlparse
+import datetime
 
 from sqlalchemy import (
     Index,
@@ -18,39 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.dialects.sqlite import JSON, VARCHAR
 from llama_index.core.bridge.pydantic import Field, PrivateAttr
 from llama_index.core.storage.chat_store.base import BaseChatStore
-
-
-def get_data_model(
-    base: type,
-    index_name: str,
-    schema_name: str,
-    use_jsonb: bool = False,
-) -> Any:
-    """
-    This part create a dynamic sqlalchemy model with a new table.
-    """
-    tablename = f"data_{index_name}"  # dynamic table name
-    class_name = f"Data{index_name}"  # dynamic class name
-
-    chat_dtype = JSON
-
-    class AbstractData(base):  # type: ignore
-        __abstract__ = True  # this line is necessary
-        id = Column(Integer, primary_key=True, autoincrement=True)  # Add primary key
-        key = Column(VARCHAR, nullable=False)
-        value = Column(chat_dtype)
-
-    return type(
-        class_name,
-        (AbstractData,),
-        {
-            "__tablename__": tablename,
-            "__table_args__": (
-                UniqueConstraint("key", name=f"{tablename}:unique_key"),
-                Index(f"{tablename}:idx_key", "key"),
-            ),
-        },
-    )
+from airunner.data.models.settings_models import Conversation
 
 
 class SQLiteChatStore(BaseChatStore):
@@ -78,17 +47,8 @@ class SQLiteChatStore(BaseChatStore):
             schema_name=schema_name.lower(),
         )
 
-        # sqlalchemy model
-        base = declarative_base()
-        self._table_class = get_data_model(
-            base,
-            table_name,
-            schema_name,
-            use_jsonb=use_jsonb,
-        )
         self._session = session
         self._async_session = async_session
-        self._initialize(base)
 
     @classmethod
     def from_params(
@@ -143,84 +103,92 @@ class SQLiteChatStore(BaseChatStore):
         async_session = sessionmaker(_async_engine, class_=AsyncSession)
         return session, async_session
 
-    def _create_schema_if_not_exists(self) -> None:
-        # SQLite does not support schemas, so this method can be skipped
-        pass
-
-    def _create_tables_if_not_exists(self, base) -> None:
-        with self._session() as session, session.begin():
-            base.metadata.create_all(session.connection())
-
-    def _initialize(self, base) -> None:
-        self._create_tables_if_not_exists(base)
-
     def set_messages(self, key: str, messages: list[ChatMessage]) -> None:
         """Set messages for a key."""
         with self._session() as session:
             if messages is None or len(messages) == 0:
                 # Retrieve the existing messages
-                result = session.execute(select(self._table_class).filter_by(key=key)).scalars().first()
+                result = session.query(Conversation).filter_by(key=key).first()
                 if result:
                     messages = result.value
                 else:
                     messages = []
-                
-            # Update the database with the new list of messages
-            stmt = text(
-                f"""
-                INSERT INTO {self._table_class.__tablename__} (key, value)
-                VALUES (:key, :value)
-                ON CONFLICT (key)
-                DO UPDATE SET
-                    value = :value;
-                """
-            )
-            params = {
-                "key": key, 
-                "value": json.dumps([
-                    model.model_dump() if type(model) is ChatMessage else 
-                        model for model in messages
-                ])}
-            try:
-                session.execute(stmt, params)
-                session.commit()
-            except Exception as e:
-                print(e)
+            value = json.dumps([
+                model.model_dump() if type(model) is ChatMessage else 
+                    model for model in messages
+            ])
+            conversation = session.query(Conversation).filter_by(key=key).first()
+            if conversation:
+                conversation.value = value
+            else:
+                conversation = Conversation(
+                    timestamp=datetime.datetime.now(datetime.timezone.utc),
+                    title="",
+                    key=key,
+                    value=value
+                )
+                session.add(conversation)
+            session.commit()
 
     async def aset_messages(self, key: str, messages: list[ChatMessage]) -> None:
         """Async version of Get messages for a key."""
         async with self._async_session() as session:
-            stmt = text(
-                f"""
-                INSERT INTO {self._table_class.__tablename__} (key, value)
-                VALUES (:key, :value)
-                ON CONFLICT (key)
-                DO UPDATE SET
-                value = EXCLUDED.value;
-                """
-            )
-
-            params = {
-                "key": key,
-                "value": json.dumps([
-                    message.model_dump() for message in messages
-                ]),
-            }
-
-            # Execute the bulk upsert
-            await session.execute(stmt, params)
+            if messages is None or len(messages) == 0:
+                # Retrieve the existing messages
+                result = session.query(Conversation).filter_by(key=key).first()
+                if result:
+                    messages = result.value
+                else:
+                    messages = []
+            value = json.dumps([
+                model.model_dump() if type(model) is ChatMessage else 
+                    model for model in messages
+            ])
+            conversation = await session.query(Conversation).filter_by(key=key).first()
+            if conversation:
+                conversation.value = value
+            else:
+                conversation = Conversation(
+                    timestamp=datetime.datetime.now(datetime.timezone.utc),
+                    title="",
+                    key=key,
+                    value=value
+                )
+                session.add(conversation)
             await session.commit()
+    
+    def get_latest_chatstore(self) -> dict:
+        """Get the latest chatstore."""
+        with self._session() as session:
+            result = session.query(Conversation).order_by(
+                Conversation.id.desc()
+            ).first()
+            return {
+                "key": result.key,
+                "value": result.value,
+            } if result else None
+
+    def get_chatstores(self) -> list[dict]:
+        """Get all chatstores."""
+        with self._session() as session:
+            result = session.query(Conversation).all()
+            return [
+                {
+                    "key": item.key,
+                    "value": item.value,
+                } for item in result
+            ]
 
     def get_messages(self, key: str) -> list[ChatMessage]:
         """Get messages for a key."""
+        messages = None
         with self._session() as session:
-            result = session.execute(select(self._table_class).filter_by(key=key))
-            result = result.scalars().first()
-            if result:
-                if result:
-                    messages = result.value
-            else:
-                messages = None
+            conversation = session.query(Conversation).filter_by(key=key).first()
+            if conversation:
+                data = conversation.value
+                if data:
+                    messages = json.loads(data)
+            print("MESSAGES", messages)
             return [
                 ChatMessage.model_validate(
                     ChatMessage(
@@ -233,12 +201,11 @@ class SQLiteChatStore(BaseChatStore):
     async def aget_messages(self, key: str) -> list[ChatMessage]:
         """Async version of Get messages for a key."""
         async with self._async_session() as session:
-            result = await session.execute(select(self._table_class).filter_by(key=key))
-            result = result.scalars().first()
-            if result:
-                messages = json.loads(result.value)
+            conversation = await session.query(Conversation).filter_by(key=key).first()
+            if conversation:
+                messages = json.loads(conversation.value)
             else:
-                messages = []
+                messages = None
             return [
                 ChatMessage.model_validate(
                     ChatMessage(
@@ -252,78 +219,51 @@ class SQLiteChatStore(BaseChatStore):
         """Add a message for a key."""
         with self._session() as session:
             # Retrieve the existing messages
-            result = session.execute(select(self._table_class).filter_by(key=key)).scalars().first()
-            if result:
+            conversation = session.query(Conversation).filter_by(key=key).first()
+            if conversation:
                 try:
-                    messages = json.loads(result.value)
+                    messages = json.loads(conversation.value)
                 except TypeError:
-                    messages = result.value
+                    messages = conversation.value
             else:
                 messages = []
+            messages = [] if messages is None else messages
     
             # Append the new message
             messages.append(message.model_dump())
-    
-            # Update the database with the new list of messages
-            stmt = text(
-                f"""
-                INSERT INTO {self._table_class.__tablename__} (key, value)
-                VALUES (:key, :value)
-                ON CONFLICT (key)
-                DO UPDATE SET
-                    value = :value;
-                """
-            )
-            params = {"key": key, "value": json.dumps(messages)}
-            try:
-                session.execute(stmt, params)
-                session.commit()
-            except Exception as e:
-                print(e)
+            session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
+            session.commit()
     
     async def async_add_message(self, key: str, message: ChatMessage) -> None:
         """Async version of Add a message for a key."""
         async with self._async_session() as session:
             # Retrieve the existing messages
-            result = await session.execute(select(self._table_class).filter_by(key=key))
-            result = result.scalars().first()
-            if result:
-                messages = json.loads(result.value)
+            conversation = await session.query(Conversation).filter_by(key=key).first()
+            if conversation:
+                try:
+                    messages = json.loads(conversation.value)
+                except TypeError:
+                    messages = conversation.value
             else:
                 messages = []
+            messages = [] if messages is None else messages
     
             # Append the new message
             messages.append(message.model_dump())
-    
-            # Update the database with the new list of messages
-            stmt = text(
-                f"""
-                INSERT INTO {self._table_class.__tablename__} (key, value)
-                VALUES (:key, :value)
-                ON CONFLICT (key)
-                DO UPDATE SET
-                    value = :value;
-                """
-            )
-            params = {"key": key, "value": json.dumps(messages)}
-            try:
-                await session.execute(stmt, params)
-                await session.commit()
-            except Exception as e:
-                print(e)
+            await session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
             await session.commit()
 
     def delete_messages(self, key: str) -> Optional[list[ChatMessage]]:
         """Delete messages for a key."""
         with self._session() as session:
-            session.execute(delete(self._table_class).filter_by(key=key))
+            session.query(Conversation).filter_by(key=key).delete()
             session.commit()
         return None
 
     async def adelete_messages(self, key: str) -> Optional[list[ChatMessage]]:
         """Async version of Delete messages for a key."""
         async with self._async_session() as session:
-            await session.execute(delete(self._table_class).filter_by(key=key))
+            await session.query(Conversation).filter_by(key=key).delete()
             await session.commit()
         return None
 
@@ -331,125 +271,109 @@ class SQLiteChatStore(BaseChatStore):
         """Delete specific message for a key."""
         with self._session() as session:
             # First, retrieve the current list of messages
-            stmt = select(self._table_class.value).where(self._table_class.key == key)
-            result = session.execute(stmt).scalar_one_or_none()
+            conversation = session.query(Conversation).filter_by(key=key).first()
+            if conversation:
+                try:
+                    messages = json.loads(conversation.value)
+                except TypeError:
+                    messages = conversation.value
+            else:
+                messages = None
 
-            if result is None or idx < 0 or idx >= len(result):
+            if messages is None or idx < 0 or idx >= len(messages):
                 # If the key doesn't exist or the index is out of bounds
                 return None
-
+            
             # Remove the message at the given index
-            removed_message = result[idx]
-
-            stmt = text(
-                f"""
-                UPDATE {self._table_class.__tablename__}
-                SET value = json_remove({self._table_class.__tablename__}.value, '$[{idx}]')
-                WHERE key = :key;
-                """
-            )
-
-            params = {"key": key}
-            session.execute(stmt, params)
+            removed_message = messages[idx]
+            messages.pop(idx)
+            session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
             session.commit()
-
             return ChatMessage.model_validate(removed_message)
 
     async def adelete_message(self, key: str, idx: int) -> Optional[ChatMessage]:
         """Async version of Delete specific message for a key."""
         async with self._async_session() as session:
             # First, retrieve the current list of messages
-            stmt = select(self._table_class.value).where(self._table_class.key == key)
-            result = (await session.execute(stmt)).scalar_one_or_none()
+            conversation = await session.query(Conversation).filter_by(key=key).first()
+            if conversation:
+                try:
+                    messages = json.loads(conversation.value)
+                except TypeError:
+                    messages = conversation.value
+            else:
+                messages = None
 
-            if result is None or idx < 0 or idx >= len(result):
+            if messages is None or idx < 0 or idx >= len(messages):
                 # If the key doesn't exist or the index is out of bounds
                 return None
-
+            
             # Remove the message at the given index
-            removed_message = result[idx]
-
-            stmt = text(
-                f"""
-                UPDATE {self._table_class.__tablename__}
-                SET value = json_remove({self._table_class.__tablename__}.value, '$[{idx}]')
-                WHERE key = :key;
-                """
-            )
-
-            params = {"key": key}
-            await session.execute(stmt, params)
+            removed_message = messages[idx]
+            messages.pop(idx)
+            await session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
             await session.commit()
-
             return ChatMessage.model_validate(removed_message)
 
     def delete_last_message(self, key: str) -> Optional[ChatMessage]:
         """Delete last message for a key."""
         with self._session() as session:
             # First, retrieve the current list of messages
-            stmt = select(self._table_class.value).where(self._table_class.key == key)
-            result = session.execute(stmt).scalar_one_or_none()
+            conversation = session.query(Conversation).filter_by(key=key).first()
+            if conversation:
+                try:
+                    messages = json.loads(conversation.value)
+                except TypeError:
+                    messages = conversation.value
+            else:
+                messages = None
 
-            if result is None or len(result) == 0:
+            if messages is None or len(messages) == 0:
                 # If the key doesn't exist or the array is empty
                 return None
-
+            
             # Remove the message at the given index
-            removed_message = result[-1]
-
-            stmt = text(
-                f"""
-                UPDATE {self._table_class.__tablename__}
-                SET value = json_remove({self._table_class.__tablename__}.value, '$[#-1]')
-                WHERE key = :key;
-                """
-            )
-            params = {"key": key}
-            session.execute(stmt, params)
+            removed_message = messages[-1]
+            messages.pop(-1)
+            session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
             session.commit()
-
             return ChatMessage.model_validate(removed_message)
 
     async def adelete_last_message(self, key: str) -> Optional[ChatMessage]:
         """Async version of Delete last message for a key."""
         async with self._async_session() as session:
             # First, retrieve the current list of messages
-            stmt = select(self._table_class.value).where(self._table_class.key == key)
-            result = (await session.execute(stmt)).scalar_one_or_none()
+            conversation = await session.query(Conversation).filter_by(key=key).first()
+            if conversation:
+                try:
+                    messages = json.loads(conversation.value)
+                except TypeError:
+                    messages = conversation.value
+            else:
+                messages = None
 
-            if result is None or len(result) == 0:
+            if messages is None or len(messages) == 0:
                 # If the key doesn't exist or the array is empty
                 return None
-
+            
             # Remove the message at the given index
-            removed_message = result[-1]
-
-            stmt = text(
-                f"""
-                UPDATE {self._table_class.__tablename__}
-                SET value = json_remove({self._table_class.__tablename__}.value, '$[#-1]')
-                WHERE key = :key;
-                """
-            )
-            params = {"key": key}
-            await session.execute(stmt, params)
+            removed_message = messages[-1]
+            messages.pop(-1)
+            await session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
             await session.commit()
-
             return ChatMessage.model_validate(removed_message)
 
     def get_keys(self) -> list[str]:
         """Get all keys."""
         with self._session() as session:
-            stmt = select(self._table_class.key)
-
-            return session.execute(stmt).scalars().all()
+            conversations = session.query(Conversation).all()
+            return [conversation.key for conversation in conversations]
 
     async def aget_keys(self) -> list[str]:
         """Async version of Get all keys."""
         async with self._async_session() as session:
-            stmt = select(self._table_class.key)
-
-            return (await session.execute(stmt)).scalars().all()
+            conversations = await session.query(Conversation).all()
+            return [conversation.key for conversation in conversations]
 
 
 def params_from_uri(uri: str) -> dict:

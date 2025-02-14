@@ -11,7 +11,7 @@ Do not change the order of the imports.
 # variables for the application.
 ################################################################
 # import facehuggershield
-from airunner.settings import NLTK_DOWNLOAD_DIR
+from airunner.settings import DB_PATH
 import os
 base_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
 # facehuggershield.huggingface.activate(
@@ -45,7 +45,7 @@ from airunner.app import App
 from alembic.config import Config
 from alembic import command
 from pathlib import Path
-from airunner.data.models.settings_models import ApplicationSettings, PathSettings
+from airunner.data.models.settings_models import ApplicationSettings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -68,7 +68,7 @@ def main():
     setup_database()
 
     # Get the first ApplicationSettings record from the database and check for run_setup_wizard boolean
-    engine = create_engine("sqlite:///" + os.path.join(base_dir, "airunner.db"))
+    engine = create_engine(f"sqlite:///{DB_PATH}")
     session = scoped_session(sessionmaker(bind=engine))
     application_settings = session.query(ApplicationSettings).first()
 
