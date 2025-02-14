@@ -15,24 +15,53 @@ from PIL import (
 from PIL.Image import Image
 from PySide6.QtCore import QRect, Slot
 from PySide6.QtWidgets import QApplication
-from compel import Compel, DiffusersTextualInversionManager, ReturnedEmbeddingsType
+from compel import (
+    Compel, 
+    DiffusersTextualInversionManager, 
+    ReturnedEmbeddingsType
+)
 from controlnet_aux.processor import MODELS as controlnet_aux_models
-from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, StableDiffusionInpaintPipeline, \
-    StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
-    StableDiffusionControlNetInpaintPipeline, StableDiffusionXLPipeline, StableDiffusionXLImg2ImgPipeline, \
-    StableDiffusionXLInpaintPipeline, StableDiffusionXLControlNetPipeline, StableDiffusionXLControlNetImg2ImgPipeline, \
-    StableDiffusionXLControlNetInpaintPipeline, ControlNetModel, AutoencoderTiny, AutoencoderKL
+from diffusers import (
+    StableDiffusionPipeline, 
+    StableDiffusionImg2ImgPipeline,
+    StableDiffusionInpaintPipeline,
+    StableDiffusionControlNetPipeline,
+    StableDiffusionControlNetImg2ImgPipeline,
+    StableDiffusionControlNetInpaintPipeline,
+    StableDiffusionXLPipeline,
+    StableDiffusionXLImg2ImgPipeline,
+    StableDiffusionXLInpaintPipeline,
+    StableDiffusionXLControlNetPipeline,
+    StableDiffusionXLControlNetImg2ImgPipeline,
+    StableDiffusionXLControlNetInpaintPipeline,
+    ControlNetModel,
+    AutoencoderTiny,
+    AutoencoderKL
+)
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTextModelWithProjection
+from transformers import (
+    CLIPFeatureExtractor, 
+    CLIPTextModel, 
+    CLIPTextModelWithProjection
+)
 from transformers import BitsAndBytesConfig as TransformersBitsAndBytesConfig
 from airunner.handlers.base_handler import BaseHandler
-from airunner.data.models.settings_models import Schedulers, Lora, Embedding, ControlnetModel, AIModels
+from airunner.data.models.settings_models import \
+    Schedulers, Lora, Embedding, ControlnetModel, AIModels
 from airunner.enums import (
-    SDMode, StableDiffusionVersion, GeneratorSection, ModelStatus, ModelType, SignalCode, HandlerState,
-    EngineResponseCode, ModelAction
+    SDMode, 
+    StableDiffusionVersion, 
+    GeneratorSection, 
+    ModelStatus, 
+    ModelType, 
+    SignalCode, 
+    HandlerState,
+    EngineResponseCode, 
+    ModelAction
 )
 from airunner.exceptions import PipeNotLoadedException, InterruptedException
-from airunner.handlers.stablediffusion.prompt_weight_bridge import PromptWeightBridge
+from airunner.handlers.stablediffusion.prompt_weight_bridge import \
+    PromptWeightBridge
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
@@ -90,9 +119,10 @@ class SDHandler(BaseHandler):
         self._deep_cache_helper: Optional[DeepCacheSDHelper] = None
         self.do_interrupt_image_generation: bool = False
 
-        # The following properties must be set to None before generating an image
-        # each time generate is called. These are cached properties that come from the
-        # database. Caching them here allows us to avoid querying the database each time.
+        # The following properties must be set to None before generating an
+        # image each time generate is called. These are cached properties that 
+        # come from the database. 
+        # Caching them here allows us to avoid querying the database each time.
         self._outpaint_image = None
         self._img2img_image = None
         self._controlnet_settings = None
@@ -109,9 +139,11 @@ class SDHandler(BaseHandler):
             pipeline_class = self._pipe.__class__
             print(pipeline_class)
             if (
-                pipeline_class in self.img2img_pipelines and not self.image_to_image_settings.enabled
+                pipeline_class in self.img2img_pipelines and 
+                not self.image_to_image_settings.enabled
             ) or (
-                pipeline_class in self.txt2img_pipelines and self.image_to_image_settings.enabled
+                pipeline_class in self.txt2img_pipelines and 
+                self.image_to_image_settings.enabled
             ):
                 self._swap_pipeline()
 
@@ -190,7 +222,7 @@ class SDHandler(BaseHandler):
 
     @Slot(str)
     def _handle_worker_error(self, error_message):
-        self.logger.error(f"Worker error: {error_message}")
+        self.logger.error("Worker error: %s", error_message)
 
     @property
     def is_single_file(self) -> bool:
@@ -577,7 +609,7 @@ class SDHandler(BaseHandler):
             except Exception as e:
                 if "CUDA out of memory" in str(e):
                     code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
-                self.logger.error(f"Error generating image: {e}")
+                self.logger.error("Error generating image: %s", e)
             if message is not None:
                 callback = message.get("callback", None)
                 if callback:
@@ -627,7 +659,10 @@ class SDHandler(BaseHandler):
         pipeline_class_ = self._pipeline_class
         if self._pipe.__class__ is pipeline_class_:  # noqa
             return
-        self.logger.debug(f"Swapping pipeline from {self._pipe.__class__} to {pipeline_class_}")
+       
+        self.logger.debug("Swapping pipeline from %s to %s", 
+                          self._pipe.__class__, 
+                          pipeline_class_)
         try:
             kwargs = {}
             if pipeline_class_ in (
@@ -638,9 +673,7 @@ class SDHandler(BaseHandler):
                 StableDiffusionXLControlNetImg2ImgPipeline,
                 StableDiffusionXLControlNetInpaintPipeline
             ):
-                kwargs.update({
-                    "controlnet": self._controlnet
-                })
+                kwargs.update(controlnet=self._controlnet)
             kwargs = self._prepare_tiny_autoencoder(kwargs)
             self._pipe = pipeline_class_.from_pipe(self._pipe, **kwargs)
         except Exception as e:
@@ -653,7 +686,9 @@ class SDHandler(BaseHandler):
         self.logger.debug("Generating image")
         model = self.generator_settings_cached.aimodel
         if self._current_model.path != model.path:
-            self.logger.debug(f"Model has changed from {self._current_model.path} to {model.path}")
+            self.logger.debug("Model has changed from %s to %s",
+                              self._current_model.path,
+                              model.path)
             if self._pipe is not None:
                 self.reload()
         if self._pipe is None:
@@ -1007,9 +1042,9 @@ class SDHandler(BaseHandler):
         
         if self.is_sd_xl_or_turbo:
             """
-            text encoder 2 is downloaded with the name model.fp16.safetensors which worked when we
-            were not quantizing the model but now when we are loading from pretrained it is looking for
-            model.safetensors
+            text encoder 2 is downloaded with the name model.fp16.safetensors
+            which worked when we were not quantizing the model but now when we 
+            are loading from pretrained it is looking for model.safetensors
             """
             existing_file_path = os.path.join(path, "text_encoder_2", "model.fp16.safetensors")
             expected_file_path = os.path.join(path, "text_encoder_2", "model.safetensors")
@@ -1026,13 +1061,21 @@ class SDHandler(BaseHandler):
 
     def _prepare_tiny_autoencoder(self, data: Dict) -> Optional[Dict]:
         if not self.is_outpaint:
+            if self.is_sd_xl_or_turbo:
+                version = StableDiffusionVersion.SDXL1_0.value
+                repo_path = "madebyollin/sdxl-vae-fp16-fix"
+                autoencoder_class_ = AutoencoderKL
+            else:
+                version = StableDiffusionVersion.SD1_5.value
+                repo_path = "madebyollin/taesd"
+                autoencoder_class_ = AutoencoderTiny
             path = os.path.expanduser(os.path.join(
                 self.path_settings_cached.base_path,
                 "art",
                 "models",
-                StableDiffusionVersion.SDXL1_0.value if self.is_sd_xl_or_turbo else StableDiffusionVersion.SD1_5.value,
+                version,
                 "tiny_autoencoder",
-                "madebyollin/sdxl-vae-fp16-fix" if self.is_sd_xl_or_turbo else "madebyollin/taesd"
+                repo_path
             ))
             if not os.path.exists(path):
                 self.logger.error("Tiny autoencoder path does not exist")
@@ -1042,8 +1085,6 @@ class SDHandler(BaseHandler):
                     "status": ModelStatus.FAILED
                 })
                 return None
-
-            autoencoder_class_ = AutoencoderKL if self.is_sd_xl_or_turbo else AutoencoderTiny
             data["vae"] = autoencoder_class_.from_pretrained(
                 path,
                 torch_dtype=torch.float16,
@@ -1088,13 +1129,19 @@ class SDHandler(BaseHandler):
                 **data
             )
         except FileNotFoundError as e:
-            self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+            self.logger.error(
+                f"Failed to load model from {self.model_path}: {e}"
+            )
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
         except EnvironmentError as e:
-            self.logger.warning(f"Failed to load model from {self.model_path}: {e}")
+            self.logger.warning(
+                f"Failed to load model from {self.model_path}: {e}"
+            )
         except ValueError as e:
-            self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+            self.logger.error(
+                f"Failed to load model from {self.model_path}: {e}"
+            )
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
         self._send_pipeline_loaded_signal()
@@ -1110,7 +1157,10 @@ class SDHandler(BaseHandler):
                 pipeline_type = "img2img"
             elif pipeline_class in self.outpaint_pipelines:
                 pipeline_type = "inpaint"
-        self.emit_signal(SignalCode.SD_PIPELINE_LOADED_SIGNAL, {"pipeline": pipeline_type})
+        self.emit_signal(
+            SignalCode.SD_PIPELINE_LOADED_SIGNAL, 
+            {"pipeline": pipeline_type}
+        )
 
     def _move_pipe_to_device(self):
         if self._pipe is not None:
@@ -1137,7 +1187,9 @@ class SDHandler(BaseHandler):
         filename = os.path.basename(lora.path)
         try:
             lora_base_path = self.lora_base_path
-            self.logger.info(f"Loading LORA weights from {lora_base_path}/{filename}")
+            self.logger.info(
+                f"Loading LORA weights from {lora_base_path}/{filename}"
+            )
             adapter_name = os.path.splitext(filename)[0]
             adapter_name = adapter_name.replace(".", "_")
             self._pipe.load_lora_weights(
