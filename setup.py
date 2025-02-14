@@ -76,7 +76,8 @@ setup(
         "rake_nltk==1.0.6",
         "faiss-gpu==1.7.2",
         "tf-keras==2.18.0",
-        "timm==1.0.14"
+        "timm==1.0.14",
+        "aiosqlite==0.21.0"
     ],
     package_data={
         "airunner": [
