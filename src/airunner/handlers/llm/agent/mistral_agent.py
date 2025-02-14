@@ -268,14 +268,16 @@ class MistralAgentQObject(
         prompt = prompt.replace("{{ username }}", self.username)
         prompt = prompt.replace("{{ botname }}", self.botname)
         return prompt
-    
+
     @property
     def _rag_system_prompt(self) -> str:
         prompt = (
             f"You are a chatbot. Your name is {self.botname} and the "
             f"user's name is {self.username}.\n"
             "Search the full text and find all relevant information "
-            "related to the query."
+            "related to the query.\n"
+            "If no documents are available, provide a general response based "
+            "on your knowledge.\n"
             "Here is more context that you can use to generate a response:\n"
             f"{self._date_time_prompt}"
         )
@@ -332,14 +334,6 @@ class MistralAgentQObject(
     def clear_history(self):
         pass
 
-    def query(
-        self,
-        message: str
-    ) -> AgentChatResponse:
-        self._complete_response = ""
-        response = self.tool_agent.query(message)
-        self.handle_response(response.response, is_last_message=True)
-    
     def chat(
         self,
         message: str,
