@@ -16,7 +16,7 @@ if not os.path.exists(DB_PATH):
 
 # Import your models here
 from airunner.data.models.settings_models import (
-    Conversation, Message, Summary,
+    Conversation, Summary,
     ApplicationSettings, ActiveGridSettings, ControlnetSettings,
     ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings,
     GeneratorSettings, LLMGeneratorSettings, TTSSettings,
@@ -45,7 +45,7 @@ for model in [
     SpeechT5Settings, EspeakSettings, STTSettings, Schedulers, BrushSettings,
     GridSettings, PathSettings, MemorySettings, Chatbot, TargetFiles, TargetDirectories,
     AIModels, ShortcutKeys, Lora, SavedPrompt, Embedding, PromptTemplate, ControlnetModel,
-    FontSetting, PipelineModel, WindowSettings, Conversation, Message, Summary
+    FontSetting, PipelineModel, WindowSettings, Conversation, Summary
 ]:
     model.metadata = metadata
 

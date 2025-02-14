@@ -162,7 +162,10 @@ class MistralAgentQObject(
     @property
     def conversation(self) -> Optional[Conversation]:
         if self._conversation is None:
-            self.conversation = self.create_conversation(self.chat_store_key)
+            self.conversation = self.create_conversation(
+                self.chat_store_key,
+                self.chatbot.id
+            )
         return self._conversation
     
     @conversation.setter
@@ -341,7 +344,9 @@ class MistralAgentQObject(
             self._chat_memory.chat_store_key = self._conversation.key
             messages = self._chat_store.get_messages(self._conversation.key)
             if messages:
-                self._chat_memory.set(json.dumps(messages))
+                self._chat_memory.set(json.dumps([
+                    message.mdoel_dump() for message in messages
+                ]))
             if self._chat_engine:
                 self._chat_engine.memory = self._chat_memory
 

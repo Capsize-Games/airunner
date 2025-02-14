@@ -1,4 +1,7 @@
 import uuid
+import json
+
+from typing import Optional
 
 from PySide6.QtCore import Slot, QTimer, QPropertyAnimation
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
@@ -17,13 +20,11 @@ class ChatPromptWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.scroll_bar = None
-        self.conversation = None
         self.is_modal = True
         self.generating = False
         self.prefix = ""
         self.prompt = ""
         self.suffix = ""
-        self.conversation_history = []
         self.spacer = None
         self.promptKeyPressEvent = None
         self.originalKeyPressEvent = None
@@ -31,7 +32,8 @@ class ChatPromptWidget(BaseWidget):
         self.action_menu_displayed = None
         self.messages_spacer = None
         self.chat_loaded = False
-        self.conversation_id = None
+        self._conversation = None
+        self.conversation_history = []
 
         self.ui.action.blockSignals(True)
         self.ui.action.addItem("Auto")
@@ -58,6 +60,37 @@ class ChatPromptWidget(BaseWidget):
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
+        self.load_conversation()
+
+    @property
+    def conversation(self) -> Optional[Conversation]:
+        return self._conversation
+    
+    @conversation.setter
+    def conversation(self, val: Optional[Conversation]):
+        self._conversation = val
+
+    @property
+    def conversation_id(self) -> Optional[int]:
+        if self._conversation is None:
+            return None
+        return self._conversation.id
+
+    def load_conversation(self):
+        conversation = self.session.query(Conversation).order_by(Conversation.id.desc()).first()
+        if conversation is not None:
+            self.conversation = conversation
+            self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
+                "conversation_id": self.conversation_id
+            })
+            print(json.loads(self.conversation.value))
+            self._set_conversation_widgets([{
+                "name": self.user.username if message["role"] == "user" else self.chatbot.name,
+                "content": message["blocks"][0]["text"],
+                "is_bot": message["role"] == "assistant",
+                "id": id
+            } for id, message in enumerate(json.loads(self.conversation.value))
+        ])
 
     @Slot(str)
     def handle_token_signal(self, val: str):
@@ -91,7 +124,14 @@ class ChatPromptWidget(BaseWidget):
         self._clear_conversation_widgets()
         if len(message["messages"]) > 0:
             self.conversation_id = message["messages"][0]["conversation_id"]
-        QTimer.singleShot(0, lambda: self._set_conversation_widgets(message["messages"]))
+            self.conversation = self.session.query(Conversation).filter_by(id=self.conversation_id).first()
+        self._set_conversation_widgets([{
+                "name": message["additional_kwargs"]["name"],
+                "content": message["text"],
+                "is_bot": message["role"] == "assistant",
+                "id": id
+            } for id, message in enumerate(json.loads(self.conversation.value))
+        ])
 
     def _set_conversation_widgets(self, messages):
         for message in messages:
@@ -153,16 +193,13 @@ class ChatPromptWidget(BaseWidget):
         self._create_conversation()
 
     def _create_conversation(self):
-        conversation = self.session.query(Conversation).order_by(
-            Conversation.id.desc()
-        ).first()
-        if not conversation:
-            conversation = self.create_conversation("cpw_" + uuid.uuid4().hex)
-        conversation_id = conversation.id
+        self.conversation = self.create_conversation(
+            "cpw_" + uuid.uuid4().hex,
+            self.chatbot.id
+        )
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
-            "conversation_id": conversation_id
+            "conversation_id": self.conversation_id
         })
-        self.conversation_id = conversation_id
 
     def _clear_conversation_widgets(self):
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
