@@ -738,7 +738,7 @@ class SettingsMixin:
             timestamp=datetime.datetime.now(datetime.timezone.utc),
             title="",
             key=chat_store_key,
-            value=json.dumps([]),
+            value=None,
             chatbot_id=chatbot_id
         )
         self.session.add(conversation)
