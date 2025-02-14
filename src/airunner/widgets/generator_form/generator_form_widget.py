@@ -485,7 +485,6 @@ class GeneratorForm(BaseWidget):
             progressbar.setFormat("Complete")
 
     def _set_keyboard_shortcuts(self):
-        
         generate_image_key = self.session.query(ShortcutKeys).filter_by(display_name="Generate Image").first()
         interrupt_key = self.session.query(ShortcutKeys).filter_by(display_name="Interrupt").first()
         if generate_image_key:

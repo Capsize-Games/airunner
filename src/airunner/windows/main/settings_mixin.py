@@ -1,6 +1,6 @@
 import logging
 import datetime
-import os
+import json
 from typing import List, Type
 
 from sqlalchemy import create_engine
@@ -14,6 +14,7 @@ from airunner.data.models.settings_models import Chatbot, AIModels, Schedulers, 
     MemorySettings, Message, Conversation, Summary, ImageFilterValue, TargetFiles, WhisperSettings, Base, User
 from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
+from airunner.settings import DB_PATH
 
 
 class SettingsMixinSharedInstance:
@@ -28,16 +29,7 @@ class SettingsMixinSharedInstance:
     def __init__(self):
         if self._initialized:
             return
-        self.db_path = os.path.expanduser(
-            os.path.join(
-                "~",
-                ".local",
-                "share",
-                "airunner",
-                "data",
-                "airunner.db"
-            )
-        )
+        self.db_path = DB_PATH
         self.engine = create_engine(f'sqlite:///{self.db_path}')
         Base.metadata.create_all(self.engine)
         self.Session = scoped_session(sessionmaker(bind=self.engine))
@@ -738,9 +730,11 @@ class SettingsMixin:
             chatbot = self.session.query(Chatbot).options(joinedload(Chatbot.target_files)).first()
         return chatbot
 
-    def create_conversation(self):
+    def create_conversation(self, chat_store_key: str):
         # find conversation which has no title, bot_mood or messages
-        conversation = self.session.query(Conversation).filter_by(title="", bot_mood="").first()
+        conversation = self.session.query(Conversation).filter_by(
+            key=chat_store_key
+        ).first()
         if conversation:
             # ensure there are no messages in the conversation
             message = self.session.query(Message).filter_by(conversation_id=conversation.id).first()
@@ -748,7 +742,9 @@ class SettingsMixin:
                 return conversation
         conversation = Conversation(
             timestamp=datetime.datetime.now(datetime.timezone.utc),
-            title=""
+            title="",
+            key=chat_store_key,
+            value=json.dumps([])
         )
         self.session.add(conversation)
         self.session.commit()
@@ -769,7 +765,7 @@ class SettingsMixin:
         )
         self.session.add(summary)
         self.session.commit()
-
+    
     def get_all_conversations(self):
         conversations = self.session.query(Conversation).all()
         return conversations

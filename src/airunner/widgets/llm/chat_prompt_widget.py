@@ -1,3 +1,5 @@
+import uuid
+
 from PySide6.QtCore import Slot, QTimer, QPropertyAnimation
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
@@ -6,6 +8,7 @@ from airunner.enums import SignalCode, LLMActionType, ModelType, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
+from airunner.data.models.settings_models import Conversation
 
 
 class ChatPromptWidget(BaseWidget):
@@ -150,7 +153,11 @@ class ChatPromptWidget(BaseWidget):
         self._create_conversation()
 
     def _create_conversation(self):
-        conversation = self.create_conversation()
+        conversation = self.session.query(Conversation).order_by(
+            Conversation.id.desc()
+        ).first()
+        if not conversation:
+            conversation = self.create_conversation("cpw_" + uuid.uuid4().hex)
         conversation_id = conversation.id
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
             "conversation_id": conversation_id

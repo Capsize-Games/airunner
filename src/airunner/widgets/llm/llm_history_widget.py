@@ -7,6 +7,8 @@ from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.llm_history_item_widget import LLMHistoryItemWidget
 from airunner.widgets.llm.templates.llm_history_widget_ui import Ui_llm_history_widget
+from airunner.data.models.settings_models import Conversation
+
 
 class LLMHistoryWidget(BaseWidget):
     widget_class_ = Ui_llm_history_widget
@@ -43,8 +45,8 @@ class LLMHistoryWidget(BaseWidget):
             self.ui.scrollAreaWidgetContents.setLayout(layout)
 
         for conversation in conversations:
-            if conversation.title == "":
-                continue
+            # if conversation.title == "":
+            #     continue
             llm_history_item_widget = LLMHistoryItemWidget(
                 conversation=conversation
             )

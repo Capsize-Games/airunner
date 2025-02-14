@@ -1,4 +1,5 @@
 import threading
+from typing import Dict, Optional
 
 from airunner.handlers.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
 from airunner.enums import SignalCode
@@ -47,9 +48,9 @@ class LLMGenerateWorker(Worker):
     def on_llm_load_model_signal(self, data):
         self._load_llm_thread(data)
 
-    def on_llm_clear_history_signal(self):
+    def on_llm_clear_history_signal(self, data:Optional[Dict] = None):
         if self.llm:
-            self.llm.clear_history()
+            self.llm.clear_history(data)
 
     def on_llm_request_signal(self, message: dict):
         self.add_to_queue(message)

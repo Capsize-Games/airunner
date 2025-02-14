@@ -563,6 +563,8 @@ class Conversation(Base):
     title = Column(String, nullable=True)  # New column added
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
     bot_mood = Column(Text, default="")
+    key = Column(String, nullable=True)
+    value = Column(JSON, nullable=False)
 
 
 class Message(Base):

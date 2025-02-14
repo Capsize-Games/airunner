@@ -2,14 +2,15 @@
 
 Simple wrapper around AgentRunner + MistralAgentWorker.
 """
-import os
+import uuid
 from typing import (
     Any,
     List,
     Optional,
     Union,
+    Dict,
 )
-from pydantic import Field
+import json
 import datetime
 import platform
 from PySide6.QtCore import QObject
@@ -35,6 +36,7 @@ from airunner.handlers.llm.storage.chat_store.sqlite import SQLiteChatStore
 from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuffer
 from llama_index.core.memory import BaseMemory
 from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
+from airunner.settings import CHAT_STORE_DB_PATH
 
 
 DEFAULT_MAX_FUNCTION_CALLS = 5
@@ -149,7 +151,6 @@ class MistralAgentQObject(
             )
         return self._rag_engine_tool
 
-
     @property
     def do_interrupt(self):
         return self._do_interrupt
@@ -161,7 +162,7 @@ class MistralAgentQObject(
     @property
     def conversation(self) -> Optional[Conversation]:
         if self._conversation is None:
-            self.conversation = self.create_conversation()
+            self.conversation = self.create_conversation(self.chat_store_key)
         return self._conversation
     
     @conversation.setter
@@ -288,26 +289,27 @@ class MistralAgentQObject(
     @property
     def chat_store(self) -> SQLiteChatStore:
         if not self._chat_store:
-            db_path = os.path.expanduser(
-                os.path.join(
-                    "~",
-                    ".local",
-                    "share",
-                    "airunner",
-                    "data",
-                    "chat_store.db"
-                )
-            )
+            db_path = CHAT_STORE_DB_PATH
             self._chat_store = SQLiteChatStore.from_uri(f"sqlite:///{db_path}")
         return self._chat_store
-    
+
+    @property
+    def chat_store_key(self) -> str:
+        if self._conversation:
+            return self._conversation.key
+        conversation = self.session.query(Conversation).order_by(Conversation.id.desc()).first()
+        if conversation:
+            self._conversation = conversation
+            return conversation.key
+        return "STK_" + uuid.uuid4().hex
+
     @property
     def chat_memory(self) -> ChatMemoryBuffer:
         if not self._chat_memory:
             self._chat_memory = ChatMemoryBuffer.from_defaults(
                 token_limit=3000,
                 chat_store=self.chat_store,
-                chat_store_key="user1"
+                chat_store_key=self.chat_store_key
             )
         return self._chat_memory
 
@@ -331,8 +333,17 @@ class MistralAgentQObject(
         self._reload_rag()
         self._rag_engine_tool = None
 
-    def clear_history(self):
-        pass
+    def clear_history(self, data: Optional[Dict] = None):
+        data = data or {}
+        conversation_id = data.get("conversation_id")
+        self._conversation = self.session.query(Conversation).filter_by(id=conversation_id).first()
+        if self._conversation:
+            self._chat_memory.chat_store_key = self._conversation.key
+            messages = self._chat_store.get_messages(self._conversation.key)
+            if messages:
+                self._chat_memory.set(json.dumps(messages))
+            if self._chat_engine:
+                self._chat_engine.memory = self._chat_memory
 
     def chat(
         self,

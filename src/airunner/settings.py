@@ -368,3 +368,14 @@ DEFAULT_SHORTCUTS = [
         "signal": SignalCode.REFRESH_STYLESHEET_SIGNAL.value
     },
 ]
+DB_PATH = os.path.expanduser(
+    os.path.join(
+        "~",
+        ".local",
+        "share",
+        "airunner",
+        "data",
+        "airunner.db"
+    )
+)
+CHAT_STORE_DB_PATH = DB_PATH
