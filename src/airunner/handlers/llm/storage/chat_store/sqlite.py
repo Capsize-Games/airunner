@@ -109,23 +109,26 @@ class SQLiteChatStore(BaseChatStore):
             if messages is None or len(messages) == 0:
                 # Retrieve the existing messages
                 result = session.query(Conversation).filter_by(key=key).first()
+                print("SET NEW MESSAGES EXISTING CONVERSATION", result.value)
                 if result:
                     messages = result.value
                 else:
                     messages = []
-            value = json.dumps([
-                model.model_dump() if type(model) is ChatMessage else 
-                    model for model in messages
-            ])
+            else:
+                messages = json.dumps([
+                    model.model_dump() if type(model) is ChatMessage else 
+                        model for model in messages
+                ])
             conversation = session.query(Conversation).filter_by(key=key).first()
+            print("SETTING CONVERSATION", messages)
             if conversation:
-                conversation.value = value
+                conversation.value = messages
             else:
                 conversation = Conversation(
                     timestamp=datetime.datetime.now(datetime.timezone.utc),
                     title="",
                     key=key,
-                    value=value
+                    value=messages
                 )
                 session.add(conversation)
             session.commit()
@@ -185,10 +188,9 @@ class SQLiteChatStore(BaseChatStore):
         with self._session() as session:
             conversation = session.query(Conversation).filter_by(key=key).first()
             if conversation:
-                data = conversation.value
-                if data:
+                data = conversation.value or []
+                if type(data) is str:
                     messages = json.loads(data)
-            print("MESSAGES", messages)
             return [
                 ChatMessage.model_validate(
                     ChatMessage(
@@ -196,7 +198,7 @@ class SQLiteChatStore(BaseChatStore):
                         content=message["blocks"][0]["text"],
                     )
                 ) for message in messages
-             ] if messages else None
+             ] if messages else []
  
     async def aget_messages(self, key: str) -> list[ChatMessage]:
         """Async version of Get messages for a key."""

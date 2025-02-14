@@ -86,10 +86,37 @@ class MistralAgentQObject(
         def get_date_and_time(*args, **kwargs) -> str:
             """Get the current date and time."""
             return self._date_time_prompt
+        
+        def update_database_with_user_info(
+            category: str,
+            information: str
+        ) -> str:
+            """Update the database with user information.\n
+            Useful for collecting interesting and important information about the user.\n
+            Use this any time you want to remember something about the user."""
+            print("UPDATING DATABASE WITH USER INFO")
+            print("-" * 50)
+            data = self.user.data or {}
+            existing_info = data.get(category, None)
+            if existing_info:
+                data[category] += f"\n{information}"
+                self.user.data = data
+                self.session.add(self.user)
+                self.session.commit()
+            else:
+                data[category] = information
+                self.user.data = data
+                self.session.add(self.user)
+                self.session.commit()
+            return "User information updated."
 
         tools = [
             FunctionTool.from_defaults(
                 get_date_and_time,
+                return_direct=False
+            ),
+            FunctionTool.from_defaults(
+                update_database_with_user_info,
                 return_direct=False
             ),
         ]
@@ -248,10 +275,19 @@ class MistralAgentQObject(
 
     @property
     def _speakers_prompt(self) -> str:
+        data = self.user.data
+        metadata_prompt = ""
+        if data is not None:
+            for k,v in data.items():
+                metadata_prompt += f"-- {k}: {v}\n"
+        if metadata_prompt:
+            metadata_prompt = f"- Metadata:\n{metadata_prompt}"
         return (
             "User information:\n"
             f"- Username: {self.username}\n"
             f"- Location: {self.location_display_name}\n"
+            f"{metadata_prompt}"
+            
             "Chatbot information:\n"
             f"- Chatbot name: {self.botname}\n"
             f"- Chatbot mood: {self.bot_mood}\n"
@@ -259,10 +295,28 @@ class MistralAgentQObject(
         )
     
     @property
+    def personality_prompt(self) -> str:
+        return (
+            f"{self.botname}'s personality: {self.chatbot.bot_personality}\n"
+            if self.chatbot.use_personality 
+            else ""
+        )
+    
+    @property
+    def mood_prompt(self) -> str:
+        return (
+            f"{self.botname}'s current mood: {self.bot_mood}\n"
+            if self.chatbot.use_mood else ""
+        )
+    
+    @property
     def _system_prompt(self) -> str:
         prompt = (
-            f"You are a chatbot. Your name is {self.botname} and the "
-            f"user's name is {self.username}.\n"
+            f"You are a chatbot."
+            f"Your name is {self.botname}.\n"
+            f"{self.personality_prompt}"
+            f"{self.mood_prompt}"
+            f"The user's name is {self.username}.\n"
             "Here is more context that you can use to generate a response:\n"
             f"{self._date_time_prompt}"
             f"{self._operating_system_prompt}"

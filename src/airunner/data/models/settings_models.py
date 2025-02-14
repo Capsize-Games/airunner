@@ -423,6 +423,7 @@ class User(Base):
     temperature_unit = Column(String, nullable=True, default="fahrenheit")
     wind_speed_unit = Column(String, nullable=True, default="mph")
     precipitation_unit = Column(String, nullable=True, default="inch")
+    data = Column(JSON, nullable=True)
 
 
 class TargetFiles(Base):
