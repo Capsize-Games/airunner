@@ -14,6 +14,7 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from airunner.handlers.llm.agent.html_file_reader import HtmlFileReader
 from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import RefreshContextChatEngine
 from airunner.data.models.news import Article
+from airunner.data.models.settings_models import Conversation
 
 
 class RAGMixin():
@@ -125,9 +126,33 @@ class RAGMixin():
             self.logger.error(f"Error loading document reader: {str(e)}")
 
     @property
+    def conversation_documents(self) -> List[Document]:
+        conversations = []
+        _conversations = self.session.query(Conversation).all()
+        for conversation in _conversations:
+            messages = conversation.value or []
+            conversation_text = f"Conversation {conversation.key}\n"
+            for message in messages:
+                conversation_text += f"{message['role']}: {message['blocks'][0]['text']}\n"
+            conversation_text += "------\n"
+            conversations.append(
+                Document(
+                    text=conversation_text,
+                    metadata={
+                        "id": conversation.id,
+                        "key": conversation.key,
+                    }
+                )
+            )
+        return conversations
+
+    @property
     def documents(self) -> List[Document]:
         documents = self.__document_reader.load_data() if self.__document_reader else []
-        return documents + self.news_documents
+        documents += self.conversation_documents
+        documents += self.news_documents
+        print("DOCUMENTS", documents)
+        return documents
 
     @property
     def news_documents(self) -> List[Document]:

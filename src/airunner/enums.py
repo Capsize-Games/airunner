@@ -250,6 +250,8 @@ class SignalCode(Enum):
     SD_PIPELINE_LOADED_SIGNAL = enum.auto()
     MISSING_REQUIRED_MODELS = enum.auto()
 
+    DELETE_MESSAGES_AFTER_ID = enum.auto()
+
 class EngineResponseCode(Enum):
     NONE = 0
     STATUS = 100
@@ -363,6 +365,7 @@ class LLMActionType(Enum):
     SUMMARIZE = "SUMMARIZE"
     DO_NOTHING = "DO NOTHING: If the user's request is unclear or you are unable to determine the user's intent, choose this action."
     GET_WEATHER = "get_weather"
+    STORE_DATA = "store_data"
 
 
 

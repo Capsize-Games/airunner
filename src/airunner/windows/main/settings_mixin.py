@@ -64,6 +64,9 @@ class SettingsMixinSharedInstance:
 class SettingsMixin:
     _chatbot: Optional[Chatbot] = None
 
+    def get_session(self):
+        return scoped_session(sessionmaker(bind=self.settings_mixin_shared_instance.engine))()
+
     @property
     def settings_mixin_shared_instance(self):
         return SettingsMixinSharedInstance()

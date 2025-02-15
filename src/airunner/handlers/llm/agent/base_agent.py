@@ -9,6 +9,7 @@ import torch
 from PySide6.QtCore import QObject
 
 from llama_index.core import Settings, RAKEKeywordTableIndex
+from llama_index.core.agent import ReActAgent
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core import SimpleDirectoryReader
@@ -16,6 +17,7 @@ from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core import PromptHelper
 from llama_index.core.chat_engine import ContextChatEngine
 from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
+from llama_index.core.tools import FunctionTool
 from transformers import TextIteratorStreamer
 
 from airunner.data.models.settings_models import Conversation
@@ -35,6 +37,22 @@ from airunner.utils.create_worker import create_worker
 from airunner.utils.prepare_llm_generate_kwargs import prepare_llm_generate_kwargs
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.agent_worker import AgentWorker
+import subprocess
+import sys
+from pydantic import Field
+
+def get_weather(location: str) -> str:
+    """Usfeful for getting the weather for a given location."""
+    return f"The weather in {location} is sunny."
+
+def multiply(a: int, b: int) -> int:
+    """Useful for multiplying two numbers."""
+    return a + b
+
+def launch_application(app_name: str) -> str:
+    """Useful for launching an application."""
+    subprocess.run(app_name)
+    return f"Launching {app_name}..."
 
 
 class RefreshContextChatEngine(ContextChatEngine):
@@ -52,6 +70,77 @@ class BaseAgent(
     def __init__(self, *args, **kwargs):
         MediatorMixin.__init__(self)
 
+        def generate_image(
+            image_subject_description: str = Field(
+                description="A description of the image subject.",
+            ),
+            location: str = Field(
+                description="The location where the image was taken.",
+            ),
+            composition: str = Field(
+                description="The composition of the image.",
+            ),
+            lighting: str = Field(
+                description="The lighting of the image.",
+            ),
+            camera_lens: str = Field(
+                description="The lens used to take the image.",
+            ),
+            camera_type: str = Field(
+                description="The type of camera used to take the image.",
+            ),
+            time_of_day: str = Field(
+                description="The time of day the image was taken.",
+            ),
+            weather: str = Field(
+                description="The weather when the image was taken.",
+            )
+        ) -> str:
+            """Generate an image based on the given parameters."""
+            return json.dumps({
+                "data": {
+                    "message": {
+                        "prompt": f"An image of {image_subject_description} in {location} with {composition} composition, {lighting} lighting",
+                        "secondary_prompt": f"Shot with a {camera_lens} lens on a {camera_type} camera during {time_of_day} with {weather} weather."
+                    },
+                    "type": "photo"
+                },
+                "action": str(LLMActionType.GENERATE_IMAGE)
+            })
+    
+        def chat(input: str) -> str:
+            """Respond to the user's message with a chat response."""
+            return json.dumps({
+                "action": str(LLMActionType.CHAT)
+            })
+        
+        self._request_response = {}
+
+        self.tools = [
+            # FunctionTool.from_defaults(
+            #     get_weather,
+            #     # async_fn=aget_weather,  # optional!
+            # ),
+            # FunctionTool.from_defaults(
+            #     multiply,
+            #     # async_fn=aget_weather,  # optional!
+            # ),
+            # FunctionTool.from_defaults(
+            #     launch_application,
+            #     # async_fn=aget_weather,  # optional!
+            # ),
+            FunctionTool.from_defaults(
+                generate_image,
+                return_direct=True
+                # async_fn=aget_weather,  # optional!
+            ),
+            FunctionTool.from_defaults(
+                chat,
+                return_direct=True
+                # async_fn=aget_weather,  # optional!
+            ),
+        ]
+        
         self._requested_action = None
         self.model = kwargs.pop("model", None)
         self.__documents = None
@@ -103,6 +192,8 @@ class BaseAgent(
         self._do_interrupt = False
         self.response_worker = create_worker(AgentWorker)
         self.load_rag(model=self.model, tokenizer=self.tokenizer)
+        self.tool_agent = ReActAgent.from_tools(self.tools, llm=self.llm, verbose=True)
+        self.tool_agent.default_tool_choice = "chat"
 
     @property
     def do_interrupt(self):
@@ -232,6 +323,8 @@ class BaseAgent(
         self.model = None
         self.tokenizer = None
         self.thread = None
+        del self.tool_agent
+        self.tool_agent = None
 
     def clear_history(self):
         self.history = []
@@ -418,31 +511,26 @@ class BaseAgent(
             f"Your personality: {bot_personality}."
         ) if use_personality else ""
 
-    def prepare_messages(
-        self,
-        action
-    ) -> list:
+    def prepare_messages(self, action) -> list:
         system_prompt = self.build_system_prompt(action)
         if action is LLMActionType.CHAT:
             history = []
             for message in self.history:
-                name = "{{ username }}" if message["role"] == LLMChatRole.HUMAN.value else "{{ botname }}"
+                if message["role"] == LLMChatRole.HUMAN.value:
+                    name = "{{ username }}"
+                else:
+                    name = "{{ botname }}"
                 history.append({
                     "content": f"{name}: {message['content']}",
                     "role": message["role"]
                 })
-            messages = [
-                {
-                    "content": system_prompt,
-                    "role": LLMChatRole.SYSTEM.value
-                }
-            ] + history
+            messages = [{
+                "content": system_prompt,
+                "role": LLMChatRole.SYSTEM.value
+            }] + history
         return messages
 
-    def get_rendered_template(
-        self,
-        action: LLMActionType
-    ) -> str:
+    def get_rendered_template(self, action: LLMActionType) -> str:
         conversation = self.prepare_messages(action)
         rendered_template = self.tokenizer.apply_chat_template(
             chat_template=self.chat_template,
@@ -461,28 +549,24 @@ class BaseAgent(
         }
         for key, value in variables.items():
             value = value or ""
-            rendered_template = rendered_template.replace("{{ " + key + " }}", value)
+            rendered_template = rendered_template.replace("{{ " + key + " }}", 
+                                                          value)
         return rendered_template
 
-    def run(
-        self,
-        prompt: str,
-        action: LLMActionType,
-        **kwargs
-    ):
+    def run(self, prompt: str, action: LLMActionType, **kwargs):
+        self._request_response = {}
+        response_object = self.tool_agent.query(prompt)
+        response = json.loads(response_object.response)
+        action = LLMActionType(response["action"])
+        if action is LLMActionType.GENERATE_IMAGE:
+            self.emit_signal(SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
+                             response["data"])
+        elif action is LLMActionType.CHAT:
+            self.chat(prompt, action, **kwargs)
+
+    def chat(self, prompt: str, action: LLMActionType, **kwargs):
         self._requested_action = None
         self.action = action
-
-        if action is LLMActionType.TOGGLE_TTS:
-            self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL)
-            return
-
-        # if action in (
-        #     LLMActionType.CHAT,
-        #     LLMActionType.PERFORM_RAG_SEARCH
-        # ) and (self.conversation_title is None or self.conversation_title == ""):
-        #     self._requested_action = action
-        #     action = LLMActionType.SUMMARIZE
 
         self.logger.debug("Running...")
         self.prompt = prompt
@@ -496,10 +580,7 @@ class BaseAgent(
             LLMActionType.APPLICATION_COMMAND,
             LLMActionType.UPDATE_MOOD
         ):
-            self.add_message_to_history(
-                self.prompt,
-                LLMChatRole.HUMAN
-            )
+            self.add_message_to_history(self.prompt, LLMChatRole.HUMAN)
 
         self.rendered_template = self.get_rendered_template(action)
         print("RENDERED TEMPLATE", self.rendered_template)
@@ -509,24 +590,28 @@ class BaseAgent(
             return_tensors="pt"
         ).to(self.device)
 
-        kwargs.update(
-            action=action,
-            do_emit_response=True
-        )
-
-        self.run_with_thread(
-            model_inputs,
-            **kwargs
-        )
+        kwargs.update(action=action, do_emit_response=True)
+        self.run_with_thread(model_inputs, **kwargs)
 
     def prepare_generate_data(self, model_inputs, stopping_criteria):
-        data = dict(
-            **model_inputs,
-            **self.generator_settings,
-            stopping_criteria=[stopping_criteria]
-        )
+        data = dict(**model_inputs,
+                    **self.generator_settings,
+                    stopping_criteria=[stopping_criteria])
         data.update(self.override_parameters)
         return data
+
+    def remove_rendered_template(self, streamed_template):
+        """
+        Strip the rendered template from the streamed_template
+        so that we are left with new text only.
+        """
+        for i, char in enumerate(self.rendered_template):
+            try:
+                if char != streamed_template[i]:
+                    return streamed_template, False
+            except IndexError:
+                return streamed_template, False
+        return streamed_template.replace(self.rendered_template, ""), True
 
     def run_with_thread(
         self,
@@ -561,62 +646,23 @@ class BaseAgent(
                     self.logger.error(str(e))
                     self.logger.error(traceback.format_exc())
 
-            # strip all new lines from rendered_template:
-            #self.rendered_template = self.rendered_template.replace("\n", " ")
             eos_token = self.tokenizer.eos_token
             bos_token = self.tokenizer.bos_token
             if self.is_mistral:
                 self.rendered_template = bos_token + self.rendered_template
-            skip = True
             streamed_template = ""
             replaced = False
             is_end_of_message = False
             is_first_message = True
 
-            if action == LLMActionType.GENERATE_IMAGE:
-                self.emit_signal(
-                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    {
-                        "message": "Generating image prompt.\n",
-                        "is_first_message": is_first_message,
-                        "is_end_of_message": False,
-                        "name": self.botname,
-                        "action": LLMActionType.CHAT
-                    }
-                )
-                is_first_message = False
-
-            if action in (
-                LLMActionType.CHAT,
-                LLMActionType.GENERATE_IMAGE,
-                LLMActionType.UPDATE_MOOD,
-                LLMActionType.SUMMARIZE,
-                LLMActionType.APPLICATION_COMMAND
-            ):
+            if action is LLMActionType.CHAT:
                 for new_text in self.streamer:
-                    # strip all newlines from new_text
                     streamed_template += new_text
-                    if self.is_mistral:
-                        streamed_template = streamed_template.replace(f"{bos_token}[INST]", f"{bos_token}[INST]")
-                    # iterate over every character in rendered_template and
-                    # check if we have the same character in streamed_template
+                    
                     if not replaced:
-                        for i, char in enumerate(self.rendered_template):
-                            try:
-                                if char == streamed_template[i]:
-                                    skip = False
-                                else:
-                                    skip = True
-                                    break
-                            except IndexError:
-                                skip = True
-                                break
-                    if skip:
-                        continue
-                    elif not replaced:
-                        replaced = True
-                        streamed_template = streamed_template.replace(self.rendered_template, "")
-                    else:
+                        streamed_template, replaced = self.remove_rendered_template(streamed_template)
+                    
+                    if replaced:
                         if eos_token in new_text:
                             streamed_template = streamed_template.replace(eos_token, "")
                             new_text = new_text.replace(eos_token, "")
@@ -699,47 +745,30 @@ class BaseAgent(
                         LLMChatRole.ASSISTANT
                     )
 
-                elif action is LLMActionType.UPDATE_MOOD:
-                    self.bot_mood = streamed_template
-                    return self.run(
-                        prompt=self.prompt,
-                        action=LLMActionType.CHAT,
-                        **kwargs,
-                    )
+                # elif action is LLMActionType.UPDATE_MOOD:
+                #     self.bot_mood = streamed_template
+                #     return self.run(
+                #         prompt=self.prompt,
+                #         action=LLMActionType.CHAT,
+                #         **kwargs,
+                #     )
 
-                elif action is LLMActionType.SUMMARIZE:
-                    self._update_conversation_title(streamed_template)
-                    return self.run(
-                        prompt=self.prompt,
-                        action=self._requested_action,
-                        **kwargs,
-                    )
+                # elif action is LLMActionType.SUMMARIZE:
+                #     self._update_conversation_title(streamed_template)
+                #     return self.run(
+                #         prompt=self.prompt,
+                #         action=self._requested_action,
+                #         **kwargs,
+                #     )
 
-                elif action is LLMActionType.GENERATE_IMAGE:
-                    self.emit_signal(
-                        SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
-                        {
-                            "message": streamed_template,
-                            "type": "photo"
-                        }
-                    )
-                elif action is LLMActionType.APPLICATION_COMMAND:
-                    index = ''.join(c for c in streamed_template if c.isdigit())
-                    try:
-                        index = int(index)
-                    except ValueError:
-                        index = 0
-
-                    try:
-                        action = self.available_actions[index]
-                    except KeyError:
-                        action = LLMActionType.CHAT
-
-                    if action is not None:
-                        return self.run(
-                            prompt=self.prompt,
-                            action=action,
-                        )
+                # elif action is LLMActionType.GENERATE_IMAGE:
+                #     self.emit_signal(
+                #         SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
+                #         {
+                #             "message": streamed_template,
+                #             "type": "photo"
+                #         }
+                #     )
             return streamed_template
 
     def get_db_connection(self):

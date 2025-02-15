@@ -1,22 +1,11 @@
-import json
 from typing import Any, Optional
 from urllib.parse import urlparse
 import datetime
 
-from sqlalchemy import (
-    Index,
-    Column,
-    Integer,
-    UniqueConstraint,
-    text,
-    delete,
-    select,
-    create_engine,
-)
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from llama_index.core.llms import ChatMessage
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.dialects.sqlite import JSON, VARCHAR
 from llama_index.core.bridge.pydantic import Field, PrivateAttr
 from llama_index.core.storage.chat_store.base import BaseChatStore
 from airunner.data.models.settings_models import Conversation
@@ -109,18 +98,16 @@ class SQLiteChatStore(BaseChatStore):
             if messages is None or len(messages) == 0:
                 # Retrieve the existing messages
                 result = session.query(Conversation).filter_by(key=key).first()
-                print("SET NEW MESSAGES EXISTING CONVERSATION", result.value)
                 if result:
                     messages = result.value
                 else:
                     messages = []
             else:
-                messages = json.dumps([
+                messages = [
                     model.model_dump() if type(model) is ChatMessage else 
                         model for model in messages
-                ])
+                ]
             conversation = session.query(Conversation).filter_by(key=key).first()
-            print("SETTING CONVERSATION", messages)
             if conversation:
                 conversation.value = messages
             else:
@@ -143,10 +130,10 @@ class SQLiteChatStore(BaseChatStore):
                     messages = result.value
                 else:
                     messages = []
-            value = json.dumps([
+            value = [
                 model.model_dump() if type(model) is ChatMessage else 
                     model for model in messages
-            ])
+            ]
             conversation = await session.query(Conversation).filter_by(key=key).first()
             if conversation:
                 conversation.value = value
@@ -188,9 +175,7 @@ class SQLiteChatStore(BaseChatStore):
         with self._session() as session:
             conversation = session.query(Conversation).filter_by(key=key).first()
             if conversation:
-                data = conversation.value or []
-                if type(data) is str:
-                    messages = json.loads(data)
+                messages = conversation.value or []
             return [
                 ChatMessage.model_validate(
                     ChatMessage(
@@ -205,7 +190,7 @@ class SQLiteChatStore(BaseChatStore):
         async with self._async_session() as session:
             conversation = await session.query(Conversation).filter_by(key=key).first()
             if conversation:
-                messages = json.loads(conversation.value)
+                messages = conversation.value
             else:
                 messages = None
             return [
@@ -215,7 +200,7 @@ class SQLiteChatStore(BaseChatStore):
                         content=message["blocks"][0]["text"],
                     )
                 ) for message in messages
-            ]
+            ] if messages else []
 
     def add_message(self, key: str, message: ChatMessage) -> None:
         """Add a message for a key."""
@@ -223,17 +208,14 @@ class SQLiteChatStore(BaseChatStore):
             # Retrieve the existing messages
             conversation = session.query(Conversation).filter_by(key=key).first()
             if conversation:
-                try:
-                    messages = json.loads(conversation.value)
-                except TypeError:
-                    messages = conversation.value
+                messages = conversation.value
             else:
                 messages = []
             messages = [] if messages is None else messages
     
             # Append the new message
             messages.append(message.model_dump())
-            session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
+            session.query(Conversation).filter_by(key=key).update({"value": messages})
             session.commit()
     
     async def async_add_message(self, key: str, message: ChatMessage) -> None:
@@ -242,17 +224,14 @@ class SQLiteChatStore(BaseChatStore):
             # Retrieve the existing messages
             conversation = await session.query(Conversation).filter_by(key=key).first()
             if conversation:
-                try:
-                    messages = json.loads(conversation.value)
-                except TypeError:
-                    messages = conversation.value
+                messages = conversation.value
             else:
                 messages = []
             messages = [] if messages is None else messages
     
             # Append the new message
             messages.append(message.model_dump())
-            await session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
+            await session.query(Conversation).filter_by(key=key).update({"value": messages})
             await session.commit()
 
     def delete_messages(self, key: str) -> Optional[list[ChatMessage]]:
@@ -275,10 +254,7 @@ class SQLiteChatStore(BaseChatStore):
             # First, retrieve the current list of messages
             conversation = session.query(Conversation).filter_by(key=key).first()
             if conversation:
-                try:
-                    messages = json.loads(conversation.value)
-                except TypeError:
-                    messages = conversation.value
+                messages = conversation.values
             else:
                 messages = None
 
@@ -289,7 +265,7 @@ class SQLiteChatStore(BaseChatStore):
             # Remove the message at the given index
             removed_message = messages[idx]
             messages.pop(idx)
-            session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
+            session.query(Conversation).filter_by(key=key).update({"value": messages})
             session.commit()
             return ChatMessage.model_validate(removed_message)
 
@@ -299,10 +275,7 @@ class SQLiteChatStore(BaseChatStore):
             # First, retrieve the current list of messages
             conversation = await session.query(Conversation).filter_by(key=key).first()
             if conversation:
-                try:
-                    messages = json.loads(conversation.value)
-                except TypeError:
-                    messages = conversation.value
+                messages = conversation.value
             else:
                 messages = None
 
@@ -313,7 +286,7 @@ class SQLiteChatStore(BaseChatStore):
             # Remove the message at the given index
             removed_message = messages[idx]
             messages.pop(idx)
-            await session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
+            await session.query(Conversation).filter_by(key=key).update({"value": messages})
             await session.commit()
             return ChatMessage.model_validate(removed_message)
 
@@ -323,10 +296,7 @@ class SQLiteChatStore(BaseChatStore):
             # First, retrieve the current list of messages
             conversation = session.query(Conversation).filter_by(key=key).first()
             if conversation:
-                try:
-                    messages = json.loads(conversation.value)
-                except TypeError:
-                    messages = conversation.value
+                messages = conversation.value
             else:
                 messages = None
 
@@ -337,7 +307,7 @@ class SQLiteChatStore(BaseChatStore):
             # Remove the message at the given index
             removed_message = messages[-1]
             messages.pop(-1)
-            session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
+            session.query(Conversation).filter_by(key=key).update({"value": messages})
             session.commit()
             return ChatMessage.model_validate(removed_message)
 
@@ -347,10 +317,7 @@ class SQLiteChatStore(BaseChatStore):
             # First, retrieve the current list of messages
             conversation = await session.query(Conversation).filter_by(key=key).first()
             if conversation:
-                try:
-                    messages = json.loads(conversation.value)
-                except TypeError:
-                    messages = conversation.value
+                messages = conversation.value
             else:
                 messages = None
 
@@ -361,7 +328,7 @@ class SQLiteChatStore(BaseChatStore):
             # Remove the message at the given index
             removed_message = messages[-1]
             messages.pop(-1)
-            await session.query(Conversation).filter_by(key=key).update({"value": json.dumps(messages)})
+            await session.query(Conversation).filter_by(key=key).update({"value": messages})
             await session.commit()
             return ChatMessage.model_validate(removed_message)
 
