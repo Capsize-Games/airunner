@@ -2,6 +2,7 @@ import json
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.message_ui import Ui_message
+from airunner.data.models.settings_models import Conversation
 
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit, QApplication, QWidget
@@ -32,6 +33,7 @@ class MessageWidget(BaseWidget):
         self.ui.content.document().contentsChanged.connect(self.sizeChange)
         self.ui.user_name.setText(f"{self.name}")
         self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
+        self.register(SignalCode.DELETE_MESSAGES_AFTER_ID, self.on_delete_messages_after_id)
         self.font_family = None
         self.font_size = None
         self.set_chat_font()
@@ -43,6 +45,14 @@ class MessageWidget(BaseWidget):
         self.ui.delete_button.setVisible(False)
         self.ui.message_container.installEventFilter(self)
         self.set_cursor(Qt.CursorShape.ArrowCursor)
+    
+    def on_delete_messages_after_id(self, data):
+        message_id = data.get("message_id", None)
+        if self.message_id > message_id:
+            try:
+                self.deleteLater()
+            except RuntimeError:
+                pass
 
     def set_cursor(self, cursor_type):
         self.ui.message_container.setCursor(cursor_type)
@@ -113,17 +123,25 @@ class MessageWidget(BaseWidget):
 
     @Slot()
     def delete(self):
-        session = self.session
-        messages = json.loads(self.conversation.messages)
-        for message in messages:
-            if message["id"] == self.message_id:
-                messages.remove(message)
-                self.conversation.messages = json.dumps(messages)
-                session.add(self.conversation)
-                break
-        session.commit()
-        self.setParent(None)
-        self.deleteLater()
+        with self.get_session() as session:
+            conversation = session.query(Conversation).filter(
+                Conversation.id == self.conversation_id
+            ).first()
+            messages = conversation.value
+            print("messages start delete", 0, self.message_id)
+            print(messages, conversation.value, self.conversation_id, conversation.key)
+            if self.message_id == 0:
+                conversation.value = []
+            else:
+                conversation.value = messages[0:self.message_id]
+            print(conversation.value)
+            session.add(conversation)
+            session.commit()
+            self.emit_signal(SignalCode.DELETE_MESSAGES_AFTER_ID, {
+                "message_id": self.message_id,
+            })
+            self.setParent(None)
+            self.deleteLater()
 
     @Slot()
     def copy(self):
