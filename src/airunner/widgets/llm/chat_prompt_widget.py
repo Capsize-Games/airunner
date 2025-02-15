@@ -40,6 +40,7 @@ class ChatPromptWidget(BaseWidget):
         self.ui.action.addItem("Chat")
         self.ui.action.addItem("Image")
         self.ui.action.addItem("RAG")
+        self.ui.action.addItem("Store Data")
         action = LLMActionType[self.action]
         if action is LLMActionType.APPLICATION_COMMAND:
             self.ui.action.setCurrentIndex(0)
@@ -49,6 +50,8 @@ class ChatPromptWidget(BaseWidget):
             self.ui.action.setCurrentIndex(2)
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
             self.ui.action.setCurrentIndex(3)
+        elif action is LLMActionType.STORE_DATA:
+            self.ui.action.setCurrentIndex(4)
         self.ui.action.blockSignals(False)
         self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
@@ -83,13 +86,12 @@ class ChatPromptWidget(BaseWidget):
             self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
                 "conversation_id": self.conversation_id
             })
-            print(json.loads(self.conversation.value))
             self._set_conversation_widgets([{
                 "name": self.user.username if message["role"] == "user" else self.chatbot.name,
                 "content": message["blocks"][0]["text"],
                 "is_bot": message["role"] == "assistant",
                 "id": id
-            } for id, message in enumerate(json.loads(self.conversation.value))
+            } for id, message in enumerate(self.conversation.value or [])
         ])
 
     @Slot(str)
@@ -298,6 +300,8 @@ class ChatPromptWidget(BaseWidget):
             llm_action_value = LLMActionType.GENERATE_IMAGE
         elif val == "RAG":
             llm_action_value = LLMActionType.PERFORM_RAG_SEARCH
+        elif val == "Store Data":
+            llm_action_value = LLMActionType.STORE_DATA
         else:
             llm_action_value = LLMActionType.APPLICATION_COMMAND
         self.update_llm_generator_settings("action", llm_action_value.name)
@@ -382,11 +386,14 @@ class ChatPromptWidget(BaseWidget):
 
         widget = None
         if message != "":
+            total_widgets = self.ui.scrollAreaWidgetContents.layout().count() - 1
+            if total_widgets < 0:
+                total_widgets = 0
             widget = MessageWidget(
                 name=name,
                 message=message,
                 is_bot=is_bot,
-                message_id=message_id,
+                message_id=total_widgets,
                 conversation_id=self.conversation_id
             )
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)

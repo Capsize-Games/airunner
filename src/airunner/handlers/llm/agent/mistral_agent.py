@@ -79,48 +79,38 @@ class MistralAgentQObject(
         self.default_tool_choice: Optional[Union[str, dict]] = default_tool_choice
         self.max_function_calls: int = max_function_calls
         self._complete_response: str = ""
+        self._store_user_tool: Optional[FunctionTool] = None
+        self.register(SignalCode.DELETE_MESSAGES_AFTER_ID, self.on_delete_messages_after_id)
         super().__init__(**kwargs)
+    
+    @property
+    def store_user_tool(self) -> FunctionTool:
+        if not self._store_user_tool:
+            def store_user_information(
+                category: str,
+                information: str
+            ) -> str:
+                """Store information about the user with this tool.
+                
+                Choose this when you need to save information about the user."""
+                data = self.user.data or {}
+                data[category] = [information] if category not in data else data[category] + [information]
+                self.user.data = data
+                self.session.add(self.user)
+                self.session.commit()
+                return "User information updated."
+        
+            self._store_user_tool = FunctionTool.from_defaults(
+                store_user_information,
+                return_direct=True
+            )
+
+        return self._store_user_tool
 
     @property
     def tools(self) -> List[BaseTool]:
-        def get_date_and_time(*args, **kwargs) -> str:
-            """Get the current date and time."""
-            return self._date_time_prompt
-        
-        def update_database_with_user_info(
-            category: str,
-            information: str
-        ) -> str:
-            """Update the database with user information.\n
-            Useful for collecting interesting and important information about the user.\n
-            Use this any time you want to remember something about the user."""
-            print("UPDATING DATABASE WITH USER INFO")
-            print("-" * 50)
-            data = self.user.data or {}
-            existing_info = data.get(category, None)
-            if existing_info:
-                data[category] += f"\n{information}"
-                self.user.data = data
-                self.session.add(self.user)
-                self.session.commit()
-            else:
-                data[category] = information
-                self.user.data = data
-                self.session.add(self.user)
-                self.session.commit()
-            return "User information updated."
-
-        tools = [
-            FunctionTool.from_defaults(
-                get_date_and_time,
-                return_direct=False
-            ),
-            FunctionTool.from_defaults(
-                update_database_with_user_info,
-                return_direct=False
-            ),
-        ]
-        return tools + [
+        return [
+            self.store_user_tool,
             self.chat_engine_tool,
             self.rag_engine_tool
         ]
@@ -136,7 +126,8 @@ class MistralAgentQObject(
                 verbose=True,
                 max_function_calls=self.max_function_calls,
                 default_tool_choice=self.default_tool_choice,
-                return_direct=True
+                return_direct=True,
+                context=self.react_agent_prompt
             )
         return self._react_tool_agent
 
@@ -165,7 +156,8 @@ class MistralAgentQObject(
         if not self._chat_engine_tool:
             self._chat_engine_tool = ChatEngineTool.from_defaults(
                 chat_engine=self.chat_engine,
-                agent=self
+                agent=self,
+                return_direct=True
             )
         return self._chat_engine_tool
     
@@ -279,7 +271,9 @@ class MistralAgentQObject(
         metadata_prompt = ""
         if data is not None:
             for k,v in data.items():
-                metadata_prompt += f"-- {k}: {v}\n"
+                metadata_prompt += f"-- {k}: \n"
+                for item in v:
+                    metadata_prompt += f"--- {item}\n"
         if metadata_prompt:
             metadata_prompt = f"- Metadata:\n{metadata_prompt}"
         return (
@@ -312,12 +306,11 @@ class MistralAgentQObject(
     @property
     def _system_prompt(self) -> str:
         prompt = (
-            f"You are a chatbot."
-            f"Your name is {self.botname}.\n"
+            f"You are a chatbot, your name is {self.botname}.\n"
+            f"You are having a conversation with the user, {self.username}\n"
+            "Here is more context that you can use to generate a response:\n"
             f"{self.personality_prompt}"
             f"{self.mood_prompt}"
-            f"The user's name is {self.username}.\n"
-            "Here is more context that you can use to generate a response:\n"
             f"{self._date_time_prompt}"
             f"{self._operating_system_prompt}"
             f"{self._speakers_prompt}"
@@ -326,18 +319,24 @@ class MistralAgentQObject(
         prompt = prompt.replace("{{ username }}", self.username)
         prompt = prompt.replace("{{ botname }}", self.botname)
         return prompt
+    
+    @property
+    def react_agent_prompt(self) -> str:
+        return (
+            f"{self._system_prompt}\n"
+        )
 
     @property
     def _rag_system_prompt(self) -> str:
         prompt = (
-            f"You are a chatbot. Your name is {self.botname} and the "
-            f"user's name is {self.username}.\n"
+            f"{self._system_prompt}\n"
+            "------\n"
+            "Rules:\n"
+            "You must attempt to find answers based on the provided documents.\n"
             "Search the full text and find all relevant information "
             "related to the query.\n"
             "If no documents are available, provide a general response based "
             "on your knowledge.\n"
-            "Here is more context that you can use to generate a response:\n"
-            f"{self._date_time_prompt}"
         )
         prompt = prompt.replace("{{ username }}", self.username)
         prompt = prompt.replace("{{ botname }}", self.botname)
@@ -398,11 +397,17 @@ class MistralAgentQObject(
             self._chat_memory.chat_store_key = self._conversation.key
             messages = self._chat_store.get_messages(self._conversation.key)
             if messages:
-                self._chat_memory.set(json.dumps([
-                    message.mdoel_dump() for message in messages
-                ]))
+                self._chat_memory.set([
+                    message.model_dump() for message in messages
+                ])
             if self._chat_engine:
                 self._chat_engine.memory = self._chat_memory
+    
+    def on_delete_messages_after_id(self, data: Dict):
+        messages = self.conversation.value
+        self._chat_memory.set(messages)
+        if self._chat_engine:
+            self._chat_engine.memory = self._chat_memory
 
     def chat(
         self,
@@ -421,8 +426,14 @@ class MistralAgentQObject(
             self.chat_engine_tool.call(**kwargs)
             self._memory = self.chat_engine._memory
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            self.rag_engine_tool.call(**kwargs)
-            self._memory = self.rag_engine._memory
+            response = self.rag_engine_tool.call(**kwargs)
+            if response.content == "Empty Response":
+                self.chat_engine_tool.call(**kwargs)
+                self._memory = self.chat_engine._memory
+            else:
+                self._memory = self.rag_engine._memory
+        elif action is LLMActionType.STORE_DATA:
+            self.react_tool_agent.call(tool_choice="store_user_tool", **kwargs)
         else:
             self.react_tool_agent.call(**kwargs)
             self._memory = self.react_tool_agent.chat_engine.memory

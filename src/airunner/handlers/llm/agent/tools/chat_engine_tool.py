@@ -75,7 +75,8 @@ class ChatEngineTool(AsyncBaseTool):
         is_first_message = True
         for token in streaming_response.response_gen:
             response += token
-            self.agent.handle_response(token, is_first_message)
+            if response != "Empty Response":
+                self.agent.handle_response(token, is_first_message)
             is_first_message = False
 
         return ToolOutput(
