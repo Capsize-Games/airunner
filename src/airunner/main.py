@@ -45,7 +45,7 @@ from airunner.app import App
 from alembic.config import Config
 from alembic import command
 from pathlib import Path
-from airunner.data.models.settings_models import ApplicationSettings
+from airunner.data.models import ApplicationSettings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
