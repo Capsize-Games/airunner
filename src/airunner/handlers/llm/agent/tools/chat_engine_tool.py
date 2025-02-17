@@ -27,7 +27,12 @@ class ChatEngineTool(AsyncBaseTool):
         resolve_input_errors: bool = True,
         agent=None
     ):
-        self._chat_engine = chat_engine
+        self.chat_engine: Union[
+            RefreshSimpleChatEngine, 
+            RefreshContextChatEngine
+        ] = chat_engine
+        if not chat_engine:
+            raise ValueError("Chat engine must be provided.")
         self._metadata = metadata
         self._resolve_input_errors = resolve_input_errors
         self.agent = agent
@@ -54,10 +59,6 @@ class ChatEngineTool(AsyncBaseTool):
             resolve_input_errors=resolve_input_errors,
             agent=agent
         )
-
-    @property
-    def chat_engine(self) -> Union[RefreshSimpleChatEngine, RefreshContextChatEngine]:
-        return self._chat_engine
     
     @property
     def metadata(self) -> ToolMetadata:
@@ -66,7 +67,7 @@ class ChatEngineTool(AsyncBaseTool):
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
-        streaming_response = self._chat_engine.stream_chat(
+        streaming_response = self.chat_engine.stream_chat(
             query_str, 
             chat_history=chat_history
         )
@@ -89,7 +90,7 @@ class ChatEngineTool(AsyncBaseTool):
     async def acall(self, *args: Any, **kwargs: Any) -> ToolOutput:
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
-        streaming_response = await self._chat_engine.astream_chat(
+        streaming_response = await self.chat_engine.astream_chat(
             query_str,
             chat_history=chat_history
         )
@@ -131,4 +132,4 @@ class ChatEngineTool(AsyncBaseTool):
         return query_str
 
     def update_system_prompt(self, system_prompt:str):
-        self._chat_engine.update_system_prompt(system_prompt)
+        self.chat_engine.update_system_prompt(system_prompt)

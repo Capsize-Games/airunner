@@ -58,6 +58,7 @@ class MistralAgent(
         RAGMixin.__init__(self)
         self.model = model
         self.tokenizer = tokenizer
+        self._streaming_stopping_criteria: Optional[ExternalConditionStoppingCriteria] = None
         self._do_interrupt: bool = False
         self.history: Optional[List[ChatMessage]] = []
         self._llm: Optional[HuggingFaceLLM] = None
@@ -128,18 +129,26 @@ class MistralAgent(
         return self._react_tool_agent
 
     @property
+    def streaming_stopping_criteria(self) -> ExternalConditionStoppingCriteria:
+        if not self._streaming_stopping_criteria:
+            self._streaming_stopping_criteria = ExternalConditionStoppingCriteria(self.do_interrupt_process)
+        return self._streaming_stopping_criteria
+
+    @property
     def llm(self) -> HuggingFaceLLM:
         if not self._llm:
+            self.logger.info("Loading HuggingFaceLLM")
             self._llm = HuggingFaceLLM(
                 model=self.model, 
                 tokenizer=self.tokenizer,
-                streaming_stopping_criteria=ExternalConditionStoppingCriteria(self.do_interrupt_process)
+                streaming_stopping_criteria=self.streaming_stopping_criteria
             )
         return self._llm
 
     @property
     def chat_engine(self) -> RefreshSimpleChatEngine:
         if not self._chat_engine:
+            self.logger.info("Loading RefreshSimpleChatEngine")
             self._chat_engine = RefreshSimpleChatEngine.from_defaults(
                 system_prompt=self._system_prompt,
                 memory=self.chat_memory,
@@ -150,6 +159,7 @@ class MistralAgent(
     @property
     def chat_engine_tool(self) -> ChatEngineTool:
         if not self._chat_engine_tool:
+            self.logger.info("Loading ChatEngineTool")
             self._chat_engine_tool = ChatEngineTool.from_defaults(
                 chat_engine=self.chat_engine,
                 agent=self,
@@ -160,6 +170,7 @@ class MistralAgent(
     @property
     def rag_engine_tool(self) -> RAGEngineTool:
         if not self._rag_engine_tool:
+            self.logger.info("Loading RAGEngineTool")
             self._rag_engine_tool = RAGEngineTool.from_defaults(
                 chat_engine=self.rag_engine,
                 agent=self
@@ -178,8 +189,7 @@ class MistralAgent(
     def conversation(self) -> Optional[Conversation]:
         if self._conversation is None:
             self.conversation = self.create_conversation(
-                self.chat_store_key,
-                self.chatbot.id
+                self.chat_store_key
             )
         return self._conversation
     
@@ -358,6 +368,7 @@ class MistralAgent(
     @property
     def chat_memory(self) -> ChatMemoryBuffer:
         if not self._chat_memory:
+            self.logger.info("Loading ChatMemoryBuffer")
             self._chat_memory = ChatMemoryBuffer.from_defaults(
                 token_limit=3000,
                 chat_store=self.chat_store,
