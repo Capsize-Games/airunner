@@ -42,10 +42,7 @@ from airunner.settings import CHAT_STORE_DB_PATH
 DEFAULT_MAX_FUNCTION_CALLS = 5
 
 
-class MistralAgentQObject(
-    QObject,
-    MediatorMixin,
-    SettingsMixin,
+class MistralAgent(
     RAGMixin,
     WeatherMixin
 ):
@@ -58,7 +55,6 @@ class MistralAgentQObject(
         max_function_calls: int = DEFAULT_MAX_FUNCTION_CALLS,
         **kwargs
     ) -> None:
-        MediatorMixin.__init__(self)
         RAGMixin.__init__(self)
         self.model = model
         self.tokenizer = tokenizer
@@ -385,8 +381,8 @@ class MistralAgentQObject(
         self._rag_engine_tool = None
         self._react_tool_agent = None
     
-    def reload_rag(self):
-        self._reload_rag()
+    def reload_rag_engine(self):
+        self.reload_rag()
         self._rag_engine_tool = None
 
     def clear_history(self, data: Optional[Dict] = None):
@@ -471,3 +467,15 @@ class MistralAgentQObject(
                 }
             )
         self._complete_response += response
+
+
+class MistralAgentQObject(
+    QObject,
+    MediatorMixin,
+    SettingsMixin,
+    MistralAgent
+):
+    def __init__(self, *args, **kwargs):
+        MediatorMixin.__init__(self)
+        MistralAgent.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
