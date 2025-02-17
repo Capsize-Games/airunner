@@ -4,7 +4,7 @@ import nltk
 from PySide6.QtCore import QObject, QThread, Slot, Signal
 from sqlalchemy import func
 
-from airunner.data.models.settings_models import AIModels, ControlnetModel
+from airunner.data.models import AIModels, ControlnetModel
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
@@ -19,7 +19,6 @@ from airunner.utils.network.huggingface_downloader import HuggingfaceDownloader
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.windows.setup_wizard.installation_settings.templates.install_page_ui import Ui_install_page
-from airunner.settings import DEFAULT_PATH_SETTINGS
 from airunner.utils.os.create_airunner_directory import create_airunner_paths
 
 nltk.data.path.append(NLTK_DOWNLOAD_DIR)

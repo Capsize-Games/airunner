@@ -30,7 +30,7 @@ from airunner.app_installer import AppInstaller
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.data.models.settings_models import ApplicationSettings, AIModels
+from airunner.data.models import ApplicationSettings
 from airunner.windows.main.main_window import MainWindow
 
 
@@ -92,7 +92,7 @@ class App(
 
     def handle_upgrade(self, current_version):
         from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-        from airunner.data.models.settings_models import PipelineModel
+        from airunner.data.models import PipelineModel
         for model in pipeline_bootstrap_data:
             pipelinemodel = self.session.query(PipelineModel).filter_by(
                 pipeline_action= model["pipeline_action"],

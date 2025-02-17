@@ -11,7 +11,7 @@ from airunner.enums import SignalCode, LLMActionType, ModelType, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
-from airunner.data.models.settings_models import Conversation
+from airunner.data.models import Conversation
 
 
 class ChatPromptWidget(BaseWidget):

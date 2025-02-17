@@ -46,8 +46,13 @@ from transformers import (
 )
 from transformers import BitsAndBytesConfig as TransformersBitsAndBytesConfig
 from airunner.handlers.base_handler import BaseHandler
-from airunner.data.models.settings_models import \
-    Schedulers, Lora, Embedding, ControlnetModel, AIModels
+from airunner.data.models import (
+    Schedulers, 
+    Lora, 
+    Embedding, 
+    ControlnetModel, 
+    AIModels
+)
 from airunner.enums import (
     SDMode, 
     StableDiffusionVersion, 
