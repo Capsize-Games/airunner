@@ -241,7 +241,7 @@ class CausalLMTransformerBaseHandler(
         """
         Public method to reload the RAG model
         """
-        self._chat_agent.reload_rag()
+        self._chat_agent.reload_rag_engine()
 
     def _load_tokenizer(self):
         if self._tokenizer is not None:

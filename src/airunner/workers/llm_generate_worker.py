@@ -61,7 +61,7 @@ class LLMGenerateWorker(Worker):
 
     def on_llm_reload_rag_index_signal(self):
         if self.llm:
-            self.llm.reload_rag()
+            self.llm.reload_rag_engine()
 
     def on_llm_add_chatbot_response_to_history(self, message):
         self.llm.add_chatbot_response_to_history(message)
