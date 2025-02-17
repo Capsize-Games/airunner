@@ -11,8 +11,16 @@ import sqlalchemy
 from alembic import op
 import sqlalchemy as sa
 
-from airunner.data.models import settings_models
 from airunner.data.models import Base
+from airunner.data.models import (
+    AIModels,
+    Schedulers,
+    ShortcutKeys,
+    PromptTemplate,
+    ControlnetModel,
+    FontSetting,
+    PipelineModel
+)
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.font_settings_bootstrap_data import font_settings_bootstrap_data
 from airunner.data.bootstrap.imagefilter_bootstrap_data import imagefilter_bootstrap_data
@@ -88,19 +96,19 @@ def set_default_ai_models():
     for model in model_bootstrap_data:
         values.append(model)
     op.bulk_insert(
-        settings_models.AIModels.__table__,
+        AIModels.__table__,
         values
     )
 
 def set_default_schedulers():
     op.bulk_insert(
-        settings_models.Schedulers.__table__,
+        Schedulers.__table__,
         SCHEDULER_CLASSES
     )
 
 def set_default_shortcut_keys():
     op.bulk_insert(
-        settings_models.ShortcutKeys.__table__,
+        ShortcutKeys.__table__,
         DEFAULT_SHORTCUTS
     )
 
@@ -109,7 +117,7 @@ def set_default_prompt_templates():
     for template in prompt_templates_bootstrap_data:
         values.append(template)
     op.bulk_insert(
-        settings_models.PromptTemplate.__table__,
+        PromptTemplate.__table__,
         values
     )
 
@@ -118,21 +126,21 @@ def set_default_controlnet_models():
     for template in controlnet_bootstrap_data:
         values.append(template)
     op.bulk_insert(
-        settings_models.ControlnetModel.__table__,
+        ControlnetModel.__table__,
         values
     )
 
 def set_default_font_settings():
     for font_setting in font_settings_bootstrap_data:
         op.bulk_insert(
-            settings_models.FontSetting.__table__,
+            FontSetting.__table__,
             [font_setting]
         )
 
 def set_default_pipeline_values():
     for pipeline in pipeline_bootstrap_data:
         op.bulk_insert(
-            settings_models.PipelineModel.__table__,
+            PipelineModel.__table__,
             [pipeline]
         )
 
