@@ -15,6 +15,10 @@ class Conversation(Base):
     key = Column(String, nullable=True)
     value = Column(JSON, nullable=False)
     chatbot_id = Column(Integer, ForeignKey('chatbots.id'))
+    chatbot_name = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    user_name = Column(String, nullable=False)
+    status = Column(String, nullable=True)
 
 
 Conversation.summaries = relationship(
