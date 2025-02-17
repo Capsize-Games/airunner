@@ -101,6 +101,7 @@ Installation
 
 ```bash
 pip install airunner
+pip install -U timm
 ```
 
 Running
