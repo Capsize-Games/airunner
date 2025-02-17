@@ -24,7 +24,7 @@ from llama_index.core.base.llms.types import ChatMessage
 from airunner.enums import LLMActionType, SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.data.models.settings_models import Conversation
+from airunner.data.models import Conversation
 from airunner.handlers.llm.agent.rag_mixin import RAGMixin
 from airunner.handlers.llm.agent.external_condition_stopping_criteria import (
     ExternalConditionStoppingCriteria

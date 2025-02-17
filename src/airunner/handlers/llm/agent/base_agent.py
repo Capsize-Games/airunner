@@ -20,7 +20,7 @@ from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
 from llama_index.core.tools import FunctionTool
 from transformers import TextIteratorStreamer
 
-from airunner.data.models.settings_models import Conversation
+from airunner.data.models import Conversation
 from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from airunner.handlers.llm.custom_embedding import CustomEmbedding
 from airunner.handlers.llm.agent.html_file_reader import HtmlFileReader

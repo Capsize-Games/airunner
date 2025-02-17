@@ -1,8 +1,8 @@
 # airunner/widgets/llm/llm_history_widget.py
 
-from PySide6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy, QHBoxLayout, QWidget, QLabel
+from PySide6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy
 
-from airunner.data.models.settings_models import LLMGeneratorSettings
+from airunner.data.models import LLMGeneratorSettings
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.llm_history_item_widget import LLMHistoryItemWidget

@@ -15,7 +15,7 @@ if not os.path.exists(DB_PATH):
     print(f"Database file not found at {DB_PATH}")
 
 # Import your models here
-from airunner.data.models.settings_models import (
+from airunner.data.models import (
     Conversation, Summary,
     ApplicationSettings, ActiveGridSettings, ControlnetSettings,
     ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings,

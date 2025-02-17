@@ -1,8 +1,7 @@
-import json
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.message_ui import Ui_message
-from airunner.data.models.settings_models import Conversation
+from airunner.data.models import Conversation
 
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit, QApplication, QWidget

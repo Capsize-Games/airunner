@@ -8,7 +8,7 @@ from llama_index.core.llms import ChatMessage
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from llama_index.core.bridge.pydantic import Field, PrivateAttr
 from llama_index.core.storage.chat_store.base import BaseChatStore
-from airunner.data.models.settings_models import Conversation
+from airunner.data.models import Conversation
 
 
 class SQLiteChatStore(BaseChatStore):

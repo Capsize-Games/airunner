@@ -1,6 +1,6 @@
 import os
 
-from airunner.data.models.settings_models import Lora, Embedding
+from airunner.data.models import Lora, Embedding
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 

@@ -59,7 +59,6 @@ a = Analysis(
     hiddenimports=[
         'airunner',
         'airunner.data.models',
-        'airunner.data.models.settings_models',
         'airunner.utils.db.column_exists',
         'airunner.data.bootstrap.controlnet_bootstrap_data',
         'airunner.data.bootstrap.font_settings_bootstrap_data',
