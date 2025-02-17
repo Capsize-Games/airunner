@@ -195,10 +195,7 @@ class ChatPromptWidget(BaseWidget):
         self._create_conversation()
 
     def _create_conversation(self):
-        self.conversation = self.create_conversation(
-            "cpw_" + uuid.uuid4().hex,
-            self.chatbot.id
-        )
+        self.conversation = self.create_conversation("cpw_" + uuid.uuid4().hex)
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
             "conversation_id": self.conversation_id
         })

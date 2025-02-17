@@ -11,6 +11,7 @@ from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.core import StorageContext, load_index_from_storage
 from airunner.handlers.llm.agent.html_file_reader import HtmlFileReader
 from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import RefreshContextChatEngine
 from airunner.data.models.news import Article
@@ -32,6 +33,7 @@ class RAGMixin():
         self.__html_reader: HtmlFileReader
         self.__markdown_reader: MarkdownReader
         self.__file_extractor: Dict[str, object]
+        self.__storage_context: Optional[StorageContext] = None
 
     @property
     def rag_engine(self) -> RefreshContextChatEngine:
@@ -186,6 +188,30 @@ class RAGMixin():
         print("DOCUMENTS", documents)
         return documents
 
+    @property
+    def storage_persist_dir(self) -> str:
+        return os.path.expanduser(os.path.join(
+            self.path_settings.base_path,
+            "text",
+            "other",
+            "cache"
+        ))
+
+    @property
+    def storage_context(self) -> StorageContext:
+        if self.__storage_context is None:
+            try:
+                self.storage_context = StorageContext.from_defaults(
+                    persist_dir=self.storage_persist_dir
+                )
+            except FileNotFoundError as e:
+                self.logger.error(f"Error loading storage context: {str(e)}")
+        return self.__storage_context
+    
+    @storage_context.setter
+    def storage_context(self, value: StorageContext):
+        self.__storage_context = value
+
     def load_rag(self):
         self._load_embeddings()
         self._load_readers()
@@ -214,7 +240,7 @@ class RAGMixin():
         self.markdown_reader = None
         self.file_extractor = None
     
-    def _reload_rag(self):
+    def reload_rag(self):
         self.logger.debug("Reloading RAG...")
         self.retriever = None
         self.index = None
@@ -311,14 +337,26 @@ class RAGMixin():
 
     def _load_document_index(self):
         self.logger.debug("Loading index...")
-        try:
-            self.index = RAKEKeywordTableIndex.from_documents(
-                self.documents,
-                llm=self.llm
+        index = None
+        if self.storage_context:
+            self.logger.debug("Loading from disc...")
+            index = (
+                load_index_from_storage(self.storage_context)
+                if self.storage_context
+                else None
             )
-            self.logger.debug("Index loaded successfully.")
-        except TypeError as e:
-            self.logger.error(f"Error loading index: {str(e)}")
+        if not index:
+            self.logger.debug("Loading index from documents...")
+            try:
+                self.index = RAKEKeywordTableIndex.from_documents(
+                    self.documents, 
+                    llm=self.llm
+                )
+                self.logger.debug("Index loaded successfully.")
+            except TypeError as e:
+                self.logger.error(f"Error loading index: {str(e)}")
+        else:
+            self.index = index
 
     def _load_retriever(self):
         try:
@@ -329,3 +367,6 @@ class RAGMixin():
             self.logger.debug("Retriever loaded successfully with index.")
         except Exception as e:
             self.logger.error(f"Error setting up the retriever: {str(e)}")
+    
+    def _save_index(self):
+        pass

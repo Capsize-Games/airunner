@@ -762,7 +762,7 @@ class SettingsMixin:
             chatbot = self.create_chatbot("Default")
         return chatbot
 
-    def create_conversation(self, chat_store_key: str, chatbot_id: int):
+    def create_conversation(self, chat_store_key: str):
         # find conversation which has no title, bot_mood or messages
         conversation = self.session.query(Conversation).filter_by(
             key=chat_store_key
@@ -774,7 +774,10 @@ class SettingsMixin:
             title="",
             key=chat_store_key,
             value=None,
-            chatbot_id=chatbot_id
+            chatbot_id=self.chatbot.id,
+            user_id=self.user.id,
+            chatbot_name=self.chatbot.name,
+            user_name=self.user.username
         )
         self.session.add(conversation)
         self.session.commit()
