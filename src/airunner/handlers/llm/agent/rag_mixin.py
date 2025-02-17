@@ -28,19 +28,33 @@ class RAGMixin():
         self.__index: Optional[RAKEKeywordTableIndex] = None
         self.__retriever: Optional[KeywordTableSimpleRetriever] = None
         self.__embedding: Optional[HuggingFaceEmbedding] = None
-        self.__pdf_reader: PDFReader
-        self.__epub_reader: EpubReader
-        self.__html_reader: HtmlFileReader
-        self.__markdown_reader: MarkdownReader
+        self.__pdf_reader: Optional[PDFReader] = None
+        self.__epub_reader: Optional[EpubReader] = None
+        self.__html_reader: Optional[HtmlFileReader] = None
+        self.__markdown_reader: Optional[MarkdownReader] = None
         self.__file_extractor: Dict[str, object]
         self.__storage_context: Optional[StorageContext] = None
 
     @property
-    def rag_engine(self) -> RefreshContextChatEngine:
+    def rag_engine(self) -> Optional[RefreshContextChatEngine]:
+        if not self.__rag_engine:
+            try:
+                self.logger.debug("Loading chat engine...")
+                self.rag_engine = RefreshContextChatEngine.from_defaults(
+                    retriever=self.retriever,
+                    #chat_history=self.history,
+                    memory=self.chat_memory,
+                    system_prompt=self._rag_system_prompt,
+                    node_postprocessors=[],
+                    llm=self.llm,
+                )
+                self.logger.debug("Chat engine loaded successfully.")
+            except Exception as e:
+                self.logger.error(f"Error loading chat engine: {str(e)}")
         return self.__rag_engine
     
     @rag_engine.setter
-    def rag_engine(self, value: RefreshContextChatEngine):
+    def rag_engine(self, value: Optional[RefreshContextChatEngine]):
         self.__rag_engine = value
 
     @property
@@ -90,19 +104,53 @@ class RAGMixin():
         self.__text_splitter = value
 
     @property
-    def index(self) -> RAKEKeywordTableIndex:
+    def index(self) -> Optional[RAKEKeywordTableIndex]:
+        if not self.__index:
+            self.logger.debug("Loading index...")
+            index = None
+            if self.storage_context:
+                self.logger.debug("Loading from disc...")
+                try:
+                    index = (
+                        load_index_from_storage(self.storage_context)
+                        if self.storage_context
+                        else None
+                    )
+                except ValueError:
+                    self.logger.error("Error loading index from disc.")
+            if not index:
+                self.logger.debug("Loading index from documents...")
+                try:
+                    self.index = RAKEKeywordTableIndex.from_documents(
+                        self.documents, 
+                        llm=self.llm
+                    )
+                    self.logger.debug("Index loaded successfully.")
+                except TypeError as e:
+                    self.logger.error(f"Error loading index: {str(e)}")
+            else:
+                self.index = index
         return self.__index
     
     @index.setter
-    def index(self, value: RAKEKeywordTableIndex):
+    def index(self, value: Optional[RAKEKeywordTableIndex]):
         self.__index = value
 
     @property
-    def retriever(self) -> KeywordTableSimpleRetriever:
+    def retriever(self) -> Optional[KeywordTableSimpleRetriever]:
+        if not self.__retriever:
+            try:
+                self.logger.debug("Loading retriever...")
+                self.retriever = KeywordTableSimpleRetriever(
+                    index=self.index,
+                )
+                self.logger.debug("Retriever loaded successfully with index.")
+            except Exception as e:
+                self.logger.error(f"Error setting up the RAG retriever: {str(e)}")
         return self.__retriever
     
     @retriever.setter
-    def retriever(self, value: KeywordTableSimpleRetriever):
+    def retriever(self, value: Optional[KeywordTableSimpleRetriever]):
         self.__retriever = value
 
     @property
@@ -114,23 +162,29 @@ class RAGMixin():
         self.__embedding = value
 
     @property
-    def pdf_reader(self) -> PDFReader:
+    def pdf_reader(self) -> Optional[PDFReader]:
+        if not self.__pdf_reader:
+            self.pdf_reader = PDFReader()
         return self.__pdf_reader
     
     @pdf_reader.setter
-    def pdf_reader(self, value: PDFReader):
+    def pdf_reader(self, value: Optional[PDFReader]):
         self.__pdf_reader = value
 
     @property
-    def epub_reader(self) -> EpubReader:
+    def epub_reader(self) -> Optional[EpubReader]:
+        if not self.__epub_reader:
+            self.epub_reader = EpubReader()
         return self.__epub_reader
     
     @epub_reader.setter
-    def epub_reader(self, value: EpubReader):
+    def epub_reader(self, value: Optional[EpubReader]):
         self.__epub_reader = value
     
     @property
     def html_reader(self) -> HtmlFileReader:
+        if not self.__html_reader:
+            self.html_reader = HtmlFileReader()
         return self.__html_reader
     
     @html_reader.setter
@@ -139,6 +193,8 @@ class RAGMixin():
 
     @property
     def markdown_reader(self) -> MarkdownReader:
+        if not self.__markdown_reader:
+            self.markdown_reader = MarkdownReader()
         return self.__markdown_reader
     
     @markdown_reader.setter
@@ -185,7 +241,6 @@ class RAGMixin():
         documents = self.document_reader.load_data() if self.document_reader else []
         documents += self.conversation_documents
         documents += self.news_articles
-        print("DOCUMENTS", documents)
         return documents
 
     @property
@@ -200,6 +255,19 @@ class RAGMixin():
     @property
     def storage_context(self) -> StorageContext:
         if self.__storage_context is None:
+            if not os.path.exists(self.storage_persist_dir):
+                os.makedirs(self.storage_persist_dir, exist_ok=True)
+            for file in [
+                "docstore.json",
+                "index_store.json",
+            ]:
+                file_path = os.path.join(
+                    self.storage_persist_dir,
+                    file
+                )
+                if not os.path.exists(file_path):
+                    with open(file_path, "w") as f:
+                        f.write("{}")
             try:
                 self.storage_context = StorageContext.from_defaults(
                     persist_dir=self.storage_persist_dir
@@ -214,15 +282,10 @@ class RAGMixin():
 
     def load_rag(self):
         self._load_embeddings()
-        self._load_readers()
-        self._load_file_extractor()
         self._load_document_reader()
         self._load_text_splitter()
         self._load_prompt_helper()
         self._load_settings()
-        self._load_document_index()
-        self._load_retriever()
-        self._load_context_rag_engine()
     
     def unload_rag(self):
         self._unload_settings()
@@ -238,7 +301,6 @@ class RAGMixin():
         self.epub_reader = None
         self.html_reader = None
         self.markdown_reader = None
-        self.file_extractor = None
     
     def reload_rag(self):
         self.logger.debug("Reloading RAG...")
@@ -247,9 +309,8 @@ class RAGMixin():
         self.rag_engine = None
         self.document_reader = None
         self._load_document_reader()
-        self._load_document_index()
-        self._load_retriever()
-        self._load_context_rag_engine()
+
+        # USE self.index.refresh_ref_docs to refresh the index
         
 
     def _load_embeddings(self):
@@ -265,21 +326,6 @@ class RAGMixin():
             ))
             self.embedding = HuggingFaceEmbedding(path)
 
-    def _load_readers(self):
-        self.pdf_reader = PDFReader()
-        self.epub_reader = EpubReader()
-        self.html_reader = HtmlFileReader()
-        self.markdown_reader = MarkdownReader()
-
-    def _load_file_extractor(self):
-        self.file_extractor = {
-            ".pdf": self.pdf_reader,
-            ".epub": self.epub_reader,
-            ".html": self.html_reader,
-            ".htm": self.html_reader,
-            ".md": self.markdown_reader,
-        }
-
     def _load_document_reader(self):
         if self.target_files is None or len(self.target_files) == 0:
             return
@@ -287,7 +333,13 @@ class RAGMixin():
         try:
             self.document_reader = SimpleDirectoryReader(
                 input_files=self.target_files,
-                file_extractor=self.file_extractor,
+                file_extractor={
+                    ".pdf": self.pdf_reader,
+                    ".epub": self.epub_reader,
+                    ".html": self.html_reader,
+                    ".htm": self.html_reader,
+                    ".md": self.markdown_reader,
+                },
                 exclude_hidden=False
             )
             self.logger.debug("Document reader loaded successfully.")
@@ -308,21 +360,6 @@ class RAGMixin():
             chunk_size_limit=None,
         )
 
-    def _load_context_rag_engine(self):
-        try:
-            self.logger.debug("Loading chat engine...")
-            self.rag_engine = RefreshContextChatEngine.from_defaults(
-                retriever=self.retriever,
-                #chat_history=self.history,
-                memory=self.chat_memory,
-                system_prompt=self._rag_system_prompt,
-                node_postprocessors=[],
-                llm=self.llm,
-            )
-            self.logger.debug("Chat engine loaded successfully.")
-        except Exception as e:
-            self.logger.error(f"Error loading chat engine: {str(e)}")
-
     def _load_settings(self):
         Settings.llm = self.llm
         Settings._embed_model = self.embedding
@@ -334,39 +371,6 @@ class RAGMixin():
         Settings.llm = None
         Settings._embed_model = None
         Settings.node_parser = None
-
-    def _load_document_index(self):
-        self.logger.debug("Loading index...")
-        index = None
-        if self.storage_context:
-            self.logger.debug("Loading from disc...")
-            index = (
-                load_index_from_storage(self.storage_context)
-                if self.storage_context
-                else None
-            )
-        if not index:
-            self.logger.debug("Loading index from documents...")
-            try:
-                self.index = RAKEKeywordTableIndex.from_documents(
-                    self.documents, 
-                    llm=self.llm
-                )
-                self.logger.debug("Index loaded successfully.")
-            except TypeError as e:
-                self.logger.error(f"Error loading index: {str(e)}")
-        else:
-            self.index = index
-
-    def _load_retriever(self):
-        try:
-            self.logger.debug("Loading retriever...")
-            self.retriever = KeywordTableSimpleRetriever(
-                index=self.index,
-            )
-            self.logger.debug("Retriever loaded successfully with index.")
-        except Exception as e:
-            self.logger.error(f"Error setting up the retriever: {str(e)}")
     
     def _save_index(self):
         pass
