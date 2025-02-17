@@ -7,7 +7,7 @@ class MediatorMixin:
     Use with any class that needs to emit and receive signals.
     Initialize with a SignalMediator instance.
     """
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.mediator = SignalMediator()
 
     def emit_signal(self, code: SignalCode, data: object = None):
