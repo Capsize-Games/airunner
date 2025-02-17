@@ -5,7 +5,7 @@ import time
 from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot
 from PySide6.QtWidgets import QApplication
 
-from airunner.data.models.settings_models import ShortcutKeys
+from airunner.data.models import ShortcutKeys
 from airunner.enums import SignalCode, GeneratorSection, ImageCategory, ImagePreset, StableDiffusionVersion, \
     ModelStatus, ModelType, LLMActionType
 from airunner.mediator_mixin import MediatorMixin
