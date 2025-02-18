@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Set
 from llama_index.core import (
     Document,
     Settings, 
@@ -7,11 +7,12 @@ from llama_index.core import (
     SimpleDirectoryReader,
     PromptHelper
 )
-from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
+from llama_index.core.indices.keyword_table.utils import simple_extract_keywords
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core import StorageContext, load_index_from_storage
+from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
 from airunner.handlers.llm.agent.html_file_reader import HtmlFileReader
 from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import RefreshContextChatEngine
 from airunner.data.models.news import Article
@@ -34,6 +35,7 @@ class RAGMixin():
         self.__markdown_reader: Optional[MarkdownReader] = None
         self.__file_extractor: Dict[str, object]
         self.__storage_context: Optional[StorageContext] = None
+        self._conversations: List[Conversation] = []
 
     @property
     def rag_engine(self) -> Optional[RefreshContextChatEngine]:
@@ -97,6 +99,11 @@ class RAGMixin():
 
     @property
     def text_splitter(self) -> SentenceSplitter:
+        if not self.__text_splitter:
+            self.text_splitter = SentenceSplitter(
+                chunk_size=256,
+                chunk_overlap=20
+            )
         return self.__text_splitter
     
     @text_splitter.setter
@@ -105,6 +112,8 @@ class RAGMixin():
 
     @property
     def index(self) -> Optional[RAKEKeywordTableIndex]:
+        loaded_from_documents = False
+        do_save_to_disc = False
         if not self.__index:
             self.logger.debug("Loading index...")
             index = None
@@ -118,23 +127,109 @@ class RAGMixin():
                     )
                 except ValueError:
                     self.logger.error("Error loading index from disc.")
+            
             if not index:
-                self.logger.debug("Loading index from documents...")
+                self._load_index_from_documents()
+                loaded_from_documents = True
+                do_save_to_disc = True
+            
+            if not loaded_from_documents:
+                self.logger.info("Refreshing index...")
                 try:
-                    self.index = RAKEKeywordTableIndex.from_documents(
-                        self.documents, 
-                        llm=self.llm
-                    )
-                    self.logger.debug("Index loaded successfully.")
-                except TypeError as e:
-                    self.logger.error(f"Error loading index: {str(e)}")
-            else:
-                self.index = index
+                    # Get existing document IDs
+                    existing_doc_ids = set(index.docstore.docs.keys())
+                    
+                    # Get new documents that aren't in the index
+                    new_nodes = []
+                    for doc in self.documents:
+                        doc_id = doc.doc_id
+                        if doc_id not in existing_doc_ids:
+                            nodes = self.text_splitter.get_nodes_from_documents([doc])
+                            new_nodes.extend(nodes)
+                    
+                    if new_nodes:
+                        self.logger.info(f"Adding {len(new_nodes)} new nodes to index...")
+                        # Store nodes directly in docstore
+                        for node in new_nodes:
+                            # Ensure node has the correct ID
+                            node.id_ = node.node_id
+                            # Add node to docstore
+                            index.docstore.add_documents([node], allow_update=True)
+                        
+                        # Build keyword table for new nodes
+                        new_keywords = {}
+                        for node in new_nodes:
+                            # Use RAKE algorithm to extract keywords
+                            extracted = self._extract_keywords_from_text(node.text)
+                            for keyword in extracted:
+                                if keyword in new_keywords:
+                                    new_keywords[keyword].append(node.node_id)
+                                else:
+                                    new_keywords[keyword] = [node.node_id]
+                        
+                        # Merge keyword tables
+                        self.logger.debug("Merging keyword tables...")
+                        for keyword, node_ids in new_keywords.items():
+                            if keyword in index.index_struct.table:
+                                # Convert to set to deduplicate
+                                existing_ids = set(index.index_struct.table[keyword])
+                                new_ids = set(node_ids)
+                                # Merge and convert back to list
+                                index.index_struct.table[keyword] = list(existing_ids | new_ids)
+                            else:
+                                index.index_struct.table[keyword] = node_ids
+
+                        self.logger.info(f"Added {len(new_nodes)} nodes and updated keyword tables")
+                        self.index = index
+                        self._save_index_to_disc()
+                        
+                        # Update conversation status
+                        for con in self.conversations:
+                            con.status = "indexed"
+                            self.session.add(con)
+                        self.session.commit()
+                        
+                except Exception as e:
+                    self.logger.error(f"Error refreshing index: {str(e)}")
+                    self._load_index_from_documents()
+        
+            if self.index and do_save_to_disc:
+                self._save_index_to_disc()
         return self.__index
     
     @index.setter
     def index(self, value: Optional[RAKEKeywordTableIndex]):
         self.__index = value
+
+    def _extract_keywords_from_text(self, text: str) -> Set[str]:
+        """Extract keywords from text using RAKE algorithm."""
+        # Use llama_index's built-in keyword extractor
+        return set(simple_extract_keywords(text))
+
+    def _load_index_from_documents(self):
+        self.logger.debug("Loading index from documents...")
+        try:
+            self.index = RAKEKeywordTableIndex.from_documents(
+                self.documents,
+                llm=self.llm
+            )
+            self.logger.debug("Index loaded successfully.")
+        except TypeError as e:
+            self.logger.error(f"Error loading index: {str(e)}")
+    
+    def _save_index_to_disc(self):
+        self.logger.info("Saving index to disc...")
+        try:
+            self.index.storage_context.persist(persist_dir=self.storage_persist_dir)
+            self.logger.info("Index saved successfully.")
+            self.logger.info("Setting conversations status to indexed...")
+            for conversation in self.conversations:
+                print("Setting conversation.id to indexed", conversation.id)
+                conversation.status = "indexed"
+                self.session.add(conversation)
+            self.session.commit()
+        except ValueError:
+            self.logger.error("Error saving index to disc.")
 
     @property
     def retriever(self) -> Optional[KeywordTableSimpleRetriever]:
@@ -216,16 +311,25 @@ class RAGMixin():
         ]
 
     @property
+    def conversations(self) -> List[Conversation]:
+        if not self._conversations:
+            self._conversations = self.session.query(Conversation).filter(
+                (Conversation.status != "indexed") | (Conversation.status == None)
+            ).all()
+            if len(self._conversations) > 1:
+                self._conversations = self._conversations[:-1]
+        return self._conversations or []
+
+    @property
     def conversation_documents(self) -> List[Document]:
-        conversations = []
-        _conversations = self.session.query(Conversation).all()
-        for conversation in _conversations:
+        converesation_documents = []
+        for conversation in self.conversations:
             messages = conversation.value or []
             conversation_text = f"Conversation {conversation.key}\n"
             for message in messages:
                 conversation_text += f"{message['role']}: {message['blocks'][0]['text']}\n"
             conversation_text += "------\n"
-            conversations.append(
+            converesation_documents.append(
                 Document(
                     text=conversation_text,
                     metadata={
@@ -234,7 +338,7 @@ class RAGMixin():
                     }
                 )
             )
-        return conversations
+        return converesation_documents
 
     @property
     def documents(self) -> List[Document]:
@@ -283,7 +387,6 @@ class RAGMixin():
     def load_rag(self):
         self._load_embeddings()
         self._load_document_reader()
-        self._load_text_splitter()
         self._load_prompt_helper()
         self._load_settings()
     
@@ -345,12 +448,6 @@ class RAGMixin():
             self.logger.debug("Document reader loaded successfully.")
         except ValueError as e:
             self.logger.error(f"Error loading document reader: {str(e)}")
-
-    def _load_text_splitter(self):
-        self.text_splitter = SentenceSplitter(
-            chunk_size=256,
-            chunk_overlap=20
-        )
 
     def _load_prompt_helper(self):
         self.prompt_helper = PromptHelper(
