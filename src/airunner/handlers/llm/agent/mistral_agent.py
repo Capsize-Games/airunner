@@ -400,7 +400,7 @@ class MistralAgent(
         data = data or {}
         conversation_id = data.get("conversation_id")
         self._conversation = self.session.query(Conversation).filter_by(id=conversation_id).first()
-        if self._conversation:
+        if self._chat_memory and self._conversation:
             self._chat_memory.chat_store_key = self._conversation.key
             messages = self._chat_store.get_messages(self._conversation.key)
             if messages:
@@ -409,6 +409,7 @@ class MistralAgent(
                 ])
             if self._chat_engine:
                 self._chat_engine.memory = self._chat_memory
+        self.reload_rag_engine()
     
     def on_delete_messages_after_id(self, data: Dict):
         messages = self.conversation.value
