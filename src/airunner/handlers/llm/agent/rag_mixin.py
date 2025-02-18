@@ -116,6 +116,8 @@ class RAGMixin():
         do_save_to_disc = False
         if not self.__index:
             self.logger.debug("Loading index...")
+            import traceback
+            traceback.print_stack()
             index = None
             if self.storage_context:
                 self.logger.debug("Loading from disc...")
@@ -193,7 +195,7 @@ class RAGMixin():
                     self.logger.error(f"Error refreshing index: {str(e)}")
                     self._load_index_from_documents()
         
-            if self.index and do_save_to_disc:
+            if self.__index and do_save_to_disc:
                 self._save_index_to_disc()
         return self.__index
     
@@ -220,7 +222,7 @@ class RAGMixin():
     def _save_index_to_disc(self):
         self.logger.info("Saving index to disc...")
         try:
-            self.index.storage_context.persist(persist_dir=self.storage_persist_dir)
+            self.__index.storage_context.persist(persist_dir=self.storage_persist_dir)
             self.logger.info("Index saved successfully.")
             self.logger.info("Setting conversations status to indexed...")
             for conversation in self.conversations:
@@ -316,7 +318,10 @@ class RAGMixin():
             self._conversations = self.session.query(Conversation).filter(
                 (Conversation.status != "indexed") | (Conversation.status == None)
             ).all()
-            if len(self._conversations) > 1:
+            total_conversations = len(self._conversations)
+            if total_conversations == 1:
+                self._conversations = []
+            elif total_conversations > 1:
                 self._conversations = self._conversations[:-1]
         return self._conversations or []
 
@@ -411,10 +416,8 @@ class RAGMixin():
         self.index = None
         self.rag_engine = None
         self.document_reader = None
+        self._conversations = None
         self._load_document_reader()
-
-        # USE self.index.refresh_ref_docs to refresh the index
-        
 
     def _load_embeddings(self):
         if not self.embedding:
