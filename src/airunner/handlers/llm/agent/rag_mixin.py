@@ -51,6 +51,8 @@ class RAGMixin():
                     llm=self.llm,
                 )
                 self.logger.debug("Chat engine loaded successfully.")
+            except ValueError as e:
+                self.logger.error(f"ValueError loading chat engine: {str(e)}")
             except Exception as e:
                 self.logger.error(f"Error loading chat engine: {str(e)}")
         return self.__rag_engine
@@ -116,8 +118,6 @@ class RAGMixin():
         do_save_to_disc = False
         if not self.__index:
             self.logger.debug("Loading index...")
-            import traceback
-            traceback.print_stack()
             index = None
             if self.storage_context:
                 self.logger.debug("Loading from disc...")
@@ -127,6 +127,7 @@ class RAGMixin():
                         if self.storage_context
                         else None
                     )
+                    self.logger.info("Index loaded successfully.")
                 except ValueError:
                     self.logger.error("Error loading index from disc.")
             
@@ -190,10 +191,14 @@ class RAGMixin():
                             con.status = "indexed"
                             self.session.add(con)
                         self.session.commit()
+                    else:
+                        self.logger.info("No new nodes to add to index.")
                         
                 except Exception as e:
                     self.logger.error(f"Error refreshing index: {str(e)}")
                     self._load_index_from_documents()
+            
+            self.__index = index
         
             if self.__index and do_save_to_disc:
                 self._save_index_to_disc()
@@ -238,8 +243,11 @@ class RAGMixin():
         if not self.__retriever:
             try:
                 self.logger.debug("Loading retriever...")
+                index = self.index
+                if not index:
+                    raise ValueError("No index found.")
                 self.retriever = KeywordTableSimpleRetriever(
-                    index=self.index,
+                    index=index,
                 )
                 self.logger.debug("Retriever loaded successfully with index.")
             except Exception as e:
