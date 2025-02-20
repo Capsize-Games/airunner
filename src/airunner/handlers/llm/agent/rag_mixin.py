@@ -17,6 +17,7 @@ from airunner.handlers.llm.agent.html_file_reader import HtmlFileReader
 from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import RefreshContextChatEngine
 from airunner.data.models.news import Article
 from airunner.data.models import Conversation
+from airunner.utils.database import Database
 
 
 class RAGMixin():
@@ -42,6 +43,8 @@ class RAGMixin():
         if not self.__rag_engine:
             try:
                 self.logger.debug("Loading chat engine...")
+                if not self.retriever:
+                    raise ValueError("No retriever found.")
                 self.rag_engine = RefreshContextChatEngine.from_defaults(
                     retriever=self.retriever,
                     #chat_history=self.history,
@@ -80,19 +83,20 @@ class RAGMixin():
     @property
     def news_articles(self) -> List[Article]:
         if self.__news_articles is None:
-            articles = self.session.query(Article).filter(
-                Article.status == "scraped"
-            ).all()[:50]
-            self.__news_articles = [
-                # Document(
-                #     text=article.content,
-                #     metadata={
-                #         "id": article.id,
-                #         "title": article.title,
-                #         #"description": article.description,
-                #     }
-                # ) for article in articles[:50]
-            ]
+            with Database.session_scope() as session:
+                articles = session.query(Article).filter(
+                    Article.status == "scraped"
+                ).all()[:50]
+                self.__news_articles = [
+                    Document(
+                        text=article.description,
+                        metadata={
+                            "id": article.id,
+                            "title": article.title,
+                            #"description": article.description,
+                        }
+                    ) for article in articles[:50]
+                ]
         return self.__news_articles or []
     
     @news_articles.setter
@@ -118,11 +122,10 @@ class RAGMixin():
         do_save_to_disc = False
         if not self.__index:
             self.logger.debug("Loading index...")
-            index = None
             if self.storage_context:
                 self.logger.debug("Loading from disc...")
                 try:
-                    index = (
+                    self.__index = (
                         load_index_from_storage(self.storage_context)
                         if self.storage_context
                         else None
@@ -131,7 +134,7 @@ class RAGMixin():
                 except ValueError:
                     self.logger.error("Error loading index from disc.")
             
-            if not index:
+            if not self.__index:
                 self._load_index_from_documents()
                 loaded_from_documents = True
                 do_save_to_disc = True
@@ -140,7 +143,7 @@ class RAGMixin():
                 self.logger.info("Refreshing index...")
                 try:
                     # Get existing document IDs
-                    existing_doc_ids = set(index.docstore.docs.keys())
+                    existing_doc_ids = set(self.__index.docstore.docs.keys())
                     
                     # Get new documents that aren't in the index
                     new_nodes = []
@@ -157,7 +160,7 @@ class RAGMixin():
                             # Ensure node has the correct ID
                             node.id_ = node.node_id
                             # Add node to docstore
-                            index.docstore.add_documents([node], allow_update=True)
+                            self.__index.docstore.add_documents([node], allow_update=True)
                         
                         # Build keyword table for new nodes
                         new_keywords = {}
@@ -173,24 +176,19 @@ class RAGMixin():
                         # Merge keyword tables
                         self.logger.debug("Merging keyword tables...")
                         for keyword, node_ids in new_keywords.items():
-                            if keyword in index.index_struct.table:
+                            if keyword in self.__index.index_struct.table:
                                 # Convert to set to deduplicate
-                                existing_ids = set(index.index_struct.table[keyword])
+                                existing_ids = set(self.__index.index_struct.table[keyword])
                                 new_ids = set(node_ids)
                                 # Merge and convert back to list
-                                index.index_struct.table[keyword] = list(existing_ids | new_ids)
+                                self.__index.index_struct.table[keyword] = list(existing_ids | new_ids)
                             else:
-                                index.index_struct.table[keyword] = node_ids
+                                self.__index.index_struct.table[keyword] = node_ids
 
                         self.logger.info(f"Added {len(new_nodes)} nodes and updated keyword tables")
-                        self.index = index
                         self._save_index_to_disc()
                         
-                        # Update conversation status
-                        for con in self.conversations:
-                            con.status = "indexed"
-                            self.session.add(con)
-                        self.session.commit()
+                        self._update_conversations_status("indexed")
                     else:
                         self.logger.info("No new nodes to add to index.")
                         
@@ -198,11 +196,23 @@ class RAGMixin():
                     self.logger.error(f"Error refreshing index: {str(e)}")
                     self._load_index_from_documents()
             
-            self.__index = index
-        
             if self.__index and do_save_to_disc:
                 self._save_index_to_disc()
         return self.__index
+
+    def _update_conversations_status(self, status: str):
+        with Database.session_scope() as session:
+            conversations = session.query(Conversation).filter(
+                (Conversation.status != status) | (Conversation.status == None)
+            ).all()
+            total_conversations = len(conversations)
+            if total_conversations == 1:
+                conversations = []
+            elif total_conversations > 1:
+                conversations = conversations[:-1]
+            for conversation in conversations:
+                conversation.status = status
+            session.commit()
     
     @index.setter
     def index(self, value: Optional[RAKEKeywordTableIndex]):
@@ -216,7 +226,7 @@ class RAGMixin():
     def _load_index_from_documents(self):
         self.logger.debug("Loading index from documents...")
         try:
-            self.index = RAKEKeywordTableIndex.from_documents(
+            self.__index = RAKEKeywordTableIndex.from_documents(
                 self.documents,
                 llm=self.llm
             )
@@ -230,11 +240,7 @@ class RAGMixin():
             self.__index.storage_context.persist(persist_dir=self.storage_persist_dir)
             self.logger.info("Index saved successfully.")
             self.logger.info("Setting conversations status to indexed...")
-            for conversation in self.conversations:
-                print("Setting conversation.id to indexed", conversation.id)
-                conversation.status = "indexed"
-                self.session.add(conversation)
-            self.session.commit()
+            self._update_conversations_status("indexed")
         except ValueError:
             self.logger.error("Error saving index to disc.")
 
@@ -322,36 +328,51 @@ class RAGMixin():
 
     @property
     def conversations(self) -> List[Conversation]:
-        if not self._conversations:
-            self._conversations = self.session.query(Conversation).filter(
+        with Database.session_scope() as session:
+            conversations = session.query(Conversation).filter(
                 (Conversation.status != "indexed") | (Conversation.status == None)
             ).all()
-            total_conversations = len(self._conversations)
+            total_conversations = len(conversations)
             if total_conversations == 1:
-                self._conversations = []
+                conversations = []
             elif total_conversations > 1:
-                self._conversations = self._conversations[:-1]
-        return self._conversations or []
+                conversations = conversations[:-1]
+            return conversations
 
     @property
     def conversation_documents(self) -> List[Document]:
-        converesation_documents = []
-        for conversation in self.conversations:
-            messages = conversation.value or []
-            conversation_text = f"Conversation {conversation.key}\n"
-            for message in messages:
-                conversation_text += f"{message['role']}: {message['blocks'][0]['text']}\n"
-            conversation_text += "------\n"
-            converesation_documents.append(
-                Document(
-                    text=conversation_text,
-                    metadata={
-                        "id": conversation.id,
-                        "key": conversation.key,
-                    }
-                )
-            )
-        return converesation_documents
+        with Database.session_scope() as session:
+            converesation_documents = []
+            conversations = session.query(Conversation).filter(
+                (Conversation.status != "indexed") | (Conversation.status == None)
+            ).all()
+            total_conversations = len(conversations)
+            if total_conversations == 1:
+                conversations = []
+            elif total_conversations > 1:
+                conversations = conversations[:-1]
+            for conversation in conversations:
+                messages = conversation.value or []
+                for conversation in conversations:
+                    messages = conversation.value or []
+                    for message_id, message in enumerate(messages):
+                        username = (
+                            conversation.user_name 
+                            if message["role"] == "user" 
+                            else conversation.chatbot_name
+                        )
+                        converesation_documents.append(
+                            Document(
+                                text=f'{message["role"]}: \"{message["blocks"][0]["text"]}\"',
+                                metadata={
+                                    "id": str(conversation.id) + "_" + str(message_id),
+                                    "key": conversation.key + "_" + str(message_id),
+                                    "speaker": username,
+                                    "role": message["role"],
+                                }
+                            )
+                        )
+            return converesation_documents
 
     @property
     def documents(self) -> List[Document]:

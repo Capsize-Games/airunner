@@ -19,6 +19,9 @@ class Conversation(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     user_name = Column(String, nullable=False)
     status = Column(String, nullable=True)
+    last_updated_message_id = Column(Integer, nullable=True)
+    summary = Column(Text, nullable=True)
+    user_data = Column(JSON, nullable=True)
 
 
 Conversation.summaries = relationship(
