@@ -195,7 +195,12 @@ class ChatPromptWidget(BaseWidget):
         self._create_conversation()
 
     def _create_conversation(self):
+        previous_conversation = self.session.query(Conversation).order_by(Conversation.id.desc()).first()
         self.conversation = self.create_conversation("cpw_" + uuid.uuid4().hex)
+        if previous_conversation:
+            self.conversation.bot_mood = previous_conversation.bot_mood
+        self.session.add(self.conversation)
+        self.session.commit()
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
             "conversation_id": self.conversation_id
         })

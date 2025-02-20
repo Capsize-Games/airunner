@@ -47,6 +47,7 @@ from airunner.data.models import (
 from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
 from airunner.settings import DB_PATH
+from airunner.enums import LLMChatRole
 
 
 class SettingsMixinSharedInstance:
@@ -740,21 +741,20 @@ class SettingsMixin:
         self.session.commit()
 
     def load_history_from_db(self, conversation_id):
-        messages = self.session.query(Message).filter_by(
-            conversation_id=conversation_id
-        ).order_by(Message.timestamp).all()
-        results = [
+        conversation = self.session.query(Conversation).filter_by(id=conversation_id).first()
+        messages = conversation.value
+        return [
             {
-                "id": message.id,
-                "role": message.role,
-                "content": message.content,
-                "name": message.name,
-                "is_bot": message.is_bot,
-                "timestamp": message.timestamp,
-                "conversation_id": message.conversation_id
-            } for message in messages
+                "id": id,
+                "role": LLMChatRole.HUMAN if message["role"] == "user"  else LLMChatRole.ASSISTANT,
+                "content": message["blocks"][0]["text"],
+                "name": self.username if message["role"] == "user" else self.chatbot.name,
+                "is_bot": message["role"] == "bot",
+                "timestamp": message["timestamp"],
+                "conversation_id": conversation_id
+
+            } for id, message in enumerate(messages)
         ]
-        return results
 
     def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
         chatbot = self.session.query(Chatbot).filter_by(id=chatbot_id).options(joinedload(Chatbot.target_files)).first()
@@ -763,10 +763,29 @@ class SettingsMixin:
         return chatbot
 
     def create_conversation(self, chat_store_key: str):
+        # get prev conversation by key != chat_store_key
+        # order by id desc
+        # get first
+        previous_conversation = self.session.query(
+            Conversation
+        ).filter(
+            Conversation.key != chat_store_key
+        ).order_by(
+            Conversation.id.desc()
+        ).first()
         # find conversation which has no title, bot_mood or messages
         conversation = self.session.query(Conversation).filter_by(
             key=chat_store_key
         ).first()
+        if (
+            previous_conversation 
+            and previous_conversation.bot_mood 
+            and conversation 
+            and conversation.bot_mood is None
+        ):
+            conversation.bot_mood = previous_conversation.bot_mood
+            self.session.add(conversation)
+            self.session.commit()
         if conversation:
             return conversation
         conversation = Conversation(
@@ -777,7 +796,8 @@ class SettingsMixin:
             chatbot_id=self.chatbot.id,
             user_id=self.user.id,
             chatbot_name=self.chatbot.name,
-            user_name=self.user.username
+            user_name=self.user.username,
+            bot_mood=previous_conversation.bot_mood if previous_conversation else None
         )
         self.session.add(conversation)
         self.session.commit()
