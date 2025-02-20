@@ -29,7 +29,7 @@ class ReActAgentTool(ChatEngineTool):
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
         tool_choice = kwargs.get("tool_choice", None)
-        streaming_response = self._chat_engine.stream_chat(
+        streaming_response = self.chat_engine.stream_chat(
             query_str, 
             chat_history=chat_history if chat_history else [],
             tool_choice=tool_choice
