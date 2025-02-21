@@ -47,6 +47,8 @@ class Chatbot(Base):
     length_penalty = Column(Integer, default=100)
     seed = Column(Integer, default=0)
     random_seed = Column(Boolean, default=False)
+    backstory = Column(Text, default="")
+    use_backstory = Column(Boolean, default=True)
 
     target_files = relationship("TargetFiles", back_populates="chatbot")
     target_directories = relationship("TargetDirectories", back_populates="chatbot")

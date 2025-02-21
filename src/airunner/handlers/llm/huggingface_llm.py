@@ -242,12 +242,6 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             tokenizer_name, **tokenizer_kwargs
         )
 
-        if tokenizer.name_or_path != model_name:
-            self.logger.warning(
-                f"The model `{model_name}` and tokenizer `{tokenizer.name_or_path}` "
-                f"are different, please ensure that they are compatible."
-            )
-
         # setup stopping criteria
         stopping_ids_list = stopping_ids or []
 

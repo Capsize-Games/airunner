@@ -1,23 +1,27 @@
+import json
 import random
 import os
 import torch
 from llama_index.llms.groq import Groq
+from llama_index.core.chat_engine.types import AgentChatResponse
+from peft import LoraConfig, get_peft_model, PeftModel
 from typing import Optional, Dict
+from transformers import TrainingArguments, Trainer
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
+from datasets import Dataset
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import MAX_SEED
 from airunner.utils.clear_memory import clear_memory
 from airunner.handlers.llm.agent.mistral_agent import MistralAgentQObject
+from airunner.data.models.conversation import Conversation
 
 
 class CausalLMTransformerBaseHandler(
     BaseHandler
 ):
-    auto_class_ = AutoModelForCausalLM
-    tokenizer_class_ = AutoTokenizer
     model_type = ModelType.LLM
 
     def __init__(self, *args, **kwargs):
@@ -121,7 +125,10 @@ class CausalLMTransformerBaseHandler(
                 bnb_4bit_quant_type='nf4',
             )
         elif self.llm_dtype == "4bit":
-            config = BitsAndBytesConfig(load_in_4bit=True)
+            config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16  # changed to match input type
+            )
         elif self.llm_dtype == "2bit":
             config = GPTQConfig(
                 bits=2,
@@ -137,26 +144,66 @@ class CausalLMTransformerBaseHandler(
         return self.chatbot.use_cache
 
     @property
-    def model_path(self):
-        model_version: str = self.chatbot.model_version
+    def model_version(self) -> str:
+        model_version = self.chatbot.model_version
         if self.llm_generator_settings.override_parameters:
             model_version = self.llm_generator_settings.model_version
-        current_llm_generator = self.application_settings.current_llm_generator
-        local_path: str = "misc"
-        if current_llm_generator == "causallm":
-            local_path = "causallm"
-        elif current_llm_generator == "seq2seq":
-            local_path = "seq2seq"
-        elif current_llm_generator == "visualqa":
-            local_path = "visualqa"
-        base: str = self.path_settings.base_path
+        return model_version
+
+    @property
+    def finetuned_model_directory(self) -> str:
+        return os.path.expanduser(
+            os.path.join(
+                self.path_settings.base_path,
+                "text",
+                "models",
+                "llm",
+                "causallm",
+                self.model_version,
+                "fine_tuned_mistral_qllm"
+            )
+        )
+
+    @property
+    def latest_checkpoint(self) -> Optional[str]:
+        latest_checkpoint = None
+        if os.path.exists(self.finetuned_model_directory):
+            checkpoints = [
+                os.path.join(
+                    self.finetuned_model_directory, 
+                    d
+                ) for d in os.listdir(
+                    self.finetuned_model_directory
+                ) if d.startswith(
+                    "checkpoint-"
+                )
+            ]
+            if checkpoints:
+                latest_checkpoint = max(checkpoints, key=os.path.getmtime)
+        return latest_checkpoint
+
+    @property
+    def model_path(self):
+        return os.path.expanduser(os.path.join(
+            self.path_settings.base_path,
+            "text",
+            "models",
+            "llm",
+            "causallm",
+            self.model_version
+        ))
+    
+    @property
+    def adapter_path(self):
+        base = self.path_settings.base_path
         return os.path.expanduser(os.path.join(
             base,
             "text",
             "models",
             "llm",
-            local_path,
-            model_version
+            "causallm",
+            self.model_version,
+            "user_memory_adapter"
         ))
 
     def load(self):
@@ -195,7 +242,7 @@ class CausalLMTransformerBaseHandler(
         clear_memory()
         self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
 
-    def handle_request(self, data:dict):
+    def handle_request(self, data: Dict) -> AgentChatResponse:
         self.logger.debug("Handling request")
         self._processing_request = True
         self._do_set_seed()
@@ -204,10 +251,125 @@ class CausalLMTransformerBaseHandler(
         action = self.llm_generator_settings.action
         if type(action) is str:
             action = LLMActionType[action]
-        self._do_generate(
+        return self._do_generate(
             data["request_data"]["prompt"],
             action
         )
+    
+    def chat(self, prompt) -> AgentChatResponse:
+        return self._do_generate(prompt, LLMActionType.CHAT)
+    
+    def train(self):
+        conversation_objects = self.session.query(Conversation).all()
+        messages = []
+        for conversation in conversation_objects:
+            conv_text = ""
+            roles = conversation.value
+            for i in range(0, len(roles), 2):
+                user_msg = roles[i]["blocks"][0]["text"]
+                assistant_msg = ""
+                if i + 1 < len(roles) and roles[i + 1]["role"] == "assistant":
+                    assistant_msg = roles[i + 1]["blocks"][0]["text"]
+                conv_text += f"<s>[INST] {user_msg} [/INST]{assistant_msg}</s>"
+            messages.append(conv_text)
+        dataset = Dataset.from_dict({"text": messages})
+        # Configure QLoRA Parameters for Fine-Tuning
+        lora_config = LoraConfig(
+            r=8,  # Increased rank for better model capacity
+            lora_alpha=32,  # Increased alpha for stronger adaptations
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],  # Added more target modules
+            lora_dropout=0.0,  # set dropout to zero to boost memorization
+            bias="none",
+            task_type="CAUSAL_LM"
+        )
+
+        # Apply LoRA configuration to the model
+        try:
+            self._model = get_peft_model(self._model, lora_config)
+            self._model.print_trainable_parameters()
+            self._model.config.use_cache = False
+            self._model.enable_input_require_grads()
+        except AttributeError as e:
+            self.logger.error(f"Error applying LoRA configuration: {e}")
+
+        # Get the latest step number from existing checkpoints
+        last_step = 0
+        if os.path.exists(self.finetuned_model_directory):
+            checkpoints = [
+                d for d in os.listdir(self.finetuned_model_directory)
+                if d.startswith("checkpoint-")
+            ]
+            if checkpoints:
+                last_step = max(
+                    int(cp.split("-")[1]) 
+                    for cp in checkpoints
+                )
+
+        # Define Training Arguments with resumed training
+        training_args = TrainingArguments(
+            output_dir=self.finetuned_model_directory,
+            per_device_train_batch_size=1,
+            gradient_accumulation_steps=16,
+            learning_rate=1e-4,
+            warmup_steps=50,
+            num_train_epochs=50,
+            max_steps=last_step + 1,  # Increment the step count
+            logging_steps=1,
+            save_steps=1,
+            save_total_limit=None,
+            fp16=True,
+            optim="adamw_torch",
+            gradient_checkpointing=True,
+            report_to="none",
+            overwrite_output_dir=False
+        )
+
+        # Train the QLoRA Model on Conversations
+        def tokenize_function(examples):
+            tokens = self._tokenizer(examples["text"], truncation=True, padding="max_length", max_length=128)
+            tokens["labels"] = tokens["input_ids"].copy()
+            return tokens
+
+        self._tokenizer.pad_token = self._tokenizer.eos_token
+        tokenized_dataset = dataset.map(tokenize_function, batched=True)
+
+        trainer = Trainer(
+            model=self._model,
+            args=training_args,
+            train_dataset=tokenized_dataset
+        )
+
+        self.logger.info(f"Resuming training from step {last_step}...")
+        trainer.train(resume_from_checkpoint=self.latest_checkpoint)
+        
+        self.logger.info("Training completed.")
+        self.logger.info("Saving finetuned model")
+        self._model.save_pretrained(self.adapter_path)
+        
+        # Create minimal config
+        minimal_config = {
+            "name_or_path": self.model_path,
+            "tokenizer_class": self._tokenizer.__class__.__name__,
+            "model_max_length": self._tokenizer.model_max_length,
+            "padding_side": self._tokenizer.padding_side,
+            "truncation_side": getattr(self._tokenizer, "truncation_side", "right"),
+            "special_tokens": {
+                "bos_token": self._tokenizer.bos_token,
+                "eos_token": self._tokenizer.eos_token,
+                "unk_token": self._tokenizer.unk_token,
+                "pad_token": self._tokenizer.pad_token,
+            }
+        }
+        
+        if hasattr(self._tokenizer, 'chat_template') and self._tokenizer.chat_template:
+            minimal_config["chat_template"] = self._tokenizer.chat_template
+                
+        # Save the config
+        config_path = os.path.join(self.adapter_path, "tokenizer_config.json")
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(minimal_config, f, indent=2, ensure_ascii=False)
+
+        print(f"✅ QLoRA Adapter saved to: {self.adapter_path}")
 
     def do_interrupt(self):
         """
@@ -246,8 +408,7 @@ class CausalLMTransformerBaseHandler(
     def _load_tokenizer(self):
         if self._tokenizer is not None:
             return
-        path = self.model_path
-        self.logger.debug(f"Loading tokenizer from {path}")
+        self.logger.debug(f"Loading tokenizer from {self.model_path}")  # Changed path variable
         kwargs = {
             "local_files_only": True,
             "device_map": self.device,
@@ -259,8 +420,8 @@ class CausalLMTransformerBaseHandler(
         if self.chat_template:
             kwargs["chat_template"] = self.chat_template
         try:
-            self._tokenizer = self.tokenizer_class_.from_pretrained(
-                path,
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                self.model_path,  # Changed to use current_model_path
                 **kwargs,
             )
             self.logger.debug("Tokenizer loaded")
@@ -358,11 +519,7 @@ class CausalLMTransformerBaseHandler(
         return do_clear_memory
 
     def _load_model_local(self):
-        self.logger.debug("Loading local LLM model")
-        path = self.model_path
-        is_quantized = os.path.exists(path)
-        if not is_quantized:
-            path = self.model_path
+        self.logger.debug(f"Loading local LLM model from {self.model_path}")
         params = {
             "local_files_only": True,
             "use_cache": self.use_cache,
@@ -373,26 +530,63 @@ class CausalLMTransformerBaseHandler(
         if self._do_quantize_model and self.use_cuda:
             config = self._quantization_config
             if config:
+                config.bnb_4bit_compute_dtype = torch.float16
                 params["quantization_config"] = config
         try:
-            self._model = self.auto_class_.from_pretrained(
-                path,
+            # Use the same path as tokenizer
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_path,
                 **params
             )
         except Exception as e:
             self.logger.error(f"Error loading model: {e}")
-            self._model = None
+            return
+        
+        try:
+            if os.path.exists(self.adapter_path):
+                # Apply LoRA config before loading adapter
+                lora_config = LoraConfig(
+                    r=8,
+                    lora_alpha=32,
+                    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+                    lora_dropout=0.0,
+                    bias="none",
+                    task_type="CAUSAL_LM"
+                )
+                
+                # Convert base model to PEFT format first
+                self._model = get_peft_model(self._model, lora_config)
+                
+                # Now load the adapter weights
+                self._model = PeftModel.from_pretrained(
+                    self._model,
+                    self.adapter_path,
+                    is_trainable=True,
+                    adapter_name="default"
+                )
+                
+                # Merge adapter weights with base model
+                self._model = self._model.merge_and_unload()
+                
+                self.logger.info("Successfully loaded and merged adapter weights")
+        except Exception as e:
+            self.logger.error(f"Error loading adapter (continuing with base model): {e}")
 
-    def _do_generate(self, prompt: str, action: LLMActionType):
+    def _do_generate(
+        self, 
+        prompt: str, 
+        action: LLMActionType
+    ) -> AgentChatResponse:
         self.logger.debug("Generating response")
         if self._current_model_path != self.model_path:
             self.unload()
             self.load()
         # if action is LLMActionType.CHAT and self.chatbot.use_mood:
         #     action = LLMActionType.UPDATE_MOOD
-        self._chat_agent.chat(prompt, action)
+        response = self._chat_agent.chat(prompt, action)
         if action is LLMActionType.CHAT:
             self._send_final_message()
+        return response
 
     def _emit_streamed_text_signal(self, **kwargs):
         self.logger.debug("Emitting streamed text signal")
@@ -439,3 +633,15 @@ class CausalLMTransformerBaseHandler(
     def _clear_memory(self):
         self.logger.debug("Clearing memory")
         clear_memory(self.memory_settings.default_gpu_llm)
+
+    def _prepare_config_for_save(self, config_dict):
+        """Convert numpy dtypes to strings in config dictionary."""
+        cleaned_config = {}
+        for key, value in config_dict.items():
+            if hasattr(value, 'dtype'):
+                cleaned_config[key] = str(value.dtype)
+            elif isinstance(value, dict):
+                cleaned_config[key] = self._prepare_config_for_save(value)
+            else:
+                cleaned_config[key] = value
+        return cleaned_config
