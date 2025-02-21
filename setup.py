@@ -39,7 +39,7 @@ setup(
         # LLM Dependencies
         "transformers==4.48.1",
         "auto-gptq==0.7.1",
-        "bitsandbytes==0.45.1",
+        "bitsandbytes==0.45.2",
         "datasets==3.2.0",
         "sentence_transformers==3.4.1",
         "sounddevice==0.5.1",  # Required for tts and stt

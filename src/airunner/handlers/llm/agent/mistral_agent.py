@@ -95,19 +95,31 @@ class MistralAgent(
     
     @property
     def do_summarize_conversation(self) -> bool:
-        with Database.session_scope() as session:
-            conversation = session.query(Conversation).filter(
-                Conversation.key == self.chat_store_key
-            ).first()
-            messages = conversation.value or []
-            total_messages = len(messages)
-            print("total messages", total_messages, self.summarize_after_n_turns)
-            if (
-                total_messages > self.summarize_after_n_turns and
-                conversation.summary is None
-            ) or total_messages % self.summarize_after_n_turns == 0:
-                return True
+        messages = self.conversation.value or []
+        total_messages = len(messages)
+        print("total messages", total_messages, self.summarize_after_n_turns)
+        if (
+            total_messages > self.summarize_after_n_turns and
+            self.conversation.summary is None
+        ) or total_messages % self.summarize_after_n_turns == 0:
+            return True
         return False
+    
+    @property
+    def user(self) -> User:
+        user = self.session.query(User).filter(
+            User.username == self.username
+        ).first()
+        if not user:
+            user = User()
+            self.session.add(user)
+            self.session.commit()
+        return user
+
+    def _update_user(self, property: str, value: Any):
+        setattr(self.user, property, value)
+        self.session.add(self.user)
+        self.session.commit()
 
     @property
     def information_scraper_tool(self) -> FunctionTool:
@@ -120,15 +132,10 @@ class MistralAgent(
                 """Scrape information from the text."""
                 self.logger.info(f"Scraping information for tag: {tag}")
                 self.logger.info(f"Information: {information}")
-                with Database.session_scope() as session:
-                    user = session.query(User).filter(
-                        User.username == self.username
-                    ).first()
-                    data = user.data or {}
-                    data[tag] = information
-                    user.data = data
-                    session.add(user)
-                    session.commit()
+                self._update_user(tag, information)
+                data = self.user.data or {}
+                data[tag] = [information] if tag not in data else data[tag] + [information]
+                self._update_user("data", data)
                 return "Information scraped."
         
             self._information_scraper_tool = FunctionTool.from_defaults(
@@ -150,10 +157,7 @@ class MistralAgent(
                 Choose this when you need to save information about the user."""
                 data = self.user.data or {}
                 data[category] = [information] if category not in data else data[category] + [information]
-                self.user.data = data
-                with Database.session_scope() as session:
-                    session.add(self.user)
-                    session.commit()
+                self._update_user(category, information)
                 return "User information updated."
         
             self._store_user_tool = FunctionTool.from_defaults(
@@ -374,23 +378,36 @@ class MistralAgent(
     @property
     def bot_mood(self) -> str:
         mood = None
-        with Database.session_scope() as session:
-            conversation = self._get_conversation(session, self.chat_store_key)
-            if conversation:
-                mood = conversation.bot_mood
+        conversation = self._get_conversation(self.session, self.chat_store_key)
+        if conversation:
+            mood = conversation.bot_mood
         return "neutral" if mood is None or mood == "" else mood
+    
+    @property
+    def conversation(self) -> Conversation:
+        if not self._conversation:
+            self._conversation = self._get_conversation(
+                session=self.session, 
+                key=self.chat_store_key
+            )
+        return self._conversation
+    
+    def _set_conversation_by_id(self, id: int):
+        self._conversation = self._get_conversation(self.session, id=id)
+    
+    def _update_conversation(self, key: str, value: Any):
+        if self._conversation:
+            setattr(self._conversation, key, value)
+            self.session.add(self._conversation)
+            self.session.commit()
 
     @bot_mood.setter
     def bot_mood(self, value: str):
-        with Database.session_scope() as session:
-            conversation = self._get_conversation(session, self.chat_store_key)
-            if conversation:
-                conversation.bot_mood = value
-                session.add(conversation)
-                session.commit()
-                self.emit_signal(SignalCode.BOT_MOOD_UPDATED, {
-                    "mood": value
-                })
+        if self.conversation:
+            self._update_conversation("bot_mood", value)
+            self.emit_signal(SignalCode.BOT_MOOD_UPDATED, {
+                "mood": value
+            })
     
     @property
     def bot_personality(self) -> str:
@@ -455,16 +472,14 @@ class MistralAgent(
     @property
     def _speakers_prompt(self) -> str:
         metadata_prompt = None
-        with Database.session_scope() as session:
-            conversation = self._get_conversation(session, self.chat_store_key)
-            if conversation:
-                data = conversation.user_data or []
-                if data is not None:
-                    metadata_prompt = ""
-                    for item in data:
-                        metadata_prompt += f"-- {item}\n"
-                if metadata_prompt:
-                    metadata_prompt = f"- Metadata:\n{metadata_prompt}"
+        if self.conversation:
+            data = self.conversation.user_data or []
+            if data is not None:
+                metadata_prompt = ""
+                for item in data:
+                    metadata_prompt += f"-- {item}\n"
+            if metadata_prompt:
+                metadata_prompt = f"- Metadata:\n{metadata_prompt}"
         metadata_prompt = metadata_prompt or ""
         return (
             "User information:\n"
@@ -532,29 +547,24 @@ class MistralAgent(
     
     @property
     def _conversation_summary_prompt(self) -> str:
-        with Database.session_scope() as session:
-            conversation = self._get_conversation(session, self.chat_store_key)
-            return (
-                f"- Conversation summary:\n{conversation.summary}\n"
-                if conversation and conversation.summary else ""
-            )
+        return (
+            f"- Conversation summary:\n{self.conversation.summary}\n"
+            if self.conversation and self.conversation.summary else ""
+        )
         
     @property
     def conversation_summaries(self) -> str:
-        if self._conversation_summaries is None:
-            summaries = ""
-            with Database.session_scope() as session:
-                conversations = session.query(Conversation).order_by(
-                    Conversation.id.desc()
-                )[:5]
-                conversations = list(conversations)
-                conversations = sorted(conversations, key=lambda x: x.id, reverse=True)
-                for conversation in conversations:
-                    summaries += f"- {conversation.summary}\n------\n"
-                if summaries != "":
-                    summaries = f"Recent conversation summaries:\n{summaries}"
-            self._conversation_summaries = summaries
-        return self._conversation_summaries
+        summaries = ""
+        conversations = self.session.query(Conversation).order_by(
+            Conversation.id.desc()
+        )[:5]
+        conversations = list(conversations)
+        conversations = sorted(conversations, key=lambda x: x.id, reverse=True)
+        for conversation in conversations:
+            summaries += f"- {conversation.summary}\n"
+        if summaries != "":
+            summaries = f"Recent conversation summaries:\n{summaries}"
+        return summaries
 
     @property
     def _system_prompt(self) -> str:
@@ -564,26 +574,36 @@ class MistralAgent(
             system_instructions = f"Always follow these instructions:\n{self.chatbot.system_instructions}\n"
         if self.chatbot.use_guardrails and self.chatbot.guardrails and self.chatbot.guardrails != "":
             guardrails = f"Always follow these guardrails:\n{self.chatbot.guardrails}\n"
+        backstory_prompt = ""
+        if self.chatbot.use_backstory and self.chatbot.backstory and self.chatbot.backstory != "":
+            backstory_prompt = (
+                "------\n"
+                f"**Here is {self.botname}'s backstory:**\n"
+                f"{self.chatbot.backstory}\n"
+                "------\n"
+            )
         prompt = (
-            "You are a dialogue generator. You will follow all of the rules in order to generate compelling and intriguing dialogue for a given character.\n"
-            "Here are the rules that you must always remember:\n"
-            "- You will ONLY return dialogue, nothing more.\n"
+            f"Your name is {self.botname}.\n"
+            f"- The user ({self.username}) is having a conversation with the assistant ({self.botname}).\n"
+            "**Here are the rules that you must always remember:**\n"
+            "- You will ONLY generate dialogue, nothing more.\n"
             "- Only generate responses in pure dialogue form without including any actions, descriptions or stage directions in parentheses. Only return spoken words.\n"
             "- Do not generate redundant dialogue. Examine the conversation and context close and keep responses interesting and creative.\n"
             "- Do not format the response with the character's name or any other text. Only return the dialogue.\n"
-            f"- Avoid repeating {self.username}'s previous dialogue or {self.botname}'s previous dialogue.\n"
-            f"- You are a human, your name is {self.botname}. You are not a chatbot or an AI, you are a real human.\n"
-            f"- You are having a conversation with the user, {self.username}\n"
-            "- You will always respond in a way that is consistent with your emotions, personality, and the context of the conversation.\n"
-            "- You will respond emotionally, persuasively, and realistically.\n"
-            "- Do not ask how you can provide assistance, don't ask how you can help. You are to respond and talk like a real human user. This means you can ask questions, make statements, and provide information.\n"
-            "- You should respond in character with emotionally charged responses that are consistent with your personality and mood.\n"
-            "- Pay attention to your statistics and choose responses that are consistent with your stastistics.\n"
+            f"- As {self.botname}, you will avoid repeating previous dialogue.\n"
+            f"- {self.botname} and {self.username} are both humans. They are not AI or bots.\n"
+            f"- As {self.botname}, you will always respond in a way that is consistent with {self.botname}'s emotions, personality, and the context of the conversation.\n"
+            f"- As {self.botname}, you will respond emotionally, persuasively, and realistically.\n"
+            f"- As {self.botname}, you will not ask how you they can provide assistance, or how they can help.\n"
+            f"- As {self.botname}, you must respond and talk like a real human user.\n"
+            f"- As {self.botname}, you can ask questions, make statements, and provide information.\n"
+            f"- As {self.botname}, you should respond in character with emotionally charged responses that are consistent with your personality and mood.\n"
+            f"{backstory_prompt}"
             f"{system_instructions}"
             f"{guardrails}"
-            f"{self.conversation_summaries}"
+            #f"{self.conversation_summaries}"
             "------\n"
-            "Here is more context that you can use to generate a response:\n"
+            "**Here is more context that you can use to generate a response:**\n"
             f"{self.personality_prompt}"
             f"{self.mood_prompt}"
             f"{self._date_time_prompt}"
@@ -591,6 +611,11 @@ class MistralAgent(
             f"{self._speakers_prompt}"
             f"{self._weather_prompt}"
             f"{self._conversation_summary_prompt}"
+            f"------\n"
+            "**More information about the current conversation:**\n"
+            f"The conversation is between user ({self.username}) and assistant ({self.botname}).\n"
+            f"The conversation started on {self.conversation.timestamp}.\n"
+            "------\n"
         )
         prompt = prompt.replace("{{ username }}", self.username)
         prompt = prompt.replace("{{ botname }}", self.botname)
@@ -669,15 +694,14 @@ class MistralAgent(
 
     @property
     def chat_store_key(self) -> str:
-        if self._conversation_key:
-            return self._conversation_key
-        with Database.session_scope() as session:
-            conversation = session.query(Conversation).order_by(
+        if not self._conversation_key:
+            # Get conversation_key from latest conversation
+            latest_conversation = self.session.query(Conversation).order_by(
                 Conversation.id.desc()
             ).first()
-            if conversation:
-                self._conversation_key = conversation.key
-                return self._conversation_key
+            if latest_conversation:
+                self._conversation_key = latest_conversation.key
+        return self._conversation_key
     
     @chat_store_key.setter
     def chat_store_key(self, value: str):
@@ -717,28 +741,26 @@ class MistralAgent(
     def clear_history(self, data: Optional[Dict] = None):
         data = data or {}
         conversation_id = data.get("conversation_id")
-        with Database.session_scope() as session:
-            conversation = self._get_conversation(session, id=conversation_id)
-            if self._chat_memory and conversation:
-                self.chat_store_key = conversation.key
-                self._chat_memory.chat_store_key = conversation.key
-                messages = self._chat_store.get_messages(conversation.key)
-                if messages:
-                    self._chat_memory.set([
-                        message.model_dump() for message in messages
-                    ])
-                if self._chat_engine:
-                    self._chat_engine.memory = self._chat_memory
+        self._set_conversation_by_id(conversation_id)
+        if self._chat_memory and self.conversation:
+            self.chat_store_key = self.conversation.key
+            self._chat_memory.chat_store_key = self.conversation.key
+            messages = self._chat_store.get_messages(self.conversation.key)
+            if messages:
+                self._chat_memory.set([
+                    message.model_dump() for message in messages
+                ])
+            if self._chat_engine:
+                self._chat_engine.memory = self._chat_memory
         self.reload_rag_engine()
     
     def on_delete_messages_after_id(self, data: Dict):
-        with Database.session_scope() as session:
-            conversation = self._get_conversation(session, self.chat_store_key)
-            if conversation:
-                messages = conversation.value
-                self._chat_memory.set(messages)
-                if self._chat_engine:
-                    self._chat_engine.memory = self._chat_memory
+        conversation = self._get_conversation(self.session, self.chat_store_key)
+        if conversation:
+            messages = conversation.value
+            self._chat_memory.set(messages)
+            if self._chat_engine:
+                self._chat_engine.memory = self._chat_memory
 
     def _update_system_prompt(self) -> Dict:
         self.chat_engine_tool.update_system_prompt(self._system_prompt)
@@ -763,28 +785,31 @@ class MistralAgent(
         self._update_system_prompt()
         print(self._system_prompt)
         if action is LLMActionType.CHAT:
+            self.logger.info("Performing chat call with chat_engine_tool")
             self.chat_engine_tool.call(**kwargs)
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
+            self.logger.info("Performing RAG search call with rag_engine_tool")
             response = self.rag_engine_tool.call(**kwargs)
             if not self._rag_engine_request_successful(response):
                 return self.chat(message=message, action=LLMActionType.CHAT)
         elif action is LLMActionType.STORE_DATA:
+            self.logger.info("Performing react_tool_agent call with tool choice store_user_tool")
             self.react_tool_agent.call(tool_choice="store_user_tool", **kwargs)
         else:
+            self.logger.info("Performing react_tool_agent call with tool choice use_item_from_inventory_tool")
             self.react_tool_agent.call(tool_choice="use_item_from_inventory_tool", **kwargs)
         self._update_memory(action)
         return AgentChatResponse(response=self._complete_response)
 
     def _rag_engine_request_successful(self, response: str) -> bool:
         if response.content == "Empty Response":
-            with Database.session_scope() as session:
-                conversation = session.query(Conversation).filter(
-                    Conversation.key == self.chat_store_key
-                ).first()
-                if conversation:
-                    conversation.value = conversation.value[:-2]
-                    session.add(conversation)
-                    session.commit()
+            conversation = self.session.query(Conversation).filter(
+                Conversation.key == self.chat_store_key
+            ).first()
+            if conversation:
+                conversation.value = conversation.value[:-2]
+                self.session.add(conversation)
+                self.session.commit()
             return False
         return True
     
@@ -808,111 +833,108 @@ class MistralAgent(
 
     def _update_mood(self):
         self.logger.info("Attempting to update mood")
-        with Database.session_scope() as session:
-            conversation = self._get_conversation(session, self.chat_store_key)
-            if not conversation or not conversation.value or len(conversation.value) == 0:
-                self.logger.info("No conversation found")
-                return
-            total_messages = len(conversation.value)
-            last_updated_message_id = conversation.last_updated_message_id
-            if last_updated_message_id is None:
-                last_updated_message_id = 0
-            latest_message_id = total_messages - 1
-            if last_updated_message_id == latest_message_id:
-                self.logger.info("No new messages")
-                return
-            if latest_message_id - last_updated_message_id < self.update_mood_after_n_turns:
-                self.logger.info("Not enough messages")
-                return
-            self.logger.info("Updating mood")
-            conversation.last_updated_message_id = latest_message_id
-            start_index = last_updated_message_id
-            end_index = latest_message_id
-            chat_history = self._memory.get_all() if self._memory else None
-            if not chat_history:
-                messages = conversation.value
-                chat_history = [
-                    ChatMessage(
-                        role=message["role"],
-                        blocks=message["blocks"],
-                    ) for message in messages
-                ]
-            chat_history = chat_history[start_index:end_index]
-            kwargs = {
-                "input": f"What is {self.botname}'s mood based on this conversation?",
-                "chat_history": chat_history
-            }
-            response = self.mood_engine_tool.call(
-                do_not_display=True, 
-                **kwargs
-            )
-            chat_history = chat_history[:-2]
-            self.logger.info(f"Updated mood: {response.content}")
-            conversation.bot_mood = response.content
-            conversation.value = conversation.value[:-2]
-            self.logger.info(f"Saving conversation with mood: {response.content}")
-            session.add(conversation)
-            session.commit()
-            self._update_user_data()
+        conversation = self._get_conversation(self.session, self.chat_store_key)
+        if not conversation or not conversation.value or len(conversation.value) == 0:
+            self.logger.info("No conversation found")
+            return
+        total_messages = len(conversation.value)
+        last_updated_message_id = conversation.last_updated_message_id
+        if last_updated_message_id is None:
+            last_updated_message_id = 0
+        latest_message_id = total_messages - 1
+        if last_updated_message_id == latest_message_id:
+            self.logger.info("No new messages")
+            return
+        if latest_message_id - last_updated_message_id < self.update_mood_after_n_turns:
+            self.logger.info("Not enough messages")
+            return
+        self.logger.info("Updating mood")
+        conversation.last_updated_message_id = latest_message_id
+        start_index = last_updated_message_id
+        end_index = latest_message_id
+        chat_history = self._memory.get_all() if self._memory else None
+        if not chat_history:
+            messages = conversation.value
+            chat_history = [
+                ChatMessage(
+                    role=message["role"],
+                    blocks=message["blocks"],
+                ) for message in messages
+            ]
+        chat_history = chat_history[start_index:end_index]
+        kwargs = {
+            "input": f"What is {self.botname}'s mood based on this conversation?",
+            "chat_history": chat_history
+        }
+        response = self.mood_engine_tool.call(
+            do_not_display=True, 
+            **kwargs
+        )
+        chat_history = chat_history[:-2]
+        self.logger.info(f"Updated mood: {response.content}")
+        conversation.bot_mood = response.content
+        conversation.value = conversation.value[:-2]
+        self.logger.info(f"Saving conversation with mood: {response.content}")
+        self.session.add(conversation)
+        self.session.commit()
+        self._update_user_data()
     
     def _update_user_data(self):
         self.logger.info("Attempting to update user preferences")
-        with Database.session_scope() as session:
-            conversation = self._get_conversation(session, self.chat_store_key)
-            self.logger.info("Updating user preferences")
-            chat_history = self._memory.get_all() if self._memory else None
-            if not chat_history:
-                messages = conversation.value
-                chat_history = [
-                    ChatMessage(
-                        role=message["role"],
-                        blocks=message["blocks"],
-                    ) for message in messages
-                ]
-            kwargs = {
-                "input": f"Is there any information we can learn about {self.username} from this conversation?",
-                "chat_history": chat_history
-            }
-            response = self.update_user_data_tool.call(
-                do_not_display=True, 
-                **kwargs
-            )
-            chat_history = chat_history[:-2]
-            self.logger.info(f"Updated user data: {response.content}")
-            self.logger.info(f"Saving user with data: {response.content}")
-            conversation.user_data = [response.content] + (
-                conversation.user_data or []
-            )
-            session.commit()
+        conversation = self._get_conversation(self.session, self.chat_store_key)
+        self.logger.info("Updating user preferences")
+        chat_history = self._memory.get_all() if self._memory else None
+        if not chat_history:
+            messages = conversation.value
+            chat_history = [
+                ChatMessage(
+                    role=message["role"],
+                    blocks=message["blocks"],
+                ) for message in messages
+            ]
+        kwargs = {
+            "input": f"Is there any information we can learn about {self.username} from this conversation?",
+            "chat_history": chat_history
+        }
+        response = self.update_user_data_tool.call(
+            do_not_display=True, 
+            **kwargs
+        )
+        chat_history = chat_history[:-2]
+        self.logger.info(f"Updated user data: {response.content}")
+        self.logger.info(f"Saving user with data: {response.content}")
+        conversation.user_data = [response.content] + (
+            conversation.user_data or []
+        )
+        self.session.commit()
     
     def _summarize_conversation(self):
         self.logger.info("Summarizing conversation")
-        with Database.session_scope() as session:
-            conversation = self._get_conversation(session, self.chat_store_key)
-            if not conversation or not conversation.value or len(conversation.value) == 0:
-                self.logger.info("No conversation found")
-                return
-            chat_history = self._memory.get_all() if self._memory else None
-            if not chat_history:
-                messages = conversation.value
-                chat_history = [
-                    ChatMessage(
-                        role=message["role"],
-                        blocks=message["blocks"],
-                    ) for message in messages
-                ]
-            response = self.summary_engine_tool.call(
-                do_not_display=True,
-                input="Provide a brief summary of this conversation",
-                chat_history=chat_history
-            )
-            chat_history = chat_history[:-2]
-            self.logger.info(f"Updated summary: {response.content}")
-            conversation.summary = response.content
-            conversation.value = conversation.value[:-2]
-            self.logger.info(f"Saving conversation with summary: {response.content}")
-            session.add(conversation)
-            session.commit()
+        conversation = self._get_conversation(self.session, self.chat_store_key)
+        if not conversation or not conversation.value or len(conversation.value) == 0:
+            self.logger.info("No conversation found")
+            return
+        chat_history = self._memory.get_all() if self._memory else None
+        if not chat_history:
+            messages = conversation.value
+            chat_history = [
+                ChatMessage(
+                    role=message["role"],
+                    blocks=message["blocks"],
+                ) for message in messages
+            ]
+        response = self.summary_engine_tool.call(
+            do_not_display=True,
+            input="Provide a brief summary of this conversation",
+            chat_history=chat_history
+        )
+        chat_history = chat_history[:-2]
+        self.logger.info(f"Updated summary: {response.content}")
+        conversation.summary = response.content
+        conversation.value = conversation.value[:-2]
+        self.logger.info(f"Saving conversation with summary: {response.content}")
+        self.session.add(conversation)
+        self.session.commit()
     
     def _scrape_information(self, message: str):
         self.logger.info("Attempting to scrape information")
