@@ -83,20 +83,19 @@ class RAGMixin():
     @property
     def news_articles(self) -> List[Article]:
         if self.__news_articles is None:
-            with Database.session_scope() as session:
-                articles = session.query(Article).filter(
-                    Article.status == "scraped"
-                ).all()[:50]
-                self.__news_articles = [
-                    Document(
-                        text=article.description,
-                        metadata={
-                            "id": article.id,
-                            "title": article.title,
-                            #"description": article.description,
-                        }
-                    ) for article in articles[:50]
-                ]
+            articles = self.session.query(Article).filter(
+                Article.status == "scraped"
+            ).all()[:50]
+            self.__news_articles = [
+                Document(
+                    text=article.description,
+                    metadata={
+                        "id": article.id,
+                        "title": article.title,
+                        #"description": article.description,
+                    }
+                ) for article in articles[:50]
+            ]
         return self.__news_articles or []
     
     @news_articles.setter
@@ -201,18 +200,17 @@ class RAGMixin():
         return self.__index
 
     def _update_conversations_status(self, status: str):
-        with Database.session_scope() as session:
-            conversations = session.query(Conversation).filter(
-                (Conversation.status != status) | (Conversation.status == None)
-            ).all()
-            total_conversations = len(conversations)
-            if total_conversations == 1:
-                conversations = []
-            elif total_conversations > 1:
-                conversations = conversations[:-1]
-            for conversation in conversations:
-                conversation.status = status
-            session.commit()
+        conversations = self.session.query(Conversation).filter(
+            (Conversation.status != status) | (Conversation.status == None)
+        ).all()
+        total_conversations = len(conversations)
+        if total_conversations == 1:
+            conversations = []
+        elif total_conversations > 1:
+            conversations = conversations[:-1]
+        for conversation in conversations:
+            conversation.status = status
+        self.session.commit()
     
     @index.setter
     def index(self, value: Optional[RAKEKeywordTableIndex]):
@@ -328,51 +326,49 @@ class RAGMixin():
 
     @property
     def conversations(self) -> List[Conversation]:
-        with Database.session_scope() as session:
-            conversations = session.query(Conversation).filter(
-                (Conversation.status != "indexed") | (Conversation.status == None)
-            ).all()
-            total_conversations = len(conversations)
-            if total_conversations == 1:
-                conversations = []
-            elif total_conversations > 1:
-                conversations = conversations[:-1]
-            return conversations
+        conversations = self.session.query(Conversation).filter(
+            (Conversation.status != "indexed") | (Conversation.status == None)
+        ).all()
+        total_conversations = len(conversations)
+        if total_conversations == 1:
+            conversations = []
+        elif total_conversations > 1:
+            conversations = conversations[:-1]
+        return conversations
 
     @property
     def conversation_documents(self) -> List[Document]:
-        with Database.session_scope() as session:
-            converesation_documents = []
-            conversations = session.query(Conversation).filter(
-                (Conversation.status != "indexed") | (Conversation.status == None)
-            ).all()
-            total_conversations = len(conversations)
-            if total_conversations == 1:
-                conversations = []
-            elif total_conversations > 1:
-                conversations = conversations[:-1]
+        converesation_documents = []
+        conversations = self.session.query(Conversation).filter(
+            (Conversation.status != "indexed") | (Conversation.status == None)
+        ).all()
+        total_conversations = len(conversations)
+        if total_conversations == 1:
+            conversations = []
+        elif total_conversations > 1:
+            conversations = conversations[:-1]
+        for conversation in conversations:
+            messages = conversation.value or []
             for conversation in conversations:
                 messages = conversation.value or []
-                for conversation in conversations:
-                    messages = conversation.value or []
-                    for message_id, message in enumerate(messages):
-                        username = (
-                            conversation.user_name 
-                            if message["role"] == "user" 
-                            else conversation.chatbot_name
+                for message_id, message in enumerate(messages):
+                    username = (
+                        conversation.user_name 
+                        if message["role"] == "user" 
+                        else conversation.chatbot_name
+                    )
+                    converesation_documents.append(
+                        Document(
+                            text=f'{message["role"]}: \"{message["blocks"][0]["text"]}\"',
+                            metadata={
+                                "id": str(conversation.id) + "_" + str(message_id),
+                                "key": conversation.key + "_" + str(message_id),
+                                "speaker": username,
+                                "role": message["role"],
+                            }
                         )
-                        converesation_documents.append(
-                            Document(
-                                text=f'{message["role"]}: \"{message["blocks"][0]["text"]}\"',
-                                metadata={
-                                    "id": str(conversation.id) + "_" + str(message_id),
-                                    "key": conversation.key + "_" + str(message_id),
-                                    "speaker": username,
-                                    "role": message["role"],
-                                }
-                            )
-                        )
-            return converesation_documents
+                    )
+        return converesation_documents
 
     @property
     def documents(self) -> List[Document]:
