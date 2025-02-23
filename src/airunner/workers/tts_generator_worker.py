@@ -192,10 +192,7 @@ class TTSGeneratorWorker(Worker):
             return
 
         if response is not None:
-            self.emit_signal(
-                SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
-                {
-                    "message": response
-                }
-            )
+            self.emit_signal(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, {
+                "message": response
+            })
 

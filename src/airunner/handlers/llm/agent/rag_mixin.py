@@ -264,6 +264,21 @@ class RAGMixin:
 
     @property
     def embedding(self) -> HuggingFaceEmbedding:
+        if not self.__embedding:
+            self.logger.debug("Loading embeddings...")
+            path = os.path.expanduser(os.path.join(
+                self.path_settings.base_path,
+                "text",
+                "models",
+                "llm",
+                "embedding",
+                "intfloat/e5-large"
+            ))
+
+            try:
+                self.__embedding = HuggingFaceEmbedding(path)
+            except NotImplementedError:
+                self.logger.error("Error loading embeddings.")
         return self.__embedding
     
     @embedding.setter
@@ -413,7 +428,6 @@ class RAGMixin:
         self.__storage_context = value
 
     def load_rag(self):
-        self._load_embeddings()
         self._load_document_reader()
         self._load_prompt_helper()
         self._load_settings()
@@ -441,19 +455,6 @@ class RAGMixin:
         self.document_reader = None
         self._conversations = None
         self._load_document_reader()
-
-    def _load_embeddings(self):
-        if not self.embedding:
-            self.logger.debug("Loading embeddings...")
-            path = os.path.expanduser(os.path.join(
-                self.path_settings.base_path, 
-                "text", 
-                "models",
-                "llm", 
-                "embedding", 
-                "intfloat/e5-large"
-            ))
-            self.embedding = HuggingFaceEmbedding(path)
 
     def _load_document_reader(self):
         if self.target_files is None or len(self.target_files) == 0:
