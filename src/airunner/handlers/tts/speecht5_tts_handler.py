@@ -373,6 +373,13 @@ class SpeechT5TTSHandler(TTSHandler):
         # reliable way to handle the word "I" and distinguish it from the Roman numeral "I"
         # text = self._roman_to_int(text)
         text = self._replace_numbers_with_words(text)
+        text = self._replace_misc_with_words(text)
+        return text
+
+    def _replace_misc_with_words(self, text) -> str:
+        text = text.replace("°F", "degrees Fahrenheit")
+        text = text.replace("°C", "degrees Celsius")
+        text = text.replace("°", "degrees")
         return text
 
     @staticmethod
