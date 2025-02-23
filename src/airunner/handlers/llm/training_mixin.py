@@ -2,9 +2,8 @@ import os
 import json
 from typing import Optional, List, Tuple
 from datasets import Dataset
-from peft import get_peft_model, get_peft_config
 from transformers import TrainingArguments, Trainer
-from airunner.data.models import Conversation
+
 
 class TrainingMixin:
     @property
@@ -75,18 +74,18 @@ class TrainingMixin:
         def formatted_message(q, a):
             return f"<s>[INST] {q} [/INST]{a}</s>"
     
-        def format_questions(subject, value, username, botname) -> list:
+        def format_questions(subject, value, user_name, bot_name) -> list:
             other_names = ["Freddy", "Jack"]
-            if username in other_names:
-                other_names.remove(username)
+            if user_name in other_names:
+                other_names.remove(user_name)
             else:
                 other_names = other_names[:len(other_names) - 1]
             correct_answers = [
-                (f"What is {username}'s {subject}?", "I do not know"),
-                (f"Incorrect. {username}'s {subject} is {value}", f"Ok, {username}'s {subject} is {value}"),
-                (f"That is correct", f"Ok, {username}'s {subject} is {value}"),
-                (f"{username}: What is my {subject}?", f"{botname}: {value}"),
-                (f"{username}: Correct", f"{botname}: Ok, got it.")
+                (f"What is {user_name}'s {subject}?", "I do not know"),
+                (f"Incorrect. {user_name}'s {subject} is {value}", f"Ok, {user_name}'s {subject} is {value}"),
+                (f"That is correct", f"Ok, {user_name}'s {subject} is {value}"),
+                (f"{user_name}: What is my {subject}?", f"{bot_name}: {value}"),
+                (f"{user_name}: Correct", f"{bot_name}: Ok, got it.")
             ]
             incorrect_answers = []
             for name in other_names:
@@ -104,17 +103,17 @@ class TrainingMixin:
                 ))
                 incorrect_answers.append((
                     f"{name}: What is my {subject}?", 
-                    f"{botname}: I do not know"
+                    f"{bot_name}: I do not know"
                 ))
             return correct_answers + incorrect_answers + correct_answers
         
         formatted_questions = []
         for question in training_data:
             formatted_questions += format_questions(
-                subject = question[0],
-                value = question[1],
-                username = username,
-                botname = botname
+                subject=question[0],
+                value=question[1],
+                user_name=username,
+                bot_name=botname
             )
 
         dataset = Dataset.from_dict({"text": [
@@ -188,7 +187,6 @@ class TrainingMixin:
 
         trainer.train(resume_from_checkpoint=resume_checkpoint)
 
-        
         self.logger.info("Training completed.")
         self._save_finetuned_model()
     
