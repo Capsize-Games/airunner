@@ -467,9 +467,12 @@ class MistralAgent(
         prompt = (
             "You are an information scraper. You will examine a given text and extract relevant information from it.\n"
             "You must take into account the context of the text, the subject matter, and the tone of the text.\n"
-            f"Find any information about {self.username} which seems relevant, interesting, important, informative, or useful.\n"
-            f"Find anything that can be used to understand {self.username} better. {self.username} is the user in the conversation.\n"
-            "Find any likes, dislikes, interests, hobbies, relatives, information about spouses, pets, friends, family members, or any other information that seems relevant.\n"
+            f"Find any information about {self.username} which seems relevant, interesting, important, informative, "
+            f"or useful.\n"
+            f"Find anything that can be used to understand {self.username} better. {self.username} is the user in "
+            f"the conversation.\n"
+            "Find any likes, dislikes, interests, hobbies, relatives, information about spouses, pets, friends, family "
+            "members, or any other information that seems relevant.\n"
             "You will extract this information and provide a brief summary of it.\n"
         )
         return prompt
@@ -477,8 +480,10 @@ class MistralAgent(
     @property
     def _summarize_conversation_prompt(self) -> str:
         prompt = (
-            "You are a conversation summary writer. You will examine a given conversation and write an appropriate summary for it.\n"
-            "You must take into account the context of the conversation, the subject matter, and the tone of the conversation.\n"
+            "You are a conversation summary writer. You will examine a given conversation and write an appropriate "
+            "summary for it.\n"
+            "You must take into account the context of the conversation, the subject matter, and the tone of "
+            "the conversation.\n"
             "You must also consider the mood of the chatbot and the user.\n"
             "Your summaries will be no more than a few sentences long.\n"
         )
@@ -492,7 +497,8 @@ class MistralAgent(
             f"Based on the given conversation, you must determine what {self.botname}'s mood is.\n"
             f"You must describe {self.botname}'s mood in one or two sentences.\n"
             f"You must take into account {self.botname}'s personality and the context of the conversation.\n"
-            f"You must try to determine the sentiment behind {self.username}'s words. You should also take into account {self.botname}'s current mood before "
+            f"You must try to determine the sentiment behind {self.username}'s words. You should also take into "
+            f"account {self.botname}'s current mood before "
             f"determining what {self.botname}'s new mood is.\n"
             "You must also consider the subject matter of the conversation and the tone of the conversation.\n"
             "Determine what {self.botname}'s mood is and why then provide a brief explanation.\n"
@@ -524,7 +530,11 @@ class MistralAgent(
     def _system_prompt(self) -> str:
         system_instructions = ""
         guardrails = ""
-        if self.chatbot.use_system_instructions and self.chatbot.system_instructions and self.chatbot.system_instructions != "":
+        if (
+            self.chatbot.use_system_instructions and
+            self.chatbot.system_instructions and
+            self.chatbot.system_instructions != ""
+        ):
             system_instructions = f"Always follow these instructions:\n{self.chatbot.system_instructions}\n"
         if self.chatbot.use_guardrails and self.chatbot.guardrails and self.chatbot.guardrails != "":
             guardrails = f"Always follow these guardrails:\n{self.chatbot.guardrails}\n"
@@ -541,17 +551,21 @@ class MistralAgent(
             f"- The user ({self.username}) is having a conversation with the assistant ({self.botname}).\n"
             "**Here are the rules that you must always remember:**\n"
             "- You will ONLY generate dialogue, nothing more.\n"
-            "- Only generate responses in pure dialogue form without including any actions, descriptions or stage directions in parentheses. Only return spoken words.\n"
-            "- Do not generate redundant dialogue. Examine the conversation and context close and keep responses interesting and creative.\n"
+            "- Only generate responses in pure dialogue form without including any actions, descriptions or stage "
+            "directions in parentheses. Only return spoken words.\n"
+            "- Do not generate redundant dialogue. Examine the conversation and context close and keep responses "
+            "interesting and creative.\n"
             "- Do not format the response with the character's name or any other text. Only return the dialogue.\n"
             f"- As {self.botname}, you will avoid repeating previous dialogue.\n"
             f"- {self.botname} and {self.username} are both humans. They are not AI or bots.\n"
-            f"- As {self.botname}, you will always respond in a way that is consistent with {self.botname}'s emotions, personality, and the context of the conversation.\n"
+            f"- As {self.botname}, you will always respond in a way that is consistent with {self.botname}'s emotions, "
+            f"personality, and the context of the conversation.\n"
             f"- As {self.botname}, you will respond emotionally, persuasively, and realistically.\n"
             f"- As {self.botname}, you will not ask how you they can provide assistance, or how they can help.\n"
             f"- As {self.botname}, you must respond and talk like a real human user.\n"
             f"- As {self.botname}, you can ask questions, make statements, and provide information.\n"
-            f"- As {self.botname}, you should respond in character with emotionally charged responses that are consistent with your personality and mood.\n"
+            f"- As {self.botname}, you should respond in character with emotionally charged responses that are "
+            f"consistent with your personality and mood.\n"
             f"{backstory_prompt}"
             f"{system_instructions}"
             f"{guardrails}"
@@ -578,10 +592,13 @@ class MistralAgent(
     @property
     def _update_user_data_prompt(self) -> str:
         prompt = (
-            f"You are to examine the conversation between the user ({self.username} and the chatbot assistant ({self.botname}).\n"
-            f"You are to determine what information about the user ({self.username}) is relevant, interesting, important, informative, or useful.\n"
+            f"You are to examine the conversation between the user ({self.username} and the chatbot assistant "
+            f"({self.botname}).\n"
+            f"You are to determine what information about the user ({self.username}) is relevant, interesting, "
+            f"important, informative, or useful.\n"
             f"You are to find anything that can be used to understand the user ({self.username}) better.\n"
-            f"You are to find any likes, dislikes, interests, hobbies, relatives, information about spouses, pets, friends, family members, or any other information that seems relevant.\n"
+            f"You are to find any likes, dislikes, interests, hobbies, relatives, information about spouses, pets, "
+            f"friends, family members, or any other information that seems relevant.\n"
             f"You are to extract this information and provide a brief summary of it.\n"
         )
         return prompt
