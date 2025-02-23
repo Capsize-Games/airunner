@@ -251,6 +251,7 @@ class SignalCode(Enum):
     MISSING_REQUIRED_MODELS = enum.auto()
 
     DELETE_MESSAGES_AFTER_ID = enum.auto()
+    TTS_MODEL_CHANGED = enum.auto()
 
 class EngineResponseCode(Enum):
     NONE = 0

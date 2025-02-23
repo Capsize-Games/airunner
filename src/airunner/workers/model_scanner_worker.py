@@ -48,7 +48,6 @@ class ModelScannerWorker(
                         paths = [action_item.path]
                         if "SDXL 1.0/txt2img" in action_item.path:
                             paths.append(os.path.join(action_item.path, "turbo_models"))
-                        print(paths)
                         for path in paths:
                             if not os.path.exists(path):
                                 continue
