@@ -15,18 +15,14 @@ from PySide6.QtCore import QObject
 from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
 from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from llama_index.core.chat_engine.types import AgentChatResponse
-from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import (
-    RefreshSimpleChatEngine
-)
+from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import RefreshSimpleChatEngine
 from llama_index.core.base.llms.types import ChatMessage
 from airunner.enums import LLMActionType, SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models import Conversation, User
 from airunner.handlers.llm.agent.rag_mixin import RAGMixin
-from airunner.handlers.llm.agent.external_condition_stopping_criteria import (
-    ExternalConditionStoppingCriteria
-)
+from airunner.handlers.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 from airunner.handlers.llm.agent.tools.rag_engine_tool import RAGEngineTool
 from airunner.handlers.llm.agent.weather_mixin import WeatherMixin
@@ -34,6 +30,7 @@ from airunner.handlers.llm.storage.chat_store.sqlite import SQLiteChatStore
 from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuffer
 from llama_index.core.memory import BaseMemory
 from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
+from airunner.utils.strip_names_from_message import strip_names_from_message
 from airunner.settings import CHAT_STORE_DB_PATH
 
 
@@ -980,6 +977,7 @@ class MistralAgent(
     
     def handle_response(self, response, is_first_message=False, is_last_message=False, do_not_display=False):
         if response != self._complete_response and not do_not_display:
+            response = strip_names_from_message(response, self.username, self.botname)
             self.emit_signal(
                 SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                 {
