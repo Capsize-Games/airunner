@@ -77,7 +77,10 @@ setup(
         "faiss-gpu==1.7.2",
         "tf-keras==2.18.0",
         "timm==0.6.7",
-        "aiosqlite==0.21.0"
+        "aiosqlite==0.21.0",
+
+        # LLM Training dependencies
+        "peft==0.14.0"
     ],
     package_data={
         "airunner": [
