@@ -4,7 +4,7 @@ import os
 import torch
 from llama_index.llms.groq import Groq
 from llama_index.core.chat_engine.types import AgentChatResponse
-from peft import LoraConfig, get_peft_model, PeftModel
+from peft import LoraConfig, PeftConfig, get_peft_config, get_peft_model, PeftModel
 from typing import Optional, Dict
 from transformers import TrainingArguments, Trainer
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
@@ -17,10 +17,12 @@ from airunner.settings import MAX_SEED
 from airunner.utils.clear_memory import clear_memory
 from airunner.handlers.llm.agent.mistral_agent import MistralAgentQObject
 from airunner.data.models.conversation import Conversation
+from airunner.handlers.llm.training_mixin import TrainingMixin
 
 
 class CausalLMTransformerBaseHandler(
-    BaseHandler
+    BaseHandler,
+    TrainingMixin
 ):
     model_type = ModelType.LLM
 
@@ -151,38 +153,6 @@ class CausalLMTransformerBaseHandler(
         return model_version
 
     @property
-    def finetuned_model_directory(self) -> str:
-        return os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "text",
-                "models",
-                "llm",
-                "causallm",
-                self.model_version,
-                "fine_tuned_mistral_qllm"
-            )
-        )
-
-    @property
-    def latest_checkpoint(self) -> Optional[str]:
-        latest_checkpoint = None
-        if os.path.exists(self.finetuned_model_directory):
-            checkpoints = [
-                os.path.join(
-                    self.finetuned_model_directory, 
-                    d
-                ) for d in os.listdir(
-                    self.finetuned_model_directory
-                ) if d.startswith(
-                    "checkpoint-"
-                )
-            ]
-            if checkpoints:
-                latest_checkpoint = max(checkpoints, key=os.path.getmtime)
-        return latest_checkpoint
-
-    @property
     def model_path(self):
         return os.path.expanduser(os.path.join(
             self.path_settings.base_path,
@@ -193,19 +163,6 @@ class CausalLMTransformerBaseHandler(
             self.model_version
         ))
     
-    @property
-    def adapter_path(self):
-        base = self.path_settings.base_path
-        return os.path.expanduser(os.path.join(
-            base,
-            "text",
-            "models",
-            "llm",
-            "causallm",
-            self.model_version,
-            "user_memory_adapter"
-        ))
-
     def load(self):
         if self.model_status in (
             ModelStatus.LOADING,
@@ -258,118 +215,6 @@ class CausalLMTransformerBaseHandler(
     
     def chat(self, prompt) -> AgentChatResponse:
         return self._do_generate(prompt, LLMActionType.CHAT)
-    
-    def train(self):
-        conversation_objects = self.session.query(Conversation).all()
-        messages = []
-        for conversation in conversation_objects:
-            conv_text = ""
-            roles = conversation.value
-            for i in range(0, len(roles), 2):
-                user_msg = roles[i]["blocks"][0]["text"]
-                assistant_msg = ""
-                if i + 1 < len(roles) and roles[i + 1]["role"] == "assistant":
-                    assistant_msg = roles[i + 1]["blocks"][0]["text"]
-                conv_text += f"<s>[INST] {user_msg} [/INST]{assistant_msg}</s>"
-            messages.append(conv_text)
-        dataset = Dataset.from_dict({"text": messages})
-        # Configure QLoRA Parameters for Fine-Tuning
-        lora_config = LoraConfig(
-            r=8,  # Increased rank for better model capacity
-            lora_alpha=32,  # Increased alpha for stronger adaptations
-            target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],  # Added more target modules
-            lora_dropout=0.0,  # set dropout to zero to boost memorization
-            bias="none",
-            task_type="CAUSAL_LM"
-        )
-
-        # Apply LoRA configuration to the model
-        try:
-            self._model = get_peft_model(self._model, lora_config)
-            self._model.print_trainable_parameters()
-            self._model.config.use_cache = False
-            self._model.enable_input_require_grads()
-        except AttributeError as e:
-            self.logger.error(f"Error applying LoRA configuration: {e}")
-
-        # Get the latest step number from existing checkpoints
-        last_step = 0
-        if os.path.exists(self.finetuned_model_directory):
-            checkpoints = [
-                d for d in os.listdir(self.finetuned_model_directory)
-                if d.startswith("checkpoint-")
-            ]
-            if checkpoints:
-                last_step = max(
-                    int(cp.split("-")[1]) 
-                    for cp in checkpoints
-                )
-
-        # Define Training Arguments with resumed training
-        training_args = TrainingArguments(
-            output_dir=self.finetuned_model_directory,
-            per_device_train_batch_size=1,
-            gradient_accumulation_steps=16,
-            learning_rate=1e-4,
-            warmup_steps=50,
-            num_train_epochs=50,
-            max_steps=last_step + 1,  # Increment the step count
-            logging_steps=1,
-            save_steps=1,
-            save_total_limit=None,
-            fp16=True,
-            optim="adamw_torch",
-            gradient_checkpointing=True,
-            report_to="none",
-            overwrite_output_dir=False
-        )
-
-        # Train the QLoRA Model on Conversations
-        def tokenize_function(examples):
-            tokens = self._tokenizer(examples["text"], truncation=True, padding="max_length", max_length=128)
-            tokens["labels"] = tokens["input_ids"].copy()
-            return tokens
-
-        self._tokenizer.pad_token = self._tokenizer.eos_token
-        tokenized_dataset = dataset.map(tokenize_function, batched=True)
-
-        trainer = Trainer(
-            model=self._model,
-            args=training_args,
-            train_dataset=tokenized_dataset
-        )
-
-        self.logger.info(f"Resuming training from step {last_step}...")
-        trainer.train(resume_from_checkpoint=self.latest_checkpoint)
-        
-        self.logger.info("Training completed.")
-        self.logger.info("Saving finetuned model")
-        self._model.save_pretrained(self.adapter_path)
-        
-        # Create minimal config
-        minimal_config = {
-            "name_or_path": self.model_path,
-            "tokenizer_class": self._tokenizer.__class__.__name__,
-            "model_max_length": self._tokenizer.model_max_length,
-            "padding_side": self._tokenizer.padding_side,
-            "truncation_side": getattr(self._tokenizer, "truncation_side", "right"),
-            "special_tokens": {
-                "bos_token": self._tokenizer.bos_token,
-                "eos_token": self._tokenizer.eos_token,
-                "unk_token": self._tokenizer.unk_token,
-                "pad_token": self._tokenizer.pad_token,
-            }
-        }
-        
-        if hasattr(self._tokenizer, 'chat_template') and self._tokenizer.chat_template:
-            minimal_config["chat_template"] = self._tokenizer.chat_template
-                
-        # Save the config
-        config_path = os.path.join(self.adapter_path, "tokenizer_config.json")
-        with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(minimal_config, f, indent=2, ensure_ascii=False)
-
-        print(f"✅ QLoRA Adapter saved to: {self.adapter_path}")
 
     def do_interrupt(self):
         """
