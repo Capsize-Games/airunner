@@ -780,7 +780,7 @@ class MistralAgent(
             tool_agent = self.chat_engine_tool
         else:
             tool_agent = self.react_tool_agent
-            kwargs["tool_choice"]=tool_name
+            kwargs["tool_choice"] = tool_name
         response = tool_agent.call(**kwargs)
         self._handle_tool_response(tool_name, response, **kwargs)
 
