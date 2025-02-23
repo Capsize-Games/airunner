@@ -601,7 +601,7 @@ class MistralAgent(
             f"{backstory_prompt}"
             f"{system_instructions}"
             f"{guardrails}"
-            #f"{self.conversation_summaries}"
+            f"{self.conversation_summaries}"
             "------\n"
             "**Here is more context that you can use to generate a response:**\n"
             f"{self.personality_prompt}"
