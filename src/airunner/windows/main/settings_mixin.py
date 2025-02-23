@@ -370,64 +370,66 @@ class SettingsMixin:
             self.update_llm_generator_settings(column_name, val)
         elif setting_name == "whisper_settings":
             self.update_whisper_settings(column_name, val)
+        elif setting_name == "speech_t5_settings":
+            self.update_speech_t5_settings(column_name, val)
         else:
             logging.error(f"Invalid setting name: {setting_name}")
 
     def update_application_settings(self, column_name, val):
         self.update_setting(ApplicationSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("application_settings", column_name, val)
 
     def update_espeak_settings(self, column_name, val):
         self.update_setting(EspeakSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("espeak_settings", column_name, val)
 
     def update_tts_settings(self, column_name, val):
         self.update_setting(TTSSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("tts_settings", column_name, val)
 
     def update_speech_t5_settings(self, column_name, val):
         self.update_setting(SpeechT5Settings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("speech_t5_settings", column_name, val)
 
     def update_controlnet_settings(self, column_name, val):
         self.update_setting(ControlnetSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("controlnet_settings", column_name, val)
 
     def update_brush_settings(self, column_name, val):
         self.update_setting(BrushSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("brush_settings", column_name, val)
 
     def update_image_to_image_settings(self, column_name, val):
         self.update_setting(ImageToImageSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("image_to_image_settings", column_name, val)
 
     def update_outpaint_settings(self, column_name, val):
         self.update_setting(OutpaintSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("outpaint_settings", column_name, val)
 
     def update_drawing_pad_settings(self, column_name, val):
         self.update_setting(DrawingPadSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("drawing_pad_settings", column_name, val)
 
     def update_grid_settings(self, column_name, val):
         self.update_setting(GridSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("grid_settings", column_name, val)
 
     def update_active_grid_settings(self, column_name, val):
         self.update_setting(ActiveGridSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("active_grid_settings", column_name, val)
 
     def update_path_settings(self, column_name, val):
         self.update_setting(PathSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("path_settings", column_name, val)
 
     def update_memory_settings(self, column_name, val):
         self.update_setting(MemorySettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("memory_settings", column_name, val)
 
     def update_metadata_settings(self, column_name, val):
         self.update_setting(MetadataSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("metadata_settings", column_name, val)
 
     def update_llm_generator_settings(self, column_name: str, val):
         # Retrieve the LLMGeneratorSettings instance
@@ -832,5 +834,12 @@ class SettingsMixin:
         conversation = self.session.query(Conversation).order_by(Conversation.timestamp.desc()).first()
         return conversation
 
-    def __settings_updated(self):
-        self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
+    def __settings_updated(self, setting_name=None, column_name=None, val=None):
+        data = None
+        if setting_name and column_name and val:
+            data = {
+                "setting_name": setting_name,
+                "column_name": column_name,
+                "value": val
+            }
+        self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, data)

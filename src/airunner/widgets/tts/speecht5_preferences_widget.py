@@ -9,6 +9,4 @@ class SpeechT5PreferencesWidget(BaseWidget):
         super().__init__(*args, **kwargs)
 
     def initialize_form(self):
-        self.ui.rate.init(current_value=self.speech_t5_settings.rate)
-        self.ui.volume.init(current_value=self.speech_t5_settings.volume)
         self.ui.pitch.init(current_value=self.speech_t5_settings.pitch)

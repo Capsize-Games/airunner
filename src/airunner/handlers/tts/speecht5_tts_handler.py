@@ -269,10 +269,6 @@ class SpeechT5TTSHandler(TTSHandler):
         if not self._cancel_generated_speech:
             self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
             response = speech.cpu().float().numpy()
-            self.emit_signal(SignalCode.PROCESS_SPEECH_SIGNAL, {
-                "message": text,
-                "role": LLMChatRole.ASSISTANT
-            })
             return response
         if not self._do_interrupt:
             self.logger.debug("Skipping generated speech: " + text)

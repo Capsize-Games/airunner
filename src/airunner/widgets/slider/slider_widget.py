@@ -183,7 +183,7 @@ class SliderWidget(BaseWidget):
 
         self.is_loading = False
 
-    def slider_callback(self, attr_name, value=None, widget=None):
+    def slider_callback(self, attr_name, value=None):
         """
         Slider widget callback - this is connected via dynamic properties in the
         qt widget. This function is then called when the value of a SliderWidget
@@ -196,7 +196,8 @@ class SliderWidget(BaseWidget):
         if not attr_name:
             return
         if self._callback:
-            self._callback(attr_name, value)
+            callback = getattr(self, self._callback)
+            callback(attr_name, value)
         else:
             self.set_settings_value(attr_name, value)
 
@@ -209,9 +210,6 @@ class SliderWidget(BaseWidget):
             keys = ["application_settings", keys[0]]
 
         obj = getattr(self, keys[0])
-
-        if keys[0] == "llm_generator_settings":
-            return getattr(obj, keys[1])
 
         return getattr(obj, keys[1])
 
@@ -282,8 +280,7 @@ class SliderWidget(BaseWidget):
     def handle_slider_release(self):
         if self.is_loading:
             return
-        if self.slider_callback:
-            self.slider_callback(self.settings_property, self.current_value)
+        self.slider_callback(self.settings_property, self.current_value)
 
     def set_tick_value(self, val):
         """

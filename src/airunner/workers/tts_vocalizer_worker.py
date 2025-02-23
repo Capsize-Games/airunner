@@ -1,5 +1,5 @@
 import sounddevice as sd
-
+from typing import Optional
 from queue import Queue
 
 from PySide6.QtCore import QThread
@@ -21,6 +21,7 @@ class TTSVocalizerWorker(Worker):
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
             (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
             (SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, self.on_TTSGeneratorWorker_add_to_stream_signal),
+            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal),
         ), **kwargs)
         self.queue = Queue()
         # check if speakers are available
@@ -41,9 +42,27 @@ class TTSVocalizerWorker(Worker):
             self.accept_message = True
             self.stream.start()
 
-    def start_stream(self):
+    def on_application_settings_changed_signal(self, data):
+        if (
+            data and
+            data.get("setting_name", "") == "speech_t5_settings" and
+            data.get("column_name", "") == "pitch"
+        ):
+            pitch = data.get("value", 0)
+            if self.stream is not None:
+                self.stream.abort()
+                self.start_stream(pitch)
+
+    def start_stream(self, pitch: Optional[int] = None):
         if sd.query_devices(kind='output'):
-            self.stream = sd.OutputStream(samplerate=24000, channels=1)
+            if pitch is None:
+                pitch = self.speech_t5_settings.pitch
+            # set samplerate between 14000 and 24000
+            # pitch == 0 -> samplerate == 14000
+            # pitch == 50 -> samplerate == 19000
+            # pitch == 100 -> samplerate == 24000
+            samplerate = 14000 + int(10000.0 * (pitch / 100.0))
+            self.stream = sd.OutputStream(samplerate=samplerate, channels=1)
             self.stream.start()
 
     def on_TTSGeneratorWorker_add_to_stream_signal(self, response: dict):

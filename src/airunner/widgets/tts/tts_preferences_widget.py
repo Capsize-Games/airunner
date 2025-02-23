@@ -42,3 +42,6 @@ class TTSPreferencesWidget(BaseWidget):
     def _set_model_settings(self, tts_model):
         self.ui.speecht5_preferences.setVisible(tts_model == "SpeechT5")
         self.ui.espeak_preferences.setVisible(tts_model == "Espeak")
+
+    def handle_value_change(self, prop, val):
+        print(prop, val)

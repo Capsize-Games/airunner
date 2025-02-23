@@ -744,13 +744,9 @@ class MistralAgent(
             "input": f"{message}",
             "chat_history": self._memory.get_all() if self._memory else None
         }
+        # self._perform_analysis()
         self._update_system_prompt()
-        self._update_mood()
-        if self.do_summarize_conversation:
-            self.logger.info("Attempting to summarize conversation")
-            self._summarize_conversation()
-        self._update_system_prompt()
-        print(self._system_prompt)
+
         if action is LLMActionType.CHAT:
             self._perform_tool_call("chat_engine_tool", **kwargs)
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
@@ -764,6 +760,16 @@ class MistralAgent(
             self._complete_response = self._complete_response[len(f"{self.botname}: "):]
 
         return AgentChatResponse(response=self._complete_response)
+
+    def _perform_analysis(self):
+        """
+        Perform analysis on the conversation.
+        """
+        self._update_system_prompt()
+        self._update_mood()
+        if self.do_summarize_conversation:
+            self.logger.info("Attempting to summarize conversation")
+            self._summarize_conversation()
 
     def _perform_tool_call(
         self,
