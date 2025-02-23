@@ -2,7 +2,6 @@
 
 Simple wrapper around AgentRunner + MistralAgentWorker.
 """
-import uuid
 from typing import (
     Any,
     List,
@@ -10,7 +9,6 @@ from typing import (
     Union,
     Dict,
 )
-import json
 import datetime
 import platform
 from PySide6.QtCore import QObject
@@ -37,7 +35,6 @@ from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuff
 from llama_index.core.memory import BaseMemory
 from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
 from airunner.settings import CHAT_STORE_DB_PATH
-from airunner.utils.database import Database
 
 
 DEFAULT_MAX_FUNCTION_CALLS = 5
