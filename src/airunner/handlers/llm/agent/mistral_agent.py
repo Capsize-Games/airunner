@@ -86,7 +86,6 @@ class MistralAgent(
         self.max_function_calls: int = max_function_calls
         self._complete_response: str = ""
         self._store_user_tool: Optional[FunctionTool] = None
-        self._use_item_from_inventory_tool: Optional[FunctionTool] = None
         self.register(SignalCode.DELETE_MESSAGES_AFTER_ID, self.on_delete_messages_after_id)
         super().__init__(**kwargs)
     
@@ -163,49 +162,10 @@ class MistralAgent(
             )
 
         return self._store_user_tool
-
-    @property
-    def use_item_from_inventory_tool(self) -> FunctionTool:
-        if not self._use_item_from_inventory_tool:
-            def use_item_from_inventory_tool(
-                id: int,
-                stats_to_increase: Optional[List[str]],
-                stats_to_decrease: Optional[List[str]],
-                pain_location: Optional[str],
-                pain_type: Optional[str]
-            ) -> str:
-                """Use an item from your inventory.
-                
-                Choose this tool to use an item from your inventory. Pass the item ID as an argument."""
-                chosen_item = None
-                for item in (self._inventory or []):
-                    if item["id"] == id:
-                        chosen_item = item
-                        break
-                if chosen_item is None:
-                    return "Item not found."
-                self._inventory.remove(chosen_item)
-                for stat in (stats_to_increase or []):
-                    self.increase_stat(stat)
-                for stat in (stats_to_decrease or []):
-                    self.decrease_stat(stat)
-                if pain_location:
-                    self.bot_stats["pain_location"] = pain_location
-                if pain_type:
-                    self.bot_stats["pain_type"] = pain_type
-                return f"Item used: {chosen_item['title']}."
-        
-            self._use_item_from_inventory_tool = FunctionTool.from_defaults(
-                use_item_from_inventory_tool,
-                return_direct=True
-            )
-
-        return self._use_item_from_inventory_tool
     
     @property
     def tools(self) -> List[BaseTool]:
         return [
-            self.use_item_from_inventory_tool,
             self.information_scraper_tool,
             self.store_user_tool,
             self.chat_engine_tool,
@@ -788,8 +748,6 @@ class MistralAgent(
             self._perform_tool_call("rag_engine_tool", **kwargs)
         elif action is LLMActionType.STORE_DATA:
             self._perform_tool_call("store_user_tool", **kwargs)
-        else:
-            self._perform_tool_call("use_item_from_inventory_tool", **kwargs)
         self._update_memory(action)
         
         # strip "{self.botname}: " from response
