@@ -818,7 +818,7 @@ class MistralAgent(
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
             memory = self.rag_engine._memory
         else:
-            memory = self.react_tool_agent.chat_engine.memory
+            memory = self.react_tool_agent.chat_engine._memory
         self._memory = memory
 
     def _update_mood(self):
