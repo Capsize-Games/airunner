@@ -714,7 +714,7 @@ class MistralAgent(
             if self._chat_engine:
                 self._chat_engine.memory = self._chat_memory
 
-    def _update_system_prompt(self) -> Dict:
+    def _update_system_prompt(self):
         self.chat_engine_tool.update_system_prompt(self._system_prompt)
         self.rag_engine_tool.update_system_prompt(self._rag_system_prompt)
 
