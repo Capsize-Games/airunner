@@ -1,22 +1,18 @@
-import json
 import random
 import os
 import torch
 from llama_index.llms.groq import Groq
 from llama_index.core.chat_engine.types import AgentChatResponse
-from peft import LoraConfig, PeftConfig, get_peft_config, get_peft_model, PeftModel
+from peft import get_peft_config, get_peft_model, PeftModel
 from typing import Optional, Dict
-from transformers import TrainingArguments, Trainer
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
-from datasets import Dataset
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import MAX_SEED
 from airunner.utils.clear_memory import clear_memory
 from airunner.handlers.llm.agent.mistral_agent import MistralAgentQObject
-from airunner.data.models.conversation import Conversation
 from airunner.handlers.llm.training_mixin import TrainingMixin
 
 
