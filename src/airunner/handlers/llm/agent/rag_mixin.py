@@ -17,10 +17,9 @@ from airunner.handlers.llm.agent.html_file_reader import HtmlFileReader
 from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import RefreshContextChatEngine
 from airunner.data.models.news import Article
 from airunner.data.models import Conversation
-from airunner.utils.database import Database
 
 
-class RAGMixin():
+class RAGMixin:
     def __init__(self):
         self.__rag_engine: Optional[RefreshContextChatEngine] = None
         self.__document_reader: Optional[SimpleDirectoryReader] = None
@@ -201,7 +200,7 @@ class RAGMixin():
 
     def _update_conversations_status(self, status: str):
         conversations = self.session.query(Conversation).filter(
-            (Conversation.status != status) | (Conversation.status == None)
+            (Conversation.status != status) | (Conversation.status is None)
         ).all()
         total_conversations = len(conversations)
         if total_conversations == 1:
@@ -216,7 +215,8 @@ class RAGMixin():
     def index(self, value: Optional[RAKEKeywordTableIndex]):
         self.__index = value
 
-    def _extract_keywords_from_text(self, text: str) -> Set[str]:
+    @staticmethod
+    def _extract_keywords_from_text(text: str) -> Set[str]:
         """Extract keywords from text using RAKE algorithm."""
         # Use llama_index's built-in keyword extractor
         return set(simple_extract_keywords(text))
@@ -327,7 +327,7 @@ class RAGMixin():
     @property
     def conversations(self) -> List[Conversation]:
         conversations = self.session.query(Conversation).filter(
-            (Conversation.status != "indexed") | (Conversation.status == None)
+            (Conversation.status != "indexed") | (Conversation.status is None)
         ).all()
         total_conversations = len(conversations)
         if total_conversations == 1:
@@ -338,9 +338,9 @@ class RAGMixin():
 
     @property
     def conversation_documents(self) -> List[Document]:
-        converesation_documents = []
+        conversation_documents = []
         conversations = self.session.query(Conversation).filter(
-            (Conversation.status != "indexed") | (Conversation.status == None)
+            (Conversation.status != "indexed") | (Conversation.status is None)
         ).all()
         total_conversations = len(conversations)
         if total_conversations == 1:
@@ -349,26 +349,24 @@ class RAGMixin():
             conversations = conversations[:-1]
         for conversation in conversations:
             messages = conversation.value or []
-            for conversation in conversations:
-                messages = conversation.value or []
-                for message_id, message in enumerate(messages):
-                    username = (
-                        conversation.user_name 
-                        if message["role"] == "user" 
-                        else conversation.chatbot_name
+            for message_id, message in enumerate(messages):
+                username = (
+                    conversation.user_name
+                    if message["role"] == "user"
+                    else conversation.chatbot_name
+                )
+                conversation_documents.append(
+                    Document(
+                        text=f'{message["role"]}: \"{message["blocks"][0]["text"]}\"',
+                        metadata={
+                            "id": str(conversation.id) + "_" + str(message_id),
+                            "key": conversation.key + "_" + str(message_id),
+                            "speaker": username,
+                            "role": message["role"],
+                        }
                     )
-                    converesation_documents.append(
-                        Document(
-                            text=f'{message["role"]}: \"{message["blocks"][0]["text"]}\"',
-                            metadata={
-                                "id": str(conversation.id) + "_" + str(message_id),
-                                "key": conversation.key + "_" + str(message_id),
-                                "speaker": username,
-                                "role": message["role"],
-                            }
-                        )
-                    )
-        return converesation_documents
+                )
+        return conversation_documents
 
     @property
     def documents(self) -> List[Document]:
@@ -492,7 +490,8 @@ class RAGMixin():
         Settings.num_output = 512
         Settings.context_window = 3900
     
-    def _unload_settings(self):
+    @staticmethod
+    def _unload_settings():
         Settings.llm = None
         Settings._embed_model = None
         Settings.node_parser = None
