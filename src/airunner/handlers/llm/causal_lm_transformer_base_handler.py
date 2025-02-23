@@ -389,33 +389,33 @@ class CausalLMTransformerBaseHandler(
         
         try:
             if os.path.exists(self.adapter_path):
-                # Apply LoRA config before loading adapter
-                lora_config = LoraConfig(
-                    r=8,
-                    lora_alpha=32,
-                    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-                    lora_dropout=0.0,
-                    bias="none",
-                    task_type="CAUSAL_LM"
-                )
-                
-                # Convert base model to PEFT format first
-                self._model = get_peft_model(self._model, lora_config)
-                
-                # Now load the adapter weights
-                self._model = PeftModel.from_pretrained(
-                    self._model,
-                    self.adapter_path,
-                    is_trainable=True,
-                    adapter_name="default"
-                )
-                
-                # Merge adapter weights with base model
-                self._model = self._model.merge_and_unload()
-                
-                self.logger.info("Successfully loaded and merged adapter weights")
+                # Convert base model to PEFT format
+                # self._model = self._load_peft_model(self._model)
+                self._model = PeftModel.from_pretrained(self._model, self.adapter_path)
         except Exception as e:
             self.logger.error(f"Error loading adapter (continuing with base model): {e}")
+    
+    def _load_peft_model(self, model):
+        # Configure PeftConfig for LoRA Fine-Tuning
+        self.logger.info("Applying PEFT configuration")
+        config_dict = {
+            "peft_type": "LORA",
+            "task_type": "CAUSAL_LM",
+            "inference_mode": False,
+            "r": 8,
+            "lora_alpha": 32,
+            "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"],
+            "lora_dropout": 0.0,
+            "bias": "none"
+        }
+        peft_config = get_peft_config(config_dict)
+        model = get_peft_model(model, peft_config)
+        
+        model.print_trainable_parameters()
+        model.config.use_cache = False
+        model.enable_input_require_grads()
+        
+        return model
 
     def _do_generate(
         self, 
