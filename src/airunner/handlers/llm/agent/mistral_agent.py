@@ -773,8 +773,9 @@ class MistralAgent(
     ) -> AgentChatResponse:
         self._complete_response = ""
         self.do_interrupt = False
+        message = f"{self.username}: {message}"
         kwargs = {
-            "input": message,
+            "input": f"{message}",
             "chat_history": self._memory.get_all() if self._memory else None
         }
         self._update_system_prompt()
