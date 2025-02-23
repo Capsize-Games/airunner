@@ -12,7 +12,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
 from airunner.data.models import Conversation
-
+from airunner.utils.strip_names_from_message import strip_names_from_message
 
 class ChatPromptWidget(BaseWidget):
     widget_class_ = Ui_chat_prompt
@@ -370,6 +370,11 @@ class ChatPromptWidget(BaseWidget):
         first_message=True,
         message_id=None
     ):
+        message = strip_names_from_message(
+            message, 
+            self.user.username, 
+            self.chatbot.botname
+        )
         if not first_message:
             # get the last widget from the scrollAreaWidgetContents.layout()
             # and append the message to it. must be a MessageWidget object
