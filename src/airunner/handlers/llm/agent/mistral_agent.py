@@ -786,33 +786,72 @@ class MistralAgent(
         self._update_system_prompt()
         print(self._system_prompt)
         if action is LLMActionType.CHAT:
-            self.logger.info("Performing chat call with chat_engine_tool")
-            self.chat_engine_tool.call(**kwargs)
+            self._perform_tool_call("chat_engine_tool", **kwargs)
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            self.logger.info("Performing RAG search call with rag_engine_tool")
-            response = self.rag_engine_tool.call(**kwargs)
-            if not self._rag_engine_request_successful(response):
-                return self.chat(message=message, action=LLMActionType.CHAT)
+            self._perform_tool_call("rag_engine_tool", **kwargs)
         elif action is LLMActionType.STORE_DATA:
-            self.logger.info("Performing react_tool_agent call with tool choice store_user_tool")
-            self.react_tool_agent.call(tool_choice="store_user_tool", **kwargs)
+            self._perform_tool_call("store_user_tool", **kwargs)
         else:
-            self.logger.info("Performing react_tool_agent call with tool choice use_item_from_inventory_tool")
-            self.react_tool_agent.call(tool_choice="use_item_from_inventory_tool", **kwargs)
+            self._perform_tool_call("use_item_from_inventory_tool", **kwargs)
         self._update_memory(action)
+        
+        # strip "{self.botname}: " from response
+        if self._complete_response.startswith(f"{self.botname}: "):
+            self._complete_response = self._complete_response[len(f"{self.botname}: "):]
+
         return AgentChatResponse(response=self._complete_response)
 
-    def _rag_engine_request_successful(self, response: str) -> bool:
+    def _perform_tool_call(
+        self,
+        tool_name: str,
+        **kwargs
+    ):
+        self.logger.info(f"Performing call with tool {tool_name}")
+        if tool_name == "rag_engine_tool":
+            tool_agent = self.rag_engine_tool
+        elif tool_name == "chat_engine_tool":
+            tool_agent = self.chat_engine_tool
+        else:
+            tool_agent = self.react_tool_agent
+            kwargs["tool_choice"]=tool_name
+        response = tool_agent.call(**kwargs)
+        self._handle_tool_response(tool_name, response, **kwargs)
+
+    def _handle_tool_response(
+        self, 
+        tool_name: str,
+        response: str,
+        **kwargs
+    ):
+        self.logger.info(f"Handling response from {tool_name}")
+        if tool_name == "rag_engine_tool":
+            self._handle_rag_engine_tool_response(response, **kwargs)
+        else:
+            self.logger.debug(f"Todo: handle {tool_name} response")
+
+    def _handle_rag_engine_tool_response(self, response: str, **kwargs):
         if response.content == "Empty Response":
-            conversation = self.session.query(Conversation).filter(
-                Conversation.key == self.chat_store_key
-            ).first()
-            if conversation:
-                conversation.value = conversation.value[:-2]
-                self.session.add(conversation)
-                self.session.commit()
-            return False
-        return True
+            self.logger.info("RAG Engine returned empty response")
+            self._strip_previous_messages_from_conversation()
+            self._perform_tool_call("chat_engine_tool", **kwargs)
+
+    def _get_conversation(self) -> Optional[Conversation]:
+        return self.session.query(Conversation).filter(
+            Conversation.key == self.chat_store_key
+        ).first()
+    
+    def _strip_previous_messages_from_conversation(
+        self, 
+        conversation: Conversation
+    ):
+        """
+        Strips the previous messages from the conversation.
+        """
+        conversation = self._get_conversation()
+        if conversation:
+            conversation.value = conversation.value[:-2]
+            self.session.add(conversation)
+            self.session.commit()
     
     def _update_memory(self, action: LLMActionType):
         if action is LLMActionType.CHAT:
