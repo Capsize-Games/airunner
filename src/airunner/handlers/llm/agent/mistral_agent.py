@@ -701,9 +701,7 @@ class MistralAgent(
             self._chat_memory.chat_store_key = self.conversation.key
             messages = self.chat_store.get_messages(self.conversation.key)
             if messages:
-                self._chat_memory.set([
-                    message.model_dump() for message in messages
-                ])
+                self._chat_memory.set(messages)
             if self._chat_engine:
                 self._chat_engine.memory = self._chat_memory
         self.reload_rag_engine()
