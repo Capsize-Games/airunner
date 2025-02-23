@@ -519,3 +519,12 @@ class ImagePreset(Enum):
     PHOTOGRAPH = "Photograph"
     PAINTING = "Painting"
 
+
+class SpeechT5Voices(Enum):
+    US_MALE = "US Male"
+    US_MALE_2 = "US Male 2"
+    US_FEMALE = "US Female"
+    US_FEMALE_2 = "US Female 2"
+    CANADIAN_MALE = "Canadian Male"
+    SCOTTISH_MALE = "Scottish Male"
+    INDIAN_MALE = "Indian Male"
