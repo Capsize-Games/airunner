@@ -12,7 +12,7 @@ from typing import (
 import datetime
 import platform
 from PySide6.QtCore import QObject
-from llama_index.core.tools import BaseTool, FunctionTool
+from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
 from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from llama_index.core.chat_engine.types import AgentChatResponse
 from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import (
@@ -784,19 +784,14 @@ class MistralAgent(
         response = tool_agent.call(**kwargs)
         self._handle_tool_response(tool_name, response, **kwargs)
 
-    def _handle_tool_response(
-        self, 
-        tool_name: str,
-        response: str,
-        **kwargs
-    ):
+    def _handle_tool_response(self, tool_name: str, response: ToolOutput, **kwargs):
         self.logger.info(f"Handling response from {tool_name}")
         if tool_name == "rag_engine_tool":
             self._handle_rag_engine_tool_response(response, **kwargs)
         else:
             self.logger.debug(f"Todo: handle {tool_name} response")
 
-    def _handle_rag_engine_tool_response(self, response: str, **kwargs):
+    def _handle_rag_engine_tool_response(self, response: ToolOutput, **kwargs):
         if response.content == "Empty Response":
             self.logger.info("RAG Engine returned empty response")
             self._strip_previous_messages_from_conversation()
