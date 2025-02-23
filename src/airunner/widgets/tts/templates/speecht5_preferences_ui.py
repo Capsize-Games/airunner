@@ -41,6 +41,14 @@ class Ui_speecht5_preferences(object):
         self.gridLayout_8.setHorizontalSpacing(0)
         self.gridLayout_8.setVerticalSpacing(10)
         self.gridLayout_8.setContentsMargins(10, 10, 10, 10)
+        self.label_3 = QLabel(self.preferences_groupbox)
+        self.label_3.setObjectName(u"label_3")
+        font = QFont()
+        font.setPointSize(9)
+        self.label_3.setFont(font)
+
+        self.gridLayout_8.addWidget(self.label_3, 0, 0, 1, 1)
+
         self.pitch = SliderWidget(self.preferences_groupbox)
         self.pitch.setObjectName(u"pitch")
         self.pitch.setProperty("slider_minimum", 1)
@@ -53,43 +61,7 @@ class Ui_speecht5_preferences(object):
         self.pitch.setProperty("spinbox_single_step", 0.010000000000000)
         self.pitch.setProperty("spinbox_page_step", 0.100000000000000)
 
-        self.gridLayout_8.addWidget(self.pitch, 2, 0, 1, 1)
-
-        self.label_3 = QLabel(self.preferences_groupbox)
-        self.label_3.setObjectName(u"label_3")
-        font = QFont()
-        font.setPointSize(9)
-        self.label_3.setFont(font)
-
-        self.gridLayout_8.addWidget(self.label_3, 0, 0, 1, 1)
-
-        self.volume = SliderWidget(self.preferences_groupbox)
-        self.volume.setObjectName(u"volume")
-        self.volume.setProperty("slider_minimum", 1)
-        self.volume.setProperty("slider_maximum", 100)
-        self.volume.setProperty("spinbox_minimum", 0.000000000000000)
-        self.volume.setProperty("spinbox_maximum", 1.000000000000000)
-        self.volume.setProperty("display_as_float", True)
-        self.volume.setProperty("slider_single_step", 1)
-        self.volume.setProperty("slider_page_step", 10)
-        self.volume.setProperty("spinbox_single_step", 0.010000000000000)
-        self.volume.setProperty("spinbox_page_step", 0.100000000000000)
-
-        self.gridLayout_8.addWidget(self.volume, 3, 0, 1, 1)
-
-        self.rate = SliderWidget(self.preferences_groupbox)
-        self.rate.setObjectName(u"rate")
-        self.rate.setProperty("slider_minimum", 1)
-        self.rate.setProperty("slider_maximum", 100)
-        self.rate.setProperty("spinbox_minimum", 0.000000000000000)
-        self.rate.setProperty("spinbox_maximum", 1.000000000000000)
-        self.rate.setProperty("display_as_float", True)
-        self.rate.setProperty("slider_single_step", 1)
-        self.rate.setProperty("slider_page_step", 10)
-        self.rate.setProperty("spinbox_single_step", 0.010000000000000)
-        self.rate.setProperty("spinbox_page_step", 0.100000000000000)
-
-        self.gridLayout_8.addWidget(self.rate, 1, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.pitch, 1, 0, 1, 1)
 
 
         self.gridLayout_7.addWidget(self.preferences_groupbox, 0, 0, 1, 1)
@@ -103,15 +75,8 @@ class Ui_speecht5_preferences(object):
     def retranslateUi(self, speecht5_preferences):
         speecht5_preferences.setWindowTitle(QCoreApplication.translate("speecht5_preferences", u"Form", None))
         self.preferences_groupbox.setTitle(QCoreApplication.translate("speecht5_preferences", u"SpeechT5", None))
-        self.pitch.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"speech_t5_settings.pitch", None))
-        self.pitch.setProperty("slider_callback", QCoreApplication.translate("speecht5_preferences", u"handle_value_change", None))
-        self.pitch.setProperty("label_text", QCoreApplication.translate("speecht5_preferences", u"Pitch", None))
         self.label_3.setText(QCoreApplication.translate("speecht5_preferences", u"More realistic. Slower. Uses VRAM", None))
-        self.volume.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"speech_t5_settings.volume", None))
-        self.volume.setProperty("slider_callback", QCoreApplication.translate("speecht5_preferences", u"handle_value_change", None))
-        self.volume.setProperty("label_text", QCoreApplication.translate("speecht5_preferences", u"Volume", None))
-        self.rate.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"speech_t5_settings.rate", None))
-        self.rate.setProperty("slider_callback", QCoreApplication.translate("speecht5_preferences", u"handle_value_change", None))
-        self.rate.setProperty("label_text", QCoreApplication.translate("speecht5_preferences", u"Rate", None))
+        self.pitch.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"speech_t5_settings.pitch", None))
+        self.pitch.setProperty("label_text", QCoreApplication.translate("speecht5_preferences", u"Pitch", None))
     # retranslateUi
 
