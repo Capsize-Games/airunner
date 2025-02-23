@@ -28,6 +28,7 @@ class TTSGeneratorWorker(Worker):
             (SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal),
             (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal),
             (SignalCode.TTS_MODEL_CHANGED, self._reload_tts_handler),
+            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal),
         ), **kwargs)
 
     def on_llm_text_streamed_signal(self, data):
@@ -89,6 +90,10 @@ class TTSGeneratorWorker(Worker):
             self.tts.unload()
             self._initialize_tts_handler()
             self.tts.load()
+
+    def on_application_settings_changed_signal(self, data):
+        if data and data.get("setting_name", "") == "speech_t5_settings" and data.get("column_name", "") == "voice":
+            self.tts.reload_speaker_embeddings()
 
     def _initialize_tts_handler(self):
         self.logger.info("Initializing TTS handler...")

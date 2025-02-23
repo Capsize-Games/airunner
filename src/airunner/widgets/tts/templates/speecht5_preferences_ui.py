@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QLabel,
-    QSizePolicy, QSpacerItem, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QGroupBox,
+    QLabel, QSizePolicy, QSpacerItem, QWidget)
 
 from airunner.widgets.slider.slider_widget import SliderWidget
 
@@ -61,13 +61,33 @@ class Ui_speecht5_preferences(object):
         self.pitch.setProperty("spinbox_single_step", 0.010000000000000)
         self.pitch.setProperty("spinbox_page_step", 0.100000000000000)
 
-        self.gridLayout_8.addWidget(self.pitch, 1, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.pitch, 2, 0, 1, 1)
+
+        self.groupBox = QGroupBox(self.preferences_groupbox)
+        self.groupBox.setObjectName(u"groupBox")
+        self.gridLayout = QGridLayout(self.groupBox)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.voice = QComboBox(self.groupBox)
+        self.voice.addItem("")
+        self.voice.addItem("")
+        self.voice.addItem("")
+        self.voice.addItem("")
+        self.voice.addItem("")
+        self.voice.addItem("")
+        self.voice.addItem("")
+        self.voice.setObjectName(u"voice")
+
+        self.gridLayout.addWidget(self.voice, 0, 0, 1, 1)
+
+
+        self.gridLayout_8.addWidget(self.groupBox, 1, 0, 1, 1)
 
 
         self.gridLayout_7.addWidget(self.preferences_groupbox, 0, 0, 1, 1)
 
 
         self.retranslateUi(speecht5_preferences)
+        self.voice.currentTextChanged.connect(speecht5_preferences.voice_changed)
 
         QMetaObject.connectSlotsByName(speecht5_preferences)
     # setupUi
@@ -78,5 +98,14 @@ class Ui_speecht5_preferences(object):
         self.label_3.setText(QCoreApplication.translate("speecht5_preferences", u"More realistic. Slower. Uses VRAM", None))
         self.pitch.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"speech_t5_settings.pitch", None))
         self.pitch.setProperty("label_text", QCoreApplication.translate("speecht5_preferences", u"Pitch", None))
+        self.groupBox.setTitle(QCoreApplication.translate("speecht5_preferences", u"Voice Style", None))
+        self.voice.setItemText(0, QCoreApplication.translate("speecht5_preferences", u"US Male", None))
+        self.voice.setItemText(1, QCoreApplication.translate("speecht5_preferences", u"US Male 2", None))
+        self.voice.setItemText(2, QCoreApplication.translate("speecht5_preferences", u"US Female", None))
+        self.voice.setItemText(3, QCoreApplication.translate("speecht5_preferences", u"US Female 2", None))
+        self.voice.setItemText(4, QCoreApplication.translate("speecht5_preferences", u"Canadian Male", None))
+        self.voice.setItemText(5, QCoreApplication.translate("speecht5_preferences", u"Scottish Male", None))
+        self.voice.setItemText(6, QCoreApplication.translate("speecht5_preferences", u"Indian Male", None))
+
     # retranslateUi
 

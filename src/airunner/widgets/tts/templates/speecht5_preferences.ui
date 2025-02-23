@@ -81,7 +81,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
+      <item row="2" column="0">
        <widget class="SliderWidget" name="pitch" native="true">
         <property name="slider_minimum" stdset="0">
          <number>1</number>
@@ -118,6 +118,54 @@
         </property>
        </widget>
       </item>
+      <item row="1" column="0">
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>Voice Style</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QComboBox" name="voice">
+           <item>
+            <property name="text">
+             <string>US Male</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>US Male 2</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>US Female</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>US Female 2</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Canadian Male</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Scottish Male</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Indian Male</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -132,7 +180,24 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>voice</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>speecht5_preferences</receiver>
+   <slot>voice_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>99</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>95</x>
+     <y>-9</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
  <slots>
   <slot>language_changed(QString)</slot>
   <slot>gender_changed(QString)</slot>
