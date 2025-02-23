@@ -335,7 +335,7 @@ class MistralAgent(
     @property
     def bot_mood(self) -> str:
         mood = None
-        conversation = self._get_conversation(self.session, self.chat_store_key)
+        conversation = self._get_conversation()
         if conversation:
             mood = conversation.bot_mood
         return "neutral" if mood is None or mood == "" else mood
@@ -343,14 +343,11 @@ class MistralAgent(
     @property
     def conversation(self) -> Conversation:
         if not self._conversation:
-            self._conversation = self._get_conversation(
-                session=self.session, 
-                key=self.chat_store_key
-            )
+            self._conversation = self._get_conversation()
         return self._conversation
     
     def _set_conversation_by_id(self, id: int):
-        self._conversation = self._get_conversation(self.session, id=id)
+        self._conversation = self._get_conversation(id=id)
     
     def _update_conversation(self, key: str, value: Any):
         if self._conversation:
@@ -790,15 +787,12 @@ class MistralAgent(
             self._strip_previous_messages_from_conversation()
             self._perform_tool_call("chat_engine_tool", **kwargs)
 
-    def _get_conversation(self) -> Optional[Conversation]:
-        return self.session.query(Conversation).filter(
-            Conversation.key == self.chat_store_key
-        ).first()
+    def _get_conversation(self, id: Optional[int] = None) -> Optional[Conversation]:
+        if id:
+            return self.session.query(Conversation).filter_by(id=id).first()
+        return self.session.query(Conversation).filter(Conversation.key == self.chat_store_key).first()
     
-    def _strip_previous_messages_from_conversation(
-        self, 
-        conversation: Conversation
-    ):
+    def _strip_previous_messages_from_conversation(self):
         """
         Strips the previous messages from the conversation.
         """
@@ -816,19 +810,10 @@ class MistralAgent(
         else:
             memory = self.react_tool_agent.chat_engine.memory
         self._memory = memory
-    
-    def _get_conversation(self, session, key: Optional[str] = None, id: Optional[int] = None) -> Optional[Conversation]:
-        if id:
-            return session.query(Conversation).filter_by(
-                id=id
-            ).first()
-        return session.query(Conversation).filter_by(
-            key=key
-        ).first()
 
     def _update_mood(self):
         self.logger.info("Attempting to update mood")
-        conversation = self._get_conversation(self.session, self.chat_store_key)
+        conversation = self._get_conversation()
         if not conversation or not conversation.value or len(conversation.value) == 0:
             self.logger.info("No conversation found")
             return
@@ -876,7 +861,7 @@ class MistralAgent(
     
     def _update_user_data(self):
         self.logger.info("Attempting to update user preferences")
-        conversation = self._get_conversation(self.session, self.chat_store_key)
+        conversation = self._get_conversation()
         self.logger.info("Updating user preferences")
         chat_history = self._memory.get_all() if self._memory else None
         if not chat_history:
@@ -895,7 +880,6 @@ class MistralAgent(
             do_not_display=True, 
             **kwargs
         )
-        chat_history = chat_history[:-2]
         self.logger.info(f"Updated user data: {response.content}")
         self.logger.info(f"Saving user with data: {response.content}")
         conversation.user_data = [response.content] + (
@@ -905,7 +889,7 @@ class MistralAgent(
     
     def _summarize_conversation(self):
         self.logger.info("Summarizing conversation")
-        conversation = self._get_conversation(self.session, self.chat_store_key)
+        conversation = self._get_conversation()
         if not conversation or not conversation.value or len(conversation.value) == 0:
             self.logger.info("No conversation found")
             return
@@ -923,8 +907,7 @@ class MistralAgent(
             input="Provide a brief summary of this conversation",
             chat_history=chat_history
         )
-        chat_history = chat_history[:-2]
-        self.logger.info(f"Updated summary: {response.content}")
+        self.logger.info("Updated summary")
         conversation.summary = response.content
         conversation.value = conversation.value[:-2]
         self.logger.info(f"Saving conversation with summary: {response.content}")
@@ -938,7 +921,7 @@ class MistralAgent(
             input=message,
             chat_history=self._memory.get_all() if self._memory else None
         )
-            # conversation = self._get_conversation(session, self.chat_store_key)
+            # conversation = self._get_conversation()
             # if not conversation or not conversation.value or len(conversation.value) == 0:
             #     self.logger.info("No conversation found")
             #     return
