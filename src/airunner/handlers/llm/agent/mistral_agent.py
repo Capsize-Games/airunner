@@ -112,8 +112,8 @@ class MistralAgent(
             self.session.commit()
         return user
 
-    def _update_user(self, property: str, value: Any):
-        setattr(self.user, property, value)
+    def _update_user(self, key: str, value: Any):
+        setattr(self.user, key, value)
         self.session.add(self.user)
         self.session.commit()
 
@@ -346,8 +346,8 @@ class MistralAgent(
             self._conversation = self._get_conversation()
         return self._conversation
     
-    def _set_conversation_by_id(self, id: int):
-        self._conversation = self._get_conversation(id=id)
+    def _set_conversation_by_id(self, conversation_id: int):
+        self._conversation = self._get_conversation(conversation_id=conversation_id)
     
     def _update_conversation(self, key: str, value: Any):
         if self._conversation:
@@ -785,9 +785,9 @@ class MistralAgent(
             self._strip_previous_messages_from_conversation()
             self._perform_tool_call("chat_engine_tool", **kwargs)
 
-    def _get_conversation(self, id: Optional[int] = None) -> Optional[Conversation]:
-        if id:
-            return self.session.query(Conversation).filter_by(id=id).first()
+    def _get_conversation(self, conversation_id: Optional[int] = None) -> Optional[Conversation]:
+        if conversation_id:
+            return self.session.query(Conversation).filter_by(id=conversation_id).first()
         return self.session.query(Conversation).filter(Conversation.key == self.chat_store_key).first()
     
     def _strip_previous_messages_from_conversation(self):
