@@ -108,11 +108,9 @@ class MainWindow(
     def __init__(
         self,
         *args,
-        defendatron=None,
         **kwargs
     ):
         self.ui = self.ui_class_()
-        self.defendatron = defendatron
         self.quitting = False
         self.update_popup = None
         self._document_path = None
