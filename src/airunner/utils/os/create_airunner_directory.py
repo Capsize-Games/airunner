@@ -1,6 +1,6 @@
 import os
 
-from airunner.data.models.settings_models import PathSettings
+from airunner.data.models import PathSettings
 
 
 def create_airunner_paths(path_settings: PathSettings):

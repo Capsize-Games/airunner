@@ -47,7 +47,6 @@ class SignalCode(Enum):
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"
     AI_MODELS_CREATE_SIGNAL = "ai_models_create_signal"
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
-    WINDOW_LOADED_SIGNAL = "window_loaded_signal"
     APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"
     APPLICATION_MODELS_CHANGED_SIGNAL = "models_changed_signal"
     APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL = "clear_status_message_signal"
@@ -194,7 +193,6 @@ class SignalCode(Enum):
     BASH_EXECUTE_SIGNAL = "bash_execute_signal"
     WRITE_FILE = "write_file_signal"
     LLM_CHOOSE_RESPONSE_LENGTH_SIGNAL = "choose_response_length_signal"
-    PROCESS_SPEECH_SIGNAL = "process_speech_signal"
     ADD_CHATBOT_MESSAGE_SIGNAL = "add_chatbot_message_signal"
     DOWNLOAD_PROGRESS = "download_progress"
     UPDATE_DOWNLOAD_LOG = "update_download_log"
@@ -249,8 +247,13 @@ class SignalCode(Enum):
     LOAD_NON_SD_MODELS = enum.auto()
 
     SD_PIPELINE_LOADED_SIGNAL = enum.auto()
+    MISSING_REQUIRED_MODELS = enum.auto()
+
+    DELETE_MESSAGES_AFTER_ID = enum.auto()
+    TTS_MODEL_CHANGED = enum.auto()
 
 class EngineResponseCode(Enum):
+    NONE = 0
     STATUS = 100
     ERROR = 200
     WARNING = 300
@@ -350,6 +353,7 @@ class LLMActionType(Enum):
     based on the user's words.
     """
     # DO_NOT_RESPOND = "DO NOTHING: Choose this action if none of the other actions apply to the user's request."
+    NONE = "None"
     CHAT = "RESPOND: Choose this action if you want to respond to the user."
     GENERATE_IMAGE = "GENERATE IMAGE: Choose this action if you want to generate an image."
     APPLICATION_COMMAND = "APPLICATION_COMMAND"
@@ -360,6 +364,8 @@ class LLMActionType(Enum):
     PERFORM_RAG_SEARCH = "SEARCH: If the user requests that you search for information, choose this action."
     SUMMARIZE = "SUMMARIZE"
     DO_NOTHING = "DO NOTHING: If the user's request is unclear or you are unable to determine the user's intent, choose this action."
+    GET_WEATHER = "get_weather"
+    STORE_DATA = "store_data"
 
 
 
@@ -513,3 +519,12 @@ class ImagePreset(Enum):
     PHOTOGRAPH = "Photograph"
     PAINTING = "Painting"
 
+
+class SpeechT5Voices(Enum):
+    US_MALE = "US Male"
+    US_MALE_2 = "US Male 2"
+    US_FEMALE = "US Female"
+    US_FEMALE_2 = "US Female 2"
+    CANADIAN_MALE = "Canadian Male"
+    SCOTTISH_MALE = "Scottish Male"
+    INDIAN_MALE = "Indian Male"

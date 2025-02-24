@@ -44,6 +44,17 @@ model_bootstrap_data = [
         "is_default": True
     },
     {
+        "name": "SDXL Inpaint",
+        "path": "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+        "branch": "fp16",
+        "version": "SDXL 1.0",
+        "category": "stablediffusion",
+        "pipeline_action": "inpaint",
+        "enabled": True,
+        "model_type": "art",
+        "is_default": True
+    },
+    {
         "name": "CompVis Safety Checker",
         "path": "CompVis/stable-diffusion-safety-checker",
         "branch": "main",
@@ -78,11 +89,22 @@ model_bootstrap_data = [
     },
     {
         "name": "Mistral 7B Instruct v3",
-        "path": "w4ffl35/Mistral-7B-Instruct-v0.3-4bit",
+        "path": "w4ffl35/Ministral-8B-Instruct-2410-doublequant",
         "branch": "main",
         "version": "0.3",
         "category": "llm",
         "pipeline_action": "causallm",
+        "enabled": True,
+        "model_type": "llm",
+        "is_default": True
+    },
+    {
+        "name": "Intfloat E5 Large",
+        "path": "intfloat/e5-large",
+        "branch": "main",
+        "version": "llm",
+        "category": "llm",
+        "pipeline_action": "embedding",
         "enabled": True,
         "model_type": "llm",
         "is_default": True

@@ -1,6 +1,6 @@
 from PySide6.QtCore import Slot
 
-from airunner.data.models.settings_models import User
+from airunner.data.models import User
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.user.templates.user_settings_ui import Ui_user_settings_widget
 

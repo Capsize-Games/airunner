@@ -4,9 +4,11 @@ import nltk
 from PySide6.QtCore import QObject, QThread, Slot, Signal
 from sqlalchemy import func
 
-from airunner.data.models.settings_models import AIModels, ControlnetModel
+from airunner.data.models import AIModels, ControlnetModel
+from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
 from airunner.data.bootstrap.sd_file_bootstrap_data import SD_FILE_BOOTSTRAP_DATA
+from airunner.data.bootstrap.tiny_autoencoder import TINY_AUTOENCODER_FILES_SD, TINY_AUTOENCODER_FILES_SDXL
 from airunner.data.bootstrap.llm_file_bootstrap_data import LLM_FILE_BOOTSTRAP_DATA
 from airunner.data.bootstrap.whisper import WHISPER_FILES
 from airunner.data.bootstrap.speech_t5 import SPEECH_T5_FILES
@@ -17,7 +19,6 @@ from airunner.utils.network.huggingface_downloader import HuggingfaceDownloader
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.windows.setup_wizard.installation_settings.templates.install_page_ui import Ui_install_page
-from airunner.settings import DEFAULT_PATH_SETTINGS
 from airunner.utils.os.create_airunner_directory import create_airunner_paths
 
 nltk.data.path.append(NLTK_DOWNLOAD_DIR)
@@ -81,40 +82,86 @@ class InstallWorker(
             "label": "Downloading Stable Diffusion models..."
         })
 
-        
-        models = self.session.query(AIModels).filter(
-            AIModels.category == "stablediffusion",
-            AIModels.is_default == 1,
-            AIModels.version != "SDXL Turbo"
-        ).all()
-        
+        models = model_bootstrap_data        
 
         self.total_models_in_current_step += len(models)
         for model in models:
-            if model.name == "CompVis Safety Checker":
+            if model["name"] == "CompVis Safety Checker":
                 action_key = "safety_checker"
-                action = f"{model.pipeline_action}/{action_key}"
-            elif model.name == "OpenAI Feature Extractor":
+                action = f"{model['pipeline_action']}/{action_key}"
+            elif model["name"] == "OpenAI Feature Extractor":
                 action_key = "feature_extractor"
-                action = f"{model.pipeline_action}/{action_key}"
+                action = f"{model['pipeline_action']}/{action_key}"
             else:
-                action = model.pipeline_action
-                action_key = model.pipeline_action
-            files = SD_FILE_BOOTSTRAP_DATA[model.version][action_key]
+                action = model["pipeline_action"]
+                action_key = model["pipeline_action"]
+            try:
+                files = SD_FILE_BOOTSTRAP_DATA[model['version']][action_key]
+            except KeyError:
+                continue
             self.parent.total_steps += len(files)
             for filename in files:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
                         self.path_settings.base_path,
-                        model.model_type,
+                        model["model_type"],
                         "models",
-                        model.version,
+                        model["version"],
                         action
                     )
                 )
                 try:
                     self.hf_downloader.download_model(
-                        requested_path=model.path,
+                        requested_path=model["path"],
+                        requested_file_name=filename,
+                        requested_file_path=requested_file_path,
+                        requested_callback=self.progress_updated.emit
+                    )
+                except Exception as e:
+                    print(f"Error downloading {filename}: {e}")
+    
+    def download_tiny_autoencoders(self):
+        self.parent.on_set_downloading_status_label({
+            "label": "Downloading Tiny Autoencoders..."
+        })
+        self.total_models_in_current_step += len(TINY_AUTOENCODER_FILES_SD["madebyollin/taesd"])
+        self.total_models_in_current_step += len(TINY_AUTOENCODER_FILES_SDXL["madebyollin/sdxl-vae-fp16-fix"])
+        for k, v in TINY_AUTOENCODER_FILES_SD.items():
+            for filename in v:
+                requested_file_path = os.path.expanduser(
+                    os.path.join(
+                        self.path_settings.base_path,
+                        "art",
+                        "models",
+                        "SD 1.5",
+                        "tiny_autoencoder",
+                        k
+                    )
+                )
+                try:
+                    self.hf_downloader.download_model(
+                        requested_path=k,
+                        requested_file_name=filename,
+                        requested_file_path=requested_file_path,
+                        requested_callback=self.progress_updated.emit
+                    )
+                except Exception as e:
+                    print(f"Error downloading {filename}: {e}")
+        for k, v in TINY_AUTOENCODER_FILES_SDXL.items():
+            for filename in v:
+                requested_file_path = os.path.expanduser(
+                    os.path.join(
+                        self.path_settings.base_path,
+                        "art",
+                        "models",
+                        "SDXL 1.0",
+                        "tiny_autoencoder",
+                        k
+                    )
+                )
+                try:
+                    self.hf_downloader.download_model(
+                        requested_path=k,
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
                         requested_callback=self.progress_updated.emit
@@ -201,15 +248,10 @@ class InstallWorker(
                 print(f"Error downloading {filename}: {e}")
 
     def download_llms(self):
-        
-        models = self.session.query(AIModels).filter(
-            AIModels.category == "llm",
-            AIModels.is_default == 1
-        ).all()
-        
+        models = [model for model in model_bootstrap_data if model["category"] == "llm"]
         self.total_models_in_current_step += len(models)
         for model in models:
-            files = LLM_FILE_BOOTSTRAP_DATA[model.path]["files"]
+            files = LLM_FILE_BOOTSTRAP_DATA[model["path"]]["files"]
             self.parent.total_steps += len(files)
             for filename in files:
                 requested_file_path = os.path.expanduser(
@@ -217,14 +259,14 @@ class InstallWorker(
                         self.path_settings.base_path,
                         "text",
                         "models",
-                        model.category,
-                        model.pipeline_action,
-                        model.path
+                        model["category"],
+                        model["pipeline_action"],
+                        model["path"]
                     )
                 )
                 try:
                     self.hf_downloader.download_model(
-                        requested_path=model.path,
+                        requested_path=model["path"],
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
                         requested_callback=self.progress_updated.emit
@@ -360,6 +402,7 @@ class InstallWorker(
             })
             self.current_step = 1
             self.download_stable_diffusion()
+            self.download_tiny_autoencoders()
         elif (
             self.application_settings.stable_diffusion_agreement_checked and
             self.current_step == 1
@@ -432,6 +475,8 @@ class InstallPage(BaseWizard):
         llm_model_count = self.session.query(func.count(AIModels.id)).filter(AIModels.category == 'llm').scalar()
 
         self.total_steps += controlnet_model_count * controlnet_version_count
+        self.total_steps += len(TINY_AUTOENCODER_FILES_SD["madebyollin/taesd"])
+        self.total_steps += len(TINY_AUTOENCODER_FILES_SDXL["madebyollin/sdxl-vae-fp16-fix"])
         self.total_steps += llm_model_count
         self.total_steps += len(SPEECH_T5_FILES["microsoft/speecht5_tts"])
         self.total_steps += len(WHISPER_FILES["openai/whisper-tiny"])

@@ -14,8 +14,7 @@ class PathSettings(BaseWizard):
 
     def __init__(self, *args):
         super(PathSettings, self).__init__(*args)
-
-        self.ui.base_path.setText(BASE_PATH)
+        self.ui.base_path.setText(self.path_settings.base_path)
 
     @Slot()
     def browse_files(self):

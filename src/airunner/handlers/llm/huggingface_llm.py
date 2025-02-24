@@ -37,8 +37,9 @@ from transformers import (
 )
 
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.utils.prepare_llm_generate_kwargs import prepare_llm_generate_kwargs
 
-DEFAULT_HUGGINGFACE_MODEL = "StabilityAI/stablelm-tuned-alpha-3b"
+DEFAULT_HUGGINGFACE_MODEL = "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
 
 
 class HuggingFaceLLM(CustomLLM, SettingsMixin):
@@ -109,6 +110,10 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             "Unused if `model` is passed in directly."
         ),
     )
+    model: Optional[Any] = Field(
+        default=None,
+        description="The model to use. If not passed in, will be loaded from `model_name`.",
+    )
     context_window: int = Field(
         default=DEFAULT_CONTEXT_WINDOW,
         description="The maximum number of tokens available for input.",
@@ -165,10 +170,14 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         default_factory=dict,
         description="The kwargs to pass to the model during initialization.",
     )
-    generate_kwargs: dict = Field(
-        default_factory=dict,
-        description="The kwargs to pass to the model during generation.",
-    )
+
+    @property
+    def generate_kwargs(self) -> dict:
+        """The generate kwargs to use."""
+        generate_kwargs = prepare_llm_generate_kwargs(self.llm_generator_settings)
+        print(generate_kwargs)
+        return generate_kwargs
+        
     is_chat_model: bool = Field(
         default=False,
         description=(
@@ -182,6 +191,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
     _model: Any = PrivateAttr()
     _tokenizer: Any = PrivateAttr()
     _stopping_criteria: Any = PrivateAttr()
+    _streaming_stopping_criteria: Any = PrivateAttr(default=None)
 
     def __init__(
         self,
@@ -205,6 +215,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         completion_to_prompt: Optional[Callable[[str], str]] = None,
         pydantic_program_mode: PydanticProgramMode = PydanticProgramMode.DEFAULT,
         output_parser: Optional[BaseOutputParser] = None,
+        streaming_stopping_criteria: Optional[StoppingCriteria] = None,
     ) -> None:
         """Initialize params."""
         model_kwargs = model_kwargs or {}
@@ -230,12 +241,6 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         tokenizer = tokenizer or AutoTokenizer.from_pretrained(
             tokenizer_name, **tokenizer_kwargs
         )
-
-        if tokenizer.name_or_path != model_name:
-            self.logger.warning(
-                f"The model `{model_name}` and tokenizer `{tokenizer.name_or_path}` "
-                f"are different, please ensure that they are compatible."
-            )
 
         # setup stopping criteria
         stopping_ids_list = stopping_ids or []
@@ -283,6 +288,15 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         self._model = model
         self._tokenizer = tokenizer
         self._stopping_criteria = stopping_criteria
+        self._streaming_stopping_criteria = StoppingCriteriaList([streaming_stopping_criteria, StopOnTokens()])
+    
+    @property
+    def model(self):
+        return self._model
+    
+    @property
+    def tokenizer(self):
+        return self._tokenizer
 
     @classmethod
     def class_name(cls) -> str:
@@ -296,6 +310,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             num_output=self.max_new_tokens,
             model_name=self.model_name,
             is_chat_model=self.is_chat_model,
+            is_function_calling_model=True
         )
 
     def unload(self):
@@ -343,7 +358,6 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
 
         tokens = self._model.generate(
             **inputs,
-            max_new_tokens=self.max_new_tokens,
             stopping_criteria=self._stopping_criteria,
             **self.generate_kwargs,
         )
@@ -379,6 +393,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         )
         generation_kwargs = dict(
             inputs,
+            stopping_criteria=self._streaming_stopping_criteria,
             **self.generate_kwargs,
         )
         generation_kwargs["streamer"] = streamer

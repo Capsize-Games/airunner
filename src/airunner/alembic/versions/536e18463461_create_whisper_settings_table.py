@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import sqlite
 
-from airunner.data.models.settings_models import WhisperSettings
+from airunner.data.models import WhisperSettings
 
 # revision identifiers, used by Alembic.
 revision: str = '536e18463461'

@@ -2,13 +2,15 @@ import os
 import re
 import time
 from queue import Queue
+from typing import Optional
 
 import inflect
 import torch
 from transformers import AutoTokenizer
+from datasets import load_dataset
 
 from airunner.handlers.tts.tts_handler import TTSHandler
-from airunner.enums import SignalCode, LLMChatRole, ModelType, ModelStatus
+from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
 from airunner.utils.clear_memory import clear_memory
 
 
@@ -216,17 +218,62 @@ class SpeechT5TTSHandler(TTSHandler):
 
     def _load_speaker_embeddings(self):
         self.logger.debug("Loading speaker embeddings...")
-
-        try:
-            self._speaker_embeddings = torch.load(
-                self.speaker_embeddings_path
+        speakers = {
+            SpeechT5Voices.US_MALE.value: "bdl",
+            SpeechT5Voices.US_MALE_2.value: "rms",
+            SpeechT5Voices.US_FEMALE.value: "slt",
+            SpeechT5Voices.US_FEMALE_2.value: "clb",
+            SpeechT5Voices.CANADIAN_MALE.value: "jmk",
+            SpeechT5Voices.SCOTTISH_MALE.value: "awb",
+            SpeechT5Voices.INDIAN_MALE.value: "ksp",
+        }
+        embeddings_dataset = load_dataset(
+            "Matthijs/cmu-arctic-xvectors",
+            split="validation"
+        )
+        speaker_key = speakers[self.speech_t5_settings.voice]
+        embeddings = self._load_dataset_by_speaker_key(
+            speaker_key,
+            embeddings_dataset
+        )
+        if embeddings is None:
+            self.logger.error(
+                "Failed to load speaker embeddings. Using fallback"
             )
-            if self.use_cuda and self._speaker_embeddings is not None:
-                self._speaker_embeddings = self._speaker_embeddings.to(torch.bfloat16).cuda()  # Change to bfloat16
+            embeddings = self._load_dataset_by_speaker_key(
+                "slt",
+                embeddings_dataset
+            )
 
-        except Exception as e:
+        self._speaker_embeddings = embeddings
+        if self._speaker_embeddings is not None:
+            if self.use_cuda:
+                self.logger.info("Moving speaker embeddings to CUDA")
+                self._speaker_embeddings = self._speaker_embeddings.to(
+                    torch.bfloat16
+                ).cuda()
+        else:
             self.logger.error("Failed to load speaker embeddings")
-            self.logger.error(e)
+        
+    def _extract_speaker_key(self, filename):
+        return filename.split("_")[2]
+
+    def _load_dataset_by_speaker_key(
+        self, 
+        speaker_key: str,
+        embeddings_dataset: Optional[torch.Tensor] = None
+    ) -> Optional[torch.Tensor]:
+        embeddings = None
+        for entry in embeddings_dataset:
+            speaker = self._extract_speaker_key(entry["filename"])
+            if speaker_key == speaker:
+                embeddings = torch.tensor(entry["xvector"]).unsqueeze(0)
+                break
+        return embeddings
+
+    def reload_speaker_embeddings(self):
+        self._unload_speaker_embeddings()
+        self._load_speaker_embeddings()
 
     def _unload_speaker_embeddings(self):
         self._speaker_embeddings = None
@@ -269,10 +316,6 @@ class SpeechT5TTSHandler(TTSHandler):
         if not self._cancel_generated_speech:
             self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
             response = speech.cpu().float().numpy()
-            self.emit_signal(SignalCode.PROCESS_SPEECH_SIGNAL, {
-                "message": text,
-                "role": LLMChatRole.ASSISTANT
-            })
             return response
         if not self._do_interrupt:
             self.logger.debug("Skipping generated speech: " + text)
@@ -330,6 +373,13 @@ class SpeechT5TTSHandler(TTSHandler):
         # reliable way to handle the word "I" and distinguish it from the Roman numeral "I"
         # text = self._roman_to_int(text)
         text = self._replace_numbers_with_words(text)
+        text = self._replace_misc_with_words(text)
+        return text
+
+    def _replace_misc_with_words(self, text) -> str:
+        text = text.replace("°F", "degrees Fahrenheit")
+        text = text.replace("°C", "degrees Celsius")
+        text = text.replace("°", "degrees")
         return text
 
     @staticmethod

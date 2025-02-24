@@ -1,8 +1,8 @@
 # airunner/widgets/llm/llm_history_widget.py
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QHBoxLayout, QWidget, QLabel
+from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 
-from airunner.data.models.settings_models import Message, LLMGeneratorSettings
+from airunner.data.models import LLMGeneratorSettings
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_history_item_ui import Ui_llm_history_item_widget
@@ -18,20 +18,17 @@ class LLMHistoryItemWidget(BaseWidget):
 
         self.ui.conversation_description.setText(self.conversation.title)
 
-        first_message = self.session.query(Message).filter_by(conversation_id=self.conversation.id).first()
         chatbot_name = "Unknown"
-        if first_message and first_message.chatbot_id:
-            chatbot = self.get_chatbot_by_id(first_message.chatbot_id)
-            if chatbot:
-                chatbot_name = chatbot.name
+        chatbot = self.get_chatbot_by_id(self.conversation.chatbot_id)
+        if chatbot:
+            chatbot_name = chatbot.name
 
         self.ui.botname.setText(chatbot_name)
         self.ui.timestamp.setText(str(self.conversation.timestamp))
 
     @Slot()
     def action_load_conversation_clicked(self):
-        first_message = self.session.query(Message).filter_by(conversation_id=self.conversation.id).first()
-        chatbot_id = first_message.chatbot_id
+        chatbot_id = self.conversation.chatbot_id
         self.session.query(LLMGeneratorSettings).update({"current_chatbot": chatbot_id})
         self.session.commit()
         self.emit_signal(SignalCode.LOAD_CONVERSATION, {

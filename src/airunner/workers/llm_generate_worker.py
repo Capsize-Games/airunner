@@ -1,4 +1,5 @@
 import threading
+from typing import Dict, Optional
 
 from airunner.handlers.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
 from airunner.enums import SignalCode
@@ -27,6 +28,7 @@ class LLMGenerateWorker(Worker):
 
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")
+        self.running = False
         if self.llm:
             self.llm.unload()
         if self._llm_thread is not None:
@@ -46,9 +48,9 @@ class LLMGenerateWorker(Worker):
     def on_llm_load_model_signal(self, data):
         self._load_llm_thread(data)
 
-    def on_llm_clear_history_signal(self):
+    def on_llm_clear_history_signal(self, data:Optional[Dict] = None):
         if self.llm:
-            self.llm.clear_history()
+            self.llm.clear_history(data)
 
     def on_llm_request_signal(self, message: dict):
         self.add_to_queue(message)
@@ -59,7 +61,7 @@ class LLMGenerateWorker(Worker):
 
     def on_llm_reload_rag_index_signal(self):
         if self.llm:
-            self.llm.reload_rag()
+            self.llm.reload_rag_engine()
 
     def on_llm_add_chatbot_response_to_history(self, message):
         self.llm.add_chatbot_response_to_history(message)

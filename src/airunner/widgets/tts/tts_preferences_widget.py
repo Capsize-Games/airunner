@@ -1,3 +1,4 @@
+from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.tts.templates.tts_preferences_ui import Ui_tts_preferences
 
@@ -34,7 +35,13 @@ class TTSPreferencesWidget(BaseWidget):
     def model_changed(self, val):
         self.update_tts_settings("model", val)
         self._set_model_settings(val)
+        self.emit_signal(SignalCode.TTS_MODEL_CHANGED, {
+            "model": val
+        })
 
     def _set_model_settings(self, tts_model):
         self.ui.speecht5_preferences.setVisible(tts_model == "SpeechT5")
         self.ui.espeak_preferences.setVisible(tts_model == "Espeak")
+
+    def handle_value_change(self, prop, val):
+        print(prop, val)
