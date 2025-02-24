@@ -46,7 +46,7 @@ class App(
     def __init__(
         self,
         main_window_class: QWindow = None,
-        defendatron=None
+        headless: bool = False
     ):
         """
         Initialize the application and run as a GUI application or a socket server.
@@ -54,7 +54,6 @@ class App(
         """
         self.main_window_class_ = main_window_class or MainWindow
         self.app = None
-        self.defendatron = defendatron
         self.splash = None
 
         """
@@ -244,9 +243,7 @@ class App(
         :return:
         """
         try:
-            window = self.main_window_class_(
-                defendatron=self.defendatron
-            )
+            window = self.main_window_class_()
         except Exception as e:
             traceback.print_exc()
             print(e)

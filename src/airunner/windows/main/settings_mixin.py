@@ -5,6 +5,7 @@ from typing import List, Type, Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import joinedload, sessionmaker, scoped_session
+import sqlite3
 
 from airunner.data.models import (
     Chatbot, 
@@ -498,7 +499,10 @@ class SettingsMixin:
         setting = self.session.query(model_class_).order_by(model_class_.id.desc()).first()
         if setting:
             setattr(setting, name, value)
-            self.session.commit()
+            try:
+                self.session.commit()
+            except sqlite3.OperationalError as e:
+                self.logger.error(f"Error updating setting: {e}")
 
     def save_generator_settings(self, generator_settings: GeneratorSettings):
         query = self.session.query(GeneratorSettings).filter_by(

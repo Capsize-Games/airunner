@@ -10,18 +10,9 @@ Do not change the order of the imports.
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
-# import facehuggershield
 from airunner.settings import DB_PATH
 import os
 base_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
-# facehuggershield.huggingface.activate(
-#     show_stdout=True,
-#     darklock_os_whitelisted_directories=[
-#         base_path,
-#         NLTK_DOWNLOAD_DIR,
-#         "/tmp"
-#     ]
-# )
 
 ################################################################
 # Set the environment variable for PyTorch to use expandable
@@ -67,7 +58,8 @@ def run_setup_wizard():
 def main():
     setup_database()
 
-    # Get the first ApplicationSettings record from the database and check for run_setup_wizard boolean
+    # Get the first ApplicationSettings record from the database and 
+    # check for run_setup_wizard boolean
     engine = create_engine(f"sqlite:///{DB_PATH}")
     session = scoped_session(sessionmaker(bind=engine))
     application_settings = session.query(ApplicationSettings).first()
@@ -75,7 +67,7 @@ def main():
     if application_settings.run_setup_wizard:
         run_setup_wizard()
     else:
-        App()
+        App(headless=True)
 
 
 if __name__ == "__main__":
