@@ -67,7 +67,7 @@ def main():
     if application_settings.run_setup_wizard:
         run_setup_wizard()
     else:
-        App(headless=True)
+        App()
 
 
 if __name__ == "__main__":

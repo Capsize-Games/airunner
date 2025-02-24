@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
     QApplication,
     QSplashScreen
 )
-from sqlalchemy import distinct
 
 from airunner.app_installer import AppInstaller
 from airunner.enums import SignalCode
@@ -45,8 +44,7 @@ class App(
     """
     def __init__(
         self,
-        main_window_class: QWindow = None,
-        headless: bool = False
+        main_window_class: QWindow = None
     ):
         """
         Initialize the application and run as a GUI application or a socket server.
@@ -162,7 +160,6 @@ class App(
 
         Override this method to run the application in a different mode.
         """
-
         # Continue with application execution
         self.splash = self.display_splash_screen(self.app)
 
