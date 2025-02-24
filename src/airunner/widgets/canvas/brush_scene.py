@@ -7,7 +7,7 @@ from PySide6.QtGui import QPen, QPixmap, QPainter
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QGraphicsPixmapItem
 
-from airunner.data.models.settings_models import DrawingPadSettings
+from airunner.data.models import DrawingPadSettings
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
 from airunner.utils.image.convert_image_to_binary import convert_image_to_binary

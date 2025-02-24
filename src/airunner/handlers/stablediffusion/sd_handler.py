@@ -15,25 +15,58 @@ from PIL import (
 from PIL.Image import Image
 from PySide6.QtCore import QRect, Slot
 from PySide6.QtWidgets import QApplication
-from compel import Compel, DiffusersTextualInversionManager, ReturnedEmbeddingsType
+from compel import (
+    Compel, 
+    DiffusersTextualInversionManager, 
+    ReturnedEmbeddingsType
+)
 from controlnet_aux.processor import MODELS as controlnet_aux_models
-from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline, StableDiffusionInpaintPipeline, \
-    StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline, \
-    StableDiffusionControlNetInpaintPipeline, StableDiffusionXLPipeline, StableDiffusionXLImg2ImgPipeline, \
-    StableDiffusionXLInpaintPipeline, StableDiffusionXLControlNetPipeline, StableDiffusionXLControlNetImg2ImgPipeline, \
-    StableDiffusionXLControlNetInpaintPipeline, ControlNetModel
+from diffusers import (
+    StableDiffusionPipeline, 
+    StableDiffusionImg2ImgPipeline,
+    StableDiffusionInpaintPipeline,
+    StableDiffusionControlNetPipeline,
+    StableDiffusionControlNetImg2ImgPipeline,
+    StableDiffusionControlNetInpaintPipeline,
+    StableDiffusionXLPipeline,
+    StableDiffusionXLImg2ImgPipeline,
+    StableDiffusionXLInpaintPipeline,
+    StableDiffusionXLControlNetPipeline,
+    StableDiffusionXLControlNetImg2ImgPipeline,
+    StableDiffusionXLControlNetInpaintPipeline,
+    ControlNetModel,
+    AutoencoderTiny,
+    AutoencoderKL
+)
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-from transformers import CLIPFeatureExtractor
-
+from transformers import (
+    CLIPFeatureExtractor, 
+    CLIPTextModel, 
+    CLIPTextModelWithProjection
+)
+from transformers import BitsAndBytesConfig as TransformersBitsAndBytesConfig
 from airunner.handlers.base_handler import BaseHandler
-from airunner.data.models.settings_models import Schedulers, Lora, Embedding, ControlnetModel, AIModels, \
-    GeneratorSettings
+from airunner.data.models import (
+    Schedulers, 
+    Lora, 
+    Embedding, 
+    ControlnetModel, 
+    AIModels
+)
 from airunner.enums import (
-    SDMode, StableDiffusionVersion, GeneratorSection, ModelStatus, ModelType, SignalCode, HandlerState,
-    EngineResponseCode, ModelAction
+    SDMode, 
+    StableDiffusionVersion, 
+    GeneratorSection, 
+    ModelStatus, 
+    ModelType, 
+    SignalCode, 
+    HandlerState,
+    EngineResponseCode, 
+    ModelAction
 )
 from airunner.exceptions import PipeNotLoadedException, InterruptedException
-from airunner.handlers.stablediffusion.prompt_weight_bridge import PromptWeightBridge
+from airunner.handlers.stablediffusion.prompt_weight_bridge import \
+    PromptWeightBridge
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils.clear_memory import clear_memory
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
@@ -48,15 +81,15 @@ SKIP_RELOAD_CONSTS = (
 
 
 class SDHandler(BaseHandler):
-    def  __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._controlnet_model = None
-        self._controlnet: ControlNetModel = None
+        self._controlnet: Optional[ControlNetModel] = None
         self._controlnet_processor: Any = None
         self.model_type = ModelType.SD
-        self._safety_checker:StableDiffusionSafetyChecker = None
-        self._feature_extractor:CLIPFeatureExtractor = None
-        self._memory_settings_flags:dict = {
+        self._safety_checker: Optional[StableDiffusionSafetyChecker] = None
+        self._feature_extractor: Optional[CLIPFeatureExtractor] = None
+        self._memory_settings_flags: dict = {
             "torch_compile_applied": False,
             "vae_slicing_applied": None,
             "last_channels_applied": None,
@@ -71,29 +104,30 @@ class SDHandler(BaseHandler):
             "enable_model_cpu_offload": None,
             "use_tome_sd": None,
         }
-        self._prompt_embeds = None
-        self._negative_prompt_embeds = None
-        self._pooled_prompt_embeds = None
-        self._negative_pooled_prompt_embeds = None
+        self._prompt_embeds: Optional[torch.Tensor] = None
+        self._negative_prompt_embeds: Optional[torch.Tensor] = None
+        self._pooled_prompt_embeds: Optional[torch.Tensor] = None
+        self._negative_pooled_prompt_embeds: Optional[torch.Tensor] = None
         self._pipe = None
-        self._current_prompt:str = ""
+        self._current_prompt: str = ""
         self._current_negative_prompt: str = ""
         self._current_prompt_2: str = ""
         self._current_negative_prompt_2: str = ""
-        self._generator = None
+        self._generator: Optional[torch.Generator] = None
         self._latents = None
-        self._textual_inversion_manager: DiffusersTextualInversionManager = None
-        self._compel_proc: Compel = None
+        self._textual_inversion_manager: Optional[DiffusersTextualInversionManager] = None
+        self._compel_proc: Optional[Compel] = None
         self._loaded_lora: Dict = {}
         self._disabled_lora: List = []
         self._loaded_embeddings: List = []
         self._current_state: HandlerState = HandlerState.UNINITIALIZED
-        self._deep_cache_helper: DeepCacheSDHelper = None
-        self.do_interrupt_image_generation = False
+        self._deep_cache_helper: Optional[DeepCacheSDHelper] = None
+        self.do_interrupt_image_generation: bool = False
 
-        # The following properties must be set to None before generating an image
-        # each time generate is called. These are cached properties that come from the
-        # database. Caching them here allows us to avoid querying the database each time.
+        # The following properties must be set to None before generating an
+        # image each time generate is called. These are cached properties that 
+        # come from the database. 
+        # Caching them here allows us to avoid querying the database each time.
         self._outpaint_image = None
         self._img2img_image = None
         self._controlnet_settings = None
@@ -110,19 +144,11 @@ class SDHandler(BaseHandler):
             pipeline_class = self._pipe.__class__
             print(pipeline_class)
             if (
-                pipeline_class in (
-                    StableDiffusionXLImg2ImgPipeline,
-                    StableDiffusionXLControlNetImg2ImgPipeline,
-                    StableDiffusionImg2ImgPipeline,
-                    StableDiffusionControlNetImg2ImgPipeline
-                ) and not self.image_to_image_settings.enabled
+                pipeline_class in self.img2img_pipelines and 
+                not self.image_to_image_settings.enabled
             ) or (
-                pipeline_class in (
-                    StableDiffusionXLPipeline,
-                    StableDiffusionXLControlNetPipeline,
-                    StableDiffusionPipeline,
-                    StableDiffusionControlNetPipeline
-                ) and self.image_to_image_settings.enabled
+                pipeline_class in self.txt2img_pipelines and 
+                self.image_to_image_settings.enabled
             ):
                 self._swap_pipeline()
 
@@ -141,6 +167,37 @@ class SDHandler(BaseHandler):
         self._drawing_pad_settings = None
         self._outpaint_settings = None
         self._path_settings = None
+
+    @property
+    def img2img_pipelines(self):
+        return (
+            StableDiffusionXLImg2ImgPipeline,
+            StableDiffusionXLControlNetImg2ImgPipeline,
+            StableDiffusionImg2ImgPipeline,
+            StableDiffusionControlNetImg2ImgPipeline
+        )
+
+    @property
+    def txt2img_pipelines(self):
+        return (
+            StableDiffusionXLPipeline,
+            StableDiffusionXLControlNetPipeline,
+            StableDiffusionPipeline,
+            StableDiffusionControlNetPipeline
+        )
+
+    @property
+    def outpaint_pipelines(self):
+        return (
+            StableDiffusionXLInpaintPipeline,
+            StableDiffusionInpaintPipeline,
+            StableDiffusionControlNetInpaintPipeline,
+            StableDiffusionXLControlNetInpaintPipeline
+        )
+
+    @property
+    def use_compel(self) -> bool:
+        return self.generator_settings_cached.use_compel
 
     @property
     def controlnet_path(self):
@@ -170,7 +227,7 @@ class SDHandler(BaseHandler):
 
     @Slot(str)
     def _handle_worker_error(self, error_message):
-        self.logger.error(f"Worker error: {error_message}")
+        self.logger.error("Worker error: %s", error_message)
 
     @property
     def is_single_file(self) -> bool:
@@ -191,12 +248,23 @@ class SDHandler(BaseHandler):
         return self.model_path.endswith(".safetensors")
 
     @property
+    def version(self) -> str:
+        version = self.generator_settings_cached.version
+        if version == "SDXL Turbo":
+            version = "SDXL 1.0"
+        return version
+
+    @property
     def is_sd_xl(self) -> bool:
         return self.generator_settings_cached.version == StableDiffusionVersion.SDXL1_0.value
 
     @property
     def is_sd_xl_turbo(self) -> bool:
         return self.generator_settings_cached.version == StableDiffusionVersion.SDXL_TURBO.value
+
+    @property
+    def is_sd_xl_or_turbo(self) -> bool:
+        return self.is_sd_xl or self.is_sd_xl_turbo
 
     @property
     def img2img_image_cached(self) -> Image:
@@ -230,17 +298,11 @@ class SDHandler(BaseHandler):
 
     @property
     def _current_model(self) -> AIModels:
-        model = self.generator_settings_cached.aimodel
-        self.session.add(model)
-        return model
+        return self.generator_settings_cached.aimodel
 
     @property
     def generator_settings_cached(self):
-        if self._generator_settings is None:
-            self._generator_settings = self.session.query(
-                GeneratorSettings
-            ).first()
-        return self._generator_settings
+        return self.generator_settings
 
     @property
     def generator_settings_scale(self) -> int:
@@ -263,13 +325,13 @@ class SDHandler(BaseHandler):
     def controlnet_model(self) -> ControlnetModel:
         if (
             self._controlnet_model is None or
-            self._controlnet_model.version != self.generator_settings_cached.version or
+            self._controlnet_model.version != self.version or
             self._controlnet_model.display_name != self.controlnet_settings_cached.controlnet
         ):
             
             self._controlnet_model = self.session.query(ControlnetModel).filter_by(
                 display_name=self.controlnet_settings_cached.controlnet,
-                version=self.generator_settings_cached.version
+                version=self.version
             ).first()
             
         return self._controlnet_model
@@ -325,7 +387,7 @@ class SDHandler(BaseHandler):
             os.path.join(
                 self.path_settings_cached.base_path,
                 "art/models",
-                self.generator_settings_cached.version,
+                self.version,
                 "lora"
             )
         )
@@ -398,7 +460,7 @@ class SDHandler(BaseHandler):
         if self.controlnet_enabled:
             operation_type = f"{operation_type}_controlnet"
 
-        if self.is_sd_xl or self.is_sd_xl_turbo:
+        if self.is_sd_xl_or_turbo:
             pipeline_map = {
                 "txt2img": StableDiffusionXLPipeline,
                 "img2img": StableDiffusionXLImg2ImgPipeline,
@@ -533,7 +595,7 @@ class SDHandler(BaseHandler):
         clear_memory()
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
 
-    def handle_generate_signal(self, message: dict=None):
+    def handle_generate_signal(self, message: Optional[Dict] = None):
         self.load()
         self._clear_cached_properties()
         self._swap_pipeline()
@@ -543,6 +605,7 @@ class SDHandler(BaseHandler):
         ):
             self._current_state = HandlerState.PREPARING_TO_GENERATE
             response = None
+            code = EngineResponseCode.NONE
             try:
                 response = self._generate()
                 code = EngineResponseCode.IMAGE_GENERATED
@@ -551,7 +614,7 @@ class SDHandler(BaseHandler):
             except Exception as e:
                 if "CUDA out of memory" in str(e):
                     code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
-                self.logger.error(f"Error generating image: {e}")
+                self.logger.error("Error generating image: %s", e)
             if message is not None:
                 callback = message.get("callback", None)
                 if callback:
@@ -601,7 +664,10 @@ class SDHandler(BaseHandler):
         pipeline_class_ = self._pipeline_class
         if self._pipe.__class__ is pipeline_class_:  # noqa
             return
-        self.logger.debug(f"Swapping pipeline from {self._pipe.__class__} to {pipeline_class_}")
+       
+        self.logger.debug("Swapping pipeline from %s to %s", 
+                          self._pipe.__class__, 
+                          pipeline_class_)
         try:
             kwargs = {}
             if pipeline_class_ in (
@@ -612,9 +678,8 @@ class SDHandler(BaseHandler):
                 StableDiffusionXLControlNetImg2ImgPipeline,
                 StableDiffusionXLControlNetInpaintPipeline
             ):
-                kwargs.update({
-                    "controlnet": self._controlnet
-                })
+                kwargs.update(controlnet=self._controlnet)
+            kwargs = self._prepare_tiny_autoencoder(kwargs)
             self._pipe = pipeline_class_.from_pipe(self._pipe, **kwargs)
         except Exception as e:
             self.logger.error(f"Error swapping pipeline: {e}")
@@ -626,7 +691,9 @@ class SDHandler(BaseHandler):
         self.logger.debug("Generating image")
         model = self.generator_settings_cached.aimodel
         if self._current_model.path != model.path:
-            self.logger.debug(f"Model has changed from {self._current_model.path} to {model.path}")
+            self.logger.debug("Model has changed from %s to %s",
+                              self._current_model.path,
+                              model.path)
             if self._pipe is not None:
                 self.reload()
         if self._pipe is None:
@@ -662,26 +729,26 @@ class SDHandler(BaseHandler):
             if self.application_settings_cached.auto_export_images:
                 self._export_images(images, args)
 
-            return dict(
-                images=images,
-                data=args,
-                nsfw_content_detected=any(nsfw_content_detected),
-                active_rect=active_rect,
-                is_outpaint=self.is_outpaint
-            )
+            return {
+                "images": images,
+                "data": args,
+                "nsfw_content_detected": any(nsfw_content_detected),
+                "active_rect": active_rect,
+                "is_outpaint": self.is_outpaint
+            }
         else:
-            return dict(
-                images=[],
-                data=args,
-                nsfw_content_detected=False,
-                active_rect=active_rect,
-                is_outpaint=self.is_outpaint
-            )
+            return {
+                "images": [],
+                "data": args,
+                "nsfw_content_detected": False,
+                "active_rect": active_rect,
+                "is_outpaint": self.is_outpaint
+            }
     
-    def _initialize_metadata(self, images: List[Any], data:Dict) -> Optional[dict]:
+    def _initialize_metadata(self, images: List[Any], data: Dict) -> Optional[dict]:
         metadata = None
         if self.metadata_settings.export_metadata:
-            metadata_dict = dict()
+            metadata_dict = {}
             if self.metadata_settings.image_export_metadata_prompt:
                 metadata_dict["prompt"] = self._current_prompt
                 metadata_dict["prompt_2"] = self._current_prompt_2
@@ -738,7 +805,7 @@ class SDHandler(BaseHandler):
             metadata = [metadata_dict for _ in range(len(images))]
         return metadata
 
-    def _export_images(self, images: List[Any], data:Dict):
+    def _export_images(self, images: List[Any], data: Dict):
         extension = self.application_settings_cached.image_export_type
         filename = "image"
         file_path = os.path.expanduser(
@@ -897,7 +964,6 @@ class SDHandler(BaseHandler):
         if self._controlnet_processor is not None:
             return
         self.logger.debug(f"Loading controlnet processor {self.controlnet_model.name}")
-        #self._controlnet_processor = Processor(self.controlnet_model.name)
         controlnet_data = controlnet_aux_models[self.controlnet_model.name]
         controlnet_class_: Any = controlnet_data["class"]
         checkpoint: bool = controlnet_data["checkpoint"]
@@ -912,8 +978,8 @@ class SDHandler(BaseHandler):
     def _load_scheduler(self, scheduler=None):
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
         scheduler_name = scheduler or self.generator_settings_cached.scheduler
-        base_path:str = self.path_settings_cached.base_path
-        scheduler_version:str = self.generator_settings_cached.version
+        base_path: str = self.path_settings_cached.base_path
+        scheduler_version: str = self.version
         scheduler_path = os.path.expanduser(
             os.path.join(
                 base_path,
@@ -947,20 +1013,109 @@ class SDHandler(BaseHandler):
         if self._pipe:
             self._pipe.scheduler = self.scheduler
 
+    def _prepare_quantization_settings(self, data: dict) -> dict:
+        """
+        Quantize the model if possible.
+        """
+        if self.is_sd_xl_turbo:
+            return data
+        
+        path = os.path.expanduser(os.path.join(
+            self.path_settings_cached.base_path,
+            "art",
+            "models",
+            StableDiffusionVersion.SDXL1_0.value if self.is_sd_xl_or_turbo else StableDiffusionVersion.SD1_5.value,
+            "inpaint" if self.is_outpaint else "txt2img"
+        ))
+
+        existing_file_path = os.path.join(path, "text_encoder", "model.fp16.safetensors")
+        expected_file_path = os.path.join(path, "text_encoder", "model.safetensors")
+        if not os.path.exists(expected_file_path) and os.path.exists(existing_file_path):
+            os.rename(existing_file_path, expected_file_path)
+
+        quant_config = TransformersBitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True
+        )
+        data["text_encoder"] = CLIPTextModel.from_pretrained(
+            path,
+            subfolder="text_encoder",
+            quantization_config=quant_config,
+            torch_dtype=torch.float16,
+            use_safetensors=True
+        )
+        
+        if self.is_sd_xl_or_turbo:
+            """
+            text encoder 2 is downloaded with the name model.fp16.safetensors
+            which worked when we were not quantizing the model but now when we 
+            are loading from pretrained it is looking for model.safetensors
+            """
+            existing_file_path = os.path.join(path, "text_encoder_2", "model.fp16.safetensors")
+            expected_file_path = os.path.join(path, "text_encoder_2", "model.safetensors")
+            if not os.path.exists(expected_file_path) and os.path.exists(existing_file_path):
+                os.rename(existing_file_path, expected_file_path)
+            data["text_encoder_2"] = CLIPTextModelWithProjection.from_pretrained(
+                path,
+                subfolder="text_encoder_2",
+                quantization_config=quant_config,
+                torch_dtype=torch.float16,
+                use_safetensors=True
+            )
+        return data
+
+    def _prepare_tiny_autoencoder(self, data: Dict) -> Optional[Dict]:
+        if not self.is_outpaint:
+            if self.is_sd_xl_or_turbo:
+                version = StableDiffusionVersion.SDXL1_0.value
+                repo_path = "madebyollin/sdxl-vae-fp16-fix"
+                autoencoder_class_ = AutoencoderKL
+            else:
+                version = StableDiffusionVersion.SD1_5.value
+                repo_path = "madebyollin/taesd"
+                autoencoder_class_ = AutoencoderTiny
+            path = os.path.expanduser(os.path.join(
+                self.path_settings_cached.base_path,
+                "art",
+                "models",
+                version,
+                "tiny_autoencoder",
+                repo_path
+            ))
+            if not os.path.exists(path):
+                self.logger.error("Tiny autoencoder path does not exist")
+                self.emit_signal(SignalCode.MISSING_REQUIRED_MODELS)
+                self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
+                    "model": ModelType.SD,
+                    "status": ModelStatus.FAILED
+                })
+                return None
+            data["vae"] = autoencoder_class_.from_pretrained(
+                path,
+                torch_dtype=torch.float16,
+                use_safetensors=True
+            )
+        return data
+
     def _load_pipe(self):
         self.logger.debug("Loading pipe")
-        data = dict(
-            torch_dtype=self.data_type,
-            use_safetensors=True,
-            local_files_only=True,
-            device=self._device,
-        )
+        data = {
+            "torch_dtype": self.data_type,
+            "use_safetensors": True,
+            "local_files_only": True,
+            "device": self._device,
+        }
 
         if self.controlnet_enabled:
             data["controlnet"] = self._controlnet
 
         pipeline_class_ = self._pipeline_class
 
+        data = self._prepare_quantization_settings(data)
+        data = self._prepare_tiny_autoencoder(data)
+        if data is None:
+            return
+        
         if self.is_sd_xl_turbo:
             config_path = os.path.expanduser(os.path.join(
                 self.path_settings_cached.base_path,
@@ -979,13 +1134,19 @@ class SDHandler(BaseHandler):
                 **data
             )
         except FileNotFoundError as e:
-            self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+            self.logger.error(
+                f"Failed to load model from {self.model_path}: {e}"
+            )
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
         except EnvironmentError as e:
-            self.logger.warning(f"Failed to load model from {self.model_path}: {e}")
+            self.logger.warning(
+                f"Failed to load model from {self.model_path}: {e}"
+            )
         except ValueError as e:
-            self.logger.error(f"Failed to load model from {self.model_path}: {e}")
+            self.logger.error(
+                f"Failed to load model from {self.model_path}: {e}"
+            )
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
         self._send_pipeline_loaded_signal()
@@ -995,13 +1156,16 @@ class SDHandler(BaseHandler):
         pipeline_type = None
         if self._pipe:
             pipeline_class = self._pipe.__class__
-            if pipeline_class in (StableDiffusionXLPipeline, StableDiffusionPipeline, StableDiffusionControlNetPipeline):
+            if pipeline_class in self.txt2img_pipelines:
                 pipeline_type = "txt2img"
-            elif pipeline_class in (StableDiffusionXLImg2ImgPipeline, StableDiffusionImg2ImgPipeline, StableDiffusionControlNetImg2ImgPipeline):
+            elif pipeline_class in self.img2img_pipelines:
                 pipeline_type = "img2img"
-            elif pipeline_class in (StableDiffusionXLInpaintPipeline, StableDiffusionInpaintPipeline, StableDiffusionControlNetInpaintPipeline):
+            elif pipeline_class in self.outpaint_pipelines:
                 pipeline_type = "inpaint"
-        self.emit_signal(SignalCode.SD_PIPELINE_LOADED_SIGNAL, { "pipeline": pipeline_type })
+        self.emit_signal(
+            SignalCode.SD_PIPELINE_LOADED_SIGNAL, 
+            {"pipeline": pipeline_type}
+        )
 
     def _move_pipe_to_device(self):
         if self._pipe is not None:
@@ -1015,7 +1179,7 @@ class SDHandler(BaseHandler):
     def _load_lora(self):
         
         enabled_lora = self.session.query(Lora).filter_by(
-            version=self.generator_settings_cached.version,
+            version=self.version,
             enabled=True
         ).all()
         for lora in enabled_lora:
@@ -1028,7 +1192,9 @@ class SDHandler(BaseHandler):
         filename = os.path.basename(lora.path)
         try:
             lora_base_path = self.lora_base_path
-            self.logger.info(f"Loading LORA weights from {lora_base_path}/{filename}")
+            self.logger.info(
+                f"Loading LORA weights from {lora_base_path}/{filename}"
+            )
             adapter_name = os.path.splitext(filename)[0]
             adapter_name = adapter_name.replace(".", "_")
             self._pipe.load_lora_weights(
@@ -1052,7 +1218,7 @@ class SDHandler(BaseHandler):
     def _set_lora_adapters(self):
         self.logger.debug("Setting LORA adapters")
         
-        loaded_lora_id = [l.id for l in self._loaded_lora.values()]
+        loaded_lora_id = [lora.id for lora in self._loaded_lora.values()]
         enabled_lora = self.session.query(Lora).filter(Lora.id.in_(loaded_lora_id)).all()
         adapter_weights = []
         adapter_names = []
@@ -1076,7 +1242,7 @@ class SDHandler(BaseHandler):
             self.logger.error(f"Failed to unload embeddings: {e}")
         
         embeddings = self.session.query(Embedding).filter_by(
-            version=self.generator_settings_cached.version
+            version=self.version
         ).all()
         
         for embedding in embeddings:
@@ -1087,7 +1253,11 @@ class SDHandler(BaseHandler):
                 else:
                     try:
                         self.logger.debug(f"Loading embedding {embedding_path}")
-                        self._pipe.load_textual_inversion(embedding_path, token=embedding.name, weight_name=embedding_path)
+                        self._pipe.load_textual_inversion(
+                            embedding_path,
+                            token=embedding.name,
+                            weight_name=embedding_path
+                        )
                         self._loaded_embeddings.append(embedding_path)
                     except Exception as e:
                         self.logger.error(f"Failed to load embedding {embedding_path}: {e}")
@@ -1097,7 +1267,7 @@ class SDHandler(BaseHandler):
             self.logger.debug("No embeddings enabled")
 
     def _load_compel(self):
-        if self.generator_settings_cached.use_compel:
+        if self.use_compel:
             try:
                 self._load_textual_inversion_manager()
                 self._load_compel_proc()
@@ -1123,11 +1293,11 @@ class SDHandler(BaseHandler):
 
     def _load_compel_proc(self):
         self.logger.debug("Loading compel proc")
-        parameters = dict(
-            truncate_long_prompts=False,
-            textual_inversion_manager=self._textual_inversion_manager
-        )
-        if self.is_sd_xl or self.is_sd_xl_turbo:
+        parameters = {
+            "truncate_long_prompts": False,
+            "textual_inversion_manager": self._textual_inversion_manager
+        }
+        if self.is_sd_xl_or_turbo:
             tokenizer = [self._pipe.tokenizer, self._pipe.tokenizer_2]
             text_encoder = [self._pipe.text_encoder, self._pipe.text_encoder_2]
             parameters["returned_embeddings_type"] = ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED
@@ -1135,10 +1305,10 @@ class SDHandler(BaseHandler):
         else:
             tokenizer = self._pipe.tokenizer
             text_encoder = self._pipe.text_encoder
-        parameters.update(dict(
-            tokenizer=tokenizer,
-            text_encoder=text_encoder
-        ))
+        parameters.update({
+            "tokenizer": tokenizer,
+            "text_encoder": text_encoder
+        })
         self._compel_proc = Compel(**parameters)
 
     def _make_memory_efficient(self):
@@ -1164,7 +1334,6 @@ class SDHandler(BaseHandler):
 
     def _finalize_load_stable_diffusion(self):
         safety_checker_ready = True
-        tokenizer_ready = True
         if self.use_safety_checker:
             safety_checker_ready = (
                 self._safety_checker is not None and
@@ -1254,7 +1423,7 @@ class SDHandler(BaseHandler):
     def _apply_model_offload(self, attr_val):
         if attr_val and not self.memory_settings.use_enable_sequential_cpu_offload:
             self.logger.debug("Enabling model cpu offload")
-            #self._move_stable_diffusion_to_cpu()
+            # self._move_stable_diffusion_to_cpu()
             self._pipe.enable_model_cpu_offload()
         else:
             self.logger.debug("Model cpu offload disabled")
@@ -1345,7 +1514,7 @@ class SDHandler(BaseHandler):
         self._loaded_lora = {}
         self._disabled_lora = []
 
-    def _unload_lora(self, lora:Lora):
+    def _unload_lora(self, lora: Lora):
         if lora.path in self._loaded_lora:
             self.logger.debug(f"Unloading LORA {lora.path}")
             del self._loaded_lora[lora.path]
@@ -1423,13 +1592,15 @@ class SDHandler(BaseHandler):
         self._generator = None
 
     def _load_prompt_embeds(self):
+        if not self.use_compel:
+            if self._compel_proc is not None:
+                self._unload_compel()
+            return
+        
         if self._compel_proc is None:
             self.logger.debug("Compel proc is not loading - attempting to load")
             self._load_compel()
-        self.logger.debug("Loading prompt embeds")
-        if not self.generator_settings_cached.use_compel:
-            return
-
+        
         prompt = self.prompt
         negative_prompt = self.negative_prompt
         second_prompt = self.second_prompt
@@ -1448,54 +1619,64 @@ class SDHandler(BaseHandler):
             self._current_negative_prompt_2 = second_negative_prompt
             self._unload_prompt_embeds()
 
-        pooled_prompt_embeds = None
-        negative_pooled_prompt_embeds = None
+        if (
+            self._prompt_embeds is None or 
+            self._negative_prompt_embeds is None or
+            self._pooled_prompt_embeds is None or
+            self._negative_pooled_prompt_embeds is None
+        ):
+            self.logger.debug("Loading prompt embeds")
 
-        if prompt != "" and second_prompt != "":
-            compel_prompt = f'("{prompt}", "{second_prompt}").and()'
-        elif prompt != "" and second_prompt == "":
-            compel_prompt = prompt
-        elif prompt == "" and second_prompt != "":
-            compel_prompt = second_prompt
-        else:
-            compel_prompt = ""
+            pooled_prompt_embeds = None
+            negative_pooled_prompt_embeds = None
 
-        if negative_prompt != "" and second_negative_prompt != "":
-            compel_negative_prompt = f'("{negative_prompt}", "{second_negative_prompt}").and()'
-        elif negative_prompt != "" and second_negative_prompt == "":
-            compel_negative_prompt = negative_prompt
-        elif negative_prompt == "" and second_negative_prompt != "":
-            compel_negative_prompt = second_negative_prompt
-        else:
-            compel_negative_prompt = ""
+            if prompt != "" and second_prompt != "":
+                compel_prompt = f'("{prompt}", "{second_prompt}").and()'
+            elif prompt != "" and second_prompt == "":
+                compel_prompt = prompt
+            elif prompt == "" and second_prompt != "":
+                compel_prompt = second_prompt
+            else:
+                compel_prompt = ""
 
-        if self.is_sd_xl or self.is_sd_xl_turbo:
-            prompt_embeds, pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
-            negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
-        else:
-            prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
-            negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
-        [
-            prompt_embeds,
-            negative_prompt_embeds
-        ] = self._compel_proc.pad_conditioning_tensors_to_same_length([
-            prompt_embeds,
-            negative_prompt_embeds
-        ])
+            if negative_prompt != "" and second_negative_prompt != "":
+                compel_negative_prompt = f'("{negative_prompt}", "{second_negative_prompt}").and()'
+            elif negative_prompt != "" and second_negative_prompt == "":
+                compel_negative_prompt = negative_prompt
+            elif negative_prompt == "" and second_negative_prompt != "":
+                compel_negative_prompt = second_negative_prompt
+            else:
+                compel_negative_prompt = ""
 
-        self._prompt_embeds = prompt_embeds
-        self._negative_prompt_embeds = negative_prompt_embeds
-        self._pooled_prompt_embeds = pooled_prompt_embeds
-        self._negative_pooled_prompt_embeds = negative_pooled_prompt_embeds
+            if self.is_sd_xl_or_turbo:
+                prompt_embeds, pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
+                negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(
+                    compel_negative_prompt
+                )
+            else:
+                prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
+                negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
+            [
+                prompt_embeds,
+                negative_prompt_embeds
+            ] = self._compel_proc.pad_conditioning_tensors_to_same_length([
+                prompt_embeds,
+                negative_prompt_embeds
+            ])
 
-        if self._prompt_embeds is not None:
-            self._prompt_embeds.half().to(self._device)
-        if self._negative_prompt_embeds is not None:
-            self._negative_prompt_embeds.half().to(self._device)
-        if self._pooled_prompt_embeds is not None:
-            self._pooled_prompt_embeds.half().to(self._device)
-        if self._negative_pooled_prompt_embeds is not None:
-            self._negative_pooled_prompt_embeds.half().to(self._device)
+            self._prompt_embeds = prompt_embeds
+            self._negative_prompt_embeds = negative_prompt_embeds
+            self._pooled_prompt_embeds = pooled_prompt_embeds
+            self._negative_pooled_prompt_embeds = negative_pooled_prompt_embeds
+
+            if self._prompt_embeds is not None:
+                self._prompt_embeds.half().to(self._device)
+            if self._negative_prompt_embeds is not None:
+                self._negative_prompt_embeds.half().to(self._device)
+            if self._pooled_prompt_embeds is not None:
+                self._pooled_prompt_embeds.half().to(self._device)
+            if self._negative_pooled_prompt_embeds is not None:
+                self._negative_pooled_prompt_embeds.half().to(self._device)
 
     def _clear_memory_efficient_settings(self):
         self.logger.debug("Clearing memory efficient settings")
@@ -1503,7 +1684,7 @@ class SDHandler(BaseHandler):
             if key.endswith("_applied"):
                 self._memory_settings_flags[key] = None
 
-    def _prepare_data(self, active_rect = None) -> dict:
+    def _prepare_data(self, active_rect=None) -> Dict:
         """
         Here we are loading the arguments for the Stable Diffusion generator.
         :return:
@@ -1511,39 +1692,37 @@ class SDHandler(BaseHandler):
         self.logger.debug("Preparing data")
         self._set_seed()
 
-        args = dict(
-            width=int(self.application_settings_cached.working_width),
-            height=int(self.application_settings_cached.working_height),
-            clip_skip=int(self.generator_settings_cached.clip_skip),
-            num_inference_steps=int(self.generator_settings_cached.steps),
-            callback=self._callback,
-            callback_steps=1,
-            generator=self._generator,
-            callback_on_step_end=self.__interrupt_callback,
-        )
+        args = {
+            "width": int(self.application_settings_cached.working_width),
+            "height": int(self.application_settings_cached.working_height),
+            "clip_skip": int(self.generator_settings_cached.clip_skip),
+            "num_inference_steps": int(self.generator_settings_cached.steps),
+            "callback": self._callback,
+            "callback_steps": 1,
+            "generator": self._generator,
+            "callback_on_step_end": self.__interrupt_callback,
+        }
 
         if len(self._loaded_lora) > 0:
-            args.update(cross_attention_kwargs=dict(
-                scale=self.lora_scale,
-            ))
+            args["cross_attention_kwargs"] = {"scale": self.lora_scale}
             self._set_lora_adapters()
 
-        if self.generator_settings_cached.use_compel:
-            args.update(dict(
-                prompt_embeds=self._prompt_embeds,
-                negative_prompt_embeds=self._negative_prompt_embeds,
-            ))
+        if self.use_compel:
+            args.update({
+                "prompt_embeds": self._prompt_embeds,
+                "negative_prompt_embeds": self._negative_prompt_embeds,
+            })
 
-            if self.is_sd_xl or self.is_sd_xl_turbo:
-                args.update(dict(
-                    pooled_prompt_embeds=self._pooled_prompt_embeds,
-                    negative_pooled_prompt_embeds=self._negative_pooled_prompt_embeds
-                ))
+            if self.is_sd_xl_or_turbo:
+                args.update({
+                    "pooled_prompt_embeds": self._pooled_prompt_embeds,
+                    "negative_pooled_prompt_embeds": self._negative_pooled_prompt_embeds
+                })
         else:
-            args.update(dict(
-                prompt=self.prompt,
-                negative_prompt=self.negative_prompt
-            ))
+            args.update({
+                "prompt": self.prompt,
+                "negative_prompt": self.negative_prompt
+            })
 
         width = int(self.application_settings_cached.working_width)
         height = int(self.application_settings_cached.working_height)
@@ -1551,17 +1730,19 @@ class SDHandler(BaseHandler):
         mask = None
 
         if self.is_txt2img or self.is_outpaint or self.is_img2img:
-            args.update(dict(
-                width=width,
-                height=height,
-            ))
+            args.update({
+                "width": width,
+                "height": height
+            })
 
         if self.is_img2img:
             image = self.img2img_image
             if args["num_inference_steps"] < MIN_NUM_INFERENCE_STEPS_IMG2IMG:
                 args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
         elif self.is_outpaint:
-            image = self.drawing_pad_image
+            image = self.outpaint_image
+            if not image:
+                image = self.drawing_pad_image
             mask = self.drawing_pad_mask
 
             # Crop the image based on the active grid location
@@ -1574,19 +1755,13 @@ class SDHandler(BaseHandler):
             new_image.paste(cropped_image, (0, 0))
             image = new_image.convert("RGB")
 
-        args.update(dict(
-            guidance_scale=self.generator_settings_cached.scale / 100.0
-        ))
+        args["guidance_scale"] = self.generator_settings_cached.scale / 100.0
 
         if not self.controlnet_enabled:
             if self.is_img2img:
-                args.update(dict(
-                    strength=self.generator_settings_cached.strength / 100.0
-                ))
+                args["strength"] = self.generator_settings_cached.strength / 100.0
             elif self.is_outpaint:
-                args.update(dict(
-                    strength=self.outpaint_settings_cached.strength / 100.0
-                ))
+                args["strength"] = self.outpaint_settings_cached.strength / 100.0
 
         # set the image to controlnet image if controlnet is enabled
         if self.controlnet_enabled:
@@ -1603,38 +1778,31 @@ class SDHandler(BaseHandler):
                     if self.is_txt2img:
                         image = control_image
                     else:
-                        args.update(dict(
-                            control_image=control_image
-                        ))
+                        args["control_image"] = control_image
                 else:
                     raise ValueError("Controlnet image is None")
 
         if image is not None:
             image = self._resize_image(image, width, height)
-            args.update(dict(
-                image=image
-            ))
+            args["image"] = image
 
         if mask is not None and self.is_outpaint:
             mask = self._resize_image(mask, width, height)
-
             mask = self._pipe.mask_processor.blur(mask, blur_factor=self.mask_blur)
-            args.update(dict(
-                mask_image=mask
-            ))
+            args["mask_image"] = mask
 
         if self.controlnet_enabled:
-            args.update(dict(
-                guess_mode=False,
-                control_guidance_start=0.0,
-                control_guidance_end=1.0,
-                strength=self.controlnet_strength / 100.0,
-                guidance_scale=self.generator_settings_scale / 100.0,
-                controlnet_conditioning_scale=self.controlnet_conditioning_scale / 100.0
-            ))
+            args.update({
+                "guess_mode": False,
+                "control_guidance_start": 0.0,
+                "control_guidance_end": 1.0,
+                "strength": self.controlnet_strength / 100.0,
+                "guidance_scale": self.generator_settings_scale / 100.0,
+                "controlnet_conditioning_scale": self.controlnet_conditioning_scale / 100.0
+            })
         return args
 
-    def _resize_image(self, image: Image, max_width: int, max_height: int) -> Image:
+    def _resize_image(self, image: Image, max_width: int, max_height: int) -> Optional[Image]:
         """
         Resize the image to ensure it is not larger than max_width and max_height,
         while maintaining the aspect ratio.

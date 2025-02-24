@@ -20,6 +20,7 @@ class InputImage(BaseWidget):
     def __init__(self, *args, **kwargs):
         self.settings_key = kwargs.pop("settings_key")
         self.use_generated_image = kwargs.pop("use_generated_image", False)
+        self.is_mask = kwargs.pop("is_mask", False)
         self._import_path = ""
         super().__init__(*args, **kwargs)
 
@@ -71,10 +72,11 @@ class InputImage(BaseWidget):
 
         self.ui.EnableSwitch.toggled.connect(self.enabled_toggled)
         if self.settings_key == "outpaint_settings":
-            self.ui.import_button.hide()
-            self.ui.link_to_grid_image_button.hide()
-            self.ui.link_to_grid_image_button.hide()
-            self.ui.lock_input_image_button.hide()
+            if self.is_mask:
+                self.ui.import_button.hide()
+                self.ui.link_to_grid_image_button.hide()
+                self.ui.link_to_grid_image_button.hide()
+                self.ui.lock_input_image_button.hide()
             self.ui.EnableSwitch.blockSignals(True)
             self.ui.EnableSwitch.checked = self.current_settings.enabled
             self.ui.EnableSwitch.setChecked(self.current_settings.enabled)
@@ -148,8 +150,6 @@ class InputImage(BaseWidget):
             self.update_current_settings("image", convert_image_to_binary(image))
 
     def load_image_from_grid(self, forced=False):
-        if self.settings_key == "outpaint_settings":
-            return
         if not forced and not self.current_settings.use_grid_image_as_input:
             return
         if not forced and self.current_settings.lock_input_image:
@@ -158,20 +158,24 @@ class InputImage(BaseWidget):
         self.load_image_from_settings()
 
     def load_image_from_settings(self):
-        if self.use_generated_image:
-            image = self.current_settings.generated_image
-        else:
-            image = self.current_settings.image
-
         if self.settings_key == "outpaint_settings":
-            image = self.drawing_pad_settings.mask
+            if self.is_mask:
+                image = self.drawing_pad_settings.mask
+            else:
+                image = self.outpaint_settings.image
+        else:
+            if self.use_generated_image:
+                image = self.current_settings.generated_image
+            else:
+                image = self.current_settings.image
 
         if image is not None:
             image = convert_binary_to_image(image)
-            if image is not None:
-                self.load_image_from_object(image)
-                return
-        self.ui.image_container.setScene(None)
+        
+        if image is not None:
+            self.load_image_from_object(image)
+        else:
+            self.ui.image_container.setScene(None)
 
     def load_image_from_object(self, image: Image):
         if image is None:

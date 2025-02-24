@@ -1,19 +1,54 @@
 import logging
 import datetime
-import os
-from typing import List, Type
+import json
+from typing import List, Type, Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import joinedload, sessionmaker, scoped_session
+import sqlite3
 
-from airunner.data.models.settings_models import Chatbot, AIModels, Schedulers, Lora, PathSettings, SavedPrompt, \
-    Embedding, PromptTemplate, ControlnetModel, FontSetting, PipelineModel, ShortcutKeys, \
-    GeneratorSettings, WindowSettings, ApplicationSettings, ActiveGridSettings, ControlnetSettings, \
-    ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings, \
-    LLMGeneratorSettings, TTSSettings, SpeechT5Settings, EspeakSettings, STTSettings, BrushSettings, GridSettings, \
-    MemorySettings, Message, Conversation, Summary, ImageFilterValue, TargetFiles, WhisperSettings, Base, User
+from airunner.data.models import (
+    Chatbot, 
+    AIModels, 
+    Schedulers, 
+    Lora, 
+    PathSettings, 
+    SavedPrompt,
+    Embedding, 
+    PromptTemplate, 
+    ControlnetModel, 
+    FontSetting, 
+    PipelineModel, 
+    ShortcutKeys,
+    GeneratorSettings, 
+    WindowSettings, 
+    ApplicationSettings, 
+    ActiveGridSettings, 
+    ControlnetSettings,
+    ImageToImageSettings, 
+    OutpaintSettings, 
+    DrawingPadSettings, 
+    MetadataSettings,
+    LLMGeneratorSettings,
+    TTSSettings, 
+    SpeechT5Settings, 
+    EspeakSettings, 
+    STTSettings, 
+    BrushSettings, 
+    GridSettings,
+    MemorySettings, 
+    Conversation, 
+    Summary, 
+    ImageFilterValue, 
+    TargetFiles, 
+    WhisperSettings, 
+    Base, 
+    User
+)
 from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
+from airunner.settings import DB_PATH
+from airunner.enums import LLMChatRole
 
 
 class SettingsMixinSharedInstance:
@@ -28,16 +63,7 @@ class SettingsMixinSharedInstance:
     def __init__(self):
         if self._initialized:
             return
-        self.db_path = os.path.expanduser(
-            os.path.join(
-                "~",
-                ".local",
-                "share",
-                "airunner",
-                "data",
-                "airunner.db"
-            )
-        )
+        self.db_path = DB_PATH
         self.engine = create_engine(f'sqlite:///{self.db_path}')
         Base.metadata.create_all(self.engine)
         self.Session = scoped_session(sessionmaker(bind=self.engine))
@@ -70,6 +96,11 @@ class SettingsMixinSharedInstance:
 
 
 class SettingsMixin:
+    _chatbot: Optional[Chatbot] = None
+
+    def get_session(self):
+        return scoped_session(sessionmaker(bind=self.settings_mixin_shared_instance.engine))()
+
     @property
     def settings_mixin_shared_instance(self):
         return SettingsMixinSharedInstance()
@@ -254,6 +285,14 @@ class SettingsMixin:
         if image is not None:
             image = image.convert("RGB")
         return image
+    
+    @property
+    def outpaint_image(self):
+        base_64_image = self.outpaint_settings.image
+        image = convert_binary_to_image(base_64_image)
+        if image is not None:
+            image = image.convert("RGB")
+        return image
 
     @property
     def image_filter_values(self):
@@ -266,10 +305,21 @@ class SettingsMixin:
         return [embedding for embedding in self.embeddings if embedding.version == version]
 
     @property
-    def chatbot(self) -> Type[Chatbot]:
-        return self.get_chatbot_by_id(
-            self.llm_generator_settings.current_chatbot
-        )
+    def chatbot(self) -> Optional[Chatbot]:
+        if not type(self.llm_generator_settings.current_chatbot) is int:
+            chatbot = self.session.query(Chatbot).first()
+            if not chatbot is None:
+                self.update_settings_by_name(
+                    "llm_generator_settings", 
+                    "current_chatbot", 
+                    chatbot.id
+                )
+                self._chatbot = chatbot
+        if not self._chatbot or self._chatbot != self.llm_generator_settings.current_chatbot:
+            self._chatbot = self.get_chatbot_by_id(
+                self.llm_generator_settings.current_chatbot
+            )
+        return self._chatbot
 
     @property
     def user(self) -> Type[User]:
@@ -321,67 +371,79 @@ class SettingsMixin:
             self.update_llm_generator_settings(column_name, val)
         elif setting_name == "whisper_settings":
             self.update_whisper_settings(column_name, val)
+        elif setting_name == "speech_t5_settings":
+            self.update_speech_t5_settings(column_name, val)
         else:
             logging.error(f"Invalid setting name: {setting_name}")
 
     def update_application_settings(self, column_name, val):
         self.update_setting(ApplicationSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("application_settings", column_name, val)
 
     def update_espeak_settings(self, column_name, val):
         self.update_setting(EspeakSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("espeak_settings", column_name, val)
 
     def update_tts_settings(self, column_name, val):
         self.update_setting(TTSSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("tts_settings", column_name, val)
 
     def update_speech_t5_settings(self, column_name, val):
         self.update_setting(SpeechT5Settings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("speech_t5_settings", column_name, val)
 
     def update_controlnet_settings(self, column_name, val):
         self.update_setting(ControlnetSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("controlnet_settings", column_name, val)
 
     def update_brush_settings(self, column_name, val):
         self.update_setting(BrushSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("brush_settings", column_name, val)
 
     def update_image_to_image_settings(self, column_name, val):
         self.update_setting(ImageToImageSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("image_to_image_settings", column_name, val)
 
     def update_outpaint_settings(self, column_name, val):
         self.update_setting(OutpaintSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("outpaint_settings", column_name, val)
 
     def update_drawing_pad_settings(self, column_name, val):
         self.update_setting(DrawingPadSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("drawing_pad_settings", column_name, val)
 
     def update_grid_settings(self, column_name, val):
         self.update_setting(GridSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("grid_settings", column_name, val)
 
     def update_active_grid_settings(self, column_name, val):
         self.update_setting(ActiveGridSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("active_grid_settings", column_name, val)
 
     def update_path_settings(self, column_name, val):
         self.update_setting(PathSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("path_settings", column_name, val)
 
     def update_memory_settings(self, column_name, val):
         self.update_setting(MemorySettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("memory_settings", column_name, val)
 
     def update_metadata_settings(self, column_name, val):
         self.update_setting(MetadataSettings, column_name, val)
-        self.__settings_updated()
+        self.__settings_updated("metadata_settings", column_name, val)
 
-    def update_llm_generator_settings(self, column_name, val):
-        self.update_setting(LLMGeneratorSettings, column_name, val)
+    def update_llm_generator_settings(self, column_name: str, val):
+        # Retrieve the LLMGeneratorSettings instance
+        settings = self.session.query(LLMGeneratorSettings).first()
+        if settings:
+            setattr(settings, column_name, val)
+            # Explicitly mark the instance and merge changes
+            self.session.add(settings)
+            self.session.commit()  # Commit changes to the database
+            self.session.refresh(settings)
+            self.logger.debug(f"LLMGeneratorSettings updated in DB: {column_name} = {val}")
+        else:
+            self.logger.error("No LLMGeneratorSettings instance found.")
         self.__settings_updated()
 
     def update_whisper_settings(self, column_name, val):
@@ -437,7 +499,10 @@ class SettingsMixin:
         setting = self.session.query(model_class_).order_by(model_class_.id.desc()).first()
         if setting:
             setattr(setting, name, value)
-            self.session.commit()
+            try:
+                self.session.commit()
+            except sqlite3.OperationalError as e:
+                self.logger.error(f"Error updating setting: {e}")
 
     def save_generator_settings(self, generator_settings: GeneratorSettings):
         query = self.session.query(GeneratorSettings).filter_by(
@@ -682,55 +747,63 @@ class SettingsMixin:
         self.session.commit()
 
     def load_history_from_db(self, conversation_id):
-        messages = self.session.query(Message).filter_by(
-            conversation_id=conversation_id
-        ).order_by(Message.timestamp).all()
-        results = [
+        conversation = self.session.query(Conversation).filter_by(id=conversation_id).first()
+        messages = conversation.value
+        return [
             {
-                "id": message.id,
-                "role": message.role,
-                "content": message.content,
-                "name": message.name,
-                "is_bot": message.is_bot,
-                "timestamp": message.timestamp,
-                "conversation_id": message.conversation_id
-            } for message in messages
+                "id": id,
+                "role": LLMChatRole.HUMAN if message["role"] == "user"  else LLMChatRole.ASSISTANT,
+                "content": message["blocks"][0]["text"],
+                "name": self.username if message["role"] == "user" else self.chatbot.name,
+                "is_bot": message["role"] == "bot",
+                "timestamp": message["timestamp"],
+                "conversation_id": conversation_id
+
+            } for id, message in enumerate(messages)
         ]
-        return results
 
-    def save_message(self, content, role, name, is_bot, conversation_id) -> Message:
-        timestamp = datetime.datetime.now()  # Ensure timestamp is a datetime object
-        llm_generator_settings = self.session.query(LLMGeneratorSettings).first()
-        message = Message(
-            role=role,
-            content=content,
-            name=name,
-            is_bot=is_bot,
-            timestamp=timestamp,
-            conversation_id=conversation_id,
-            chatbot_id=llm_generator_settings.current_chatbot
-        )
-        self.session.add(message)
-        self.session.commit()
-        return message
-
-    def get_chatbot_by_id(self, chatbot_id) -> Type[Chatbot]:
+    def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
         chatbot = self.session.query(Chatbot).filter_by(id=chatbot_id).options(joinedload(Chatbot.target_files)).first()
         if chatbot is None:
-            chatbot = self.session.query(Chatbot).options(joinedload(Chatbot.target_files)).first()
+            chatbot = self.create_chatbot("Default")
         return chatbot
 
-    def create_conversation(self):
+    def create_conversation(self, chat_store_key: str):
+        # get prev conversation by key != chat_store_key
+        # order by id desc
+        # get first
+        previous_conversation = self.session.query(
+            Conversation
+        ).filter(
+            Conversation.key != chat_store_key
+        ).order_by(
+            Conversation.id.desc()
+        ).first()
         # find conversation which has no title, bot_mood or messages
-        conversation = self.session.query(Conversation).filter_by(title="", bot_mood="").first()
+        conversation = self.session.query(Conversation).filter_by(
+            key=chat_store_key
+        ).first()
+        if (
+            previous_conversation 
+            and previous_conversation.bot_mood 
+            and conversation 
+            and conversation.bot_mood is None
+        ):
+            conversation.bot_mood = previous_conversation.bot_mood
+            self.session.add(conversation)
+            self.session.commit()
         if conversation:
-            # ensure there are no messages in the conversation
-            message = self.session.query(Message).filter_by(conversation_id=conversation.id).first()
-            if message is None:
-                return conversation
+            return conversation
         conversation = Conversation(
             timestamp=datetime.datetime.now(datetime.timezone.utc),
-            title=""
+            title="",
+            key=chat_store_key,
+            value=None,
+            chatbot_id=self.chatbot.id,
+            user_id=self.user.id,
+            chatbot_name=self.chatbot.name,
+            user_name=self.user.username,
+            bot_mood=previous_conversation.bot_mood if previous_conversation else None
         )
         self.session.add(conversation)
         self.session.commit()
@@ -751,13 +824,12 @@ class SettingsMixin:
         )
         self.session.add(summary)
         self.session.commit()
-
+    
     def get_all_conversations(self):
         conversations = self.session.query(Conversation).all()
         return conversations
 
     def delete_conversation(self, conversation_id):
-        self.session.query(Message).filter_by(conversation_id=conversation_id).delete()
         self.session.query(Summary).filter_by(conversation_id=conversation_id).delete()
         self.session.query(Conversation).filter_by(id=conversation_id).delete()
         self.session.commit()
@@ -766,5 +838,12 @@ class SettingsMixin:
         conversation = self.session.query(Conversation).order_by(Conversation.timestamp.desc()).first()
         return conversation
 
-    def __settings_updated(self):
-        self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL)
+    def __settings_updated(self, setting_name=None, column_name=None, val=None):
+        data = None
+        if setting_name and column_name and val:
+            data = {
+                "setting_name": setting_name,
+                "column_name": column_name,
+                "value": val
+            }
+        self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, data)

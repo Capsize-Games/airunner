@@ -1,3 +1,8 @@
+import uuid
+import json
+
+from typing import Optional
+
 from PySide6.QtCore import Slot, QTimer, QPropertyAnimation
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
@@ -6,7 +11,8 @@ from airunner.enums import SignalCode, LLMActionType, ModelType, ModelStatus
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
-
+from airunner.data.models import Conversation
+from airunner.utils.strip_names_from_message import strip_names_from_message
 
 class ChatPromptWidget(BaseWidget):
     widget_class_ = Ui_chat_prompt
@@ -14,13 +20,11 @@ class ChatPromptWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.scroll_bar = None
-        self.conversation = None
         self.is_modal = True
         self.generating = False
         self.prefix = ""
         self.prompt = ""
         self.suffix = ""
-        self.conversation_history = []
         self.spacer = None
         self.promptKeyPressEvent = None
         self.originalKeyPressEvent = None
@@ -28,13 +32,15 @@ class ChatPromptWidget(BaseWidget):
         self.action_menu_displayed = None
         self.messages_spacer = None
         self.chat_loaded = False
-        self.conversation_id = None
+        self._conversation = None
+        self.conversation_history = []
 
         self.ui.action.blockSignals(True)
         self.ui.action.addItem("Auto")
         self.ui.action.addItem("Chat")
         self.ui.action.addItem("Image")
         self.ui.action.addItem("RAG")
+        self.ui.action.addItem("Store Data")
         action = LLMActionType[self.action]
         if action is LLMActionType.APPLICATION_COMMAND:
             self.ui.action.setCurrentIndex(0)
@@ -44,6 +50,8 @@ class ChatPromptWidget(BaseWidget):
             self.ui.action.setCurrentIndex(2)
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
             self.ui.action.setCurrentIndex(3)
+        elif action is LLMActionType.STORE_DATA:
+            self.ui.action.setCurrentIndex(4)
         self.ui.action.blockSignals(False)
         self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
@@ -55,6 +63,36 @@ class ChatPromptWidget(BaseWidget):
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
+        self.load_conversation()
+
+    @property
+    def conversation(self) -> Optional[Conversation]:
+        return self._conversation
+    
+    @conversation.setter
+    def conversation(self, val: Optional[Conversation]):
+        self._conversation = val
+
+    @property
+    def conversation_id(self) -> Optional[int]:
+        if self._conversation is None:
+            return None
+        return self._conversation.id
+
+    def load_conversation(self):
+        conversation = self.session.query(Conversation).order_by(Conversation.id.desc()).first()
+        if conversation is not None:
+            self.conversation = conversation
+            self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
+                "conversation_id": self.conversation_id
+            })
+            self._set_conversation_widgets([{
+                "name": self.user.username if message["role"] == "user" else self.chatbot.name,
+                "content": message["blocks"][0]["text"],
+                "is_bot": message["role"] == "assistant",
+                "id": id
+            } for id, message in enumerate(self.conversation.value or [])
+        ])
 
     @Slot(str)
     def handle_token_signal(self, val: str):
@@ -88,7 +126,14 @@ class ChatPromptWidget(BaseWidget):
         self._clear_conversation_widgets()
         if len(message["messages"]) > 0:
             self.conversation_id = message["messages"][0]["conversation_id"]
-        QTimer.singleShot(0, lambda: self._set_conversation_widgets(message["messages"]))
+            self.conversation = self.session.query(Conversation).filter_by(id=self.conversation_id).first()
+        self._set_conversation_widgets([{
+                "name": message["additional_kwargs"]["name"],
+                "content": message["text"],
+                "is_bot": message["role"] == "assistant",
+                "id": id
+            } for id, message in enumerate(json.loads(self.conversation.value))
+        ])
 
     def _set_conversation_widgets(self, messages):
         for message in messages:
@@ -150,12 +195,15 @@ class ChatPromptWidget(BaseWidget):
         self._create_conversation()
 
     def _create_conversation(self):
-        conversation = self.create_conversation()
-        conversation_id = conversation.id
+        previous_conversation = self.session.query(Conversation).order_by(Conversation.id.desc()).first()
+        self.conversation = self.create_conversation("cpw_" + uuid.uuid4().hex)
+        if previous_conversation:
+            self.conversation.bot_mood = previous_conversation.bot_mood
+        self.session.add(self.conversation)
+        self.session.commit()
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
-            "conversation_id": conversation_id
+            "conversation_id": self.conversation_id
         })
-        self.conversation_id = conversation_id
 
     def _clear_conversation_widgets(self):
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
@@ -254,6 +302,8 @@ class ChatPromptWidget(BaseWidget):
             llm_action_value = LLMActionType.GENERATE_IMAGE
         elif val == "RAG":
             llm_action_value = LLMActionType.PERFORM_RAG_SEARCH
+        elif val == "Store Data":
+            llm_action_value = LLMActionType.STORE_DATA
         else:
             llm_action_value = LLMActionType.APPLICATION_COMMAND
         self.update_llm_generator_settings("action", llm_action_value.name)
@@ -320,6 +370,11 @@ class ChatPromptWidget(BaseWidget):
         first_message=True,
         message_id=None
     ):
+        message = strip_names_from_message(
+            message, 
+            self.user.username, 
+            self.chatbot.botname
+        )
         if not first_message:
             # get the last widget from the scrollAreaWidgetContents.layout()
             # and append the message to it. must be a MessageWidget object
@@ -338,11 +393,14 @@ class ChatPromptWidget(BaseWidget):
 
         widget = None
         if message != "":
+            total_widgets = self.ui.scrollAreaWidgetContents.layout().count() - 1
+            if total_widgets < 0:
+                total_widgets = 0
             widget = MessageWidget(
                 name=name,
                 message=message,
                 is_bot=is_bot,
-                message_id=message_id,
+                message_id=total_widgets,
                 conversation_id=self.conversation_id
             )
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
