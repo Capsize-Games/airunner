@@ -23,6 +23,7 @@ class LLMSettingsWidget(
         self.ui.model_type_container.hide()
         self.ui.model_version_container.hide()
         self.ui.prompt_template_container.hide()
+        self.initialize_form()
 
     @Slot(bool)
     def toggle_use_cache(self, val: bool):
@@ -30,7 +31,6 @@ class LLMSettingsWidget(
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.emit_signal(SignalCode.WINDOW_LOADED_SIGNAL)
 
     def early_stopping_toggled(self, val):
         self.update_chatbot("early_stopping", val)
@@ -119,7 +119,9 @@ class LLMSettingsWidget(
             element.blockSignals(False)
 
     def callback(self, attr_name, value, widget=None):
-        self.update_chatbot(attr_name, value)
+        keys = attr_name.split(".")
+        self.update_llm_generator_settings(keys[1], value)
+        print(getattr(self.llm_generator_settings, keys[1]) == value)
 
     def model_text_changed(self, val):
         self.update_application_settings("current_llm_generator", val)

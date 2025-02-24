@@ -1,8 +1,12 @@
 from setuptools import setup, find_packages
 
+def read_version():
+    with open("version.txt", "r") as f:
+        return f.read().strip()
+
 setup(
     name="airunner",
-    version="3.1.9",
+    version=read_version(),
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -26,7 +30,7 @@ setup(
         "torchaudio==2.6.0",
         "torchvision==0.21.0",
         "optimum==1.24.0",
-        "numpy==2.0.2",
+        "numpy==1.26.4",
         "pillow==11.1.0",
         "tensorflow==2.18.0",
         "DeepCache==0.1.1",
@@ -35,15 +39,18 @@ setup(
         # LLM Dependencies
         "transformers==4.48.1",
         "auto-gptq==0.7.1",
-        "bitsandbytes==0.45.1",
+        "bitsandbytes==0.45.2",
         "datasets==3.2.0",
         "sentence_transformers==3.4.1",
         "sounddevice==0.5.1",  # Required for tts and stt
         "pyttsx3==2.91",  # Required for tts
         "cryptography==44.0.0",
         "setuptools==75.8.0",
+        "openmeteo_requests==1.3.0",
+        "requests-cache==1.2.1",
+        "retry-requests==2.0.0",
 
-        # # Stable Diffusion Dependencies
+        # Stable Diffusion Dependencies
         "diffusers==0.32.2",
         "controlnet_aux==0.0.9",
         "safetensors==0.5.2",
@@ -61,9 +68,19 @@ setup(
         "llama-index-llms-huggingface==0.4.2",
         "llama-index-llms-groq==0.3.1",
         "llama-index-embeddings-mistralai==0.3.0",
+        "llama-index-vector-stores-faiss==0.3.0",
+        "llama-index-embeddings-huggingface==0.5.1",
+        "langchain-community==0.3.17",
         "EbookLib==0.18",
         "html2text==2024.2.26",
-        "rake_nltk==1.0.6"
+        "rake_nltk==1.0.6",
+        "faiss-gpu==1.7.2",
+        "tf-keras==2.18.0",
+        "timm==0.6.7",
+        "aiosqlite==0.21.0",
+
+        # LLM Training dependencies
+        "peft==0.14.0"
     ],
     package_data={
         "airunner": [
@@ -77,6 +94,7 @@ setup(
             "windows/**/*.ui",
             "*.qrc",
             "*.ini",
+            "version.txt",
         ],
     },
     include_package_data=True,

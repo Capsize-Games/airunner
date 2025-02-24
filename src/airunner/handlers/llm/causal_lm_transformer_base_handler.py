@@ -1,26 +1,25 @@
 import random
 import os
-
 import torch
-
 from llama_index.llms.groq import Groq
-
+from llama_index.core.chat_engine.types import AgentChatResponse
+from peft import get_peft_config, get_peft_model, PeftModel
+from typing import Optional, Dict
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
-
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import MAX_SEED
 from airunner.utils.clear_memory import clear_memory
-from airunner.handlers.llm.agent.base_agent import BaseAgent
+from airunner.handlers.llm.agent.mistral_agent import MistralAgentQObject
+from airunner.handlers.llm.training_mixin import TrainingMixin
 
 
 class CausalLMTransformerBaseHandler(
-    BaseHandler
+    BaseHandler,
+    TrainingMixin
 ):
-    auto_class_ = AutoModelForCausalLM
-    tokenizer_class_ = AutoTokenizer
     model_type = ModelType.LLM
 
     def __init__(self, *args, **kwargs):
@@ -30,7 +29,7 @@ class CausalLMTransformerBaseHandler(
         self._model = None
         self._streamer = None
         self._chat_engine = None
-        self._chat_agent = None
+        self._chat_agent: Optional[MistralAgentQObject] = None
         self._llm_with_tools = None
         self._agent_executor = None
         self._embed_model = None
@@ -42,8 +41,7 @@ class CausalLMTransformerBaseHandler(
         self._return_agent_code: bool = False
         self._rag_tokenizer = None
         self._rag_retriever = None
-        self._do_quantize_model = kwargs.pop("do_quantize_model", True)
-        self.__model = None
+        self._do_quantize_model = kwargs.pop("do_quantize_model", False)
         self._vocoder = None
         self._current_model_path = kwargs.get("current_model_path", "")
         self._history = []
@@ -68,7 +66,7 @@ class CausalLMTransformerBaseHandler(
     @property
     def is_mistral(self) -> bool:
         path = self._current_model_path.lower()
-        return "mistral" in path
+        return "ministral" in path
 
     @property
     def is_llama_instruct(self):
@@ -125,7 +123,10 @@ class CausalLMTransformerBaseHandler(
                 bnb_4bit_quant_type='nf4',
             )
         elif self.llm_dtype == "4bit":
-            config = BitsAndBytesConfig(load_in_4bit=True)
+            config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16  # changed to match input type
+            )
         elif self.llm_dtype == "2bit":
             config = GPTQConfig(
                 bits=2,
@@ -141,28 +142,23 @@ class CausalLMTransformerBaseHandler(
         return self.chatbot.use_cache
 
     @property
-    def model_path(self):
-        model_version:str = self.chatbot.model_version
+    def model_version(self) -> str:
+        model_version = self.chatbot.model_version
         if self.llm_generator_settings.override_parameters:
             model_version = self.llm_generator_settings.model_version
-        current_llm_generator = self.application_settings.current_llm_generator
-        local_path:str = "misc"
-        if current_llm_generator == "causallm":
-            local_path = "causallm"
-        elif current_llm_generator == "seq2seq":
-            local_path = "seq2seq"
-        elif current_llm_generator == "visualqa":
-            local_path = "visualqa"
-        base:str = self.path_settings.base_path
+        return model_version
+
+    @property
+    def model_path(self):
         return os.path.expanduser(os.path.join(
-            base,
+            self.path_settings.base_path,
             "text",
             "models",
             "llm",
-            local_path,
-            model_version
+            "causallm",
+            self.model_version
         ))
-
+    
     def load(self):
         if self.model_status in (
             ModelStatus.LOADING,
@@ -199,7 +195,7 @@ class CausalLMTransformerBaseHandler(
         clear_memory()
         self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
 
-    def handle_request(self, data:dict):
+    def handle_request(self, data: Dict) -> AgentChatResponse:
         self.logger.debug("Handling request")
         self._processing_request = True
         self._do_set_seed()
@@ -208,10 +204,13 @@ class CausalLMTransformerBaseHandler(
         action = self.llm_generator_settings.action
         if type(action) is str:
             action = LLMActionType[action]
-        self._do_generate(
+        return self._do_generate(
             data["request_data"]["prompt"],
             action
         )
+    
+    def chat(self, prompt) -> AgentChatResponse:
+        return self._do_generate(prompt, LLMActionType.CHAT)
 
     def do_interrupt(self):
         """
@@ -220,14 +219,14 @@ class CausalLMTransformerBaseHandler(
         if self._chat_agent:
             self._chat_agent.interrupt_process()
 
-    def clear_history(self):
+    def clear_history(self, data: Optional[Dict] = None):
         """
         Public method to clear the chat agent history
         """
         if not self._chat_agent:
             return
         self.logger.debug("Clearing chat history")
-        self._chat_agent.clear_history()
+        self._chat_agent.clear_history(data)
 
     def add_chatbot_response_to_history(self, message):
         """
@@ -245,17 +244,16 @@ class CausalLMTransformerBaseHandler(
         """
         Public method to reload the RAG model
         """
-        self._chat_agent.reload_rag()
+        self._chat_agent.reload_rag_engine()
 
     def _load_tokenizer(self):
         if self._tokenizer is not None:
             return
-        path = self.model_path
-        self.logger.debug(f"Loading tokenizer from {path}")
+        self.logger.debug(f"Loading tokenizer from {self.model_path}")  # Changed path variable
         kwargs = {
             "local_files_only": True,
             "device_map": self.device,
-            "trust_remote_code": True,
+            "trust_remote_code": False,
             "torch_dtype": self.torch_dtype,
             "attn_implementation": "flash_attention_2",
         }
@@ -263,8 +261,8 @@ class CausalLMTransformerBaseHandler(
         if self.chat_template:
             kwargs["chat_template"] = self.chat_template
         try:
-            self._tokenizer = self.tokenizer_class_.from_pretrained(
-                path,
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                self.model_path,  # Changed to use current_model_path
                 **kwargs,
             )
             self.logger.debug("Tokenizer loaded")
@@ -298,11 +296,24 @@ class CausalLMTransformerBaseHandler(
         if self._chat_agent is not None:
             return
         self.logger.debug("Loading agent")
-        self._chat_agent = BaseAgent(
+        # def get_weather(
+        #     location: str = Field(
+        #         description="The location to get the weather for.",
+        #     )
+        # ) -> str:
+        #     """Get the weather report for a given location."""
+        #     return f"{location} is sunny today."
+
+        tools = [
+            # FunctionTool.from_defaults(
+            #     get_weather,
+            #     return_direct=True
+            # ),
+        ]
+        self._chat_agent = MistralAgentQObject(
             model=self._model,
             tokenizer=self._tokenizer,
-            chat_template=self.chat_template,
-            is_mistral=self.is_mistral,
+            default_tool_choice=None
         )
 
     def _unload_streamer(self):
@@ -349,44 +360,74 @@ class CausalLMTransformerBaseHandler(
         return do_clear_memory
 
     def _load_model_local(self):
-        self.logger.debug("Loading local LLM model")
-        path = self.model_path
-        is_quantized = os.path.exists(path)
-        if not is_quantized:
-            path = self.model_path
-        params = dict(
-            local_files_only=True,
-            use_cache=self.use_cache,
-            trust_remote_code=False,
-            torch_dtype=self.torch_dtype,
-            device_map=self.device,
-        )
+        self.logger.debug(f"Loading local LLM model from {self.model_path}")
+        params = {
+            "local_files_only": True,
+            "use_cache": self.use_cache,
+            "trust_remote_code": False,
+            "torch_dtype": self.torch_dtype,
+            "device_map": self.device,
+        }
         if self._do_quantize_model and self.use_cuda:
             config = self._quantization_config
             if config:
+                config.bnb_4bit_compute_dtype = torch.float16
                 params["quantization_config"] = config
         try:
-            self._model = self.auto_class_.from_pretrained(
-                path,
+            # Use the same path as tokenizer
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_path,
                 **params
             )
         except Exception as e:
             self.logger.error(f"Error loading model: {e}")
-            self._model = None
+            return
+        
+        try:
+            if os.path.exists(self.adapter_path):
+                # Convert base model to PEFT format
+                # self._model = self._load_peft_model(self._model)
+                self._model = PeftModel.from_pretrained(self._model, self.adapter_path)
+        except Exception as e:
+            self.logger.error(f"Error loading adapter (continuing with base model): {e}")
+    
+    def _load_peft_model(self, model):
+        # Configure PeftConfig for LoRA Fine-Tuning
+        self.logger.info("Applying PEFT configuration")
+        config_dict = {
+            "peft_type": "LORA",
+            "task_type": "CAUSAL_LM",
+            "inference_mode": False,
+            "r": 8,
+            "lora_alpha": 32,
+            "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"],
+            "lora_dropout": 0.0,
+            "bias": "none"
+        }
+        peft_config = get_peft_config(config_dict)
+        model = get_peft_model(model, peft_config)
+        
+        model.print_trainable_parameters()
+        model.config.use_cache = False
+        model.enable_input_require_grads()
+        
+        return model
 
-    def _do_generate(self, prompt: str, action: LLMActionType):
+    def _do_generate(
+        self, 
+        prompt: str, 
+        action: LLMActionType
+    ) -> AgentChatResponse:
         self.logger.debug("Generating response")
         if self._current_model_path != self.model_path:
             self.unload()
             self.load()
-        if action is LLMActionType.CHAT and self.chatbot.use_mood:
-            action = LLMActionType.UPDATE_MOOD
-        self._chat_agent.run(
-            prompt,
-            action
-        )
+        # if action is LLMActionType.CHAT and self.chatbot.use_mood:
+        #     action = LLMActionType.UPDATE_MOOD
+        response = self._chat_agent.chat(prompt, action)
         if action is LLMActionType.CHAT:
             self._send_final_message()
+        return response
 
     def _emit_streamed_text_signal(self, **kwargs):
         self.logger.debug("Emitting streamed text signal")
@@ -433,3 +474,15 @@ class CausalLMTransformerBaseHandler(
     def _clear_memory(self):
         self.logger.debug("Clearing memory")
         clear_memory(self.memory_settings.default_gpu_llm)
+
+    def _prepare_config_for_save(self, config_dict):
+        """Convert numpy dtypes to strings in config dictionary."""
+        cleaned_config = {}
+        for key, value in config_dict.items():
+            if hasattr(value, 'dtype'):
+                cleaned_config[key] = str(value.dtype)
+            elif isinstance(value, dict):
+                cleaned_config[key] = self._prepare_config_for_save(value)
+            else:
+                cleaned_config[key] = value
+        return cleaned_config

@@ -1,6 +1,7 @@
 import queue
 import re
 import threading
+from typing import Optional
 
 from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
 from airunner.handlers.tts.espeak_tts_handler import EspeakTTSHandler
@@ -19,12 +20,15 @@ class TTSGeneratorWorker(Worker):
         self.play_queue = []
         self.play_queue_started = False
         self.do_interrupt = False
+        self._current_model: Optional[str] = None
         super().__init__(*args, signals=(
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
             (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
             (SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal),
             (SignalCode.TTS_DISABLE_SIGNAL, self.on_disable_tts_signal),
             (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal),
+            (SignalCode.TTS_MODEL_CHANGED, self._reload_tts_handler),
+            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal),
         ), **kwargs)
 
     def on_llm_text_streamed_signal(self, data):
@@ -77,8 +81,24 @@ class TTSGeneratorWorker(Worker):
         if self.application_settings.tts_enabled:
             self.tts.load()
 
+    def _reload_tts_handler(self, data: dict):
+        if not self.application_settings.tts_enabled:
+            return
+
+        if self._current_model != data["model"]:
+            self._current_model = data["model"]
+            self.tts.unload()
+            self._initialize_tts_handler()
+            self.tts.load()
+
+    def on_application_settings_changed_signal(self, data):
+        if data and data.get("setting_name", "") == "speech_t5_settings" and data.get("column_name", "") == "voice":
+            self.tts.reload_speaker_embeddings()
+
     def _initialize_tts_handler(self):
+        self.logger.info("Initializing TTS handler...")
         tts_model = self.tts_settings.model.lower()
+        print(tts_model, TTSModel.ESPEAK.value, tts_model == TTSModel.ESPEAK.value)
         if tts_model == TTSModel.ESPEAK.value:
             tts_handler_class_ = EspeakTTSHandler
         else:
@@ -177,10 +197,7 @@ class TTSGeneratorWorker(Worker):
             return
 
         if response is not None:
-            self.emit_signal(
-                SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
-                {
-                    "message": response
-                }
-            )
+            self.emit_signal(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, {
+                "message": response
+            })
 

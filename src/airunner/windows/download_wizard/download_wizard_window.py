@@ -44,12 +44,9 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
 
     def next_button_clicked(self):
         current_page = self.currentPage()
-        print("NEXT BUTTON CLICKED", current_page)
         if hasattr(current_page, 'next'):
-            print("PAGE HAS NEXT")
             current_page.next()
         if hasattr(current_page, "start"):
-            print("PAGE HAS RUN")
             current_page.start()
 
     def init_pages(self):

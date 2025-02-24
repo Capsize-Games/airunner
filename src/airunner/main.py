@@ -10,18 +10,9 @@ Do not change the order of the imports.
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
-# import facehuggershield
-from airunner.settings import NLTK_DOWNLOAD_DIR
+from airunner.settings import DB_PATH
 import os
 base_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
-# facehuggershield.huggingface.activate(
-#     show_stdout=True,
-#     darklock_os_whitelisted_directories=[
-#         base_path,
-#         NLTK_DOWNLOAD_DIR,
-#         "/tmp"
-#     ]
-# )
 
 ################################################################
 # Set the environment variable for PyTorch to use expandable
@@ -45,9 +36,10 @@ from airunner.app import App
 from alembic.config import Config
 from alembic import command
 from pathlib import Path
-from airunner.data.models.settings_models import ApplicationSettings
+from airunner.data.models import ApplicationSettings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
+
 
 def setup_database():
     base_path = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -57,16 +49,23 @@ def setup_database():
     alembic_cfg.set_main_option("script_location", str(alembic_dir))
     command.upgrade(alembic_cfg, "head")
 
+
+def run_setup_wizard():
+    from airunner.app_installer import AppInstaller
+    AppInstaller()
+
+
 def main():
     setup_database()
 
-    # Get the first ApplicationSettings record from the database and check for run_setup_wizard boolean
-    engine = create_engine("sqlite:///" + os.path.join(base_dir, "airunner.db"))
+    # Get the first ApplicationSettings record from the database and 
+    # check for run_setup_wizard boolean
+    engine = create_engine(f"sqlite:///{DB_PATH}")
     session = scoped_session(sessionmaker(bind=engine))
     application_settings = session.query(ApplicationSettings).first()
+
     if application_settings.run_setup_wizard:
-        from airunner.app_installer import AppInstaller
-        AppInstaller()
+        run_setup_wizard()
     else:
         App()
 
