@@ -3,8 +3,8 @@ import os
 import torch
 from llama_index.llms.groq import Groq
 from llama_index.core.chat_engine.types import AgentChatResponse
-from peft import get_peft_config, get_peft_model, PeftModel
-from typing import Optional, Dict
+from peft import PeftModel
+from typing import Optional, Dict, List
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
@@ -20,48 +20,28 @@ class CausalLMTransformerBaseHandler(
     BaseHandler,
     TrainingMixin
 ):
-    model_type = ModelType.LLM
-
-    def __init__(self, *args, **kwargs):
-        self.model_type = ModelType.LLM
-        self.model_class = "llm"
-        self.agent_options = kwargs.pop("agent_options", {})
-        self._model = None
-        self._streamer = None
-        self._chat_engine = None
-        self._chat_agent: Optional[MistralAgentQObject] = None
-        self._llm_with_tools = None
-        self._agent_executor = None
-        self._embed_model = None
-        self._service_context_model = None
-        self._use_query_engine: bool = False
-        self._use_chat_engine: bool = True
-        self._user_evaluation: str = ""
-        self._restrict_tools_to_additional: bool = True
-        self._return_agent_code: bool = False
-        self._rag_tokenizer = None
-        self._rag_retriever = None
-        self._do_quantize_model = kwargs.pop("do_quantize_model", False)
-        self._vocoder = None
-        self._current_model_path = kwargs.get("current_model_path", "")
-        self._history = []
-        self._set_attention_mask = kwargs.get("set_attention_mask", False)
-        self._do_push_to_hub = kwargs.get("do_push_to_hub", False)
-        self._llm_int8_enable_fp32_cpu_offload = kwargs.get("llm_int8_enable_fp32_cpu_offload", True)
-        self._generator_name = kwargs.get("generator_name", "")
-        self._return_result = kwargs.get("return_result", True)
-        self._skip_special_tokens = kwargs.get("skip_special_tokens", True)
-        self._processing_request = kwargs.get("_processing_request", False)
-        self._bad_words_ids = kwargs.get("bad_words_ids", None)
-        self._bos_token_id = kwargs.get("bos_token_id", None)
-        self._pad_token_id = kwargs.get("pad_token_id", None)
-        self._eos_token_id = kwargs.get("eos_token_id", None)
-        self._no_repeat_ngram_size = kwargs.get("no_repeat_ngram_size", 1)
-        self._decoder_start_token_id = kwargs.get("decoder_start_token_id", None)
-        self._tokenizer = None
-        self._generator = None
-
-        super().__init__(*args, **kwargs)
+    model_type: ModelType = ModelType.LLM
+    model_class: str = "llm"
+    _model: Optional[object] = None
+    _streamer: Optional[object] = None
+    _chat_engine: Optional[object] = None
+    _chat_agent: Optional[MistralAgentQObject] = None
+    _llm_with_tools: Optional[object] = None
+    _agent_executor: Optional[object] = None
+    _embed_model: Optional[object] = None
+    _service_context_model: Optional[object] = None
+    _use_query_engine: bool = False
+    _use_chat_engine: bool = True
+    _user_evaluation: str = ""
+    _restrict_tools_to_additional: bool = True
+    _return_agent_code: bool = False
+    _rag_tokenizer: Optional[object] = None
+    _rag_retriever: Optional[object] = None
+    _vocoder: Optional[object] = None
+    _tokenizer: Optional[object] = None
+    _generator: Optional[object] = None
+    _history: Optional[List] = []
+    _current_model_path: Optional[str] = None
 
     @property
     def is_mistral(self) -> bool:
@@ -74,30 +54,6 @@ class CausalLMTransformerBaseHandler(
         if "instruct" in path and "llama" in path:
             return True
         return False
-
-    @property
-    def chat_template(self):
-        if self.is_mistral:
-            return (
-                "{% for message in messages %}"
-                "{% if message['role'] == 'system' %}"
-                "{{ '[INST] <<SYS>>' + message['content'] + ' <</SYS>>[/INST]' }}"
-                "{% elif message['role'] == 'user' %}"
-                "{{ '[INST]' + message['content'] + ' [/INST]' }}"
-                "{% elif message['role'] == 'assistant' %}"
-                "{{ message['content'] + eos_token + ' ' }}"
-                "{% endif %}"
-                "{% endfor %}"
-            )
-        elif self.is_llama_instruct:
-            return (
-                "{{ '<|begin_of_text|>' }}"
-                "{% for message in messages %}"
-                "{{ '<|start_header_id|>' + "
-                "message['role'] + '<|end_header_id|>' + '\n\n' + message['content'] + "
-                "'<|end_header_id|>\n\n' + message['content'] + '<|eot_id|>' }}"
-                "{% endfor %}"
-            )
 
     @property
     def username(self):
@@ -197,10 +153,8 @@ class CausalLMTransformerBaseHandler(
 
     def handle_request(self, data: Dict) -> AgentChatResponse:
         self.logger.debug("Handling request")
-        self._processing_request = True
         self._do_set_seed()
         self.load()
-        self._processing_request = True
         action = self.llm_generator_settings.action
         if type(action) is str:
             action = LLMActionType[action]
@@ -208,9 +162,19 @@ class CausalLMTransformerBaseHandler(
             data["request_data"]["prompt"],
             action
         )
-    
-    def chat(self, prompt) -> AgentChatResponse:
-        return self._do_generate(prompt, LLMActionType.CHAT)
+
+    def chat(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        rag_system_prompt: Optional[str] = None
+    ) -> AgentChatResponse:
+        return self._do_generate(
+            prompt,
+            LLMActionType.CHAT,
+            system_prompt,
+            rag_system_prompt
+        )
 
     def do_interrupt(self):
         """
@@ -249,21 +213,15 @@ class CausalLMTransformerBaseHandler(
     def _load_tokenizer(self):
         if self._tokenizer is not None:
             return
-        self.logger.debug(f"Loading tokenizer from {self.model_path}")  # Changed path variable
-        kwargs = {
-            "local_files_only": True,
-            "device_map": self.device,
-            "trust_remote_code": False,
-            "torch_dtype": self.torch_dtype,
-            "attn_implementation": "flash_attention_2",
-        }
-
-        if self.chat_template:
-            kwargs["chat_template"] = self.chat_template
+        self.logger.debug(f"Loading tokenizer from {self.model_path}")
         try:
             self._tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path,  # Changed to use current_model_path
-                **kwargs,
+                self.model_path,
+                local_files_only=True,
+                device_map=self.device,
+                trust_remote_code=False,
+                torch_dtype=self.torch_dtype,
+                attn_implementation="flash_attention_2",
             )
             self.logger.debug("Tokenizer loaded")
         except Exception as e:
@@ -361,23 +319,15 @@ class CausalLMTransformerBaseHandler(
 
     def _load_model_local(self):
         self.logger.debug(f"Loading local LLM model from {self.model_path}")
-        params = {
-            "local_files_only": True,
-            "use_cache": self.use_cache,
-            "trust_remote_code": False,
-            "torch_dtype": self.torch_dtype,
-            "device_map": self.device,
-        }
-        if self._do_quantize_model and self.use_cuda:
-            config = self._quantization_config
-            if config:
-                config.bnb_4bit_compute_dtype = torch.float16
-                params["quantization_config"] = config
         try:
             # Use the same path as tokenizer
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.model_path,
-                **params
+                local_files_only = True,
+                use_cache = self.use_cache,
+                trust_remote_code = False,
+                torch_dtype = self.torch_dtype,
+                device_map = self.device,
             )
         except Exception as e:
             self.logger.error(f"Error loading model: {e}")
@@ -386,37 +336,16 @@ class CausalLMTransformerBaseHandler(
         try:
             if os.path.exists(self.adapter_path):
                 # Convert base model to PEFT format
-                # self._model = self._load_peft_model(self._model)
                 self._model = PeftModel.from_pretrained(self._model, self.adapter_path)
         except Exception as e:
             self.logger.error(f"Error loading adapter (continuing with base model): {e}")
-    
-    def _load_peft_model(self, model):
-        # Configure PeftConfig for LoRA Fine-Tuning
-        self.logger.info("Applying PEFT configuration")
-        config_dict = {
-            "peft_type": "LORA",
-            "task_type": "CAUSAL_LM",
-            "inference_mode": False,
-            "r": 8,
-            "lora_alpha": 32,
-            "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"],
-            "lora_dropout": 0.0,
-            "bias": "none"
-        }
-        peft_config = get_peft_config(config_dict)
-        model = get_peft_model(model, peft_config)
         
-        model.print_trainable_parameters()
-        model.config.use_cache = False
-        model.enable_input_require_grads()
-        
-        return model
-
     def _do_generate(
         self, 
         prompt: str, 
-        action: LLMActionType
+        action: LLMActionType,
+        system_prompt: Optional[str] = None,
+        rag_system_prompt: Optional[str] = None
     ) -> AgentChatResponse:
         self.logger.debug("Generating response")
         if self._current_model_path != self.model_path:
@@ -424,7 +353,7 @@ class CausalLMTransformerBaseHandler(
             self.load()
         # if action is LLMActionType.CHAT and self.chatbot.use_mood:
         #     action = LLMActionType.UPDATE_MOOD
-        response = self._chat_agent.chat(prompt, action)
+        response = self._chat_agent.chat(prompt, action, system_prompt, rag_system_prompt)
         if action is LLMActionType.CHAT:
             self._send_final_message()
         return response
@@ -466,23 +395,3 @@ class CausalLMTransformerBaseHandler(
         torch.backends.cudnn.benchmark = False
         if self._tokenizer:
             self._tokenizer.seed = seed
-
-    def _save_quantized_model(self):
-        self.logger.debug("Saving quantized model to cache")
-        self._model.save_pretrained(self.model_path)
-
-    def _clear_memory(self):
-        self.logger.debug("Clearing memory")
-        clear_memory(self.memory_settings.default_gpu_llm)
-
-    def _prepare_config_for_save(self, config_dict):
-        """Convert numpy dtypes to strings in config dictionary."""
-        cleaned_config = {}
-        for key, value in config_dict.items():
-            if hasattr(value, 'dtype'):
-                cleaned_config[key] = str(value.dtype)
-            elif isinstance(value, dict):
-                cleaned_config[key] = self._prepare_config_for_save(value)
-            else:
-                cleaned_config[key] = value
-        return cleaned_config
