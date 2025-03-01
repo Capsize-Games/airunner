@@ -162,9 +162,19 @@ class CausalLMTransformerBaseHandler(
             data["request_data"]["prompt"],
             action
         )
-    
-    def chat(self, prompt) -> AgentChatResponse:
-        return self._do_generate(prompt, LLMActionType.CHAT)
+
+    def chat(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        rag_system_prompt: Optional[str] = None
+    ) -> AgentChatResponse:
+        return self._do_generate(
+            prompt,
+            LLMActionType.CHAT,
+            system_prompt,
+            rag_system_prompt
+        )
 
     def do_interrupt(self):
         """
@@ -333,7 +343,9 @@ class CausalLMTransformerBaseHandler(
     def _do_generate(
         self, 
         prompt: str, 
-        action: LLMActionType
+        action: LLMActionType,
+        system_prompt: Optional[str] = None,
+        rag_system_prompt: Optional[str] = None
     ) -> AgentChatResponse:
         self.logger.debug("Generating response")
         if self._current_model_path != self.model_path:
@@ -341,7 +353,7 @@ class CausalLMTransformerBaseHandler(
             self.load()
         # if action is LLMActionType.CHAT and self.chatbot.use_mood:
         #     action = LLMActionType.UPDATE_MOOD
-        response = self._chat_agent.chat(prompt, action)
+        response = self._chat_agent.chat(prompt, action, system_prompt, rag_system_prompt)
         if action is LLMActionType.CHAT:
             self._send_final_message()
         return response
