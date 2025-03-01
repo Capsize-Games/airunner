@@ -9,6 +9,7 @@ from typing import (
     Union,
     Dict,
 )
+import uuid
 import datetime
 import platform
 from PySide6.QtCore import QObject
@@ -533,8 +534,8 @@ class MistralAgent(
             self.chatbot.system_instructions != ""
         ):
             system_instructions = f"Always follow these instructions:\n{self.chatbot.system_instructions}\n"
-        if self.chatbot.use_guardrails and self.chatbot.guardrails and self.chatbot.guardrails != "":
-            guardrails = f"Always follow these guardrails:\n{self.chatbot.guardrails}\n"
+        if self.chatbot.use_guardrails and self.chatbot.guardrails_prompt and self.chatbot.guardrails_prompt != "":
+            guardrails = f"Always follow these guardrails:\n{self.chatbot.guardrails_prompt}\n"
         backstory_prompt = ""
         if self.chatbot.use_backstory and self.chatbot.backstory and self.chatbot.backstory != "":
             backstory_prompt = (
@@ -663,10 +664,10 @@ class MistralAgent(
     @property
     def chat_store_key(self) -> str:
         if not self._conversation_key:
-            # Get conversation_key from latest conversation
-            latest_conversation = self.session.query(Conversation).order_by(
-                Conversation.id.desc()
-            ).first()
+            key = "agnt_" + uuid.uuid4().hex
+            latest_conversation = self.create_conversation(key)
+            self.session.add(latest_conversation)
+            self.session.commit()
             if latest_conversation:
                 self._conversation_key = latest_conversation.key
         return self._conversation_key
@@ -728,14 +729,20 @@ class MistralAgent(
             if self._chat_engine:
                 self._chat_engine.memory = self._chat_memory
 
-    def _update_system_prompt(self):
-        self.chat_engine_tool.update_system_prompt(self._system_prompt)
-        self.rag_engine_tool.update_system_prompt(self._rag_system_prompt)
+    def _update_system_prompt(
+        self, 
+        system_prompt: Optional[str] = None,
+        rag_system_prompt: Optional[str] = None
+    ):
+        self.chat_engine_tool.update_system_prompt(system_prompt or self._system_prompt)
+        self.rag_engine_tool.update_system_prompt(rag_system_prompt or self._rag_system_prompt)
 
     def chat(
         self,
         message: str,
-        action: LLMActionType = LLMActionType.CHAT
+        action: LLMActionType = LLMActionType.CHAT,
+        system_prompt: Optional[str] = None,
+        rag_system_prompt: Optional[str] = None
     ) -> AgentChatResponse:
         self._complete_response = ""
         self.do_interrupt = False
@@ -745,7 +752,7 @@ class MistralAgent(
             "chat_history": self._memory.get_all() if self._memory else None
         }
         # self._perform_analysis()
-        self._update_system_prompt()
+        self._update_system_prompt(system_prompt, rag_system_prompt)
 
         if action is LLMActionType.CHAT:
             self._perform_tool_call("chat_engine_tool", **kwargs)
