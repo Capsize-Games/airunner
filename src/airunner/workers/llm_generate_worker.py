@@ -7,9 +7,8 @@ from airunner.workers.worker import Worker
 
 
 class LLMGenerateWorker(Worker):
-    def __init__(self, agent_options=None):
+    def __init__(self):
         self.llm = None
-        self.agent_options = agent_options
         super().__init__()
         for signal in (
             (SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal),
@@ -89,7 +88,7 @@ class LLMGenerateWorker(Worker):
     def _load_llm(self, data=None):
         data = data or {}
         if self.llm is None:
-            self.llm = CausalLMTransformerBaseHandler(agent_options=self.agent_options)
+            self.llm = CausalLMTransformerBaseHandler()
 
         self.llm.load()
 
