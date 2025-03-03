@@ -1,7 +1,9 @@
 import os
+from typing import Optional
 import requests_cache
 from retry_requests import retry
 import openmeteo_requests
+from openmeteo_sdk.VariablesWithTime import VariablesWithTime
 
 
 class WeatherMixin:
@@ -40,6 +42,8 @@ class WeatherMixin:
     @property
     def _weather_prompt(self) -> str:
         weather = self.get_weather()
+        if not weather:
+            return ""
         current_temperature_2m = weather.Variables(0).Value()
         current_precipitation = weather.Variables(1).Value()
         current_rain = weather.Variables(2).Value()
@@ -60,7 +64,7 @@ class WeatherMixin:
             f"- wind gusts: {current_wind_gusts_10m} {self.wind_speed_unit}\n"
         )
     
-    def get_weather(self):
+    def get_weather(self) -> Optional[VariablesWithTime]:
         cache_session = requests_cache.CachedSession(
             self.cache_path, 
             expire_after = self.weather_cache_expiration
@@ -87,5 +91,9 @@ class WeatherMixin:
             "forecast_days": self.forecast_days,
         }
         responses = openmeteo.weather_api(url, params=params)
-        response = responses[0]
-        return response.Current()
+        try:
+            response = responses[0]
+            return response.Current()
+        except IndexError as e:
+            self.logger.error("Error getting weather: " + str(e))
+            return None
