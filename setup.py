@@ -1,9 +1,25 @@
 from setuptools import setup, find_packages
 import os
+import sys
+import subprocess
+
+is_windows = os.name != "nt"
+
 
 def read_version():
     with open("version.txt", "r") as f:
         return f.read().strip()
+
+
+def install_with_index_url(packages, index_url):
+    subprocess.check_call([
+        sys.executable, 
+        "-m", 
+        "pip", 
+        "install", 
+        "--index-url", 
+        index_url
+    ] + packages)
 
 
 install_requires = [
@@ -14,9 +30,6 @@ install_requires = [
     "PySide6_Addons==6.7.0",
     "PySide6_Essentials==6.7.0",
     "tokenizers==0.21.0",
-    "torch==2.6.0",
-    "torchaudio==2.6.0",
-    "torchvision==0.21.0",
     "optimum==1.24.0",
     "numpy==1.26.4",
     "pillow==11.1.0",
@@ -63,15 +76,22 @@ install_requires = [
     "html2text==2024.2.26",
     "rake_nltk==1.0.6",
     "tf-keras==2.18.0",
-    "timm==0.6.7",
     "aiosqlite==0.21.0",
 
     # LLM Training dependencies
     "peft==0.14.0"
 ]
 
-if os.name != "nt":
+torch_libraries = [
+    "torch==2.6.0",
+    "torchvision==0.21.0",
+    "torchaudio==2.6.0"
+]
+
+if is_windows:
     install_requires.append("faiss-gpu==1.7.2")
+else:
+    install_requires = torch_libraries + install_requires
 
 setup(
     name="airunner",
@@ -110,3 +130,19 @@ setup(
         ],
     },
 )
+
+if is_windows:
+    # Install torch libraries with the specified index-url
+    install_with_index_url(
+        torch_libraries, 
+        "https://download.pytorch.org/whl/cu126"
+    )
+
+
+subprocess.check_call([
+    sys.executable, 
+    "-m", 
+    "pip", 
+    "install", 
+    "timm==1.0.15" 
+])
