@@ -65,7 +65,7 @@ class Ui_install_page(object):
 
     def retranslateUi(self, install_page):
         install_page.setWindowTitle(QCoreApplication.translate("install_page", u"Form", None))
-        self.label.setText(QCoreApplication.translate("install_page", u"Installing AI Runner", None))
+        self.label.setText(QCoreApplication.translate("install_page", u"Downloading AI Models", None))
         self.progress_bar.setFormat(QCoreApplication.translate("install_page", u"Total Installation progress %p%", None))
         self.log.setPlainText("")
         self.status.setText("")

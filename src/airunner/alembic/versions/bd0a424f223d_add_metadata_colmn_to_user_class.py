@@ -19,8 +19,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table('users') as batch_op:
-        batch_op.add_column(sa.Column('data', sqlite.JSON(), nullable=True))
+    try:
+        with op.batch_alter_table('users') as batch_op:
+            batch_op.add_column(sa.Column('data', sqlite.JSON(), nullable=True))
+    except sa.exc.OperationalError as e:
+        print("Error adding column: ", e)
 
 
 def downgrade() -> None:

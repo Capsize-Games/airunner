@@ -11,7 +11,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.drop_table('messages')
+    try:
+        op.drop_table('messages')
+    except sa.exc.OperationalError as e:
+        print("Error dropping table messages: ", e)
 
 
 def downgrade() -> None:

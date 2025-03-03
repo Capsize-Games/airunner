@@ -467,8 +467,6 @@ class InstallPage(BaseWizard):
         if self.application_settings.stable_diffusion_agreement_checked:
             self.total_steps += 1
 
-        
-
         controlnet_model_count = self.session.query(func.count(ControlnetModel.id.distinct())).scalar()
         controlnet_version_count = self.session.query(func.count(ControlnetModel.version.distinct())).scalar()
 
