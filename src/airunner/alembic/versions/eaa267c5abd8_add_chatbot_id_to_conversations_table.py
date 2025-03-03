@@ -9,7 +9,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import sqlite
 
 # revision identifiers, used by Alembic.
 revision: str = 'eaa267c5abd8'
@@ -19,10 +18,26 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table('conversations') as batch_op:
-        batch_op.add_column(sa.Column('chatbot_id', sa.Integer(), sa.ForeignKey('chatbots.id', name='fk_conversations_chatbot_id')))
+    # Disable foreign key constraints
+    op.execute('PRAGMA foreign_keys=OFF')
+    
+    # Add the new column directly
+    try:
+        op.add_column('conversations', sa.Column('chatbot_id', sa.Integer(), sa.ForeignKey('chatbots.id', name='fk_conversations_chatbot_id')))
+    except sa.exc.OperationalError as e:
+        print("Error adding column: ", e)
+
+    
+    # Enable foreign key constraints
+    op.execute('PRAGMA foreign_keys=ON')
 
 
 def downgrade() -> None:
-    with op.batch_alter_table('conversations') as batch_op:
-        batch_op.drop_column('chatbot_id')
+    # Disable foreign key constraints
+    op.execute('PRAGMA foreign_keys=OFF')
+    
+    # Drop the column directly
+    op.drop_column('conversations', 'chatbot_id')
+    
+    # Enable foreign key constraints
+    op.execute('PRAGMA foreign_keys=ON')
