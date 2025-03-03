@@ -32,7 +32,7 @@ from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuff
 from llama_index.core.memory import BaseMemory
 from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
 from airunner.utils.strip_names_from_message import strip_names_from_message
-from airunner.settings import CHAT_STORE_DB_PATH
+from airunner.settings import DB_URL
 
 
 DEFAULT_MAX_FUNCTION_CALLS = 5
@@ -562,8 +562,7 @@ class MistralAgent(
             f"- As {self.botname}, you will not ask how you they can provide assistance, or how they can help.\n"
             f"- As {self.botname}, you must respond and talk like a real human user.\n"
             f"- As {self.botname}, you can ask questions, make statements, and provide information.\n"
-            f"- As {self.botname}, you should respond in character with emotionally charged responses that are "
-            f"consistent with your personality and mood.\n"
+            f"- As {self.botname}, you should respond in character with emotionally charged responses that are consistent with your personality and mood.\n"
             f"{backstory_prompt}"
             f"{system_instructions}"
             f"{guardrails}"
@@ -580,8 +579,7 @@ class MistralAgent(
             f"------\n"
             "**More information about the current conversation:**\n"
             f"The conversation is between user ({self.username}) and assistant ({self.botname}).\n"
-            f"The conversation started on {self.conversation.timestamp}.\n"
-            "------\n"
+            f"The conversation started on {self.conversation.timestamp}."
         )
         prompt = prompt.replace("{{ username }}", self.username)
         prompt = prompt.replace("{{ botname }}", self.botname)
@@ -655,8 +653,7 @@ class MistralAgent(
     @property
     def chat_store(self) -> SQLiteChatStore:
         if not self._chat_store:
-            db_path = CHAT_STORE_DB_PATH
-            self._chat_store = SQLiteChatStore.from_uri(f"sqlite:///{db_path}")
+            self._chat_store = SQLiteChatStore.from_uri(DB_URL)
         return self._chat_store
 
     _conversation_key: Optional[str] = None
