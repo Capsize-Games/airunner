@@ -11,7 +11,7 @@ config = context.config
 config.set_main_option("sqlalchemy.url", DB_URL)
 
 # check if db file exists
-if not os.path.exists(DB_URL):
+if not os.path.exists(DB_URL) and DB_URL.__contains__("sqlite"):
     print(f"Database file not found at {DB_URL}")
 
 # Import your models here
