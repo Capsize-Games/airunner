@@ -1,4 +1,4 @@
-from typing import Any, Optional, Dict
+from typing import Any, Optional
 from urllib.parse import urlparse
 import datetime
 import asyncio
@@ -12,7 +12,7 @@ from llama_index.core.bridge.pydantic import Field, PrivateAttr
 from llama_index.core.storage.chat_store.base import BaseChatStore
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
-
+from airunner.settings import DB_URL, ASYNC_DB_URL
 
 class SQLiteChatStore(BaseChatStore):
     table_name: Optional[str] = Field(
@@ -54,9 +54,9 @@ class SQLiteChatStore(BaseChatStore):
         use_jsonb: bool = False,
     ) -> "SQLiteChatStore":
         """Return connection string from database parameters."""
-        conn_str = connection_string or f"sqlite:///{database}"
-        async_conn_str = async_connection_string or f"sqlite+aiosqlite:///{database}"
-        session, async_session = cls._connect(conn_str, async_conn_str, debug)
+        db_url = connection_string or DB_URL
+        async_db_url = async_connection_string or ASYNC_DB_URL
+        session, async_session = cls._connect(db_url, async_db_url, debug)
         return cls(
             session=session,
             async_session=async_session,

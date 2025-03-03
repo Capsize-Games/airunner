@@ -378,4 +378,7 @@ DB_PATH = os.path.expanduser(
         "airunner.db"
     )
 )
-CHAT_STORE_DB_PATH = DB_PATH
+DB_URL = os.environ.get("AI_RUNNER_DATABASE_URL", f"sqlite:///{DB_PATH}")
+ASYNC_DB_URL = os.environ.get(
+    "ASYNC_AI_RUNNER_DATABASE_URL", f"sqlite+aiosqlite:///{DB_PATH}"
+)

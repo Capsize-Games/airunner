@@ -40,6 +40,7 @@ from pathlib import Path
 from airunner.data.models import ApplicationSettings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
+from airunner.settings import DB_URL
 
 
 def setup_database():
@@ -61,7 +62,7 @@ def main():
 
     # Get the first ApplicationSettings record from the database and 
     # check for run_setup_wizard boolean
-    engine = create_engine(f"sqlite:///{DB_PATH}")
+    engine = create_engine(DB_URL)
     session = scoped_session(sessionmaker(bind=engine))
     application_settings = session.query(ApplicationSettings).first()
 
