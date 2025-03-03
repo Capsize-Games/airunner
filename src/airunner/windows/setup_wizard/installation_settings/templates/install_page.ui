@@ -23,7 +23,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Installing AI Runner</string>
+      <string>Downloading AI Models</string>
      </property>
     </widget>
    </item>
