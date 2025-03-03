@@ -85,6 +85,7 @@ class SetupWizardWindow(
 
         # Set window title
         self.setWindowTitle("AI Runner Setup Wizard")
+        self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
 
     def addPage(self, page):
         page_id = super().addPage(page)
