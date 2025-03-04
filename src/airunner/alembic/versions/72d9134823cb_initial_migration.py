@@ -90,7 +90,7 @@ def set_default_values(model_name_):
     # Handle the 'users' table specifically to avoid the NotNullViolation error
     if model_name_.__tablename__ == 'users':
         # Provide a default username to satisfy the NOT NULL constraint
-        default_values['username'] = 'default_user'  # Or any appropriate default username
+        default_values['username'] = 'default_user'
 
     op.bulk_insert(
         model_name_.__table__,
