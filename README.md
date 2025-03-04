@@ -162,10 +162,4 @@ python -m unittest src/airunner/tests/test_prompt_weight_convert.py
 
 ## Database
 
-By default, AI Runner uses a SQLite database. This can be changed by
-setting the `AI_RUNNER_DATABASE_URL` and `ASYNC_AI_RUNNER_DATABASE_URL` 
-environment variables.
-
-**Example**
-
-`AI_RUNNER_DATABASE_URL="postgresql+psycopg2://user:password@hostname/database_name"`
+See the [database wiki page](https://github.com/Capsize-Games/airunner/wiki/Database) for details on how to switch engines, make changes to models and run migrations.
