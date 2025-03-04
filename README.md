@@ -71,7 +71,7 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 #### Minimum system requirements
 
-- OS: Linux
+- OS: Linux or Windows
 - Processor: Intel i5 or equivalent
 - Memory: 16 GB RAM
 - Graphics: 2080s RTX or higher
@@ -80,7 +80,7 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 #### Recommended system specs
 
-- OS: Linux
+- OS: Ubuntu 22.04
 - Processor: Intel i7 or equivalent
 - Memory: 30 GB RAM
 - Graphics: 4090 RTX or higher
@@ -123,7 +123,7 @@ airunner
 
 ---
 
-## Models
+## AI Models
 
 AI Runner installs all of the models required to run a chatbot with text-to-speech and speech-to-text capabilities,
 as well as the core models required for Stable Diffusion. However, you must supply your own art generator models.
@@ -172,10 +172,4 @@ python -m unittest src/airunner/tests/test_prompt_weight_convert.py
 
 ## Database
 
-By default, AI Runner uses a SQLite database. This can be changed by
-setting the `AI_RUNNER_DATABASE_URL` and `ASYNC_AI_RUNNER_DATABASE_URL` 
-environment variables.
-
-**Example**
-
-`AI_RUNNER_DATABASE_URL="postgresql+psycopg2://user:password@hostname/database_name"`
+See the [database wiki page](https://github.com/Capsize-Games/airunner/wiki/Database) for details on how to switch engines, make changes to data models and run migrations.
