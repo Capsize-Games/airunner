@@ -8,6 +8,7 @@ import signal
 import traceback
 from functools import partial
 from pathlib import Path
+from importlib.metadata import version
 
 from PySide6 import QtCore
 from PySide6.QtCore import (
@@ -66,12 +67,7 @@ class App(
         self.start()
         self.run_setup_wizard()
 
-        def read_version():
-            version_file = os.path.join(os.path.dirname(__file__), "..", "..", "version.txt")
-            with open(version_file, "r") as f:
-                return f.read().strip()
-
-        current_version = read_version()
+        current_version = version("airunner")
         if self.do_upgrade(current_version):
             self.handle_upgrade(current_version)
         self.run()
