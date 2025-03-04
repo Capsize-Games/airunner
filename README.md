@@ -71,7 +71,7 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 #### Minimum system requirements
 
-- OS: Linux
+- OS: Linux or Windows
 - Processor: Intel i5 or equivalent
 - Memory: 16 GB RAM
 - Graphics: 2080s RTX or higher
@@ -80,7 +80,7 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 #### Recommended system specs
 
-- OS: Linux
+- OS: Ubuntu 22.04
 - Processor: Intel i7 or equivalent
 - Memory: 30 GB RAM
 - Graphics: 4090 RTX or higher
