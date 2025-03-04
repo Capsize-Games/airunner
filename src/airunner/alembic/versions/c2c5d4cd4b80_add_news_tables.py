@@ -9,7 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import sqlite
+from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision: str = 'c2c5d4cd4b80'
@@ -18,40 +18,48 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+
 def upgrade() -> None:
-    op.create_table(
-        'news_rss_feeds',
-        sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
-        sa.Column('url', sa.String, nullable=False),
-        sa.Column('name', sa.String, nullable=False),
-        sa.Column('category', sa.String, nullable=False),
-        sa.Column('political_bias', sa.String, nullable=True),
-        sa.Column('last_scraped', sa.DateTime, nullable=True)
-    )
+    bind = op.get_bind()
+    inspector = Inspector.from_engine(bind)
 
-    op.create_table(
-        'news_categories',
-        sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
-        sa.Column('name', sa.String, nullable=False)
-    )
+    if 'news_rss_feeds' not in inspector.get_table_names():
+        op.create_table(
+            'news_rss_feeds',
+            sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
+            sa.Column('url', sa.String, nullable=False),
+            sa.Column('name', sa.String, nullable=False),
+            sa.Column('category', sa.String, nullable=False),
+            sa.Column('political_bias', sa.String, nullable=True),
+            sa.Column('last_scraped', sa.DateTime, nullable=True)
+        )
 
-    op.create_table(
-        'news_articles',
-        sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
-        sa.Column('title', sa.String, nullable=False),
-        sa.Column('source', sa.String, nullable=False),
-        sa.Column('description', sa.String, nullable=True),
-        sa.Column('image', sa.LargeBinary, nullable=True),
-        sa.Column('content', sa.Text, nullable=True),
-        sa.Column('status', sa.String, nullable=False, default='new'),
-        sa.Column('scraped_at', sa.DateTime, default=sa.func.now())
-    )
+    if 'news_categories' not in inspector.get_table_names():
+        op.create_table(
+            'news_categories',
+            sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
+            sa.Column('name', sa.String, nullable=False)
+        )
 
-    op.create_table(
-        'article_category_association',
-        sa.Column('article_id', sa.Integer, sa.ForeignKey('news_articles.id')),
-        sa.Column('category_id', sa.Integer, sa.ForeignKey('news_categories.id'))
-    )
+    if 'news_articles' not in inspector.get_table_names():
+        op.create_table(
+            'news_articles',
+            sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
+            sa.Column('title', sa.String, nullable=False),
+            sa.Column('source', sa.String, nullable=False),
+            sa.Column('description', sa.String, nullable=True),
+            sa.Column('image', sa.LargeBinary, nullable=True),
+            sa.Column('content', sa.Text, nullable=True),
+            sa.Column('status', sa.String, nullable=False, default='new'),
+            sa.Column('scraped_at', sa.DateTime, default=sa.func.now())
+        )
+
+    if 'article_category_association' not in inspector.get_table_names():
+        op.create_table(
+            'article_category_association',
+            sa.Column('article_id', sa.Integer, sa.ForeignKey('news_articles.id')),
+            sa.Column('category_id', sa.Integer, sa.ForeignKey('news_categories.id'))
+        )
 
     # Insert data into news_rss_feeds
     news_rss_feeds_table = sa.table(
@@ -105,10 +113,3 @@ def upgrade() -> None:
         {'url': 'https://redstate.com/feed', 'name': 'RedState', 'category': 'Politics', 'political_bias': 'Right'},
         {'url': 'https://thefederalist.com/feed/', 'name': 'The Federalist', 'category': 'Politics', 'political_bias': 'Right'}
     ])
-
-
-def downgrade() -> None:
-    op.drop_table('article_category_association')
-    op.drop_table('news_articles')
-    op.drop_table('news_categories')
-    op.drop_table('news_rss_feeds')
