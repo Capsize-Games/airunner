@@ -1,27 +1,13 @@
 from setuptools import setup, find_packages
 import os
-import sys
-import subprocess
-
-is_windows = os.name != "nt"
-
 
 def read_version():
     with open("version.txt", "r") as f:
         return f.read().strip()
 
+is_windows = os.name == "nt"
 
-def install_with_index_url(packages, index_url):
-    subprocess.check_call([
-        sys.executable, 
-        "-m", 
-        "pip", 
-        "install", 
-        "--index-url", 
-        index_url
-    ] + packages)
-
-
+# Define common dependencies
 install_requires = [
     # Core application dependencies
     "accelerate==1.3.0",
@@ -43,8 +29,8 @@ install_requires = [
     "bitsandbytes==0.45.2",
     "datasets==3.2.0",
     "sentence_transformers==3.4.1",
-    "sounddevice==0.5.1",  # Required for tts and stt
-    "pyttsx3==2.91",  # Required for tts
+    "sounddevice==0.5.1",
+    "pyttsx3==2.91",
     "cryptography==44.0.0",
     "setuptools==75.8.0",
     "openmeteo_requests==1.3.0",
@@ -58,7 +44,7 @@ install_requires = [
     "compel==2.0.3",
     "tomesd==0.1.3",
 
-    # # TTS Dependencies
+    # TTS Dependencies
     "inflect==7.5.0",
     "pycountry==24.6.1",
 
@@ -79,19 +65,23 @@ install_requires = [
     "aiosqlite==0.21.0",
 
     # LLM Training dependencies
-    "peft==0.14.0"
+    "peft==0.14.0",
 ]
 
-torch_libraries = [
-    "torch==2.6.0",
-    "torchvision==0.21.0",
-    "torchaudio==2.6.0"
-]
-
+# Add PyTorch dependencies with explicit URLs for Windows only
 if is_windows:
-    install_requires.append("faiss-gpu==1.7.2")
+    install_requires.extend([
+        "torch==2.6.0+cu126 @ https://download.pytorch.org/whl/cu126/torch-2.6.0%2Bcu126-cp310-cp310-win_amd64.whl",
+        "torchvision==0.21.0+cu126 @ https://download.pytorch.org/whl/cu126/torchvision-0.21.0%2Bcu126-cp310-cp310-win_amd64.whl",
+        "torchaudio==2.6.0+cu126 @ https://download.pytorch.org/whl/cu126/torchaudio-2.6.0%2Bcu126-cp310-cp310-win_amd64.whl",
+    ])
 else:
-    install_requires = torch_libraries + install_requires
+    install_requires.extend([
+        "torch==2.6.0",
+        "torchvision==0.21.0",
+        "torchaudio==2.6.0",
+        "faiss-gpu==1.7.2",
+    ])
 
 setup(
     name="airunner",
@@ -130,19 +120,3 @@ setup(
         ],
     },
 )
-
-if is_windows:
-    # Install torch libraries with the specified index-url
-    install_with_index_url(
-        torch_libraries, 
-        "https://download.pytorch.org/whl/cu126"
-    )
-
-
-subprocess.check_call([
-    sys.executable, 
-    "-m", 
-    "pip", 
-    "install", 
-    "timm==1.0.15" 
-])
