@@ -704,14 +704,14 @@ class MistralAgent(
         self.reload_rag()
         self._rag_engine_tool = None
 
-    def clear_history(self, data: Optional[Dict] = None):
+    async def clear_history(self, data: Optional[Dict] = None):
         data = data or {}
         conversation_id = data.get("conversation_id")
         self._set_conversation_by_id(conversation_id)
         if self._chat_memory and self.conversation:
             self.chat_store_key = self.conversation.key
             self._chat_memory.chat_store_key = self.conversation.key
-            messages = self.chat_store.get_messages(self.conversation.key)
+            messages = await self.chat_store.get_messages(self.conversation.key)
             if messages:
                 self._chat_memory.set(messages)
             if self._chat_engine:

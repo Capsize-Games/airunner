@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, Boolean, String, Float, JSON, ForeignKey
+from sqlalchemy import (
+    Column, 
+    Integer, 
+    Boolean, 
+    String, 
+    Float, 
+    JSON, 
+    ForeignKey, 
+    BigInteger
+)
 from sqlalchemy.orm import relationship
 
 from airunner.data.models.base import Base
@@ -31,7 +40,7 @@ class GeneratorSettings(Base):
     steps = Column(Integer, default=20)
     ddim_eta = Column(Float, default=0.5)
     scale = Column(Integer, default=750)
-    seed = Column(Integer, default=42)
+    seed = Column(BigInteger, default=42)
     prompt_triggers = Column(String, default="")
     strength = Column(Integer, default=50)
     n_samples = Column(Integer, default=1)

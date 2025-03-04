@@ -2,10 +2,9 @@
 import os
 
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool, MetaData
+from sqlalchemy import engine_from_config, pool
 from alembic import context
 from airunner.settings import DB_URL
-
 
 config = context.config
 config.set_main_option("sqlalchemy.url", DB_URL)
@@ -15,16 +14,7 @@ if not os.path.exists(DB_URL) and DB_URL.__contains__("sqlite"):
     print(f"Database file not found at {DB_URL}")
 
 # Import your models here
-from airunner.data.models import (
-    Conversation, Summary,
-    ApplicationSettings, ActiveGridSettings, ControlnetSettings,
-    ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings,
-    GeneratorSettings, LLMGeneratorSettings, TTSSettings,
-    SpeechT5Settings, EspeakSettings, STTSettings, Schedulers, BrushSettings,
-    GridSettings, PathSettings, MemorySettings, Chatbot, TargetFiles, TargetDirectories,
-    AIModels, ShortcutKeys, Lora, SavedPrompt, Embedding, PromptTemplate, ControlnetModel,
-    FontSetting, PipelineModel, WindowSettings
-)
+from airunner.data.models.base import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -34,23 +24,7 @@ config = context.config
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
 
-# Create a single MetaData object
-metadata = MetaData()
-
-# Bind all models to the single MetaData object
-for model in [
-    ApplicationSettings, ActiveGridSettings, ControlnetSettings,
-    ImageToImageSettings, OutpaintSettings, DrawingPadSettings, MetadataSettings,
-    GeneratorSettings, LLMGeneratorSettings, TTSSettings,
-    SpeechT5Settings, EspeakSettings, STTSettings, Schedulers, BrushSettings,
-    GridSettings, PathSettings, MemorySettings, Chatbot, TargetFiles, TargetDirectories,
-    AIModels, ShortcutKeys, Lora, SavedPrompt, Embedding, PromptTemplate, ControlnetModel,
-    FontSetting, PipelineModel, WindowSettings, Conversation, Summary
-]:
-    model.metadata = metadata
-
-# Combine all model's MetaData objects here
-target_metadata = metadata
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -95,6 +69,7 @@ def run_migrations_online():
 
         with context.begin_transaction():
             context.run_migrations()
+            connection.commit()
 
 if context.is_offline_mode():
     run_migrations_offline()
