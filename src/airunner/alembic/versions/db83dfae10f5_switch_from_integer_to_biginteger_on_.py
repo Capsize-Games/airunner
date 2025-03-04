@@ -50,32 +50,32 @@ def upgrade() -> None:
                 existing_nullable=True
             )
 
-    try:
-        if 'conversations' in inspector.get_table_names() and 'users' in inspector.get_table_names():
-            op.create_foreign_key(None, 'conversations', 'users', ['user_id'], ['id'])
-    except Exception as e:
-        print("Error creating foreign key: ", e)
-    try:
-        if 'conversations' in inspector.get_table_names() and 'chatbots' in inspector.get_table_names():
-            op.create_foreign_key(None, 'conversations', 'chatbots', ['chatbot_id'], ['id'])
-    except Exception as e:
-        print("Error creating foreign key: ", e)
+    if 'conversations' in inspector.get_table_names() and 'users' in inspector.get_table_names():
+        if bind.dialect.name == 'sqlite':
+            with op.batch_alter_table('conversations') as batch_op:
+                batch_op.create_foreign_key('fk_conversations_users', 'users', ['user_id'], ['id'])
+        else:
+            op.create_foreign_key('fk_conversations_users', 'conversations', 'users', ['user_id'], ['id'])
+
+    if 'conversations' in inspector.get_table_names() and 'chatbots' in inspector.get_table_names():
+        if bind.dialect.name == 'sqlite':
+            with op.batch_alter_table('conversations') as batch_op:
+                batch_op.create_foreign_key('fk_conversations_chatbots', 'chatbots', ['chatbot_id'], ['id'])
+        else:
+            op.create_foreign_key('fk_conversations_chatbots', 'conversations', 'chatbots', ['chatbot_id'], ['id'])
 
     if 'generator_settings' in inspector.get_table_names():
         if bind.dialect.name == 'sqlite':
             with op.batch_alter_table('generator_settings') as batch_op:
                 batch_op.alter_column('seed', existing_type=sa.Integer(), type_=sa.BigInteger())
+                batch_op.create_foreign_key('fk_generator_settings_aimodels', 'aimodels', ['model'], ['id'])
         else:
             op.alter_column('generator_settings', 'seed',
                 existing_type=sa.Integer(),
                 type_=sa.BigInteger(),
                 existing_nullable=True
             )
-        try:
-            if 'generator_settings' in inspector.get_table_names() and 'aimodels' in inspector.get_table_names():
-                op.create_foreign_key(None, 'generator_settings', 'aimodels', ['model'], ['id'])
-        except Exception as e:
-            print("Error creating foreign key: ", e)
+            op.create_foreign_key('fk_generator_settings_aimodels', 'generator_settings', 'aimodels', ['model'], ['id'])
 
     if 'llm_generator_settings' in inspector.get_table_names():
         if bind.dialect.name == 'sqlite':
@@ -95,24 +95,26 @@ def upgrade() -> None:
         else:
             op.create_unique_constraint('uq_news_articles_source', 'news_articles', ['source'])
 
-    try:
-        if 'summaries' in inspector.get_table_names() and 'conversations' in inspector.get_table_names():
-            op.create_foreign_key(None, 'summaries', 'conversations', ['conversation_id'], ['id'])
-    except Exception as e:
-        print("Error creating foreign key: ", e)
+    if 'summaries' in inspector.get_table_names() and 'conversations' in inspector.get_table_names():
+        if bind.dialect.name == 'sqlite':
+            with op.batch_alter_table('summaries') as batch_op:
+                batch_op.create_foreign_key('fk_summaries_conversations', 'conversations', ['conversation_id'], ['id'])
+        else:
+            op.create_foreign_key('fk_summaries_conversations', 'summaries', 'conversations', ['conversation_id'], ['id'])
 
-    try:
-        if 'target_directories' in inspector.get_table_names() and 'chatbots' in inspector.get_table_names():
-            op.create_foreign_key(None, 'target_directories', 'chatbots', ['chatbot_id'], ['id'])
-    except Exception as e:
-        print("Error creating foreign key: ", e)
+    if 'target_directories' in inspector.get_table_names() and 'chatbots' in inspector.get_table_names():
+        if bind.dialect.name == 'sqlite':
+            with op.batch_alter_table('target_directories') as batch_op:
+                batch_op.create_foreign_key('fk_target_directories_chatbots', 'chatbots', ['chatbot_id'], ['id'])
+        else:
+            op.create_foreign_key('fk_target_directories_chatbots', 'target_directories', 'chatbots', ['chatbot_id'], ['id'])
 
-    try:
-        if 'target_files' in inspector.get_table_names() and 'chatbots' in inspector.get_table_names():
-            op.create_foreign_key(None, 'target_files', 'chatbots', ['chatbot_id'], ['id'])
-    except Exception as e:
-        print("Error creating foreign key: ", e)
-
+    if 'target_files' in inspector.get_table_names() and 'chatbots' in inspector.get_table_names():
+        if bind.dialect.name == 'sqlite':
+            with op.batch_alter_table('target_files') as batch_op:
+                batch_op.create_foreign_key('fk_target_files_chatbots', 'chatbots', ['chatbot_id'], ['id'])
+        else:
+            op.create_foreign_key('fk_target_files_chatbots', 'target_files', 'chatbots', ['chatbot_id'], ['id'])
 
 def downgrade() -> None:
     bind = op.get_bind()
