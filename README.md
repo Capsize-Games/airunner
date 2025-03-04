@@ -95,21 +95,68 @@ There are several ways to get started with AI Runner such as packaged, from sour
 
 [Detailed packaging and installation instructions can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
-### Install as a library
+First install torch libraries
 
-Installation
+```bash
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+```
+
+Now install AI Runner
+
+### Install from pip
+
+**Windows**
 
 ```bash
 pip install airunner
 ```
 
-Running
+**Linux**
+
+```bash
+pip install airunner[linux]
+```
+
+### Local installation
+
+After cloning this repo, run the following commands
+
+**Windows**
+
+```bash
+pip install -e .
+```
+
+**Linux**
+
+```bash
+pip install -e .[linux]
+```
+
+### Upgrade timm
+
+[controlnet-aux](https://github.com/huggingface/controlnet_aux) uses an old 
+version of timm, so we must manually upgrade. You'll see this error after 
+upgrading which can be safely ignored.
+
+```bash
+pip install --upgrade timm==1.0.15
+```
+
+## Running
+
+You can simply type the following command to run the application
 
 ```bash
 airunner
 ```
 
+You can also use python to run it directly
 
+```bash
+cd src/airunner
+python main.py
+```
 
 ---
 
