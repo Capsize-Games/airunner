@@ -11,4 +11,4 @@ class ShortcutKeys(Base):
     key = Column(Integer, nullable=False)
     modifiers = Column(Integer, nullable=False)
     description = Column(String, nullable=False)
-    signal = Column(Integer, nullable=False)
+    signal = Column(String, nullable=False)

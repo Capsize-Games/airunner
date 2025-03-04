@@ -22,15 +22,19 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade():
     bind = op.get_bind()
     inspector = Inspector.from_engine(bind)
-    columns = [col['name'] for col in inspector.get_columns('conversations')]
+    columns_conversations = [col['name'] for col in inspector.get_columns('conversations')]
+    columns_chatbots = [col['name'] for col in inspector.get_columns('chatbots')]
 
-    if 'bot_mood' not in columns:
+    if 'bot_mood' not in columns_conversations:
         op.add_column('conversations', sa.Column('bot_mood', sa.Text(), nullable=True))
 
-    try:
-        op.drop_column('chatbots', 'bot_mood')
-    except OperationalError as e:
-        print(f"Error dropping column 'bot_mood' from 'chatbots': {e}")
+    if 'bot_mood' in columns_chatbots:
+        try:
+            op.drop_column('chatbots', 'bot_mood')
+        except OperationalError as e:
+            print(f"Error dropping column 'bot_mood' from 'chatbots': {e}")
+    else:
+        print("Column 'bot_mood' not found in 'chatbots', skipping drop.")
 
 def downgrade():
     op.add_column('chatbots', sa.Column('bot_mood', sa.Text(), nullable=True))

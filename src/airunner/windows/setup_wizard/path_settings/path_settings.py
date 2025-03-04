@@ -2,11 +2,9 @@ import os
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtCore import Slot
 
-from airunner.settings import BASE_PATH, DEFAULT_PATH_SETTINGS
-from airunner.utils.os.create_airunner_directory import create_airunner_paths
+from airunner.settings import DEFAULT_PATH_SETTINGS
 from airunner.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.windows.setup_wizard.path_settings.templates.path_settings_ui import Ui_PathSettings
-from airunner.enums import SignalCode
 
 
 class PathSettings(BaseWizard):
@@ -15,6 +13,17 @@ class PathSettings(BaseWizard):
     def __init__(self, *args):
         super(PathSettings, self).__init__(*args)
         self.ui.base_path.setText(self.path_settings.base_path)
+
+    def _update_paths(self, base_path: str):
+        self.update_path_settings("base_path", base_path)
+        for k, v in DEFAULT_PATH_SETTINGS.items():
+            self.update_path_settings(
+                k, 
+                os.path.expanduser(os.path.join(
+                    base_path, 
+                    v
+                ))
+            )
 
     @Slot()
     def browse_files(self):
@@ -29,7 +38,9 @@ class PathSettings(BaseWizard):
         if selected_path:
             self.ui.base_path.setText(selected_path[0])
         base_path = self.ui.base_path.text()
-        self.update_path_settings("base_path", base_path)
-        for k, v in DEFAULT_PATH_SETTINGS.items():
-                self.update_path_settings(k, os.path.expanduser(os.path.join(base_path, v)))
+        self._update_paths(base_path)
 
+    @Slot(str)
+    def path_text_changed(self, base_path: str):
+        self._update_paths(base_path)
+        self.update()
