@@ -25,7 +25,7 @@ setup(
         "torchaudio==2.6.0",
         "accelerate==1.3.0",
         "huggingface-hub==0.28.1",
-        "PySide6==6.7.0",
+        "PySide6==6.8.2.1",
         "PySide6_Addons==6.7.0",
         "PySide6_Essentials==6.7.0",
         "tokenizers==0.21.0",
