@@ -1,4 +1,3 @@
-import json
 from typing import Any, List, Optional
 
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
@@ -7,7 +6,10 @@ from llama_index.core.memory import ChatMemoryBuffer as ChatMemoryBufferBroken
 
 class ChatMemoryBuffer(ChatMemoryBufferBroken):
     def get(
-        self, input: Optional[str] = None, initial_token_count: int = 0, **kwargs: Any
+        self, 
+        input: Optional[str] = None, 
+        initial_token_count: int = 0, 
+        **kwargs: Any
     ) -> List[ChatMessage]:
         """Get chat history."""
         chat_history = self.get_all()

@@ -1,11 +1,11 @@
 from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
-from airunner.settings import DB_PATH
+from airunner.settings import DB_PATH, DB_URL
 
 
 class Database:
-    engine = create_engine(f"sqlite:///{DB_PATH}")
+    engine = create_engine(DB_URL)
     Session = scoped_session(sessionmaker(bind=engine))
 
     @classmethod
