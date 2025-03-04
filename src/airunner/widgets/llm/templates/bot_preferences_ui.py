@@ -15,16 +15,16 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QGroupBox,
-    QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
-    QPushButton, QScrollArea, QSizePolicy, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
+    QGridLayout, QGroupBox, QHBoxLayout, QLabel,
+    QLineEdit, QPlainTextEdit, QPushButton, QScrollArea,
+    QSizePolicy, QVBoxLayout, QWidget)
 
 class Ui_bot_preferences(object):
     def setupUi(self, bot_preferences):
         if not bot_preferences.objectName():
             bot_preferences.setObjectName(u"bot_preferences")
-        bot_preferences.resize(722, 1262)
+        bot_preferences.resize(828, 1092)
         self.gridLayout_4 = QGridLayout(bot_preferences)
         self.gridLayout_4.setSpacing(0)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
@@ -34,7 +34,7 @@ class Ui_bot_preferences(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 720, 1260))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 812, 1153))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setVerticalSpacing(10)
@@ -56,71 +56,31 @@ class Ui_bot_preferences(object):
         self.verticalLayout_3.addWidget(self.system_instructions)
 
 
-        self.gridLayout.addWidget(self.system_instructions_groupbox, 4, 0, 1, 1)
+        self.gridLayout.addWidget(self.system_instructions_groupbox, 8, 0, 1, 1)
 
-        self.personality_groupbox = QGroupBox(self.scrollAreaWidgetContents_2)
-        self.personality_groupbox.setObjectName(u"personality_groupbox")
-        self.personality_groupbox.setCheckable(True)
-        self.gridLayout_5 = QGridLayout(self.personality_groupbox)
-        self.gridLayout_5.setObjectName(u"gridLayout_5")
-        self.bot_personality = QPlainTextEdit(self.personality_groupbox)
-        self.bot_personality.setObjectName(u"bot_personality")
-        sizePolicy.setHeightForWidth(self.bot_personality.sizePolicy().hasHeightForWidth())
-        self.bot_personality.setSizePolicy(sizePolicy)
-        self.bot_personality.setMinimumSize(QSize(0, 75))
+        self.groupBox_2 = QGroupBox(self.scrollAreaWidgetContents_2)
+        self.groupBox_2.setObjectName(u"groupBox_2")
+        self.gridLayout_8 = QGridLayout(self.groupBox_2)
+        self.gridLayout_8.setObjectName(u"gridLayout_8")
+        self.comboBox = QComboBox(self.groupBox_2)
+        self.comboBox.addItem("")
+        self.comboBox.addItem("")
+        self.comboBox.setObjectName(u"comboBox")
 
-        self.gridLayout_5.addWidget(self.bot_personality, 1, 0, 1, 1)
-
-        self.label_2 = QLabel(self.personality_groupbox)
-        self.label_2.setObjectName(u"label_2")
-
-        self.gridLayout_5.addWidget(self.label_2, 0, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.comboBox, 0, 0, 1, 1)
 
 
-        self.gridLayout.addWidget(self.personality_groupbox, 6, 0, 1, 1)
+        self.gridLayout.addWidget(self.groupBox_2, 0, 0, 1, 1)
 
-        self.names_groupbox = QGroupBox(self.scrollAreaWidgetContents_2)
-        self.names_groupbox.setObjectName(u"names_groupbox")
-        self.names_groupbox.setCheckable(True)
-        self.horizontalLayout = QHBoxLayout(self.names_groupbox)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.verticalLayout_6 = QVBoxLayout()
-        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
-        self.label = QLabel(self.names_groupbox)
-        self.label.setObjectName(u"label")
-        font = QFont()
-        font.setBold(True)
-        self.label.setFont(font)
+        self.use_weather_prompt = QCheckBox(self.scrollAreaWidgetContents_2)
+        self.use_weather_prompt.setObjectName(u"use_weather_prompt")
 
-        self.verticalLayout_6.addWidget(self.label)
+        self.gridLayout.addWidget(self.use_weather_prompt, 4, 0, 1, 1)
 
-        self.botname = QLineEdit(self.names_groupbox)
-        self.botname.setObjectName(u"botname")
-        self.botname.setCursorPosition(9)
+        self.label_3 = QLabel(self.scrollAreaWidgetContents_2)
+        self.label_3.setObjectName(u"label_3")
 
-        self.verticalLayout_6.addWidget(self.botname)
-
-
-        self.horizontalLayout.addLayout(self.verticalLayout_6)
-
-
-        self.gridLayout.addWidget(self.names_groupbox, 3, 0, 1, 1)
-
-        self.guardrails_groupbox = QGroupBox(self.scrollAreaWidgetContents_2)
-        self.guardrails_groupbox.setObjectName(u"guardrails_groupbox")
-        self.guardrails_groupbox.setCheckable(True)
-        self.verticalLayout_2 = QVBoxLayout(self.guardrails_groupbox)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.guardrails_prompt = QPlainTextEdit(self.guardrails_groupbox)
-        self.guardrails_prompt.setObjectName(u"guardrails_prompt")
-        sizePolicy.setHeightForWidth(self.guardrails_prompt.sizePolicy().hasHeightForWidth())
-        self.guardrails_prompt.setSizePolicy(sizePolicy)
-        self.guardrails_prompt.setMinimumSize(QSize(0, 150))
-
-        self.verticalLayout_2.addWidget(self.guardrails_prompt)
-
-
-        self.gridLayout.addWidget(self.guardrails_groupbox, 5, 0, 1, 1)
+        self.gridLayout.addWidget(self.label_3, 5, 0, 1, 1)
 
         self.groupBox = QGroupBox(self.scrollAreaWidgetContents_2)
         self.groupBox.setObjectName(u"groupBox")
@@ -150,20 +110,6 @@ class Ui_bot_preferences(object):
 
         self.gridLayout.addWidget(self.groupBox, 1, 0, 1, 1)
 
-        self.groupBox_2 = QGroupBox(self.scrollAreaWidgetContents_2)
-        self.groupBox_2.setObjectName(u"groupBox_2")
-        self.gridLayout_8 = QGridLayout(self.groupBox_2)
-        self.gridLayout_8.setObjectName(u"gridLayout_8")
-        self.comboBox = QComboBox(self.groupBox_2)
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.setObjectName(u"comboBox")
-
-        self.gridLayout_8.addWidget(self.comboBox, 0, 0, 1, 1)
-
-
-        self.gridLayout.addWidget(self.groupBox_2, 0, 0, 1, 1)
-
         self.groupBox_3 = QGroupBox(self.scrollAreaWidgetContents_2)
         self.groupBox_3.setObjectName(u"groupBox_3")
         self.gridLayout_9 = QGridLayout(self.groupBox_3)
@@ -181,7 +127,7 @@ class Ui_bot_preferences(object):
         self.target_files.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 674, 148))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 766, 148))
         self.gridLayout_10 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_10.setObjectName(u"gridLayout_10")
         self.target_files.setWidget(self.scrollAreaWidgetContents)
@@ -190,6 +136,84 @@ class Ui_bot_preferences(object):
 
 
         self.gridLayout.addWidget(self.groupBox_3, 2, 0, 1, 1)
+
+        self.personality_groupbox = QGroupBox(self.scrollAreaWidgetContents_2)
+        self.personality_groupbox.setObjectName(u"personality_groupbox")
+        self.personality_groupbox.setCheckable(True)
+        self.gridLayout_5 = QGridLayout(self.personality_groupbox)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.bot_personality = QPlainTextEdit(self.personality_groupbox)
+        self.bot_personality.setObjectName(u"bot_personality")
+        sizePolicy.setHeightForWidth(self.bot_personality.sizePolicy().hasHeightForWidth())
+        self.bot_personality.setSizePolicy(sizePolicy)
+        self.bot_personality.setMinimumSize(QSize(0, 75))
+
+        self.gridLayout_5.addWidget(self.bot_personality, 1, 0, 1, 1)
+
+        self.label_2 = QLabel(self.personality_groupbox)
+        self.label_2.setObjectName(u"label_2")
+
+        self.gridLayout_5.addWidget(self.label_2, 0, 0, 1, 1)
+
+
+        self.gridLayout.addWidget(self.personality_groupbox, 10, 0, 1, 1)
+
+        self.names_groupbox = QGroupBox(self.scrollAreaWidgetContents_2)
+        self.names_groupbox.setObjectName(u"names_groupbox")
+        self.names_groupbox.setCheckable(True)
+        self.horizontalLayout = QHBoxLayout(self.names_groupbox)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.verticalLayout_6 = QVBoxLayout()
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.label = QLabel(self.names_groupbox)
+        self.label.setObjectName(u"label")
+        font = QFont()
+        font.setBold(True)
+        self.label.setFont(font)
+
+        self.verticalLayout_6.addWidget(self.label)
+
+        self.botname = QLineEdit(self.names_groupbox)
+        self.botname.setObjectName(u"botname")
+        self.botname.setCursorPosition(9)
+
+        self.verticalLayout_6.addWidget(self.botname)
+
+
+        self.horizontalLayout.addLayout(self.verticalLayout_6)
+
+
+        self.gridLayout.addWidget(self.names_groupbox, 7, 0, 1, 1)
+
+        self.line = QFrame(self.scrollAreaWidgetContents_2)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.gridLayout.addWidget(self.line, 6, 0, 1, 1)
+
+        self.guardrails_groupbox = QGroupBox(self.scrollAreaWidgetContents_2)
+        self.guardrails_groupbox.setObjectName(u"guardrails_groupbox")
+        self.guardrails_groupbox.setCheckable(True)
+        self.verticalLayout_2 = QVBoxLayout(self.guardrails_groupbox)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.guardrails_prompt = QPlainTextEdit(self.guardrails_groupbox)
+        self.guardrails_prompt.setObjectName(u"guardrails_prompt")
+        sizePolicy.setHeightForWidth(self.guardrails_prompt.sizePolicy().hasHeightForWidth())
+        self.guardrails_prompt.setSizePolicy(sizePolicy)
+        self.guardrails_prompt.setMinimumSize(QSize(0, 150))
+
+        self.verticalLayout_2.addWidget(self.guardrails_prompt)
+
+
+        self.gridLayout.addWidget(self.guardrails_groupbox, 9, 0, 1, 1)
+
+        self.line_2 = QFrame(self.scrollAreaWidgetContents_2)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setFrameShape(QFrame.Shape.HLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.gridLayout.addWidget(self.line_2, 3, 0, 1, 1)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
 
@@ -210,6 +234,7 @@ class Ui_bot_preferences(object):
         self.delete_button.clicked.connect(bot_preferences.delete_clicked)
         self.comboBox.currentTextChanged.connect(bot_preferences.agent_type_changed)
         self.browse_documents_button.clicked.connect(bot_preferences.browse_documents)
+        self.use_weather_prompt.toggled.connect(bot_preferences.use_weather_prompt_toggled)
 
         QMetaObject.connectSlotsByName(bot_preferences)
     # setupUi
@@ -218,15 +243,12 @@ class Ui_bot_preferences(object):
         bot_preferences.setWindowTitle(QCoreApplication.translate("bot_preferences", u"Form", None))
         self.system_instructions_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"System Instructions", None))
         self.system_instructions.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"Instructions for the LLM", None))
-        self.personality_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Bot Personality", None))
-        self.bot_personality.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"EXAMPLE: {{ botname }} is very helpful and {{ gender }} loves {{ username }}.", None))
-        self.label_2.setText(QCoreApplication.translate("bot_preferences", u"A brief description of the bot's personality", None))
-        self.names_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Use names", None))
-        self.label.setText(QCoreApplication.translate("bot_preferences", u"Assistant name", None))
-        self.botname.setText(QCoreApplication.translate("bot_preferences", u"AI Runner", None))
-        self.botname.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"Bot name", None))
-        self.guardrails_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Guardrails", None))
-        self.guardrails_prompt.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"The guardrails prompt is used to moderate results.", None))
+        self.groupBox_2.setTitle(QCoreApplication.translate("bot_preferences", u"Agent Type", None))
+        self.comboBox.setItemText(0, QCoreApplication.translate("bot_preferences", u"Chatbot", None))
+        self.comboBox.setItemText(1, QCoreApplication.translate("bot_preferences", u"Tool", None))
+
+        self.use_weather_prompt.setText(QCoreApplication.translate("bot_preferences", u"Use Weather Prompt", None))
+        self.label_3.setText(QCoreApplication.translate("bot_preferences", u"Check this and set zipcode in User Settings to give agents access to local weather.", None))
         self.groupBox.setTitle(QCoreApplication.translate("bot_preferences", u"Existing Agents", None))
 #if QT_CONFIG(tooltip)
         self.create_new_button.setToolTip(QCoreApplication.translate("bot_preferences", u"Add new agent", None))
@@ -236,11 +258,16 @@ class Ui_bot_preferences(object):
         self.delete_button.setToolTip(QCoreApplication.translate("bot_preferences", u"Delete agent", None))
 #endif // QT_CONFIG(tooltip)
         self.delete_button.setText("")
-        self.groupBox_2.setTitle(QCoreApplication.translate("bot_preferences", u"Agent Type", None))
-        self.comboBox.setItemText(0, QCoreApplication.translate("bot_preferences", u"Chatbot", None))
-        self.comboBox.setItemText(1, QCoreApplication.translate("bot_preferences", u"Tool", None))
-
         self.groupBox_3.setTitle(QCoreApplication.translate("bot_preferences", u"Documents", None))
         self.browse_documents_button.setText(QCoreApplication.translate("bot_preferences", u"Browse", None))
+        self.personality_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Bot Personality", None))
+        self.bot_personality.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"EXAMPLE: {{ botname }} is very helpful and {{ gender }} loves {{ username }}.", None))
+        self.label_2.setText(QCoreApplication.translate("bot_preferences", u"A brief description of the bot's personality", None))
+        self.names_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Use names", None))
+        self.label.setText(QCoreApplication.translate("bot_preferences", u"Assistant name", None))
+        self.botname.setText(QCoreApplication.translate("bot_preferences", u"AI Runner", None))
+        self.botname.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"Bot name", None))
+        self.guardrails_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Guardrails", None))
+        self.guardrails_prompt.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"The guardrails prompt is used to moderate results.", None))
     # retranslateUi
 

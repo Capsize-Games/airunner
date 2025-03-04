@@ -519,7 +519,8 @@ class MistralAgent(
         conversations = list(conversations)
         conversations = sorted(conversations, key=lambda x: x.id, reverse=True)
         for conversation in conversations:
-            summaries += f"- {conversation.summary}\n"
+            if conversation.summary:
+                summaries += f"- {conversation.summary}\n"
         if summaries != "":
             summaries = f"Recent conversation summaries:\n{summaries}"
         return summaries
@@ -749,6 +750,7 @@ class MistralAgent(
             "chat_history": self._memory.get_all() if self._memory else None
         }
         # self._perform_analysis()
+        print(self._system_prompt)
         self._update_system_prompt(system_prompt, rag_system_prompt)
 
         if action is LLMActionType.CHAT:

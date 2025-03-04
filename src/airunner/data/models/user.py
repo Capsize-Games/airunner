@@ -11,7 +11,5 @@ class User(Base):
     location_display_name = Column(String, nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    temperature_unit = Column(String, nullable=True, default="fahrenheit")
-    wind_speed_unit = Column(String, nullable=True, default="mph")
-    precipitation_unit = Column(String, nullable=True, default="inch")
+    unit_system = Column(String, nullable=True, default="imperial")
     data = Column(JSON, nullable=True)
