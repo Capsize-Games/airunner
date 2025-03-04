@@ -156,5 +156,4 @@ ENV PATH="/home/appuser/.local/bin:${PATH}"
 ENV PYTHONUSERBASE=/home/appuser/.local
 ENV DOCKER_ENV=true
 COPY airunner.spec airunner.spec
-COPY version.txt version.txt
 COPY ./lib/tokenizers/punkt /app/lib/tokenizers/punkt
