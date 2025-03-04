@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Boolean, String
+from sqlalchemy import Column, Integer, Boolean, String, BigInteger
 
 from airunner.data.models.base import Base
 
@@ -8,7 +8,7 @@ class LLMGeneratorSettings(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     action = Column(String, default="CHAT")
     use_tool_filter = Column(Boolean, default=False)
-    seed = Column(Integer, default=0)
+    seed = Column(BigInteger, default=0)
     random_seed = Column(Boolean, default=False)
     model_version = Column(String, default="w4ffl35/Mistral-7B-Instruct-v0.3-4bit")
     dtype = Column(String, default="4bit")
