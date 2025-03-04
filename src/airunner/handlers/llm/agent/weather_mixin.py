@@ -24,16 +24,33 @@ class WeatherMixin:
         )
 
     @property
+    def unit_system(self) -> str:
+        return self.user.unit_system
+    
+    @property
+    def is_metric(self) -> bool:
+        return self.unit_system == "metric"
+
+    @property
     def temperature_unit(self) -> str:
-        return self.user.temperature_unit
+        if self.is_metric:
+            return "celsius"
+        else:
+            return "fahrenheit"
     
     @property
     def wind_speed_unit(self) -> str:
-        return self.user.wind_speed_unit
+        if self.is_metric:
+            return "km/h"
+        else:
+            return "mph"
     
     @property
     def precipitation_unit(self) -> str:
-        return self.user.precipitation_unit
+        if self.is_metric:
+            return "mm"
+        else:
+            return "inch"
     
     @property
     def forecast_days(self) -> int:
