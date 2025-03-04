@@ -30,6 +30,7 @@ class BotPreferencesWidget(BaseWidget):
             "guardrails_prompt",
             "guardrails_groupbox",
             "target_files",
+            "use_weather_prompt",
         ]
         self.toggle_signals(self.ui, elements)
         self.ui.botname.setText(self.chatbot.botname)
@@ -40,6 +41,7 @@ class BotPreferencesWidget(BaseWidget):
         self.ui.system_instructions_groupbox.setChecked(self.chatbot.use_system_instructions)
         self.ui.guardrails_prompt.setPlainText(self.chatbot.guardrails_prompt)
         self.ui.guardrails_groupbox.setChecked(self.chatbot.use_guardrails)
+        self.ui.use_weather_prompt.setChecked(self.chatbot.use_weather_prompt)
         self.load_documents()
         self.toggle_signals(self.ui, elements, False)
 
@@ -131,6 +133,10 @@ class BotPreferencesWidget(BaseWidget):
     @Slot(bool)
     def agent_type_changed(self, val: str):
         print("agent type changed", val)
+
+    @Slot(bool)
+    def use_weather_prompt_toggled(self, val: bool):
+        self.update_chatbot("use_weather_prompt", val)
 
     @Slot()
     def browse_documents(self):
