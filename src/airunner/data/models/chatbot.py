@@ -47,6 +47,7 @@ class Chatbot(Base):
     length_penalty = Column(Integer, default=100)
     backstory = Column(Text, default="")
     use_backstory = Column(Boolean, default=True)
+    use_weather_prompt = Column(Boolean, default=False)
 
     target_files = relationship("TargetFiles", back_populates="chatbot")
     target_directories = relationship("TargetDirectories", back_populates="chatbot")

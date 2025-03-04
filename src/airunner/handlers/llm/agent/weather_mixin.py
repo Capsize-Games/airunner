@@ -65,6 +65,13 @@ class WeatherMixin:
         )
     
     def get_weather(self) -> Optional[VariablesWithTime]:
+        if (
+            not self.user.latitude or 
+            not self.user.longitude or 
+            not self.chatbot.use_weather_prompt
+        ):
+            return None
+        
         cache_session = requests_cache.CachedSession(
             self.cache_path, 
             expire_after = self.weather_cache_expiration
