@@ -12,8 +12,21 @@
 
 # AI Runner 
 
+## Table of Contents
+- [Introduction](#introduction)
+- [Stable Diffusion](#stable-diffusion)
+- [Customizable Chatbots with Moods and Personalities](#customizable-chatbots-with-moods-and-personalities)
+- [Features](#-features)
+- [System Requirements](#-system-requirements)
+- [Installation](#-installation)
+- [Running](#running)
+- [AI Models](#ai-models)
+- [Unit Tests](#unit-tests)
+- [Database](#database)
 
-AI Runner is an interface which allows you to run open-source large language models (LLM) and AI image generators (Stable Diffusion) on your own hardware.
+## Introduction
+
+AI Runner is an interface that allows you to run open-source large language models (LLM) and AI image generators (Stable Diffusion) on your own hardware.
 
 It is designed to be easy to use, with a simple and intuitive interface that allows you to run AI models without the need for a web server or cloud service.
 
@@ -31,7 +44,7 @@ It has been optimized for speed and efficiency, allowing you to generate images 
 
 ## ⭐ Features
 
-AI Runner is an AI interface which allows you to run open-source 
+AI Runner is an AI interface that allows you to run open-source 
 large language models (LLM) and AI image generators (Stable Diffusion) on your own hardware.
 
 | Feature                              | Description                                              |
@@ -69,7 +82,7 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 ## 💻 System Requirements
 
-#### Minimum system requirements
+### Minimum System Requirements
 
 - OS: Linux or Windows
 - Processor: Intel i5 or equivalent
@@ -78,7 +91,7 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 - Network: Broadband Internet connection required for setup
 - Storage: 130 GB available space
 
-#### Recommended system specs
+### Recommended System Specs
 
 - OS: Ubuntu 22.04
 - Processor: Intel i7 or equivalent
@@ -91,71 +104,24 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 ## 🚀 Installation
 
-There are several ways to get started with AI Runner such as packaged, from source and as a library.
+### Quickstart
 
-[Detailed packaging and installation instructions can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
-
-First install torch libraries
+Install for Linux
 
 ```bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
-```
-
-Now install AI Runner
-
-### Install from pip
-
-**Windows**
-
-```bash
-pip install airunner
-```
-
-**Linux**
-
-```bash
-pip install airunner[linux]
-```
-
-### Local installation
-
-After cloning this repo, run the following commands
-
-**Windows**
-
-```bash
-pip install -e .
-```
-
-**Linux**
-
-```bash
 pip install -e .[linux]
-```
-
-### Upgrade timm
-
-[controlnet-aux](https://github.com/huggingface/controlnet_aux) uses an old 
-version of timm, so we must manually upgrade. You'll see this error after 
-upgrading which can be safely ignored.
-
-```bash
 pip install --upgrade timm==1.0.15
 ```
 
-## Running
+[Detailed packaging and installation instructions can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
-You can simply type the following command to run the application
+### Running
+
+Run the application with the following command
 
 ```bash
 airunner
-```
-
-You can also use python to run it directly
-
-```bash
-cd src/airunner
-python main.py
 ```
 
 ---
@@ -192,7 +158,7 @@ Models must be placed in their respective directories in the `airunner` director
 
 ---
 
-## Unit tests
+## Unit Tests
 
 Run all unit tests
 
@@ -200,7 +166,11 @@ Run all unit tests
 python -m unittest discover -s src/airunner/tests
 ```
 
-Run a single unit tests `python -m unittest src/airunner/tests/<file_name>`
+Run a single unit test
+
+```bash
+python -m unittest src/airunner/tests/<file_name>
+```
 
 Example
 ```bash
