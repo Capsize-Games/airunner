@@ -1,12 +1,8 @@
 from setuptools import setup, find_packages
 
-def read_version():
-    with open("version.txt", "r") as f:
-        return f.read().strip()
-
 setup(
     name="airunner",
-    version=read_version(),
+    version="3.1.13",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -97,7 +93,6 @@ setup(
             "windows/**/*.ui",
             "*.qrc",
             "*.ini",
-            "version.txt",
         ],
     },
     include_package_data=True,
