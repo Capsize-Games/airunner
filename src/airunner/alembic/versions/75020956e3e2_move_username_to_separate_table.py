@@ -3,7 +3,7 @@ import os
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import sqlite
+from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision: str = '75020956e3e2'
@@ -17,22 +17,25 @@ def convert_image_to_binary(image_path):
     return binary_data
 
 def upgrade():
-    try:
+    bind = op.get_bind()
+    inspector = Inspector.from_engine(bind)
+    tables = inspector.get_table_names()
+    columns_chatbots = [col['name'] for col in inspector.get_columns('chatbots')]
+
+    if 'users' not in tables:
         op.create_table(
             'users',
             sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
             sa.Column('username', sa.String, nullable=False),
         )
-        op.execute(
-            sa.text("INSERT INTO users (username) VALUES ('User')")
-        )
-    except Exception as e:
-        print(f"Error during upgrade: {e}")
+        op.execute(sa.text("INSERT INTO users (username) VALUES ('User')"))
+    else:
+        print("Table 'users' already exists, skipping create.")
 
-    try:
+    if 'username' in columns_chatbots:
         op.drop_column('chatbots', 'username')
-    except Exception as e:
-        print(f"Column already dropped: {e}")
+    else:
+        print("Column 'username' not found in 'chatbots', skipping drop.")
 
 def downgrade():
     try:

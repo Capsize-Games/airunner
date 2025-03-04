@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Text
+from sqlalchemy import Column, Integer, String, Boolean, Text, BigInteger
 from sqlalchemy.orm import relationship
 
 from airunner.data.models.base import Base
@@ -22,7 +22,7 @@ class Chatbot(Base):
     use_gpu = Column(Boolean, default=True)
     skip_special_tokens = Column(Boolean, default=True)
     sequences = Column(Integer, default=1)
-    seed = Column(Integer, default=42)
+    seed = Column(BigInteger, default=42)
     random_seed = Column(Boolean, default=True)
     model_version = Column(String, default="w4ffl35/Mistral-7B-Instruct-v0.3-4bit")
     model_type = Column(String, default="llm")
@@ -45,8 +45,6 @@ class Chatbot(Base):
     decoder_start_token_id = Column(Integer, default=None)
     use_cache = Column(Boolean, default=True)
     length_penalty = Column(Integer, default=100)
-    seed = Column(Integer, default=0)
-    random_seed = Column(Boolean, default=False)
     backstory = Column(Text, default="")
     use_backstory = Column(Boolean, default=True)
 

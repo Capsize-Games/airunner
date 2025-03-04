@@ -12,7 +12,7 @@ class ImageFilterValue(Base):
     value_type = Column(String, nullable=False)
     min_value = Column(Float, nullable=True)
     max_value = Column(Float, nullable=True)
-    image_filter_id = Column(Integer, ForeignKey('image_filter_settings.id'))
+    image_filter_id = Column(Integer, ForeignKey('image_filter_settings.id'), nullable=False, default=1)
     image_filter = relationship("ImageFilter", back_populates="image_filter_values")
 
 

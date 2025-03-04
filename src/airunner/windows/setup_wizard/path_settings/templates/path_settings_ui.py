@@ -58,6 +58,7 @@ class Ui_PathSettings(object):
 
         self.retranslateUi(PathSettings)
         self.pushButton.clicked.connect(PathSettings.browse_files)
+        self.base_path.textChanged.connect(PathSettings.path_text_changed)
 
         QMetaObject.connectSlotsByName(PathSettings)
     # setupUi

@@ -1,7 +1,6 @@
-from typing import Any, Optional, Dict
+from typing import Any, Optional
 from urllib.parse import urlparse
 import datetime
-import asyncio
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
@@ -12,7 +11,7 @@ from llama_index.core.bridge.pydantic import Field, PrivateAttr
 from llama_index.core.storage.chat_store.base import BaseChatStore
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
-
+from airunner.settings import DB_URL, ASYNC_DB_URL
 
 class SQLiteChatStore(BaseChatStore):
     table_name: Optional[str] = Field(
@@ -54,9 +53,9 @@ class SQLiteChatStore(BaseChatStore):
         use_jsonb: bool = False,
     ) -> "SQLiteChatStore":
         """Return connection string from database parameters."""
-        conn_str = connection_string or f"sqlite:///{database}"
-        async_conn_str = async_connection_string or f"sqlite+aiosqlite:///{database}"
-        session, async_session = cls._connect(conn_str, async_conn_str, debug)
+        db_url = connection_string or DB_URL
+        async_db_url = async_connection_string or ASYNC_DB_URL
+        session, async_session = cls._connect(db_url, async_db_url, debug)
         return cls(
             session=session,
             async_session=async_session,
@@ -97,7 +96,35 @@ class SQLiteChatStore(BaseChatStore):
 
     def set_messages(self, key: str, messages: list[ChatMessage]) -> None:
         """Set messages for a key."""
-        asyncio.run(self.aset_messages(key, messages))
+        with self._session() as session:
+            with session.begin():
+                result = session.execute(
+                    select(Conversation).filter_by(key=key)
+                )
+                conversation = result.scalars().first()
+                if messages and len(messages) > 0:
+                    formatted_messages = []
+                    for message in messages:
+                        message.blocks[0].text = strip_names_from_message(
+                            message.blocks[0].text,
+                            conversation.user_name,
+                            conversation.chatbot_name
+                        )
+                        formatted_messages.append(message.model_dump())
+                    messages = formatted_messages
+
+                    if conversation:
+                        conversation.value = messages
+                        flag_modified(conversation, "value")
+                    else:
+                        conversation = Conversation(
+                            timestamp=datetime.datetime.now(datetime.timezone.utc),
+                            title="",
+                            key=key,
+                            value=messages
+                        )
+                        session.add(conversation)
+                    session.commit()
 
     async def aset_messages(self, key: str, messages: list[ChatMessage]) -> None:
         """Async version of Get messages for a key."""
@@ -155,7 +182,25 @@ class SQLiteChatStore(BaseChatStore):
 
     def get_messages(self, key: str) -> list[ChatMessage]:
         """Get messages for a key."""
-        return asyncio.run(self.aget_messages(key))
+        with self._session() as session:
+            result = session.query(Conversation).filter_by(key=key).first()
+            if result:
+                messages = result.value
+            else:
+                messages = []
+            formatted_messages = []
+            for message in messages:
+                text = message["blocks"][0]["text"]
+                if message["role"] == "user":
+                    name = result.user_name
+                else:
+                    name = result.chatbot_name
+                text = f"{name}: {text}"
+                formatted_messages.append(ChatMessage.from_str(
+                    content=text,
+                    role=message["role"],
+                ))
+            return formatted_messages
  
     async def aget_messages(self, key: str) -> list[ChatMessage]:
         """Async version of Get messages for a key."""
@@ -183,7 +228,41 @@ class SQLiteChatStore(BaseChatStore):
 
     def add_message(self, key: str, message: ChatMessage) -> None:
         """Add a message for a key."""
-        asyncio.run(self.async_add_message(key, message))
+        with self._session() as session:
+            with session.begin():
+                # Retrieve the existing messages from the current conversation
+                result = session.execute(
+                    select(Conversation).filter_by(key=key)
+                )
+                conversation = result.scalars().first()
+                if conversation:
+                    messages = conversation.value
+                else:
+                    messages = []
+                messages = messages or []
+        
+                # Append the new message
+                message.blocks[0].text = strip_names_from_message(
+                    message.blocks[0].text,
+                    conversation.user_name,
+                    conversation.chatbot_name
+                )
+
+                # Append the new message
+                messages.append(message.model_dump())
+
+                if conversation:
+                    conversation.value = messages
+                    flag_modified(conversation, "value")
+                else:
+                    conversation = Conversation(
+                        key=key,
+                        value=messages,
+                        timestamp=datetime.datetime.now(datetime.timezone.utc),
+                        title="",
+                    )
+                    session.add(conversation)
+                session.commit()
     
     async def async_add_message(self, key: str, message: ChatMessage) -> None:
         """Async version of Add a message for a key."""

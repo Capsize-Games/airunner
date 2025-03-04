@@ -86,6 +86,12 @@ def set_default_values(model_name_):
     for column in model_name_.__table__.columns:
         if column.default is not None:
             default_values[column.name] = column.default.arg
+
+    # Handle the 'users' table specifically to avoid the NotNullViolation error
+    if model_name_.__tablename__ == 'users':
+        # Provide a default username to satisfy the NOT NULL constraint
+        default_values['username'] = 'default_user'  # Or any appropriate default username
+
     op.bulk_insert(
         model_name_.__table__,
         [default_values]

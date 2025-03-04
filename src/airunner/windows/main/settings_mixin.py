@@ -1,6 +1,5 @@
 import logging
 import datetime
-import json
 from typing import List, Type, Optional
 
 from sqlalchemy import create_engine
@@ -47,7 +46,7 @@ from airunner.data.models import (
 )
 from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
-from airunner.settings import DB_PATH
+from airunner.settings import DB_URL
 from airunner.enums import LLMChatRole
 
 
@@ -63,8 +62,7 @@ class SettingsMixinSharedInstance:
     def __init__(self):
         if self._initialized:
             return
-        self.db_path = DB_PATH
-        self.engine = create_engine(f'sqlite:///{self.db_path}')
+        self.engine = create_engine(DB_URL)
         Base.metadata.create_all(self.engine)
         self.Session = scoped_session(sessionmaker(bind=self.engine))
         self.conversation_id = None

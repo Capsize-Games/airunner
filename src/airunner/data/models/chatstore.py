@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 import datetime
 
-Base = declarative_base()
+from airunner.data.models.base import Base
 
 
 class Chatstore(Base):

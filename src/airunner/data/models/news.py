@@ -6,7 +6,7 @@ from sqlalchemy.orm import relationship
 
 import datetime
 
-Base = declarative_base()
+from airunner.data.models.base import Base
 
 
 article_category_association = Table(

@@ -78,8 +78,8 @@
    <slot>browse_files()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>269</x>
-     <y>135</y>
+     <x>278</x>
+     <y>161</y>
     </hint>
     <hint type="destinationlabel">
      <x>260</x>
@@ -87,8 +87,25 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>base_path</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>PathSettings</receiver>
+   <slot>path_text_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>213</x>
+     <y>120</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>48</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>browse_files()</slot>
+  <slot>path_text_changed(QString)</slot>
  </slots>
 </ui>
