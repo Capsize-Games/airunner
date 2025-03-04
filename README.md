@@ -113,7 +113,7 @@ airunner
 
 ---
 
-## Models
+## AI Models
 
 AI Runner installs all of the models required to run a chatbot with text-to-speech and speech-to-text capabilities,
 as well as the core models required for Stable Diffusion. However, you must supply your own art generator models.
@@ -162,4 +162,4 @@ python -m unittest src/airunner/tests/test_prompt_weight_convert.py
 
 ## Database
 
-See the [database wiki page](https://github.com/Capsize-Games/airunner/wiki/Database) for details on how to switch engines, make changes to models and run migrations.
+See the [database wiki page](https://github.com/Capsize-Games/airunner/wiki/Database) for details on how to switch engines, make changes to data models and run migrations.
