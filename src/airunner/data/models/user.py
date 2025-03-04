@@ -6,7 +6,7 @@ from airunner.data.models.base import Base
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String, nullable=False)
+    username = Column(String, nullable=False, default="User")
     zipcode = Column(String, nullable=True)
     location_display_name = Column(String, nullable=True)
     latitude = Column(Float, nullable=True)
