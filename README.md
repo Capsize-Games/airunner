@@ -101,6 +101,16 @@ Installation
 
 ```bash
 pip install airunner
+pip install --upgrade timm==1.0.15
+```
+
+[controlnet-aux](https://github.com/huggingface/controlnet_aux) uses an old 
+version of timm, so we must manually upgrade. You'll see this error after 
+upgrading which can be safely ignored:
+
+```bash
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+controlnet-aux 0.0.9 requires timm<=0.6.7, but you have timm 1.0.15 which is incompatible.
 ```
 
 Running
