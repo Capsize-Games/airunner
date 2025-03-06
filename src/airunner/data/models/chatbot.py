@@ -1,11 +1,11 @@
 from sqlalchemy import Column, Integer, String, Boolean, Text, BigInteger
 from sqlalchemy.orm import relationship
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 from airunner.settings import DEFAULT_CHATBOT_GUARDRAILS_PROMPT, DEFAULT_CHATBOT_SYSTEM_PROMPT
 
 
-class Chatbot(Base):
+class Chatbot(BaseModel):
     __tablename__ = 'chatbots'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, default="Chatbot")

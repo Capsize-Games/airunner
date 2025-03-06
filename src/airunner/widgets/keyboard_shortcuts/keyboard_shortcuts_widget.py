@@ -70,11 +70,11 @@ class KeyboardShortcutsWidget(BaseWidget):
             shortcut_key.modifiers = event.modifiers().value
 
             
-            self.session.add(shortcut_key)
+            shortcut_key.save()
 
 
             # clear existing key if it exists
-            existing_keys = self.session.query(ShortcutKeys).filter(
+            existing_keys = ShortcutKeys.objects.filter(
                 ShortcutKeys.text == shortcut_key.text,
                 ShortcutKeys.id != shortcut_key.id
             ).all()
@@ -82,7 +82,7 @@ class KeyboardShortcutsWidget(BaseWidget):
                 existing_key.text = ""
                 existing_key.key = 0
                 existing_key.modifiers = 0
-                self.session.add(existing_key)
+                existing_key.save()
 
             for i, widget in enumerate(self.shortcut_key_widgets):
                 if i == index:
@@ -91,7 +91,6 @@ class KeyboardShortcutsWidget(BaseWidget):
                     widget.line_edit.setText("")
 
             line_edit.setText(shortcut_key.text)
-            self.session.commit()
             
 
             self.pressed_keys.clear()
@@ -107,12 +106,11 @@ class KeyboardShortcutsWidget(BaseWidget):
             # Ensure v.modifiers is a list
             if not isinstance(v.modifiers, list):
                 v.modifiers = []
-            self.session.query(ShortcutKeys).filter(ShortcutKeys.id == v.id).update({
+            ShortcutKeys.objects.update(v.id, {
                 "text": v.text,
                 "key": v.key,
                 "modifiers": ",".join(v.modifiers)  # Convert list to comma-separated string
             })
-        self.session.commit()
         
 
     def clear_shortcut_setting(self, key=""):

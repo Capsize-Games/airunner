@@ -2,8 +2,7 @@ import logging
 import datetime
 from typing import List, Type, Optional
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import joinedload, sessionmaker, scoped_session
+from sqlalchemy.orm import joinedload
 import sqlite3
 
 from airunner.data.models import (
@@ -41,13 +40,12 @@ from airunner.data.models import (
     ImageFilterValue, 
     TargetFiles, 
     WhisperSettings, 
-    Base, 
     User
 )
 from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
-from airunner.settings import DB_URL
 from airunner.enums import LLMChatRole
+from airunner.data.session_manager import session_scope
 
 
 class SettingsMixinSharedInstance:
@@ -62,9 +60,6 @@ class SettingsMixinSharedInstance:
     def __init__(self):
         if self._initialized:
             return
-        self.engine = create_engine(DB_URL)
-        Base.metadata.create_all(self.engine)
-        self.Session = scoped_session(sessionmaker(bind=self.engine))
         self.conversation_id = None
 
         # Configure the logger
@@ -84,20 +79,15 @@ class SettingsMixinSharedInstance:
         self.logger.propagate = False
 
         self._initialized = True
-
-    @property
-    def session(self):
-        return self.Session()
-
-    def close_session(self):
-        self.Session.remove()
+        self.chatbot: Optional[Chatbot] = None
 
 
 class SettingsMixin:
     _chatbot: Optional[Chatbot] = None
 
-    def get_session(self):
-        return scoped_session(sessionmaker(bind=self.settings_mixin_shared_instance.engine))()
+    @property
+    def session_manager(self):
+        return self.settings_mixin_shared_instance.session_manager
 
     @property
     def settings_mixin_shared_instance(self):
@@ -106,13 +96,6 @@ class SettingsMixin:
     @property
     def logger(self):
         return self.settings_mixin_shared_instance.logger
-
-    @property
-    def session(self):
-        return self.settings_mixin_shared_instance.session
-
-    def close_session(self):
-        self.settings_mixin_shared_instance.close_session()
 
     @property
     def stt_settings(self) -> STTSettings:
@@ -214,7 +197,7 @@ class SettingsMixin:
 
     @property
     def embeddings(self) -> List[Type[Embedding]]:
-        return self.session.query(Embedding).all()
+        return Embedding.objects.all()
 
     @property
     def prompt_templates(self) -> List[Type[PromptTemplate]]:
@@ -293,19 +276,22 @@ class SettingsMixin:
         return image
 
     @property
-    def image_filter_values(self):
-        return self.session.query(ImageFilterValue).all()
+    def image_filter_values(self) -> Optional[List[ImageFilterValue]]:
+        return ImageFilterValue.objects.all()
 
-    def get_lora_by_version(self, version):
-        return self.session.query(Lora).filter_by(version=version).all()
+    def get_lora_by_version(self, version) -> Optional[List[Lora]]:
+        return Lora.objects.filter_by(version=version).all()
 
-    def get_embeddings_by_version(self, version):
-        return [embedding for embedding in self.embeddings if embedding.version == version]
+    def get_embeddings_by_version(self, version) -> Optional[List[Embedding]]:
+        return [
+            embedding for embedding in self.embeddings 
+                if embedding.version == version
+        ]
 
     @property
     def chatbot(self) -> Optional[Chatbot]:
         if not type(self.llm_generator_settings.current_chatbot) is int:
-            chatbot = self.session.query(Chatbot).first()
+            chatbot = Chatbot.objects.first()
             if not chatbot is None:
                 self.update_settings_by_name(
                     "llm_generator_settings", 
@@ -321,24 +307,20 @@ class SettingsMixin:
 
     @property
     def user(self) -> Type[User]:
-        user = self.session.query(User).first()
+        user = User.objects.first()
         if user is None:
             user = User()
             user.username = "User"
-            self.session.add(user)
-            self.session.commit()
+            user.save()        
         return user
 
-    @property
-    def window_settings(self):
-        return self.load_window_settings()
-
     def add_chatbot_document_to_chatbot(self, chatbot, file_path):
-        document = self.session.query(TargetFiles).filter_by(chatbot_id=chatbot.id, file_path=file_path).first()
+        document = TargetFiles.objects.filter_by(
+            chatbot_id=chatbot.id, file_path=file_path
+        ).first()
         if document is None:
             document = TargetFiles(file_path=file_path, chatbot_id=chatbot.id)
-        self.session.merge(document)  # Use merge instead of add
-        self.session.commit()
+        TargetFiles.objects.merge(document)
 
     def update_settings_by_name(self, setting_name, column_name, val):
         if setting_name == "application_settings":
@@ -432,13 +414,11 @@ class SettingsMixin:
 
     def update_llm_generator_settings(self, column_name: str, val):
         # Retrieve the LLMGeneratorSettings instance
-        settings = self.session.query(LLMGeneratorSettings).first()
+        settings = LLMGeneratorSettings.objects.first()
         if settings:
             setattr(settings, column_name, val)
             # Explicitly mark the instance and merge changes
-            self.session.add(settings)
-            self.session.commit()  # Commit changes to the database
-            self.session.refresh(settings)
+            settings.save()
             self.logger.debug(f"LLMGeneratorSettings updated in DB: {column_name} = {val}")
         else:
             self.logger.error("No LLMGeneratorSettings instance found.")
@@ -454,7 +434,7 @@ class SettingsMixin:
         self.__settings_updated()
 
     def update_ai_model(self, model: AIModels):
-        query = self.session.query(AIModels).filter_by(
+        ai_model = AIModels.objects.filter_by(
             name=model.name,
             path=model.path,
             branch=model.branch,
@@ -465,207 +445,188 @@ class SettingsMixin:
             model_type=model.model_type,
             is_default=model.is_default
         ).first()
-        if query:
+        if ai_model:
             for key in model.__dict__.keys():
                 if key != "_sa_instance_state":
-                    setattr(query, key, getattr(model, key))
+                    setattr(ai_model, key, getattr(model, key))
+            ai_model.save()
         else:
-            self.session.add(model)
-        self.session.commit()
+            model.save()
         self.__settings_updated()
 
     def update_generator_settings(self, column_name, val):
         generator_settings = self.generator_settings
         setattr(generator_settings, column_name, val)
-        self.save_generator_settings(generator_settings)
+        generator_settings.save()
 
     def update_controlnet_image_settings(self, column_name, val):
         controlnet_settings = self.controlnet_settings
         setattr(controlnet_settings, column_name, val)
         self.update_controlnet_settings(column_name, val)
 
-    def load_schedulers(self) -> list[Type[Schedulers]]:
-        return self.session.query(Schedulers).all()
+    def load_schedulers(self) -> List[Schedulers]:
+        return Schedulers.objects.all()
 
     def load_settings_from_db(self, model_class_):
-        settings = self.session.query(model_class_).first()
+        settings = model_class_.objects.first()
         if settings is None:
-            settings = self.create_new_settings(model_class_)
+            settings = model_class_()
+            settings.save()
         return settings
 
     def update_setting(self, model_class_, name, value):
-        setting = self.session.query(model_class_).order_by(model_class_.id.desc()).first()
+        setting = model_class_.objects.order_by(model_class_.id.desc()).first()
         if setting:
             setattr(setting, name, value)
             try:
-                self.session.commit()
+                setting.save()
             except sqlite3.OperationalError as e:
                 self.logger.error(f"Error updating setting: {e}")
 
-    def save_generator_settings(self, generator_settings: GeneratorSettings):
-        query = self.session.query(GeneratorSettings).filter_by(
-            id=generator_settings.id
-        ).first()
-        if query:
-            for key in generator_settings.__dict__.keys():
-                if key != "_sa_instance_state":
-                    setattr(query, key, getattr(generator_settings, key))
-        else:
-            self.session.add(generator_settings)
-        self.session.commit()
-        self.__settings_updated()
-
     def reset_settings(self):
-        # Delete all entries from the model class
-        self.session.query(ApplicationSettings).delete()
-        self.session.query(ActiveGridSettings).delete()
-        self.session.query(ControlnetSettings).delete()
-        self.session.query(ImageToImageSettings).delete()
-        self.session.query(OutpaintSettings).delete()
-        self.session.query(DrawingPadSettings).delete()
-        self.session.query(MetadataSettings).delete()
-        self.session.query(GeneratorSettings).delete()
-        self.session.query(LLMGeneratorSettings).delete()
-        self.session.query(TTSSettings).delete()
-        self.session.query(SpeechT5Settings).delete()
-        self.session.query(EspeakSettings).delete()
-        self.session.query(STTSettings).delete()
-        self.session.query(BrushSettings).delete()
-        self.session.query(GridSettings).delete()
-        self.session.query(PathSettings).delete()
-        self.session.query(MemorySettings).delete()
-        # Commit the changes
-        self.session.commit()
-
-    def create_new_settings(self, model_class_):
-        new_settings = model_class_()
-        self.session.add(new_settings)
-        self.session.commit()
-        self.session.refresh(new_settings)
-        return new_settings
+        """
+        Reset all settings to their default values by deleting all 
+        settings from the database. When applications are
+        accessed again, they will be recreated.
+        """
+        ApplicationSettings.objects.delete_all()
+        ActiveGridSettings.objects.delete_all()
+        ControlnetSettings.objects.delete_all()
+        ImageToImageSettings.objects.delete_all()
+        OutpaintSettings.objects.delete_all()
+        DrawingPadSettings.objects.delete_all()
+        MetadataSettings.objects.delete_all()
+        GeneratorSettings.objects.delete_all()
+        LLMGeneratorSettings.objects.delete_all()
+        TTSSettings.objects.delete_all()
+        SpeechT5Settings.objects.delete_all()
+        EspeakSettings.objects.delete_all()
+        STTSettings.objects.delete_all()
+        BrushSettings.objects.delete_all()
+        GridSettings.objects.delete_all()
+        PathSettings.objects.delete_all()
+        MemorySettings.objects.delete_all()
 
     def get_saved_prompt_by_id(self, prompt_id) -> Type[SavedPrompt]:
-        return self.session.query(SavedPrompt).filter_by(id=prompt_id).first()
+        return SavedPrompt.objects.filter_by(id=prompt_id).first()
 
     def update_saved_prompt(self, saved_prompt: SavedPrompt):
-        query = self.session.query(SavedPrompt).filter_by(
+        new_saved_prompt = SavedPrompt.objects.filter_by(
             id=saved_prompt.id
         ).first()
-        if query:
+        if new_saved_prompt:
             for key in saved_prompt.__dict__.keys():
                 if key != "_sa_instance_state":
-                    setattr(query, key, getattr(saved_prompt, key))
+                    setattr(new_saved_prompt, key, getattr(saved_prompt, key))
+            new_saved_prompt.save()
         else:
-            self.session.add(saved_prompt)
-        self.session.commit()
+            saved_prompt.save()
         self.__settings_updated()
 
     def create_saved_prompt(self, data: dict):
         new_saved_prompt = SavedPrompt(**data)
-        self.session.add(new_saved_prompt)
-        self.session.commit()
+        new_saved_prompt.save()
 
     def load_saved_prompts(self) -> List[Type[SavedPrompt]]:
-        return self.session.query(SavedPrompt).all()
+        return SavedPrompt.objects.all()
 
     def load_font_settings(self) -> List[Type[FontSetting]]:
-        return self.session.query(FontSetting).all()
+        return FontSetting.objects.all()
 
     def get_font_setting_by_name(self, name) -> Type[FontSetting]:
-        return self.session.query(FontSetting).filter_by(name=name).first()
+        return FontSetting.objects.filter_by(
+            name=name
+        ).first()
 
     def update_font_setting(self, font_setting: Type[FontSetting]):
-        query = self.session.query(FontSetting).filter_by(
+        new_font_setting = FontSetting.objects.filter_by(
             name=font_setting.name
         ).first()
-        if query:
+        if new_font_setting:
             for key in font_setting.__dict__.keys():
                 if key != "_sa_instance_state":
-                    setattr(query, key, getattr(font_setting, key))
+                    setattr(new_font_setting, key, getattr(font_setting, key))
+            new_font_setting.save()
         else:
-            self.session.add(font_setting)
-        self.session.commit()
+            font_setting.save()
         self.__settings_updated()
 
     def load_ai_models(self) -> List[Type[AIModels]]:
-        return self.session.query(AIModels).all()
+        return AIModels.objects.all()
 
     def load_chatbots(self) -> List[Type[Chatbot]]:
-        settings = self.session.query(Chatbot).all()
-        return settings
+        return Chatbot.objects.all()
 
     def delete_chatbot_by_name(self, chatbot_name):
-        self.session.query(Chatbot).filter_by(name=chatbot_name).delete()
-        self.session.commit()
+        Chatbot.objects.filter_by(name=chatbot_name).delete()
 
     def create_chatbot(self, chatbot_name):
         new_chatbot = Chatbot(name=chatbot_name)
-        self.session.add(new_chatbot)
-        self.session.commit()
+        new_chatbot.save()
 
     def reset_path_settings(self):
-        self.session.query(PathSettings).delete()
+        PathSettings.objects.delete_all()
         self.set_default_values(PathSettings)
-        self.session.commit()
 
     def set_default_values(self, model_name_):
-        default_values = {}
-        for column in model_name_.__table__.columns:
-            if column.default is not None:
-                default_values[column.name] = column.default.arg
-        self.session.execute(
-            model_name_.__table__.insert(),
-            [default_values]
-        )
-        self.session.commit()
+        with session_scope() as session:
+            default_values = {}
+            for column in model_name_.__table__.columns:
+                if column.default is not None:
+                    default_values[column.name] = column.default.arg
+            session.execute(
+                model_name_.__table__.insert(),
+                [default_values]
+            )
+            session.commit()
 
     def load_lora(self) -> List[Type[Lora]]:
-        return self.session.query(Lora).all()
+        return Lora.objects.all()
 
     def get_lora_by_name(self, name):
-        return self.session.query(Lora).filter_by(name=name).first()
+        return Lora.objects.filter_by(name=name).first()
 
     def add_lora(self, lora: Lora):
-        self.session.add(lora)
-        self.session.commit()
+        lora.save()
 
     def delete_lora(self, lora: Lora):
-        self.session.query(Lora).filter_by(name=lora.name).delete()
-        self.session.commit()
+        loras = Lora.objects.filter_by(name=lora.name)
+        for lora in loras:
+            lora.delete()
 
     def update_lora(self, lora: Lora):
-        query = self.session.query(Lora).filter_by(name=lora.name).first()
-        if query:
+        new_lora = Lora.objects.filter_by(name=lora.name).first()
+        if new_lora:
             for key in lora.__dict__.keys():
                 if key != "_sa_instance_state":
-                    setattr(query, key, getattr(lora, key))
+                    setattr(new_lora, key, getattr(lora, key))
+            new_lora.save()
         else:
-            self.session.add(lora)
-        self.session.commit()
+            lora.save()
         self.__settings_updated()
 
     def update_loras(self, loras: List[Lora]):
         for lora in loras:
-            query = self.session.query(Lora).filter_by(name=lora.name).first()
-            if query:
+            new_lora = Lora.objects.filter_by(name=lora.name).first()
+            if new_lora:
                 for key in lora.__dict__.keys():
                     if key != "_sa_instance_state":
-                        setattr(query, key, getattr(lora, key))
+                        setattr(new_lora, key, getattr(lora, key))
+                new_lora.save()
             else:
-                self.session.add(lora)
-        self.session.commit()
+                lora.save()
         self.__settings_updated()
 
     def create_lora(self, lora: Lora):
-        self.session.add(lora)
-        self.session.commit()
+        lora.save()
 
     def delete_lora_by_name(self, lora_name, version):
-        self.session.query(Lora).filter_by(name=lora_name, version=version).delete()
-        self.session.commit()
+        loras = Lora.objects.filter_by(name=lora_name, version=version)
+        for lora in loras:
+            lora.delete()
 
     def delete_embedding(self, embedding: Embedding):
-        self.session.query(Embedding).filter_by(
+        Embedding.objects.filter_by(
             name=embedding.name,
             path=embedding.path,
             branch=embedding.branch,
@@ -676,11 +637,10 @@ class SettingsMixin:
             model_type=embedding.model_type,
             is_default=embedding.is_default
         ).delete()
-        self.session.commit()
 
     def update_embeddings(self, embeddings: List[Embedding]):
         for embedding in embeddings:
-            query = self.session.query(Embedding).filter_by(
+            new_embedding = Embedding.objects.filter_by(
                 name=embedding.name,
                 path=embedding.path,
                 branch=embedding.branch,
@@ -691,61 +651,58 @@ class SettingsMixin:
                 model_type=embedding.model_type,
                 is_default=embedding.is_default
             ).first()
-            if query:
+            if new_embedding:
                 for key in embedding.__dict__.keys():
                     if key != "_sa_instance_state":
-                        setattr(query, key, getattr(embedding, key))
+                        setattr(new_embedding, key, getattr(embedding, key))
+                new_embedding.save()
             else:
-                self.session.add(embedding)
-        self.session.commit()
+                embedding.save()
         self.__settings_updated()
 
     def get_embedding_by_name(self, name):
-        return self.session.query(Embedding).filter_by(name=name).first()
+        return Embedding.objects.filter_by(name=name).first()
 
     def add_embedding(self, embedding: Embedding):
-        self.session.add(embedding)
-        self.session.commit()
+        embedding.save()
 
     def load_prompt_templates(self) -> List[Type[PromptTemplate]]:
-        return self.session.query(PromptTemplate).all()
+        return PromptTemplate.objects.all()
 
     def get_prompt_template_by_name(self, name) -> Type[PromptTemplate]:
-        return self.session.query(PromptTemplate).filter_by(template_name=name).first()
+        return PromptTemplate.objects.filter_by(template_name=name).first()
 
     def load_controlnet_models(self) -> List[Type[ControlnetModel]]:
-        return self.session.query(ControlnetModel).all()
+        return ControlnetModel.objects.all()
 
     def controlnet_model_by_name(self, name) -> Type[ControlnetModel]:
-        return self.session.query(ControlnetModel).filter_by(name=name).first()
+        return ControlnetModel.objects.filter_by(name=name).first()
 
     def load_pipelines(self) -> List[Type[PipelineModel]]:
-        return self.session.query(PipelineModel).all()
+        return PipelineModel.objects.all()
 
     def load_shortcut_keys(self) -> List[Type[ShortcutKeys]]:
-        return self.session.query(ShortcutKeys).all()
-
-    def load_window_settings(self) -> Type[WindowSettings]:
-        return self.session.query(WindowSettings).first()
+        return ShortcutKeys.objects.all()
 
     def save_window_settings(self, column_name, val):
         window_settings = self.window_settings
         setattr(window_settings, column_name, val)
-        query = self.session.query(WindowSettings).first()
-        if query:
+        new_window_settings = WindowSettings.objects.first()
+        if new_window_settings:
             for key in window_settings.__dict__.keys():
                 if key != "_sa_instance_state":
-                    setattr(query, key, getattr(window_settings, key))
+                    setattr(new_window_settings, key, getattr(window_settings, key))
+            new_window_settings.save()
         else:
-            self.session.add(window_settings)
-        self.session.commit()
+            window_settings.save()
 
     def save_object(self, database_object):
-        self.session.add(database_object)
-        self.session.commit()
+        database_object.save()
 
     def load_history_from_db(self, conversation_id):
-        conversation = self.session.query(Conversation).filter_by(id=conversation_id).first()
+        conversation = Conversation.objects.filter_by(
+            id=conversation_id
+        ).first()
         messages = conversation.value
         return [
             {
@@ -761,24 +718,32 @@ class SettingsMixin:
         ]
 
     def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
-        chatbot = self.session.query(Chatbot).filter_by(id=chatbot_id).options(joinedload(Chatbot.target_files)).first()
-        if chatbot is None:
-            chatbot = self.create_chatbot("Default")
-        return chatbot
+        if not self.settings_mixin_shared_instance.chatbot:
+            chatbot = Chatbot.objects.options(
+                joinedload(Chatbot.target_files),
+                joinedload(Chatbot.target_directories)
+            ).get(chatbot_id)
+            if chatbot is None:
+                chatbot = self.create_chatbot("Default")
+            self.settings_mixin_shared_instance.chatbot = chatbot
+        return self.settings_mixin_shared_instance.chatbot
 
     def create_conversation(self, chat_store_key: str):
+        print("CREATE CONVERSATION")
         # get prev conversation by key != chat_store_key
         # order by id desc
         # get first
-        previous_conversation = self.session.query(
-            Conversation
+        previous_conversation = Conversation.objects.options(
+            joinedload(Conversation.summaries)
         ).filter(
             Conversation.key != chat_store_key
         ).order_by(
             Conversation.id.desc()
         ).first()
         # find conversation which has no title, bot_mood or messages
-        conversation = self.session.query(Conversation).filter_by(
+        conversation = Conversation.objects.options(
+            joinedload(Conversation.summaries)
+        ).filter_by(
             key=chat_store_key
         ).first()
         if (
@@ -787,11 +752,13 @@ class SettingsMixin:
             and conversation 
             and conversation.bot_mood is None
         ):
+            print("SAVING CONVERSATION")
             conversation.bot_mood = previous_conversation.bot_mood
-            self.session.add(conversation)
-            self.session.commit()
+            conversation.save()
         if conversation:
+            print("RETURNING CONVERSATION")
             return conversation
+        print("CREATING NEW CONVERSATION")
         conversation = Conversation(
             timestamp=datetime.datetime.now(datetime.timezone.utc),
             title="",
@@ -803,15 +770,21 @@ class SettingsMixin:
             user_name=self.user.username,
             bot_mood=previous_conversation.bot_mood if previous_conversation else None
         )
-        self.session.add(conversation)
-        self.session.commit()
-        return conversation
+        print("SAVING NEW CONVERSATION")
+        conversation.save()
+        return Conversation.objects.options(
+            joinedload(Conversation.summaries)
+        ).filter_by(
+            key=chat_store_key
+        ).first()
 
     def update_conversation_title(self, conversation_id, title):
-        conversation = self.session.query(Conversation).filter_by(id=conversation_id).first()
+        conversation = Conversation.objects.filter_by(
+            id=conversation_id
+        ).first()
         if conversation:
             conversation.title = title
-            self.session.commit()
+            conversation.save()
 
     def add_summary(self, content, conversation_id):
         timestamp = datetime.datetime.now()  # Ensure timestamp is a datetime object
@@ -820,21 +793,19 @@ class SettingsMixin:
             timestamp=timestamp,
             conversation_id=conversation_id
         )
-        self.session.add(summary)
-        self.session.commit()
+        summary.save()
     
-    def get_all_conversations(self):
-        conversations = self.session.query(Conversation).all()
-        return conversations
+    def get_all_conversations(self) -> Optional[List[Conversation]]:
+        return Conversation.objects.all()
 
     def delete_conversation(self, conversation_id):
-        self.session.query(Summary).filter_by(conversation_id=conversation_id).delete()
-        self.session.query(Conversation).filter_by(id=conversation_id).delete()
-        self.session.commit()
+        Summary.objects.delete(conversation_id=conversation_id)
+        Conversation.objects.delete(id=conversation_id)
 
-    def get_most_recent_conversation(self):
-        conversation = self.session.query(Conversation).order_by(Conversation.timestamp.desc()).first()
-        return conversation
+    def get_most_recent_conversation(self) -> Optional[Conversation]:
+        return Conversation.objects.order_by(
+            Conversation.timestamp.desc()
+        ).first()
 
     def __settings_updated(self, setting_name=None, column_name=None, val=None):
         data = None

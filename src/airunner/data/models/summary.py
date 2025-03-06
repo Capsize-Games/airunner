@@ -1,11 +1,11 @@
 import datetime
-from sqlalchemy import Column, Integer, DateTime, String, Text, JSON, ForeignKey
+from sqlalchemy import Column, Integer, DateTime, String, ForeignKey
 from sqlalchemy.orm import relationship
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class Summary(Base):
+class Summary(BaseModel):
     __tablename__ = 'summaries'
     id = Column(Integer, primary_key=True, autoincrement=True)
     content = Column(String, nullable=False)

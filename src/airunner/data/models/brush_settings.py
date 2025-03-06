@@ -1,10 +1,10 @@
 from sqlalchemy import Column, Integer, String
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 from airunner.settings import DEFAULT_BRUSH_PRIMARY_COLOR, DEFAULT_BRUSH_SECONDARY_COLOR
 
 
-class BrushSettings(Base):
+class BrushSettings(BaseModel):
     __tablename__ = 'brush_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     size = Column(Integer, default=75)

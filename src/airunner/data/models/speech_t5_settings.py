@@ -1,10 +1,10 @@
 from sqlalchemy import Column, Integer, String
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 from airunner.enums import SpeechT5Voices
 
 
-class SpeechT5Settings(Base):
+class SpeechT5Settings(BaseModel):
     __tablename__ = 'speech_t5_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     datasets_path = Column(String, default="Matthijs/cmu-arctic-xvectors")

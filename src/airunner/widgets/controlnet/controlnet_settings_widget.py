@@ -24,7 +24,7 @@ class ControlnetSettingsWidget(BaseWidget):
             self._version = self.generator_settings.version
             current_index = 0
             
-            controlnet_models = self.session.query(ControlnetModel).filter_by(
+            controlnet_models = ControlnetModel.objects.filter_by(
                 version=self.generator_settings.version
             ).all()
             self.ui.controlnet.blockSignals(True)

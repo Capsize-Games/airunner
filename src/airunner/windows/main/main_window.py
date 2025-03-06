@@ -4,6 +4,7 @@ import sys
 import urllib
 import webbrowser
 from functools import partial
+from typing import Optional
 
 import requests
 from PIL import Image
@@ -69,6 +70,7 @@ from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
+from airunner.data.models import WindowSettings
 
 
 class MainWindow(
@@ -158,6 +160,10 @@ class MainWindow(
         self.register_signals()
         self.initialize_ui()
         self._initialize_workers()
+
+    @property
+    def window_settings(self) -> Optional[WindowSettings]:
+        return WindowSettings.objects.first()
 
     @property
     def generator_tab_widget(self):
@@ -949,11 +955,11 @@ class MainWindow(
 
     def _set_keyboard_shortcuts(self):
         
-        quit_key = self.session.query(ShortcutKeys).filter_by(display_name="Quit").first()
-        brush_key = self.session.query(ShortcutKeys).filter_by(display_name="Brush").first()
-        eraser_key = self.session.query(ShortcutKeys).filter_by(display_name="Eraser").first()
-        move_tool_key = self.session.query(ShortcutKeys).filter_by(display_name="Move Tool").first()
-        select_tool_key = self.session.query(ShortcutKeys).filter_by(display_name="Select Tool").first()
+        quit_key = ShortcutKeys.objects.filter_by(display_name="Quit").first()
+        brush_key = ShortcutKeys.objects.filter_by(display_name="Brush").first()
+        eraser_key = ShortcutKeys.objects.filter_by(display_name="Eraser").first()
+        move_tool_key = ShortcutKeys.objects.filter_by(display_name="Move Tool").first()
+        select_tool_key = ShortcutKeys.objects.filter_by(display_name="Select Tool").first()
 
         if quit_key is not None:
             key_sequence = QKeySequence(quit_key.key | quit_key.modifiers)
@@ -993,9 +999,7 @@ class MainWindow(
         self._llm_generate_worker = create_worker(LLMGenerateWorker)
 
     def _initialize_filter_actions(self):
-        # add more filters:
-        
-        image_filters = self.session.query(ImageFilter).all()
+        image_filters = ImageFilter.objects.all()
         for image_filter in image_filters:
             action = self.ui.menuFilters.addAction(image_filter.display_name)
             action.triggered.connect(partial(self.display_filter_window, image_filter))
@@ -1123,9 +1127,9 @@ class MainWindow(
         img = Image.new("RGB", (width, height), (0, 0, 0))
         base64_image = convert_image_to_binary(img)
         
-        drawing_pad_settings = self.session.query(DrawingPadSettings).first()
+        drawing_pad_settings = DrawingPadSettings.objects.first()
         drawing_pad_settings.mask = base64_image
-        self.session.commit()
+        drawing_pad_settings.save()
         
     def display_missing_models_error(self):
         msg_box = QMessageBox()
