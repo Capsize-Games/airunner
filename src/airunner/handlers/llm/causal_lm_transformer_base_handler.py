@@ -276,7 +276,10 @@ class CausalLMTransformerBaseHandler(
 
     def _unload_streamer(self):
         self.logger.debug("Unloading streamer")
-        del self._streamer
+        try:
+            del self._streamer
+        except AttributeError as e:
+            self.logger.warning(f"Error unloading streamer: {e}")
         self._streamer = None
 
     def _unload_llm_with_tools(self):
@@ -289,12 +292,18 @@ class CausalLMTransformerBaseHandler(
 
     def _unload_agent_executor(self):
         self.logger.debug("Unloading agent executor")
-        del self._agent_executor
+        try:
+            del self._agent_executor
+        except AttributeError as e:
+            self.logger.warning(f"Error unloading agent executor: {e}")
         self._agent_executor = None
 
     def _unload_embed_model(self):
         self.logger.debug("Unloading embed model")
-        del self._embed_model
+        try:
+            del self._embed_model
+        except AttributeError as e:
+            self.logger.warning(f"Error unloading embed model: {e}")
         self._embed_model = None
 
     def _unload_model(self):
@@ -304,7 +313,10 @@ class CausalLMTransformerBaseHandler(
 
     def _unload_tokenizer(self):
         self.logger.debug("Unloading tokenizer")
-        del self._tokenizer
+        try:
+            del self._tokenizer
+        except AttributeError as e:
+            self.logger.warning(f"Error unloading tokenizer {e}")
         self._tokenizer = None
         clear_memory(self.memory_settings.default_gpu_llm)
         return True
@@ -315,7 +327,10 @@ class CausalLMTransformerBaseHandler(
         if self._chat_agent is not None:
             self.logger.debug("Unloading chat agent")
             self._chat_agent.unload()
-            del self._chat_agent
+            try:
+                del self._chat_agent
+            except AttributeError as e:
+                self.logger.warning(f"Error unloading chat agent: {e}")
             self._chat_agent = None
             do_clear_memory = True
         return do_clear_memory
