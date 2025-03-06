@@ -35,14 +35,8 @@ def upgrade() -> None:
     if 'chatbots' in inspector.get_table_names():
         if bind.dialect.name == 'sqlite':
             # SQLite does not support altering column types directly
-            if 'chatbots_new' not in inspector.get_table_names():
-                op.execute("CREATE TABLE chatbots_new AS SELECT * FROM chatbots;")
-                op.execute("ALTER TABLE chatbots_new RENAME COLUMN seed TO seed_old;")
-                op.execute("ALTER TABLE chatbots_new ADD COLUMN seed BIGINT;")
-                op.execute("UPDATE chatbots_new SET seed = seed_old;")
-                op.execute("ALTER TABLE chatbots_new DROP COLUMN seed_old;")
-                op.execute("DROP TABLE chatbots;")
-                op.execute("ALTER TABLE chatbots_new RENAME TO chatbots;")
+            with op.batch_alter_table('chatbots', recreate='always') as batch_op:
+                batch_op.alter_column('seed', existing_type=sa.Integer(), type_=sa.BigInteger(), existing_nullable=True)
         else:
             op.alter_column('chatbots', 'seed',
                 existing_type=sa.Integer(),
@@ -66,8 +60,8 @@ def upgrade() -> None:
 
     if 'generator_settings' in inspector.get_table_names():
         if bind.dialect.name == 'sqlite':
-            with op.batch_alter_table('generator_settings') as batch_op:
-                batch_op.alter_column('seed', existing_type=sa.Integer(), type_=sa.BigInteger())
+            with op.batch_alter_table('generator_settings', recreate='always') as batch_op:
+                batch_op.alter_column('seed', existing_type=sa.Integer(), type_=sa.BigInteger(), existing_nullable=True)
                 batch_op.create_foreign_key('fk_generator_settings_aimodels', 'aimodels', ['model'], ['id'])
         else:
             op.alter_column('generator_settings', 'seed',
@@ -79,8 +73,8 @@ def upgrade() -> None:
 
     if 'llm_generator_settings' in inspector.get_table_names():
         if bind.dialect.name == 'sqlite':
-            with op.batch_alter_table('llm_generator_settings') as batch_op:
-                batch_op.alter_column('seed', existing_type=sa.Integer(), type_=sa.BigInteger())
+            with op.batch_alter_table('llm_generator_settings', recreate='always') as batch_op:
+                batch_op.alter_column('seed', existing_type=sa.Integer(), type_=sa.BigInteger(), existing_nullable=True)
         else:
             op.alter_column('llm_generator_settings', 'seed',
                 existing_type=sa.Integer(),
@@ -118,38 +112,45 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     bind = op.get_bind()
-    op.drop_constraint(None, 'target_files', type_='foreignkey')
-    op.drop_constraint(None, 'target_directories', type_='foreignkey')
-    op.drop_constraint(None, 'summaries', type_='foreignkey')
-    op.drop_constraint('uq_news_articles_source', 'news_articles', type_='unique')
+
     if bind.dialect.name == 'sqlite':
-        with op.batch_alter_table('llm_generator_settings') as batch_op:
-            batch_op.alter_column('seed', existing_type=sa.BigInteger(), type_=sa.Integer())
+        # SQLite does not support ALTER of constraints, so use batch mode
+        with op.batch_alter_table('target_files', recreate='always') as batch_op:
+            pass  # no-op to trigger recreation
+        with op.batch_alter_table('target_directories', recreate='always') as batch_op:
+            pass  # no-op to trigger recreation
+        with op.batch_alter_table('summaries', recreate='always') as batch_op:
+            pass  # no-op to trigger recreation
+        with op.batch_alter_table('news_articles', recreate='always') as batch_op:
+            pass  # no-op to trigger recreation
+        with op.batch_alter_table('llm_generator_settings', recreate='always') as batch_op:
+            batch_op.alter_column('seed', existing_type=sa.BigInteger(), type_=sa.Integer(), existing_nullable=True)
+        with op.batch_alter_table('generator_settings', recreate='always') as batch_op:
+            batch_op.alter_column('seed', existing_type=sa.BigInteger(), type_=sa.Integer(), existing_nullable=True)
+            # batch_op.drop_constraint('fk_generator_settings_aimodels', type_='foreignkey')
+        with op.batch_alter_table('conversations', recreate='always') as batch_op:
+            pass
+        with op.batch_alter_table('chatbots', recreate='always') as batch_op:
+            batch_op.alter_column('seed', existing_type=sa.BigInteger(), type_=sa.Integer(), existing_nullable=True)
     else:
+        op.drop_constraint('fk_target_files_chatbots', 'target_files', type_='foreignkey')
+        op.drop_constraint('fk_target_directories_chatbots', 'target_directories', type_='foreignkey')
+        op.drop_constraint('fk_summaries_conversations', 'summaries', type_='foreignkey')
+        op.drop_constraint('uq_news_articles_source', 'news_articles', type_='unique')
         op.alter_column('llm_generator_settings', 'seed',
             existing_type=sa.BigInteger(),
             type_=sa.Integer(),
             existing_nullable=True
         )
-    op.drop_constraint(None, 'generator_settings', type_='foreignkey')
-    if bind.dialect.name == 'sqlite':
-        with op.batch_alter_table('generator_settings') as batch_op:
-            batch_op.alter_column('seed', existing_type=sa.BigInteger(), type_=sa.Integer())
-    else:
         op.alter_column('generator_settings', 'seed',
             existing_type=sa.BigInteger(),
             type_=sa.Integer(),
             existing_nullable=True
         )
-    op.drop_constraint(None, 'conversations', type_='foreignkey')
-    op.drop_constraint(None, 'conversations', type_='foreignkey')
-    if bind.dialect.name == 'sqlite':
-        with op.batch_alter_table('chatbots') as batch_op:
-            batch_op.alter_column('seed', existing_type=sa.BigInteger(), type_=sa.Integer())
-    else:
         op.alter_column('chatbots', 'seed',
             existing_type=sa.BigInteger(),
             type_=sa.Integer(),
             existing_nullable=True
         )
+
     op.drop_table('chatstore')
