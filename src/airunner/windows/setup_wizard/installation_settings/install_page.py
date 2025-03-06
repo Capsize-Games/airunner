@@ -467,10 +467,14 @@ class InstallPage(BaseWizard):
         if self.application_settings.stable_diffusion_agreement_checked:
             self.total_steps += 1
 
-        controlnet_model_count = ControlnetModel.objects.query(func.count(ControlnetModel.id.distinct())).scalar()
-        controlnet_version_count = ControlnetModel.objects.query(func.count(ControlnetModel.version.distinct())).scalar()
+        controlnet_model_ids = ControlnetModel.objects.distinct(ControlnetModel.id).all()
+        controlnet_model_count = len(controlnet_model_ids)
 
-        llm_model_count = AIModels.objects.query(func.count(AIModels.id)).filter(AIModels.category == 'llm').scalar()
+        controlnet_model_versions = ControlnetModel.objects.distinct(ControlnetModel.version).all()
+        controlnet_version_count = len(controlnet_model_versions)
+
+        llm_model_count_query = AIModels.objects.filter(AIModels.category == 'llm').all()
+        llm_model_count = len(llm_model_count_query)
 
         self.total_steps += controlnet_model_count * controlnet_version_count
         self.total_steps += len(TINY_AUTOENCODER_FILES_SD["madebyollin/taesd"])
