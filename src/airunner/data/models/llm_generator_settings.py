@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Boolean, String, BigInteger
+from sqlalchemy import Column, Integer, Boolean, String, BigInteger, ForeignKey
 
 from airunner.data.models.base import BaseModel
 
@@ -36,3 +36,4 @@ class LLMGeneratorSettings(BaseModel):
     decoder_start_token_id = Column(Integer, nullable=True)
     use_cache = Column(Boolean, default=True)
     length_penalty = Column(Integer, default=100)
+    current_conversation = Column(Integer, ForeignKey('conversations.id'), nullable=True)
