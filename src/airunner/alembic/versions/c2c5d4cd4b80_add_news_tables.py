@@ -113,3 +113,19 @@ def upgrade() -> None:
         {'url': 'https://redstate.com/feed', 'name': 'RedState', 'category': 'Politics', 'political_bias': 'Right'},
         {'url': 'https://thefederalist.com/feed/', 'name': 'The Federalist', 'category': 'Politics', 'political_bias': 'Right'}
     ])
+
+def downgrade() -> None:
+    bind = op.get_bind()
+    inspector = Inspector.from_engine(bind)
+
+    if 'article_category_association' in inspector.get_table_names():
+        op.drop_table('article_category_association')
+
+    if 'news_articles' in inspector.get_table_names():
+        op.drop_table('news_articles')
+
+    if 'news_categories' in inspector.get_table_names():
+        op.drop_table('news_categories')
+
+    if 'news_rss_feeds' in inspector.get_table_names():
+        op.drop_table('news_rss_feeds')

@@ -5,7 +5,7 @@ Revises: 6d58cbfd61fb
 Create Date: 2024-10-13 09:29:29.878635
 
 """
-from typing import Sequence, Union
+from typing import Union
 
 from alembic import op
 import sqlalchemy as sa
@@ -14,8 +14,6 @@ from sqlalchemy.dialects import sqlite
 # revision identifiers, used by Alembic.
 revision: str = '3212e8fccc68'
 down_revision: Union[str, None] = '6d58cbfd61fb'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade():
     # Modify columns to Float if they are not already Float

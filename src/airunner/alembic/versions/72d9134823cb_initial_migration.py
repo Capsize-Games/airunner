@@ -5,13 +5,13 @@ Revises:
 Create Date: 2024-10-07 17:18:54.617216
 
 """
-from typing import Sequence, Union
+from typing import Union
 
 import sqlalchemy
 from alembic import op
 import sqlalchemy as sa
 
-from airunner.data.models import Base
+from airunner.data.models.base import BaseModel
 from airunner.data.models import (
     AIModels,
     Schedulers,
@@ -32,13 +32,11 @@ from airunner.settings import SCHEDULER_CLASSES, DEFAULT_SHORTCUTS
 # revision identifiers, used by Alembic.
 revision: str = '72d9134823cb'
 down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
     # Get all model classes
-    models = Base.__subclasses__()
+    models = BaseModel.__subclasses__()
 
     # Iterate over each model
     for model in models:

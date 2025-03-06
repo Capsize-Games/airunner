@@ -1,15 +1,11 @@
-from typing import Sequence, Union
-import os
+from typing import Union
 
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.engine.reflection import Inspector
 
-# revision identifiers, used by Alembic.
 revision: str = '75020956e3e2'
 down_revision: Union[str, None] = '26a0d29a3af3'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
 
 def convert_image_to_binary(image_path):
     with open(image_path, 'rb') as file:
@@ -47,4 +43,3 @@ def downgrade():
         op.drop_table('users')
     except Exception as e:
         print(f"Table already dropped: {e}")
-    # ### end Alembic commands ###

@@ -5,16 +5,13 @@ Revises: f403ff7468e8
 Create Date: 2024-10-24 12:31:37.706170
 
 """
-from typing import Sequence, Union
+from typing import Union
 
 from alembic import op
 import sqlalchemy as sa
 
-# revision identifiers, used by Alembic.
 revision: str = '26a0d29a3af3'
 down_revision: Union[str, None] = 'f403ff7468e8'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade():

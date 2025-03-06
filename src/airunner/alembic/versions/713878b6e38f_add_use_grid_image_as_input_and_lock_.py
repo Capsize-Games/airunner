@@ -5,17 +5,14 @@ Revises: 75020956e3e2
 Create Date: 2025-02-04 18:52:23.277083
 
 """
-from typing import Sequence, Union
+from typing import Union
 
 from sqlalchemy.engine.reflection import Inspector
 from alembic import op
 import sqlalchemy as sa
 
-# revision identifiers, used by Alembic.
 revision: str = '713878b6e38f'
 down_revision: Union[str, None] = '75020956e3e2'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     bind = op.get_bind()
