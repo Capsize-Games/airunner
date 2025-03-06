@@ -36,3 +36,26 @@ def create_table(cls):
     else:
         print(f"Table '{cls.__tablename__}' already exists, skipping create.")
     return
+
+def create_table_with_defaults(model):
+    if not table_exists(model.__tablename__):
+        try:
+            op.create_table(
+                model.__tablename__,
+                *model.__table__.columns
+            )
+            set_default_values(model)
+        except Exception as e:
+            print(f"Failed to create table {model.__tablename__}: {str(e)}")
+    else:
+        print(f"{model.__tablename__} already exists, skipping")
+
+def set_default_values(model):
+    default_values = {}
+    for column in model.__table__.columns:
+        if column.default is not None:
+            default_values[column.name] = column.default.arg
+    op.bulk_insert(
+        model.__table__,
+        [default_values]
+    )
