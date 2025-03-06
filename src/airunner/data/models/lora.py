@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, String, Boolean
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class Lora(Base):
+class Lora(BaseModel):
     __tablename__ = 'lora'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)

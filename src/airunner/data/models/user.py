@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, String, Float, JSON
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class User(Base):
+class User(BaseModel):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String, nullable=False, default="User")

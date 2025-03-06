@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, Boolean
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class MemorySettings(Base):
+class MemorySettings(BaseModel):
     __tablename__ = 'memory_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     use_last_channels = Column(Boolean, default=True)

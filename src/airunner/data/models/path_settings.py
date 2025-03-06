@@ -1,11 +1,11 @@
 import os
 from sqlalchemy import Column, Integer, String
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 from airunner.settings import BASE_PATH
 
 
-class PathSettings(Base):
+class PathSettings(BaseModel):
     __tablename__ = 'path_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     base_path = Column(String, default=BASE_PATH)
