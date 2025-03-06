@@ -1,10 +1,10 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class ImageFilterValue(Base):
+class ImageFilterValue(BaseModel):
     __tablename__ = 'image_filter_values'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)

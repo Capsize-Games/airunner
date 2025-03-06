@@ -1,7 +1,7 @@
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.windows.prompt_browser.templates.prompt_browser_prompt_widget_ui import Ui_prompt_widget
-
+from airunner.data.models import SavedPrompt
 
 class PromptWidget(BaseWidget):
     widget_class_ = Ui_prompt_widget
@@ -34,9 +34,7 @@ class PromptWidget(BaseWidget):
         })
 
     def action_clicked_button_delete(self):
-        
-        self.session.delete(self.saved_prompt)
-        self.session.commit()
+        SavedPrompt.objects.delete(self.saved_prompt.id)
         
         self.deleteLater()
 

@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Callable, List, Optional, Sequence, Union
 
 import torch
@@ -37,9 +36,8 @@ from transformers import (
 )
 
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.utils.prepare_llm_generate_kwargs import prepare_llm_generate_kwargs
-
-DEFAULT_HUGGINGFACE_MODEL = "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
+from airunner.data.models import LLMGeneratorSettings, Chatbot
+from airunner.settings import DEFAULT_HUGGINGFACE_MODEL
 
 
 class HuggingFaceLLM(CustomLLM, SettingsMixin):
@@ -173,10 +171,62 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
 
     @property
     def generate_kwargs(self) -> dict:
-        """The generate kwargs to use."""
-        generate_kwargs = prepare_llm_generate_kwargs(self.llm_generator_settings)
-        print(generate_kwargs)
-        return generate_kwargs
+        item = LLMGeneratorSettings.objects.first()
+        if not item:
+            self.logger.error("No LLMGeneratorSettings found")
+        else:
+            self.logger.debug(f"LLMGeneratorSettings found: {item}")
+        if (
+            item and (
+            not getattr(item, "override_parameters") or 
+            not item.override_parameters
+        )):
+            item = Chatbot.objects.get(item.current_chatbot)
+            min_val = 0.0001
+            length_penalty = item.length_penalty / 1000.0
+            repetition_penalty = item.repetition_penalty / 100.0
+            top_p = item.top_p / 1000.0
+            temperature = item.temperature / 10000.0
+            do_sample = item.do_sample
+            early_stopping = item.early_stopping
+            eta_cutoff = item.eta_cutoff
+            max_new_tokens = item.max_new_tokens
+            min_length = item.min_length
+            num_return_sequences = item
+            top_k = item.top_k
+            use_cache = item.use_cache
+            ngram_size = item.ngram_size
+            num_beams = item.num_beams
+
+            if length_penalty < min_val:
+                length_penalty = min_val
+
+            if repetition_penalty < min_val:
+                repetition_penalty = min_val
+
+            if top_p < min_val:
+                top_p = min_val
+
+            if temperature < min_val:
+                temperature = min_val
+
+            return {
+                "length_penalty": length_penalty,
+                "repetition_penalty": repetition_penalty,
+                "do_sample": do_sample,
+                "early_stopping": early_stopping,
+                "eta_cutoff": eta_cutoff,
+                "max_new_tokens": max_new_tokens,
+                "min_length": min_length,
+                "num_return_sequences": num_return_sequences,
+                "temperature": temperature,
+                "top_k": top_k,
+                "top_p": top_p,
+                "use_cache": use_cache,
+                # "no_repeat_ngram_size": ngram_size,
+                # "num_beams": num_beams,
+            }
+        return {}
         
     is_chat_model: bool = Field(
         default=False,

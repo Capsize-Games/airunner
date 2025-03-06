@@ -20,8 +20,7 @@ class PromptTemplatesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        session = self.session
-        self._prompt_templates = session.query(PromptTemplate).all()
+        self._prompt_templates = PromptTemplate.objects.all()
         self.ui.template_name.clear()
         self.current_template_index = 0
         for template in self._prompt_templates:
@@ -47,39 +46,34 @@ class PromptTemplatesWidget(BaseWidget):
 
     @Slot()
     def system_prompt_changed(self):
-        session = self.session
         template = self._prompt_templates[self.current_template_index]
         template.system = self.ui.system_prompt.toPlainText()
+        template.save()
         self._prompt_templates[self.current_template_index] = template
-        session.commit()
 
     @Slot()
     def guardrails_prompt_changed(self):
-        session = self.session
         template = self._prompt_templates[self.current_template_index]
         template.guardrails = self.ui.guardrails_prompt.toPlainText()
+        template.save()
         self._prompt_templates[self.current_template_index] = template
-        session.commit()
 
     @Slot(bool)
     def toggle_use_guardrails(self, val:bool):
-        session = self.session
         template = self._prompt_templates[self.current_template_index]
         template.use_guardrails = val
+        template.save()
         self._prompt_templates[self.current_template_index] = template
-        session.commit()
 
     @Slot(bool)
     def toggle_use_datetime(self, val:bool):
-        session = self.session
         template = self._prompt_templates[self.current_template_index]
         template.use_system_datetime_in_system_prompt = val
+        template.save()
         self._prompt_templates[self.current_template_index] = template
-        session.commit()
 
     Slot()
     def reset_system_prompt(self):
-        session = self.session
         template = self._prompt_templates[self.current_template_index]
 
         if template.template_name == "image":
@@ -98,13 +92,12 @@ class PromptTemplatesWidget(BaseWidget):
             default = ""
 
         template.system = default
+        template.save()
         self.ui.system_prompt.setPlainText(default)
         self._prompt_templates[self.current_template_index] = template
-        session.commit()
 
     Slot()
     def reset_guardrails_prompt(self):
-        session = self.session
         template = self._prompt_templates[self.current_template_index]
 
         if template.template_name == "image":
@@ -115,6 +108,6 @@ class PromptTemplatesWidget(BaseWidget):
             default = ""
 
         template.guardrails = default
+        template.save()
         self.ui.guardrails_prompt.setPlainText(default)
         self._prompt_templates[self.current_template_index] = template
-        session.commit()

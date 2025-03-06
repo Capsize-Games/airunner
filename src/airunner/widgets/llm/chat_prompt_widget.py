@@ -80,7 +80,7 @@ class ChatPromptWidget(BaseWidget):
         return self._conversation.id
 
     def load_conversation(self):
-        conversation = self.session.query(Conversation).order_by(Conversation.id.desc()).first()
+        conversation = Conversation.objects.order_by(Conversation.id.desc()).first()
         if conversation is not None:
             self.conversation = conversation
             self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
@@ -126,7 +126,9 @@ class ChatPromptWidget(BaseWidget):
         self._clear_conversation_widgets()
         if len(message["messages"]) > 0:
             self.conversation_id = message["messages"][0]["conversation_id"]
-            self.conversation = self.session.query(Conversation).filter_by(id=self.conversation_id).first()
+            self.conversation = Conversation.objects.filter_by(
+                id=self.conversation_id
+            ).first()
         self._set_conversation_widgets([{
                 "name": message["additional_kwargs"]["name"],
                 "content": message["text"],
@@ -195,12 +197,13 @@ class ChatPromptWidget(BaseWidget):
         self._create_conversation()
 
     def _create_conversation(self):
-        previous_conversation = self.session.query(Conversation).order_by(Conversation.id.desc()).first()
+        previous_conversation = Conversation.objects.order_by(
+            Conversation.id.desc()
+        ).first()
         self.conversation = self.create_conversation("cpw_" + uuid.uuid4().hex)
         if previous_conversation:
             self.conversation.bot_mood = previous_conversation.bot_mood
-        self.session.add(self.conversation)
-        self.session.commit()
+        self.conversation.save()
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
             "conversation_id": self.conversation_id
         })

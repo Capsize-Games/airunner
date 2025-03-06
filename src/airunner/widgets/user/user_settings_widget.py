@@ -11,30 +11,26 @@ class UserSettingsWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        session = self.session
-        user = session.query(User).first()
+        user = User.objects.first()
         if user is not None:
             self.ui.username.setText(user.username)
             self.ui.zipcode.setText(user.zipcode)
             self.ui.unit_system.setCurrentText(user.unit_system)
         else:
             user = User()
-            session.add(user)
-            session.commit()
+            user.save()
 
     @Slot(str)
     def username_changed(self, val):
-        session = self.session
-        user = session.query(User).first()
+        user = User.objects.first()
         user.username = val
-        session.commit()
+        user.save()
 
     @Slot(str)
     def zipcode_changed(self, val):
         # only do zipcode lookup if zipcode is 5 digits
         if len(val) == 5:
-            session = self.session
-            user = session.query(User).first()
+            user = User.objects.first()
             if user.zipcode != val:
                 user.zipcode = val
                 result = get_lat_lon(val)
@@ -43,11 +39,10 @@ class UserSettingsWidget(BaseWidget):
                     user.latitude = lat
                     user.longitude = lon
                     user.location_display_name = display_name
-                session.commit()
+                user.save()
 
     @Slot(str)
     def unit_system_changed(self, val):
-        session = self.session
-        user = session.query(User).first()
+        user = User.objects.first()
         user.unit_system = val
-        session.commit()
+        user.save()

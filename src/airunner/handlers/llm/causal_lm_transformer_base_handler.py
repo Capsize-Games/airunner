@@ -281,7 +281,10 @@ class CausalLMTransformerBaseHandler(
 
     def _unload_llm_with_tools(self):
         self.logger.debug("Unloading LLM with tools")
-        del self._llm_with_tools
+        try:
+            del self._llm_with_tools
+        except AttributeError as e:
+            self.logger.warning(f"Error unloading LLM with tools: {e}")
         self._llm_with_tools = None
 
     def _unload_agent_executor(self):

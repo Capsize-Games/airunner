@@ -1,10 +1,10 @@
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class AIModels(Base):
+class AIModels(BaseModel):
     __tablename__ = 'aimodels'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)

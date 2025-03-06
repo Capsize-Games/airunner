@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, Boolean, String, BigInteger
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class LLMGeneratorSettings(Base):
+class LLMGeneratorSettings(BaseModel):
     __tablename__ = 'llm_generator_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     action = Column(String, default="CHAT")

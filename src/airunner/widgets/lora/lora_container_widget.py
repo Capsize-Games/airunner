@@ -10,6 +10,8 @@ from airunner.widgets.lora.lora_widget import LoraWidget
 from airunner.widgets.lora.templates.lora_container_ui import Ui_lora_container
 from airunner.workers.directory_watcher import DirectoryWatcher
 
+from airunner.data.models import Lora
+
 
 class LoraContainerWidget(BaseWidget):
     widget_class_ = Ui_lora_container
@@ -173,8 +175,7 @@ class LoraContainerWidget(BaseWidget):
 
         # Remove lora from database
         
-        self.session.delete(lora_widget.current_lora)
-        self.session.commit()
+        Lora.objects.delete(lora_widget.current_lora.id)
         
 
         self._apply_button_enabled = True

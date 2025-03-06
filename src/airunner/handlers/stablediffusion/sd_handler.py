@@ -322,14 +322,14 @@ class SDHandler(BaseHandler):
         return img
 
     @property
-    def controlnet_model(self) -> ControlnetModel:
+    def controlnet_model(self) -> Optional[ControlnetModel]:
         if (
             self._controlnet_model is None or
             self._controlnet_model.version != self.version or
             self._controlnet_model.display_name != self.controlnet_settings_cached.controlnet
         ):
             
-            self._controlnet_model = self.session.query(ControlnetModel).filter_by(
+            self._controlnet_model = ControlnetModel.objects.filter_by(
                 display_name=self.controlnet_settings_cached.controlnet,
                 version=self.version
             ).first()
@@ -991,7 +991,9 @@ class SDHandler(BaseHandler):
             )
         )
         
-        scheduler = self.session.query(Schedulers).filter_by(display_name=scheduler_name).first()
+        scheduler = Schedulers.objects.filter_by(
+            display_name=scheduler_name
+        ).first()
         if not scheduler:
             self.logger.error(f"Failed to find scheduler {scheduler_name}")
             return None
@@ -1178,7 +1180,7 @@ class SDHandler(BaseHandler):
 
     def _load_lora(self):
         
-        enabled_lora = self.session.query(Lora).filter_by(
+        enabled_lora = Lora.objects.filter_by(
             version=self.version,
             enabled=True
         ).all()
@@ -1219,7 +1221,7 @@ class SDHandler(BaseHandler):
         self.logger.debug("Setting LORA adapters")
         
         loaded_lora_id = [lora.id for lora in self._loaded_lora.values()]
-        enabled_lora = self.session.query(Lora).filter(Lora.id.in_(loaded_lora_id)).all()
+        enabled_lora = Lora.objects.filter(Lora.id.in_(loaded_lora_id)).all()
         adapter_weights = []
         adapter_names = []
         for lora in enabled_lora:
@@ -1241,7 +1243,7 @@ class SDHandler(BaseHandler):
         except RuntimeError as e:
             self.logger.error(f"Failed to unload embeddings: {e}")
         
-        embeddings = self.session.query(Embedding).filter_by(
+        embeddings = Embedding.objects.filter_by(
             version=self.version
         ).all()
         

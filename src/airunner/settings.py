@@ -382,3 +382,4 @@ DB_URL = os.environ.get("AI_RUNNER_DATABASE_URL", f"sqlite:///{DB_PATH}")
 ASYNC_DB_URL = os.environ.get(
     "ASYNC_AI_RUNNER_DATABASE_URL", f"sqlite+aiosqlite:///{DB_PATH}"
 )
+DEFAULT_HUGGINGFACE_MODEL = "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
