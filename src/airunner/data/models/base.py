@@ -97,17 +97,26 @@ class BaseManager:
                 logger.error(f"Error in delete(): {e}")
                 return 0
 
-    def delete(self, pk):
+    def delete(self, pk=None, **kwargs):
         with session_scope() as session:
             try:
-                obj = session.query(self.cls).filter(self.cls.id == pk).first()
-                if obj:
-                    session.delete(obj)
+                if pk:
+                    obj = session.query(self.cls).filter(self.cls.id == pk).first()
+                    if obj:
+                        session.delete(obj)
+                        session.commit()
+                        logger.debug(f"Deleted {self.cls.__name__} with id {pk}")
+                        return True
+                    else:
+                        logger.debug(f"No {self.cls.__name__} found with id {pk}")
+                        return False
+                elif kwargs:
+                    result = session.query(self.cls).filter_by(**kwargs).delete()
                     session.commit()
-                    logger.debug(f"Deleted {self.cls.__name__} with id {pk}")
-                    return True
+                    logger.debug(f"Deleted {result} {self.cls.__name__} objects")
+                    return result
                 else:
-                    logger.debug(f"No {self.cls.__name__} found with id {pk}")
+                    logger.debug("No arguments provided to delete()")
                     return False
             except Exception as e:
                 logger.error(f"Error in delete({pk}): {e}")
@@ -140,6 +149,17 @@ class BaseManager:
             except Exception as e:
                 logger.error(f"Error in merge(): {e}")
                 return False
+    
+    def distinct(self, *args):
+        with session_scope() as session:
+            try:
+                result = session.query(self.cls).distinct(*args)
+                logger.debug(f"Query result for distinct({args}): {result}")
+                session.expunge_all()
+                return result
+            except Exception as e:
+                logger.error(f"Error in distinct({args}): {e}")
+                return []
 
 
 class BaseModel(Base):
