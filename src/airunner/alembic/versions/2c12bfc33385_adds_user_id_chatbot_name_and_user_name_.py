@@ -17,6 +17,5 @@ down_revision: Union[str, None] = 'bd0a424f223d'
 def upgrade() -> None:
     add_columns(Conversation, ['user_id', 'chatbot_name', 'user_name', 'status'])
 
-
 def downgrade() -> None:
     drop_columns(Conversation, ['user_id', 'chatbot_name', 'user_name', 'status'])
