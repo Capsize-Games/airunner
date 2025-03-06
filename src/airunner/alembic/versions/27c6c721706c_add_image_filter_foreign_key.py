@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from airunner.utils.db import set_default_and_create_fk  # New import
 
 
 # revision identifiers, used by Alembic.
@@ -19,31 +20,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-
-    # Set default value for existing rows
-    op.execute("UPDATE image_filter_values SET image_filter_id = 1 WHERE image_filter_id IS NULL OR image_filter_id NOT IN (SELECT id FROM image_filter_settings)")
-
-    # Alter column to set default value and not nullable
-    if bind.dialect.name == 'sqlite':
-        # SQLite does not support altering column types directly
-        with op.batch_alter_table('image_filter_values', recreate='always') as batch_op:
-            batch_op.alter_column('image_filter_id',
-                existing_type=sa.INTEGER(),
-                nullable=False,
-                server_default=sa.text('1'))
-    else:
-        op.alter_column('image_filter_values', 'image_filter_id',
-            existing_type=sa.INTEGER(),
-            nullable=False,
-            server_default=sa.text('1'))
-
-    # Create foreign key constraint
-    if bind.dialect.name == 'sqlite':
-        with op.batch_alter_table('image_filter_values', recreate='always') as batch_op:
-            batch_op.create_foreign_key('fk_image_filter_values_image_filter_id', 'image_filter_settings', ['image_filter_id'], ['id'])
-    else:
-        op.create_foreign_key('fk_image_filter_values_image_filter_id', 'image_filter_values', 'image_filter_settings', ['image_filter_id'], ['id'])
+    set_default_and_create_fk(
+        table_name='image_filter_values',
+        column_name='image_filter_id',
+        ref_table_name='image_filter_settings',
+        ref_column_name='id',
+        default_value=1
+    )
 
 
 def downgrade() -> None:

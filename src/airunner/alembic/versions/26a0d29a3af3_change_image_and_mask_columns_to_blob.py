@@ -7,56 +7,25 @@ Create Date: 2024-10-24 12:31:37.706170
 """
 from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from airunner.utils.db import safe_alter_column
 
 revision: str = '26a0d29a3af3'
 down_revision: Union[str, None] = 'f403ff7468e8'
 
 
 def upgrade():
-    try:
-        op.alter_column('controlnet_settings', 'image', type_=sa.LargeBinary, existing_type=sa.String, nullable=True)
-        op.alter_column('controlnet_settings', 'generated_image', type_=sa.LargeBinary, existing_type=sa.String, nullable=True)
-    except sa.exc.OperationalError:
-        pass
-
-    try:
-        op.alter_column('image_to_image_settings', 'image', type_=sa.LargeBinary, existing_type=sa.String, nullable=True)
-    except sa.exc.OperationalError:
-        pass
-
-    try:
-        op.alter_column('outpaint_settings', 'image', type_=sa.LargeBinary, existing_type=sa.String, nullable=True)
-    except sa.exc.OperationalError:
-        pass
-
-    try:
-        op.alter_column('drawing_pad_settings', 'image', type_=sa.LargeBinary, existing_type=sa.String, nullable=True)
-        op.alter_column('drawing_pad_settings', 'mask', type_=sa.LargeBinary, existing_type=sa.String, nullable=True)
-    except sa.exc.OperationalError:
-        pass
-
+    safe_alter_column('controlnet_settings', 'image', sa.LargeBinary, sa.String, nullable=True)
+    safe_alter_column('controlnet_settings', 'generated_image', sa.LargeBinary, sa.String, nullable=True)
+    safe_alter_column('image_to_image_settings', 'image', sa.LargeBinary, sa.String, nullable=True)
+    safe_alter_column('outpaint_settings', 'image', sa.LargeBinary, sa.String, nullable=True)
+    safe_alter_column('drawing_pad_settings', 'image', sa.LargeBinary, sa.String, nullable=True)
+    safe_alter_column('drawing_pad_settings', 'mask', sa.LargeBinary, sa.String, nullable=True)
 
 def downgrade():
-    try:
-        op.alter_column('controlnet_settings', 'image', type_=sa.String, existing_type=sa.LargeBinary, nullable=True)
-        op.alter_column('controlnet_settings', 'generated_image', type_=sa.String, existing_type=sa.LargeBinary, nullable=True)
-    except sa.exc.OperationalError:
-        pass
-
-    try:
-        op.alter_column('image_to_image_settings', 'image', type_=sa.String, existing_type=sa.LargeBinary, nullable=True)
-    except sa.exc.OperationalError:
-        pass
-
-    try:
-        op.alter_column('outpaint_settings', 'image', type_=sa.String, existing_type=sa.LargeBinary, nullable=True)
-    except sa.exc.OperationalError:
-        pass
-
-    try:
-        op.alter_column('drawing_pad_settings', 'image', type_=sa.String, existing_type=sa.LargeBinary, nullable=True)
-        op.alter_column('drawing_pad_settings', 'mask', type_=sa.String, existing_type=sa.LargeBinary, nullable=True)
-    except sa.exc.OperationalError:
-        pass
+    safe_alter_column('controlnet_settings', 'image', sa.String, sa.LargeBinary, nullable=True)
+    safe_alter_column('controlnet_settings', 'generated_image', sa.String, sa.LargeBinary, nullable=True)
+    safe_alter_column('image_to_image_settings', 'image', sa.String, sa.LargeBinary, nullable=True)
+    safe_alter_column('outpaint_settings', 'image', sa.String, sa.LargeBinary, nullable=True)
+    safe_alter_column('drawing_pad_settings', 'image', sa.String, sa.LargeBinary, nullable=True)
+    safe_alter_column('drawing_pad_settings', 'mask', sa.String, sa.LargeBinary, nullable=True)
