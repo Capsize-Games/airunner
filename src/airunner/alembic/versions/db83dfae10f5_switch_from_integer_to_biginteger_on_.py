@@ -5,17 +5,14 @@ Revises: 3f2896b85ff3
 Create Date: 2025-03-03 15:12:13.927445
 
 """
-from typing import Sequence, Union
+from typing import Union
 
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.engine.reflection import Inspector
 
-# revision identifiers, used by Alembic.
 revision: str = 'db83dfae10f5'
 down_revision: Union[str, None] = '3f2896b85ff3'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
