@@ -10,7 +10,6 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.engine.reflection import Inspector
-from sqlalchemy.engine import Engine
 
 # revision identifiers, used by Alembic.
 revision: str = 'db83dfae10f5'
