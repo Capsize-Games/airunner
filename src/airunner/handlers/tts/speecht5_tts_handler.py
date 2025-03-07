@@ -304,20 +304,6 @@ class SpeechT5TTSHandler(TTSHandler):
         self._speaker_embeddings = None
         clear_memory(self.memory_settings.default_gpu_tts)
 
-    def _prepare_text(self, text: str) -> str:
-        """Prepare text for TTS processing by applying character replacements."""
-        if not text:
-            return ""
-            
-        # Apply character replacements
-        for old, new in self._character_replacement_map.items():
-            text = text.replace(old, new)
-            
-        # Remove any extra whitespace and trim
-        text = " ".join(text.split())
-        
-        return text
-
     def _do_generate(self, message: str):
         self.logger.debug("Generating text-to-speech with T5")
         text = self._prepare_text(message)
