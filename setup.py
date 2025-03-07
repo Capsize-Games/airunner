@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.2.0",
+    version="3.2.1",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -20,9 +20,6 @@ setup(
         "torchaudio==2.6.0",
         "accelerate==1.3.0",
         "huggingface-hub==0.28.1",
-        "PySide6==6.7.0",
-        "PySide6_Addons==6.7.0",
-        "PySide6_Essentials==6.7.0",
         "tokenizers==0.21.0",
         "optimum==1.24.0",
         "numpy==1.26.4",
@@ -31,8 +28,14 @@ setup(
         "aiosqlite==0.21.0",
     ],
     extras_require={
+        "gui": [
+            "PySide6==6.7.0",
+            "PySide6_Addons==6.7.0",
+            "PySide6_Essentials==6.7.0",
+        ],
         "linux": [
             "faiss-gpu==1.7.2",
+            "tensorrt==10.9.0.34",
         ],
         "dev": [
             "pytest",
