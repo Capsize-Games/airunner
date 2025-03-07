@@ -80,6 +80,9 @@ setup(
     extras_require={
         "linux": [
             "faiss-gpu==1.7.2",
+        ],
+        "dev": [
+            "pytest",
         ]
     },
     package_data={
