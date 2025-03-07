@@ -95,9 +95,8 @@ class ModelScannerWorker(
         if not os.path.exists(model_path):
             self.logger.error(f"Model path does not exist: {model_path}")
             return
-        existing_models = self.session.query(AIModels).all()
+        existing_models = AIModels.objects.all()
         for model in existing_models:
             if not os.path.exists(model.path):
-                self.session.delete(model)
-                self.session.commit()
+                AIModels.objects.delete(model.id)
                 self.logger.debug(f"Removed missing model: {model.name}")

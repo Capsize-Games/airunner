@@ -7,6 +7,7 @@ import diffusers
 import numpy as np
 import tomesd
 import torch
+from sqlalchemy.orm import joinedload
 from DeepCache import DeepCacheSDHelper
 from PIL import (
     ImageDraw,
@@ -73,6 +74,8 @@ from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
 from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
 from airunner.utils.image.export_image import export_images
 from airunner.utils.get_torch_device import get_torch_device
+from airunner.data.session_manager import session_scope
+from airunner.data.models import GeneratorSettings
 
 SKIP_RELOAD_CONSTS = (
     SDMode.FAST_GENERATE,
@@ -83,6 +86,7 @@ SKIP_RELOAD_CONSTS = (
 class SDHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._current_model_path = ""
         self._controlnet_model = None
         self._controlnet: Optional[ControlNetModel] = None
         self._controlnet_processor: Any = None
@@ -297,8 +301,19 @@ class SDHandler(BaseHandler):
         return self._path_settings
 
     @property
+    def current_model_path(self) -> str:
+        return self._current_model_path
+    
+    @current_model_path.setter
+    def current_model_path(self, value: str):
+        self._current_model_path = value
+
+    @property
     def _current_model(self) -> AIModels:
-        return self.generator_settings_cached.aimodel
+        generator_settings = GeneratorSettings.objects.options(
+            joinedload(GeneratorSettings.aimodel)
+        ).first()
+        return generator_settings.aimodel
 
     @property
     def generator_settings_cached(self):
@@ -322,14 +337,14 @@ class SDHandler(BaseHandler):
         return img
 
     @property
-    def controlnet_model(self) -> ControlnetModel:
+    def controlnet_model(self) -> Optional[ControlnetModel]:
         if (
             self._controlnet_model is None or
             self._controlnet_model.version != self.version or
             self._controlnet_model.display_name != self.controlnet_settings_cached.controlnet
         ):
             
-            self._controlnet_model = self.session.query(ControlnetModel).filter_by(
+            self._controlnet_model = ControlnetModel.objects.filter_by(
                 display_name=self.controlnet_settings_cached.controlnet,
                 version=self.version
             ).first()
@@ -689,13 +704,12 @@ class SDHandler(BaseHandler):
 
     def _generate(self):
         self.logger.debug("Generating image")
-        model = self.generator_settings_cached.aimodel
-        if self._current_model.path != model.path:
-            self.logger.debug("Model has changed from %s to %s",
-                              self._current_model.path,
-                              model.path)
-            if self._pipe is not None:
-                self.reload()
+        # if self._current_model.path != model.path:
+        #     self.logger.debug("Model has changed from %s to %s",
+        #                       self._current_model.path,
+        #                       model.path)
+        #     if self._pipe is not None:
+        #         self.reload()
         if self._pipe is None:
             raise PipeNotLoadedException()
         self._load_prompt_embeds()
@@ -991,7 +1005,9 @@ class SDHandler(BaseHandler):
             )
         )
         
-        scheduler = self.session.query(Schedulers).filter_by(display_name=scheduler_name).first()
+        scheduler = Schedulers.objects.filter_by(
+            display_name=scheduler_name
+        ).first()
         if not scheduler:
             self.logger.error(f"Failed to find scheduler {scheduler_name}")
             return None
@@ -1178,7 +1194,7 @@ class SDHandler(BaseHandler):
 
     def _load_lora(self):
         
-        enabled_lora = self.session.query(Lora).filter_by(
+        enabled_lora = Lora.objects.filter_by(
             version=self.version,
             enabled=True
         ).all()
@@ -1219,7 +1235,7 @@ class SDHandler(BaseHandler):
         self.logger.debug("Setting LORA adapters")
         
         loaded_lora_id = [lora.id for lora in self._loaded_lora.values()]
-        enabled_lora = self.session.query(Lora).filter(Lora.id.in_(loaded_lora_id)).all()
+        enabled_lora = Lora.objects.filter(Lora.id.in_(loaded_lora_id)).all()
         adapter_weights = []
         adapter_names = []
         for lora in enabled_lora:
@@ -1241,7 +1257,7 @@ class SDHandler(BaseHandler):
         except RuntimeError as e:
             self.logger.error(f"Failed to unload embeddings: {e}")
         
-        embeddings = self.session.query(Embedding).filter_by(
+        embeddings = Embedding.objects.filter_by(
             version=self.version
         ).all()
         

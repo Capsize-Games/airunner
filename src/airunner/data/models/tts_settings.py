@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, Boolean, String
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class TTSSettings(Base):
+class TTSSettings(BaseModel):
     __tablename__ = 'tts_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     tts_model = Column(String, default="SpeechT5")

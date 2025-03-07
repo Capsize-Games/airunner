@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, Boolean, LargeBinary
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class DrawingPadSettings(Base):
+class DrawingPadSettings(BaseModel):
     __tablename__ = 'drawing_pad_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     image = Column(LargeBinary, nullable=True)

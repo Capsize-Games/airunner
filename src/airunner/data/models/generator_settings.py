@@ -10,11 +10,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 from airunner.settings import SD_DEFAULT_VAE_PATH, DEFAULT_SCHEDULER
 
 
-class GeneratorSettings(Base):
+class GeneratorSettings(BaseModel):
     __tablename__ = 'generator_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     pipeline_action = Column(String, default="txt2img")

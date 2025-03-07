@@ -198,8 +198,7 @@ class BrushScene(CustomScene):
         return super().mousePressEvent(event)
 
     def _handle_left_mouse_release(self, event) -> bool:
-        
-        drawing_pad_settings = self.session.query(DrawingPadSettings).first()
+        drawing_pad_settings = DrawingPadSettings.objects.first()
         if self.drawing_pad_settings.mask_layer_enabled:
             mask_image: Image = ImageQt.fromqimage(self.mask_image)
             # Ensure mask is fully opaque
@@ -215,7 +214,7 @@ class BrushScene(CustomScene):
                 self.current_tool is CanvasToolName.ERASER
             )):
                 self.emit_signal(SignalCode.GENERATE_MASK)
-        self.session.commit()
+        drawing_pad_settings.save()
         
         self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
         if self.drawing_pad_settings.mask_layer_enabled:

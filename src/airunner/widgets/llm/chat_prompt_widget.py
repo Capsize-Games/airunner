@@ -32,7 +32,8 @@ class ChatPromptWidget(BaseWidget):
         self.action_menu_displayed = None
         self.messages_spacer = None
         self.chat_loaded = False
-        self._conversation = None
+        self._conversation: Optional[Conversation] = None
+        self._conversation_id: Optional[int] = None
         self.conversation_history = []
 
         self.ui.action.blockSignals(True)
@@ -72,22 +73,37 @@ class ChatPromptWidget(BaseWidget):
     @conversation.setter
     def conversation(self, val: Optional[Conversation]):
         self._conversation = val
+        self._conversation_id = val.id
 
     @property
     def conversation_id(self) -> Optional[int]:
-        if self._conversation is None:
-            return None
-        return self._conversation.id
+        return self._conversation_id
+    
+    @conversation_id.setter
+    def conversation_id(self, val: Optional[int]):
+        self._conversation_id = val
+        if val:
+            self._conversation = Conversation.objects.filter_by(
+                id=val
+            ).first()
+        else:
+            self._conversation = None
 
     def load_conversation(self):
-        conversation = self.session.query(Conversation).order_by(Conversation.id.desc()).first()
+        conversation = Conversation.objects.order_by(
+            Conversation.id.desc()
+        ).first()
         if conversation is not None:
             self.conversation = conversation
             self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
                 "conversation_id": self.conversation_id
             })
             self._set_conversation_widgets([{
-                "name": self.user.username if message["role"] == "user" else self.chatbot.name,
+                "name": (
+                    self.user.username 
+                    if message["role"] == "user" 
+                    else self.chatbot.name
+                ),
                 "content": message["blocks"][0]["text"],
                 "is_bot": message["role"] == "assistant",
                 "id": id
@@ -125,8 +141,10 @@ class ChatPromptWidget(BaseWidget):
     def on_set_conversation(self, message):
         self._clear_conversation_widgets()
         if len(message["messages"]) > 0:
-            self.conversation_id = message["messages"][0]["conversation_id"]
-            self.conversation = self.session.query(Conversation).filter_by(id=self.conversation_id).first()
+            conversation_id = message["messages"][0]["conversation_id"]
+            self.conversation = Conversation.objects.filter_by(
+                id=conversation_id
+            ).first()
         self._set_conversation_widgets([{
                 "name": message["additional_kwargs"]["name"],
                 "content": message["text"],
@@ -192,15 +210,9 @@ class ChatPromptWidget(BaseWidget):
     def _clear_conversation(self):
         self.conversation_history = []
         self._clear_conversation_widgets()
-        self._create_conversation()
 
     def _create_conversation(self):
-        previous_conversation = self.session.query(Conversation).order_by(Conversation.id.desc()).first()
         self.conversation = self.create_conversation("cpw_" + uuid.uuid4().hex)
-        if previous_conversation:
-            self.conversation.bot_mood = previous_conversation.bot_mood
-        self.session.add(self.conversation)
-        self.session.commit()
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
             "conversation_id": self.conversation_id
         })
@@ -224,8 +236,6 @@ class ChatPromptWidget(BaseWidget):
         return self.llm_generator_settings.action
 
     def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="causallm"):
-        if self.conversation_id is None:
-            self._create_conversation()
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
         if prompt is None or prompt == "":
             self.logger.warning("Prompt is empty")

@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, String
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class EspeakSettings(Base):
+class EspeakSettings(BaseModel):
     __tablename__ = 'espeak_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     gender = Column(String, default="Male")
