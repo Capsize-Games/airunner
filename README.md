@@ -110,7 +110,7 @@ Install for Linux
 
 ```bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
-pip install -e .[linux]
+pip install airunner[gui,linux,dev,art,llm,tts]
 pip install --upgrade timm==1.0.15
 ```
 
