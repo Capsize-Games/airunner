@@ -23,6 +23,9 @@ from airunner.enums import (
     SignalCode,
     Gender,
 )
+from dotenv import load_dotenv
+
+load_dotenv()
 python_venv_dir = os.path.dirname(sys.executable)
 NLTK_DOWNLOAD_DIR = os.path.join(
     python_venv_dir,
@@ -378,8 +381,6 @@ DB_PATH = os.path.expanduser(
         "airunner.db"
     )
 )
-DB_URL = os.environ.get("AI_RUNNER_DATABASE_URL", f"sqlite:///{DB_PATH}")
-ASYNC_DB_URL = os.environ.get(
-    "ASYNC_AI_RUNNER_DATABASE_URL", f"sqlite+aiosqlite:///{DB_PATH}"
-)
+DB_URL = os.environ.get("AI_RUNNER_DATABASE_URL", "")
+DB_URL = f"sqlite:///{DB_PATH}" if (DB_URL == "" or not DB_URL) else DB_URL
 DEFAULT_HUGGINGFACE_MODEL = "w4ffl35/Ministral-8B-Instruct-2410-doublequant"

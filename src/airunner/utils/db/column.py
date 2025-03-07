@@ -11,11 +11,11 @@ def get_columns(cls) -> List[str]:
     return columns
     
 
-def column_exists(cls, column_name):
+def column_exists(cls, column_name: str) -> bool:
     return column_name in get_columns(cls)
 
 
-def add_column(cls, col):
+def add_column(cls, col: str):
     available_columns = cls.__table__.columns.keys()
     if not column_exists(cls, col) and col in available_columns:
         op.add_column(cls.__tablename__, getattr(cls, col))
@@ -23,17 +23,17 @@ def add_column(cls, col):
         print(f"Column '{col}' already exists, skipping add.")
 
 
-def add_columns(cls, cols):
+def add_columns(cls, cols: List[str]):
     for col in cols:
         add_column(cls, col)
 
 
-def drop_column(cls, col):
+def drop_column(cls, col: str):
     if column_exists(cls, col):
         inspector = get_inspector()
         foreign_keys = inspector.get_foreign_keys(cls.__tablename__)
 
-        with op.batch_alter_table(cls.__tablename__, recreate='always') as batch_op:
+        with op.batch_alter_table(cls.__tablename__, recreate='auto') as batch_op:
             for fk in foreign_keys:
                 if col in fk['constrained_columns']:
                     batch_op.drop_constraint(fk['name'], type_='foreignkey')
@@ -42,7 +42,7 @@ def drop_column(cls, col):
         print(f"Column '{col}' does not exist, skipping drop.")
 
 
-def drop_columns(cls, cols):
+def drop_columns(cls, cols: List[str]):
     for col in cols:
         drop_column(cls, col)
 
@@ -57,7 +57,7 @@ def alter_column(
         print(f"Column '{col_a}' already has the same type as '{col_b}', skipping modify.")
         return
 
-    with op.batch_alter_table(cls.__tablename__, recreate='always') as batch_op:
+    with op.batch_alter_table(cls.__tablename__, recreate='auto') as batch_op:
         batch_op.alter_column(
             col_a.name,
             existing_type=getattr(cls, col_a.name).type,
@@ -107,7 +107,7 @@ def drop_column_with_fk(
         foreign_keys = inspector.get_foreign_keys(cls.__tablename__)
         fk_exists = any(fk['name'] == fk_name for fk in foreign_keys)
 
-        with op.batch_alter_table(cls.__tablename__, recreate='always') as batch_op:
+        with op.batch_alter_table(cls.__tablename__, recreate='auto') as batch_op:
             if fk_exists:
                 batch_op.drop_constraint(fk_name, type_='foreignkey')
             batch_op.drop_column(column_name)
@@ -139,33 +139,51 @@ def safe_alter_column(
 
     if existing_server_default is not None:
         options['server_default'] = existing_server_default
+
     try:
-        op.alter_column(
+        with op.batch_alter_table(
             cls.__tablename__, 
-            column_name,
-            **options
-        )
+            recreate='auto'
+        ) as batch_op:
+            batch_op.alter_column(
+                column_name,
+                **options
+            )
     except sa.exc.OperationalError:
-        pass
+        print(f"Error altering column '{column_name}'")
 
 
-def set_default_and_create_fk(table_name, column_name, ref_table_name, ref_column_name, default_value):
-    bind = op.get_bind()
-    
-    # Set default value for existing rows
-    op.execute(f"UPDATE {table_name} SET {column_name} = {default_value} WHERE {column_name} IS NULL OR {column_name} NOT IN (SELECT {ref_column_name} FROM {ref_table_name})")
+def safe_alter_columns(cls, columns: List[sa.Column]):
+    for column in columns:
+        safe_alter_column(
+            cls, 
+            column.name, 
+            column.type, 
+            column.type, 
+            column.nullable
+        )
 
-    # Alter column to set default value and not nullable
-    if bind.dialect.name == 'sqlite':
-        with op.batch_alter_table(table_name, recreate='always') as batch_op:
-            batch_op.alter_column(column_name,
-                existing_type=sa.INTEGER(),
-                nullable=False,
-                server_default=sa.text(str(default_value)))
-            batch_op.create_foreign_key(f'fk_{table_name}_{column_name}', ref_table_name, [column_name], [ref_column_name])
-    else:
-        op.alter_column(table_name, column_name,
-            existing_type=sa.INTEGER(),
-            nullable=False,
-            server_default=sa.text(str(default_value)))
-        op.create_foreign_key(f'fk_{table_name}_{column_name}', table_name, ref_table_name, [column_name], [ref_column_name])
+def set_default_and_create_fk(
+    table_name, 
+    column_name, 
+    ref_table_name, 
+    ref_column_name, 
+    default_value
+):
+    op.execute(
+        f"""
+        UPDATE {table_name} 
+        SET {column_name} = {default_value} 
+        WHERE {column_name} IS NULL 
+        OR {column_name} NOT IN (
+            SELECT {ref_column_name} FROM {ref_table_name}
+        )
+        """
+    )
+    safe_alter_column(
+        table_name,
+        column_name,
+        existing_type=sa.INTEGER(),
+        nullable=False,
+        existing_server_default=sa.text(str(default_value))
+    )
