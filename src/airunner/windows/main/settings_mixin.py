@@ -3,7 +3,6 @@ import datetime
 from typing import List, Type, Optional
 
 from sqlalchemy.orm import joinedload
-import sqlite3
 
 from airunner.data.models import (
     Chatbot, 
@@ -512,23 +511,27 @@ class SettingsMixin:
         settings from the database. When applications are
         accessed again, they will be recreated.
         """
-        ApplicationSettings.objects.delete_all()
-        ActiveGridSettings.objects.delete_all()
-        ControlnetSettings.objects.delete_all()
-        ImageToImageSettings.objects.delete_all()
-        OutpaintSettings.objects.delete_all()
-        DrawingPadSettings.objects.delete_all()
-        MetadataSettings.objects.delete_all()
-        GeneratorSettings.objects.delete_all()
-        LLMGeneratorSettings.objects.delete_all()
-        TTSSettings.objects.delete_all()
-        SpeechT5Settings.objects.delete_all()
-        EspeakSettings.objects.delete_all()
-        STTSettings.objects.delete_all()
-        BrushSettings.objects.delete_all()
-        GridSettings.objects.delete_all()
-        PathSettings.objects.delete_all()
-        MemorySettings.objects.delete_all()
+        settings_models = [
+            ApplicationSettings,
+            ActiveGridSettings,
+            ControlnetSettings,
+            ImageToImageSettings,
+            OutpaintSettings,
+            DrawingPadSettings,
+            MetadataSettings,
+            GeneratorSettings,
+            LLMGeneratorSettings,
+            TTSSettings,
+            SpeechT5Settings,
+            EspeakSettings,
+            STTSettings,
+            BrushSettings,
+            GridSettings,
+            PathSettings,
+            MemorySettings,
+        ]
+        for cls in settings_models:
+            cls.objects.delete_all()
 
     def get_saved_prompt_by_id(self, prompt_id) -> Type[SavedPrompt]:
         return SavedPrompt.objects.filter_by(id=prompt_id).first()
@@ -752,7 +755,6 @@ class SettingsMixin:
         return self.settings_mixin_shared_instance.chatbot
 
     def create_conversation(self, chat_store_key: str):
-        print("CREATE CONVERSATION")
         # get prev conversation by key != chat_store_key
         # order by id desc
         # get first
@@ -775,13 +777,10 @@ class SettingsMixin:
             and conversation 
             and conversation.bot_mood is None
         ):
-            print("SAVING CONVERSATION")
             conversation.bot_mood = previous_conversation.bot_mood
             conversation.save()
         if conversation:
-            print("RETURNING CONVERSATION")
             return conversation
-        print("CREATING NEW CONVERSATION with key", chat_store_key)
         conversation = Conversation(
             timestamp=datetime.datetime.now(datetime.timezone.utc),
             title="",
@@ -793,7 +792,6 @@ class SettingsMixin:
             user_name=self.user.username,
             bot_mood=previous_conversation.bot_mood if previous_conversation else None
         )
-        print("SAVING NEW CONVERSATION")
         conversation.save()
         return Conversation.objects.options(
             joinedload(Conversation.summaries)
