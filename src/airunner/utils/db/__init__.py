@@ -8,6 +8,7 @@ from airunner.utils.db.column import alter_column
 from airunner.utils.db.column import add_column_with_fk
 from airunner.utils.db.column import drop_column_with_fk
 from airunner.utils.db.column import safe_alter_column
+from airunner.utils.db.column import safe_alter_columns
 from airunner.utils.db.column import set_default_and_create_fk
 from airunner.utils.db.table import get_tables
 from airunner.utils.db.table import table_exists
@@ -26,6 +27,7 @@ __all__ = [
     "drop_columns",
     "alter_column",
     "safe_alter_column",
+    "safe_alter_columns",
     "add_column_with_fk",
     "drop_column_with_fk",
     "set_default_and_create_fk",

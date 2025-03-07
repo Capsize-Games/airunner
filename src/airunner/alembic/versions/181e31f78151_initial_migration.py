@@ -1,14 +1,14 @@
-"""Consolidated base migration
+"""Initial migration
 
-Revision ID: 5d69fae414fe
-Revises: 093e44cf3895
-Create Date: 2025-03-06 16:48:58.012049
+Revision ID: 181e31f78151
+Revises: None
+Create Date: 2025-03-06 19:37:44.523586
 
 """
-from typing import Union
+from typing import Sequence, Union
 
-from airunner.data.models.base import BaseModel
-from airunner.utils.db import add_tables
+from alembic import op
+from airunner.data import models
 from airunner.utils.db.bootstrap import (
     set_default_ai_models,
     set_default_schedulers,
@@ -21,12 +21,16 @@ from airunner.utils.db.bootstrap import (
 )
 
 
-revision: str = '5d69fae414fe'
+# revision identifiers, used by Alembic.
+revision: str = '181e31f78151'
 down_revision: Union[str, None] = None
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    add_tables(BaseModel.__subclasses__())
+    # Create tables using models
+    models.Base.metadata.create_all(bind=op.get_bind())
     set_default_ai_models()
     set_default_schedulers()
     set_default_shortcut_keys()
@@ -35,7 +39,8 @@ def upgrade() -> None:
     set_default_font_settings()
     set_default_pipeline_values()
     set_image_filter_settings()
-    
+
 
 def downgrade() -> None:
-    pass
+    # Drop tables using models
+    models.Base.metadata.drop_all(bind=op.get_bind())

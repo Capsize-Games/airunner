@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.1.15",
+    version="3.2.0",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -28,7 +28,6 @@ setup(
         "optimum==1.24.0",
         "numpy==1.26.4",
         "pillow==11.1.0",
-        "tensorflow==2.18.0",
         "DeepCache==0.1.1",
         "alembic==1.14.1",
 
@@ -75,6 +74,8 @@ setup(
 
         # LLM Training dependencies
         "peft==0.14.0",
+
+        "python-dotenv==1.0.1",
     ],
     extras_require={
         "linux": [
