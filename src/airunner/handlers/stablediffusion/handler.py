@@ -74,7 +74,6 @@ from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
 from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
 from airunner.utils.image.export_image import export_images
 from airunner.utils.get_torch_device import get_torch_device
-from airunner.data.session_manager import session_scope
 from airunner.data.models import GeneratorSettings
 
 SKIP_RELOAD_CONSTS = (
@@ -83,7 +82,7 @@ SKIP_RELOAD_CONSTS = (
 )
 
 
-class SDHandler(BaseHandler):
+class ArtHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._current_model_path = ""
