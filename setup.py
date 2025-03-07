@@ -60,7 +60,7 @@ setup(
             "requests-cache==1.2.1",
             "retry-requests==2.0.0",
             "llama-index==0.12.14",
-            "llama-index-readers-file==0.4.4",
+            "llama-index-readers-file==0.4.6",
             "llama-index-readers-web==0.3.5",
             "llama-index-llms-huggingface==0.4.2",
             "llama-index-llms-groq==0.3.1",
