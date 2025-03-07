@@ -34,11 +34,19 @@ It has been optimized for speed and efficiency, allowing you to generate images 
 
 ## Stable Diffusion
 
-![img.png](img.png)
+![images/img.png](images/img.png)
+
+## Drawing tools
+
+![images/drawing_tools.png](images/drawing_tools.png)
+
+## Image filters
+
+![images/image_filter.png](images/image_filter.png)
 
 ## Customizable Chatbots with Moods and Personalities
 
-![img_1.png](img_1.png)
+![images/img_1.png](images/img_1.png)
 
 ---
 

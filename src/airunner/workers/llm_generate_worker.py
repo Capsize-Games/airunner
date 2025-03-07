@@ -1,7 +1,7 @@
 import threading
 from typing import Dict, Optional
 
-from airunner.handlers.llm.causal_lm_transformer_base_handler import CausalLMTransformerBaseHandler
+from airunner.handlers.llm.handler import LLMHandler
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
@@ -88,7 +88,7 @@ class LLMGenerateWorker(Worker):
     def _load_llm(self, data=None):
         data = data or {}
         if self.llm is None:
-            self.llm = CausalLMTransformerBaseHandler()
+            self.llm = LLMHandler()
 
         self.llm.load()
 

@@ -378,75 +378,51 @@ class SettingsMixin:
 
     def update_application_settings(self, column_name, val):
         self.update_setting(ApplicationSettings, column_name, val)
-        self.__settings_updated("application_settings", column_name, val)
 
     def update_espeak_settings(self, column_name, val):
         self.update_setting(EspeakSettings, column_name, val)
-        self.__settings_updated("espeak_settings", column_name, val)
 
     def update_tts_settings(self, column_name, val):
         self.update_setting(TTSSettings, column_name, val)
-        self.__settings_updated("tts_settings", column_name, val)
 
     def update_speech_t5_settings(self, column_name, val):
         self.update_setting(SpeechT5Settings, column_name, val)
-        self.__settings_updated("speech_t5_settings", column_name, val)
 
     def update_controlnet_settings(self, column_name, val):
         self.update_setting(ControlnetSettings, column_name, val)
-        self.__settings_updated("controlnet_settings", column_name, val)
 
     def update_brush_settings(self, column_name, val):
         self.update_setting(BrushSettings, column_name, val)
-        self.__settings_updated("brush_settings", column_name, val)
 
     def update_image_to_image_settings(self, column_name, val):
         self.update_setting(ImageToImageSettings, column_name, val)
-        self.__settings_updated("image_to_image_settings", column_name, val)
 
     def update_outpaint_settings(self, column_name, val):
         self.update_setting(OutpaintSettings, column_name, val)
-        self.__settings_updated("outpaint_settings", column_name, val)
 
     def update_drawing_pad_settings(self, column_name, val):
         self.update_setting(DrawingPadSettings, column_name, val)
-        self.__settings_updated("drawing_pad_settings", column_name, val)
 
     def update_grid_settings(self, column_name, val):
         self.update_setting(GridSettings, column_name, val)
-        self.__settings_updated("grid_settings", column_name, val)
 
     def update_active_grid_settings(self, column_name, val):
         self.update_setting(ActiveGridSettings, column_name, val)
-        self.__settings_updated("active_grid_settings", column_name, val)
 
     def update_path_settings(self, column_name, val):
         self.update_setting(PathSettings, column_name, val)
-        self.__settings_updated("path_settings", column_name, val)
 
     def update_memory_settings(self, column_name, val):
         self.update_setting(MemorySettings, column_name, val)
-        self.__settings_updated("memory_settings", column_name, val)
 
     def update_metadata_settings(self, column_name, val):
         self.update_setting(MetadataSettings, column_name, val)
-        self.__settings_updated("metadata_settings", column_name, val)
 
     def update_llm_generator_settings(self, column_name: str, val):
-        # Retrieve the LLMGeneratorSettings instance
-        settings = LLMGeneratorSettings.objects.first()
-        if settings:
-            setattr(settings, column_name, val)
-            # Explicitly mark the instance and merge changes
-            settings.save()
-            self.logger.debug(f"LLMGeneratorSettings updated in DB: {column_name} = {val}")
-        else:
-            self.logger.error("No LLMGeneratorSettings instance found.")
-        self.__settings_updated()
+        self.update_setting(LLMGeneratorSettings, column_name, val)
 
     def update_whisper_settings(self, column_name, val):
         self.update_setting(WhisperSettings, column_name, val)
-        self.__settings_updated()
 
     def update_ai_models(self, models: List[AIModels]):
         for model in models:
@@ -502,6 +478,7 @@ class SettingsMixin:
                     name: value
                 }
             )
+            self.__settings_updated(model_class_.__tablename__, name, value)
         else:
             self.logger.error("Failed to update settings: No setting found")
 
