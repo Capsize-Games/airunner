@@ -1,4 +1,5 @@
 import torch
+from abc import ABC, abstractmethod
 from PySide6.QtCore import QObject
 from airunner.enums import HandlerType, SignalCode, ModelType, ModelStatus, ModelAction
 from airunner.mediator_mixin import MediatorMixin
@@ -9,12 +10,12 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 class BaseHandler(
     QObject,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    ABC
 ):
     """
-    Base class for all AI handlers.
-    AI Handlers are classes which load and process AI models.
-    They are typically instantiated by workers.
+    Base abstract class for all model handlers.
+    Provides common functionality and interface for all handlers.
     """
     handler_type = HandlerType.TRANSFORMER
     model_type = None
@@ -25,7 +26,7 @@ class BaseHandler(
         MediatorMixin.__init__(self)
         
         super().__init__(*args, **kwargs)
-        self._requested_action:ModelAction = ModelAction.NONE
+        self._requested_action: ModelAction = ModelAction.NONE
 
     @property
     def model_status(self):
@@ -47,10 +48,14 @@ class BaseHandler(
             self.unload()
             self._requested_action = ModelAction.NONE
 
+    @abstractmethod
     def load(self):
-        raise NotImplementedError
+        """Load the model and related components."""
+        pass
 
+    @abstractmethod
     def unload(self):
+        """Unload the model and free resources."""
         pass
 
     @property
@@ -93,7 +98,11 @@ class BaseHandler(
     def torch_dtype(self):
         return torch.float16 if self.use_cuda else torch.float32
 
-    def change_model_status(self, model: ModelType, status: ModelStatus):
+    def change_model_status(
+        self, 
+        model: ModelType, 
+        status: ModelStatus
+    ):
         self._model_status[model] = status
         self.emit_signal(
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {

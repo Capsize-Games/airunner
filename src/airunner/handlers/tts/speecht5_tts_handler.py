@@ -1,13 +1,21 @@
 import os
-import re
 import time
 from queue import Queue
-from typing import Optional
+from typing import Optional, Union, ClassVar, Type, Dict
 
-import inflect
 import torch
-from transformers import AutoTokenizer
-from datasets import load_dataset
+
+import datasets
+from datasets import (
+    load_dataset, 
+    DatasetDict, 
+    Dataset, 
+    IterableDatasetDict, 
+    IterableDataset
+)
+from transformers import AutoTokenizer, PreTrainedModel, ProcessorMixin
+from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech
+from transformers import SpeechT5HifiGan
 
 from airunner.handlers.tts.tts_handler import TTSHandler
 from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
@@ -15,90 +23,116 @@ from airunner.utils.clear_memory import clear_memory
 
 
 class SpeechT5TTSHandler(TTSHandler):
-    target_model = "t5"
+    """
+    SpeechT5 implementation of the TTSHandler.
+    Uses the SpeechT5ForTextToSpeech model and SpeechT5Processor.
+    """
+    target_model: ClassVar[str] = "microsoft/speecht5_tts"
+    model_class: ClassVar[Type[PreTrainedModel]] = SpeechT5ForTextToSpeech
+    processor_class: ClassVar[Type[ProcessorMixin]] = SpeechT5Processor
+    vocoder_class: ClassVar[Type[PreTrainedModel]] = SpeechT5HifiGan
+    tokenizer_class: ClassVar[Type[AutoTokenizer]] = AutoTokenizer
+    dataset_path: ClassVar[str] = "Matthijs/cmu-arctic-xvectors"
+    speakers: Dict[str, str] = {
+        SpeechT5Voices.US_MALE.value: "bdl",
+        SpeechT5Voices.US_MALE_2.value: "rms",
+        SpeechT5Voices.US_FEMALE.value: "slt",
+        SpeechT5Voices.US_FEMALE_2.value: "clb",
+        SpeechT5Voices.CANADIAN_MALE.value: "jmk",
+        SpeechT5Voices.SCOTTISH_MALE.value: "awb",
+        SpeechT5Voices.INDIAN_MALE.value: "ksp",
+    }
 
     def __init__(self, *args, **kwargs):
-        from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech
-        self._model_class_ = SpeechT5ForTextToSpeech
-        self._processor_class_ = SpeechT5Processor
-        self._current_model = None
+        super().__init__(*args, **kwargs)
+        self.vocoder = None
         self._character_replacement_map = {
             "\n": " ",
             "’": "'",
             "-": " "
         }
-        self._single_character_sentence_enders = [".", "?", "!", "…"]
-        self._double_character_sentence_enders = [".”", "?”", "!”", "…”", ".'", "?'", "!'", "…'"]
-        self._model = None
-        self._vocoder = None
-        self._processor = None
+        self._model: Optional[Type[PreTrainedModel]] = None
+        self._vocoder: Optional[Type[PreTrainedModel]] = None
+        self._processor: Optional[Type[ProcessorMixin]] = None
+        self._tokenizer: Optional[Type[AutoTokenizer]] = None
         self._text_queue = Queue()
-        self._input_text = ""
-        self._corpus = []
         self._speaker_embeddings = None
         self._dataset = None
         self._sentences = []
         self._do_interrupt = False
         self._cancel_generated_speech = False
         self._paused = False
-        super().__init__(*args, **kwargs)
+    
+    @property
+    def model(self) -> Type[PreTrainedModel]:
+        return self._model
+    
+    @model.setter
+    def model(self, value: Type[PreTrainedModel]):
+        self._model = value
 
     @property
     def processor_path(self) -> str:
-        path:str = self.speech_t5_settings.processor_path
-        return os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "text/models",
-                "tts",
-                path
-            )
-        )
+        return self.tts_path(self.speech_t5_settings.processor_path)
 
     @property
     def model_path(self) -> str:
-        path:str = self.speech_t5_settings.model_path
-        return os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "text/models",
-                "tts",
-                path
-            )
-        )
+        return self.tts_path(self.speech_t5_settings.model_path)
 
     @property
     def vocoder_path(self) -> str:
-        path:str = self.speech_t5_settings.vocoder_path
-        return os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "text/models",
-                "tts",
-                path
-            )
-        )
-
+        return self.tts_path(self.speech_t5_settings.vocoder_path)
+    
     @property
-    def speaker_embeddings_path(self):
-        return os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "text/models",
-                "tts",
-                "datasets",
-                "w4ffl35",
-                "speecht5_speaker_embeddings",
-                "speaker_embeddings"
-            )
-        )
+    def dtype(self) -> torch.dtype:
+        return torch.float16
+    
+    @property
+    def vocoder(self) -> Optional[Type[PreTrainedModel]]:
+        return self._vocoder
+    
+    @vocoder.setter
+    def vocoder(self, value: Optional[Type[PreTrainedModel]]):
+        self._vocoder = value
+    
+    @property
+    def processor(self) -> Optional[Type[ProcessorMixin]]:
+        return self._processor
+    
+    @processor.setter
+    def processor(self, value: Optional[Type[ProcessorMixin]]):
+        self._processor = value
+    
+    @property
+    def tokenizer(self) -> Optional[Type[AutoTokenizer]]:
+        return self._tokenizer
+    
+    @tokenizer.setter
+    def tokenizer(self, value: Optional[Type[AutoTokenizer]]):
+        self._tokenizer = value
 
-    def generate(self, message):
+    def tts_path(self, path: str) -> str:
+        return os.path.join(self.path_settings.tts_model_path, path)
+
+    def _set_status_unloaded(self):
+        self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED)
+
+    def _set_status_loading(self):
+        self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
+    
+    def _set_status_loaded(self):
+        self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
+
+    def _set_status_failed(self):
+        self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
+
+    def generate(self, message: str):
         if self.model_status is not ModelStatus.LOADED:
             return None
 
         if self._do_interrupt or self._paused:
             return None
+
         try:
             return self._do_generate(message)
         except torch.cuda.OutOfMemoryError:
@@ -114,47 +148,43 @@ class SpeechT5TTSHandler(TTSHandler):
             ModelStatus.FAILED
         ):
             self.unload()
-        self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self.logger.debug(f"Loading text-to-speech")
+        self._set_status_loading()
         self._load_model()
         self._load_vocoder()
         self._load_processor()
         self._load_speaker_embeddings()
         self._load_tokenizer()
-        self._load_corpus()
-        self._current_model = self._current_model
 
         if (
-            self._model is not None
-            and self._vocoder is not None
-            and self._processor is not None
+            self.model is not None
+            and self.vocoder is not None
+            and self.processor is not None
             and self._speaker_embeddings is not None
-            and self._tokenizer is not None
-            and self._corpus is not None
+            and self.tokenizer is not None
         ):
-            self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
+            self._set_status_loaded()
         else:
-            self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
+            self._set_status_failed()
 
     def unload(self):
         if self.model_status is ModelStatus.LOADING:
             return
-        self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
-        self.logger.debug("Unloading")
-        self._unload_model()
-        self._unload_processor()
-        self._unload_vocoder()
+        self._set_status_loading()
+        self.model = None
+        self.processor = None
+        self.vocoder = None
         self._unload_speaker_embeddings()
-        self._unload_tokenizer()
-        self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED)
+        self.tokenizer = None
+        clear_memory(self.memory_settings.default_gpu_tts)
+        self._set_status_unloaded()
 
     def _load_model(self):
-        model_class_ = self._model_class_
-        if model_class_ is None:
+        if self.model_class is None:
             return
         self.logger.debug(f"Loading model {self.model_path}")
         try:
-            self._model = model_class_.from_pretrained(
+            self.model = self.model_class.from_pretrained(
                 self.model_path,
                 local_files_only=True,
                 torch_dtype=self.torch_dtype,
@@ -167,7 +197,7 @@ class SpeechT5TTSHandler(TTSHandler):
         self.logger.debug("Loading tokenizer")
 
         try:
-            self._tokenizer = AutoTokenizer.from_pretrained(
+            self.tokenizer = self.tokenizer_class.from_pretrained(
                 self.model_path,
                 device_map=self.device,
                 torch_dtype=self.torch_dtype,
@@ -180,9 +210,8 @@ class SpeechT5TTSHandler(TTSHandler):
 
     def _load_vocoder(self):
         self.logger.debug(f"Loading Vocoder {self.vocoder_path}")
-        from transformers import SpeechT5HifiGan
         try:
-            self._vocoder = self._vocoder = SpeechT5HifiGan.from_pretrained(
+            self.vocoder = self.vocoder_class.from_pretrained(
                 self.vocoder_path,
                 local_files_only=True,
                 torch_dtype=self.torch_dtype,
@@ -194,44 +223,22 @@ class SpeechT5TTSHandler(TTSHandler):
 
     def _load_processor(self):
         self.logger.debug("Loading Procesor")
-        processor_class_ = self._processor_class_
-        if processor_class_:
+        if self.processor_class:
             try:
-                processor = processor_class_.from_pretrained(
+                self.processor = self.processor_class.from_pretrained(
                     self.processor_path,
                     local_files_only=True,
                     torch_dtype=self.torch_dtype,
                     device_map=self.device
                 )
-                self._processor = processor
             except Exception as e:
                 self.logger.error("Failed to load processor")
                 self.logger.error(e)
 
-    def _load_corpus(self):
-        if self._input_text:
-            self.logger.debug("Loading Corpus")
-            corpus = open(self._input_text, "r").read()
-            for key, value in self._character_replacement_map.items():
-                corpus = corpus.replace(key, value)
-            self._corpus = corpus.split(" ")
-
     def _load_speaker_embeddings(self):
         self.logger.debug("Loading speaker embeddings...")
-        speakers = {
-            SpeechT5Voices.US_MALE.value: "bdl",
-            SpeechT5Voices.US_MALE_2.value: "rms",
-            SpeechT5Voices.US_FEMALE.value: "slt",
-            SpeechT5Voices.US_FEMALE_2.value: "clb",
-            SpeechT5Voices.CANADIAN_MALE.value: "jmk",
-            SpeechT5Voices.SCOTTISH_MALE.value: "awb",
-            SpeechT5Voices.INDIAN_MALE.value: "ksp",
-        }
-        embeddings_dataset = load_dataset(
-            "Matthijs/cmu-arctic-xvectors",
-            split="validation"
-        )
-        speaker_key = speakers[self.speech_t5_settings.voice]
+        embeddings_dataset = load_dataset(self.dataset_path, datasets.Split.TEST)
+        speaker_key = self.speakers[self.speech_t5_settings.voice]
         embeddings = self._load_dataset_by_speaker_key(
             speaker_key,
             embeddings_dataset
@@ -261,7 +268,12 @@ class SpeechT5TTSHandler(TTSHandler):
     def _load_dataset_by_speaker_key(
         self, 
         speaker_key: str,
-        embeddings_dataset: Optional[torch.Tensor] = None
+        embeddings_dataset: Union[
+            DatasetDict, 
+            Dataset, 
+            IterableDatasetDict, 
+            IterableDataset
+        ] = None
     ) -> Optional[torch.Tensor]:
         embeddings = None
         for entry in embeddings_dataset:
@@ -279,7 +291,7 @@ class SpeechT5TTSHandler(TTSHandler):
         self._speaker_embeddings = None
         clear_memory(self.memory_settings.default_gpu_tts)
 
-    def _do_generate(self, message):
+    def _do_generate(self, message: str):
         self.logger.debug("Generating text-to-speech with T5")
         text = self._prepare_text(message)
 
@@ -288,20 +300,20 @@ class SpeechT5TTSHandler(TTSHandler):
 
         self.logger.debug("Processing inputs...")
 
-        inputs = self._processor(
+        inputs = self.processor(
             text=text,
             return_tensors="pt",
-            torch_dtype=torch.float16  # Ensure inputs are in float16
+            torch_dtype=self.dtype  # Ensure inputs are in float16
         )
         inputs = self._move_inputs_to_device(inputs)
 
         self.logger.debug("Generating speech...")
         start = time.time()
-        self._speaker_embeddings = self._speaker_embeddings.to(torch.float16).to(self.device)
-        self._vocoder = self._vocoder.to(torch.float16).to(self.device)
+        self._speaker_embeddings = self._speaker_embeddings.to(self.dtype).to(self.device)
+        self._vocoder = self._vocoder.to(self.dtype).to(self.device)
 
         try:
-            speech = self._model.generate(
+            speech = self.model.generate(
                 **inputs,
                 speaker_embeddings=self._speaker_embeddings,
                 vocoder=self._vocoder,
@@ -338,23 +350,6 @@ class SpeechT5TTSHandler(TTSHandler):
                 self.logger.error(e)
         return inputs
 
-    def _unload_model(self):
-        self._model = None
-        self._current_model = None
-        clear_memory(self.memory_settings.default_gpu_tts)
-
-    def _unload_processor(self):
-        self._processor = None
-        clear_memory(self.memory_settings.default_gpu_tts)
-
-    def _unload_vocoder(self):
-        self._vocoder = None
-        clear_memory(self.memory_settings.default_gpu_tts)
-
-    def _unload_tokenizer(self):
-        self.tokenizer = None
-        clear_memory(self.memory_settings.default_gpu_tts)
-
     def unblock_tts_generator_signal(self):
         self.logger.debug("Unblocking text-to-speech generation...")
         self._do_interrupt = False
@@ -365,113 +360,3 @@ class SpeechT5TTSHandler(TTSHandler):
         self._cancel_generated_speech = False
         self._paused = True
         self._text_queue = Queue()
-
-    def _prepare_text(self, text) -> str:
-        text = self._replace_unspeakable_characters(text)
-        text = self._strip_emoji_characters(text)
-        # the following function is currently disabled because we must first find a
-        # reliable way to handle the word "I" and distinguish it from the Roman numeral "I"
-        # text = self._roman_to_int(text)
-        text = self._replace_numbers_with_words(text)
-        text = self._replace_misc_with_words(text)
-        return text
-
-    def _replace_misc_with_words(self, text) -> str:
-        text = text.replace("°F", "degrees Fahrenheit")
-        text = text.replace("°C", "degrees Celsius")
-        text = text.replace("°", "degrees")
-        return text
-
-    @staticmethod
-    def _replace_unspeakable_characters(text) -> str:
-        # Replace ellipsis and other unspeakable characters
-        text = text.replace("...", " ")
-        text = text.replace("…", " ")
-        text = text.replace("“", "")
-        text = text.replace("”", "")
-        text = text.replace("–", "")
-        text = text.replace("—", "")
-        text = text.replace('"', "")
-        text = text.replace("-", "")
-        text = text.replace("-", "")
-
-        # Replace windows newlines
-        text = text.replace("\r\n", " ")
-
-        # Replace newlines
-        text = text.replace("\n", " ")
-
-        # Replace tabs
-        text = text.replace("\t", " ")
-
-        # Remove single quotes used as quotes but keep apostrophes
-        text = re.sub(r"(?<=\W)'|'(?=\W)", "", text)
-        text = re.sub(r"‘|’", "", text)
-
-        return text
-
-    @staticmethod
-    def _strip_emoji_characters(text) -> str:
-        # strip emojis
-        emoji_pattern = re.compile(
-            "["
-            "\U0001F600-\U0001F64F"  # emoticons
-            "\U0001F300-\U0001F5FF"  # symbols & pictographs
-            "\U0001F680-\U0001F6FF"  # transport & map symbols
-            "\U0001F700-\U0001F77F"  # alchemical symbols
-            "\U0001F780-\U0001F7FF"  # Geometric Shapes Extended
-            "\U0001F800-\U0001F8FF"  # Supplemental Arrows-C
-            "\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
-            "\U0001FA00-\U0001FA6F"  # Chess Symbols
-            "\U0001FA70-\U0001FAFF"  # Symbols and Pictographs Extended-A
-            "\U00002702-\U000027B0"  # Dingbats
-            "\U000024C2-\U0001F251"
-            "]+", flags=re.UNICODE
-        )
-        text = emoji_pattern.sub(r'', text)
-        return text
-
-    @staticmethod
-    def _roman_to_int(text) -> str:
-        roman_numerals = {
-            'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000
-        }
-
-        def convert_roman_to_int(roman):
-            total = 0
-            prev_value = 0
-            for char in reversed(roman):
-                value = roman_numerals[char]
-                if value < prev_value:
-                    total -= value
-                else:
-                    total += value
-                prev_value = value
-            return str(total)
-
-        # Replace Roman numerals with their integer values
-        result = re.sub(r'\b[IVXLCDM]+\b', lambda match: convert_roman_to_int(match.group(0)), text)
-        return result
-
-    @staticmethod
-    def _replace_numbers_with_words(text) -> str:
-        p = inflect.engine()
-
-        # Handle time formats separately
-        text = re.sub(r'(\d+):(\d+)([APap][Mm])', lambda m: f"{p.number_to_words(m.group(1))} {p.number_to_words(m.group(2)).replace('zero', '').replace('-', ' ')} {m.group(3)[0].upper()} {m.group(3)[1].upper()}", text)
-        text = re.sub(r'(\d+):(\d+)', lambda m: f"{p.number_to_words(m.group(1))} {p.number_to_words(m.group(2)).replace('-', ' ')}", text)
-
-        # Split text into words and non-word characters
-        words = re.findall(r'\d+|\D+', text)
-
-        for i in range(len(words)):
-            if words[i].isdigit():  # check if the word is a digit
-                words[i] = p.number_to_words(words[i]).replace('-', ' ')
-
-        # Join words with a space to ensure proper spacing
-        result = ' '.join(words).replace('  ', ' ')
-
-        # Ensure "PM" and "AM" are correctly spaced
-        result = re.sub(r'\b([AP])M\b', r'\1 M', result)
-
-        return result
