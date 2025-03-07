@@ -2,7 +2,11 @@ from sqlalchemy import Column, Integer, String, Boolean, Text, BigInteger
 from sqlalchemy.orm import relationship
 
 from airunner.data.models.base import BaseModel
-from airunner.settings import DEFAULT_CHATBOT_GUARDRAILS_PROMPT, DEFAULT_CHATBOT_SYSTEM_PROMPT
+from airunner.settings import (
+    DEFAULT_CHATBOT_GUARDRAILS_PROMPT, 
+    DEFAULT_CHATBOT_SYSTEM_PROMPT, 
+    DEFAULT_LLM_HF_PATH
+)
 
 
 class Chatbot(BaseModel):
@@ -24,7 +28,7 @@ class Chatbot(BaseModel):
     sequences = Column(Integer, default=1)
     seed = Column(BigInteger, default=42)
     random_seed = Column(Boolean, default=True)
-    model_version = Column(String, default="w4ffl35/Mistral-7B-Instruct-v0.3-4bit")
+    model_version = Column(String, default=DEFAULT_LLM_HF_PATH)
     model_type = Column(String, default="llm")
     dtype = Column(String, default="4bit")
     return_result = Column(Boolean, default=True)
