@@ -108,6 +108,10 @@ class SettingsMixin:
     @property
     def whisper_settings(self) -> WhisperSettings:
         return self.load_settings_from_db(WhisperSettings)
+    
+    @property
+    def window_settings(self) -> WindowSettings:
+        return self.load_settings_from_db(WindowSettings)
 
     @property
     def llm_generator_settings(self) -> LLMGeneratorSettings:
@@ -290,19 +294,35 @@ class SettingsMixin:
 
     @property
     def chatbot(self) -> Optional[Chatbot]:
-        if not type(self.llm_generator_settings.current_chatbot) is int:
-            chatbot = Chatbot.objects.first()
-            if not chatbot is None:
-                self.update_settings_by_name(
-                    "llm_generator_settings", 
-                    "current_chatbot", 
-                    chatbot.id
-                )
-                self._chatbot = chatbot
-        if not self._chatbot or self._chatbot != self.llm_generator_settings.current_chatbot:
-            self._chatbot = self.get_chatbot_by_id(
-                self.llm_generator_settings.current_chatbot
-            )
+        chatbot = self._chatbot
+        current_chatbot_id = self.llm_generator_settings.current_chatbot
+        
+        if (
+            not chatbot 
+            and current_chatbot_id
+        ) or (
+            chatbot
+            and current_chatbot_id 
+            and chatbot.id != current_chatbot_id
+        ):
+            chatbot = Chatbot.objects.options(
+                joinedload(Chatbot.target_files),
+            ).get(current_chatbot_id)
+        
+        if chatbot is None:
+            chatbot = Chatbot.objects.options(
+                joinedload(Chatbot.target_files),
+            ).first()
+        
+        if chatbot is None:
+            chatbot = Chatbot()
+            chatbot.save()
+            chatbot = Chatbot.objects.options(
+                joinedload(Chatbot.target_files),
+            ).first()
+        
+        self._chatbot = chatbot
+
         return self._chatbot
 
     @property
@@ -311,7 +331,8 @@ class SettingsMixin:
         if user is None:
             user = User()
             user.username = "User"
-            user.save()        
+            user.save()
+            user = User.objects.first()
         return user
 
     def add_chatbot_document_to_chatbot(self, chatbot, file_path):
@@ -472,7 +493,7 @@ class SettingsMixin:
         if settings is None:
             settings = model_class_()
             settings.save()
-        return settings
+        return model_class_.objects.first()
 
     def update_setting(self, model_class_, name, value):
         setting = model_class_.objects.order_by(model_class_.id.desc()).first()
