@@ -14,7 +14,7 @@ from airunner.utils.db.table import table_exists
 from airunner.utils.db.table import add_table
 from airunner.utils.db.table import add_tables
 from airunner.utils.db.table import drop_table
-from airunner.utils.db.table import create_table
+from airunner.utils.db.table import drop_tables
 
 
 __all__ = [
@@ -34,5 +34,5 @@ __all__ = [
     "add_table",
     "add_tables",
     "drop_table",
-    "create_table",
+    "drop_tables",
 ]

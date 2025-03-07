@@ -13,14 +13,15 @@ def table_exists(table_name):
 
 def add_table(cls):
     if not table_exists(cls.__tablename__):
-        op.create_table(cls.__tablename__, *cls.__table_args__)
+        columns = [column.copy() for column in cls.__table__.columns]
+        op.create_table(cls.__tablename__, *columns, *getattr(cls, '__table_args__', ()))
     else:
         print(f"Table '{cls.__tablename__}' already exists, skipping add.")
     return
 
 def add_tables(classes):
     for cls in classes:
-        add_table(cls)
+        create_table_with_defaults(cls)
     return
 
 def drop_table(cls):
@@ -30,19 +31,24 @@ def drop_table(cls):
         print(f"Table '{cls.__tablename__}' does not exist, skipping drop.")
     return
 
-def create_table(cls):
-    if not table_exists(cls.__tablename__):
-        op.create_table(cls.__tablename__, *cls.__table_args__)
-    else:
-        print(f"Table '{cls.__tablename__}' already exists, skipping create.")
+def drop_tables(classes):
+    for cls in classes:
+        drop_table(cls)
     return
 
 def create_table_with_defaults(model):
     if not table_exists(model.__tablename__):
         try:
+            columns = []
+            for column in model.__table__.columns:
+                column_copy = column.copy()
+                if column.default is not None:
+                    column_copy.server_default = column.default
+                columns.append(column_copy)
             op.create_table(
                 model.__tablename__,
-                *model.__table__.columns
+                *columns,
+                *getattr(model, '__table_args__', ())
             )
             set_default_values(model)
         except Exception as e:

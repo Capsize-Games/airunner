@@ -1,3 +1,4 @@
+from typing import Optional, Any
 from alembic import op
 import sqlalchemy as sa
 from typing import List
@@ -114,9 +115,36 @@ def drop_column_with_fk(
         print(f"Column '{column_name}' does not exist, skipping drop.")
 
 
-def safe_alter_column(table_name: str, column_name: str, new_type: sa.types.TypeEngine, existing_type: sa.types.TypeEngine, nullable: bool):
+def safe_alter_column(
+    cls, 
+    column_name: str, 
+    new_type: Optional[sa.types.TypeEngine] = None, 
+    existing_type: Optional[sa.types.TypeEngine] = None, 
+    nullable: bool = False,
+    existing_server_default: Optional[Any] = None
+):
+    if not column_exists(cls, column_name):
+        print(f"Column '{column_name}' does not exist, skipping alter.")
+        return
+
+    options = dict(
+        nullable=nullable,
+    )
+
+    if existing_type:
+        options['existing_type'] = existing_type
+
+    if new_type:
+        options['type_'] = new_type
+
+    if existing_server_default is not None:
+        options['server_default'] = existing_server_default
     try:
-        op.alter_column(table_name, column_name, type_=new_type, existing_type=existing_type, nullable=nullable)
+        op.alter_column(
+            cls.__tablename__, 
+            column_name,
+            **options
+        )
     except sa.exc.OperationalError:
         pass
 
