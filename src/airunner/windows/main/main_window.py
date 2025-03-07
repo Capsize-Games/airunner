@@ -162,10 +162,6 @@ class MainWindow(
         self._initialize_workers()
 
     @property
-    def window_settings(self) -> Optional[WindowSettings]:
-        return WindowSettings.objects.first()
-
-    @property
     def generator_tab_widget(self):
         return self.ui.generator_widget
 

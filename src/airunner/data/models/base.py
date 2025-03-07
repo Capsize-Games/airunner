@@ -177,7 +177,8 @@ class BaseModel(Base):
                 logger.debug(f"Saved {self.cls}")
             except Exception as e:
                 logger.error(f"Error in save(): {e}")
-            session.expunge(self)
+            finally:
+                session.expunge(self)
         
     def delete(self):
         success = False
