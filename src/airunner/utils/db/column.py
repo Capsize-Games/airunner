@@ -149,8 +149,8 @@ def safe_alter_column(
                 column_name,
                 **options
             )
-    except sa.exc.OperationalError:
-        print(f"Error altering column '{column_name}'")
+    except sa.exc.OperationalError as e:
+        print(f"Error altering column '{column_name}'", e)
 
 
 def safe_alter_columns(cls, columns: List[sa.Column]):
