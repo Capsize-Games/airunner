@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, Float
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class STTSettings(Base):
+class STTSettings(BaseModel):
     __tablename__ = 'stt_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     duration = Column(Integer, default=10)

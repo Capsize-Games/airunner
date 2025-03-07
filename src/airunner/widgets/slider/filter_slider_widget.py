@@ -4,7 +4,7 @@ from airunner.widgets.slider.slider_widget import SliderWidget
 
 
 class FilterSliderWidget(SliderWidget):
-    def __init__(self, *args, session, filter_value, preview_filter, **kwargs):
+    def __init__(self, *args, filter_value, preview_filter, **kwargs):
         self._filter_value = filter_value
         self.preview_filter = preview_filter
         super().__init__(*args, **kwargs)
@@ -25,5 +25,5 @@ class FilterSliderWidget(SliderWidget):
 
     def set_settings_value(self, settings_property: str, val: Any):
         self._filter_value.value = val
-        self.session.commit()
+        self._filter_value.save()
         self.preview_filter()

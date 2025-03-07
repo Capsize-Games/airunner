@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 from airunner.enums import (
     ImageGenerator, 
     GeneratorSection, 
@@ -9,7 +9,7 @@ from airunner.enums import (
 )
 
 
-class ApplicationSettings(Base):
+class ApplicationSettings(BaseModel):
     __tablename__ = 'application_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     use_cuda = Column(Boolean, default=True)

@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, String, Boolean
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class ActiveGridSettings(Base):
+class ActiveGridSettings(BaseModel):
     __tablename__ = 'active_grid_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     enabled = Column(Boolean, default=True)

@@ -111,9 +111,7 @@ class EmbeddingsContainerWidget(BaseWidget):
                     break
 
         # Remove lora from database
-        
-        self.session.delete(embedding_widget.embedding)
-        self.session.commit()
+        embedding_widget.embedding.delete()
         
 
         self._apply_button_enabled = True

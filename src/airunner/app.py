@@ -87,7 +87,7 @@ class App(
         from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
         from airunner.data.models import PipelineModel
         for model in pipeline_bootstrap_data:
-            pipelinemodel = self.session.query(PipelineModel).filter_by(
+            pipelinemodel = PipelineModel.objects.filter_by(
                 pipeline_action= model["pipeline_action"],
                 version=model["version"],
                 category=model["category"],
@@ -102,8 +102,7 @@ class App(
             pipelinemodel.category = model["category"]
             pipelinemodel.classname = model["classname"]
             pipelinemodel.default = model["default"]
-            self.session.add(pipelinemodel)
-        self.session.commit()
+            pipelinemodel.save()
         try:
             app_version_tuple = tuple(map(int, self.application_settings.app_version.split(".")))
         except ValueError:
@@ -128,10 +127,11 @@ class App(
             self.run_setup_wizard()
             self.application_settings.app_version = current_version
             self.llm_generator_settings.model_version = "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
-            self.session.commit()
+            self.application_settings.save()
+            self.llm_generator_settings.save()
 
     def run_setup_wizard(self):
-        application_settings = self.session.query(ApplicationSettings).first()
+        application_settings = ApplicationSettings.objects.first()
         if application_settings.run_setup_wizard:
             AppInstaller()
 
