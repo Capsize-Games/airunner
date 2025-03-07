@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, Boolean, String, BigInteger, ForeignKey
 
 from airunner.data.models.base import BaseModel
+from airunner.settings import DEFAULT_LLM_HF_PATH
 
 
 class LLMGeneratorSettings(BaseModel):
@@ -10,13 +11,13 @@ class LLMGeneratorSettings(BaseModel):
     use_tool_filter = Column(Boolean, default=False)
     seed = Column(BigInteger, default=0)
     random_seed = Column(Boolean, default=False)
-    model_version = Column(String, default="w4ffl35/Mistral-7B-Instruct-v0.3-4bit")
+    model_version = Column(String, default=DEFAULT_LLM_HF_PATH)
     dtype = Column(String, default="4bit")
     use_gpu = Column(Boolean, default=True)
     message_type = Column(String, default="chat")
     override_parameters = Column(Boolean, default=True)
     current_chatbot = Column(Integer, default=1)
-    prompt_template = Column(String, default="Mistral 7B Instruct: Default Chatbot")
+    prompt_template = Column(String, default="Ministral 8B Instruct: Default Chatbot")
     batch_size = Column(Integer, default=1)
     use_api = Column(Boolean, default=False)
     api_key = Column(String, nullable=True)
