@@ -1,3 +1,6 @@
+from airunner.settings import DEFAULT_LLM_HF_PATH
+
+
 def parse_template(template: dict) -> str:
     system_instructions = template["system_instructions"]
     model = template["model"]
@@ -6,7 +9,7 @@ def parse_template(template: dict) -> str:
     parsed_template = ""
     if llm_category == "causallm":
         if model in [
-            "w4ffl35/Mistral-7B-Instruct-v0.3-4bit"
+            DEFAULT_LLM_HF_PATH,
         ]:
             parsed_template = "\n".join((
                 "[INST]<<SYS>>",
