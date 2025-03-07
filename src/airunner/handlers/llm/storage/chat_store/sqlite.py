@@ -13,6 +13,7 @@ from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
 from airunner.data.session_manager import session_scope
 
+
 class SQLiteChatStore(BaseChatStore):
     table_name: Optional[str] = Field(
         default="chatstore", description="SQLite table name."

@@ -16,7 +16,7 @@ from airunner.handlers.llm.agent.mistral_agent import MistralAgentQObject
 from airunner.handlers.llm.training_mixin import TrainingMixin
 
 
-class CausalLMTransformerBaseHandler(
+class LLMHandler(
     BaseHandler,
     TrainingMixin
 ):
