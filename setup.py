@@ -74,8 +74,6 @@ setup(
 
         # LLM Training dependencies
         "peft==0.14.0",
-
-        "python-dotenv==1.0.1",
     ],
     extras_require={
         "linux": [
@@ -83,6 +81,7 @@ setup(
         ],
         "dev": [
             "pytest",
+            "python-dotenv==1.0.1"
         ]
     },
     package_data={
