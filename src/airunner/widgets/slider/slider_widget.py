@@ -141,7 +141,7 @@ class SliderWidget(BaseWidget):
         if self.table_id is not None and self.table_name is not None and self.table_column is not None:
             
             if self.table_name == "lora":
-                self.table_item = self.session.query(Lora).filter_by(id=self.table_id).first()
+                self.table_item = Lora.objects.filter_by(id=self.table_id).first()
                 current_value = getattr(self.table_item, self.table_column)
             
         elif current_value is None:
@@ -217,8 +217,7 @@ class SliderWidget(BaseWidget):
         if self.table_item is not None:
             
             setattr(self.table_item, self.table_column, val)
-            self.session.add(self.table_item)
-            self.session.commit()
+            self.table_item.save()
             
         elif settings_property is not None:
             keys = settings_property.split(".")

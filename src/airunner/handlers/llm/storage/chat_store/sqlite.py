@@ -11,7 +11,7 @@ from llama_index.core.bridge.pydantic import Field, PrivateAttr
 from llama_index.core.storage.chat_store.base import BaseChatStore
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
-from airunner.settings import DB_URL, ASYNC_DB_URL
+from airunner.data.session_manager import session_scope
 
 class SQLiteChatStore(BaseChatStore):
     table_name: Optional[str] = Field(
@@ -22,13 +22,9 @@ class SQLiteChatStore(BaseChatStore):
     )
 
     _table_class: Optional[Any] = PrivateAttr()
-    _session: Optional[sessionmaker] = PrivateAttr()
-    _async_session: Optional[sessionmaker] = PrivateAttr()
 
     def __init__(
         self,
-        session: sessionmaker,
-        async_session: sessionmaker,
         table_name: str,
         schema_name: str = "",
         use_jsonb: bool = False,
@@ -37,9 +33,6 @@ class SQLiteChatStore(BaseChatStore):
             table_name=table_name.lower(),
             schema_name=schema_name.lower(),
         )
-
-        self._session = session
-        self._async_session = async_session
 
     @classmethod
     def from_params(
@@ -53,12 +46,7 @@ class SQLiteChatStore(BaseChatStore):
         use_jsonb: bool = False,
     ) -> "SQLiteChatStore":
         """Return connection string from database parameters."""
-        db_url = connection_string or DB_URL
-        async_db_url = async_connection_string or ASYNC_DB_URL
-        session, async_session = cls._connect(db_url, async_db_url, debug)
         return cls(
-            session=session,
-            async_session=async_session,
             table_name=table_name,
             schema_name=schema_name,
             use_jsonb=use_jsonb,
@@ -96,71 +84,38 @@ class SQLiteChatStore(BaseChatStore):
 
     def set_messages(self, key: str, messages: list[ChatMessage]) -> None:
         """Set messages for a key."""
-        with self._session() as session:
-            with session.begin():
-                result = session.execute(
-                    select(Conversation).filter_by(key=key)
-                )
-                conversation = result.scalars().first()
-                if messages and len(messages) > 0:
-                    formatted_messages = []
-                    for message in messages:
-                        message.blocks[0].text = strip_names_from_message(
-                            message.blocks[0].text,
-                            conversation.user_name,
-                            conversation.chatbot_name
-                        )
-                        formatted_messages.append(message.model_dump())
-                    messages = formatted_messages
+        with session_scope() as session:
+            result = session.execute(
+                select(Conversation).filter_by(key=key)
+            )
+            conversation = result.scalars().first()
+            if messages and len(messages) > 0:
+                formatted_messages = []
+                for message in messages:
+                    message.blocks[0].text = strip_names_from_message(
+                        message.blocks[0].text,
+                        conversation.user_name,
+                        conversation.chatbot_name
+                    )
+                    formatted_messages.append(message.model_dump())
+                messages = formatted_messages
 
-                    if conversation:
-                        conversation.value = messages
-                        flag_modified(conversation, "value")
-                    else:
-                        conversation = Conversation(
-                            timestamp=datetime.datetime.now(datetime.timezone.utc),
-                            title="",
-                            key=key,
-                            value=messages
-                        )
-                        session.add(conversation)
-                    session.commit()
+                if conversation:
+                    conversation.value = messages
+                    flag_modified(conversation, "value")
+                else:
+                    conversation = Conversation(
+                        timestamp=datetime.datetime.now(datetime.timezone.utc),
+                        title="",
+                        key=key,
+                        value=messages
+                    )
+                    session.add(conversation)
+                session.commit()
 
-    async def aset_messages(self, key: str, messages: list[ChatMessage]) -> None:
-        """Async version of Get messages for a key."""
-        async with self._async_session() as session:
-            async with session.begin():
-                result = await session.execute(
-                    select(Conversation).filter_by(key=key)
-                )
-                conversation = result.scalars().first()
-                if messages and len(messages) > 0:
-                    formatted_messages = []
-                    for message in messages:
-                        message.blocks[0].text = strip_names_from_message(
-                            message.blocks[0].text,
-                            conversation.user_name,
-                            conversation.chatbot_name
-                        )
-                        formatted_messages.append(message.model_dump())
-                    messages = formatted_messages
-
-                    if conversation:
-                        conversation.value = messages
-                        flag_modified(conversation, "value")
-                    else:
-                        conversation = Conversation(
-                            timestamp=datetime.datetime.now(datetime.timezone.utc),
-                            title="",
-                            key=key,
-                            value=messages
-                        )
-                        session.add(conversation)
-                    await session.commit()
-    
     def get_latest_chatstore(self) -> dict:
         """Get the latest chatstore."""
-        with self._session() as session:
+        with session_scope() as session:
             result = session.query(Conversation).order_by(
                 Conversation.id.desc()
             ).first()
@@ -171,7 +126,7 @@ class SQLiteChatStore(BaseChatStore):
 
     def get_chatstores(self) -> list[dict]:
         """Get all chatstores."""
-        with self._session() as session:
+        with session_scope() as session:
             result = session.query(Conversation).all()
             return [
                 {
@@ -182,7 +137,7 @@ class SQLiteChatStore(BaseChatStore):
 
     def get_messages(self, key: str) -> list[ChatMessage]:
         """Get messages for a key."""
-        with self._session() as session:
+        with session_scope() as session:
             result = session.query(Conversation).filter_by(key=key).first()
             if result:
                 messages = result.value
@@ -202,123 +157,53 @@ class SQLiteChatStore(BaseChatStore):
                 ))
             return formatted_messages
  
-    async def aget_messages(self, key: str) -> list[ChatMessage]:
-        """Async version of Get messages for a key."""
-        async with self._async_session() as session:
-            async with session.begin():
-                result = await session.execute(
-                    select(Conversation).filter_by(key=key)
-                )
-                conversation = result.scalars().first()
-                if conversation:
-                    messages = conversation.value
-                formatted_messages = []
-                for message in (messages or []):
-                    text = message["blocks"][0]["text"]
-                    if message["role"] == "user":
-                        name = conversation.user_name
-                    else:
-                        name = conversation.chatbot_name
-                    text = f"{name}: {text}"
-                    formatted_messages.append(ChatMessage.from_str(
-                        content=text,
-                        role=message["role"],
-                    ))
-                return formatted_messages
-
     def add_message(self, key: str, message: ChatMessage) -> None:
         """Add a message for a key."""
-        with self._session() as session:
-            with session.begin():
-                # Retrieve the existing messages from the current conversation
-                result = session.execute(
-                    select(Conversation).filter_by(key=key)
-                )
-                conversation = result.scalars().first()
-                if conversation:
-                    messages = conversation.value
-                else:
-                    messages = []
-                messages = messages or []
+        with session_scope() as session:
+            # Retrieve the existing messages from the current conversation
+            result = session.execute(
+                select(Conversation).filter_by(key=key)
+            )
+            conversation = result.scalars().first()
+            if conversation:
+                messages = conversation.value
+            else:
+                messages = []
+            messages = messages or []
         
-                # Append the new message
-                message.blocks[0].text = strip_names_from_message(
-                    message.blocks[0].text,
-                    conversation.user_name,
-                    conversation.chatbot_name
+            # Append the new message
+            message.blocks[0].text = strip_names_from_message(
+                message.blocks[0].text,
+                conversation.user_name,
+                conversation.chatbot_name
+            )
+
+            # Append the new message
+            messages.append(message.model_dump())
+
+            if conversation:
+                conversation.value = messages
+                flag_modified(conversation, "value")
+            else:
+                conversation = Conversation(
+                    key=key,
+                    value=messages,
+                    timestamp=datetime.datetime.now(datetime.timezone.utc),
+                    title="",
                 )
-
-                # Append the new message
-                messages.append(message.model_dump())
-
-                if conversation:
-                    conversation.value = messages
-                    flag_modified(conversation, "value")
-                else:
-                    conversation = Conversation(
-                        key=key,
-                        value=messages,
-                        timestamp=datetime.datetime.now(datetime.timezone.utc),
-                        title="",
-                    )
-                    session.add(conversation)
-                session.commit()
+                session.add(conversation)
+            session.commit()
     
-    async def async_add_message(self, key: str, message: ChatMessage) -> None:
-        """Async version of Add a message for a key."""
-        async with self._async_session() as session:
-            async with session.begin():
-                # Retrieve the existing messages from the current conversation
-                result = await session.execute(
-                    select(Conversation).filter_by(key=key)
-                )
-                conversation = result.scalars().first()
-                if conversation:
-                    messages = conversation.value
-                else:
-                    messages = []
-                messages = messages or []
-        
-                # Append the new message
-                message.blocks[0].text = strip_names_from_message(
-                    message.blocks[0].text,
-                    conversation.user_name,
-                    conversation.chatbot_name
-                )
-
-                # Append the new message
-                messages.append(message.model_dump())
-
-                if conversation:
-                    conversation.value = messages
-                    flag_modified(conversation, "value")
-                else:
-                    conversation = Conversation(
-                        key=key,
-                        value=messages,
-                        timestamp=datetime.datetime.now(datetime.timezone.utc),
-                        title="",
-                    )
-                    session.add(conversation)
-                await session.commit()
-
     def delete_messages(self, key: str) -> Optional[list[ChatMessage]]:
         """Delete messages for a key."""
-        with self._session() as session:
+        with session_scope() as session:
             session.query(Conversation).filter_by(key=key).delete()
             session.commit()
         return None
 
-    async def adelete_messages(self, key: str) -> Optional[list[ChatMessage]]:
-        """Async version of Delete messages for a key."""
-        async with self._async_session() as session:
-            await session.query(Conversation).filter_by(key=key).delete()
-            await session.commit()
-        return None
-
     def delete_message(self, key: str, idx: int) -> Optional[ChatMessage]:
         """Delete specific message for a key."""
-        with self._session() as session:
+        with session_scope() as session:
             # First, retrieve the current list of messages
             conversation = session.query(Conversation).filter_by(key=key).first()
             if conversation:
@@ -333,34 +218,12 @@ class SQLiteChatStore(BaseChatStore):
             # Remove the message at the given index
             removed_message = messages[idx]
             messages.pop(idx)
-            session.query(Conversation).filter_by(key=key).update({"value": messages})
-            session.commit()
-            return ChatMessage.model_validate(removed_message)
-
-    async def adelete_message(self, key: str, idx: int) -> Optional[ChatMessage]:
-        """Async version of Delete specific message for a key."""
-        async with self._async_session() as session:
-            # First, retrieve the current list of messages
-            conversation = await session.query(Conversation).filter_by(key=key).first()
-            if conversation:
-                messages = conversation.value
-            else:
-                messages = None
-
-            if messages is None or idx < 0 or idx >= len(messages):
-                # If the key doesn't exist or the index is out of bounds
-                return None
-            
-            # Remove the message at the given index
-            removed_message = messages[idx]
-            messages.pop(idx)
-            await session.query(Conversation).filter_by(key=key).update({"value": messages})
-            await session.commit()
+            self._update_conversation(conversation, messages)
             return ChatMessage.model_validate(removed_message)
 
     def delete_last_message(self, key: str) -> Optional[ChatMessage]:
         """Delete last message for a key."""
-        with self._session() as session:
+        with session_scope() as session:
             # First, retrieve the current list of messages
             conversation = session.query(Conversation).filter_by(key=key).first()
             if conversation:
@@ -379,37 +242,10 @@ class SQLiteChatStore(BaseChatStore):
             session.commit()
             return ChatMessage.model_validate(removed_message)
 
-    async def adelete_last_message(self, key: str) -> Optional[ChatMessage]:
-        """Async version of Delete last message for a key."""
-        async with self._async_session() as session:
-            # First, retrieve the current list of messages
-            conversation = await session.query(Conversation).filter_by(key=key).first()
-            if conversation:
-                messages = conversation.value
-            else:
-                messages = None
-
-            if messages is None or len(messages) == 0:
-                # If the key doesn't exist or the array is empty
-                return None
-            
-            # Remove the message at the given index
-            removed_message = messages[-1]
-            messages.pop(-1)
-            await session.query(Conversation).filter_by(key=key).update({"value": messages})
-            await session.commit()
-            return ChatMessage.model_validate(removed_message)
-
     def get_keys(self) -> list[str]:
         """Get all keys."""
-        with self._session() as session:
+        with session_scope() as session:
             conversations = session.query(Conversation).all()
-            return [conversation.key for conversation in conversations]
-
-    async def aget_keys(self) -> list[str]:
-        """Async version of Get all keys."""
-        async with self._async_session() as session:
-            conversations = await session.query(Conversation).all()
             return [conversation.key for conversation in conversations]
 
 

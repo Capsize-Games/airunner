@@ -101,19 +101,17 @@ class MistralAgent(
     
     @property
     def user(self) -> User:
-        user = self.session.query(User).filter(
+        user = User.objects.filter(
             User.username == self.username
         ).first()
         if not user:
             user = User()
-            self.session.add(user)
-            self.session.commit()
+            user.save()
         return user
 
     def _update_user(self, key: str, value: Any):
         setattr(self.user, key, value)
-        self.session.add(self.user)
-        self.session.commit()
+        self.user.save()
 
     @property
     def information_scraper_tool(self) -> FunctionTool:
@@ -350,8 +348,7 @@ class MistralAgent(
     def _update_conversation(self, key: str, value: Any):
         if self._conversation:
             setattr(self._conversation, key, value)
-            self.session.add(self._conversation)
-            self.session.commit()
+            self._conversation.save()
 
     @bot_mood.setter
     def bot_mood(self, value: str):
@@ -513,7 +510,7 @@ class MistralAgent(
     @property
     def conversation_summaries(self) -> str:
         summaries = ""
-        conversations = self.session.query(Conversation).order_by(
+        conversations = Conversation.objects.order_by(
             Conversation.id.desc()
         )[:5]
         conversations = list(conversations)
@@ -664,8 +661,7 @@ class MistralAgent(
         if not self._conversation_key:
             key = "agnt_" + uuid.uuid4().hex
             latest_conversation = self.create_conversation(key)
-            self.session.add(latest_conversation)
-            self.session.commit()
+            print("GOT LATEST CONVERSATION", latest_conversation)
             if latest_conversation:
                 self._conversation_key = latest_conversation.key
         return self._conversation_key
@@ -705,14 +701,14 @@ class MistralAgent(
         self.reload_rag()
         self._rag_engine_tool = None
 
-    async def clear_history(self, data: Optional[Dict] = None):
+    def clear_history(self, data: Optional[Dict] = None):
         data = data or {}
         conversation_id = data.get("conversation_id")
         self._set_conversation_by_id(conversation_id)
         if self._chat_memory and self.conversation:
             self.chat_store_key = self.conversation.key
             self._chat_memory.chat_store_key = self.conversation.key
-            messages = await self.chat_store.get_messages(self.conversation.key)
+            messages = self.chat_store.get_messages(self.conversation.key)
             if messages:
                 self._chat_memory.set(messages)
             if self._chat_engine:
@@ -808,8 +804,10 @@ class MistralAgent(
 
     def _get_conversation(self, conversation_id: Optional[int] = None) -> Optional[Conversation]:
         if conversation_id:
-            return self.session.query(Conversation).filter_by(id=conversation_id).first()
-        return self.session.query(Conversation).filter(Conversation.key == self.chat_store_key).first()
+            return Conversation.objects.filter_by(id=conversation_id).first()
+        return Conversation.objects.filter(
+            Conversation.key == self.chat_store_key
+        ).first()
     
     def _strip_previous_messages_from_conversation(self):
         """
@@ -818,8 +816,7 @@ class MistralAgent(
         conversation = self._get_conversation()
         if conversation:
             conversation.value = conversation.value[:-2]
-            self.session.add(conversation)
-            self.session.commit()
+            conversation.save()
     
     def _update_memory(self, action: LLMActionType):
         if action is LLMActionType.CHAT:
@@ -874,8 +871,7 @@ class MistralAgent(
         conversation.bot_mood = response.content
         conversation.value = conversation.value[:-2]
         self.logger.info(f"Saving conversation with mood: {response.content}")
-        self.session.add(conversation)
-        self.session.commit()
+        conversation.save()
         self._update_user_data()
     
     def _update_user_data(self):
@@ -904,7 +900,7 @@ class MistralAgent(
         conversation.user_data = [response.content] + (
             conversation.user_data or []
         )
-        self.session.commit()
+        conversation.save()
     
     def _summarize_conversation(self):
         self.logger.info("Summarizing conversation")
@@ -930,8 +926,7 @@ class MistralAgent(
         conversation.summary = response.content
         conversation.value = conversation.value[:-2]
         self.logger.info(f"Saving conversation with summary: {response.content}")
-        self.session.add(conversation)
-        self.session.commit()
+        conversation.save()
     
     def _scrape_information(self, message: str):
         self.logger.info("Attempting to scrape information")

@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, String, Boolean, LargeBinary
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class ControlnetSettings(Base):
+class ControlnetSettings(BaseModel):
     __tablename__ = 'controlnet_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     image = Column(LargeBinary, nullable=True)

@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, Boolean
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class MetadataSettings(Base):
+class MetadataSettings(BaseModel):
     __tablename__ = 'metadata_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     image_export_metadata_prompt = Column(Boolean, default=True)

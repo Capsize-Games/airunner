@@ -1,14 +1,14 @@
-from airunner.enums import SignalCode
-from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.llm.templates.message_ui import Ui_message
-from airunner.data.models import Conversation
-
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit, QApplication, QWidget
 from PySide6.QtGui import QFontMetrics
 from PySide6.QtCore import Qt, QSize, Slot, QEvent
 from PySide6.QtCore import Signal
 
+from airunner.enums import SignalCode
+from airunner.widgets.base_widget import BaseWidget
+from airunner.widgets.llm.templates.message_ui import Ui_message
+from airunner.data.models import Conversation
+from airunner.data.session_manager import session_scope
 
 class AutoResizingTextEdit(QTextEdit):
     def __init__(self, *args, **kwargs):
@@ -122,7 +122,7 @@ class MessageWidget(BaseWidget):
 
     @Slot()
     def delete(self):
-        with self.get_session() as session:
+        with session_scope() as session:
             conversation = session.query(Conversation).filter(
                 Conversation.id == self.conversation_id
             ).first()

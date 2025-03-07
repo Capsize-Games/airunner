@@ -82,7 +82,7 @@ class RAGMixin:
     @property
     def news_articles(self) -> List[Article]:
         if self.__news_articles is None:
-            articles = self.session.query(Article).filter(
+            articles = Article.objects.filter(
                 Article.status == "scraped"
             ).all()[:50]
             self.__news_articles = [
@@ -199,7 +199,7 @@ class RAGMixin:
         return self.__index
 
     def _update_conversations_status(self, status: str):
-        conversations = self.session.query(Conversation).filter(
+        conversations = Conversation.objects.filter(
             (Conversation.status != status) | (Conversation.status is None)
         ).all()
         total_conversations = len(conversations)
@@ -209,7 +209,7 @@ class RAGMixin:
             conversations = conversations[:-1]
         for conversation in conversations:
             conversation.status = status
-        self.session.commit()
+        conversation.save()
     
     @index.setter
     def index(self, value: Optional[RAKEKeywordTableIndex]):
@@ -341,7 +341,7 @@ class RAGMixin:
 
     @property
     def conversations(self) -> List[Conversation]:
-        conversations = self.session.query(Conversation).filter(
+        conversations = Conversation.objects.filter(
             (Conversation.status != "indexed") | (Conversation.status is None)
         ).all()
         total_conversations = len(conversations)
@@ -354,7 +354,7 @@ class RAGMixin:
     @property
     def conversation_documents(self) -> List[Document]:
         conversation_documents = []
-        conversations = self.session.query(Conversation).filter(
+        conversations = Conversation.objects.filter(
             (Conversation.status != "indexed") | (Conversation.status is None)
         ).all()
         total_conversations = len(conversations)

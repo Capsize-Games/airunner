@@ -10,7 +10,7 @@ config = context.config
 config.set_main_option("sqlalchemy.url", DB_URL)
 
 # check if db file exists
-if not os.path.exists(DB_URL) and DB_URL.__contains__("sqlite"):
+if DB_URL.__contains__("sqlite") and not os.path.exists(DB_URL.replace("sqlite:///", "")):
     print(f"Database file not found at {DB_URL}")
 
 # Import your models here
@@ -46,6 +46,8 @@ def run_migrations_offline():
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=False,
+        compare_server_default=False
     )
 
     with context.begin_transaction():
@@ -64,7 +66,10 @@ def run_migrations_online():
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, 
+            target_metadata=target_metadata,
+            compare_type=False,
+            compare_server_default=False
         )
 
         with context.begin_transaction():

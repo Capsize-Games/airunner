@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, LargeBinary, Boolean
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class WindowSettings(Base):
+class WindowSettings(BaseModel):
     __tablename__ = "window_settings"
     id = Column(Integer, primary_key=True, autoincrement=True)
     is_maximized = Column(Boolean, default=False)

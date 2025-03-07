@@ -7,6 +7,7 @@ from airunner.enums import SignalCode
 from airunner.widgets.slider.filter_slider_widget import FilterSliderWidget
 from airunner.windows.base_window import BaseWindow
 from airunner.windows.filter_window_ui import Ui_filter_window
+from airunner.data.session_manager import session_scope
 
 
 class FilterWindow(BaseWindow):
@@ -19,13 +20,15 @@ class FilterWindow(BaseWindow):
 
     def __init__(self, image_filter_id):
         """
-        :param session: The SQLAlchemy session to use.
         :param image_filter_id: The ID of the filter to load.
         """
         super().__init__(exec=False)
 
-        self.image_filter = self.session.query(ImageFilter).options(joinedload(ImageFilter.image_filter_values)).get(
-            image_filter_id)
+        self.image_filter = ImageFilter.objects.options(
+            joinedload(ImageFilter.image_filter_values)
+        ).get(
+            image_filter_id
+        )
         self.image_filter_model_name = self.image_filter.name
         self.window_title = self.image_filter.display_name
         self._filter = None
@@ -51,7 +54,6 @@ class FilterWindow(BaseWindow):
                     spinbox_maximum = float(max_value) / max_value
 
                 slider_spinbox_widget = FilterSliderWidget(
-                    session=self.session,
                     filter_value=filter_value,
                     preview_filter=self.preview_filter
                 )
@@ -85,16 +87,18 @@ class FilterWindow(BaseWindow):
         module = importlib.import_module(f"airunner.filters.{filter_name}")
         class_ = getattr(module, self.image_filter.filter_class)
         kwargs = {}
-        for image_filter_value in self.image_filter.image_filter_values:
-            val_type = image_filter_value.value_type
-            val = image_filter_value.value
-            if val_type == "int":
-                val = int(val)
-            elif val_type == "float":
-                val = float(val)
-            elif val_type == "bool":
-                val = val == "True"
-            kwargs[image_filter_value.name] = val
+        with session_scope() as session:
+            for image_filter_value in self.image_filter.image_filter_values:
+                session.add(image_filter_value)
+                val_type = image_filter_value.value_type
+                val = image_filter_value.value
+                if val_type == "int":
+                    val = int(val)
+                elif val_type == "float":
+                    val = float(val)
+                elif val_type == "bool":
+                    val = val == "True"
+                kwargs[image_filter_value.name] = val
         self._filter = class_(**kwargs)
         return self._filter
 

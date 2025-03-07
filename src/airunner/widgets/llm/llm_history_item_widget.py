@@ -29,8 +29,10 @@ class LLMHistoryItemWidget(BaseWidget):
     @Slot()
     def action_load_conversation_clicked(self):
         chatbot_id = self.conversation.chatbot_id
-        self.session.query(LLMGeneratorSettings).update({"current_chatbot": chatbot_id})
-        self.session.commit()
+        llm_generator_settings = LLMGeneratorSettings.objects.first()
+        LLMGeneratorSettings.objects.update(llm_generator_settings.id, {
+            "current_chatbot": chatbot_id
+        })
         self.emit_signal(SignalCode.LOAD_CONVERSATION, {
             "conversation_id": self.conversation.id,
             "conversation": self.conversation,

@@ -86,7 +86,7 @@ class BotPreferencesWidget(BaseWidget):
 
     def saved_chatbots_changed(self, val):
         
-        chatbot = self.session.query(Chatbot).filter(Chatbot.name == val).first()
+        chatbot = Chatbot.objects.filter(Chatbot.name == val).first()
         chatbot_id = chatbot.id
         
         self.update_llm_generator_settings("current_chatbot", chatbot_id)
@@ -171,9 +171,7 @@ class BotPreferencesWidget(BaseWidget):
             layout.addWidget(widget)
 
     def delete_document(self, target_file:TargetFiles):
-        
-        self.session.delete(target_file)
-        self.session.commit()
+        TargetFiles.objects.delete(target_file.id)
         
         self.load_documents()
         self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)

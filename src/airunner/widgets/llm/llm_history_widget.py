@@ -58,10 +58,11 @@ class LLMHistoryWidget(BaseWidget):
         self.ui.scrollAreaWidgetContents.setLayout(layout)
 
     def on_conversation_click(self, conversation):
-        self.session.query(LLMGeneratorSettings).update(
+        llm_generator_settings = LLMGeneratorSettings.objects.first()
+        LLMGeneratorSettings.objects.update(
+            llm_generator_settings.id,
             {"current_chatbot": conversation.chatbot_id}
         )
-        self.session.commit()
         self.emit_signal(SignalCode.LOAD_CONVERSATION, {
             "conversation_id": conversation.id,
             "conversation": conversation,

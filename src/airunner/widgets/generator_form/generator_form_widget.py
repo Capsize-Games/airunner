@@ -80,7 +80,7 @@ class SaveGeneratorSettingsWorker(
                     x=self.crops_coord_top_left_x,
                     y=self.crops_coord_top_left_y
                 )
-                self.save_generator_settings(generator_settings)
+                generator_settings.save()
 
             time.sleep(0.1)
 
@@ -485,8 +485,12 @@ class GeneratorForm(BaseWidget):
             progressbar.setFormat("Complete")
 
     def _set_keyboard_shortcuts(self):
-        generate_image_key = self.session.query(ShortcutKeys).filter_by(display_name="Generate Image").first()
-        interrupt_key = self.session.query(ShortcutKeys).filter_by(display_name="Interrupt").first()
+        generate_image_key = ShortcutKeys.objects.filter_by(
+            display_name="Generate Image"
+        ).first()
+        interrupt_key = ShortcutKeys.objects.filter_by(
+            display_name="Interrupt"
+        ).first()
         if generate_image_key:
             self.ui.generate_button.setShortcut(generate_image_key.key)
             self.ui.generate_button.setToolTip(f"{generate_image_key.display_name} ({generate_image_key.text})")

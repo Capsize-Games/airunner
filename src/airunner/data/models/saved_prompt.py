@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, String
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class SavedPrompt(Base):
+class SavedPrompt(BaseModel):
     __tablename__ = "saved_prompts"
     id = Column(Integer, primary_key=True, autoincrement=True)
     prompt = Column(String, nullable=True)

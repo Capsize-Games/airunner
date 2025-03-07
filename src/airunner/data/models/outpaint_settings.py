@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, Boolean, LargeBinary
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class OutpaintSettings(Base):
+class OutpaintSettings(BaseModel):
     __tablename__ = 'outpaint_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     image = Column(LargeBinary, nullable=True)

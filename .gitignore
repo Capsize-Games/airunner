@@ -33,3 +33,4 @@ test.json
 htmlcov
 network_access_attempts.log
 *.lprof
+.env

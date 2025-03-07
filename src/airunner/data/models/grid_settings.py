@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, String, Boolean, Float
 
-from airunner.data.models.base import Base
+from airunner.data.models.base import BaseModel
 
 
-class GridSettings(Base):
+class GridSettings(BaseModel):
     __tablename__ = 'grid_settings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     cell_size = Column(Integer, default=64)
