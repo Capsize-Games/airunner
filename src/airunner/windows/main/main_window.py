@@ -1134,7 +1134,6 @@ class MainWindow(
         msg_box.setText("You are missing some required models.")
         
         download_missing_models = msg_box.addButton("Download missing models", QMessageBox.AcceptRole)
-        cancel_button = msg_box.addButton(QMessageBox.Cancel)
         
         msg_box.exec()
         
