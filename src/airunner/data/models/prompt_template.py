@@ -6,7 +6,7 @@ from airunner.data.models.base import BaseModel
 class PromptTemplate(BaseModel):
     __tablename__ = "prompt_templates"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    template_name = Column(String, nullable=False)
+    template_name = Column(String, nullable=False, default="")
     use_guardrails = Column(Boolean, default=True)
     guardrails = Column(Text, default="")
     system = Column(Text, default="")

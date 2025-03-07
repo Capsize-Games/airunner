@@ -477,11 +477,13 @@ class SettingsMixin:
     def update_setting(self, model_class_, name, value):
         setting = model_class_.objects.order_by(model_class_.id.desc()).first()
         if setting:
-            setattr(setting, name, value)
-            try:
-                setting.save()
-            except sqlite3.OperationalError as e:
-                self.logger.error(f"Error updating setting: {e}")
+            model_class_.objects.update(
+                setting.id, **{
+                    name: value
+                }
+            )
+        else:
+            self.logger.error("Failed to update settings: No setting found")
 
     def reset_settings(self):
         """
@@ -758,7 +760,7 @@ class SettingsMixin:
         if conversation:
             print("RETURNING CONVERSATION")
             return conversation
-        print("CREATING NEW CONVERSATION")
+        print("CREATING NEW CONVERSATION with key", chat_store_key)
         conversation = Conversation(
             timestamp=datetime.datetime.now(datetime.timezone.utc),
             title="",
