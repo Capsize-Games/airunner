@@ -11,7 +11,6 @@ from llama_index.core.bridge.pydantic import Field, PrivateAttr
 from llama_index.core.storage.chat_store.base import BaseChatStore
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
-from airunner.settings import DB_URL, ASYNC_DB_URL
 from airunner.data.session_manager import session_scope
 
 class SQLiteChatStore(BaseChatStore):
