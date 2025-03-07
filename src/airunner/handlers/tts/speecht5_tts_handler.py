@@ -1,7 +1,7 @@
 import os
 import time
 from queue import Queue
-from typing import Optional, Union, ClassVar, Type, Dict
+from typing import Optional, Union, ClassVar, Type, Dict, Any
 
 import torch
 
@@ -110,6 +110,16 @@ class SpeechT5TTSHandler(TTSHandler):
     @tokenizer.setter
     def tokenizer(self, value: Optional[Type[AutoTokenizer]]):
         self._tokenizer = value
+
+    @property
+    def device(self) -> torch.device:
+        """Return the appropriate device based on settings."""
+        return torch.device("cuda" if self.tts_settings.use_cuda else "cpu")
+    
+    @property
+    def torch_dtype(self) -> torch.dtype:
+        """Return the consistent torch dtype to use across models and inputs."""
+        return torch.float16 if self.tts_settings.use_cuda else torch.float32
 
     def tts_path(self, path: str) -> str:
         return os.path.join(self.path_settings.tts_model_path, path)
@@ -237,7 +247,10 @@ class SpeechT5TTSHandler(TTSHandler):
 
     def _load_speaker_embeddings(self):
         self.logger.debug("Loading speaker embeddings...")
-        embeddings_dataset = load_dataset(self.dataset_path, datasets.Split.TEST)
+        embeddings_dataset = load_dataset(
+            self.dataset_path, 
+            split=datasets.Split.VALIDATION
+        )
         speaker_key = self.speakers[self.speech_t5_settings.voice]
         embeddings = self._load_dataset_by_speaker_key(
             speaker_key,
@@ -291,6 +304,20 @@ class SpeechT5TTSHandler(TTSHandler):
         self._speaker_embeddings = None
         clear_memory(self.memory_settings.default_gpu_tts)
 
+    def _prepare_text(self, text: str) -> str:
+        """Prepare text for TTS processing by applying character replacements."""
+        if not text:
+            return ""
+            
+        # Apply character replacements
+        for old, new in self._character_replacement_map.items():
+            text = text.replace(old, new)
+            
+        # Remove any extra whitespace and trim
+        text = " ".join(text.split())
+        
+        return text
+
     def _do_generate(self, message: str):
         self.logger.debug("Generating text-to-speech with T5")
         text = self._prepare_text(message)
@@ -303,51 +330,52 @@ class SpeechT5TTSHandler(TTSHandler):
         inputs = self.processor(
             text=text,
             return_tensors="pt",
-            torch_dtype=self.dtype  # Ensure inputs are in float16
         )
         inputs = self._move_inputs_to_device(inputs)
 
         self.logger.debug("Generating speech...")
         start = time.time()
-        self._speaker_embeddings = self._speaker_embeddings.to(self.dtype).to(self.device)
-        self._vocoder = self._vocoder.to(self.dtype).to(self.device)
-
+        
+        # Use consistent device and dtype handling
         try:
+            speaker_embeddings = self._speaker_embeddings.to(self.torch_dtype).to(self.device)
+            vocoder = self.vocoder.to(self.torch_dtype).to(self.device)
+            
             speech = self.model.generate(
                 **inputs,
-                speaker_embeddings=self._speaker_embeddings,
-                vocoder=self._vocoder,
+                speaker_embeddings=speaker_embeddings,
+                vocoder=vocoder,
                 max_length=100
             )
         except Exception as e:
-            self.logger.error("Failed to generate speech")
-            self.logger.error(e)
+            self.logger.error(f"Failed to generate speech: {str(e)}")
             self._cancel_generated_speech = False
             return None
 
         if not self._cancel_generated_speech:
-            self.logger.debug("Generated speech in " + str(time.time() - start) + " seconds")
+            self.logger.debug(f"Generated speech in {time.time() - start:.2f} seconds")
             response = speech.cpu().float().numpy()
             return response
         if not self._do_interrupt:
-            self.logger.debug("Skipping generated speech: " + text)
+            self.logger.debug(f"Skipping generated speech: {text}")
             self._cancel_generated_speech = False
         return None
 
-    def _move_inputs_to_device(self, inputs):
-        use_cuda = self.tts_settings.use_cuda
-        if use_cuda:
-            self.logger.debug("Moving inputs to CUDA")
-            try:
-                for key in ("input_ids", "attention_mask"):
-                    inputs[key] = inputs[key].to(self.device)
-
-                if "history_prompt" in inputs:
-                    for key in ("semantic_prompt", "coarse_prompt", "fine_prompt"):
-                        inputs["history_prompt"][key] = inputs["history_prompt"][key].to(self.device)
-            except AttributeError as e:
-                self.logger.error("Failed to move inputs to CUDA")
-                self.logger.error(e)
+    def _move_inputs_to_device(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """Move input tensors to the appropriate device."""
+        try:
+            device = self.device
+            for key in inputs:
+                if isinstance(inputs[key], torch.Tensor):
+                    inputs[key] = inputs[key].to(device)
+                elif isinstance(inputs[key], dict):
+                    for subkey in inputs[key]:
+                        if isinstance(inputs[key][subkey], torch.Tensor):
+                            inputs[key][subkey] = inputs[key][subkey].to(device)
+                            
+        except Exception as e:
+            self.logger.error(f"Failed to move inputs to device: {str(e)}")
+            
         return inputs
 
     def unblock_tts_generator_signal(self):
@@ -360,3 +388,9 @@ class SpeechT5TTSHandler(TTSHandler):
         self._cancel_generated_speech = False
         self._paused = True
         self._text_queue = Queue()
+
+    def cleanup(self):
+        """Clean up resources when the handler is no longer needed."""
+        self.unload()
+        self._text_queue = Queue()
+        self._sentences = []

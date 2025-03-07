@@ -73,8 +73,8 @@ def update_path_values(stt_model_path, tts_model_path):
         path_id = path_setting[0]
         base_path = path_setting[1]
 
-        stt_model_path = stt_model_path.replace(BASE_PATH, base_path)
-        tts_model_path = tts_model_path.replace(BASE_PATH, base_path)
+        stt_model_path = stt_model_path.replace(os.path.expanduser(BASE_PATH), base_path)
+        tts_model_path = tts_model_path.replace(os.path.expanduser(BASE_PATH), base_path)
         
         try:
             connection.execute(
