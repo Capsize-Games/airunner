@@ -92,28 +92,6 @@ class ChatEngineTool(AsyncBaseTool):
             raw_output=response,
         )
 
-    async def acall(self, *args: Any, **kwargs: Any) -> ToolOutput:
-        query_str = self._get_query_str(*args, **kwargs)
-        chat_history = kwargs.get("chat_history", None)
-        streaming_response = await self.chat_engine.astream_chat(
-            query_str,
-            chat_history=chat_history
-        )
-
-        response = ""
-        is_first_message = True
-        for token in streaming_response.response_gen:
-            response += token
-            self.agent.handle_response(token, is_first_message)
-            is_first_message = False
-
-        return ToolOutput(
-            content=str(response),
-            tool_name=self.metadata.name,
-            raw_input={"input": query_str},
-            raw_output=response,
-        )
-
     def as_langchain_tool(self) -> "LlamaIndexTool":
         tool_config = IndexToolConfig(
             chat_engine=self.chat_engine,
