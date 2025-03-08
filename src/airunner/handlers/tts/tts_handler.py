@@ -46,7 +46,7 @@ class TTSHandler(BaseHandler):
         pass
 
     @abstractmethod
-    def do_generate(self, message):
+    def generate(self, message):
         """Generate speech from text."""
         pass
 
