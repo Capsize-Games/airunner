@@ -1,5 +1,5 @@
 import unittest
-from airunner.handlers.tts.speecht5_tts_handler import SpeechT5TTSHandler
+from airunner.handlers.tts.speecht5_handler import SpeechT5Handler
 from airunner.utils.text_preprocessing import (
     replace_numbers_with_words,
     roman_to_int,
@@ -7,6 +7,7 @@ from airunner.utils.text_preprocessing import (
     strip_emoji_characters,
     prepare_text_for_tts
 )
+
 
 class TestTextPreprocessing(unittest.TestCase):
 
@@ -111,13 +112,14 @@ class TestTextPreprocessing(unittest.TestCase):
                 self.assertEqual(processed, expected_output)
 
 
-class TestSpeechT5TTSHandler(unittest.TestCase):
-    """Tests specific to the SpeechT5TTSHandler that aren't covered by text preprocessing tests"""
+class TestSpeechT5Handler(unittest.TestCase):
+    """Tests specific to the SpeechT5Handler that aren't covered by text preprocessing tests"""
     
     def test_handler_initialization(self):
-        handler = SpeechT5TTSHandler()
+        handler = SpeechT5Handler()
         self.assertIsNotNone(handler)
         # Add more handler-specific tests if needed
+
 
 if __name__ == '__main__':
     unittest.main()
