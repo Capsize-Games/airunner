@@ -10,8 +10,9 @@ Do not change the order of the imports.
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
-from airunner.settings import DB_PATH
+from airunner.data.models import WindowSettings
 import os
+import argparse
 base_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
 
 ################################################################
@@ -55,6 +56,13 @@ def run_setup_wizard():
 
 
 def main():
+    parser = argparse.ArgumentParser(description="AI Runner")
+    parser.add_argument("--clear-window-settings", action="store_true", help="Clear window settings")
+    args = parser.parse_args()
+
+    if args.clear_window_settings:
+        WindowSettings.objects.delete_all()
+
     setup_database()
 
     # Get the first ApplicationSettings record from the database and 
