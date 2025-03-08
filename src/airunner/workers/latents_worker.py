@@ -2,13 +2,8 @@ import numpy as np
 from PIL import Image
 from airunner.enums import (
     SignalCode,
-    SDMode,
 )
 from airunner.workers.worker import Worker
-SKIP_RELOAD_CONSTS = (
-    SDMode.FAST_GENERATE,
-    SDMode.DRAWING,
-)
 
 
 class LatentsWorker(Worker):

@@ -55,7 +55,6 @@ from airunner.data.models import (
     AIModels
 )
 from airunner.enums import (
-    SDMode, 
     StableDiffusionVersion, 
     GeneratorSection, 
     ModelStatus, 
@@ -75,12 +74,6 @@ from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
 from airunner.utils.image.export_image import export_images
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.data.models import GeneratorSettings
-
-SKIP_RELOAD_CONSTS = (
-    SDMode.FAST_GENERATE,
-    SDMode.DRAWING,
-)
-
 
 class StableDiffusionHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
