@@ -74,6 +74,7 @@ from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
 from airunner.utils.image.export_image import export_images
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.data.models import GeneratorSettings
+from airunner.handlers.stablediffusion.image_response import ImageResponse
 
 class StableDiffusionHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
@@ -628,7 +629,7 @@ class StableDiffusionHandler(BaseHandler):
                     callback(message)
             self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
                 'code': code,
-                'message': response
+                'message': response.to_dict()
             })
             self._current_state = HandlerState.READY
             clear_memory()
@@ -694,7 +695,7 @@ class StableDiffusionHandler(BaseHandler):
             self._send_pipeline_loaded_signal()
             self._move_pipe_to_device()
 
-    def _generate(self):
+    def _generate(self) -> ImageResponse:
         self.logger.debug("Generating image")
         if self._pipe is None:
             raise PipeNotLoadedException()
@@ -715,8 +716,10 @@ class StableDiffusionHandler(BaseHandler):
 
         with torch.no_grad():
             results = self._pipe(**args)
+
         images = results.get("images", [])
         images, nsfw_content_detected = self._check_and_mark_nsfw_images(images)
+
         if images is not None:
             self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
                 "step": self.generator_settings_cached.steps,
@@ -729,21 +732,13 @@ class StableDiffusionHandler(BaseHandler):
             if self.application_settings_cached.auto_export_images:
                 self._export_images(images, args)
 
-            return {
-                "images": images,
-                "data": args,
-                "nsfw_content_detected": any(nsfw_content_detected),
-                "active_rect": active_rect,
-                "is_outpaint": self.is_outpaint
-            }
-        else:
-            return {
-                "images": [],
-                "data": args,
-                "nsfw_content_detected": False,
-                "active_rect": active_rect,
-                "is_outpaint": self.is_outpaint
-            }
+        return ImageResponse(
+            images=images or [],
+            data=args,
+            nsfw_content_detected=any(nsfw_content_detected),
+            active_rect=active_rect,
+            is_outpaint=self.is_outpaint
+        )
     
     def _initialize_metadata(self, images: List[Any], data: Dict) -> Optional[dict]:
         metadata = None

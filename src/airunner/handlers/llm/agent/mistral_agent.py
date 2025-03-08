@@ -2,6 +2,7 @@
 
 Simple wrapper around AgentRunner + MistralAgentWorker.
 """
+import os
 from typing import (
     Any,
     List,
@@ -748,11 +749,16 @@ class MistralAgent(
             "chat_history": self._memory.get_all() if self._memory else None,
             "llm_request": llm_request
         }
-        # self._perform_analysis()
-        print(self._system_prompt)
+        
+        if self.llm_perform_analysis:
+            self._perform_analysis()
+
+        if self.print_llm_system_prompt:
+            self.logger.info(self._system_prompt)
+
         self._update_system_prompt(system_prompt, rag_system_prompt)
 
-        self._update_llm_settings(llm_request)
+        self.llm.llm_request = llm_request
 
         if action is LLMActionType.CHAT:
             self._perform_tool_call("chat_engine_tool", **kwargs)
@@ -777,12 +783,6 @@ class MistralAgent(
         if self.do_summarize_conversation:
             self.logger.info("Attempting to summarize conversation")
             self._summarize_conversation()
-
-    def _update_llm_settings(
-        self, 
-        llm_request: Optional[LLMRequest] = None
-    ):
-        self.llm.llm_request = llm_request
 
     def _perform_tool_call(
         self,
@@ -811,7 +811,7 @@ class MistralAgent(
         if response.content == "Empty Response":
             self.logger.info("RAG Engine returned empty response")
             self._strip_previous_messages_from_conversation()
-            self._update_llm_settings(kwargs.get("llm_request", None))
+            self.llm.llm_request = kwargs.get("llm_request", None)
             self._perform_tool_call("chat_engine_tool", **kwargs)
 
     def _get_conversation(self, conversation_id: Optional[int] = None) -> Optional[Conversation]:

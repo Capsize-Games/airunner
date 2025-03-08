@@ -58,10 +58,18 @@ def run_setup_wizard():
 def main():
     parser = argparse.ArgumentParser(description="AI Runner")
     parser.add_argument("--clear-window-settings", action="store_true", help="Clear window settings")
+    parser.add_argument("--print-llm-system-prompt", action="store_true", help="Print LLM System prompt to console")
+    parser.add_argument("--perform-llm-analysis", action="store_true", help="Perform LLM analysis")
     args = parser.parse_args()
 
     if args.clear_window_settings:
         WindowSettings.objects.delete_all()
+    
+    if args.print_llm_system_prompt:
+        os.environ["AI_RUNNER_PRINT_LLM_SYSTEM_PROMPT"] = "1"
+    
+    if args.perform_llm_analysis:
+        os.environ["AI_RUNNER_PERFORM_ANALYSIS"] = "1"
 
     setup_database()
 

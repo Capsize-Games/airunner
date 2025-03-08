@@ -1,5 +1,6 @@
 import logging
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.inspection import inspect
 from airunner.data.session_manager import session_scope
 
 Base = declarative_base()
@@ -192,3 +193,6 @@ class BaseModel(Base):
                 logger.error(f"Error in delete(): {e}")
             session.expunge(self)
         return success
+
+    def to_dict(self):
+        return {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}

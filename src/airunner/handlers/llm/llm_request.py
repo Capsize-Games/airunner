@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Optional, Dict
 from airunner.data.models import Chatbot, LLMGeneratorSettings
 from airunner.data.session_manager import session_scope
@@ -6,6 +6,11 @@ from airunner.data.session_manager import session_scope
 
 @dataclass
 class LLMRequest:
+    """
+    Dataclass to represent the LLM request.
+
+    The LLMRequest is used to store individual requests to LLM models.
+    """
     do_sample: bool = True
     early_stopping: bool = True
     eta_cutoff: int = 200
@@ -41,23 +46,17 @@ class LLMRequest:
         if temperature < min_val:
             temperature = min_val
 
-        return {
-            "do_sample": self.do_sample,
-            "early_stopping": self.early_stopping,
-            "eta_cutoff": self.eta_cutoff,
-            "length_penalty": length_penalty,
-            "max_new_tokens": self.max_new_tokens,
-            "min_length": self.min_length,
-            "no_repeat_ngram_size": self.no_repeat_ngram_size,
-            "num_beams": self.num_beams,
-            "num_return_sequences": self.num_return_sequences,
-            "repetition_penalty": repetition_penalty,
-            "temperature": temperature,
-            "top_k": self.top_k,
-            "top_p": top_p,
-            "use_cache": self.use_cache,
-        }
+        data = asdict(self)
 
+        data.update({
+            "length_penalty": length_penalty,
+            "repetition_penalty": repetition_penalty,
+            "top_p": top_p,
+            "temperature": temperature
+        })
+
+        return data
+    
     @classmethod
     def from_values(
         cls,
