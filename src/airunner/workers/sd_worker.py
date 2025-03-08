@@ -6,8 +6,8 @@ from PySide6.QtCore import QObject, Signal, Slot
 
 from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
 from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.workers.worker import Worker
+from airunner.handlers.stablediffusion.stablediffusion_handler import StableDiffusionHandler
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -166,7 +166,6 @@ class SDWorker(Worker):
             self.sd.sd_load_tokenizer(data)
 
     def start_worker_thread(self):
-        from src.airunner.handlers.stablediffusion.stablediffusion_handler import StableDiffusionHandler
         self.sd = StableDiffusionHandler()
         if self.application_settings.sd_enabled:
             self.sd.load()
