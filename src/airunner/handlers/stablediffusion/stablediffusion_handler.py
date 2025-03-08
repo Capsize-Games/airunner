@@ -696,12 +696,6 @@ class StableDiffusionHandler(BaseHandler):
 
     def _generate(self):
         self.logger.debug("Generating image")
-        # if self._current_model.path != model.path:
-        #     self.logger.debug("Model has changed from %s to %s",
-        #                       self._current_model.path,
-        #                       model.path)
-        #     if self._pipe is not None:
-        #         self.reload()
         if self._pipe is None:
             raise PipeNotLoadedException()
         self._load_prompt_embeds()
