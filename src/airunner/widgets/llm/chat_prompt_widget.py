@@ -13,6 +13,7 @@ from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
+from airunner.handlers.llm.llm_request import LLMRequest
 
 class ChatPromptWidget(BaseWidget):
     widget_class_ = Ui_chat_prompt
@@ -267,6 +268,7 @@ class ChatPromptWidget(BaseWidget):
                 "request_data": {
                     "action": self.action,
                     "prompt": prompt,
+                    "llm_request_data": None  # override as needed
                 }
             }
         )
