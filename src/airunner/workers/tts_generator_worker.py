@@ -4,8 +4,8 @@ import threading
 from typing import Optional
 
 from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
-from airunner.handlers.tts.espeak_tts_handler import EspeakTTSHandler
-from airunner.handlers.tts.speecht5_tts_handler import SpeechT5TTSHandler
+from airunner.handlers.tts.espeak_handler import EspeakHandler
+from airunner.handlers.tts.speecht5_handler import SpeechT5Handler
 from airunner.workers.worker import Worker
 
 
@@ -100,9 +100,9 @@ class TTSGeneratorWorker(Worker):
         tts_model = self.tts_settings.model.lower()
         print(tts_model, TTSModel.ESPEAK.value, tts_model == TTSModel.ESPEAK.value)
         if tts_model == TTSModel.ESPEAK.value:
-            tts_handler_class_ = EspeakTTSHandler
+            tts_handler_class_ = EspeakHandler
         else:
-            tts_handler_class_ = SpeechT5TTSHandler
+            tts_handler_class_ = SpeechT5Handler
         self.tts = tts_handler_class_()
 
     def add_to_queue(self, message):
