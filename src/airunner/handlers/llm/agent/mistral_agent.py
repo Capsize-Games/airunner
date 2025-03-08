@@ -33,6 +33,7 @@ from llama_index.core.memory import BaseMemory
 from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
 from airunner.utils.strip_names_from_message import strip_names_from_message
 from airunner.settings import DB_URL
+from airunner.handlers.llm.llm_request import LLMRequest
 
 
 DEFAULT_MAX_FUNCTION_CALLS = 5
@@ -736,18 +737,22 @@ class MistralAgent(
         message: str,
         action: LLMActionType = LLMActionType.CHAT,
         system_prompt: Optional[str] = None,
-        rag_system_prompt: Optional[str] = None
+        rag_system_prompt: Optional[str] = None,
+        llm_request: Optional[LLMRequest] = None
     ) -> AgentChatResponse:
         self._complete_response = ""
         self.do_interrupt = False
         message = f"{self.username}: {message}"
         kwargs = {
             "input": f"{message}",
-            "chat_history": self._memory.get_all() if self._memory else None
+            "chat_history": self._memory.get_all() if self._memory else None,
+            "llm_request": llm_request
         }
         # self._perform_analysis()
         print(self._system_prompt)
         self._update_system_prompt(system_prompt, rag_system_prompt)
+
+        self._update_llm_settings(llm_request)
 
         if action is LLMActionType.CHAT:
             self._perform_tool_call("chat_engine_tool", **kwargs)
@@ -772,6 +777,12 @@ class MistralAgent(
         if self.do_summarize_conversation:
             self.logger.info("Attempting to summarize conversation")
             self._summarize_conversation()
+
+    def _update_llm_settings(
+        self, 
+        llm_request: Optional[LLMRequest] = None
+    ):
+        self.llm.llm_request = llm_request
 
     def _perform_tool_call(
         self,
@@ -800,6 +811,7 @@ class MistralAgent(
         if response.content == "Empty Response":
             self.logger.info("RAG Engine returned empty response")
             self._strip_previous_messages_from_conversation()
+            self._update_llm_settings(kwargs.get("llm_request", None))
             self._perform_tool_call("chat_engine_tool", **kwargs)
 
     def _get_conversation(self, conversation_id: Optional[int] = None) -> Optional[Conversation]:
