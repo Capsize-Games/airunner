@@ -50,6 +50,7 @@ class TTSHandler(BaseHandler):
         """Generate speech from text."""
         pass
 
-    def _prepare_text(self, text: str) -> str:
+    @staticmethod
+    def _prepare_text(text: str) -> str:
         """Prepare text for TTS processing using utility functions."""
         return prepare_text_for_tts(text)
