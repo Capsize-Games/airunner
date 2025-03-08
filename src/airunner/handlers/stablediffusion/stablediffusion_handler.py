@@ -82,7 +82,7 @@ SKIP_RELOAD_CONSTS = (
 )
 
 
-class ArtHandler(BaseHandler):
+class StableDiffusionHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._current_model_path = ""
