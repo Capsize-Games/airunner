@@ -13,7 +13,7 @@ setup(
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "src"},
     packages=find_packages("src"),
-    python_requires=">=3.10.12",
+    python_requires=">=3.10.12,<3.11",
     install_requires=[
         "torch==2.6.0",
         "torchvision==0.21.0",

@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Optional, Sequence, Union
+from typing import Any, Callable, List, Optional, Sequence, Union, Dict
 
 import torch
 from llama_index.core.base.llms.types import (
@@ -37,6 +37,7 @@ from transformers import (
 
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models import LLMGeneratorSettings, Chatbot
+from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.settings import DEFAULT_LLM_HF_PATH
 
 
@@ -161,72 +162,31 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             "Sometimes huggingface tokenizers return extra inputs that cause errors."
         ),
     )
-    tokenizer_kwargs: dict = Field(
-        default_factory=dict, description="The kwargs to pass to the tokenizer."
+    tokenizer_kwargs: Dict = Field(
+        default_factory=Dict, description="The kwargs to pass to the tokenizer."
     )
-    model_kwargs: dict = Field(
-        default_factory=dict,
+    model_kwargs: Dict = Field(
+        default_factory=Dict,
         description="The kwargs to pass to the model during initialization.",
     )
+    
+    _llm_request: Optional[LLMRequest] = None
 
     @property
-    def generate_kwargs(self) -> dict:
-        item = LLMGeneratorSettings.objects.first()
-        if not item:
-            self.logger.error("No LLMGeneratorSettings found")
-        else:
-            self.logger.debug(f"LLMGeneratorSettings found: {item}")
-        if (
-            item and (
-            not getattr(item, "override_parameters") or 
-            not item.override_parameters
-        )):
-            item = Chatbot.objects.get(item.current_chatbot)
-            min_val = 0.0001
-            length_penalty = item.length_penalty / 1000.0
-            repetition_penalty = item.repetition_penalty / 100.0
-            top_p = item.top_p / 1000.0
-            temperature = item.temperature / 10000.0
-            do_sample = item.do_sample
-            early_stopping = item.early_stopping
-            eta_cutoff = item.eta_cutoff
-            max_new_tokens = item.max_new_tokens
-            min_length = item.min_length
-            num_return_sequences = item
-            top_k = item.top_k
-            use_cache = item.use_cache
-            ngram_size = item.ngram_size
-            num_beams = item.num_beams
-
-            if length_penalty < min_val:
-                length_penalty = min_val
-
-            if repetition_penalty < min_val:
-                repetition_penalty = min_val
-
-            if top_p < min_val:
-                top_p = min_val
-
-            if temperature < min_val:
-                temperature = min_val
-
-            return {
-                "length_penalty": length_penalty,
-                "repetition_penalty": repetition_penalty,
-                "do_sample": do_sample,
-                "early_stopping": early_stopping,
-                "eta_cutoff": eta_cutoff,
-                "max_new_tokens": max_new_tokens,
-                "min_length": min_length,
-                "num_return_sequences": num_return_sequences,
-                "temperature": temperature,
-                "top_k": top_k,
-                "top_p": top_p,
-                "use_cache": use_cache,
-                # "no_repeat_ngram_size": ngram_size,
-                # "num_beams": num_beams,
-            }
+    def generate_kwargs(self) -> Dict:
+        if self.llm_request:
+            return self.llm_request.to_dict()
         return {}
+
+    @property
+    def llm_request(self) -> Optional[LLMRequest]:
+        if self._llm_request is None:
+            self._llm_request = LLMRequest.from_default()
+        return self._llm_request
+    
+    @llm_request.setter
+    def llm_request(self, value: Optional[LLMRequest]):
+        self._llm_request = value
         
     is_chat_model: bool = Field(
         default=False,
@@ -254,10 +214,10 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         tokenizer: Optional[Any] = None,
         device_map: Optional[str] = "auto",
         stopping_ids: Optional[List[int]] = None,
-        tokenizer_kwargs: Optional[dict] = None,
+        tokenizer_kwargs: Optional[Dict] = None,
         tokenizer_outputs_to_remove: Optional[list] = None,
-        model_kwargs: Optional[dict] = None,
-        generate_kwargs: Optional[dict] = None,
+        model_kwargs: Optional[Dict] = None,
+        generate_kwargs: Optional[Dict] = None,
         is_chat_model: Optional[bool] = False,
         callback_manager: Optional[CallbackManager] = None,
         system_prompt: str = "",
