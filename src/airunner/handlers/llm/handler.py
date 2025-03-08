@@ -1,19 +1,23 @@
 import random
 import os
 import torch
-from llama_index.llms.groq import Groq
-from llama_index.core.chat_engine.types import AgentChatResponse
-from peft import PeftModel
 from typing import Optional, Dict, List
+from peft import PeftModel
+
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
+
+from llama_index.llms.groq import Groq
+from llama_index.core.chat_engine.types import AgentChatResponse
+
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import MAX_SEED
 from airunner.utils.clear_memory import clear_memory
 from airunner.handlers.llm.agent.mistral_agent import MistralAgentQObject
 from airunner.handlers.llm.training_mixin import TrainingMixin
+from airunner.handlers.llm.llm_request import LLMRequest
 
 
 class LLMHandler(
@@ -159,22 +163,23 @@ class LLMHandler(
         if type(action) is str:
             action = LLMActionType[action]
         return self._do_generate(
-            data["request_data"]["prompt"],
-            action
+            prompt=data["request_data"]["prompt"],
+            action=action,
+            llm_request=data.get("llm_request_data", None),
         )
 
-    def chat(
-        self,
-        prompt: str,
-        system_prompt: Optional[str] = None,
-        rag_system_prompt: Optional[str] = None
-    ) -> AgentChatResponse:
-        return self._do_generate(
-            prompt,
-            LLMActionType.CHAT,
-            system_prompt,
-            rag_system_prompt
-        )
+    # def chat(
+    #     self,
+    #     prompt: str,
+    #     system_prompt: Optional[str] = None,
+    #     rag_system_prompt: Optional[str] = None
+    # ) -> AgentChatResponse:
+    #     return self._do_generate(
+    #         prompt=prompt,
+    #         action=LLMActionType.CHAT,
+    #         system_prompt=system_prompt,
+    #         rag_system_prompt=rag_system_prompt
+    #     )
 
     def do_interrupt(self):
         """
@@ -363,7 +368,8 @@ class LLMHandler(
         prompt: str, 
         action: LLMActionType,
         system_prompt: Optional[str] = None,
-        rag_system_prompt: Optional[str] = None
+        rag_system_prompt: Optional[str] = None,
+        llm_request: Optional[LLMRequest] = None
     ) -> AgentChatResponse:
         self.logger.debug("Generating response")
         if self._current_model_path != self.model_path:
@@ -371,7 +377,13 @@ class LLMHandler(
             self.load()
         # if action is LLMActionType.CHAT and self.chatbot.use_mood:
         #     action = LLMActionType.UPDATE_MOOD
-        response = self._chat_agent.chat(prompt, action, system_prompt, rag_system_prompt)
+        response = self._chat_agent.chat(
+            message=prompt, 
+            action=action, 
+            system_prompt=system_prompt, 
+            rag_system_prompt=rag_system_prompt,
+            llm_request=llm_request
+        )
         if action is LLMActionType.CHAT:
             self._send_final_message()
         return response
