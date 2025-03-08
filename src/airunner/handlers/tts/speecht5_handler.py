@@ -1,5 +1,6 @@
 import os
 import time
+from abc import ABC
 from queue import Queue
 from typing import Optional, Union, ClassVar, Type, Dict, Any
 
@@ -22,7 +23,7 @@ from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
 from airunner.utils.clear_memory import clear_memory
 
 
-class SpeechT5TTSHandler(TTSHandler):
+class SpeechT5Handler(TTSHandler, ABC):
     """
     SpeechT5 implementation of the TTSHandler.
     Uses the SpeechT5ForTextToSpeech model and SpeechT5Processor.
