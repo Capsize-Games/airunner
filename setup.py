@@ -29,7 +29,7 @@ setup(
     ],
     extras_require={
         "gui": [
-            "PySide6==6.7.0",
+            "PySide6==6.8.2.1",
             "PySide6_Addons==6.7.0",
             "PySide6_Essentials==6.7.0",
         ],
