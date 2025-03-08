@@ -1,3 +1,4 @@
+import os
 import logging
 import datetime
 from typing import List, Type, Optional
@@ -83,6 +84,14 @@ class SettingsMixinSharedInstance:
 
 class SettingsMixin:
     _chatbot: Optional[Chatbot] = None
+
+    @property
+    def llm_perform_analysis(self) -> bool:
+        return os.getenv("AI_RUNNER_PERFORM_ANALYSIS", "False").lower() == "1"
+
+    @property
+    def print_llm_system_prompt(self) -> bool:
+        return os.getenv("AI_RUNNER_PRINT_LLM_SYSTEM_PROMPT", "False").lower() == "1"
 
     @property
     def session_manager(self):
