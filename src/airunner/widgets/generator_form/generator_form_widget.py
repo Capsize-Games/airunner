@@ -91,11 +91,9 @@ class GeneratorForm(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.conversation = None
         self.seed_override = None
         self.parent = None
         self.initialized = False
-        self.showing_past_conversations = False
         self.signal_handlers = {
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.SD_GENERATE_IMAGE_SIGNAL: self.on_generate_image_signal,
@@ -106,7 +104,6 @@ class GeneratorForm(BaseWidget):
             SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.handle_generate_image_from_image,
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
-            SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
             SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated,
             SignalCode.KEYBOARD_SHORTCUTS_UPDATED: self.on_keyboard_shortcuts_updated,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
@@ -159,7 +156,7 @@ class GeneratorForm(BaseWidget):
         self.toggle_secondary_prompts()
 
     def on_bot_mood_updated(self, data):
-        self._set_chatbot_mood(data["mood"])
+        pass
 
     def on_generate_image_signal(self, _data):
         self.handle_generate_button_clicked()
@@ -254,16 +251,8 @@ class GeneratorForm(BaseWidget):
     # End LLM Generated Image handlers
     ##########################################################################
 
-    def _set_chatbot_mood(self, mood=None):
-        self.ui.mood_label.setText(mood if mood else self.conversation.bot_mood if self.conversation else "")
-
     def handle_generate_image_from_image(self, image):
         pass
-
-    def on_load_conversation(self, data):
-        self.conversation = data["conversation"]
-        self._set_chatbot_mood()
-        self.ui.generator_form_tabs.setCurrentIndex(1)
 
     def toggle_secondary_prompts(self):
         if self.generator_settings.version != StableDiffusionVersion.SDXL1_0.value:
@@ -430,7 +419,6 @@ class GeneratorForm(BaseWidget):
         self.toggle_secondary_prompts()
         self.initialized = True
         self.thread.start()
-        self._set_chatbot_mood()
 
     def set_form_values(self, _data=None):
         self.ui.prompt.blockSignals(True)

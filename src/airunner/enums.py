@@ -252,6 +252,8 @@ class SignalCode(Enum):
     DELETE_MESSAGES_AFTER_ID = enum.auto()
     TTS_MODEL_CHANGED = enum.auto()
 
+    CLEAR_CONVERSATION = enum.auto()
+
 class EngineResponseCode(Enum):
     NONE = 0
     STATUS = 100

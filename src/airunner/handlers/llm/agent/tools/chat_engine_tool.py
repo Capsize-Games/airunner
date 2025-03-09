@@ -92,6 +92,9 @@ class ChatEngineTool(AsyncBaseTool):
             raw_output=response,
         )
 
+    async def acall(self, *args, **kwargs):
+        pass
+
     def as_langchain_tool(self) -> "LlamaIndexTool":
         tool_config = IndexToolConfig(
             chat_engine=self.chat_engine,
