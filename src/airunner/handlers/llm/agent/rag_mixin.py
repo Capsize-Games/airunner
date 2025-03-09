@@ -209,7 +209,7 @@ class RAGMixin:
             conversations = conversations[:-1]
         for conversation in conversations:
             conversation.status = status
-        conversation.save()
+            conversation.save()
     
     @index.setter
     def index(self, value: Optional[RAKEKeywordTableIndex]):
