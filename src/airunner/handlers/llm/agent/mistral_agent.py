@@ -399,7 +399,7 @@ class AIRunnerAgent(
     def _update_conversation(self, key: str, value: Any):
         if self.conversation:
             setattr(self.conversation, key, value)
-            self.conversation.save()
+            Conversation.objects.update(self.conversation.id, **{key: value})
 
     @bot_mood.setter
     def bot_mood(self, value: str):
