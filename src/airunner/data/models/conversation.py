@@ -9,6 +9,10 @@ from airunner.data.models.summary import Summary
 from airunner.data.models.chatbot import Chatbot
 from airunner.data.models.user import User
 
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lex_rank import LexRankSummarizer
+
 
 class Conversation(BaseModel):
     __tablename__ = 'conversations'
@@ -26,6 +30,28 @@ class Conversation(BaseModel):
     last_updated_message_id = Column(Integer, nullable=True)
     summary = Column(Text, nullable=True)
     user_data = Column(JSON, nullable=True)
+
+    @property
+    def formatted_messages(self) -> str:
+        messages = self.value
+        if messages:
+            context = ""
+            for message in messages:
+                context += f"{message['role']}: {message['blocks'][0]['text']}\n"
+            return context
+        return ""
+
+    def summarize(self) -> str:
+        messages = self.formatted_messages
+        if messages != "":
+            parser = PlaintextParser.from_string(messages, Tokenizer("english"))
+            summarizer = LexRankSummarizer()
+            sentence_count = 1
+            summary = summarizer(parser.document, sentence_count)
+            summary_string = "\n".join([str(sentence) for sentence in summary])
+            
+            return summary_string
+        return ""
 
     @classmethod
     def delete(cls, pk=None, **kwargs):

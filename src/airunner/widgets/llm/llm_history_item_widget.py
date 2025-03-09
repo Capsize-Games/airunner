@@ -17,7 +17,7 @@ class LLMHistoryItemWidget(BaseWidget):
         super(LLMHistoryItemWidget, self).__init__(*args, **kwargs)
         self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
-        self.ui.conversation_description.setText(self.conversation.title)
+        self.ui.conversation_description.setText(self.conversation.summarize())
 
         chatbot_name = "Unknown"
         chatbot = self.get_chatbot_by_id(self.conversation.chatbot_id)
