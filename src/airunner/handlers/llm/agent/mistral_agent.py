@@ -357,17 +357,7 @@ class AIRunnerAgent(
     @property
     def conversation(self) -> Conversation:
         if not self._conversation:
-            if self.conversation_id:
-                self.conversation = Conversation.objects.get(
-                    self.conversation_id
-                )
-            if not self._conversation:
-                self._conversation = Conversation.objects.order_by(
-                    Conversation.id.desc()
-                ).first()
-            
-            if not self._conversation:
-                self._conversation = Conversation.create()
+            self.conversation = self._create_conversation()
         return self._conversation
     
     @conversation.setter
@@ -378,6 +368,22 @@ class AIRunnerAgent(
             self._conversation_id = value.id
         self._user = None
         self._chatbot = None
+    
+    def _create_conversation(self) -> Conversation:
+        conversation = None
+        if self.conversation_id:
+            self.logger.info(f"Loading conversation with ID: {self.conversation_id}")
+            conversation = Conversation.objects.get(self.conversation_id)
+        
+        if not conversation:
+            self.logger.info("No conversation found, looking for most recent")
+            conversation = Conversation.most_recent()
+        
+        if not conversation:
+            self.logger.info("Creating new conversation")
+            conversation = Conversation.create()
+            
+        return conversation
     
     @property
     def conversation_id(self) -> int:
