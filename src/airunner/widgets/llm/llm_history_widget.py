@@ -22,7 +22,10 @@ class LLMHistoryWidget(BaseWidget):
         self.load_conversations()
 
     def load_conversations(self):
-        conversations = Conversation.objects.all()
+        conversations = Conversation.objects.order_by(
+            Conversation.id.desc()
+        ).all()        
+
         layout = self.ui.gridLayout_2
 
         if layout is None:
