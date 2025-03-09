@@ -1,7 +1,6 @@
 from dataclasses import dataclass, asdict
 from typing import Optional, Dict
 from airunner.data.models import Chatbot, LLMGeneratorSettings
-from airunner.data.session_manager import session_scope
 
 
 @dataclass
