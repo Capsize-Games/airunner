@@ -1,9 +1,12 @@
+from typing import Optional
 import datetime
 from sqlalchemy import Column, Integer, DateTime, String, Text, JSON, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, joinedload
 
 from airunner.data.models.base import BaseModel
 from airunner.data.models.summary import Summary
+from airunner.data.models.chatbot import Chatbot
+from airunner.data.models.user import User
 
 
 class Conversation(BaseModel):
@@ -22,6 +25,54 @@ class Conversation(BaseModel):
     last_updated_message_id = Column(Integer, nullable=True)
     summary = Column(Text, nullable=True)
     user_data = Column(JSON, nullable=True)
+
+    @classmethod
+    def delete(cls, pk=None, **kwargs):
+        Summary.objects.delete(conversation_id=pk)
+        cls.objects.delete(pk, **kwargs)
+
+    @classmethod
+    def create(
+        cls, 
+        chatbot: Optional[Chatbot] = None, 
+        user: Optional[User] = None
+    ):
+        previous_conversation = cls.objects.options(
+            joinedload(cls.summaries)
+        ).order_by(
+            cls.id.desc()
+        ).first()
+        
+        if not chatbot:
+            if previous_conversation:
+                chatbot = Chatbot.objects.get(previous_conversation.chatbot_id)
+            else:
+                chatbot = Chatbot.objects.first()
+
+        if not user:
+            if previous_conversation:
+                user = User.objects.get(previous_conversation.user_id)
+            else:
+                user = User.objects.first()
+
+        conversation = cls(
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
+            title="",
+            key="",
+            value=None,
+            chatbot_id=chatbot.id,
+            user_id=user.id,
+            chatbot_name=chatbot.name,
+            user_name=user.username,
+            bot_mood=previous_conversation.bot_mood if previous_conversation else None
+        )
+        conversation.save()
+        conversation = cls.objects.options(
+            joinedload(cls.summaries)
+        ).order_by(
+            cls.id.desc()
+        ).first()
+        return conversation
 
 
 Conversation.summaries = relationship(

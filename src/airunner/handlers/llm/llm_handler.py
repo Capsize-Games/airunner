@@ -188,6 +188,13 @@ class LLMHandler(
         if self._chat_agent:
             self._chat_agent.interrupt_process()
 
+    def on_conversation_deleted(self, data):
+        """
+        Public method to handle conversation deletion
+        """
+        if self._chat_agent:
+            self._chat_agent.on_conversation_deleted(data)
+
     def clear_history(self, data: Optional[Dict] = None):
         """
         Public method to clear the chat agent history

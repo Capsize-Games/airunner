@@ -62,7 +62,9 @@ class ChatPromptWidget(BaseWidget):
         self.register(SignalCode.SET_CONVERSATION, self.on_set_conversation)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.CHATBOT_CHANGED, self.on_chatbot_changed)
-        self.register(SignalCode.CONVERSATION_DELETED, self.on_conversation_deleted)
+        self.register(SignalCode.CONVERSATION_DELETED, self.on_delete_conversation)
+        self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_conversation)
+        self.register(SignalCode.LOAD_CONVERSATION, self.on_load_conversation)
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
@@ -91,10 +93,23 @@ class ChatPromptWidget(BaseWidget):
         else:
             self._conversation = None
 
-    def load_conversation(self):
-        conversation = Conversation.objects.order_by(
-            Conversation.id.desc()
-        ).first()
+    def on_load_conversation(self, data):
+        self.load_conversation(data["conversation_id"])
+    
+    def on_delete_conversation(self, data):
+        if self.conversation_id == data["conversation_id"] or self.conversation_id is None:
+            self._clear_conversation_widgets()
+        self.conversation_id = data["conversation_id"]            
+
+    def load_conversation(self, id: Optional[int] = None):
+        conversation = None
+        if id is not None:
+            conversation = Conversation.objects.get(id)
+        
+        if conversation is None:
+            conversation = Conversation.objects.order_by(
+                Conversation.id.desc()
+            ).first()
         if conversation is not None:
             self.conversation = conversation
             self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
@@ -133,12 +148,7 @@ class ChatPromptWidget(BaseWidget):
             self.enable_send_button()
 
     def on_chatbot_changed(self):
-        self._clear_conversation()
-
-    def on_conversation_deleted(self, data):
-        if self.conversation_id == data["conversation_id"]:
-            self.conversation_id = None
-            self._clear_conversation()
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
 
     def on_set_conversation(self, message):
         self._clear_conversation_widgets()
@@ -207,17 +217,14 @@ class ChatPromptWidget(BaseWidget):
 
     @Slot()
     def action_button_clicked_clear_conversation(self):
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
+    
+    def on_clear_conversation(self):
         self._clear_conversation()
 
     def _clear_conversation(self):
         self.conversation_history = []
         self._clear_conversation_widgets()
-
-    def _create_conversation(self):
-        self.conversation = self.create_conversation("cpw_" + uuid.uuid4().hex)
-        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
-            "conversation_id": self.conversation_id
-        })
 
     def _clear_conversation_widgets(self):
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):

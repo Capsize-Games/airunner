@@ -21,9 +21,13 @@ class LLMGenerateWorker(Worker):
             (SignalCode.LOAD_CONVERSATION, self.on_llm_load_conversation),
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.llm_on_interrupt_process_signal),
             (SignalCode.QUIT_APPLICATION, self.on_quit_application_signal),
+            (SignalCode.CONVERSATION_DELETED, self.on_conversation_deleted_signal),
         ):
             self.register(signal[0], signal[1])
         self._llm_thread = None
+
+    def on_conversation_deleted_signal(self, data):
+        self.llm.on_conversation_deleted(data)
 
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")

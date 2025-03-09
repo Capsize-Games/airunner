@@ -65,6 +65,8 @@ class MistralAgent(
         # self.news_scraper_worker: NewsScraperWorker = create_worker(NewsScraperWorker)
         self._conversation_summaries: Optional[str] = None
         self._conversation: Optional[Conversation] = None
+        self._conversation_id: Optional[int] = None
+        self._user: Optional[User] = None
         self._chat_engine: Optional[RefreshSimpleChatEngine] = None
         self._mood_engine: Optional[RefreshSimpleChatEngine] = None
         self._summary_engine: Optional[RefreshSimpleChatEngine] = None
@@ -93,7 +95,6 @@ class MistralAgent(
     def do_summarize_conversation(self) -> bool:
         messages = self.conversation.value or []
         total_messages = len(messages)
-        print("total messages", total_messages, self.summarize_after_n_turns)
         if (
             total_messages > self.summarize_after_n_turns and
             self.conversation.summary is None
@@ -103,13 +104,25 @@ class MistralAgent(
     
     @property
     def user(self) -> User:
-        user = User.objects.filter(
-            User.username == self.username
-        ).first()
-        if not user:
-            user = User()
-            user.save()
-        return user
+        if not self._user:
+            if self.conversation:
+                user = User.objects.get(
+                    self.conversation.user_id
+                )
+            if not user:
+                user = User.objects.filter(
+                    User.username == self.username
+                ).first()
+            if not user:
+                user = User()
+                user.save()
+            self.user = user
+        return self._user
+    
+    @user.setter
+    def user(self, value: Optional[User]):
+        self._user = value
+        self._update_conversation("user_id", value.id)
 
     def _update_user(self, key: str, value: Any):
         setattr(self.user, key, value)
@@ -333,7 +346,7 @@ class MistralAgent(
     @property
     def bot_mood(self) -> str:
         mood = None
-        conversation = self._get_conversation()
+        conversation = self.conversation
         if conversation:
             mood = conversation.bot_mood
         return "neutral" if mood is None or mood == "" else mood
@@ -341,16 +354,43 @@ class MistralAgent(
     @property
     def conversation(self) -> Conversation:
         if not self._conversation:
-            self._conversation = self._get_conversation()
+            if self.conversation_id:
+                self.conversation = Conversation.objects.get(
+                    self.conversation_id
+                )
+            if not self._conversation:
+                self._conversation = Conversation.objects.order_by(
+                    Conversation.id.desc()
+                ).first()
+            
+            if not self._conversation:
+                self._conversation = Conversation.create()
         return self._conversation
     
-    def _set_conversation_by_id(self, conversation_id: int):
-        self._conversation = self._get_conversation(conversation_id=conversation_id)
+    @conversation.setter
+    def conversation(self, value: Optional[Conversation]):
+        self._conversation = value
+        if value and self.conversation_id != value.id:
+            self.chat_memory.chat_store_key = str(value.id)
+            self._conversation_id = value.id
+        self._user = None
+        self._chatbot = None
+    
+    @property
+    def conversation_id(self) -> int:
+        return self._conversation_id
+    
+    @conversation_id.setter
+    def conversation_id(self, value: int):
+        if value != self._conversation_id:
+            self._conversation_id = value
+            if self.conversation.id != self._conversation_id:
+                self.conversation = None
     
     def _update_conversation(self, key: str, value: Any):
-        if self._conversation:
-            setattr(self._conversation, key, value)
-            self._conversation.save()
+        if self.conversation:
+            setattr(self.conversation, key, value)
+            self.conversation.save()
 
     @bot_mood.setter
     def bot_mood(self, value: str):
@@ -656,21 +696,9 @@ class MistralAgent(
             self._chat_store = SQLiteChatStore.from_uri(DB_URL)
         return self._chat_store
 
-    _conversation_key: Optional[str] = None
-
-    @property
-    def chat_store_key(self) -> str:
-        if not self._conversation_key:
-            key = "agnt_" + uuid.uuid4().hex
-            latest_conversation = self.create_conversation(key)
-            print("GOT LATEST CONVERSATION", latest_conversation)
-            if latest_conversation:
-                self._conversation_key = latest_conversation.key
-        return self._conversation_key
-    
-    @chat_store_key.setter
-    def chat_store_key(self, value: str):
-        self._conversation_key = value
+    @chat_store.setter
+    def chat_store(self, value: Optional[SQLiteChatStore]):
+        self._chat_store = value
 
     @property
     def chat_memory(self) -> ChatMemoryBuffer:
@@ -679,9 +707,18 @@ class MistralAgent(
             self._chat_memory = ChatMemoryBuffer.from_defaults(
                 token_limit=3000,
                 chat_store=self.chat_store,
-                chat_store_key=self.chat_store_key
+                chat_store_key=str(self.conversation.id)
             )
         return self._chat_memory
+
+    @chat_memory.setter
+    def chat_memory(self, value: Optional[ChatMemoryBuffer]):
+        self._chat_memory = value
+
+    def on_load_conversation(self, data: Optional[Dict] = None):
+        data = data or {}
+        conversation_id = data.get("conversation_id", None)
+        self.conversation = Conversation.objects.get(conversation_id)
 
     def unload(self):
         self.unload_rag()
@@ -703,27 +740,41 @@ class MistralAgent(
         self.reload_rag()
         self._rag_engine_tool = None
 
+    def on_conversation_deleted(self, data: Optional[Dict] = None):
+        data = data or {}
+        conversation_id = data.get("conversation_id", None)
+        if conversation_id == self.conversation_id or self.conversation_id is None:
+            self.conversation = None
+            self.conversation_id = None
+            self.reset_memory()
+
     def clear_history(self, data: Optional[Dict] = None):
         data = data or {}
-        conversation_id = data.get("conversation_id")
-        self._set_conversation_by_id(conversation_id)
-        if self._chat_memory and self.conversation:
-            self.chat_store_key = self.conversation.key
-            self._chat_memory.chat_store_key = self.conversation.key
-            messages = self.chat_store.get_messages(self.conversation.key)
-            if messages:
-                self._chat_memory.set(messages)
-            if self._chat_engine:
-                self._chat_engine.memory = self._chat_memory
+        conversation_id = data.get("conversation_id", None)
+        
+        self.conversation_id = conversation_id
+
+        if not conversation_id:
+            self.conversation = Conversation.create()
+        
+        self.reset_memory()
+    
+    def reset_memory(self):
+        self.chat_memory = None
+        self.chat_store = None
+        messages = self.chat_store.get_messages(self.conversation.id)
+        self.chat_memory.set(messages)
+        self.chat_engine.memory = self.chat_memory
+        self.react_tool_agent.memory = self.chat_memory
         self.reload_rag_engine()
     
     def on_delete_messages_after_id(self):
-        conversation = self._get_conversation()
+        conversation = self.conversation
         if conversation:
             messages = conversation.value
-            self._chat_memory.set(messages)
+            self.chat_memory.set(messages)
             if self._chat_engine:
-                self._chat_engine.memory = self._chat_memory
+                self._chat_engine.memory = self.chat_memory
 
     def _update_system_prompt(
         self, 
@@ -813,19 +864,12 @@ class MistralAgent(
             self._strip_previous_messages_from_conversation()
             self.llm.llm_request = kwargs.get("llm_request", None)
             self._perform_tool_call("chat_engine_tool", **kwargs)
-
-    def _get_conversation(self, conversation_id: Optional[int] = None) -> Optional[Conversation]:
-        if conversation_id:
-            return Conversation.objects.filter_by(id=conversation_id).first()
-        return Conversation.objects.filter(
-            Conversation.key == self.chat_store_key
-        ).first()
     
     def _strip_previous_messages_from_conversation(self):
         """
         Strips the previous messages from the conversation.
         """
-        conversation = self._get_conversation()
+        conversation = self.conversation
         if conversation:
             conversation.value = conversation.value[:-2]
             conversation.save()
@@ -841,7 +885,7 @@ class MistralAgent(
 
     def _update_mood(self):
         self.logger.info("Attempting to update mood")
-        conversation = self._get_conversation()
+        conversation = self.conversation
         if not conversation or not conversation.value or len(conversation.value) == 0:
             self.logger.info("No conversation found")
             return
@@ -888,7 +932,7 @@ class MistralAgent(
     
     def _update_user_data(self):
         self.logger.info("Attempting to update user preferences")
-        conversation = self._get_conversation()
+        conversation = self.conversation
         self.logger.info("Updating user preferences")
         chat_history = self._memory.get_all() if self._memory else None
         if not chat_history:
@@ -916,7 +960,7 @@ class MistralAgent(
     
     def _summarize_conversation(self):
         self.logger.info("Summarizing conversation")
-        conversation = self._get_conversation()
+        conversation = self.conversation
         if not conversation or not conversation.value or len(conversation.value) == 0:
             self.logger.info("No conversation found")
             return

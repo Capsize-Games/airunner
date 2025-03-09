@@ -375,7 +375,6 @@ class RAGMixin:
                         text=f'{message["role"]}: \"{message["blocks"][0]["text"]}\"',
                         metadata={
                             "id": str(conversation.id) + "_" + str(message_id),
-                            "key": conversation.key + "_" + str(message_id),
                             "speaker": username,
                             "role": message["role"],
                         }

@@ -127,8 +127,6 @@ class MessageWidget(BaseWidget):
                 Conversation.id == self.conversation_id
             ).first()
             messages = conversation.value
-            print("messages start delete", 0, self.message_id)
-            print(messages, conversation.value, self.conversation_id, conversation.key)
             if self.message_id == 0:
                 conversation.value = []
             else:

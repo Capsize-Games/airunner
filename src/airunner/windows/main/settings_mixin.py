@@ -35,8 +35,6 @@ from airunner.data.models import (
     BrushSettings, 
     GridSettings,
     MemorySettings, 
-    Conversation, 
-    Summary, 
     ImageFilterValue, 
     TargetFiles, 
     WhisperSettings, 
@@ -60,7 +58,6 @@ class SettingsMixinSharedInstance:
     def __init__(self):
         if self._initialized:
             return
-        self.conversation_id = None
 
         # Configure the logger
         self.logger = logging.getLogger("AI Runner")
@@ -711,24 +708,6 @@ class SettingsMixin:
     def save_object(self, database_object):
         database_object.save()
 
-    def load_history_from_db(self, conversation_id):
-        conversation = Conversation.objects.filter_by(
-            id=conversation_id
-        ).first()
-        messages = conversation.value
-        return [
-            {
-                "id": id,
-                "role": LLMChatRole.HUMAN if message["role"] == "user"  else LLMChatRole.ASSISTANT,
-                "content": message["blocks"][0]["text"],
-                "name": self.username if message["role"] == "user" else self.chatbot.name,
-                "is_bot": message["role"] == "bot",
-                "timestamp": message["timestamp"],
-                "conversation_id": conversation_id
-
-            } for id, message in enumerate(messages)
-        ]
-
     def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
         if not self.settings_mixin_shared_instance.chatbot:
             chatbot = Chatbot.objects.options(
@@ -739,80 +718,6 @@ class SettingsMixin:
                 chatbot = self.create_chatbot("Default")
             self.settings_mixin_shared_instance.chatbot = chatbot
         return self.settings_mixin_shared_instance.chatbot
-
-    def create_conversation(self, chat_store_key: str):
-        # get prev conversation by key != chat_store_key
-        # order by id desc
-        # get first
-        previous_conversation = Conversation.objects.options(
-            joinedload(Conversation.summaries)
-        ).filter(
-            Conversation.key != chat_store_key
-        ).order_by(
-            Conversation.id.desc()
-        ).first()
-        # find conversation which has no title, bot_mood or messages
-        conversation = Conversation.objects.options(
-            joinedload(Conversation.summaries)
-        ).filter_by(
-            key=chat_store_key
-        ).first()
-        if (
-            previous_conversation 
-            and previous_conversation.bot_mood 
-            and conversation 
-            and conversation.bot_mood is None
-        ):
-            conversation.bot_mood = previous_conversation.bot_mood
-            conversation.save()
-        if conversation:
-            return conversation
-        conversation = Conversation(
-            timestamp=datetime.datetime.now(datetime.timezone.utc),
-            title="",
-            key=chat_store_key,
-            value=None,
-            chatbot_id=self.chatbot.id,
-            user_id=self.user.id,
-            chatbot_name=self.chatbot.name,
-            user_name=self.user.username,
-            bot_mood=previous_conversation.bot_mood if previous_conversation else None
-        )
-        conversation.save()
-        return Conversation.objects.options(
-            joinedload(Conversation.summaries)
-        ).filter_by(
-            key=chat_store_key
-        ).first()
-
-    def update_conversation_title(self, conversation_id, title):
-        conversation = Conversation.objects.filter_by(
-            id=conversation_id
-        ).first()
-        if conversation:
-            conversation.title = title
-            conversation.save()
-
-    def add_summary(self, content, conversation_id):
-        timestamp = datetime.datetime.now()  # Ensure timestamp is a datetime object
-        summary = Summary(
-            content=content,
-            timestamp=timestamp,
-            conversation_id=conversation_id
-        )
-        summary.save()
-    
-    def get_all_conversations(self) -> Optional[List[Conversation]]:
-        return Conversation.objects.all()
-
-    def delete_conversation(self, conversation_id):
-        Summary.objects.delete(conversation_id=conversation_id)
-        Conversation.objects.delete(id=conversation_id)
-
-    def get_most_recent_conversation(self) -> Optional[Conversation]:
-        return Conversation.objects.order_by(
-            Conversation.timestamp.desc()
-        ).first()
 
     def __settings_updated(self, setting_name=None, column_name=None, val=None):
         data = None
