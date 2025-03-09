@@ -18,6 +18,7 @@ from airunner.utils.clear_memory import clear_memory
 from airunner.handlers.llm.agent.mistral_agent import MistralAgentQObject
 from airunner.handlers.llm.training_mixin import TrainingMixin
 from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.handlers.llm.llm_response import LLMResponse
 
 
 class LLMHandler(
@@ -26,13 +27,10 @@ class LLMHandler(
 ):
     model_type: ModelType = ModelType.LLM
     model_class: str = "llm"
-    _model: Optional[object] = None
-    _streamer: Optional[object] = None
-    _chat_engine: Optional[object] = None
+    _model: Optional[AutoModelForCausalLM] = None
+    _streamer: Optional[TextIteratorStreamer] = None
     _chat_agent: Optional[MistralAgentQObject] = None
-    _llm_with_tools: Optional[object] = None
     _agent_executor: Optional[object] = None
-    _embed_model: Optional[object] = None
     _service_context_model: Optional[object] = None
     _use_query_engine: bool = False
     _use_chat_engine: bool = True
@@ -58,16 +56,6 @@ class LLMHandler(
         if "instruct" in path and "llama" in path:
             return True
         return False
-
-    @property
-    def username(self):
-        return self.user.username
-
-    @property
-    def botname(self):
-        if self.chatbot.assign_names:
-            return self.chatbot.botname
-        return "Assistant"
 
     @property
     def _quantization_config(self):
@@ -130,9 +118,8 @@ class LLMHandler(
         self._current_model_path = self.model_path
         self._load_tokenizer()
         self._load_model()
-        self._load_streamer()
         self._load_agent()
-        if self._model and self._tokenizer and self._streamer and self._chat_agent:
+        if self._model and self._tokenizer and self._chat_agent:
             self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
         else:
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
@@ -145,10 +132,6 @@ class LLMHandler(
             return
         self.logger.debug("Unloading LLM")
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
-        self._unload_streamer()
-        self._unload_llm_with_tools()
-        self._unload_agent_executor()
-        self._unload_embed_model()
         self._unload_model()
         self._unload_tokenizer()
         self._unload_agent()
@@ -168,25 +151,19 @@ class LLMHandler(
             llm_request=data.get("llm_request_data", None),
         )
 
-    # def chat(
-    #     self,
-    #     prompt: str,
-    #     system_prompt: Optional[str] = None,
-    #     rag_system_prompt: Optional[str] = None
-    # ) -> AgentChatResponse:
-    #     return self._do_generate(
-    #         prompt=prompt,
-    #         action=LLMActionType.CHAT,
-    #         system_prompt=system_prompt,
-    #         rag_system_prompt=rag_system_prompt
-    #     )
-
     def do_interrupt(self):
         """
         Public method to interrupt the chat process
         """
         if self._chat_agent:
             self._chat_agent.interrupt_process()
+
+    def on_conversation_deleted(self, data):
+        """
+        Public method to handle conversation deletion
+        """
+        if self._chat_agent:
+            self._chat_agent.on_conversation_deleted(data)
 
     def clear_history(self, data: Optional[Dict] = None):
         """
@@ -249,12 +226,6 @@ class LLMHandler(
         else:
             self._load_model_local()
 
-    def _load_streamer(self):
-        if self._streamer is not None:
-            return
-        self.logger.debug("Loading LLM text streamer")
-        self._streamer = TextIteratorStreamer(self._tokenizer)
-
     def _load_agent(self):
         if self._chat_agent is not None:
             return
@@ -278,38 +249,6 @@ class LLMHandler(
             tokenizer=self._tokenizer,
             default_tool_choice=None
         )
-
-    def _unload_streamer(self):
-        self.logger.debug("Unloading streamer")
-        try:
-            del self._streamer
-        except AttributeError as e:
-            self.logger.warning(f"Error unloading streamer: {e}")
-        self._streamer = None
-
-    def _unload_llm_with_tools(self):
-        self.logger.debug("Unloading LLM with tools")
-        try:
-            del self._llm_with_tools
-        except AttributeError as e:
-            self.logger.warning(f"Error unloading LLM with tools: {e}")
-        self._llm_with_tools = None
-
-    def _unload_agent_executor(self):
-        self.logger.debug("Unloading agent executor")
-        try:
-            del self._agent_executor
-        except AttributeError as e:
-            self.logger.warning(f"Error unloading agent executor: {e}")
-        self._agent_executor = None
-
-    def _unload_embed_model(self):
-        self.logger.debug("Unloading embed model")
-        try:
-            del self._embed_model
-        except AttributeError as e:
-            self.logger.warning(f"Error unloading embed model: {e}")
-        self._embed_model = None
 
     def _unload_model(self):
         self.logger.debug("Unloading model")
@@ -387,22 +326,14 @@ class LLMHandler(
         if action is LLMActionType.CHAT:
             self._send_final_message()
         return response
-
-    def _emit_streamed_text_signal(self, **kwargs):
-        self.logger.debug("Emitting streamed text signal")
-        kwargs["name"] = self.botname
-        self.emit_signal(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-            kwargs
-        )
+        
 
     def _send_final_message(self):
         self.logger.debug("Sending final message")
-        self._emit_streamed_text_signal(
-            message="",
-            is_first_message=False,
-            is_end_of_message=True
-        )
+        self.logger.debug("Emitting streamed text signal")
+        self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
+            "response": LLMResponse(is_end_of_message=True)
+        })
 
     def _do_set_seed(self):
         self.logger.debug("Setting seed")

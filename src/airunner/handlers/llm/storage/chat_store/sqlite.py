@@ -4,14 +4,12 @@ import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.sql import select
 from llama_index.core.llms import ChatMessage
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from llama_index.core.bridge.pydantic import Field, PrivateAttr
 from llama_index.core.storage.chat_store.base import BaseChatStore
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
-from airunner.data.session_manager import session_scope
 
 
 class SQLiteChatStore(BaseChatStore):
@@ -85,11 +83,9 @@ class SQLiteChatStore(BaseChatStore):
 
     def set_messages(self, key: str, messages: list[ChatMessage]) -> None:
         """Set messages for a key."""
-        with session_scope() as session:
-            result = session.execute(
-                select(Conversation).filter_by(key=key)
-            )
-            conversation = result.scalars().first()
+        id = int(key)
+        conversation = Conversation.objects.get(id)
+        if conversation:
             if messages and len(messages) > 0:
                 formatted_messages = []
                 for message in messages:
@@ -111,143 +107,128 @@ class SQLiteChatStore(BaseChatStore):
                         key=key,
                         value=messages
                     )
-                    session.add(conversation)
-                session.commit()
+                conversation.save()
 
     def get_latest_chatstore(self) -> dict:
         """Get the latest chatstore."""
-        with session_scope() as session:
-            result = session.query(Conversation).order_by(
-                Conversation.id.desc()
-            ).first()
-            return {
-                "key": result.key,
-                "value": result.value,
-            } if result else None
+        result = Conversation.objects.order_by("id", "desc").first()
+        return {
+            "key": str(result.id),
+            "value": result.value,
+        } if result else None
 
     def get_chatstores(self) -> list[dict]:
         """Get all chatstores."""
-        with session_scope() as session:
-            result = session.query(Conversation).all()
-            return [
-                {
-                    "key": item.key,
-                    "value": item.value,
-                } for item in result
-            ]
+        result = Conversation.objects.all()
+        return [
+            {
+                "key": str(item.id),
+                "value": item.value,
+            } for item in result
+        ]
 
     def get_messages(self, key: str) -> list[ChatMessage]:
         """Get messages for a key."""
-        with session_scope() as session:
-            result = session.query(Conversation).filter_by(key=key).first()
-            if result:
-                messages = result.value
+        id = int(key)
+        result = Conversation.objects.get(id)
+        messages = (result.value if result else None) or []
+        formatted_messages = []
+        for message in messages:
+            text = message["blocks"][0]["text"]
+            if message["role"] == "user":
+                name = result.user_name
             else:
-                messages = []
-            formatted_messages = []
-            for message in messages:
-                text = message["blocks"][0]["text"]
-                if message["role"] == "user":
-                    name = result.user_name
-                else:
-                    name = result.chatbot_name
-                text = f"{name}: {text}"
-                formatted_messages.append(ChatMessage.from_str(
-                    content=text,
-                    role=message["role"],
-                ))
-            return formatted_messages
+                name = result.chatbot_name
+            text = f"{name}: {text}"
+            formatted_messages.append(ChatMessage.from_str(
+                content=text,
+                role=message["role"],
+            ))
+        return formatted_messages
  
     def add_message(self, key: str, message: ChatMessage) -> None:
         """Add a message for a key."""
-        with session_scope() as session:
-            # Retrieve the existing messages from the current conversation
-            result = session.execute(
-                select(Conversation).filter_by(key=key)
-            )
-            conversation = result.scalars().first()
-            if conversation:
-                messages = conversation.value
-            else:
-                messages = []
-            messages = messages or []
-        
-            # Append the new message
-            message.blocks[0].text = strip_names_from_message(
-                message.blocks[0].text,
-                conversation.user_name,
-                conversation.chatbot_name
-            )
+        id = int(key)
+        conversation = Conversation.objects.get(id)
+        if conversation:
+            messages = conversation.value
+        else:
+            messages = []
+        messages = messages or []
+    
+        # Append the new message
+        message.blocks[0].text = strip_names_from_message(
+            message.blocks[0].text,
+            conversation.user_name,
+            conversation.chatbot_name
+        )
 
-            # Append the new message
-            messages.append(message.model_dump())
+        # Append the new message
+        messages.append(message.model_dump())
 
-            if conversation:
-                conversation.value = messages
-                flag_modified(conversation, "value")
-            else:
-                conversation = Conversation(
-                    key=key,
-                    value=messages,
-                    timestamp=datetime.datetime.now(datetime.timezone.utc),
-                    title="",
-                )
-                session.add(conversation)
-            session.commit()
+        if conversation:
+            conversation.value = messages
+            flag_modified(conversation, "value")
+        else:
+            conversation = Conversation(
+                key=key,
+                value=messages,
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+                title="",
+            )
+        conversation.save()
     
     def delete_messages(self, key: str) -> Optional[list[ChatMessage]]:
         """Delete messages for a key."""
-        with session_scope() as session:
-            session.query(Conversation).filter_by(key=key).delete()
-            session.commit()
-        return None
+        id = int(key)
+        Conversation.objects.delete(id)
 
     def delete_message(self, key: str, idx: int) -> Optional[ChatMessage]:
         """Delete specific message for a key."""
-        with session_scope() as session:
-            # First, retrieve the current list of messages
-            conversation = session.query(Conversation).filter_by(key=key).first()
-            if conversation:
-                messages = conversation.values
-            else:
-                messages = None
+        id = int(key)
+        # First, retrieve the current list of messages
+        conversation = Conversation.objects.get(id)
+        if conversation:
+            messages = conversation.values
+        else:
+            messages = None
 
-            if messages is None or idx < 0 or idx >= len(messages):
-                # If the key doesn't exist or the index is out of bounds
-                return None
-            
-            # Remove the message at the given index
-            removed_message = messages[idx]
-            messages.pop(idx)
-            self._update_conversation(conversation, messages)
-            return ChatMessage.model_validate(removed_message)
+        if messages is None or idx < 0 or idx >= len(messages):
+            # If the key doesn't exist or the index is out of bounds
+            return None
+        
+        # Remove the message at the given index
+        removed_message = messages[idx]
+        messages.pop(idx)
+        self._update_conversation(conversation, messages)
+        return ChatMessage.model_validate(removed_message)
 
     def delete_last_message(self, key: str) -> Optional[ChatMessage]:
         """Delete last message for a key."""
-        with session_scope() as session:
-            # First, retrieve the current list of messages
-            conversation = session.query(Conversation).filter_by(key=key).first()
-            if conversation:
-                messages = conversation.value
-            else:
-                messages = None
+        id = int(key)
+        # First, retrieve the current list of messages
+        conversation = Conversation.objects.get(id)
+        if conversation:
+            messages = conversation.value
+        else:
+            messages = None
 
-            if messages is None or len(messages) == 0:
-                # If the key doesn't exist or the array is empty
-                return None
-            
-            # Remove the message at the given index
-            removed_message = messages[-1]
-            messages.pop(-1)
-            session.query(Conversation).filter_by(key=key).update({"value": messages})
-            session.commit()
-            return ChatMessage.model_validate(removed_message)
+        if messages is None or len(messages) == 0:
+            # If the key doesn't exist or the array is empty
+            return None
+        
+        # Remove the message at the given index
+        removed_message = messages[-1]
+        messages.pop(-1)
+        Conversation.objects.update(id, {
+            "value": messages
+        })
+        return ChatMessage.model_validate(removed_message)
 
     def get_keys(self) -> list[str]:
         """Get all keys."""
-        with session_scope() as session:
-            conversations = session.query(Conversation).all()
-            return [conversation.key for conversation in conversations]
+        conversations = Conversation.objects.all()
+        return [str(conversation.id) for conversation in conversations]
 
 
 def params_from_uri(uri: str) -> dict:

@@ -13,6 +13,8 @@ from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
+from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.handlers.llm.llm_response import LLMResponse
 
 
 class ChatPromptWidget(BaseWidget):
@@ -61,7 +63,9 @@ class ChatPromptWidget(BaseWidget):
         self.register(SignalCode.SET_CONVERSATION, self.on_set_conversation)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.CHATBOT_CHANGED, self.on_chatbot_changed)
-        self.register(SignalCode.CONVERSATION_DELETED, self.on_conversation_deleted)
+        self.register(SignalCode.CONVERSATION_DELETED, self.on_delete_conversation)
+        self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_conversation)
+        self.register(SignalCode.LOAD_CONVERSATION, self.on_load_conversation)
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
@@ -90,10 +94,23 @@ class ChatPromptWidget(BaseWidget):
         else:
             self._conversation = None
 
-    def load_conversation(self):
-        conversation = Conversation.objects.order_by(
-            Conversation.id.desc()
-        ).first()
+    def on_load_conversation(self, data):
+        self.load_conversation(data["conversation_id"])
+    
+    def on_delete_conversation(self, data):
+        if self.conversation_id == data["conversation_id"] or self.conversation_id is None:
+            self._clear_conversation_widgets()
+        self.conversation_id = data["conversation_id"]            
+
+    def load_conversation(self, id: Optional[int] = None):
+        conversation = None
+        if id is not None:
+            conversation = Conversation.objects.get(id)
+        
+        if conversation is None:
+            conversation = Conversation.objects.order_by(
+                Conversation.id.desc()
+            ).first()
         if conversation is not None:
             self.conversation = conversation
             self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
@@ -132,12 +149,7 @@ class ChatPromptWidget(BaseWidget):
             self.enable_send_button()
 
     def on_chatbot_changed(self):
-        self._clear_conversation()
-
-    def on_conversation_deleted(self, data):
-        if self.conversation_id == data["conversation_id"]:
-            self.conversation_id = None
-            self._clear_conversation()
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
 
     def on_set_conversation(self, message):
         self._clear_conversation_widgets()
@@ -174,27 +186,21 @@ class ChatPromptWidget(BaseWidget):
         self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
 
     def on_add_bot_message_to_conversation(self, data: dict):
-        try:
-            name = data["name"]
-            message = data["message"]
-            is_first_message = data["is_first_message"]
-            is_end_of_message = data["is_end_of_message"]
-        except TypeError as e:
-            self.logger.error("Error parsing data: "+str(e))
-            self.enable_generate()
-            return
+        llm_response: LLMResponse = data.get("response", None)
+        if not llm_response:
+            raise ValueError("No LLMResponse object found in data")
 
-        if is_first_message:
+        if llm_response.is_first_message:
             self.stop_progress_bar()
 
         self.add_message_to_conversation(
-            name=name,
-            message=message,
+            name=llm_response.name or self.chatbot.name,
+            message=llm_response.message,
             is_bot=True, 
-            first_message=is_first_message
+            first_message=llm_response.is_first_message
         )
 
-        if is_end_of_message:
+        if llm_response.is_end_of_message:
             self.enable_generate()
 
     def enable_generate(self):
@@ -206,17 +212,14 @@ class ChatPromptWidget(BaseWidget):
 
     @Slot()
     def action_button_clicked_clear_conversation(self):
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
+    
+    def on_clear_conversation(self):
         self._clear_conversation()
 
     def _clear_conversation(self):
         self.conversation_history = []
         self._clear_conversation_widgets()
-
-    def _create_conversation(self):
-        self.conversation = self.create_conversation("cpw_" + uuid.uuid4().hex)
-        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
-            "conversation_id": self.conversation_id
-        })
 
     def _clear_conversation_widgets(self):
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
@@ -268,7 +271,7 @@ class ChatPromptWidget(BaseWidget):
                 "request_data": {
                     "action": self.action,
                     "prompt": prompt,
-                    "llm_request_data": None  # override as needed
+                    "llm_request_data": LLMRequest.from_default()
                 }
             }
         )
