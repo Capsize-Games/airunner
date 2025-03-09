@@ -7,6 +7,7 @@ from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.llm_history_item_widget import LLMHistoryItemWidget
 from airunner.widgets.llm.templates.llm_history_widget_ui import Ui_llm_history_widget
+from airunner.data.models import Conversation
 
 
 class LLMHistoryWidget(BaseWidget):
@@ -21,7 +22,7 @@ class LLMHistoryWidget(BaseWidget):
         self.load_conversations()
 
     def load_conversations(self):
-        conversations = self.get_all_conversations()
+        conversations = Conversation.objects.all()
         layout = self.ui.gridLayout_2
 
         if layout is None:
@@ -71,7 +72,7 @@ class LLMHistoryWidget(BaseWidget):
 
     def on_delete_conversation(self, layout, conversation):
         conversation_id = conversation.id
-        self.delete_conversation(conversation_id)
+        Conversation.delete(conversation_id)
         for i in reversed(range(layout.count())):
             widget = layout.itemAt(i).widget()
             if widget:
