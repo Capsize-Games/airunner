@@ -2,7 +2,6 @@
 
 Simple wrapper around AgentRunner + MistralAgentWorker.
 """
-from dataclasses import dataclass
 from typing import (
     Any,
     List,
