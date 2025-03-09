@@ -1,4 +1,5 @@
 from typing import Optional
+import logging
 import datetime
 from sqlalchemy import Column, Integer, DateTime, String, Text, JSON, ForeignKey
 from sqlalchemy.orm import relationship, joinedload
@@ -73,6 +74,19 @@ class Conversation(BaseModel):
             cls.id.desc()
         ).first()
         return conversation
+
+    @classmethod
+    def most_recent(cls) -> Optional['Conversation']:
+        try:
+            conversation = cls.objects.order_by(
+                cls.id.desc()
+            ).first()
+            
+            if conversation:
+                return Conversation(**conversation.to_dict())
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in most_recent(): {e}")
 
 
 Conversation.summaries = relationship(
