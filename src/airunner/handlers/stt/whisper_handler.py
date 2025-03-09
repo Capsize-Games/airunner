@@ -25,7 +25,7 @@ class WhisperHandler(BaseHandler):
         self._model = None
         self._processor = None
         self._feature_extractor = None
-        self._fs = 16000
+        self._sampling_rate = 16000
 
     @property
     def dtype(self):
@@ -172,14 +172,23 @@ class WhisperHandler(BaseHandler):
         if torch.isnan(inputs).any():
             raise NaNException
 
-        # Move inputs to CPU and ensure they are in float32 before passing to _feature_extractor
+        # Move inputs to CPU and ensure they are in float32 before 
+        # passing to _feature_extractor
         inputs = inputs.cpu().to(torch.float32)
-        inputs = self._feature_extractor(inputs, sampling_rate=self._fs, return_tensors="pt")
+        inputs = self._feature_extractor(
+            inputs, 
+            sampling_rate=self._sampling_rate, 
+            return_tensors="pt"
+        )
 
         if torch.isnan(inputs.input_features).any():
             raise NaNException
 
-        inputs["input_features"] = inputs["input_features"].to(self.dtype).to(self.device)
+        inputs["input_features"] = inputs["input_features"].to(
+            self.dtype
+        ).to(
+            self.device
+        )
         if torch.isnan(inputs.input_features).any():
             raise NaNException
 
