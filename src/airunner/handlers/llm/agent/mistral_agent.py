@@ -338,11 +338,11 @@ class AIRunnerAgent(
         return self._rag_engine_tool
 
     @property
-    def do_interrupt(self):
+    def do_interrupt(self) -> bool:
         return self._do_interrupt
 
     @do_interrupt.setter
-    def do_interrupt(self, value):
+    def do_interrupt(self, value: bool):
         self._do_interrupt = value
     
     @property
