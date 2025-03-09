@@ -14,6 +14,7 @@ from airunner.utils.random_seed import random_seed
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.handlers.llm.llm_response import LLMResponse
 
 
 class SaveGeneratorSettingsWorker(
@@ -177,16 +178,15 @@ class GeneratorForm(BaseWidget):
         """
 
         # Send a messagae to the user as chatbot letting them know that the image is generating
-        self.emit_signal(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-            dict(
+        self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
+            "response": LLMResponse(
                 message="Your image is generating...",
                 is_first_message=True,
                 is_end_of_message=True,
                 name=self.chatbot.name,
                 action=LLMActionType.GENERATE_IMAGE
             )
-        )
+        })
 
         # Unload non-Stable Diffusion models
         self.emit_signal(SignalCode.UNLOAD_NON_SD_MODELS, dict(
@@ -241,10 +241,11 @@ class GeneratorForm(BaseWidget):
 
         self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
             callback=lambda d: self.emit_signal(SignalCode.LOAD_NON_SD_MODELS, dict(
-                callback=lambda d: self.emit_signal(
-                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    image_generated_message
-                )
+                callback=lambda d: self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
+                    "response": LLMResponse(
+                        message=image_generated_message
+                    )
+                })
             ))
         ))
     ##########################################################################

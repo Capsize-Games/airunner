@@ -2,8 +2,9 @@ import traceback
 import torch
 from typing import Dict
 
-from airunner.enums import SignalCode, LLMActionType
+from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
+from airunner.handlers.llm.llm_response import LLMResponse
 
 
 class AgentWorker(Worker):
@@ -20,16 +21,13 @@ class AgentWorker(Worker):
             message["model"].generate(**message["kwargs"])
         except RuntimeError as e:
             self.logger.error(f"RuntimeError: {str(e)}")
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                dict(
-                    message="",
+            self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
+                "response": LLMResponse(
                     is_first_message=True,
                     is_end_of_message=True,
                     name=message["botname"],
-                    action=LLMActionType.CHAT
                 )
-            )
+            })
                 
 
         except Exception as e:

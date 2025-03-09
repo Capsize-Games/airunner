@@ -2,23 +2,29 @@
 
 Simple wrapper around AgentRunner + MistralAgentWorker.
 """
-import os
+from dataclasses import dataclass
 from typing import (
     Any,
     List,
     Optional,
     Union,
     Dict,
+    Type,
 )
-import uuid
 import datetime
 import platform
 from PySide6.QtCore import QObject
+
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
-from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from llama_index.core.chat_engine.types import AgentChatResponse
-from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import RefreshSimpleChatEngine
 from llama_index.core.base.llms.types import ChatMessage
+from llama_index.core.memory import BaseMemory
+from llama_index.core.llms.custom import CustomLLM
+
+from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
+from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import RefreshSimpleChatEngine
 from airunner.enums import LLMActionType, SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -30,39 +36,33 @@ from airunner.handlers.llm.agent.tools.rag_engine_tool import RAGEngineTool
 from airunner.handlers.llm.agent.weather_mixin import WeatherMixin
 from airunner.handlers.llm.storage.chat_store.sqlite import SQLiteChatStore
 from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuffer
-from llama_index.core.memory import BaseMemory
 from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
 from airunner.utils.strip_names_from_message import strip_names_from_message
 from airunner.settings import DB_URL
 from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.handlers.llm.llm_response import LLMResponse
 
 
 DEFAULT_MAX_FUNCTION_CALLS = 5
 
-
-class MistralAgent(
+class AIRunnerAgent(
     RAGMixin,
     WeatherMixin
 ):
-    """QObject wrapper for Mistral Agent"""
     def __init__(
         self,
-        model: Any,
-        tokenizer: Any,
         default_tool_choice: Optional[Union[str, dict]] = None,
         max_function_calls: int = DEFAULT_MAX_FUNCTION_CALLS,
+        *args,
         **kwargs
     ) -> None:
         RAGMixin.__init__(self)
         self.update_mood_after_n_turns = 3
         self.summarize_after_n_turns = 5
-        self.model = model
-        self.tokenizer = tokenizer
         self._streaming_stopping_criteria: Optional[ExternalConditionStoppingCriteria] = None
         self._do_interrupt: bool = False
         self.history: Optional[List[ChatMessage]] = []
-        self._llm: Optional[HuggingFaceLLM] = None
-        # self.news_scraper_worker: NewsScraperWorker = create_worker(NewsScraperWorker)
+        self._llm: Optional[Type[CustomLLM]] = None
         self._conversation_summaries: Optional[str] = None
         self._conversation: Optional[Conversation] = None
         self._conversation_id: Optional[int] = None
@@ -89,8 +89,15 @@ class MistralAgent(
         self._complete_response: str = ""
         self._store_user_tool: Optional[FunctionTool] = None
         self.register(SignalCode.DELETE_MESSAGES_AFTER_ID, self.on_delete_messages_after_id)
-        super().__init__(**kwargs)
     
+    def on_delete_messages_after_id(self):
+        conversation = self.conversation
+        if conversation:
+            messages = conversation.value
+            self.chat_memory.set(messages)
+            if self._chat_engine:
+                self._chat_engine.memory = self.chat_memory
+        
     @property
     def do_summarize_conversation(self) -> bool:
         messages = self.conversation.value or []
@@ -206,25 +213,21 @@ class MistralAgent(
         return self._streaming_stopping_criteria
 
     @property
-    def llm(self) -> HuggingFaceLLM:
-        if not self._llm:
-            self.logger.info("Loading HuggingFaceLLM")
-            self._llm = HuggingFaceLLM(
-                model=self.model, 
-                tokenizer=self.tokenizer,
-                streaming_stopping_criteria=self.streaming_stopping_criteria
-            )
-        return self._llm
+    def llm(self) -> Type[CustomLLM]:
+        pass
 
     @property
     def chat_engine(self) -> RefreshSimpleChatEngine:
         if not self._chat_engine:
             self.logger.info("Loading RefreshSimpleChatEngine")
-            self._chat_engine = RefreshSimpleChatEngine.from_defaults(
-                system_prompt=self._system_prompt,
-                memory=self.chat_memory,
-                llm=self.llm
-            )
+            try:
+                self._chat_engine = RefreshSimpleChatEngine.from_defaults(
+                    system_prompt=self._system_prompt,
+                    memory=self.chat_memory,
+                    llm=self.llm
+                )
+            except Exception as e:
+                self.logger.error(f"Error loading chat engine: {str(e)}")
         return self._chat_engine
     
     @property
@@ -722,10 +725,6 @@ class MistralAgent(
 
     def unload(self):
         self.unload_rag()
-        del self.model
-        del self.tokenizer
-        self.model = None
-        self.tokenizer = None
         self.thread = None
         del self._chat_engine
         del self._chat_engine_tool
@@ -768,14 +767,6 @@ class MistralAgent(
         self.react_tool_agent.memory = self.chat_memory
         self.reload_rag_engine()
     
-    def on_delete_messages_after_id(self):
-        conversation = self.conversation
-        if conversation:
-            messages = conversation.value
-            self.chat_memory.set(messages)
-            if self._chat_engine:
-                self._chat_engine.memory = self.chat_memory
-
     def _update_system_prompt(
         self, 
         system_prompt: Optional[str] = None,
@@ -795,6 +786,7 @@ class MistralAgent(
         self._complete_response = ""
         self.do_interrupt = False
         message = f"{self.username}: {message}"
+        self._update_memory(action)
         kwargs = {
             "input": f"{message}",
             "chat_history": self._memory.get_all() if self._memory else None,
@@ -1026,41 +1018,77 @@ class MistralAgent(
     
     def do_interrupt_process(self):
         if self.do_interrupt:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                dict(
-                    message="",
-                    is_first_message=False,
-                    is_end_of_message=False,
-                    name=self.botname,
-                    action=LLMActionType.CHAT
-                )
-            )
+            self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
+                "response": LLMResponse(name=self.botname,)
+            })
         return self.do_interrupt
     
     def handle_response(self, response, is_first_message=False, is_last_message=False, do_not_display=False):
         if response != self._complete_response and not do_not_display:
             response = strip_names_from_message(response, self.username, self.botname)
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {
-                    "message": response,
-                    "is_first_message": is_first_message,
-                    "is_end_of_message": is_last_message,
-                    "name": self.botname,
-                    "action": LLMActionType.CHAT
-                }
-            )
+            self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
+                "response": LLMResponse(
+                    message=response,
+                    is_first_message=is_first_message,
+                    is_end_of_message=is_last_message,
+                    name=self.botname,
+                )
+            })
         self._complete_response += response
+
+
+class GroqAgent(AIRunnerAgent):
+    def llm(self) -> Type[CustomLLM]:
+        pass
+
+
+class OpenRouterAgent(AIRunnerAgent):
+    def llm(self) -> Type[CustomLLM]:
+        pass
+
+
+class OpenAIAgent(AIRunnerAgent):
+    def llm(self) -> Type[CustomLLM]:
+        pass
 
 
 class MistralAgentQObject(
     QObject,
+    AIRunnerAgent,
     MediatorMixin,
     SettingsMixin,
-    MistralAgent
 ):
-    def __init__(self, *args, **kwargs):
+    """QObject wrapper for Mistral Agent"""
+    def __init__(
+        self, 
+        model: Optional[AutoModelForCausalLM] = None,
+        tokenizer: Optional[AutoTokenizer] = None,
+        *args, 
+        **kwargs
+    ):
+        self.model = model
+        self.tokenizer = tokenizer
         MediatorMixin.__init__(self)
-        MistralAgent.__init__(self, *args, **kwargs)
         super().__init__(*args, **kwargs)
+    
+    def unload(self):
+        del self.model
+        del self.tokenizer
+        self.model = None
+        self.tokenizer = None
+        self._llm = None
+        super().unload()
+    
+    @property
+    def llm(self) -> Type[CustomLLM]:
+        if not self._llm:
+            self.logger.info("Loading HuggingFaceLLM")
+            if self.model and self.tokenizer:
+                self._llm = HuggingFaceLLM(
+                    model=self.model,
+                    tokenizer=self.tokenizer,
+                    streaming_stopping_criteria=self.streaming_stopping_criteria
+                )
+            else:
+                self.logger.error("Unable to load HuggingFaceLLM: Model and tokenizer must be provided.")
+        return self._llm

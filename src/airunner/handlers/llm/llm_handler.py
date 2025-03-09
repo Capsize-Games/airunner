@@ -18,6 +18,7 @@ from airunner.utils.clear_memory import clear_memory
 from airunner.handlers.llm.agent.mistral_agent import MistralAgentQObject
 from airunner.handlers.llm.training_mixin import TrainingMixin
 from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.handlers.llm.llm_response import LLMResponse
 
 
 class LLMHandler(
@@ -405,11 +406,10 @@ class LLMHandler(
 
     def _send_final_message(self):
         self.logger.debug("Sending final message")
-        self._emit_streamed_text_signal(
-            message="",
-            is_first_message=False,
-            is_end_of_message=True
-        )
+        self.logger.debug("Emitting streamed text signal")
+        self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
+            "response": LLMResponse(is_end_of_message=True)
+        })
 
     def _do_set_seed(self):
         self.logger.debug("Setting seed")

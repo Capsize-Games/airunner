@@ -7,6 +7,7 @@ from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
 from airunner.handlers.tts.espeak_handler import EspeakHandler
 from airunner.handlers.tts.speecht5_handler import SpeechT5Handler
 from airunner.workers.worker import Worker
+from airunner.handlers.llm.llm_response import LLMResponse
 
 
 class TTSGeneratorWorker(Worker):
@@ -35,19 +36,22 @@ class TTSGeneratorWorker(Worker):
         if not self.application_settings.tts_enabled:
             return
 
-        action = data.get("action", LLMActionType.CHAT)
-        if action is LLMActionType.GENERATE_IMAGE:
+        llm_response: LLMResponse = data.get("response", None)
+        if not llm_response:
+            raise ValueError("No LLMResponse object found in data")
+
+        if llm_response.action is LLMActionType.GENERATE_IMAGE:
             return
 
         if self.tts.model_status is not ModelStatus.LOADED:
             self.tts.load()
 
-        message = data.get("message", "")
-        is_end_of_message = data.get("is_end_of_message", False)
         self.add_to_queue({
-            'message': message.replace("</s>", "") + ("." if is_end_of_message else ""),
+            'message': llm_response.message.replace("</s>", "") + (
+                "." if llm_response.is_end_of_message else ""
+            ),
             'tts_settings': self.tts_settings,
-            'is_end_of_message': is_end_of_message,
+            'is_end_of_message': llm_response.is_end_of_message,
         })
 
     def on_interrupt_process_signal(self):

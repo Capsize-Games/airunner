@@ -14,6 +14,7 @@ from airunner.widgets.llm.message_widget import MessageWidget
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
 from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.handlers.llm.llm_response import LLMResponse
 
 
 class ChatPromptWidget(BaseWidget):
@@ -185,27 +186,21 @@ class ChatPromptWidget(BaseWidget):
         self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
 
     def on_add_bot_message_to_conversation(self, data: dict):
-        try:
-            name = data["name"]
-            message = data["message"]
-            is_first_message = data["is_first_message"]
-            is_end_of_message = data["is_end_of_message"]
-        except TypeError as e:
-            self.logger.error("Error parsing data: "+str(e))
-            self.enable_generate()
-            return
+        llm_response: LLMResponse = data.get("response", None)
+        if not llm_response:
+            raise ValueError("No LLMResponse object found in data")
 
-        if is_first_message:
+        if llm_response.is_first_message:
             self.stop_progress_bar()
 
         self.add_message_to_conversation(
-            name=name,
-            message=message,
+            name=llm_response.name or self.chatbot.name,
+            message=llm_response.message,
             is_bot=True, 
-            first_message=is_first_message
+            first_message=llm_response.is_first_message
         )
 
-        if is_end_of_message:
+        if llm_response.is_end_of_message:
             self.enable_generate()
 
     def enable_generate(self):
