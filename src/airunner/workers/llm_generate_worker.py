@@ -11,7 +11,6 @@ class LLMGenerateWorker(Worker):
         self.llm = None
         super().__init__()
         for signal in (
-            (SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal),
             (SignalCode.LLM_UNLOAD_SIGNAL, self.on_llm_on_unload_signal),
             (SignalCode.LLM_LOAD_SIGNAL, self.on_llm_load_model_signal),
             (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_llm_clear_history_signal),
@@ -36,9 +35,6 @@ class LLMGenerateWorker(Worker):
             self.llm.unload()
         if self._llm_thread is not None:
             self._llm_thread.join()
-
-    def on_llm_request_worker_response_signal(self, message: dict):
-        self.add_to_queue(message)
 
     def on_llm_on_unload_signal(self, data=None):
         data = data or {}
