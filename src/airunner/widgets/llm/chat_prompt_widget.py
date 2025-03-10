@@ -45,7 +45,7 @@ class ChatPromptWidget(BaseWidget):
         self.ui.action.addItem("Image")
         self.ui.action.addItem("RAG")
         self.ui.action.addItem("Store Data")
-        action = LLMActionType[self.action]
+        action = self.action
         if action is LLMActionType.APPLICATION_COMMAND:
             self.ui.action.setCurrentIndex(0)
         elif action is LLMActionType.CHAT:
@@ -236,8 +236,8 @@ class ChatPromptWidget(BaseWidget):
         self.enable_send_button()
 
     @property
-    def action(self) -> str:
-        return self.llm_generator_settings.action
+    def action(self) -> LLMActionType:
+        return LLMActionType[self.llm_generator_settings.action]
 
     def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="causallm"):
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
@@ -271,7 +271,7 @@ class ChatPromptWidget(BaseWidget):
                 "request_data": {
                     "action": self.action,
                     "prompt": prompt,
-                    "llm_request_data": LLMRequest.from_default()
+                    "llm_request": LLMRequest.from_default()
                 }
             }
         )
