@@ -196,8 +196,7 @@ class SliderWidget(BaseWidget):
         if not attr_name:
             return
         if self._callback:
-            callback = getattr(self, self._callback)
-            callback(attr_name, value)
+            self._callback(attr_name, value)
         else:
             self.set_settings_value(attr_name, value)
 
