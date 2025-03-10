@@ -147,8 +147,8 @@ class LLMHandler(
             action = LLMActionType[action]
         return self._do_generate(
             prompt=data["request_data"]["prompt"],
-            action=action,
-            llm_request=data.get("llm_request_data", None),
+            action=data["request_data"]["action"],
+            llm_request=data["request_data"]["llm_request"],
         )
 
     def do_interrupt(self):

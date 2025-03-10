@@ -4,7 +4,6 @@ import sys
 import urllib
 import webbrowser
 from functools import partial
-from typing import Optional
 
 import requests
 from PIL import Image
@@ -37,7 +36,9 @@ from airunner.enums import (
     SignalCode,
     CanvasToolName,
     GeneratorSection,
-    LLMAction, ModelType, ModelStatus
+    LLMActionType, 
+    ModelType, 
+    ModelStatus
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import (
@@ -70,7 +71,7 @@ from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
-from airunner.data.models import WindowSettings
+from airunner.handlers.llm.llm_request import LLMRequest
 
 
 class MainWindow(
@@ -490,8 +491,9 @@ class MainWindow(
                 {
                     "llm_request": True,
                     "request_data": {
-                        "action": LLMAction.RAG,
+                        "action": LLMActionType.RAG,
                         "prompt": "Summarize the text and provide a synopsis of the content. Be concise and informative.",
+                        "llm_request": LLMRequest.from_default()
                     }
                 }
             )

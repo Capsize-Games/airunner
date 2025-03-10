@@ -144,7 +144,6 @@ class SignalCode(Enum):
     # TODO: combine clear history signals - we have two by mistake
     LLM_CLEAR_HISTORY_SIGNAL = "llm_clear_history_signal"
     LLM_TEXT_STREAMED_SIGNAL = "llm_text_streamed_signal"
-    LLM_REQUEST_WORKER_RESPONSE_SIGNAL = "LLMRequestWorker_response_signal"
     LLM_REQUEST_SIGNAL = "llm_request_signal"
     LLM_TEXT_GENERATE_REQUEST_SIGNAL = "llm_text_generate_request_signal"
     LLM_TOKEN_SIGNAL = "llm_token_signal"
@@ -310,13 +309,6 @@ class Mode(Enum):
     IMAGE = "Image Generation"
     LANGUAGE_PROCESSOR = "Language Processing"
     MODEL_MANAGER = "Model Manager"
-
-
-class LLMAction(Enum):
-    CHAT = "chat"
-    RAG = "rag"
-    UPDATE_BOT_MOOD = "summary"
-    EVALUATE_USER = "user_evaluation"
 
 
 class LLMChatRole(Enum):

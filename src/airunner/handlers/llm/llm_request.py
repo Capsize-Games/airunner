@@ -54,6 +54,20 @@ class LLMRequest:
             "temperature": temperature
         })
 
+        """
+        Length penalty flag is only used in beam-based generation modes
+        so num_beams should be > 1 for length penalty to be used.
+        """
+        if self.num_beams == 1 and length_penalty != 0.0:
+            del data["length_penalty"]
+
+        """
+        early_stopping flag is only used in beam-based generation modes
+        so num_beams should be > 1 for early stopping to be used.
+        """
+        if self.num_beams == 1:
+            del data["early_stopping"]
+
         return data
     
     @classmethod
