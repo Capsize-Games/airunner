@@ -11,7 +11,6 @@ from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import (
 )
 from llama_index.core.tools.types import AsyncBaseTool, ToolMetadata, ToolOutput
 from llama_index.core.langchain_helpers.agents.tools import IndexToolConfig, LlamaIndexTool
-from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 
 class ChatEngineTool(AsyncBaseTool):

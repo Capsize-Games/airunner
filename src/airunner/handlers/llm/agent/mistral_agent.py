@@ -33,7 +33,7 @@ from airunner.handlers.llm.agent.external_condition_stopping_criteria import Ext
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 from airunner.handlers.llm.agent.tools.rag_engine_tool import RAGEngineTool
 from airunner.handlers.llm.agent.weather_mixin import WeatherMixin
-from airunner.handlers.llm.storage.chat_store.sqlite import SQLiteChatStore
+from airunner.handlers.llm.storage.chat_store.database import DatabaseChatStore
 from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuffer
 from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
 from airunner.utils.strip_names_from_message import strip_names_from_message
@@ -77,7 +77,7 @@ class AIRunnerAgent(
         self._information_scraper_tool: Optional[ChatEngineTool] = None
         self._information_scraper_engine: Optional[RefreshSimpleChatEngine] = None
         self._rag_engine_tool: Optional[RAGEngineTool] = None
-        self._chat_store: Optional[SQLiteChatStore] = None
+        self._chat_store: Optional[DatabaseChatStore] = None
         self._chat_memory: Optional[ChatMemoryBuffer] = None
         self._current_action: LLMActionType = LLMActionType.NONE
         self._memory: Optional[BaseMemory] = None
@@ -699,13 +699,13 @@ class AIRunnerAgent(
         return prompt
     
     @property
-    def chat_store(self) -> SQLiteChatStore:
+    def chat_store(self) -> DatabaseChatStore:
         if not self._chat_store:
-            self._chat_store = SQLiteChatStore.from_uri(DB_URL)
+            self._chat_store = DatabaseChatStore.from_uri(DB_URL)
         return self._chat_store
 
     @chat_store.setter
-    def chat_store(self, value: Optional[SQLiteChatStore]):
+    def chat_store(self, value: Optional[DatabaseChatStore]):
         self._chat_store = value
 
     @property

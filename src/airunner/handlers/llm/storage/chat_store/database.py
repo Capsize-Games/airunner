@@ -12,7 +12,7 @@ from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
 
 
-class SQLiteChatStore(BaseChatStore):
+class DatabaseChatStore(BaseChatStore):
     table_name: Optional[str] = Field(
         default="chatstore", description="SQLite table name."
     )
@@ -43,7 +43,7 @@ class SQLiteChatStore(BaseChatStore):
         async_connection_string: Optional[str] = None,
         debug: bool = False,
         use_jsonb: bool = False,
-    ) -> "SQLiteChatStore":
+    ) -> "DatabaseChatStore":
         """Return connection string from database parameters."""
         return cls(
             table_name=table_name,
@@ -59,7 +59,7 @@ class SQLiteChatStore(BaseChatStore):
         schema_name: str = "",
         debug: bool = False,
         use_jsonb: bool = False,
-    ) -> "SQLiteChatStore":
+    ) -> "DatabaseChatStore":
         """Return connection string from database parameters."""
         params = params_from_uri(uri)
         return cls.from_params(
