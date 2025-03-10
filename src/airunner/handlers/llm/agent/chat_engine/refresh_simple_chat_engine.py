@@ -8,3 +8,9 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
             content=system_prompt, 
             role=self._llm.metadata.system_role
         )
+
+    async def achat(self, *args, **kwargs):
+        pass
+
+    async def astream_chat(self, *args, **kwargs):
+        pass

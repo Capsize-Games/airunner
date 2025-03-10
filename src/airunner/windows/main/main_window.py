@@ -4,7 +4,7 @@ import sys
 import urllib
 import webbrowser
 from functools import partial
-from typing import Optional
+from typing import Dict
 
 import requests
 from PIL import Image
@@ -37,7 +37,9 @@ from airunner.enums import (
     SignalCode,
     CanvasToolName,
     GeneratorSection,
-    LLMAction, ModelType, ModelStatus
+    LLMActionType, 
+    ModelType, 
+    ModelStatus
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import (
@@ -70,7 +72,8 @@ from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
-from airunner.data.models import WindowSettings
+from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.handlers.llm.llm_settings import LLMSettings
 
 
 class MainWindow(
@@ -138,7 +141,7 @@ class MainWindow(
         self.status_normal_color_light = STATUS_NORMAL_COLOR_LIGHT
         self.status_normal_color_dark = STATUS_NORMAL_COLOR_DARK
         self._themes = None
-        self.button_clicked_signal = Signal(dict)
+        self.button_clicked_signal = Signal(Dict)
         self.status_widget = None
         self.header_widget_spacer = None
         self.deterministic_window = None
@@ -453,7 +456,7 @@ class MainWindow(
             file.write(response.content)
         return filename
 
-    def on_navigate_to_url(self, data: dict = None):
+    def on_navigate_to_url(self, data: Dict = None):
         url, ok = QInputDialog.getText(self, 'Browse Web', 'Enter your URL:')
         if ok:
             try:
@@ -490,8 +493,9 @@ class MainWindow(
                 {
                     "llm_request": True,
                     "request_data": {
-                        "action": LLMAction.RAG,
+                        "action": LLMActionType.RAG,
                         "prompt": "Summarize the text and provide a synopsis of the content. Be concise and informative.",
+                        "llm_request": LLMRequest.from_default()
                     }
                 }
             )
@@ -550,10 +554,10 @@ class MainWindow(
         # Start a new instance of the application
         QProcess.startDetached(sys.executable, sys.argv)
 
-    def on_write_file_signal(self, data: dict):
+    def on_write_file_signal(self, data: Dict):
         """
         Writes data to a file.
-        :param data: dict
+        :param data: Dict
         :return: None
         """
         args = data["args"]
@@ -564,11 +568,11 @@ class MainWindow(
         with open("output.txt", "w") as f:
             f.write(message)
 
-    def on_bash_execute_signal(self, data: dict) -> str:
+    def on_bash_execute_signal(self, data: Dict) -> str:
         """
         Takes a message from the LLM and strips bash commands from it.
         Passes bash command to the bash_execute function.
-        :param data: dict
+        :param data: Dict
         :return:
         """
         args = data["args"]
@@ -621,7 +625,7 @@ class MainWindow(
                 return shortcutkey.text
         return ""
 
-    def on_save_stablediffusion_prompt_signal(self, data: dict):
+    def on_save_stablediffusion_prompt_signal(self, data: Dict):
         self.create_saved_prompt({
             'prompt': data["prompt"],
             'negative_prompt': data["negative_prompt"],
@@ -681,7 +685,7 @@ class MainWindow(
         else:
             self.showFullScreen()
 
-    def on_unload_non_sd_models(self, data:dict=None):
+    def on_unload_non_sd_models(self, data:Dict=None):
         self._llm_generate_worker.on_llm_on_unload_signal()
         self._tts_generator_worker.unload()
         self._stt_audio_processor_worker.unload()
@@ -689,7 +693,7 @@ class MainWindow(
         if callback:
             callback(data)
 
-    def on_load_non_sd_models(self, data:dict=None):
+    def on_load_non_sd_models(self, data:Dict=None):
         self._llm_generate_worker.load()
         if self.application_settings.tts_enabled:
             self._tts_generator_worker.load()
@@ -699,7 +703,7 @@ class MainWindow(
         if callback:
             callback(data)
 
-    def on_toggle_llm(self, data:dict=None, val=None):
+    def on_toggle_llm(self, data:Dict=None, val=None):
         if val is None:
             val = not self.application_settings.llm_enabled
         self._update_action_button(
@@ -712,7 +716,7 @@ class MainWindow(
             data
         )
 
-    def on_toggle_sd(self, data:dict=None, val=None):
+    def on_toggle_sd(self, data:Dict=None, val=None):
         if val is None:
             val = not self.application_settings.sd_enabled
         self._update_action_button(
@@ -725,7 +729,7 @@ class MainWindow(
             data
         )
 
-    def on_toggle_tts(self, data:dict=None, val=None):
+    def on_toggle_tts(self, data:Dict=None, val=None):
         if val is None:
             val = not self.application_settings.sd_enabled
         self._update_action_button(
@@ -746,7 +750,7 @@ class MainWindow(
         load_signal: SignalCode,
         unload_signal: SignalCode,
         application_setting:str=None,
-        data:dict=None
+        data:Dict=None
     ):
         if self._model_status[model_type] is ModelStatus.LOADING:
             val = not val
@@ -1105,6 +1109,7 @@ class MainWindow(
         elif model is ModelType.LLM:
             self.ui.actionToggle_LLM.setDisabled(status is ModelStatus.LOADING)
             if status is ModelStatus.FAILED:
+                self.logger.warning("LLM failed to load")
                 self.ui.actionToggle_LLM.setChecked(False)
         elif model is ModelType.TTS:
             self.ui.actionToggle_Text_to_Speech.setDisabled(status is ModelStatus.LOADING)

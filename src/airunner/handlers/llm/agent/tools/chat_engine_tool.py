@@ -11,7 +11,6 @@ from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import (
 )
 from llama_index.core.tools.types import AsyncBaseTool, ToolMetadata, ToolOutput
 from llama_index.core.langchain_helpers.agents.tools import IndexToolConfig, LlamaIndexTool
-from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 
 class ChatEngineTool(AsyncBaseTool):
@@ -68,6 +67,7 @@ class ChatEngineTool(AsyncBaseTool):
         query_str = self._get_query_str(*args, **kwargs)
         do_not_display = kwargs.get("do_not_display", False)
         chat_history = kwargs.get("chat_history", [])
+        self.chat_engine._llm.llm_request = kwargs.get("llm_request", None)
         streaming_response = self.chat_engine.stream_chat(
             query_str, 
             chat_history=chat_history
@@ -92,27 +92,8 @@ class ChatEngineTool(AsyncBaseTool):
             raw_output=response,
         )
 
-    async def acall(self, *args: Any, **kwargs: Any) -> ToolOutput:
-        query_str = self._get_query_str(*args, **kwargs)
-        chat_history = kwargs.get("chat_history", None)
-        streaming_response = await self.chat_engine.astream_chat(
-            query_str,
-            chat_history=chat_history
-        )
-
-        response = ""
-        is_first_message = True
-        for token in streaming_response.response_gen:
-            response += token
-            self.agent.handle_response(token, is_first_message)
-            is_first_message = False
-
-        return ToolOutput(
-            content=str(response),
-            tool_name=self.metadata.name,
-            raw_input={"input": query_str},
-            raw_output=response,
-        )
+    async def acall(self, *args, **kwargs):
+        pass
 
     def as_langchain_tool(self) -> "LlamaIndexTool":
         tool_config = IndexToolConfig(

@@ -11,7 +11,6 @@ class LLMGenerateWorker(Worker):
         self.llm = None
         super().__init__()
         for signal in (
-            (SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal),
             (SignalCode.LLM_UNLOAD_SIGNAL, self.on_llm_on_unload_signal),
             (SignalCode.LLM_LOAD_SIGNAL, self.on_llm_load_model_signal),
             (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_llm_clear_history_signal),
@@ -21,9 +20,13 @@ class LLMGenerateWorker(Worker):
             (SignalCode.LOAD_CONVERSATION, self.on_llm_load_conversation),
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.llm_on_interrupt_process_signal),
             (SignalCode.QUIT_APPLICATION, self.on_quit_application_signal),
+            (SignalCode.CONVERSATION_DELETED, self.on_conversation_deleted_signal),
         ):
             self.register(signal[0], signal[1])
         self._llm_thread = None
+
+    def on_conversation_deleted_signal(self, data):
+        self.llm.on_conversation_deleted(data)
 
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")
@@ -32,9 +35,6 @@ class LLMGenerateWorker(Worker):
             self.llm.unload()
         if self._llm_thread is not None:
             self._llm_thread.join()
-
-    def on_llm_request_worker_response_signal(self, message: dict):
-        self.add_to_queue(message)
 
     def on_llm_on_unload_signal(self, data=None):
         data = data or {}

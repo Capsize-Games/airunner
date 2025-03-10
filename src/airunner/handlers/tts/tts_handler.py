@@ -29,6 +29,11 @@ class TTSHandler(BaseHandler):
         # Runtime instances of the models should be instance attributes
         self._model = None
         self._processor = None
+    
+    @abstractmethod
+    def reload_speaker_embeddings(self):
+        """Reload speaker embeddings."""
+        pass
 
     @abstractmethod
     def interrupt_process_signal(self):
