@@ -24,7 +24,7 @@ setup(
         "optimum==1.24.0",
         "numpy==1.26.4",
         "pillow==11.1.0",
-        "alembic==1.14.1",
+        "alembic==1.15.1",
         "aiosqlite==0.21.0",
     ],
     extras_require={
