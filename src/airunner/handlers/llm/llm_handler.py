@@ -15,10 +15,14 @@ from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import MAX_SEED
 from airunner.utils.clear_memory import clear_memory
-from airunner.handlers.llm.agent.mistral_agent import MistralAgentQObject
+from airunner.handlers.llm.agent.mistral_agent import (
+    MistralAgentQObject, 
+    OpenRouterQObject
+)
 from airunner.handlers.llm.training_mixin import TrainingMixin
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.handlers.llm.llm_settings import LLMSettings
 
 
 class LLMHandler(
@@ -44,6 +48,11 @@ class LLMHandler(
     _generator: Optional[object] = None
     _history: Optional[List] = []
     _current_model_path: Optional[str] = None
+    llm_settings: LLMSettings
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.llm_settings = LLMSettings()
 
     @property
     def is_mistral(self) -> bool:
@@ -122,6 +131,10 @@ class LLMHandler(
         if self._model and self._tokenizer and self._chat_agent:
             self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
         else:
+            if not self._model:
+                self.logger.error("Model failed to load")
+            if not self._chat_agent:
+                self.logger.error("Chat agent failed to load")
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
 
     def unload(self):
@@ -244,11 +257,23 @@ class LLMHandler(
             #     return_direct=True
             # ),
         ]
-        self._chat_agent = MistralAgentQObject(
-            model=self._model,
-            tokenizer=self._tokenizer,
-            default_tool_choice=None
-        )
+        if self.llm_settings.use_local_llm:
+            self.logger.info("Loading local chat agent")
+            self._chat_agent = MistralAgentQObject(
+                model=self._model,
+                tokenizer=self._tokenizer,
+                default_tool_choice=None,
+                llm_settings=self.llm_settings
+            )
+        elif self.llm_settings.use_open_router:
+            self.logger.info("Loading openrouter chat agent")
+            self._chat_agent = OpenRouterQObject(
+                llm_settings=self.llm_settings
+            )
+        else:
+            self.logger.warning("No chat agent to load")
+            print(self.llm_settings)
+        self.logger.info("Chat agent loaded")
 
     def _unload_model(self):
         self.logger.debug("Unloading model")
