@@ -2,6 +2,7 @@
 
 Simple wrapper around AgentRunner + MistralAgentWorker.
 """
+import os
 from typing import (
     Any,
     List,
@@ -40,6 +41,8 @@ from airunner.utils.strip_names_from_message import strip_names_from_message
 from airunner.settings import DB_URL
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.handlers.llm.llm_settings import LLMSettings
+from openai import OpenAI
 
 
 DEFAULT_MAX_FUNCTION_CALLS = 5
@@ -52,10 +55,12 @@ class AIRunnerAgent(
         self,
         default_tool_choice: Optional[Union[str, dict]] = None,
         max_function_calls: int = DEFAULT_MAX_FUNCTION_CALLS,
+        llm_settings: LLMSettings = LLMSettings(),
         *args,
         **kwargs
     ) -> None:
         RAGMixin.__init__(self)
+        self.llm_settings: LLMSettings = llm_settings
         self.update_mood_after_n_turns = 3
         self.summarize_after_n_turns = 5
         self._streaming_stopping_criteria: Optional[ExternalConditionStoppingCriteria] = None
@@ -1049,12 +1054,39 @@ class GroqAgent(AIRunnerAgent):
 
 class OpenRouterAgent(AIRunnerAgent):
     def llm(self) -> Type[CustomLLM]:
-        pass
+        if not self._llm:
+            self._llm = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=self.llm_settings.open_router_api_key
+            )
+        return self._llm
+    
+    def chat(self, prompt: str):
+        completion = self.llm.chat.completions.create(
+        extra_body={},
+        model="mistralai/mistral-7b-instruct:free",
+        messages=[
+            {
+            "role": "user",
+            "content": prompt
+            }
+        ]
+        )
+        print(completion.choices[0].message.content)
 
 
 class OpenAIAgent(AIRunnerAgent):
     def llm(self) -> Type[CustomLLM]:
         pass
+
+
+class OpenRouterQObject(
+    QObject,
+    OpenRouterAgent,
+    MediatorMixin,
+    SettingsMixin,
+):
+    pass
 
 
 class MistralAgentQObject(
@@ -1095,5 +1127,8 @@ class MistralAgentQObject(
                     streaming_stopping_criteria=self.streaming_stopping_criteria
                 )
             else:
-                self.logger.error("Unable to load HuggingFaceLLM: Model and tokenizer must be provided.")
+                self.logger.error(
+                    "Unable to load HuggingFaceLLM: "
+                    "Model and tokenizer must be provided."
+                )
         return self._llm
