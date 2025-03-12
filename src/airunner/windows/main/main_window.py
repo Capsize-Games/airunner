@@ -74,7 +74,7 @@ from airunner.windows.update.update_window import UpdateWindow
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.widgets.markdown_viewer import MarkdownViewer
 from airunner.widgets.pygame_open_gl_widget import PygameOpenGLWidget
-from airunner.data.models import SplitterSetting, ApplicationSettings
+from airunner.data.models import SplitterSetting, Tab
 
 
 class MainWindow(
@@ -162,6 +162,7 @@ class MainWindow(
         self._worker_manager = None
         self.register_signals()
         self.initialize_ui()
+        self.ui.center_tab_container.currentChanged.connect(self.on_tab_section_changed)
         self._initialize_workers()
 
     @property
@@ -577,16 +578,13 @@ class MainWindow(
     def initialize_ui(self):
         self.logger.debug("Loading UI")
         self.ui.setupUi(self)
-        settings = ApplicationSettings.objects.first()
-        
-        # Set the default tab index
         active_index = 0
-        for tab in settings.tabs["center"]:
-            if tab["active"]:
-                active_index = tab["index"]
+        tabs = Tab.objects.filter_by(section="center").all()
+        for tab in tabs:
+            if tab.active:
+                active_index = tab.index
                 break
         self.ui.center_tab_container.setCurrentIndex(active_index)
-        self.ui.center_tab_container.currentChanged.connect(self.on_tab_section_changed)
 
         self.set_stylesheet()
         self.restore_state()
@@ -613,7 +611,7 @@ class MainWindow(
 
     @Slot(int)
     def on_tab_section_changed(self, index: int):
-        ApplicationSettings.update_active_tabs("center", index)
+        Tab.update_tabs("center", self.ui.center_tab_container, index)
 
     def initialize_widget_elements(self):
         for item in (

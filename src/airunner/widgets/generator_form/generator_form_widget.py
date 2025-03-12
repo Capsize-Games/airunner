@@ -16,7 +16,7 @@ from airunner.settings import (
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
 from airunner.handlers.llm.llm_response import LLMResponse
-from airunner.data.models import ApplicationSettings
+from airunner.data.models import Tab
 
 
 class GeneratorForm(BaseWidget):
@@ -39,7 +39,8 @@ class GeneratorForm(BaseWidget):
     
     @Slot(int)
     def on_tab_section_changed(self, index: int):
-        ApplicationSettings.update_active_tabs("left", index)
+        Tab.update_tabs("left", self.ui.generator_form_tabs, index)
+        
         
     @property
     def is_txt2img(self):
@@ -236,13 +237,13 @@ class GeneratorForm(BaseWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self.initialized = True
-        settings = ApplicationSettings.objects.first()
-        tab_index = 0
-        for tab in settings.tabs["left"]:
-            if tab["active"]:
-                tab_index = tab["index"]
+        active_index = 0
+        tabs = Tab.objects.filter_by(section="left").all()
+        for tab in tabs:
+            if tab.active:
+                active_index = tab.index
                 break
-        self.ui.generator_form_tabs.setCurrentIndex(tab_index)
+        self.ui.generator_form_tabs.setCurrentIndex(active_index)
         
     def clear_prompts(self):
         self.ui.prompt.setPlainText("")
