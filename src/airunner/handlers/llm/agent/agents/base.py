@@ -1,7 +1,3 @@
-"""Mistral Agent.
-
-Simple wrapper around AgentRunner + MistralAgentWorker.
-"""
 import os
 from typing import (
     Any,
@@ -21,7 +17,7 @@ from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
 from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.memory import BaseMemory
-from llama_index.core.llms.custom import CustomLLM
+from llama_index.core.llms.llm import LLM
 
 from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import RefreshSimpleChatEngine
@@ -47,7 +43,8 @@ from openai import OpenAI
 
 DEFAULT_MAX_FUNCTION_CALLS = 5
 
-class AIRunnerAgent(
+
+class BaseAgent(
     RAGMixin,
     WeatherMixin
 ):
@@ -66,7 +63,7 @@ class AIRunnerAgent(
         self._streaming_stopping_criteria: Optional[ExternalConditionStoppingCriteria] = None
         self._do_interrupt: bool = False
         self.history: Optional[List[ChatMessage]] = []
-        self._llm: Optional[Type[CustomLLM]] = None
+        self._llm: Optional[Type[LLM]] = None
         self._conversation_summaries: Optional[str] = None
         self._conversation: Optional[Conversation] = None
         self._conversation_id: Optional[int] = None
@@ -217,7 +214,7 @@ class AIRunnerAgent(
         return self._streaming_stopping_criteria
 
     @property
-    def llm(self) -> Type[CustomLLM]:
+    def llm(self) -> Type[LLM]:
         pass
 
     @property
@@ -1046,89 +1043,3 @@ class AIRunnerAgent(
             })
         self._complete_response += response
 
-
-class GroqAgent(AIRunnerAgent):
-    def llm(self) -> Type[CustomLLM]:
-        pass
-
-
-class OpenRouterAgent(AIRunnerAgent):
-    def llm(self) -> Type[CustomLLM]:
-        if not self._llm:
-            self._llm = OpenAI(
-                base_url="https://openrouter.ai/api/v1",
-                api_key=self.llm_settings.open_router_api_key
-            )
-        return self._llm
-    
-    def chat(self, prompt: str):
-        completion = self.llm.chat.completions.create(
-        extra_body={},
-        model="mistralai/mistral-7b-instruct:free",
-        messages=[
-            {
-            "role": "user",
-            "content": prompt
-            }
-        ]
-        )
-        print(completion.choices[0].message.content)
-
-
-class OpenAIAgent(AIRunnerAgent):
-    def llm(self) -> Type[CustomLLM]:
-        pass
-
-
-class OpenRouterQObject(
-    QObject,
-    OpenRouterAgent,
-    MediatorMixin,
-    SettingsMixin,
-):
-    pass
-
-
-class MistralAgentQObject(
-    QObject,
-    AIRunnerAgent,
-    MediatorMixin,
-    SettingsMixin,
-):
-    """QObject wrapper for Mistral Agent"""
-    def __init__(
-        self, 
-        model: Optional[AutoModelForCausalLM] = None,
-        tokenizer: Optional[AutoTokenizer] = None,
-        *args, 
-        **kwargs
-    ):
-        self.model = model
-        self.tokenizer = tokenizer
-        MediatorMixin.__init__(self)
-        super().__init__(*args, **kwargs)
-    
-    def unload(self):
-        del self.model
-        del self.tokenizer
-        self.model = None
-        self.tokenizer = None
-        self._llm = None
-        super().unload()
-    
-    @property
-    def llm(self) -> Type[CustomLLM]:
-        if not self._llm:
-            self.logger.info("Loading HuggingFaceLLM")
-            if self.model and self.tokenizer:
-                self._llm = HuggingFaceLLM(
-                    model=self.model,
-                    tokenizer=self.tokenizer,
-                    streaming_stopping_criteria=self.streaming_stopping_criteria
-                )
-            else:
-                self.logger.error(
-                    "Unable to load HuggingFaceLLM: "
-                    "Model and tokenizer must be provided."
-                )
-        return self._llm
