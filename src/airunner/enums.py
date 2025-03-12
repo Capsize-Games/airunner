@@ -252,6 +252,7 @@ class SignalCode(Enum):
     TTS_MODEL_CHANGED = enum.auto()
 
     CLEAR_CONVERSATION = enum.auto()
+    TOGGLE_TOOL = enum.auto()
 
 class EngineResponseCode(Enum):
     NONE = 0

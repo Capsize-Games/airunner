@@ -59,7 +59,6 @@ from airunner.workers.tts_generator_worker import TTSGeneratorWorker
 from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 
 from airunner.utils.get_version import get_version
-from airunner.utils.set_widget_state import set_widget_state
 from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.stats.stats_widget import StatsWidget
 from airunner.widgets.status.status_widget import StatusWidget
@@ -73,7 +72,9 @@ from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.handlers.llm.llm_settings import LLMSettings
+from airunner.widgets.markdown_viewer import MarkdownViewer
+from airunner.widgets.pygame_open_gl_widget import PygameOpenGLWidget
+from airunner.data.models import SplitterSetting, ApplicationSettings
 
 
 class MainWindow(
@@ -92,7 +93,6 @@ class MainWindow(
     snap_to_grid_changed_signal = Signal(bool)
     image_generated = Signal(bool)
     generator_tab_changed_signal = Signal()
-    tab_section_changed_signal = Signal()
     load_image = Signal(str)
     load_image_object = Signal(object)
     loaded = Signal()
@@ -186,10 +186,6 @@ class MainWindow(
     def document_name(self):
         return "Untitled"
 
-    @property
-    def current_tool(self):
-        return CanvasToolName(self.application_settings.current_tool)
-
     """
     Slot functions
     
@@ -265,7 +261,6 @@ class MainWindow(
 
     @Slot()
     def action_new_document_triggered(self):
-        self.new_document()
         self.emit_signal(SignalCode.CANVAS_CLEAR)
 
     @Slot()
@@ -517,10 +512,6 @@ class MainWindow(
             (SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal),
             (SignalCode.QUIT_APPLICATION, self.action_quit_triggered),
             (SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal),
-            (SignalCode.ENABLE_BRUSH_TOOL_SIGNAL, lambda _message: self.action_toggle_brush(True)),
-            (SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda _message: self.action_toggle_eraser(True)),
-            (SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True)),
-            (SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True)),
             (SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal),
             (SignalCode.WRITE_FILE, self.on_write_file_signal),
             (SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal),
@@ -537,7 +528,9 @@ class MainWindow(
             (SignalCode.REFRESH_STYLESHEET_SIGNAL, self.on_theme_changed_signal),
             (SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal),
             (SignalCode.NAVIGATE_TO_URL, self.on_navigate_to_url),
-            (SignalCode.MISSING_REQUIRED_MODELS, self.display_missing_models_error)
+            (SignalCode.MISSING_REQUIRED_MODELS, self.display_missing_models_error),
+            (SignalCode.CANVAS_CLEAR, self.new_document),
+            (SignalCode.TOGGLE_TOOL, self.on_toggle_tool_signal)
         ):
             self.register(item[0], item[1])
 
@@ -584,6 +577,17 @@ class MainWindow(
     def initialize_ui(self):
         self.logger.debug("Loading UI")
         self.ui.setupUi(self)
+        settings = ApplicationSettings.objects.first()
+        
+        # Set the default tab index
+        active_index = 0
+        for tab in settings.tabs["center"]:
+            if tab["active"]:
+                active_index = tab["index"]
+                break
+        self.ui.center_tab_container.setCurrentIndex(active_index)
+        self.ui.center_tab_container.currentChanged.connect(self.on_tab_section_changed)
+
         self.set_stylesheet()
         self.restore_state()
         self.status_widget = StatusWidget()
@@ -592,7 +596,24 @@ class MainWindow(
         self.initialize_widget_elements()
         self.ui.actionUndo.setEnabled(False)
         self.ui.actionRedo.setEnabled(False)
-        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, {"main_window": self})
+        self.ui.document_tab.layout().addWidget(MarkdownViewer(
+            os.path.expanduser(os.path.join(
+                self.path_settings.base_path,
+                "text",
+                "other",
+                "documents",
+                "README.md"
+            ))
+        ))
+        self.ui.game_tab.layout().addWidget(PygameOpenGLWidget())
+        self.emit_signal(
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, 
+            {"main_window": self}
+        )
+
+    @Slot(int)
+    def on_tab_section_changed(self, index: int):
+        ApplicationSettings.update_active_tabs("center", index)
 
     def initialize_widget_elements(self):
         for item in (
@@ -775,15 +796,22 @@ class MainWindow(
         self.save_window_settings("is_maximized", self.isMaximized())
         self.save_window_settings("is_fullscreen", self.isFullScreen())
         self.save_window_settings("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter.saveState())
-        self.save_window_settings("content_splitter", self.ui.content_splitter.saveState())
-        self.save_window_settings("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter.saveState())
-        self.save_window_settings("tool_tab_widget_index", self.ui.tool_tab_widget.ui.tool_tab_widget_container.currentIndex())
-        self.save_window_settings("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter.saveState())
         self.save_window_settings("width", self.width())
         self.save_window_settings("height", self.height())
         self.save_window_settings("x_pos", self.pos().x())
         self.save_window_settings("y_pos", self.pos().y())
         self.save_window_settings("mode_tab_widget_index", self.ui.generator_widget.ui.generator_form_tabs.currentIndex())
+        settings = SplitterSetting.objects.filter_by(name="main_window_splitter").first()
+        if not settings:
+            settings = SplitterSetting.objects.create(
+                name="main_window_splitter",
+                splitter_settings=self.ui.main_window_splitter.saveState()
+            )
+        else:
+            SplitterSetting.objects.update(
+                settings.id,
+                main_window_splitter=self.ui.main_window_splitter.saveState()
+            )
 
     def restore_state(self):
         self.logger.debug("Restoring state")
@@ -794,26 +822,7 @@ class MainWindow(
         else:
             self.showNormal()
 
-        self.ui.actionToggle_Grid.blockSignals(True)
-        self.ui.actionToggle_Grid.setChecked(self.grid_settings.show_grid)
-        self.ui.actionToggle_Grid.blockSignals(False)
-
-        first_run = False
-        splitters = [
-            ("content_splitter", self.ui.content_splitter),
-            ("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter),
-            ("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter),
-            ("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter),
-        ]
-        for splitter_name, splitter in splitters:
-            splitter_state = getattr(self.window_settings, splitter_name)
-            if splitter_state is not None:
-                splitter.blockSignals(True)
-                splitter.restoreState(splitter_state)
-                splitter.blockSignals(False)
-            elif splitter_name == "content_splitter":
-                first_run = True
-                splitter.setSizes([self.width() - 200, 512, 200])
+        first_run = False   
 
         self.setMinimumSize(100, 100)  # Set a reasonable minimum size
 
@@ -826,13 +835,10 @@ class MainWindow(
         else:
             x_pos = int(self.window_settings.x_pos)
             y_pos = int(self.window_settings.y_pos)
-        self.ui.generator_widget.ui.generator_form_tabs.setCurrentIndex(
-            int(self.window_settings.mode_tab_widget_index)
-        )
 
-        self.ui.tool_tab_widget.ui.tool_tab_widget_container.setCurrentIndex(
-            int(self.window_settings.tool_tab_widget_index)
-        )
+        settings = SplitterSetting.objects.filter_by(name="main_window_splitter").first()
+        if settings:
+            self.ui.main_window_splitter.restoreState(settings.splitter_settings)
 
         self.resize(width, height)
         self.move(x_pos, y_pos)
@@ -860,8 +866,12 @@ class MainWindow(
     def action_ai_toggled(self, val):
         self.update_application_settings("ai_mode", val)
 
+    @Slot(bool)
     def action_toggle_grid(self, val):
         self.update_grid_settings("show_grid", val)
+    
+    def on_toggle_tool_signal(self, data: Dict):
+        self.toggle_tool(data["tool"], data["active"])
 
     def show_nsfw_warning_popup(self):
         if self.application_settings.show_nsfw_warning:
@@ -1009,15 +1019,6 @@ class MainWindow(
         FilterWindow(image_filter.id)
 
     def _initialize_default_buttons(self):
-        show_grid = self.grid_settings.show_grid
-        current_tool = self.current_tool
-
-        set_widget_state(self.ui.actionToggle_Active_Grid_Area, current_tool is CanvasToolName.ACTIVE_GRID_AREA)
-        set_widget_state(self.ui.actionToggle_Brush, current_tool is CanvasToolName.BRUSH)
-        set_widget_state(self.ui.actionToggle_Eraser, current_tool is CanvasToolName.ERASER)
-        set_widget_state(self.ui.actionToggle_Grid, show_grid is True)
-        set_widget_state(self.ui.actionMask_toggle, self.drawing_pad_settings.mask_layer_enabled is True)
-
         self.ui.actionSafety_Checker.blockSignals(True)
         self.ui.actionSafety_Checker.setChecked(self.application_settings.nsfw_filter)
         self.ui.actionSafety_Checker.blockSignals(False)

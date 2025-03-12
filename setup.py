@@ -70,6 +70,7 @@ setup(
             "llama-index-embeddings-mistralai==0.3.0",
             "llama-index-vector-stores-faiss==0.3.0",
             "llama-index-embeddings-huggingface==0.5.1",
+            "llama-index-llms-openrouter==0.3.1",
             "langchain-community==0.3.17",
             "EbookLib==0.18",
             "html2text==2024.2.26",

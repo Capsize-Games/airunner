@@ -15,7 +15,7 @@ from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import MAX_SEED
 from airunner.utils.clear_memory import clear_memory
-from airunner.handlers.llm.agent.mistral_agent import (
+from airunner.handlers.llm.agent.agents import (
     MistralAgentQObject, 
     OpenRouterQObject
 )
@@ -125,8 +125,9 @@ class LLMHandler(
         self.unload()
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
         self._current_model_path = self.model_path
-        self._load_tokenizer()
-        self._load_model()
+        if self.llm_settings.use_local_llm:
+            self._load_tokenizer()
+            self._load_model()
         self._load_agent()
         if self._model and self._tokenizer and self._chat_agent:
             self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
@@ -229,34 +230,38 @@ class LLMHandler(
 
     def _load_model(self):
         if self._model is not None:
-            return
-        self.logger.debug("transformer_base_handler.load_model Loading model")
-        if self.llm_generator_settings.use_api:
-            self._model = Groq(
-                model=self.llm_generator_settings.api_model,
-                api_key=self.llm_generator_settings.api_key,
+            return        
+        self.logger.debug(f"Loading local LLM model from {self.model_path}")
+        try:
+            # Use the same path as tokenizer
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_path,
+                local_files_only = True,
+                use_cache = self.use_cache,
+                trust_remote_code = False,
+                torch_dtype = self.torch_dtype,
+                device_map = self.device,
             )
-        else:
-            self._load_model_local()
+        except Exception as e:
+            self.logger.error(f"Error loading model: {e}")
+            return
+        
+        try:
+            if os.path.exists(self.adapter_path):
+                # Convert base model to PEFT format
+                self._model = PeftModel.from_pretrained(
+                    self._model, 
+                    self.adapter_path
+                )
+        except Exception as e:
+            self.logger.error(
+                f"Error loading adapter (continuing with base model): {e}"
+            )
 
     def _load_agent(self):
         if self._chat_agent is not None:
             return
         self.logger.debug("Loading agent")
-        # def get_weather(
-        #     location: str = Field(
-        #         description="The location to get the weather for.",
-        #     )
-        # ) -> str:
-        #     """Get the weather report for a given location."""
-        #     return f"{location} is sunny today."
-
-        tools = [
-            # FunctionTool.from_defaults(
-            #     get_weather,
-            #     return_direct=True
-            # ),
-        ]
         if self.llm_settings.use_local_llm:
             self.logger.info("Loading local chat agent")
             self._chat_agent = MistralAgentQObject(
@@ -303,29 +308,6 @@ class LLMHandler(
             self._chat_agent = None
             do_clear_memory = True
         return do_clear_memory
-
-    def _load_model_local(self):
-        self.logger.debug(f"Loading local LLM model from {self.model_path}")
-        try:
-            # Use the same path as tokenizer
-            self._model = AutoModelForCausalLM.from_pretrained(
-                self.model_path,
-                local_files_only = True,
-                use_cache = self.use_cache,
-                trust_remote_code = False,
-                torch_dtype = self.torch_dtype,
-                device_map = self.device,
-            )
-        except Exception as e:
-            self.logger.error(f"Error loading model: {e}")
-            return
-        
-        try:
-            if os.path.exists(self.adapter_path):
-                # Convert base model to PEFT format
-                self._model = PeftModel.from_pretrained(self._model, self.adapter_path)
-        except Exception as e:
-            self.logger.error(f"Error loading adapter (continuing with base model): {e}")
         
     def _do_generate(
         self, 

@@ -166,6 +166,21 @@ class BaseManager:
             except Exception as e:
                 logger.error(f"Error in distinct({args}): {e}")
                 return None
+    
+    def create(self, *args, **kwargs) -> Optional[_T]:
+        obj = None
+        with session_scope() as session:
+            try:
+                obj = self.cls(*args, **kwargs)
+                session.add(obj)
+                session.commit()
+                logger.debug(f"Created {self.cls.__name__}")
+            except Exception as e:
+                logger.error(f"Error in create({args}, {kwargs}): {e}")
+            finally:
+                session.expunge(obj)
+        return obj
+
 
 
 class BaseModel(Base):

@@ -383,3 +383,10 @@ DB_PATH = os.path.expanduser(
 )
 DB_URL = os.environ.get("AI_RUNNER_DATABASE_URL", "")
 DB_URL = f"sqlite:///{DB_PATH}" if (DB_URL == "" or not DB_URL) else DB_URL
+
+# Default LLM Settings
+USE_LOCAL_LLM_DEFAULT = True
+USE_OPENROUTER_DEFAULT = False
+OPENROUTER_API_KEY_DEFAULT = ""
+USE_OPENAI_DEFAULT = False
+OPENAI_API_KEY_DEFAULT = ""

@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import os
 
 from PySide6 import QtGui
@@ -41,6 +42,14 @@ class BaseWidget(
         self.signal_handlers: dict = {}
         self.services: dict = {}
         self.worker_class_map: dict = {}
+    
+    @abstractmethod
+    def save_state(self):
+        pass
+
+    @abstractmethod
+    def restore_state(self):
+        pass
 
     def initialize(self):
         """
@@ -95,6 +104,7 @@ class BaseWidget(
         using __init__.
         """
         self.initialize()
+        self.restore_state()
 
     def set_icons(self):
         theme = "dark" if self.is_dark else "light"
