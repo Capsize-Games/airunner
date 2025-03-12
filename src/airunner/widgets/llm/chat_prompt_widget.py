@@ -1,9 +1,9 @@
-import uuid
+import base64
 import json
 
 from typing import Optional
 
-from PySide6.QtCore import Slot, QTimer, QPropertyAnimation
+from PySide6.QtCore import Slot, QTimer, QPropertyAnimation, QByteArray
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
 
@@ -15,6 +15,7 @@ from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.data.models import SplitterSetting
 
 
 class ChatPromptWidget(BaseWidget):
@@ -66,6 +67,7 @@ class ChatPromptWidget(BaseWidget):
         self.register(SignalCode.CONVERSATION_DELETED, self.on_delete_conversation)
         self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_conversation)
         self.register(SignalCode.LOAD_CONVERSATION, self.on_load_conversation)
+        self.register(SignalCode.QUIT_APPLICATION, self.save_state)
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
@@ -209,6 +211,24 @@ class ChatPromptWidget(BaseWidget):
             self.do_generate(prompt_override=self.held_message)
             self.held_message = None
         self.enable_send_button()
+    
+    def save_state(self):
+        settings = SplitterSetting.objects.filter_by(name="chat_prompt_splitter").first()
+        state = self.ui.chat_prompt_splitter.saveState()
+        if not settings:
+            SplitterSetting.objects.create(
+                name="chat_prompt_splitter", splitter_settings=state
+            )
+        else:
+            SplitterSetting.objects.update(
+                settings.id, 
+                chat_prompt_splitter=state
+            )
+    
+    def restore_state(self):
+        settings = SplitterSetting.objects.filter_by(name="chat_prompt_splitter").first()
+        if settings:
+            self.ui.chat_prompt_splitter.restoreState(settings.splitter_settings)
 
     @Slot()
     def action_button_clicked_clear_conversation(self):
