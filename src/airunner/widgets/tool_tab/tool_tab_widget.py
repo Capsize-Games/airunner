@@ -3,7 +3,7 @@ from PySide6.QtCore import Slot
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.tool_tab.templates.tool_tab_ui import Ui_tool_tab_widget
 from airunner.enums import SignalCode
-from airunner.data.models import SplitterSetting, ApplicationSettings
+from airunner.data.models import SplitterSetting, Tab
 
 
 class ToolTabWidget(BaseWidget):
@@ -21,7 +21,7 @@ class ToolTabWidget(BaseWidget):
 
     @Slot(int)
     def on_tab_section_changed(self, index: int):
-        ApplicationSettings.update_active_tabs("right", index)
+        Tab.update_tabs("right", self.ui.tool_tab_widget_container, index)
 
     def save_state(self):
         settings = SplitterSetting.objects.filter_by(name="llm_splitter").first()
@@ -37,12 +37,11 @@ class ToolTabWidget(BaseWidget):
             )
     
     def restore_state(self):
-        # Set the default tab index
         active_index = 0
-        settings = ApplicationSettings.objects.first()
-        for tab in settings.tabs["right"]:
-            if tab["active"]:
-                active_index = tab["index"]
+        tabs = Tab.objects.filter_by(section="right").all()
+        for tab in tabs:
+            if tab.active:
+                active_index = tab.index
                 break
         self.ui.tool_tab_widget_container.setCurrentIndex(active_index)
 

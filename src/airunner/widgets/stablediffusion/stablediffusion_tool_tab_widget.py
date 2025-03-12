@@ -1,7 +1,7 @@
 from PySide6.QtCore import Slot
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stablediffusion_tool_tab_ui import Ui_stablediffusion_tool_tab_widget
-from airunner.data.models import ApplicationSettings
+from airunner.data.models import ApplicationSettings, Tab
 
 class StablediffusionToolTabWidget(BaseWidget):
     widget_class_ = Ui_stablediffusion_tool_tab_widget
@@ -12,28 +12,24 @@ class StablediffusionToolTabWidget(BaseWidget):
     
     @Slot(int)
     def on_tab_section_changed(self, index: int):
-        ApplicationSettings.update_active_tabs("stablediffusion_tool_tab", index)
+        Tab.update_tabs("stablediffusion_tool_tab", self.ui.tool_tab_widget_container, index)
 
     def showEvent(self, event):
         super().showEvent(event)
-        settings = ApplicationSettings.objects.first()
-        tabs = settings.tabs.get("stablediffusion_tool_tab", None)
-        if not tabs:
-            tabs = [
-                {
-                    "name": f"{self.ui.tool_tab_widget_container.tabText(index)}",
-                    "index": index,
-                    "active": False
-                } for index in range(self.ui.tool_tab_widget_container.count())
-            ]
-            ApplicationSettings.objects.update(
-                settings.id,
-                tabs={
-                    **settings.tabs,
-                    "stablediffusion_tool_tab": tabs
-                }
-            )
-        for i, tab in enumerate(tabs):
-            if tab.get("active", False):
-                self.ui.tool_tab_widget_container.setCurrentIndex(i)
+        section = "stablediffusion_tool_tab"
+        for index in range(self.ui.tool_tab_widget_container.count()):
+            tab_text = self.ui.tool_tab_widget_container.tabText(index)
+            tab = Tab.objects.filter_by(section=section, name=tab_text).first()
+            if not tab:
+                Tab.objects.create(
+                    section=section,
+                    name=tab_text,
+                    index=index,
+                    active=False
+                )
+
+        tabs = Tab.objects.filter_by(section=section).all()
+        for tab in tabs:
+            if tab.active:
+                self.ui.tool_tab_widget_container.setCurrentIndex(tab.index)
                 break
