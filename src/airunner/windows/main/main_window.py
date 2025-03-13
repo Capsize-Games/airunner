@@ -162,7 +162,6 @@ class MainWindow(
         self._worker_manager = None
         self.register_signals()
         self.initialize_ui()
-        self.ui.center_tab_container.currentChanged.connect(self.on_tab_section_changed)
         self._initialize_workers()
 
     @property
@@ -238,19 +237,19 @@ class MainWindow(
 
     @Slot()
     def import_controlnet_image(self):
-        self.emit_signal(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
+        pass
 
     @Slot()
     def export_controlnet_image(self):
-        self.emit_signal(SignalCode.CONTROLNET_EXPORT_IMAGE_SIGNAL)
+        pass
 
     @Slot()
     def import_drawingpad_image(self):
-        self.emit_signal(SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL)
+        pass
 
     @Slot()
     def export_drawingpad_image(self):
-        self.emit_signal(SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL)
+        pass
 
     @Slot()
     def action_export_image_triggered(self):
@@ -369,11 +368,11 @@ class MainWindow(
 
     @Slot()
     def action_outpaint_export(self):
-        self.emit_signal(SignalCode.OUTPAINT_EXPORT_SIGNAL)
+        pass
 
     @Slot()
     def action_outpaint_import(self):
-        self.emit_signal(SignalCode.OUTPAINT_IMPORT_SIGNAL)
+        pass
 
     @Slot()
     def action_run_setup_wizard_clicked(self):
