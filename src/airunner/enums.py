@@ -32,10 +32,8 @@ class ModelAction(Enum):
 
 class SignalCode(Enum):
     REFRESH_STYLESHEET_SIGNAL = "refresh_stylesheet_signal"
-    SD_STATE_CHANGED_SIGNAL = "sd_state_changed_signal"
     NAVIGATE_TO_URL = "navigate_to_url"
     RAG_RELOAD_INDEX_SIGNAL = "rag_reload_index_signal"
-    RESET_APPLIED_MEMORY_SETTINGS = "reset_applied_memory_settings"
     ENABLE_BRUSH_TOOL_SIGNAL = "enable_brush_tool_signal"
     ENABLE_ERASER_TOOL_SIGNAL = "enable_eraser_tool_signal"
     ENABLE_SELECTION_TOOL_SIGNAL = "enable_selection_tool_signal"
@@ -43,10 +41,10 @@ class SignalCode(Enum):
     INTERRUPT_PROCESS_SIGNAL = "interrupt_process_signal"
     INTERRUPT_IMAGE_GENERATION_SIGNAL = "interrupt_image_generation_signal"
     AI_MODELS_SAVE_OR_UPDATE_SIGNAL = "ai_models_save_or_update_signal"
-    AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"
+    AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"  # No listeners
     AI_MODELS_CREATE_SIGNAL = "ai_models_create_signal"
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
-    APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"
+    APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"  # No listeners
     APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL = "clear_status_message_signal"
     APPLICATION_RESET_SETTINGS_SIGNAL = "reset_settings_signal"
     APPLICATION_RESET_PATHS_SIGNAL = "reset_paths_signal"
@@ -61,11 +59,11 @@ class SignalCode(Enum):
     MASK_GENERATOR_WORKER_RESPONSE_SIGNAL = "mask_generator_worker_response_signal"
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_RESPONSE_SIGNAL = "audio_processor_response_signal"
-    PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL = "preset_image_generator_display_menu_signal"
-    PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL = "activate_brush"
+    PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL = "preset_image_generator_display_menu_signal"  # No listeners
+    PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL = "activate_brush"  # No listeners
     CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL = "load_image_from_path_signal"
     SCENE_DO_DRAW_SIGNAL = "scene_do_draw_signal"
-    CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"
+    CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"  # No listeners
     CANVAS_UPDATE_CURSOR = "canvas_update_cursor"
     CANVAS_ZOOM_LEVEL_CHANGED = "zoom_level_changed"
     CANVAS_CLEAR = "clear_canvas"
