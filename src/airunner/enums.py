@@ -178,6 +178,10 @@ class SignalCode(Enum):
 
     TOGGLE_TOOL = enum.auto()
 
+    SECTION_CHANGED = enum.auto()
+
+    WEB_BROWSER_PAGE_HTML = enum.auto()
+
 class EngineResponseCode(Enum):
     NONE = 0
     STATUS = 100
