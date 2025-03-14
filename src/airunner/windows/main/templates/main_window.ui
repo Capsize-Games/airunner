@@ -181,28 +181,6 @@
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="browser_tab">
-              <attribute name="title">
-               <string>Browser</string>
-              </attribute>
-              <layout class="QGridLayout" name="gridLayout_5">
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <item row="0" column="0">
-                <widget class="WebBrowserWidget" name="browser" native="true"/>
-               </item>
-              </layout>
-             </widget>
             </widget>
            </item>
           </layout>
@@ -1423,12 +1401,6 @@
    <class>ToolTabWidget</class>
    <extends>QWidget</extends>
    <header>airunner/widgets/tool_tab/tool_tab_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>WebBrowserWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/widgets/webbrowser/web_browser_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
