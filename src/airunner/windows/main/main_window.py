@@ -71,9 +71,9 @@ from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.widgets.markdown_viewer import MarkdownViewer
 from airunner.widgets.pygame_open_gl_widget import PygameOpenGLWidget
 from airunner.data.models import SplitterSetting, Tab
+from airunner.plugin_loader import PluginLoader
 
 
 class MainWindow(
@@ -591,20 +591,26 @@ class MainWindow(
 
         self.ui.actionUndo.setEnabled(False)
         self.ui.actionRedo.setEnabled(False)
-        self.ui.document_tab.layout().addWidget(MarkdownViewer(
-            os.path.expanduser(os.path.join(
-                self.path_settings.base_path,
-                "text",
-                "other",
-                "documents",
-                "README.md"
-            ))
-        ))
-        self.ui.game_tab.layout().addWidget(PygameOpenGLWidget())
+        self._load_plugins()
         self.emit_signal(
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, 
             {"main_window": self}
         )
+
+    def _load_plugins(self):
+        base_path = self.path_settings.base_path
+        path = os.path.join(base_path, "plugins")
+        plugin_loader = PluginLoader(plugin_dir=path)
+        plugins = plugin_loader.load_plugins()
+
+        if len(plugins) == 0:
+            self.logger.info("No plugins found at " + path)
+        else:
+            self.logger.info("Loading plugins from " + path)
+            for plugin in plugins:
+                if hasattr(plugin, "get_widget"):
+                    widget = plugin.get_widget()
+                    self.ui.center_tab_container.addTab(widget, plugin.name)
 
     @Slot(int)
     def on_tab_section_changed(self, index: int):
