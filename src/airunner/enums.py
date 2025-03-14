@@ -202,12 +202,6 @@ class EngineResponseCode(Enum):
     INSUFFICIENT_GPU_MEMORY = 1200
 
 
-class EngineRequestCode(Enum):
-    GENERATE_IMAGE = 100
-    GENERATE_TEXT = 200
-    GENERATE_CAPTION = 300
-
-
 class Scheduler(Enum):
     EULER_ANCESTRAL = "Euler a"
     EULER = "Euler"
@@ -247,26 +241,6 @@ class LLMChatRole(Enum):
     SYSTEM = "system"
 
 
-class LLMToolName(Enum):
-    """
-    The following tools are used by the LLM to process various user
-    requests. They should be named with the same convention as python functions.
-    """
-    COMMENT_ON_IMAGE = "comment_on_image"
-    GENERATE_IMAGE = "generate_image"
-    DEFAULT_TOOL = "default_response_tool"
-    LLM_PROCESS_STT_AUDIO = "llm_process_stt_audio"
-    RAG_SEARCH = "llm_rag_search"
-    QUIT_APPLICATION = "quit_application"
-    STT_START_CAPTURE = "stt_start_audio_capture"
-    STT_STOP_CAPTURE = "stt_stop_audio_capture"
-    TTS_ENABLE = "tts_enable"
-    TTS_DISABLE = "tts_disable"
-    BASH_EXECUTE = "bash_execute"
-    WRITE_FILE = "write_file"
-    CHOOSE_RESPONSE_LENGTH = "choose_response_length"
-
-
 class LLMActionType(Enum):
     """
     The following action types are used by the LLM to process various user
@@ -301,14 +275,6 @@ class CanvasToolName(Enum):
     NONE = "none"
 
 
-class WindowSection(Enum):
-    CONTROLNET = "controlnet"
-    EMBEDDINGS = "Embeddings"
-    LORA = "LoRA"
-    PEN = "Pen"
-    ACTIVE_GRID = "Active Grid"
-
-
 class ImageGenerator(Enum):
     STABLEDIFFUSION = "stablediffusion"
 
@@ -338,18 +304,6 @@ class Language(Enum):
     SPANISH = "Spanish"
 
 
-class LanguageCode(Enum):
-    ENGLISH = "en"
-    SPANISH = "es"
-
-
-class SchedulerAlgorithm(Enum):
-    SDE_DPM_SOLVER_PLUS_PLUS = "sde-dpmsolver++"
-    SDE_DPM_SOLVER = "sde-dpmsolver"
-    DPM_SOLVER_PLUS_PLUS = "dpmsolver++"
-    DPM_SOLVER = "dpmsolver"
-
-
 class CanvasType(Enum):
     BRUSH = "brush"
     IMAGE = "image"
@@ -359,17 +313,6 @@ class CanvasType(Enum):
 
 class Controlnet(Enum):
     CANNY = "canny"
-
-
-class SDMode(Enum):
-    STANDARD = "standard"
-    DRAWING = "drawing"
-    FAST_GENERATE = "fast_generate"
-
-
-class DeviceName(Enum):
-    CUDA = "cuda"
-    CPU = "cpu"
 
 
 class Gender(Enum):
@@ -431,11 +374,6 @@ class HandlerState(Enum):
 class TTSModel(Enum):
     ESPEAK = "espeak"
     SPEECHT5 = "speecht5"
-
-
-class AgentState(Enum):
-    SEARCH = "search"
-    CHAT = "chat"
 
 
 class ImagePreset(Enum):
