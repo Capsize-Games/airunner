@@ -5,6 +5,7 @@ import trafilatura
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.webbrowser.templates.web_browser_ui import Ui_web_browser_widget
+from airunner.enums import SignalCode
 
 
 class WebBrowserWidget(BaseWidget):
@@ -12,17 +13,33 @@ class WebBrowserWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        self.html = ""
         self.browser = self.ui.webEngineView
-        self.navigate("https://duckduckgo.com", search_query="ducks")
-        self.get_page_html()
-
-    def navigate(self, url, search_query=None):
-        if search_query:
-            search_url = f"https://duckduckgo.com/?q={search_query.replace(' ', '+')}"
-            self.browser.setUrl(search_url)
-        else:
-            self.browser.setUrl(url)
+        self.browser.page().loadFinished.connect(self.on_load_finished)
     
-    def get_page_html(self):
-        self.browser.page().toHtml(lambda html: print(html))
+    @Slot()
+    def submit(self):
+        url = self.ui.url.text()
+        url = url.lower().strip().replace("http://", "").replace("https://", "")
+        self.navigate(f"https://{url}")
+    
+    def navigate(self, url):
+        self.browser.setUrl(url)
+    
+    def on_load_finished(self, success):
+        if success:
+            self.browser.page().toHtml(self.handle_html)
+        else:
+            print("Failed to load the page")
+    
+    def handle_html(self, html):
+        self.html = html
+        content = trafilatura.extract(
+            self.html,
+            output_format="txt",
+            with_metadata=False,
+            include_comments=False,
+            include_formatting=False,
+            include_links=False
+        )
+        self.emit_signal(SignalCode.WEB_BROWSER_PAGE_HTML, {"content": content})
