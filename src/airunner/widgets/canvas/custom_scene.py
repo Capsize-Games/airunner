@@ -98,7 +98,7 @@ class CustomScene(
         elif self.settings_key == "drawing_pad_settings":
             settings = self.drawing_pad_settings
         if not settings:
-            raise ValueError(f"Settings not found for key: {self.settings_key}")
+            raise ValueError(f"Settings is not set. Settings not found for key: {self.settings_key}")
         return settings
 
     @property
