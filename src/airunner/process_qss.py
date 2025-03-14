@@ -50,8 +50,8 @@ def build_templates(path):
 
 def process_qss(_path=None):
     # Define the regular expression pattern for variables
-    VAR_BLOCK_PATTERN = r'/\*\s*VARIABLES\s*\*/(.+?)/\*\s*END_VARIABLES\s*\*/'
-    VAR_PATTERN = r'@[\w-]+'
+    var_block_pattern = r'/\*\s*VARIABLES\s*\*/(.+?)/\*\s*END_VARIABLES\s*\*/'
+    var_pattern = r'@[\w-]+'
 
     def process_file(file_path, output_file, variables):
         """Process a single QSS file and write the output to the output file."""
@@ -62,7 +62,7 @@ def process_qss(_path=None):
         contents = re.sub(r'\$include\("(.+)"\)', lambda m: process_file(m.group(1), output_file, variables), contents)
 
         # Replace any variables with their values
-        for match in re.finditer(VAR_PATTERN, contents):
+        for match in re.finditer(var_pattern, contents):
             var_name = match.group(0)
             if var_name in variables:
                 contents = contents.replace(var_name, variables[var_name])
@@ -85,10 +85,10 @@ def process_qss(_path=None):
                 if os.path.isfile(file_path) and filename.endswith('.qss'):
                     with open(file_path, 'r') as input_file:
                         input_contents = input_file.read()
-                    var_block_match = re.search(VAR_BLOCK_PATTERN, input_contents, flags=re.DOTALL)
+                    var_block_match = re.search(var_block_pattern, input_contents, flags=re.DOTALL)
                     if var_block_match:
                         var_block_contents = var_block_match.group(1)
-                        for match in re.finditer(VAR_PATTERN, var_block_contents):
+                        for match in re.finditer(var_pattern, var_block_contents):
                             var_name = match.group(0)
                             if var_name not in variables:
                                 variables[var_name] = get_variable_value(var_name, var_block_contents)
@@ -96,7 +96,7 @@ def process_qss(_path=None):
         # Remove variable blocks from the output file
         with open(output_path, 'r') as f:
             contents = f.read()
-        contents = re.sub(VAR_BLOCK_PATTERN, '', contents, flags=re.DOTALL)
+        contents = re.sub(var_block_pattern, '', contents, flags=re.DOTALL)
         with open(output_path, 'w') as f:
             f.write(contents)
 

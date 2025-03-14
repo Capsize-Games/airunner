@@ -1065,10 +1065,10 @@ class MainWindow(
         self.set_window_title()
 
     def center(self):
-        availableGeometry = QGuiApplication.primaryScreen().availableGeometry()
-        frameGeometry = self.frameGeometry()
-        frameGeometry.moveCenter(availableGeometry.center())
-        self.move(frameGeometry.topLeft())
+        available_geometry = QGuiApplication.primaryScreen().availableGeometry()
+        frame_geometry = self.frameGeometry()
+        frame_geometry.moveCenter(available_geometry.center())
+        self.move(frame_geometry.topLeft())
 
     def set_window_title(self):
         """

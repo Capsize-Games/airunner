@@ -18,8 +18,8 @@ class OpenAI(BaseAgent):
             model="",
             messages=[
                 {
-                "role": "user",
-                "content": prompt
+                    "role": "user",
+                    "content": prompt
                 }
             ]
         )
