@@ -44,7 +44,7 @@ class EmbeddingWidget(BaseWidget):
         self.save_object(embedding)
 
     @Slot(bool)
-    def action_toggled_embedding(self, val, emit_signal=True):
+    def action_toggled_embedding(self, val, _emit_signal=True):
         self.embedding.active = val
         self.ui.enabledCheckbox.blockSignals(True)
         self.ui.enabledCheckbox.setChecked(val)

@@ -26,7 +26,7 @@ class DatabaseChatStore(BaseChatStore):
         self,
         table_name: str,
         schema_name: str = "",
-        use_jsonb: bool = False,
+        _use_jsonb: bool = False,
     ):
         super().__init__(
             table_name=table_name.lower(),
@@ -36,12 +36,12 @@ class DatabaseChatStore(BaseChatStore):
     @classmethod
     def from_params(
         cls,
-        database: Optional[str] = None,
+        _database: Optional[str] = None,
         table_name: str = "chatstore",
         schema_name: str = "",
-        connection_string: Optional[str] = None,
-        async_connection_string: Optional[str] = None,
-        debug: bool = False,
+        _connection_string: Optional[str] = None,
+        _async_connection_string: Optional[str] = None,
+        _debug: bool = False,
         use_jsonb: bool = False,
     ) -> "DatabaseChatStore":
         """Return connection string from database parameters."""

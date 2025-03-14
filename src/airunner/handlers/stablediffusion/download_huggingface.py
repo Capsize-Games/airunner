@@ -13,7 +13,7 @@ class DownloadHuggingface(
         self.worker = None
         self.file_name = None
 
-    def download_model(self, url, callback=None):
+    def download_model(self, url, _callback=None):
         path = self.extract_path_from_url(url)
         hf_hub_download(repo_id=path, filename="config.json")
 

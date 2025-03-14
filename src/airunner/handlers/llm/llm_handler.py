@@ -156,9 +156,6 @@ class LLMHandler(
         self.logger.debug("Handling request")
         self._do_set_seed()
         self.load()
-        action = self.llm_generator_settings.action
-        if type(action) is str:
-            action = LLMActionType[action]
         return self._do_generate(
             prompt=data["request_data"]["prompt"],
             action=data["request_data"]["action"],

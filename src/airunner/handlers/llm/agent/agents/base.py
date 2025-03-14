@@ -922,7 +922,6 @@ class BaseAgent(
             do_not_display=True, 
             **kwargs
         )
-        chat_history = chat_history[:-2]
         self.logger.info(f"Updated mood: {response.content}")
         conversation.bot_mood = response.content
         conversation.value = conversation.value[:-2]

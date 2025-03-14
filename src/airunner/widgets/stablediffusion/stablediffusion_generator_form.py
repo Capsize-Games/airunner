@@ -217,7 +217,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.secondary_prompt.setPlainText(secondary_prompt)
         self.ui.secondary_negative_prompt.setPlainText(negative_prompt)
 
-    def unload_llm_callback(self, data: dict = None):
+    def unload_llm_callback(self, _data: dict = None):
         """
         Callback function to be called after the LLM has been unloaded.
         """
@@ -236,7 +236,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 finalize=self.finalize_image_generated_by_llm
             ))
 
-    def finalize_image_generated_by_llm(self, data):
+    def finalize_image_generated_by_llm(self, _data):
         """
         Callback function to be called after the image has been generated.
         """
@@ -435,7 +435,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
             splitter.restoreState(splitter_state)
             splitter.blockSignals(False)
         elif splitter_name == "content_splitter":
-            first_run = True
             splitter.setSizes([self.width() - 200, 512, 200])
 
     def set_form_values(self, _data=None):

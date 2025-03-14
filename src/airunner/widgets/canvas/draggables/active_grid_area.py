@@ -95,7 +95,7 @@ class ActiveGridArea(DraggablePixmap):
     def toggle_render_fill(self, _render_fill):
         self.update_selection_fill()
 
-    def change_fill_opacity(self, value):
+    def change_fill_opacity(self, _value):
         self.update_selection_fill()
 
     def update_selection_fill(self):

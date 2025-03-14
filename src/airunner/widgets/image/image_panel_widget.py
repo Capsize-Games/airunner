@@ -50,7 +50,7 @@ class ImagePanelWidget(BaseWidget):
             widget = item.widget()
             widget.deleteLater()
 
-    def show_files(self, clear_images=True, reset_scroll_bar=True, show_folders=True):
+    def show_files(self, _clear_images=True, reset_scroll_bar=True, _show_folders=True):
         """
         Displays the files in the image panel widget.
 
@@ -102,7 +102,7 @@ class ImagePanelWidget(BaseWidget):
                 image_widget.set_image(os.path.join(self.path_settings.image_path, file))
                 self.ui.scrollAreaWidgetContents.layout().addWidget(image_widget)
     
-    def handle_folder_clicked(self, path):
+    def handle_folder_clicked(self, _path):
         """
         Handles the event when a folder is clicked.
 

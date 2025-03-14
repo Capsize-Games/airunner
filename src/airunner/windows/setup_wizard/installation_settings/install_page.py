@@ -358,7 +358,7 @@ class InstallWorker(
         )
         self.download_finished()
 
-    def finalize_installation(self, *args):
+    def finalize_installation(self, *_args):
         self.parent.on_set_downloading_status_label({
             "label": "Installation complete."
         })

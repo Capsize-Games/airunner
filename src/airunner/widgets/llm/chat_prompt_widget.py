@@ -260,7 +260,7 @@ class ChatPromptWidget(BaseWidget):
     def action(self) -> LLMActionType:
         return LLMActionType[self.llm_generator_settings.action]
 
-    def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="causallm"):
+    def do_generate(self, _image_override=None, prompt_override=None, _callback=None, _generator_name="causallm"):
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
         if prompt is None or prompt == "":
             self.logger.warning("Prompt is empty")
@@ -404,7 +404,7 @@ class ChatPromptWidget(BaseWidget):
         message,
         is_bot, 
         first_message=True,
-        message_id=None
+        _message_id=None
     ):
         message = strip_names_from_message(
             message, 

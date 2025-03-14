@@ -59,7 +59,7 @@ class ActiveGridSettingsWidget(BaseWidget):
     def size_lock_toggled(self, val):
         self.update_application_settings("active_grid_size_lock", val)
 
-    def update_size(self, message: dict):
+    def update_size(self, _message: dict):
         width = self.application_settings.working_width
         height = self.application_settings.working_height
         if self.application_settings.active_grid_size_lock:

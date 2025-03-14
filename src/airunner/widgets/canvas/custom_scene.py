@@ -249,8 +249,7 @@ class CustomScene(
         msg_box.setText("You are out of GPU memory (VRAM). Enable CPU offload and try again.")
         
         enable_cpu_offload_button = msg_box.addButton("Enable CPU offload", QMessageBox.AcceptRole)
-        cancel_button = msg_box.addButton(QMessageBox.Cancel)
-        
+
         msg_box.exec()
         
         if msg_box.clickedButton() == enable_cpu_offload_button:
@@ -637,8 +636,8 @@ class CustomScene(
         image: Image,
         is_outpaint: bool = False,
         outpaint_box_rect: QPoint = None,
-        border_size: int = 1,  # size of the border
-        border_color: tuple = (255, 0, 0, 255)  # color of the border in RGBA format
+        _border_size: int = 1,  # size of the border
+        _border_color: tuple = (255, 0, 0, 255)  # color of the border in RGBA format
     ):
         """
         Adds a given image to the scene
@@ -669,7 +668,7 @@ class CustomScene(
         self.update()
         self.initialize_image(image)
 
-    def _handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None) -> [Image, QPoint, QPoint]:
+    def _handle_outpaint(self, outpaint_box_rect, outpainted_image, _action=None) -> [Image, QPoint, QPoint]:
         if self.current_active_image is None:
             point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
             return outpainted_image, QPoint(0, 0), point

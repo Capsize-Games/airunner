@@ -113,7 +113,7 @@ class GeneratorForm(BaseWidget):
         self.ui.secondary_prompt.setPlainText(secondary_prompt)
         self.ui.secondary_negative_prompt.setPlainText(negative_prompt)        
 
-    def finalize_image_generated_by_llm(self, data):
+    def finalize_image_generated_by_llm(self, _data):
         """
         Callback function to be called after the image has been generated.
         """

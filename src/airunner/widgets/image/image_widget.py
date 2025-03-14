@@ -133,7 +133,6 @@ class ImageWidget(BaseWidget):
     def load_meta_data(self, image_path):
         # load the png metadata from image_path
         # check if image_path is Image
-        image = None
         if isinstance(image_path, Image.Image):
             image = image_path
         else:

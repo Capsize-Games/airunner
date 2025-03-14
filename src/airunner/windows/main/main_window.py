@@ -447,7 +447,7 @@ class MainWindow(
             file.write(response.content)
         return filename
 
-    def on_navigate_to_url(self, data: Dict = None):
+    def on_navigate_to_url(self, _data: Dict = None):
         url, ok = QInputDialog.getText(self, 'Browse Web', 'Enter your URL:')
         if ok:
             try:
@@ -630,7 +630,7 @@ class MainWindow(
             item[0].blockSignals(False)
         self.initialized = True
 
-    def layer_opacity_changed(self, attr_name, value=None, widget=None):
+    def layer_opacity_changed(self, _attr_name, value=None, _widget=None):
         self.emit_signal(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
 
     def keyPressEvent(self, event):

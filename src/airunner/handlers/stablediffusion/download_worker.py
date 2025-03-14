@@ -49,8 +49,6 @@ class DownloadWorker(
                 time.sleep(0.1)
                 continue
 
-            queue_size = self.queue.qsize()
-
             path, file_name, file_path, callback = self.queue.get()
             if path == "" and file_name == "" and file_path == "":
                 callback()

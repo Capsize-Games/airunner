@@ -26,7 +26,7 @@ class SeedWidget(BaseWidget):
             self.ui.lineEdit.blockSignals(True)
             self.ui.lineEdit.setText(str(self.generator_settings.seed))
             self.ui.lineEdit.blockSignals(False)
-        except RuntimeError as e:
+        except RuntimeError as _e:
             pass
 
     def action_clicked_button_random_seed(self, value):
