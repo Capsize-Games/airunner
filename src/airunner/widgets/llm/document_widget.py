@@ -1,10 +1,12 @@
+from abc import ABC
+
 from PySide6.QtCore import Slot
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.document_widget_ui import Ui_document_widget
 
 
-class DocumentWidget(BaseWidget):
+class DocumentWidget(BaseWidget, ABC):
     widget_class_ = Ui_document_widget
 
     def __init__(self, target_file, delete_function, *args, **kwargs):

@@ -1,5 +1,7 @@
 import os
 import json
+from abc import ABC
+
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QLabel
 from PySide6.QtCore import Qt
@@ -18,7 +20,7 @@ from PySide6.QtCore import QMimeData
 from PySide6.QtCore import QByteArray
 
 
-class ImageWidget(BaseWidget):
+class ImageWidget(BaseWidget, ABC):
     widget_class_ = Ui_image_widget
     image_path = None
     meta_data = {}

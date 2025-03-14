@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import Any
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QDoubleSpinBox
@@ -7,7 +8,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.slider.templates.slider_ui import Ui_slider_widget
 
 
-class SliderWidget(BaseWidget):
+class SliderWidget(BaseWidget, ABC):
     widget_class_ = Ui_slider_widget
     display_as_float = False
     divide_by = 1.0

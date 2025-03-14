@@ -1,3 +1,5 @@
+from abc import ABC
+
 from airunner.data.models import AIModels, GeneratorSettings
 from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
 from airunner.widgets.base_widget import BaseWidget
@@ -9,7 +11,7 @@ from airunner.workers.model_scanner_worker import ModelScannerWorker
 
 class StableDiffusionSettingsWidget(
     BaseWidget,
-    PipelineMixin
+    PipelineMixin, ABC
 ):
     widget_class_ = Ui_stable_diffusion_settings_widget
 

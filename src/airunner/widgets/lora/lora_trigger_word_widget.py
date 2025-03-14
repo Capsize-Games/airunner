@@ -1,10 +1,12 @@
+from abc import ABC
+
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.templates.lora_trigger_word_ui import Ui_lora_trigger_word
 from PySide6.QtWidgets import QApplication
 
 
-class LoraTriggerWordWidget(BaseWidget):
+class LoraTriggerWordWidget(BaseWidget, ABC):
     widget_class_ = Ui_lora_trigger_word
     trigger_word = None
 

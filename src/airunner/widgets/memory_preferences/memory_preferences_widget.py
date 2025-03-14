@@ -1,9 +1,11 @@
+from abc import ABC
+
 from PySide6.QtCore import Slot
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.memory_preferences.templates.memory_preferences_ui import Ui_memory_preferences
 
 
-class MemoryPreferencesWidget(BaseWidget):
+class MemoryPreferencesWidget(BaseWidget, ABC):
     widget_class_ = Ui_memory_preferences
 
     def __init__(self, **kwargs):

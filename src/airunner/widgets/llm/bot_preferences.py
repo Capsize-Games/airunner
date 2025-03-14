@@ -1,3 +1,5 @@
+from abc import ABC
+
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
@@ -9,7 +11,7 @@ from airunner.widgets.llm.document_widget import DocumentWidget
 from airunner.widgets.llm.templates.bot_preferences_ui import Ui_bot_preferences
 
 
-class BotPreferencesWidget(BaseWidget):
+class BotPreferencesWidget(BaseWidget, ABC):
     widget_class_ = Ui_bot_preferences
 
     def __init__(self, *args, **kwargs):

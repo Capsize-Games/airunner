@@ -1,9 +1,12 @@
+from abc import ABC
+
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.input_image_container_ui import Ui_input_image_container
 from airunner.widgets.canvas.input_image import InputImage
 
-class InputImageContainer(BaseWidget):
+
+class InputImageContainer(BaseWidget, ABC):
     widget_class_ = Ui_input_image_container
 
     def __init__(self, *args, **kwargs):

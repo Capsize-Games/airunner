@@ -1,3 +1,5 @@
+from abc import ABC
+
 import numpy as np
 from PIL import Image
 from airunner.enums import (
@@ -6,7 +8,7 @@ from airunner.enums import (
 from airunner.workers.worker import Worker
 
 
-class LatentsWorker(Worker):
+class LatentsWorker(Worker, ABC):
     def __init__(self):
         super().__init__()
         self.register(SignalCode.HANDLE_LATENTS_SIGNAL, self.on_handle_latents_signal)

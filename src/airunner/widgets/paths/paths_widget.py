@@ -1,9 +1,11 @@
+from abc import ABC
+
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.paths.templates.paths_ui import Ui_paths_form
 
 
-class PathsWidget(BaseWidget):
+class PathsWidget(BaseWidget, ABC):
     widget_class_ = Ui_paths_form
 
     def __init__(self, **kwargs):

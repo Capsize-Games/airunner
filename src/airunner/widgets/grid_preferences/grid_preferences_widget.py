@@ -1,10 +1,12 @@
+from abc import ABC
+
 from PySide6.QtWidgets import QColorDialog
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.grid_preferences.templates.grid_preferences_ui import Ui_grid_preferences
 
 
-class GridPreferencesWidget(BaseWidget):
+class GridPreferencesWidget(BaseWidget, ABC):
     widget_class_ = Ui_grid_preferences
 
     def __init__(self, *args, **kwargs):

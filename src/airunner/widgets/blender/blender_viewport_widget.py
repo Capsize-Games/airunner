@@ -1,3 +1,5 @@
+from abc import ABC
+
 from PySide6.QtWidgets import (
     QVBoxLayout,
     QLabel,
@@ -10,7 +12,7 @@ from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 
 
-class BlenderViewportWidget(BaseWidget):
+class BlenderViewportWidget(BaseWidget, ABC):
     def __init__(self):
         super().__init__()
         self.apply_button = None

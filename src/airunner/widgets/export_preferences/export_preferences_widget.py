@@ -1,9 +1,11 @@
+from abc import ABC
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.export_preferences.templates.export_preferences_ui import Ui_export_preferences
 from PySide6.QtWidgets import QFileDialog
 
 
-class ExportPreferencesWidget(BaseWidget):
+class ExportPreferencesWidget(BaseWidget, ABC):
     widget_class_ = Ui_export_preferences
 
     def __init__(self, **kwargs):

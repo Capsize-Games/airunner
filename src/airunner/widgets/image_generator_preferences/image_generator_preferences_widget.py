@@ -1,3 +1,5 @@
+from abc import ABC
+
 from airunner.enums import ImageGenerator, GeneratorSection
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image_generator_preferences.templates.image_generator_preferences_ui import (
@@ -5,7 +7,7 @@ from airunner.widgets.image_generator_preferences.templates.image_generator_pref
 )
 
 
-class ImageGeneratorPreferencesWidget(BaseWidget):
+class ImageGeneratorPreferencesWidget(BaseWidget, ABC):
     widget_class_ = Ui_image_generator_preferences
 
     def __init__(self, *args, **kwargs):

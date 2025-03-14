@@ -1,3 +1,5 @@
+from abc import ABC
+
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit, QApplication, QWidget
 from PySide6.QtGui import QFontMetrics
@@ -17,7 +19,7 @@ class AutoResizingTextEdit(QTextEdit):
         self.document().contentsChanged.connect(self.sizeChange)
 
 
-class MessageWidget(BaseWidget):
+class MessageWidget(BaseWidget, ABC):
     widget_class_ = Ui_message
     textChanged = Signal()
 

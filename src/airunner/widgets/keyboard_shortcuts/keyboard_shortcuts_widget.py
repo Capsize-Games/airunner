@@ -1,3 +1,5 @@
+from abc import ABC
+
 from PySide6.QtCore import Qt
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QWidget
@@ -9,7 +11,7 @@ from airunner.widgets.keyboard_shortcuts.templates.keyboard_shortcut_widget_ui i
 from airunner.widgets.keyboard_shortcuts.templates.keyboard_shortcuts_ui import Ui_keyboard_shortcuts
 
 
-class KeyboardShortcutsWidget(BaseWidget):
+class KeyboardShortcutsWidget(BaseWidget, ABC):
     widget_class_ = Ui_keyboard_shortcuts
 
     def __init__(self, **kwargs):
