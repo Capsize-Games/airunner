@@ -14,17 +14,14 @@ audit the application by using this repository as a reference.
 All current and future security documentation will be contained
 within this file.
 """
-import logging
+from dotenv import load_dotenv
 import os
 import sys
 from PySide6 import QtCore
 from airunner.enums import (
     Scheduler,
     SignalCode,
-    Gender,
 )
-from dotenv import load_dotenv
-
 load_dotenv()
 python_venv_dir = os.path.dirname(sys.executable)
 NLTK_DOWNLOAD_DIR = os.path.join(
@@ -32,9 +29,6 @@ NLTK_DOWNLOAD_DIR = os.path.join(
     "..",
     "lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/"
 )
-ORGANIZATION = "Capsize Games"
-APPLICATION_NAME = "AI Runner"
-LOG_LEVEL = logging.DEBUG
 DEFAULT_LLM_HF_PATH = "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
 DEFAULT_STT_HF_PATH = "openai/whisper-tiny"
 DEFAULT_IMAGE_SYSTEM_PROMPT = os.environ.get(
@@ -190,34 +184,43 @@ DEFAULT_PATH_SETTINGS = {
         )
     ),
 }
-MALE = Gender.MALE
-FEMALE = Gender.FEMALE
-PHOTO_REALISTIC_NEGATIVE_PROMPT = (
-    "illustration, drawing, cartoon, not real, fake, cgi, 3d animation, "
-    "3d art, sculpture, animation, anime, Digital art, Concept art, Pixel art"
+PHOTO_REALISTIC_NEGATIVE_PROMPT = os.environ.get(
+    "PHOTO_REALISTIC_NEGATIVE_PROMPT",
+    (
+        "illustration, drawing, cartoon, not real, fake, cgi, 3d animation, "
+        "3d art, sculpture, animation, anime, Digital art, Concept art, Pixel art"
+    )
 )
 
-ILLUSTRATION_NEGATIVE_PROMPT = (
-    "photo, photograph, photography, high-definition, video, "
-    "realistic, hyper-realistic, film"
+ILLUSTRATION_NEGATIVE_PROMPT = os.environ.get(
+    "ILLUSTRATION_NEGATIVE_PROMPT",
+    (
+        "photo, photograph, photography, high-definition, video, "
+        "realistic, hyper-realistic, film"
+    )
 )
-BUG_REPORT_LINK = (
-    "https://github.com/Capsize-Games/airunner/issues/new"
-    "?assignees=&labels=&template=bug_report.md&title="
+BUG_REPORT_LINK = os.environ.get(
+    "BUG_REPORT_LINK",
+    (
+        "https://github.com/Capsize-Games/airunner/issues/new"
+        "?assignees=&labels=&template=bug_report.md&title="
+    )
 )
-VULNERABILITY_REPORT_LINK = (
-    "https://github.com/Capsize-Games/airunner/security/advisories/new"
+VULNERABILITY_REPORT_LINK = os.environ.get(
+    "VULNERABILITY_REPORT_LINK",
+    (
+        "https://github.com/Capsize-Games/airunner/security/advisories/new"
+    )
 )
-SD_DEFAULT_VAE_PATH = ""
-SD_FEATURE_EXTRACTOR_PATH = "openai/clip-vit-large-patch14"
-DEFAULT_BRUSH_PRIMARY_COLOR = "#99C1F1"
-DEFAULT_BRUSH_SECONDARY_COLOR = "#000000"
-STATUS_ERROR_COLOR = "#ff0000"
-STATUS_NORMAL_COLOR_LIGHT = "#000000"
-STATUS_NORMAL_COLOR_DARK = "#ffffff"
-DARK_THEME_NAME = "dark_theme"
-LIGHT_THEME_NAME = "light_theme"
-VALID_IMAGE_FILES = "Image Files (*.png *.jpg *.jpeg)"
+SD_DEFAULT_VAE_PATH = os.environ.get("SD_DEFAULT_VAE_PATH", "")
+DEFAULT_BRUSH_PRIMARY_COLOR = os.environ.get("DEFAULT_BRUSH_PRIMARY_COLOR", "#99C1F1")
+DEFAULT_BRUSH_SECONDARY_COLOR = os.environ.get("DEFAULT_BRUSH_SECONDARY_COLOR", "#000000")
+STATUS_ERROR_COLOR = os.environ.get("STATUS_ERROR_COLOR", "#ff0000")
+STATUS_NORMAL_COLOR_LIGHT = os.environ.get("STATUS_NORMAL_COLOR_LIGHT", "#000000")
+STATUS_NORMAL_COLOR_DARK = os.environ.get("STATUS_NORMAL_COLOR_DARK", "#ffffff")
+DARK_THEME_NAME = os.environ.get("DARK_THEME_NAME", "dark_theme")
+LIGHT_THEME_NAME = os.environ.get("LIGHT_THEME_NAME", "light_theme")
+VALID_IMAGE_FILES = os.environ.get("VALID_IMAGE_FILES", "Image Files (*.png *.jpg *.jpeg)")
 ESPEAK_SETTINGS = {
     "voices": {
         "Male": [
@@ -244,13 +247,6 @@ ESPEAK_SETTINGS = {
     },
     "punctuation_modes": ["none", "all", "some"],
 }
-AVAILABLE_ACTIONS = [
-    "txt2img",
-    "img2img",
-    "outpaint",
-    "controlnet",
-    "safety_checker",
-]
 SCHEDULER_CLASSES = [
     dict(
         display_name=Scheduler.EULER_ANCESTRAL.value,
@@ -321,12 +317,11 @@ SCHEDULER_CLASSES = [
         name="DPMSolverMultistepScheduler",
     ),
 ]
-MAX_SEED = 4294967295
-SCHEDULERS = [e.value for e in Scheduler]
-DEFAULT_SCHEDULER = Scheduler.DPM_PP_2M_K.value
-MIN_NUM_INFERENCE_STEPS_IMG2IMG = 3
-NSFW_CONTENT_DETECTED_MESSAGE = "NSFW content detected"
-SLEEP_TIME_IN_MS = 50
+MAX_SEED = os.environ.get("MAX_SEED", 4294967295)
+DEFAULT_SCHEDULER = os.environ.get("DEFAULT_SCHEDULER", Scheduler.DPM_PP_2M_K.value)
+MIN_NUM_INFERENCE_STEPS_IMG2IMG = os.environ.get("MIN_NUM_INFERENCE_STEPS_IMG2IMG", 3)
+NSFW_CONTENT_DETECTED_MESSAGE = os.environ.get("NSFW_CONTENT_DETECTED_MESSAGE", "NSFW content detected")
+SLEEP_TIME_IN_MS = os.environ.get("SLEEP_TIME_IN_MS", 50)
 DEFAULT_SHORTCUTS = [
     {
         "display_name": "Generate Image",
@@ -411,12 +406,14 @@ DB_PATH = os.path.expanduser(
         "airunner.db"
     )
 )
-DB_URL = os.environ.get("AI_RUNNER_DATABASE_URL", "")
-DB_URL = f"sqlite:///{DB_PATH}" if (DB_URL == "" or not DB_URL) else DB_URL
+default_url = "sqlite:///" + DB_PATH
+DB_URL = os.environ.get("AIRUNNER_DATABASE_URL", default_url)
+if DB_URL == "" or not DB_URL:
+    DB_URL = default_url
 
 # Default LLM Settings
-USE_LOCAL_LLM_DEFAULT = True
-USE_OPENROUTER_DEFAULT = False
-OPENROUTER_API_KEY_DEFAULT = ""
-USE_OPENAI_DEFAULT = False
-OPENAI_API_KEY_DEFAULT = ""
+USE_LOCAL_LLM_DEFAULT = os.environ.get("USE_LOCAL_LLM_DEFAULT", True)
+USE_OPENROUTER_DEFAULT = os.environ.get("USE_OPENROUTER_DEFAULT", False)
+OPENROUTER_API_KEY_DEFAULT = os.environ.get("OPENROUTER_API_KEY_DEFAULT", "")
+USE_OPENAI_DEFAULT = os.environ.get("USE_OPENAI_DEFAULT", False)
+OPENAI_API_KEY_DEFAULT = os.environ.get("OPENAI_API_KEY_DEFAULT", "")
