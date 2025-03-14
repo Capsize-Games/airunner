@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, List
 from urllib.parse import urlparse
 import datetime
 from sqlalchemy import create_engine
@@ -83,8 +83,8 @@ class DatabaseChatStore(BaseChatStore):
 
     def set_messages(self, key: str, messages: list[ChatMessage]) -> None:
         """Set messages for a key."""
-        id = int(key)
-        conversation = Conversation.objects.get(id)
+        index = int(key)
+        conversation = Conversation.objects.get(index)
         if conversation:
             if messages and len(messages) > 0:
                 formatted_messages = []
@@ -129,8 +129,8 @@ class DatabaseChatStore(BaseChatStore):
 
     def get_messages(self, key: str) -> list[ChatMessage]:
         """Get messages for a key."""
-        id = int(key)
-        result = Conversation.objects.get(id)
+        index = int(key)
+        result = Conversation.objects.get(index)
         messages = (result.value if result else None) or []
         formatted_messages = []
         for message in messages:
@@ -148,8 +148,8 @@ class DatabaseChatStore(BaseChatStore):
  
     def add_message(self, key: str, message: ChatMessage) -> None:
         """Add a message for a key."""
-        id = int(key)
-        conversation = Conversation.objects.get(id)
+        index = int(key)
+        conversation = Conversation.objects.get(index)
         if conversation:
             messages = conversation.value
         else:
@@ -178,16 +178,17 @@ class DatabaseChatStore(BaseChatStore):
             )
         conversation.save()
     
-    def delete_messages(self, key: str) -> Optional[list[ChatMessage]]:
+    def delete_messages(self, key: str) -> Optional[List[ChatMessage]]:
         """Delete messages for a key."""
-        id = int(key)
-        Conversation.objects.delete(id)
+        index = int(key)
+        Conversation.objects.delete(index)
+        return None
 
     def delete_message(self, key: str, idx: int) -> Optional[ChatMessage]:
         """Delete specific message for a key."""
-        id = int(key)
+        index = int(key)
         # First, retrieve the current list of messages
-        conversation = Conversation.objects.get(id)
+        conversation = Conversation.objects.get(index)
         if conversation:
             messages = conversation.values
         else:
@@ -205,9 +206,9 @@ class DatabaseChatStore(BaseChatStore):
 
     def delete_last_message(self, key: str) -> Optional[ChatMessage]:
         """Delete last message for a key."""
-        id = int(key)
+        index = int(key)
         # First, retrieve the current list of messages
-        conversation = Conversation.objects.get(id)
+        conversation = Conversation.objects.get(index)
         if conversation:
             messages = conversation.value
         else:
@@ -220,7 +221,7 @@ class DatabaseChatStore(BaseChatStore):
         # Remove the message at the given index
         removed_message = messages[-1]
         messages.pop(-1)
-        Conversation.objects.update(id, {
+        Conversation.objects.update(index, {
             "value": messages
         })
         return ChatMessage.model_validate(removed_message)
