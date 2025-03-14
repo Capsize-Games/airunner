@@ -22,7 +22,7 @@ class TTSGeneratorWorker(Worker):
         self.play_queue_started = False
         self.do_interrupt = False
         self._current_model: Optional[str] = None
-        super().__init__(*args, signals=(
+        super().__init__(signals=(
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
             (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
             (SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal),
@@ -30,7 +30,7 @@ class TTSGeneratorWorker(Worker):
             (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal),
             (SignalCode.TTS_MODEL_CHANGED, self._reload_tts_handler),
             (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal),
-        ), **kwargs)
+        ))
 
     def on_llm_text_streamed_signal(self, data):
         if not self.application_settings.tts_enabled:

@@ -492,14 +492,6 @@ class MainWindow(
                 }
             )
 
-    def on_describe_image_signal(self, data):
-        image = data["image"]
-        callback = data["callback"]
-        self.generator_tab_widget.ui.ai_tab_widget.describe_image(
-            image=image,
-            callback=callback
-        )
-
     def show_layers(self):
         self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 

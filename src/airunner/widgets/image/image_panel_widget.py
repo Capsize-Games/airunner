@@ -50,14 +50,12 @@ class ImagePanelWidget(BaseWidget):
             widget = item.widget()
             widget.deleteLater()
 
-    def show_files(self, _clear_images=True, reset_scroll_bar=True, _show_folders=True):
+    def show_files(self, reset_scroll_bar=True):
         """
         Displays the files in the image panel widget.
 
         Args:
-            clear_images (bool, optional): Whether to clear the existing images. Defaults to True.
             reset_scroll_bar (bool, optional): Whether to reset the scroll bar position. Defaults to True.
-            show_folders (bool, optional): Whether to show folders in the file list. Defaults to True.
         """
         if reset_scroll_bar:
             self.ui.scrollArea.verticalScrollBar().setValue(0)
@@ -102,15 +100,6 @@ class ImagePanelWidget(BaseWidget):
                 image_widget.set_image(os.path.join(self.path_settings.image_path, file))
                 self.ui.scrollAreaWidgetContents.layout().addWidget(image_widget)
     
-    def handle_folder_clicked(self, _path):
-        """
-        Handles the event when a folder is clicked.
-
-        Args:
-            path (str): The path of the clicked folder.
-        """
-        self.show_files()
-    
     def handle_scroll(self, value):
         """
         Handles the scroll event of the image panel widget.
@@ -123,4 +112,4 @@ class ImagePanelWidget(BaseWidget):
         """
         if value >= self.ui.scrollArea.verticalScrollBar().maximum() - self.page_step + 1:
             self.page += 1
-            self.show_files(clear_images=False, reset_scroll_bar=False, show_folders=False)
+            self.show_files(reset_scroll_bar=False)
