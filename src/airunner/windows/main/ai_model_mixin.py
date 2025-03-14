@@ -4,17 +4,6 @@ from airunner.enums import SignalCode
 
 
 class AIModelMixin:
-    def on_ai_model_delete_signal(self, item: dict):
-        self.ai_models = [existing_item for existing_item in self.ai_models if existing_item.name != item.name]
-        self.update_settings("ai_models", self.ai_models)
-
-    def ai_model_names_by_section(self, section) -> List[str]:
-        return [model.name for model in self.ai_models if model.section == section]
-
-    def models_by_pipeline_action(self, pipeline_action: str):
-        val = [model for model in self.ai_models if model.pipeline_action == pipeline_action]
-        return val
-    
     def ai_models_find(self, search="", default=False):
         return [
             model for model in self.ai_models
@@ -60,9 +49,3 @@ class AIModelMixin:
     
     def ai_model_versions(self):
         return [model.version for model in self.ai_models]
-    
-    def ai_models_by_category(self, category):
-        return [model for model in self.ai_models if model.category == category]
-
-    def ai_model_get_all(self):
-        return self.ai_models
