@@ -3,6 +3,8 @@ from typing import (
     Optional,
     Union,
 )
+
+from airunner.handlers.llm.agent.chat_engine.react_agent_engine import ReactAgentEngine
 from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import (
     RefreshContextChatEngine
 )
@@ -21,14 +23,15 @@ class ChatEngineTool(AsyncBaseTool):
     
     def __init__(
         self,
-        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine],
+        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine, ReactAgentEngine],
         metadata: ToolMetadata,
         resolve_input_errors: bool = True,
         agent=None
     ):
         self.chat_engine: Union[
             RefreshSimpleChatEngine, 
-            RefreshContextChatEngine
+            RefreshContextChatEngine,
+            ReactAgentEngine
         ] = chat_engine
         if not chat_engine:
             raise ValueError("Chat engine must be provided.")
@@ -39,7 +42,7 @@ class ChatEngineTool(AsyncBaseTool):
     @classmethod
     def from_defaults(
         cls,
-        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine],
+        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine, ReactAgentEngine],
         name: Optional[str] = None,
         description: Optional[str] = None,
         return_direct: bool = False,
