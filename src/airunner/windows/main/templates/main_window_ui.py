@@ -23,7 +23,6 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QMainWindow, QMenu,
 from airunner.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.widgets.tool_tab.tool_tab_widget import ToolTabWidget
-from airunner.widgets.webbrowser.web_browser_widget import WebBrowserWidget
 import airunner.resources_light_rc
 import airunner.resources_dark_rc
 
@@ -485,17 +484,6 @@ class Ui_MainWindow(object):
         self.gridLayout_2.addWidget(self.canvas, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.art_tab, "")
-        self.browser_tab = QWidget()
-        self.browser_tab.setObjectName(u"browser_tab")
-        self.gridLayout_5 = QGridLayout(self.browser_tab)
-        self.gridLayout_5.setObjectName(u"gridLayout_5")
-        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
-        self.browser = WebBrowserWidget(self.browser_tab)
-        self.browser.setObjectName(u"browser")
-
-        self.gridLayout_5.addWidget(self.browser, 0, 0, 1, 1)
-
-        self.center_tab_container.addTab(self.browser_tab, "")
 
         self.gridLayout_4.addWidget(self.center_tab_container, 0, 0, 1, 1)
 
@@ -931,7 +919,6 @@ class Ui_MainWindow(object):
         self.actionNew_Conversation.setText(QCoreApplication.translate("MainWindow", u"New Conversation", None))
         self.actionDelete_conversation.setText(QCoreApplication.translate("MainWindow", u"Delete conversation", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.art_tab), QCoreApplication.translate("MainWindow", u"Art", None))
-        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.browser_tab), QCoreApplication.translate("MainWindow", u"Browser", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
         self.menuChat.setTitle(QCoreApplication.translate("MainWindow", u"Chat", None))
