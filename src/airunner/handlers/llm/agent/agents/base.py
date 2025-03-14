@@ -212,7 +212,7 @@ class BaseAgent(
         return self._streaming_stopping_criteria
 
     @property
-    def llm(self) -> Type[LLM]:
+    def llm(self) -> LLM:
         pass
 
     @property
@@ -592,6 +592,7 @@ class BaseAgent(
                 f"{self.chatbot.backstory}\n"
                 "------\n"
             )
+        section_prompt = ""
         prompt = (
             f"Your name is {self.botname}.\n"
             f"- The user ({self.username}) is having a conversation with the assistant ({self.botname}).\n"
