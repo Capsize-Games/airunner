@@ -622,9 +622,6 @@ class BaseAgent(
             section_prompt = "The user is playing a game."
         else:
             section_prompt = ""
-        print("-"*100)
-        print(self.current_tab.name, self.webpage_html)
-        print("*"*100)
         prompt = (
             f"Your name is {self.botname}.\n"
             f"- The user ({self.username}) is having a conversation with the assistant ({self.botname}).\n"
