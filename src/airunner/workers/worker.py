@@ -55,7 +55,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
                 if msg is not None:
                     self.handle_message(msg)
             except queue.Empty:
-                msg = None
+                pass
             if self.paused:
                 self.logger.debug("Paused")
                 while self.paused:
@@ -74,7 +74,6 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         return msg
     
     def get_last_item(self):
-        msg = None
         index = None
         while not self.queue.empty():
             try:

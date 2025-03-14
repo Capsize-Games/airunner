@@ -54,7 +54,6 @@ def scan_path_for_embeddings(base_path) -> bool:
     embedding_added = False
     embedding_deleted = False
     db_handler = SettingsMixin()
-    items = []
     for versionpath, versionnames, versionfiles in os.walk(os.path.expanduser(os.path.join(base_path, "art/models"))):
         version = versionpath.split("/")[-1]
         embedding_path = os.path.expanduser(

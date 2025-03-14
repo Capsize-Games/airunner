@@ -124,7 +124,7 @@ class LLMSettingsWidget(
         for element in elements:
             element.blockSignals(False)
 
-    def callback(self, attr_name, value, widget=None):
+    def callback(self, attr_name, value, _widget=None):
         keys = attr_name.split(".")
         self.update_llm_generator_settings(keys[1], value)
         print(getattr(self.llm_generator_settings, keys[1]) == value)

@@ -21,7 +21,7 @@ class InputImageContainer(BaseWidget):
     def settings_key(self):
         return self.property("settings_key")
 
-    def on_mask_generator_worker_response_signal(self, message):
+    def on_mask_generator_worker_response_signal(self, _message):
         if self.mask_image:
             self.mask_image.on_mask_generator_worker_response_signal()
 

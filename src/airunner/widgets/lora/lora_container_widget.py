@@ -186,7 +186,7 @@ class LoraContainerWidget(BaseWidget):
         self._load_lora(force_reload=True)
         self._deleting = False
 
-    def available_lora(self, action):
+    def available_lora(self, _action):
         available_lora = []
         for lora in self.lora:
             if lora.enabled and lora.scale > 0:
@@ -197,7 +197,6 @@ class LoraContainerWidget(BaseWidget):
         for lora in self.lora:
             trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
             for tab_name in self.tabs.keys():
-                tab = self.tabs[tab_name]
                 for i in range(self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget().layout().count()):
                     lora_widget = self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget().layout().itemAt(
                         i).widget()
@@ -211,14 +210,14 @@ class LoraContainerWidget(BaseWidget):
                         )
                         break
 
-    def handle_lora_trigger_word(self, lora, lora_widget, value):
+    def handle_lora_trigger_word(self, lora, _lora_widget, value):
         for n in range(len(self.lora)):
             lora_object = self.lora[n]
             if lora_object.name == lora.name:
                 lora_object.trigger_word = value
                 self.update_lora(lora_object)
 
-    def handle_lora_slider(self, lora, lora_widget, value, tab_name):
+    def handle_lora_slider(self, lora, lora_widget, value, _tab_name):
         float_val = value / 100
         for n in range(len(self.lora)):
             lora_object = self.lora[n]
@@ -227,7 +226,7 @@ class LoraContainerWidget(BaseWidget):
                 self.update_lora(lora_object)
         lora_widget.scaleSpinBox.setValue(float_val)
 
-    def handle_lora_spinbox(self, lora, lora_widget, value, tab_name):
+    def handle_lora_spinbox(self, lora, lora_widget, value, _tab_name):
         for n in range(len(self.lora)):
             lora_object = self.lora[n]
             if lora_object.name == lora.name:

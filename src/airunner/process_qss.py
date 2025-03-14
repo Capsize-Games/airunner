@@ -15,7 +15,6 @@ def build_ui(path):
 
         print("Generating", ui_file)
         ui_file = str(ui_file)
-        ui_file_name = os.path.basename(ui_file)
         ui_file_dir = os.path.dirname(ui_file)
         ui_file_py = ui_file.replace(".ui", "_ui.py")
         print(f"Generating {ui_file_py}")
@@ -115,7 +114,6 @@ def process_qss(_path=None):
         for filename in os.listdir(directory_path):
             file_path = os.path.join(directory_path, filename)
             if os.path.isdir(file_path):
-                output_dir = os.path.join(directory_path, filename)
                 process_directory(file_path)
             elif os.path.isfile(file_path) and filename == 'manifest.txt':
                 output_dir = os.path.dirname(file_path)

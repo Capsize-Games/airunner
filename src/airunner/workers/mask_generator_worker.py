@@ -21,7 +21,7 @@ class MaskGeneratorWorker(Worker):
     def register_signals(self):
         self.register(SignalCode.GENERATE_MASK, self.on_generate_mask_signal)
 
-    def on_generate_mask_signal(self, message: dict):
+    def on_generate_mask_signal(self, _message: dict):
         mask = self.generate_mask()
         self.emit_signal(
             SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL,
