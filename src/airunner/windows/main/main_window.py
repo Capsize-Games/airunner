@@ -71,7 +71,6 @@ from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.widgets.pygame_open_gl_widget import PygameOpenGLWidget
 from airunner.data.models import SplitterSetting, Tab
 from airunner.plugin_loader import PluginLoader
 
