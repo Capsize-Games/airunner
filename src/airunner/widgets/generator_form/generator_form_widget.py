@@ -1,6 +1,5 @@
 import json
 import re
-from abc import ABC
 
 from PySide6.QtCore import Signal, QRect, Slot
 
@@ -20,7 +19,7 @@ from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.data.models import Tab
 
 
-class GeneratorForm(BaseWidget, ABC):
+class GeneratorForm(BaseWidget):
     widget_class_ = Ui_generator_form
     changed_signal = Signal(str, object)
 

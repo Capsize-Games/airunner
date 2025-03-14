@@ -1,12 +1,10 @@
-from abc import ABC
-
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.templates.embedding_trigger_word_ui import Ui_embedding_trigger_word
 from PySide6.QtWidgets import QApplication
 
 
-class EmbeddingTriggerWordWidget(BaseWidget, ABC):
+class EmbeddingTriggerWordWidget(BaseWidget):
     widget_class_ = Ui_embedding_trigger_word
     trigger_word = None
 

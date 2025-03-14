@@ -1,5 +1,4 @@
 import os
-from abc import ABC
 
 from PySide6.QtCore import Slot, QThread, QSize
 from PySide6.QtWidgets import QWidget, QSizePolicy
@@ -12,7 +11,7 @@ from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_emb
 from airunner.workers.directory_watcher import DirectoryWatcher
 
 
-class EmbeddingsContainerWidget(BaseWidget, ABC):
+class EmbeddingsContainerWidget(BaseWidget):
     widget_class_ = Ui_embeddings_container
     search_filter = ""
     spacer = None

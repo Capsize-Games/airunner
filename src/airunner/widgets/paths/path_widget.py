@@ -1,12 +1,11 @@
 import os
-from abc import ABC
 
 from PySide6.QtWidgets import QFileDialog
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.paths.templates.path_ui import Ui_path_widget
 
 
-class PathWidget(BaseWidget, ABC):
+class PathWidget(BaseWidget):
     widget_class_ = Ui_path_widget
 
     @property

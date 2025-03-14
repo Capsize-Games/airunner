@@ -1,3 +1,4 @@
+from abc import ABC, ABCMeta
 from abc import abstractmethod
 import os
 
@@ -10,11 +11,27 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.utils.create_worker import create_worker
 
 
-class BaseWidget(
+class BaseABCMeta(type(QWidget), ABCMeta):
+    pass
+
+
+class AbstractBaseWidget(
     QWidget,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    ABC,
+    metaclass=BaseABCMeta
 ):
+    @abstractmethod
+    def save_state(self):
+        pass
+
+    @abstractmethod
+    def restore_state(self):
+        pass
+
+
+class BaseWidget(AbstractBaseWidget):
     widget_class_ = None
     icons = ()
     ui = None
@@ -43,14 +60,6 @@ class BaseWidget(
         self.services: dict = {}
         self.worker_class_map: dict = {}
     
-    @abstractmethod
-    def save_state(self):
-        pass
-
-    @abstractmethod
-    def restore_state(self):
-        pass
-
     def initialize(self):
         """
         Call this function to initialize the widget.

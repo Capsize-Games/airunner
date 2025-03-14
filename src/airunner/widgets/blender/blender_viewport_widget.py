@@ -1,4 +1,3 @@
-from abc import ABC
 
 from PySide6.QtWidgets import (
     QVBoxLayout,
@@ -12,7 +11,7 @@ from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 
 
-class BlenderViewportWidget(BaseWidget, ABC):
+class BlenderViewportWidget(BaseWidget):
     def __init__(self):
         super().__init__()
         self.apply_button = None

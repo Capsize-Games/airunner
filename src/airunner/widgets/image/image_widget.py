@@ -1,6 +1,5 @@
 import os
 import json
-from abc import ABC
 
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QLabel
@@ -20,7 +19,7 @@ from PySide6.QtCore import QMimeData
 from PySide6.QtCore import QByteArray
 
 
-class ImageWidget(BaseWidget, ABC):
+class ImageWidget(BaseWidget):
     widget_class_ = Ui_image_widget
     image_path = None
     meta_data = {}
@@ -216,7 +215,7 @@ class ImageWidget(BaseWidget, ABC):
         pass
 
 
-class BrushImageWidget(ImageWidget, ABC):
+class BrushImageWidget(ImageWidget):
     def __init__(self, *args, **kwargs):
         self.container = kwargs.pop("container", None)
         self.brush = kwargs.pop("brush", CanvasToolName.BRUSH)

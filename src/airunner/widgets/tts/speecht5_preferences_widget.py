@@ -1,10 +1,9 @@
-from abc import ABC
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.tts.templates.speecht5_preferences_ui import Ui_speecht5_preferences
 
 
-class SpeechT5PreferencesWidget(BaseWidget, ABC):
+class SpeechT5PreferencesWidget(BaseWidget):
     widget_class_ = Ui_speecht5_preferences
 
     def __init__(self, *args, **kwargs):

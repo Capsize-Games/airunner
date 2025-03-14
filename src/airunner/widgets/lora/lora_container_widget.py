@@ -1,5 +1,4 @@
 import os
-from abc import ABC
 
 from PySide6.QtCore import Slot, QSize, QThread
 from PySide6.QtWidgets import QWidget, QSizePolicy
@@ -14,7 +13,7 @@ from airunner.workers.directory_watcher import DirectoryWatcher
 from airunner.data.models import Lora
 
 
-class LoraContainerWidget(BaseWidget, ABC):
+class LoraContainerWidget(BaseWidget):
     widget_class_ = Ui_lora_container
     search_filter = ""
     spacer = None

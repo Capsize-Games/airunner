@@ -1,4 +1,3 @@
-from abc import ABC
 
 import torch
 from PySide6.QtCore import QTimer
@@ -9,7 +8,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.status.templates.status_ui import Ui_status_widget
 
 
-class StatusWidget(BaseWidget, ABC):
+class StatusWidget(BaseWidget):
     widget_class_ = Ui_status_widget
 
     def __init__(self, *args, **kwargs):

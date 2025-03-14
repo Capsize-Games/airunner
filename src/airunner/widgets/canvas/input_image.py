@@ -1,5 +1,4 @@
 import os
-from abc import ABC
 
 from PIL import Image
 from PySide6.QtCore import Slot
@@ -15,7 +14,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.input_image_ui import Ui_input_image
 
 
-class InputImage(BaseWidget, ABC):
+class InputImage(BaseWidget):
     widget_class_ = Ui_input_image
 
     def __init__(self, *args, **kwargs):

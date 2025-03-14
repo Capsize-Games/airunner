@@ -1,6 +1,5 @@
 import os
 import threading
-from abc import ABC
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.image_widget import ImageWidget
@@ -8,7 +7,7 @@ from airunner.widgets.image.templates.image_panel_widget_ui import Ui_image_pane
 from airunner.widgets.qflowlayout.q_flow_layout import QFlowLayout
 
 
-class ImagePanelWidget(BaseWidget, ABC):
+class ImagePanelWidget(BaseWidget):
     widget_class_ = Ui_image_panel_widget
 
     def __init__(self, *args, **kwargs):

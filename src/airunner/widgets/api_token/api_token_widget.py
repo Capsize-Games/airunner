@@ -1,11 +1,10 @@
-from abc import ABC
 
 from PySide6.QtWidgets import QLineEdit
 from airunner.widgets.api_token.templates.api_token_ui import Ui_api_token
 from airunner.widgets.base_widget import BaseWidget
 
 
-class APITokenWidget(BaseWidget, ABC):
+class APITokenWidget(BaseWidget):
     widget_class_ = Ui_api_token
 
     def __init__(self, *args, **kwargs):

@@ -1,4 +1,3 @@
-from abc import ABC
 
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
@@ -10,7 +9,7 @@ from airunner.widgets.llm.templates.llm_history_item_ui import Ui_llm_history_it
 from airunner.data.models import Conversation
 
 
-class LLMHistoryItemWidget(BaseWidget, ABC):
+class LLMHistoryItemWidget(BaseWidget):
     widget_class_ = Ui_llm_history_item_widget
 
     def __init__(self, *args, **kwargs):

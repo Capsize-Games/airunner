@@ -1,4 +1,3 @@
-from abc import ABC
 
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
@@ -6,7 +5,7 @@ from airunner.windows.prompt_browser.templates.prompt_browser_prompt_widget_ui i
 from airunner.data.models import SavedPrompt
 
 
-class PromptWidget(BaseWidget, ABC):
+class PromptWidget(BaseWidget):
     widget_class_ = Ui_prompt_widget
 
     def __init__(self, *args, **kwargs):

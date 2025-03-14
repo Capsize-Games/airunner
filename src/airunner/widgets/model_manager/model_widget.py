@@ -1,4 +1,3 @@
-from abc import ABC
 
 from PySide6.QtCore import Slot
 
@@ -6,7 +5,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.model_ui import Ui_model_widget
 
 
-class ModelWidget(BaseWidget, ABC):
+class ModelWidget(BaseWidget):
     widget_class_ = Ui_model_widget
 
     def __init__(self, *args, **kwargs):

@@ -1,4 +1,3 @@
-from abc import ABC
 
 from PySide6.QtCore import Slot
 
@@ -17,7 +16,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.prompt_templates_ui import Ui_prompt_templates_widget
 
 
-class PromptTemplatesWidget(BaseWidget, ABC):
+class PromptTemplatesWidget(BaseWidget):
     widget_class_ = Ui_prompt_templates_widget
 
     def __init__(self, *args, **kwargs):

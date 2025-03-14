@@ -1,9 +1,7 @@
-from abc import ABC
 
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 
-from airunner.enums import SignalCode
 from airunner.settings import DEFAULT_LLM_HF_PATH
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
@@ -12,7 +10,7 @@ from airunner.windows.main.ai_model_mixin import AIModelMixin
 
 class LLMSettingsWidget(
     BaseWidget,
-    AIModelMixin, ABC
+    AIModelMixin
 ):
     widget_class_ = Ui_llm_settings_widget
 

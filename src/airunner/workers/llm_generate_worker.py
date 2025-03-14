@@ -103,4 +103,4 @@ class LLMGenerateWorker(Worker):
 
         callback = data.get("callback", None)
         if callback:
-            callback(data
+            callback(data)
