@@ -202,6 +202,15 @@ class LLMHandler(
         """
         self._chat_agent.reload_rag_engine()
 
+    def on_section_changed(self):
+        self._chat_agent.current_tab = None
+    
+    def on_web_browser_page_html(self, content: str):
+        if self._chat_agent:
+            self._chat_agent.on_web_browser_page_html(content)
+        else:
+            self.logger.error("Chat agent not loaded")
+
     def _load_tokenizer(self):
         if self._tokenizer is not None:
             return
