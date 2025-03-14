@@ -117,7 +117,8 @@ class BotPreferencesWidget(BaseWidget):
     def show_confirmation_dialog(self, msg):
         return self.show_dialog(msg, "Confirmation", buttons=["Yes", "No"])
 
-    def show_dialog(self, msg, title, buttons=["OK"]):
+    @staticmethod
+    def show_dialog(msg, title, buttons=["OK"]):
         dialog = QMessageBox()
         dialog.setText(msg)
         dialog.setWindowTitle(title)
