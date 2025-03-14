@@ -16,13 +16,13 @@ class TTSVocalizerWorker(Worker):
     """
     reader_mode_active = False
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, signals = (
+    def __init__(self):
+        super().__init__(signals=(
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
             (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
             (SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, self.on_TTSGeneratorWorker_add_to_stream_signal),
             (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal),
-        ), **kwargs)
+        ))
         self.queue = Queue()
         # check if speakers are available
         self.stream = None

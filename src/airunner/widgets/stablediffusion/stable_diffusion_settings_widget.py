@@ -79,8 +79,8 @@ class StableDiffusionSettingsWidget(
                 model = AIModels.objects.filter(
                     AIModels.version == generator_settings.version,
                     AIModels.pipeline_action == val,
-                    AIModels.enabled == True,
-                    AIModels.is_default == False
+                    AIModels.enabled is True,
+                    AIModels.is_default is False
                 ).first()
                 if model is not None:
                     generator_settings.model = model.id
@@ -105,8 +105,8 @@ class StableDiffusionSettingsWidget(
         model = AIModels.objects.filter(
             AIModels.version == val,
             AIModels.pipeline_action == generator_settings.pipeline_action,
-            AIModels.enabled == True,
-            AIModels.is_default == False
+            AIModels.enabled is True,
+            AIModels.is_default is False
         ).first()
         generator_settings.version = val
         generator_settings.model = model.id
@@ -173,8 +173,8 @@ class StableDiffusionSettingsWidget(
             AIModels.category == image_generator,
             AIModels.pipeline_action.in_(pipeline_actions),
             AIModels.version == version,
-            AIModels.enabled == True,
-            AIModels.is_default == False
+            AIModels.enabled is True,
+            AIModels.is_default is False
         ).all()
         model_id = generator_settings.model
         if model_id is None and len(models) > 0:

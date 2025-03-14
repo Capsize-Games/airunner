@@ -2,6 +2,7 @@ from typing import Callable
 from airunner.enums import SignalCode
 from airunner.signal_mediator import SignalMediator
 
+
 class MediatorMixin:
     """
     Use with any class that needs to emit and receive signals.

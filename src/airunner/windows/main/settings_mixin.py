@@ -291,10 +291,9 @@ class SettingsMixin:
     def get_lora_by_version(self, version) -> Optional[List[Lora]]:
         return Lora.objects.filter_by(version=version).all()
 
-    def get_embeddings_by_version(self, version) -> Optional[List[Embedding]]:
+    def get_embeddings_by_version(self, version) -> Optional[List[Type[Embedding]]]:
         return [
-            embedding for embedding in self.embeddings 
-                if embedding.version == version
+            embedding for embedding in self.embeddings if embedding.version == version
         ]
 
     @property
@@ -569,9 +568,10 @@ class SettingsMixin:
     def delete_chatbot_by_name(self, chatbot_name):
         Chatbot.objects.filter_by(name=chatbot_name).delete()
 
-    def create_chatbot(self, chatbot_name):
+    def create_chatbot(self, chatbot_name) -> Chatbot:
         new_chatbot = Chatbot(name=chatbot_name)
         new_chatbot.save()
+        return new_chatbot
 
     def reset_path_settings(self):
         PathSettings.objects.delete_all()

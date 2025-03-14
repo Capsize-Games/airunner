@@ -76,6 +76,7 @@ from airunner.utils.get_torch_device import get_torch_device
 from airunner.data.models import GeneratorSettings
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 
+
 class StableDiffusionHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

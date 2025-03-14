@@ -96,8 +96,6 @@ class BrushScene(CustomScene):
         if self.painter is None:
             self.refresh_image(self.current_active_image)
         if self.painter is not None and self.painter.isActive():
-            #self.painter.drawImage(0, 0, self.active_image)
-
             if self.last_pos:
                 if self.current_tool is CanvasToolName.BRUSH:
                     self._draw_at(self.painter)
@@ -134,7 +132,13 @@ class BrushScene(CustomScene):
             color=self.active_eraser_color
         )
 
-    def _create_line(self, drawing=False, erasing=False, painter=None, color: QColor=None):
+    def _create_line(
+        self,
+        drawing: bool = False,
+        erasing: bool = False,
+        painter: QPainter = None,
+        color: QColor = None
+    ):
         if (drawing and not self._is_drawing) or (erasing and not self._is_erasing):
             self._is_drawing = drawing
             self._is_erasing = erasing
@@ -265,7 +269,14 @@ class BrushScene(CustomScene):
                 self.mask_item = None
 
     def _create_mask_image(self):
-        mask_image = PIL.Image.new("RGBA", (self.active_grid_settings.width, self.active_grid_settings.height), (0, 0, 0, 255))
+        mask_image = PIL.Image.new(
+            "RGBA",
+            (
+                self.active_grid_settings.width,
+                self.active_grid_settings.height
+            ),
+            (0, 0, 0, 255)
+        )
         self.update_drawing_pad_settings("mask", convert_image_to_binary(mask_image))
         self.mask_image = ImageQt.ImageQt(mask_image)
         self.initialize_image()

@@ -14,7 +14,7 @@ SD_FILE_BOOTSTRAP_DATA = {
             "tokenizer/special_tokens_map.json",
             "tokenizer/tokenizer_config.json",
             "tokenizer/vocab.json",
-            #"v1-5-pruned-emaonly.safetensors",
+            # "v1-5-pruned-emaonly.safetensors",
         ],
         "datasets": [
             "Matthijs/cmu-arctic-xvectors"
@@ -35,7 +35,7 @@ SD_FILE_BOOTSTRAP_DATA = {
             "vae/diffusion_pytorch_model.fp16.safetensors",
             "config.json",
             "model_index.json",
-            #"sd-v1-5-inpainting.ckpt"
+            # "sd-v1-5-inpainting.ckpt"
         ],
         "inpaint_vae": [
             "config.json",

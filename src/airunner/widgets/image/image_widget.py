@@ -111,7 +111,7 @@ class ImageWidget(BaseWidget):
             # Execute the drag operation
             drag.exec(Qt.DropAction.MoveAction)
         elif event.button() == Qt.MouseButton.RightButton:
-            #self.send_image_to_grid()
+            # self.send_image_to_grid()
             self.display_image_menu(event)
 
     def display_image_menu(self, event):
@@ -166,7 +166,10 @@ class ImageWidget(BaseWidget):
         view.setRenderHint(QPainter.RenderHint.Antialiasing)
         view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
         view.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-        view.setOptimizationFlags(QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing | QGraphicsView.OptimizationFlag.DontSavePainterState)
+        view.setOptimizationFlags(
+            QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing |
+            QGraphicsView.OptimizationFlag.DontSavePainterState
+        )
         view.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
         view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         view.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
@@ -174,7 +177,11 @@ class ImageWidget(BaseWidget):
         view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         view.setInteractive(True)
         view.setMouseTracking(True)
-        view.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform | QPainter.RenderHint.TextAntialiasing)
+        view.setRenderHints(
+            QPainter.RenderHint.Antialiasing |
+            QPainter.RenderHint.SmoothPixmapTransform |
+            QPainter.RenderHint.TextAntialiasing
+        )
 
         # Create a layout and add the QGraphicsView to it
         layout = QVBoxLayout()
@@ -207,7 +214,7 @@ class ImageWidget(BaseWidget):
         pass
 
 
-class BrushImageWidget(ImageWidget):
+class BrushImageWidget(ImageWidget, ABC):
     def __init__(self, *args, **kwargs):
         self.container = kwargs.pop("container", None)
         self.brush = kwargs.pop("brush", CanvasToolName.BRUSH)

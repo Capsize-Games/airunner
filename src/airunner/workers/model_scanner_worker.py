@@ -14,7 +14,7 @@ class ModelScannerWorker(
         super().__init__(*args, **kwargs)
         PipelineMixin.__init__(self)
 
-    def handle_message(self):
+    def handle_message(self, _message):
         self.scan_for_models()
         self.remove_missing_models()
 
