@@ -1800,7 +1800,8 @@ class StableDiffusionHandler(BaseHandler):
             })
         return args
 
-    def _resize_image(self, image: Image, max_width: int, max_height: int) -> Optional[Image]:
+    @staticmethod
+    def _resize_image(image: Image, max_width: int, max_height: int) -> Optional[Image]:
         """
         Resize the image to ensure it is not larger than max_width and max_height,
         while maintaining the aspect ratio.

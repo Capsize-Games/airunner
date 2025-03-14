@@ -275,7 +275,8 @@ class SpeechT5Handler(TTSHandler):
         else:
             self.logger.error("Failed to load speaker embeddings")
         
-    def _extract_speaker_key(self, filename):
+    @staticmethod
+    def _extract_speaker_key(filename):
         return filename.split("_")[2]
 
     def _load_dataset_by_speaker_key(

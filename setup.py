@@ -26,6 +26,7 @@ setup(
         "pillow==11.1.0",
         "alembic==1.14.1",
         "aiosqlite==0.21.0",
+        "sqlalchemy==2.0.38",
     ],
     extras_require={
         "gui": [
