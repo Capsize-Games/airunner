@@ -1,4 +1,3 @@
-from abc import ABC
 
 from PySide6.QtCore import Slot
 
@@ -8,7 +7,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.webbrowser.templates.web_browser_ui import Ui_web_browser_widget
 
 
-class WebBrowserWidget(BaseWidget, ABC):
+class WebBrowserWidget(BaseWidget):
     widget_class_ = Ui_web_browser_widget
 
     def __init__(self, *args, **kwargs):

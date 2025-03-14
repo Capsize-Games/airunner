@@ -1,4 +1,3 @@
-from abc import ABC
 
 from airunner.enums import SignalCode
 from airunner.utils.random_seed import random_seed
@@ -6,7 +5,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.seed.templates.seed_ui import Ui_seed_widget
 
 
-class SeedWidget(BaseWidget, ABC):
+class SeedWidget(BaseWidget):
     widget_class_ = Ui_seed_widget
     name = "seed_widget"
 

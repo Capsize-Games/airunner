@@ -1,4 +1,3 @@
-from abc import ABC
 
 from PySide6.QtCore import QTimer, Slot
 
@@ -9,7 +8,7 @@ from airunner.widgets.lora.lora_trigger_word_widget import LoraTriggerWordWidget
 from airunner.widgets.lora.templates.lora_ui import Ui_lora
 
 
-class LoraWidget(BaseWidget, ABC):
+class LoraWidget(BaseWidget):
     """
     This class represents a single lora.
     It is responsible for displaying the lora's name, trigger words,
