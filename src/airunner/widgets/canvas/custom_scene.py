@@ -1,6 +1,7 @@
 import io
 import os
 import subprocess
+from typing import Optional
 
 import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
@@ -36,8 +37,8 @@ class CustomScene(
         self.image_backup = None
         self.previewing_filter = False
         self.painter = None
-        self.image: QImage = None
-        self.item: QGraphicsPixmapItem = None
+        self.image: Optional[QImage] = None
+        self.item: Optional[QGraphicsPixmapItem] = None
         super().__init__()
         self.last_export_path = None
         self._target_size = None
