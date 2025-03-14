@@ -230,6 +230,7 @@ class BaseAgent(
 
     @property
     def llm(self) -> LLM:
+        pass
 
     @property
     def chat_engine(self) -> RefreshSimpleChatEngine:
