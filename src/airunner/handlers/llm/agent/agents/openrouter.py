@@ -2,6 +2,7 @@ from typing import Type
 
 from PySide6.QtCore import QObject
 
+from airunner.handlers.llm.llm_settings import LLMSettings
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from llama_index.core.llms.llm import LLM
@@ -25,5 +26,9 @@ class OpenRouterQObject(
     MediatorMixin,
     SettingsMixin,
 ):
-    pass
+    def __init__(self, llm_settings: LLMSettings, *args, **kwargs):
+        QObject.__init__(self)
+        OpenRouterAgent.__init__(self, llm_settings=llm_settings)
+        MediatorMixin.__init__(self)
+        SettingsMixin.__init__(self)
 

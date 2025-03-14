@@ -11,7 +11,7 @@ from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent, QMessageBox
 
-from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, EngineResponseCode
+from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils import platform_info
@@ -123,6 +123,13 @@ class CustomScene(
         self._update_current_settings("image", image)
         if self.settings_key == "drawing_pad_settings":
             self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
+
+    @property
+    def is_brush_or_eraser(self):
+        return self.current_tool in (
+            CanvasToolName.BRUSH,
+            CanvasToolName.ERASER
+        )
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
@@ -244,11 +251,11 @@ class CustomScene(
     
     def display_gpu_memory_error(self):
         msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setIcon(QMessageBox.Icon.Critical)
         msg_box.setWindowTitle("Error: Unable to Generate Image")
         msg_box.setText("You are out of GPU memory (VRAM). Enable CPU offload and try again.")
         
-        enable_cpu_offload_button = msg_box.addButton("Enable CPU offload", QMessageBox.AcceptRole)
+        enable_cpu_offload_button = msg_box.addButton("Enable CPU offload", QMessageBox.ButtonRole.AcceptRole)
 
         msg_box.exec()
         
@@ -636,16 +643,12 @@ class CustomScene(
         image: Image,
         is_outpaint: bool = False,
         outpaint_box_rect: QPoint = None,
-        _border_size: int = 1,  # size of the border
-        _border_color: tuple = (255, 0, 0, 255)  # color of the border in RGBA format
     ):
         """
         Adds a given image to the scene
         :param image: Image object to add to the scene
         :param is_outpaint: bool indicating if the image is an outpaint
         :param outpaint_box_rect: QPoint indicating the root point of the image
-        :param border_size: int indicating the size of the border
-        :param border_color: tuple indicating the color of the border
         :return:
         """
         # image = ImageOps.expand(image, border=border_size, fill=border_color)
@@ -657,8 +660,7 @@ class CustomScene(
         if is_outpaint:
             image, root_point, pivot_point = self._handle_outpaint(
                 outpaint_box_rect,
-                image,
-                action=GeneratorSection.OUTPAINT.value
+                image
             )
         # self._set_current_active_image(image)
         self.current_active_image = image
@@ -668,7 +670,7 @@ class CustomScene(
         self.update()
         self.initialize_image(image)
 
-    def _handle_outpaint(self, outpaint_box_rect, outpainted_image, _action=None) -> [Image, QPoint, QPoint]:
+    def _handle_outpaint(self, outpaint_box_rect, outpainted_image) -> [Image, QPoint, QPoint]:
         if self.current_active_image is None:
             point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
             return outpainted_image, QPoint(0, 0), point

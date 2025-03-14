@@ -253,7 +253,6 @@ class LLMToolName(Enum):
     requests. They should be named with the same convention as python functions.
     """
     COMMENT_ON_IMAGE = "comment_on_image"
-    DESCRIBE_IMAGE = "describe_image"
     GENERATE_IMAGE = "generate_image"
     DEFAULT_TOOL = "default_response_tool"
     LLM_PROCESS_STT_AUDIO = "llm_process_stt_audio"

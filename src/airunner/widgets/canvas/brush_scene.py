@@ -60,13 +60,6 @@ class BrushScene(CustomScene):
             return QColor(Qt.GlobalColor.black)
         return QColor(Qt.GlobalColor.transparent)
 
-    @property
-    def is_brush_or_eraser(self):
-        return self.current_tool in (
-            CanvasToolName.BRUSH,
-            CanvasToolName.ERASER
-        )
-
     def on_brush_color_changed(self, data):
         self._brush_color = QColor(data["color"])
 
