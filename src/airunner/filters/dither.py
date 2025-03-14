@@ -3,6 +3,7 @@ from PIL import Image
 
 from airunner.filters.base_filter import BaseFilter
 
+
 class Dither(BaseFilter):
     def apply_filter(self, image, do_reset):
         # Convert image to grayscale

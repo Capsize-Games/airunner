@@ -17,7 +17,7 @@ class InputImageContainer(BaseWidget):
 
     @property
     def settings_key(self):
-        return self.property("settings_key")    
+        return self.property("settings_key")
 
     def on_mask_generator_worker_response_signal(self, message):
         if self.mask_image:
@@ -33,14 +33,14 @@ class InputImageContainer(BaseWidget):
         if self.input_image is None:
             self.input_image = InputImage(settings_key=self.settings_key)
             self.ui.tabWidget.addTab(self.input_image, "Input Image")
-        
+
         if self.generated_image is None and settings_key == "controlnet_settings":
             self.generated_image = InputImage(settings_key=self.settings_key, use_generated_image=True)
             self.ui.tabWidget.addTab(self.generated_image, "Generated Image")
         elif self.mask_image is None and settings_key == "outpaint_settings":
             self.mask_image = InputImage(settings_key=self.settings_key, is_mask=True)
             self.ui.tabWidget.addTab(self.mask_image, "Mask")
-    
+
     def _set_label(self):
         settings_key = self.settings_key
         if settings_key == "outpaint_settings":

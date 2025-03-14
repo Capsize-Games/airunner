@@ -89,23 +89,22 @@ class LLMRequest:
         use_cache: bool,
     ) -> 'LLMRequest':
         return cls(
-            do_sample = do_sample,
-            early_stopping = early_stopping,
-            eta_cutoff = eta_cutoff,
-            length_penalty = length_penalty / 1000.0,
-            max_new_tokens = max_new_tokens,
-            min_length = min_length,
-            no_repeat_ngram_size = no_repeat_ngram_size,
-            num_beams = num_beams,
-            num_return_sequences = num_return_sequences,
-            repetition_penalty = repetition_penalty / 100.0,
-            temperature = temperature / 10000.0,
-            top_k = top_k,
-            top_p = top_p / 1000.0,
-            use_cache = use_cache,
+            do_sample=do_sample,
+            early_stopping=early_stopping,
+            eta_cutoff=eta_cutoff,
+            length_penalty=length_penalty / 1000.0,
+            max_new_tokens=max_new_tokens,
+            min_length=min_length,
+            no_repeat_ngram_size=no_repeat_ngram_size,
+            num_beams=num_beams,
+            num_return_sequences=num_return_sequences,
+            repetition_penalty=repetition_penalty / 100.0,
+            temperature=temperature / 10000.0,
+            top_k=top_k,
+            top_p=top_p / 1000.0,
+            use_cache=use_cache,
         )
         
-
     @classmethod
     def from_chatbot(
         cls, 

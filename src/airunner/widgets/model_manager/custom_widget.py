@@ -85,7 +85,12 @@ class CustomModelWidget(
             self.model_widgets.append(model_widget)
         
         if not self.spacer:
-            self.spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+            self.spacer = QtWidgets.QSpacerItem(
+                20,
+                40,
+                QtWidgets.QSizePolicy.Policy.Minimum,
+                QtWidgets.QSizePolicy.Policy.Expanding
+            )
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
     def mode_type_changed(self, val):

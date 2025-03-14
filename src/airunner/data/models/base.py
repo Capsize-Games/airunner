@@ -182,7 +182,6 @@ class BaseManager:
         return obj
 
 
-
 class BaseModel(Base):
     __abstract__ = True
 

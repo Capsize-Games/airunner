@@ -147,6 +147,8 @@ class SignalCode(Enum):
     SAFETY_CHECKER_LOAD_SIGNAL = "SAFETY_CHECKER_LOAD_SIGNAL"
     SAFETY_CHECKER_UNLOAD_SIGNAL = "SAFETY_CHECKER_UNLOAD_SIGNAL"
 
+    BRUSH_COLOR_CHANGED_SIGNAL = enum.auto()
+
     HISTORY_CLEAR_SIGNAL = enum.auto()
     UNDO_SIGNAL = enum.auto()
     REDO_SIGNAL = enum.auto()
@@ -179,6 +181,7 @@ class SignalCode(Enum):
     SECTION_CHANGED = enum.auto()
 
     WEB_BROWSER_PAGE_HTML = enum.auto()
+
 
 class EngineResponseCode(Enum):
     NONE = 0
@@ -281,13 +284,14 @@ class LLMActionType(Enum):
     UPDATE_MOOD = "UPDATE_MOOD"
     QUIT_APPLICATION = "QUIT APPLICATION: If the users requests that you quit the application, choose this action."
     TOGGLE_FULLSCREEN = "TOGGLE FULLSCREEN: If the user requests to toggle fullscreen mode, choose this action."
-    TOGGLE_TTS = "TOGGLE TEXT-TO-SPEECH: If the user requests that you turn on or off or toggle text-to-speech, choose this action."
+    TOGGLE_TTS = "TOGGLE TEXT-TO-SPEECH: If the user requests that you turn on or off or toggle text-to-speech, " \
+                 "choose this action."
     PERFORM_RAG_SEARCH = "SEARCH: If the user requests that you search for information, choose this action."
     SUMMARIZE = "SUMMARIZE"
-    DO_NOTHING = "DO NOTHING: If the user's request is unclear or you are unable to determine the user's intent, choose this action."
+    DO_NOTHING = "DO NOTHING: If the user's request is unclear or you are unable to determine the user's intent, " \
+                 "choose this action."
     GET_WEATHER = "get_weather"
     STORE_DATA = "store_data"
-
 
 
 class CanvasToolName(Enum):

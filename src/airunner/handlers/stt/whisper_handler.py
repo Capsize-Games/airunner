@@ -71,7 +71,7 @@ class WhisperHandler(BaseHandler):
             if transcription:
                 self._send_transcription(transcription)
 
-    def load(self, retry:bool = False):
+    def load(self, retry: bool = False):
         if self.stt_is_loading or self.stt_is_loaded:
             return
         self.logger.debug("Loading Whisper (text-to-speech)")

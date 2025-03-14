@@ -115,7 +115,7 @@ class SDWorker(Worker):
             thread = threading.Thread(target=self._unload_controlnet)
             thread.start()
 
-    def on_load_stablediffusion_signal(self, data:dict=None):
+    def on_load_stablediffusion_signal(self, data: dict = None):
         if self.sd:
             thread = threading.Thread(target=self._load_sd, args=(data,))
             thread.start()
@@ -125,7 +125,7 @@ class SDWorker(Worker):
             thread = threading.Thread(target=self._unload_sd, args=(data,))
             thread.start()
 
-    def _load_sd(self, data:dict=None):
+    def _load_sd(self, data: dict = None):
         do_reload = data.get("do_reload", False)
         if do_reload:
             self.sd.reload()
@@ -136,7 +136,7 @@ class SDWorker(Worker):
             if callback is not None:
                 callback(data)
 
-    def _unload_sd(self, data:dict=None):
+    def _unload_sd(self, data: dict = None):
         self.sd.unload()
         if data:
             callback = data.get("callback", None)
@@ -177,7 +177,7 @@ class SDWorker(Worker):
         pass
 
     def on_stop_auto_image_generation_signal(self, _data=None):
-        #self.sd_mode = SDMode.STANDARD
+        # self.sd_mode = SDMode.STANDARD
         pass
 
     def on_do_generate_signal(self, message: dict):

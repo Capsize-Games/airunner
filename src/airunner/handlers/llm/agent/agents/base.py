@@ -38,7 +38,7 @@ from airunner.settings import DB_URL
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
-from openai import OpenAI
+from airunner.data.models import Tab
 
 
 DEFAULT_MAX_FUNCTION_CALLS = 5
@@ -57,7 +57,10 @@ class BaseAgent(
         **kwargs
     ) -> None:
         RAGMixin.__init__(self)
+        self.thread = None
+        self._chatbot = None
         self.llm_settings: LLMSettings = llm_settings
+        self._current_tab: Optional[Tab] = None
         self.update_mood_after_n_turns = 3
         self.summarize_after_n_turns = 5
         self._streaming_stopping_criteria: Optional[ExternalConditionStoppingCriteria] = None
@@ -89,6 +92,7 @@ class BaseAgent(
         self.max_function_calls: int = max_function_calls
         self._complete_response: str = ""
         self._store_user_tool: Optional[FunctionTool] = None
+        self.webpage_html: str = ""
         self.register(SignalCode.DELETE_MESSAGES_AFTER_ID, self.on_delete_messages_after_id)
     
     def on_delete_messages_after_id(self):
@@ -612,7 +616,8 @@ class BaseAgent(
             f"- As {self.botname}, you will not ask how you they can provide assistance, or how they can help.\n"
             f"- As {self.botname}, you must respond and talk like a real human user.\n"
             f"- As {self.botname}, you can ask questions, make statements, and provide information.\n"
-            f"- As {self.botname}, you should respond in character with emotionally charged responses that are consistent with your personality and mood.\n"
+            f"- As {self.botname}, you should respond in character with emotionally charged responses that are "
+            f"consistent with your personality and mood.\n"
             f"{backstory_prompt}"
             f"{system_instructions}"
             f"{guardrails}"
@@ -629,7 +634,8 @@ class BaseAgent(
             f"------\n"
             "**More information about the current conversation:**\n"
             f"The conversation is between user ({self.username}) and assistant ({self.botname}).\n"
-            f"The conversation started on {self.conversation.timestamp}."
+            f"The conversation started on {self.conversation.timestamp}.\n"
+            f"{section_prompt}"
         )
         prompt = prompt.replace("{{ username }}", self.username)
         prompt = prompt.replace("{{ botname }}", self.botname)
@@ -990,32 +996,6 @@ class BaseAgent(
             input=message,
             chat_history=self._memory.get_all() if self._memory else None
         )
-            # conversation = self._get_conversation()
-            # if not conversation or not conversation.value or len(conversation.value) == 0:
-            #     self.logger.info("No conversation found")
-            #     return
-            # chat_history = self._memory.get_all() if self._memory else None
-            # if not chat_history:
-            #     messages = conversation.value
-            #     chat_history = [
-            #         ChatMessage(
-            #             role=message["role"],
-            #             blocks=message["blocks"],
-            #         ) for message in messages
-            #     ]
-                
-            # response = self.information_scraper_tool.call(
-            #     do_not_display=True,
-            #     input="Scrape information from this conversation",
-            #     chat_history=chat_history
-            # )
-            # chat_history = chat_history[:-2]
-            # self.logger.info(f"Updated summary: {response.content}")
-            # conversation.summary = response.content
-            # conversation.value = conversation.value[:-2]
-            # self.logger.info(f"Saving conversation with summary: {response.content}")
-            # session.add(conversation)
-            # session.commit()
 
     def save_chat_history(self):
         pass

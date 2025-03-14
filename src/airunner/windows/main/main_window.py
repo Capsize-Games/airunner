@@ -136,7 +136,6 @@ class MainWindow(
         self.client = None
         self._version = None
         self._latest_version = None
-        self.data = None  # this is set in the generator_mixin image_handler function and used for deterministic generation
         self.status_error_color = STATUS_ERROR_COLOR
         self.status_normal_color_light = STATUS_NORMAL_COLOR_LIGHT
         self.status_normal_color_dark = STATUS_NORMAL_COLOR_DARK
@@ -489,7 +488,8 @@ class MainWindow(
                     "llm_request": True,
                     "request_data": {
                         "action": LLMActionType.RAG,
-                        "prompt": "Summarize the text and provide a synopsis of the content. Be concise and informative.",
+                        "prompt": "Summarize the text and provide a synopsis of the content. "
+                                  "Be concise and informative.",
                         "llm_request": LLMRequest.from_default()
                     }
                 }
@@ -608,9 +608,15 @@ class MainWindow(
             {"main_window": self}
         )
 
+        settings = SplitterSetting.objects.filter_by(name="main_window_splitter").first()
+        if settings:
+            self.ui.main_window_splitter.restoreState(settings.splitter_settings)
+        self.ui.center_tab_container.currentChanged.connect(self.on_tab_section_changed)
+
     @Slot(int)
     def on_tab_section_changed(self, index: int):
         Tab.update_tabs("center", self.ui.center_tab_container, index)
+        self.emit_signal(SignalCode.SECTION_CHANGED)
 
     def initialize_widget_elements(self):
         for item in (
@@ -654,7 +660,6 @@ class MainWindow(
     def set_path_settings(self, key, val):
         self.update_path_settings(key, val)
 
-
     def action_quit_triggered(self):
         QApplication.quit()
         self.close()
@@ -670,7 +675,6 @@ class MainWindow(
         self.logger.debug("Quitting")
         self.save_state()
         self.emit_signal(SignalCode.QUIT_APPLICATION)
-
 
     def show_settings_path(self, name, default_path=None):
         path = getattr(self.path_settings, name)
@@ -688,7 +692,6 @@ class MainWindow(
         getattr(self.ui, widget_name).setIcon(icon)
         self.update()
 
-
     def toggle_nsfw_filter(self):
         self.set_nsfw_filter_tooltip()
 
@@ -703,7 +706,7 @@ class MainWindow(
         else:
             self.showFullScreen()
 
-    def on_unload_non_sd_models(self, data:Dict=None):
+    def on_unload_non_sd_models(self, data: Dict = None):
         self._llm_generate_worker.on_llm_on_unload_signal()
         self._tts_generator_worker.unload()
         self._stt_audio_processor_worker.unload()
@@ -711,7 +714,7 @@ class MainWindow(
         if callback:
             callback(data)
 
-    def on_load_non_sd_models(self, data:Dict=None):
+    def on_load_non_sd_models(self, data: Dict = None):
         self._llm_generate_worker.load()
         if self.application_settings.tts_enabled:
             self._tts_generator_worker.load()
@@ -721,7 +724,7 @@ class MainWindow(
         if callback:
             callback(data)
 
-    def on_toggle_llm(self, data:Dict=None, val=None):
+    def on_toggle_llm(self, data: Dict = None, val=None):
         if val is None:
             val = not self.application_settings.llm_enabled
         self._update_action_button(
@@ -734,7 +737,7 @@ class MainWindow(
             data
         )
 
-    def on_toggle_sd(self, data:Dict=None, val=None):
+    def on_toggle_sd(self, data: Dict = None, val=None):
         if val is None:
             val = not self.application_settings.sd_enabled
         self._update_action_button(
@@ -747,7 +750,7 @@ class MainWindow(
             data
         )
 
-    def on_toggle_tts(self, data:Dict=None, val=None):
+    def on_toggle_tts(self, data: Dict = None, val=None):
         if val is None:
             val = not self.application_settings.sd_enabled
         self._update_action_button(
@@ -764,11 +767,11 @@ class MainWindow(
         self,
         model_type,
         element,
-        val:bool,
+        val: bool,
         load_signal: SignalCode,
         unload_signal: SignalCode,
-        application_setting:str=None,
-        data:Dict=None
+        application_setting: str = None,
+        data: Dict = None
     ):
         if self._model_status[model_type] is ModelStatus.LOADING:
             val = not val
@@ -797,17 +800,21 @@ class MainWindow(
         self.save_window_settings("height", self.height())
         self.save_window_settings("x_pos", self.pos().x())
         self.save_window_settings("y_pos", self.pos().y())
-        self.save_window_settings("mode_tab_widget_index", self.ui.generator_widget.ui.generator_form_tabs.currentIndex())
+        self.save_window_settings(
+            "mode_tab_widget_index",
+            self.ui.generator_widget.ui.generator_form_tabs.currentIndex()
+        )
+
         settings = SplitterSetting.objects.filter_by(name="main_window_splitter").first()
         if not settings:
-            settings = SplitterSetting.objects.create(
+            SplitterSetting.objects.create(
                 name="main_window_splitter",
                 splitter_settings=self.ui.main_window_splitter.saveState()
             )
         else:
             SplitterSetting.objects.update(
                 settings.id,
-                main_window_splitter=self.ui.main_window_splitter.saveState()
+                splitter_settings=self.ui.main_window_splitter.saveState()
             )
 
     def restore_state(self):
@@ -833,13 +840,17 @@ class MainWindow(
             x_pos = int(self.window_settings.x_pos)
             y_pos = int(self.window_settings.y_pos)
 
-        settings = SplitterSetting.objects.filter_by(name="main_window_splitter").first()
-        if settings:
-            self.ui.main_window_splitter.restoreState(settings.splitter_settings)
-
         self.resize(width, height)
         self.move(x_pos, y_pos)
         self.raise_()
+
+        # settings = SplitterSetting.objects.filter_by(
+        #     name="main_window_splitter"
+        # ).first()
+        # if settings:
+        #     self.ui.main_window_splitter.restoreState(
+        #         settings.splitter_settings
+        #     )
 
     ##### End window properties #####
     #################################
@@ -884,8 +895,10 @@ class MainWindow(
                     "You are attempting to disable the safety checker (NSFW filter).\n"
                     "It is strongly recommended that you keep this enabled at all times.\n"
                     "The Safety Checker prevents potentially harmful content from being displayed.\n"
-                    "Only disable it if you are sure the Image model you are using is not capable of generating harmful content.\n"
-                    "Disabling the safety checker is intended as a last resort for continual false positives and as a research feature.\n"
+                    "Only disable it if you are sure the Image model you are using is not capable of generating "
+                    "harmful content.\n"
+                    "Disabling the safety checker is intended as a last resort for continual false positives and as a "
+                    "research feature.\n"
                     "\n\n"
                     "Are you sure you want to disable the filter?"
                 )
@@ -993,8 +1006,6 @@ class MainWindow(
             self.ui.actionToggle_Selection.setShortcut(key_sequence)
             self.ui.actionToggle_Selection.setToolTip(f"{select_tool_key.display_name} ({select_tool_key.text})")
 
-        
-
     def _initialize_workers(self):
         self.logger.debug("Initializing worker manager")
         self._mask_generator_worker = create_worker(MaskGeneratorWorker)
@@ -1010,7 +1021,6 @@ class MainWindow(
         for image_filter in image_filters:
             action = self.ui.menuFilters.addAction(image_filter.display_name)
             action.triggered.connect(partial(self.display_filter_window, image_filter))
-        
 
     def display_filter_window(self, image_filter):
         FilterWindow(image_filter.id)

@@ -21,12 +21,21 @@ class LLMGenerateWorker(Worker):
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.llm_on_interrupt_process_signal),
             (SignalCode.QUIT_APPLICATION, self.on_quit_application_signal),
             (SignalCode.CONVERSATION_DELETED, self.on_conversation_deleted_signal),
+            (SignalCode.SECTION_CHANGED, self.on_section_changed_signal),
+            (SignalCode.WEB_BROWSER_PAGE_HTML, self.on_web_browser_page_html_signal),
         ):
             self.register(signal[0], signal[1])
         self._llm_thread = None
 
     def on_conversation_deleted_signal(self, data):
         self.llm.on_conversation_deleted(data)
+    
+    def on_section_changed_signal(self):
+        self.llm.on_section_changed()
+    
+    def on_web_browser_page_html_signal(self, data):
+        if self.llm:
+            self.llm.on_web_browser_page_html(data.get("content", ""))
 
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")
@@ -47,7 +56,7 @@ class LLMGenerateWorker(Worker):
     def on_llm_load_model_signal(self, data):
         self._load_llm_thread(data)
 
-    def on_llm_clear_history_signal(self, data:Optional[Dict] = None):
+    def on_llm_clear_history_signal(self, data: Optional[Dict] = None):
         if self.llm:
             self.llm.clear_history(data)
 
@@ -94,4 +103,4 @@ class LLMGenerateWorker(Worker):
 
         callback = data.get("callback", None)
         if callback:
-            callback(data)
+            callback(data

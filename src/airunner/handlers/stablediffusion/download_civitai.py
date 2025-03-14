@@ -27,7 +27,7 @@ class DownloadCivitAI(
         url = f"https://civitai.com/api/v1/models/{model_id}?token={self.application_settings.civit_ai_api_key}"
         headers = {
             "Content-Type": "application/json",
-            #"Authorization": f"Bearer {api_token}"
+            # "Authorization": f"Bearer {api_token}"
         }
         print(f"Getting model data from CivitAI {url}")
         response = requests.get(url, headers=headers, allow_redirects=True)

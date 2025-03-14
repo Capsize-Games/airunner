@@ -236,11 +236,11 @@ class LLMHandler(
             # Use the same path as tokenizer
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.model_path,
-                local_files_only = True,
-                use_cache = self.use_cache,
-                trust_remote_code = False,
-                torch_dtype = self.torch_dtype,
-                device_map = self.device,
+                local_files_only=True,
+                use_cache=self.use_cache,
+                trust_remote_code=False,
+                torch_dtype=self.torch_dtype,
+                device_map=self.device,
             )
         except Exception as e:
             self.logger.error(f"Error loading model: {e}")
@@ -333,7 +333,6 @@ class LLMHandler(
         if action is LLMActionType.CHAT:
             self._send_final_message()
         return response
-        
 
     def _send_final_message(self):
         self.logger.debug("Sending final message")

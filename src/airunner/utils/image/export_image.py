@@ -2,6 +2,7 @@ from typing import List, Dict, AnyStr, Any
 from PIL import Image, PngImagePlugin
 import os
 
+
 def export_image(
     image: Image,
     file_path: AnyStr,
@@ -21,6 +22,7 @@ def export_image(
         image.save(current_path, pnginfo=png_info)
     else:
         image.save(current_path)
+
 
 def export_images(
     images: List[Any],

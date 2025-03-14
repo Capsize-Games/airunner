@@ -53,10 +53,7 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
             try:
                 msg = self.get_item_from_queue()
                 if msg is not None:
-                    if len(inspect.signature(self.handle_message).parameters) == 0:
-                        self.handle_message()
-                    else:
-                        self.handle_message(msg)
+                    self.handle_message(msg)
             except queue.Empty:
                 msg = None
             if self.paused:

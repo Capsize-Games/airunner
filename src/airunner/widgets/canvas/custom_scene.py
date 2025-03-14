@@ -28,6 +28,8 @@ class CustomScene(
     SettingsMixin
 ):
     def __init__(self, canvas_type: str):
+        self._is_erasing = None
+        self._is_drawing = None
         self.canvas_type = canvas_type
         MediatorMixin.__init__(self)
         
@@ -140,7 +142,12 @@ class CustomScene(
             # Use the last export path if available
             initial_dir = self.last_export_path if self.last_export_path else ""
 
-            file_dialog = QFileDialog(parent_window, "Save Image", initial_dir, f"Image Files ({' '.join(VALID_IMAGE_FILES)})")
+            file_dialog = QFileDialog(
+                parent_window,
+                "Save Image",
+                initial_dir,
+                f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
+            )
             file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
             if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
                 file_path = file_dialog.selectedFiles()[0]

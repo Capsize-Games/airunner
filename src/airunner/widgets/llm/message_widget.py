@@ -10,6 +10,7 @@ from airunner.widgets.llm.templates.message_ui import Ui_message
 from airunner.data.models import Conversation
 from airunner.data.session_manager import session_scope
 
+
 class AutoResizingTextEdit(QTextEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,7 +45,7 @@ class MessageWidget(BaseWidget):
         self.ui.delete_button.setVisible(False)
         self.ui.message_container.installEventFilter(self)
         self.set_cursor(Qt.CursorShape.ArrowCursor)
-    
+
     def on_delete_messages_after_id(self, data):
         message_id = data.get("message_id", None)
         if self.message_id > message_id:

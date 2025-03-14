@@ -34,8 +34,8 @@ class LLMHistoryWidget(BaseWidget):
         # clear all widgets from the layout
         try:
             layout.removeItem(self.spacer)
-        except:
-            pass
+        except Exception as e:
+            self.logger.error(f"Error removing spacer: {e}")
 
         if layout:
             for i in reversed(range(layout.count())):

@@ -170,7 +170,7 @@ class BotPreferencesWidget(BaseWidget):
             widget = DocumentWidget(target_file, self.delete_document)
             layout.addWidget(widget)
 
-    def delete_document(self, target_file:TargetFiles):
+    def delete_document(self, target_file: TargetFiles):
         TargetFiles.objects.delete(target_file.id)
         
         self.load_documents()

@@ -46,7 +46,6 @@ class SaveGeneratorSettingsWorker(
         self.crops_coord_top_left_x = 0
         self.crops_coord_top_left_y = 0
 
-
     def run(self):
         do_update_settings = False
         while True:
@@ -218,7 +217,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.secondary_prompt.setPlainText(secondary_prompt)
         self.ui.secondary_negative_prompt.setPlainText(negative_prompt)
 
-    def unload_llm_callback(self, data:dict=None):
+    def unload_llm_callback(self, data: dict = None):
         """
         Callback function to be called after the LLM has been unloaded.
         """

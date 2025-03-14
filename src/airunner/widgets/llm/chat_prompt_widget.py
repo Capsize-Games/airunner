@@ -118,17 +118,18 @@ class ChatPromptWidget(BaseWidget):
             self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
                 "conversation_id": self.conversation_id
             })
-            self._set_conversation_widgets([{
-                "name": (
-                    self.user.username 
-                    if message["role"] == "user" 
-                    else self.chatbot.name
-                ),
-                "content": message["blocks"][0]["text"],
-                "is_bot": message["role"] == "assistant",
-                "id": id
-            } for id, message in enumerate(self.conversation.value or [])
-        ])
+            self._set_conversation_widgets([
+                {
+                    "name": (
+                        self.user.username
+                        if message["role"] == "user"
+                        else self.chatbot.name
+                    ),
+                    "content": message["blocks"][0]["text"],
+                    "is_bot": message["role"] == "assistant",
+                    "id": message_id
+                } for message_id, message in enumerate(self.conversation.value or [])
+            ])
 
     @Slot(str)
     def handle_token_signal(self, val: str):

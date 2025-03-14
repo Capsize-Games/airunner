@@ -16,7 +16,10 @@ class AIModelMixin:
         return val
     
     def ai_models_find(self, search="", default=False):
-        return [model for model in self.ai_models if model.is_default == default and search.lower() in model.name.lower()]
+        return [
+            model for model in self.ai_models
+            if model.is_default == default and search.lower() in model.name.lower()
+        ]
 
     def ai_model_get_disabled_default(self):
         return [model for model in self.ai_models if model.is_default is True and model.enabled is False]

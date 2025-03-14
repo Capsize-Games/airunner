@@ -28,7 +28,6 @@ class AgentWorker(Worker):
                     name=message["botname"],
                 )
             })
-                
 
         except Exception as e:
             print("47 An error occurred in model.generate:")

@@ -69,9 +69,7 @@ class KeyboardShortcutsWidget(BaseWidget):
             shortcut_key.key = event.key()
             shortcut_key.modifiers = event.modifiers().value
 
-            
             shortcut_key.save()
-
 
             # clear existing key if it exists
             existing_keys = ShortcutKeys.objects.filter(
@@ -91,7 +89,6 @@ class KeyboardShortcutsWidget(BaseWidget):
                     widget.line_edit.setText("")
 
             line_edit.setText(shortcut_key.text)
-            
 
             self.pressed_keys.clear()
             self.emit_signal(SignalCode.KEYBOARD_SHORTCUTS_UPDATED)
@@ -111,7 +108,6 @@ class KeyboardShortcutsWidget(BaseWidget):
                 "key": v.key,
                 "modifiers": ",".join(v.modifiers)  # Convert list to comma-separated string
             })
-        
 
     def clear_shortcut_setting(self, key=""):
         for index, v in enumerate(self.shortcut_keys):

@@ -13,6 +13,9 @@ from airunner.widgets.base_widget import BaseWidget
 class BlenderViewportWidget(BaseWidget):
     def __init__(self):
         super().__init__()
+        self.apply_button = None
+        self.size_spinbox = None
+        self.image_label = None
         self.setup_ui()
         self.image_lock = Lock()
         self.camera_lock = Lock()  # Lock for controlling camera size

@@ -15,7 +15,7 @@ class EspeakHandler(TTSHandler, ABC):
         self._language = None
         self._gender = None
 
-    def generate(self, message:str):
+    def generate(self, message: str):
         message = message.replace('"', "'")
         if message != "":
             self._engine.say(message)

@@ -26,7 +26,13 @@ class PipelineMixin:
         return [pipeline["name"] for pipeline in pipeline_bootstrap_data if pipeline["section"] == section]
 
     def available_pipeline_by_action_version_category(self, pipeline_action, version, category):
-        return [pipeline["name"] for pipeline in pipeline_bootstrap_data if pipeline["pipeline_action"] == pipeline_action and pipeline["version"] == version and pipeline["category"] == category]
+        return [
+            pipeline["name"]
+            for pipeline in pipeline_bootstrap_data if
+            pipeline["pipeline_action"] == pipeline_action and
+            pipeline["version"] == version and
+            pipeline["category"] == category
+        ]
 
     def pipeline_actions(self):
         return [pipeline["pipeline_action"] for pipeline in pipeline_bootstrap_data]

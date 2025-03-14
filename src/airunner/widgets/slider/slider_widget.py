@@ -190,7 +190,6 @@ class SliderWidget(BaseWidget):
         is changed.
         :param attr_name: the name of the attribute to change
         :param value: the value to set the attribute to
-        :param widget: the widget that triggered the callback
         :return:
         """
         if not attr_name:

@@ -47,7 +47,6 @@ class StatusWidget(BaseWidget):
             self.ui.pipeline_label.setText("")
             self.ui.pipeline_divider.hide()
 
-
     def showEvent(self, event):
         super().showEvent(event)
         self.set_sd_status_text()
