@@ -173,8 +173,6 @@ class SDWorker(Worker):
         print("on_sd_cancel_signal")
 
     def on_start_auto_image_generation_signal(self, _data=None):
-        # self.sd_mode = SDMode.DRAWING
-        # self.generate()
         pass
 
     def on_stop_auto_image_generation_signal(self, _data=None):
