@@ -111,6 +111,7 @@ class BaseAgent(
     @property
     def user(self) -> User:
         if not self._user:
+            user = None
             if self.conversation:
                 user = User.objects.get(
                     self.conversation.user_id
