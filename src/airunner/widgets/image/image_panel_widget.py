@@ -30,8 +30,8 @@ class ImagePanelWidget(BaseWidget):
         self.start = 0
         self.end = 0
         self.ui.scrollArea.verticalScrollBar().valueChanged.connect(self.handle_scroll)
-        flowLayout = QFlowLayout()
-        self.ui.scrollAreaWidgetContents.setLayout(flowLayout)
+        flow_layout = QFlowLayout()
+        self.ui.scrollAreaWidgetContents.setLayout(flow_layout)
         self.display_thread = threading.Thread(target=self.display_thumbnails)
 
     def showEvent(self, event):

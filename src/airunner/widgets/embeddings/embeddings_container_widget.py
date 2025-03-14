@@ -116,7 +116,6 @@ class EmbeddingsContainerWidget(BaseWidget):
 
         # Remove lora from database
         embedding_widget.embedding.delete()
-        
 
         self._apply_button_enabled = True
         self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
