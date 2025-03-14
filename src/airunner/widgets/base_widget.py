@@ -141,7 +141,7 @@ class BaseWidget(AbstractBaseWidget):
                     os.path.join(f"src/icons/{icon}{'-light' if is_dark else ''}.png")
                 )
             )
-        except AttributeError as e:
+        except AttributeError as _e:
             pass
 
     def get_form_element(self, element):

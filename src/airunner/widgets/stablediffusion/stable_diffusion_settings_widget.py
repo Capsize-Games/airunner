@@ -51,7 +51,7 @@ class StableDiffusionSettingsWidget(
     def toggled_use_compel(self, val):
         self.update_generator_settings("use_compel", val)
 
-    def handle_model_changed(self, model_name):
+    def handle_model_changed(self, _model_name):
         index = self.ui.model.currentIndex()
         model_id = self.ui.model.itemData(index)
         self.update_generator_settings("model", model_id)

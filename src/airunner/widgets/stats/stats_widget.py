@@ -80,8 +80,7 @@ class StatsWidget(
         try:
             process = psutil.Process(os.getpid())
             memory_info = process.memory_info()
-        except Exception as e:
-            memory_info = None
+        except Exception as _e:
             return
 
         used = memory_info.rss / (1024.0 ** 3)  # Resident Set Size
@@ -106,18 +105,8 @@ class StatsWidget(
         QApplication.processEvents()
 
     @staticmethod
-    def set_color(row, col, status):
-        # Set the color of the text according to the status
-        if status == ModelStatus.LOADED:
-            color = Qt.GlobalColor.green
-        elif status == ModelStatus.READY:
-            color = Qt.GlobalColor.yellow
-        elif status == ModelStatus.LOADING:
-            color = Qt.GlobalColor.darkYellow
-        elif status == ModelStatus.FAILED:
-            color = Qt.GlobalColor.red
-        else:
-            color = Qt.GlobalColor.lightGray
+    def set_color(_row, _col, status):
+        pass
 
     def on_log_logged_signal(self, data: dict = None):
         """
