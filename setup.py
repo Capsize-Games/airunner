@@ -78,6 +78,8 @@ setup(
             "rake_nltk==1.0.6",
             "tf-keras==2.18.0",
             "peft==0.14.0",
+            "trafilatura==2.0.0",
+            "lxml_html_clean==0.4.1",
         ],
         "tts": [
             "inflect==7.5.0",
