@@ -482,7 +482,6 @@
  <slots>
   <slot>handle_prompt_changed()</slot>
   <slot>handle_negative_prompt_changed()</slot>
-  <slot>toggle_prompt_builder_checkbox(bool)</slot>
   <slot>handle_model_changed(QString)</slot>
   <slot>handle_scheduler_changed(QString)</slot>
   <slot>toggle_variation(bool)</slot>
@@ -492,7 +491,6 @@
   <slot>save_settings()</slot>
   <slot>handle_pipeline_changed(QString)</slot>
   <slot>handle_version_changed(QString)</slot>
-  <slot>handle_prompt_builder_button_toggled(bool)</slot>
   <slot>handle_image_presets_changed(QString)</slot>
   <slot>handle_second_prompt_changed()</slot>
   <slot>handle_second_negative_prompt_changed()</slot>
