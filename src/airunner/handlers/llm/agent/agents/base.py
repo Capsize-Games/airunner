@@ -1,4 +1,3 @@
-import os
 from typing import (
     Any,
     List,
@@ -9,21 +8,16 @@ from typing import (
 )
 import datetime
 import platform
-from PySide6.QtCore import QObject
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
+from llama_index.core.base.llms.base import BaseLLM
 from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
 from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.memory import BaseMemory
 from llama_index.core.llms.llm import LLM
 
-from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import RefreshSimpleChatEngine
 from airunner.enums import LLMActionType, SignalCode
-from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models import Conversation, User
 from airunner.handlers.llm.agent.rag_mixin import RAGMixin
 from airunner.handlers.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
