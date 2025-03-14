@@ -104,10 +104,10 @@ class ChatPromptWidget(BaseWidget):
             self._clear_conversation_widgets()
         self.conversation_id = data["conversation_id"]            
 
-    def load_conversation(self, id: Optional[int] = None):
+    def load_conversation(self, index: Optional[int] = None):
         conversation = None
-        if id is not None:
-            conversation = Conversation.objects.get(id)
+        if index is not None:
+            conversation = Conversation.objects.get(index)
         
         if conversation is None:
             conversation = Conversation.objects.order_by(
@@ -165,8 +165,8 @@ class ChatPromptWidget(BaseWidget):
                 "name": message["additional_kwargs"]["name"],
                 "content": message["text"],
                 "is_bot": message["role"] == "assistant",
-                "id": id
-            } for id, message in enumerate(json.loads(self.conversation.value))
+                "id": index
+            } for index, message in enumerate(json.loads(self.conversation.value))
         ])
 
     def _set_conversation_widgets(self, messages):
