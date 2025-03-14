@@ -1,3 +1,5 @@
+from abc import ABC
+
 from PySide6.QtWidgets import QColorDialog
 from airunner.enums import SignalCode
 from airunner.widgets.active_grid_settings.templates.active_grid_settings_ui import Ui_active_grid_settings_widget
@@ -5,7 +7,7 @@ from airunner.widgets.base_widget import BaseWidget
 from PySide6.QtCore import Slot
 
 
-class ActiveGridSettingsWidget(BaseWidget):
+class ActiveGridSettingsWidget(BaseWidget, ABC):
     widget_class_ = Ui_active_grid_settings_widget
 
     def __init__(self, *args, **kwargs):

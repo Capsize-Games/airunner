@@ -1,4 +1,5 @@
 import os
+from abc import ABC
 from urllib.parse import urlparse
 
 from airunner.data.models import Lora, AIModels
@@ -14,7 +15,7 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 class ImportWidget(
     BaseWidget,
     PipelineMixin,
-    AIModelMixin
+    AIModelMixin, ABC
 ):
     widget_class_ = Ui_import_model_widget
     model_widgets = []

@@ -1,3 +1,5 @@
+from abc import ABC
+
 from PySide6.QtCore import Slot
 
 from airunner.data.models import Embedding
@@ -7,7 +9,7 @@ from airunner.widgets.embeddings.embedding_trigger_word_widget import EmbeddingT
 from airunner.widgets.embeddings.templates.embedding_ui import Ui_embedding
 
 
-class EmbeddingWidget(BaseWidget):
+class EmbeddingWidget(BaseWidget, ABC):
     """
     This class represents a single embedding.
     It is responsible for displaying the embedding's name, trigger words,

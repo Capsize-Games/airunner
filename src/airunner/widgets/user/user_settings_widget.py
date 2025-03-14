@@ -1,3 +1,5 @@
+from abc import ABC
+
 from PySide6.QtCore import Slot
 
 from airunner.data.models import User
@@ -6,7 +8,7 @@ from airunner.widgets.user.templates.user_settings_ui import Ui_user_settings_wi
 from airunner.utils.get_lat_lon import get_lat_lon
 
 
-class UserSettingsWidget(BaseWidget):
+class UserSettingsWidget(BaseWidget, ABC):
     widget_class_ = Ui_user_settings_widget
 
     def __init__(self, *args, **kwargs):

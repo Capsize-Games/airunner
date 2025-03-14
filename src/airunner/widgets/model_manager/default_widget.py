@@ -1,4 +1,5 @@
 import threading
+from abc import ABC
 
 from PySide6 import QtCore
 from PySide6.QtCore import QTimer
@@ -14,7 +15,7 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 class DefaultModelWidget(
     BaseWidget,
     PipelineMixin,
-    AIModelMixin
+    AIModelMixin, ABC
 ):
     widget_class_ = Ui_default_model_widget
     model_widgets = []

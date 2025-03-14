@@ -1,8 +1,14 @@
+from abc import ABC
+
+from PySide6.QtCore import Slot
+
+import trafilatura
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.webbrowser.templates.web_browser_ui import Ui_web_browser_widget
 
 
-class WebBrowserWidget(BaseWidget):
+class WebBrowserWidget(BaseWidget, ABC):
     widget_class_ = Ui_web_browser_widget
 
     def __init__(self, *args, **kwargs):

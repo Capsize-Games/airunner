@@ -1,9 +1,10 @@
+from abc import ABC
 from typing import Any
 
 from airunner.widgets.slider.slider_widget import SliderWidget
 
 
-class FilterSliderWidget(SliderWidget):
+class FilterSliderWidget(SliderWidget, ABC):
     def __init__(self, *args, filter_value, preview_filter, **kwargs):
         self._filter_value = filter_value
         self.preview_filter = preview_filter
