@@ -181,12 +181,12 @@ class Ui_MainWindow(object):
         self.actionUndo_2 = QAction(MainWindow)
         self.actionUndo_2.setObjectName(u"actionUndo_2")
         icon5 = QIcon()
-        icon5.addFile(u"../../../../../../../../../../../../../../../../../../../../../../../../.designer/src/icons/007-undo.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon5.addFile(u"../../../../../../../../../../../../../../../../../../../../../../../../../../../../../.designer/src/icons/007-undo.png", QSize(), QIcon.Normal, QIcon.Off)
         self.actionUndo_2.setIcon(icon5)
         self.actionRedo_2 = QAction(MainWindow)
         self.actionRedo_2.setObjectName(u"actionRedo_2")
         icon6 = QIcon()
-        icon6.addFile(u"../../../../../../../../../../../../../../../../../../../../../../../../.designer/src/icons/008-redo.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon6.addFile(u"../../../../../../../../../../../../../../../../../../../../../../../../../../../../../.designer/src/icons/008-redo.png", QSize(), QIcon.Normal, QIcon.Off)
         self.actionRedo_2.setIcon(icon6)
         self.actionCut = QAction(MainWindow)
         self.actionCut.setObjectName(u"actionCut")
@@ -305,7 +305,7 @@ class Ui_MainWindow(object):
         if QIcon.hasThemeIcon(iconThemeName):
             icon8 = QIcon.fromTheme(iconThemeName)
         else:
-            icon8.addFile(u"../../../../../../../../../../../../.designer/backup/applications-internet", QSize(), QIcon.Normal, QIcon.On)
+            icon8.addFile(u"../../../../../../../../../../../../../../../../../.designer/backup/applications-internet", QSize(), QIcon.Normal, QIcon.On)
 
         self.actionToggle_LLM.setIcon(icon8)
         self.actionToggle_Text_to_Speech = QAction(MainWindow)
@@ -321,7 +321,7 @@ class Ui_MainWindow(object):
         if QIcon.hasThemeIcon(iconThemeName):
             icon10 = QIcon.fromTheme(iconThemeName)
         else:
-            icon10.addFile(u"../../../../../../../../../../../../.designer/backup/audio-input-microphone", QSize(), QIcon.Normal, QIcon.On)
+            icon10.addFile(u"../../../../../../../../../../../../../../../../../.designer/backup/audio-input-microphone", QSize(), QIcon.Normal, QIcon.On)
 
         self.actionToggle_Speech_to_Text.setIcon(icon10)
         self.actionToggle_Stable_Diffusion = QAction(MainWindow)
@@ -686,7 +686,7 @@ class Ui_MainWindow(object):
         self.actionRedo.triggered.connect(MainWindow.action_redo_triggered)
         self.artActionNew.triggered.connect(MainWindow.action_new_document_triggered)
 
-        self.center_tab_container.setCurrentIndex(3)
+        self.center_tab_container.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
