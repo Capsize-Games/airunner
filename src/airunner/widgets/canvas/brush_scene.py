@@ -231,13 +231,13 @@ class BrushScene(CustomScene):
             r, g, b, alpha = mask.split()
 
             # Make black areas fully transparent and white areas 50% transparent
-            def adjust_alpha(r, g, b, a):
-                if r == 0 and g == 0 and b == 0:
+            def adjust_alpha(red, green, blue, alpha):
+                if red == 0 and green == 0 and blue == 0:
                     return 0
-                elif r == 255 and g == 255 and b == 255:
+                elif red == 255 and green == 255 and blue == 255:
                     return 128
                 else:
-                    return a
+                    return alpha
 
             # Apply the adjust_alpha function to each pixel
             new_alpha = [

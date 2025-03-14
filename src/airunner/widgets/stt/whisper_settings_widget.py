@@ -24,8 +24,8 @@ class WhisperSettingsWidget(BaseWidget):
         self.ui.language.blockSignals(False)
 
     @Slot(bool)
-    def is_multilingual_changed(self, bool):
-        self.update_settings_by_name("whisper_settings", "is_multilingual", bool)
+    def is_multilingual_changed(self, val: bool):
+        self.update_settings_by_name("whisper_settings", "is_multilingual", val)
 
     @Slot(str)
     def on_language_changed(self, language):
