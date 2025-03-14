@@ -1,14 +1,13 @@
 import random
 import os
 import torch
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 from peft import PeftModel
 
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
 
-from llama_index.llms.groq import Groq
 from llama_index.core.chat_engine.types import AgentChatResponse
 
 from airunner.handlers.base_handler import BaseHandler
@@ -33,7 +32,7 @@ class LLMHandler(
     model_class: str = "llm"
     _model: Optional[AutoModelForCausalLM] = None
     _streamer: Optional[TextIteratorStreamer] = None
-    _chat_agent: Optional[MistralAgentQObject] = None
+    _chat_agent: Optional[Union[MistralAgentQObject, OpenRouterQObject]] = None
     _agent_executor: Optional[object] = None
     _service_context_model: Optional[object] = None
     _use_query_engine: bool = False

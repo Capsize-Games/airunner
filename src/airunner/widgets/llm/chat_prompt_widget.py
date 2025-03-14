@@ -175,8 +175,7 @@ class ChatPromptWidget(BaseWidget):
                 name=message["name"],
                 message=message["content"],
                 is_bot=message["is_bot"],
-                message_id=message["id"],
-                first_message=True
+                first_message=True,
             )
         QTimer.singleShot(100, self.scroll_to_bottom)
 
@@ -199,7 +198,7 @@ class ChatPromptWidget(BaseWidget):
         self.add_message_to_conversation(
             name=llm_response.name or self.chatbot.name,
             message=llm_response.message,
-            is_bot=True, 
+            is_bot=True,
             first_message=llm_response.is_first_message
         )
 
@@ -260,7 +259,7 @@ class ChatPromptWidget(BaseWidget):
     def action(self) -> LLMActionType:
         return LLMActionType[self.llm_generator_settings.action]
 
-    def do_generate(self, _image_override=None, prompt_override=None, _callback=None, _generator_name="causallm"):
+    def do_generate(self, prompt_override=None):
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
         if prompt is None or prompt == "":
             self.logger.warning("Prompt is empty")
@@ -389,14 +388,6 @@ class ChatPromptWidget(BaseWidget):
 
     def insert_newline(self):
         self.ui.prompt.insertPlainText("\n")
-    
-    def describe_image(self, image, callback):
-        self.do_generate(
-            image_override=image, 
-            prompt_override="What is in this picture?",
-            callback=callback,
-            generator_name="visualqa"
-        )
 
     def add_message_to_conversation(
         self,

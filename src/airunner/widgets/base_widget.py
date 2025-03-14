@@ -107,9 +107,6 @@ class BaseWidget(AbstractBaseWidget):
 
     def initialize_form(self):
         pass
-
-    def add_to_grid(self, widget, row, column, row_span=1, column_span=1):
-        self.layout().addWidget(widget, row, column, row_span, column_span)
     
     def showEvent(self, event):
         super().showEvent(event)

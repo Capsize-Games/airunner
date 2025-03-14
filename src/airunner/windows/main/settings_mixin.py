@@ -556,7 +556,7 @@ class SettingsMixin:
             name=name
         ).first()
 
-    def update_font_setting(self, font_setting: Type[FontSetting]):
+    def update_font_setting(self, font_setting: FontSetting):
         new_font_setting = FontSetting.objects.filter_by(
             name=font_setting.name
         ).first()
