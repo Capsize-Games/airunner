@@ -59,7 +59,6 @@ from airunner.workers.tts_generator_worker import TTSGeneratorWorker
 from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 
 from airunner.utils.get_version import get_version
-from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.stats.stats_widget import StatsWidget
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -297,10 +296,6 @@ class MainWindow(
     @Slot()
     def action_clear_all_prompts_triggered(self):
         self.clear_all_prompts()
-
-    @Slot()
-    def action_show_model_manager(self):
-        ModelManagerWidget()
 
     @Slot()
     def action_triggered_browse_ai_runner_path(self):
