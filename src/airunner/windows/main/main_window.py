@@ -570,7 +570,7 @@ class MainWindow(
         active_index = 0
         tabs = Tab.objects.filter_by(section="center").all()
         for tab in tabs:
-            if tab.active:
+            if (tab.active):
                 active_index = tab.index
                 break
         self.ui.center_tab_container.setCurrentIndex(active_index)
