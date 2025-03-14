@@ -129,7 +129,8 @@ class App(
             self.application_settings.save()
             self.llm_generator_settings.save()
 
-    def run_setup_wizard(self):
+    @staticmethod
+    def run_setup_wizard():
         application_settings = ApplicationSettings.objects.first()
         if application_settings.run_setup_wizard:
             AppInstaller()

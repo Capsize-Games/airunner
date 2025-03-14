@@ -2,7 +2,8 @@ from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_d
 
 
 class PipelineMixin:
-    def pipeline_get_by_filter(self, filter_dict):
+    @staticmethod
+    def pipeline_get_by_filter(filter_dict):
         return [item for item in pipeline_bootstrap_data if all(item.get(k) == v for k, v in filter_dict.items())]
 
     def get_pipeline_classname(self, pipeline_action, version, category):
@@ -22,10 +23,12 @@ class PipelineMixin:
             pipelines = self.pipeline_get_by_filter({"category": category})
         return pipelines
 
-    def available_pipeline_by_section(self, section):
+    @staticmethod
+    def available_pipeline_by_section(section):
         return [pipeline["name"] for pipeline in pipeline_bootstrap_data if pipeline["section"] == section]
 
-    def available_pipeline_by_action_version_category(self, pipeline_action, version, category):
+    @staticmethod
+    def available_pipeline_by_action_version_category(pipeline_action, version, category):
         return [
             pipeline["name"]
             for pipeline in pipeline_bootstrap_data if
@@ -34,5 +37,6 @@ class PipelineMixin:
             pipeline["category"] == category
         ]
 
-    def pipeline_actions(self):
+    @staticmethod
+    def pipeline_actions():
         return [pipeline["pipeline_action"] for pipeline in pipeline_bootstrap_data]

@@ -821,7 +821,8 @@ class CustomScene(
             }
         )
 
-    def _load_image(self, image_path: str) -> Image:
+    @staticmethod
+    def _load_image(image_path: str) -> Image:
         image = Image.open(image_path)
         return image
 

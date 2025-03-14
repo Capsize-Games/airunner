@@ -199,7 +199,8 @@ class RAGMixin:
                 self._save_index_to_disc()
         return self.__index
 
-    def _update_conversations_status(self, status: str):
+    @staticmethod
+    def _update_conversations_status(status: str):
         conversations = Conversation.objects.filter(
             (Conversation.status != status) | (Conversation.status is None)
         ).all()

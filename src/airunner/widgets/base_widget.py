@@ -38,6 +38,12 @@ class BaseWidget(AbstractBaseWidget):
     qss_filename = None
     threads = []
 
+    def save_state(self):
+        pass
+
+    def restore_state(self):
+        pass
+
     @property
     def current_tool(self):
         return CanvasToolName(self.application_settings.current_tool)

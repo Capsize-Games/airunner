@@ -94,7 +94,8 @@ class KeyboardShortcutsWidget(BaseWidget):
             self.pressed_keys.clear()
             self.emit_signal(SignalCode.KEYBOARD_SHORTCUTS_UPDATED)
 
-    def get_key_text(self, event):
+    @staticmethod
+    def get_key_text(event):
         key_sequence = QtGui.QKeySequence(event.key() | event.modifiers().value)
         return key_sequence.toString(QtGui.QKeySequence.SequenceFormat.NativeText)
 

@@ -365,7 +365,8 @@ class InstallWorker(
         self.parent.update_progress_bar()
         self.parent.parent.show_final_page()
 
-    def update_progress(self, current, total):
+    @staticmethod
+    def update_progress(current, total):
         print("update progress", current, total)
 
     @Slot()

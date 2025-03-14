@@ -109,7 +109,8 @@ class DatabaseChatStore(BaseChatStore):
                     )
                 conversation.save()
 
-    def get_latest_chatstore(self) -> dict:
+    @staticmethod
+    def get_latest_chatstore() -> dict:
         """Get the latest chatstore."""
         result = Conversation.objects.order_by("id", "desc").first()
         return {
@@ -117,7 +118,8 @@ class DatabaseChatStore(BaseChatStore):
             "value": result.value,
         } if result else None
 
-    def get_chatstores(self) -> list[dict]:
+    @staticmethod
+    def get_chatstores() -> list[dict]:
         """Get all chatstores."""
         result = Conversation.objects.all()
         return [

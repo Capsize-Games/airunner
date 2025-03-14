@@ -168,7 +168,8 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.run()
 
-    def on_sd_cancel_signal(self, _data=None):
+    @staticmethod
+    def on_sd_cancel_signal(_data=None):
         print("on_sd_cancel_signal")
 
     def on_start_auto_image_generation_signal(self, _data=None):
@@ -194,7 +195,8 @@ class SDWorker(Worker):
             self._workers.append(worker)
             thread.start()
 
-    def handle_error(self, error_message):
+    @staticmethod
+    def handle_error(error_message):
         print(f"Error: {error_message}")
 
     def on_interrupt_image_generation_signal(self, _data=None):

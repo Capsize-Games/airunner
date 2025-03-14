@@ -105,7 +105,8 @@ class StatsWidget(
 
         QApplication.processEvents()
 
-    def set_color(self, row, col, status):
+    @staticmethod
+    def set_color(row, col, status):
         # Set the color of the text according to the status
         if status == ModelStatus.LOADED:
             color = Qt.GlobalColor.green

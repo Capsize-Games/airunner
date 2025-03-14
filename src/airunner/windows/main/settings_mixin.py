@@ -288,7 +288,8 @@ class SettingsMixin:
     def image_filter_values(self) -> Optional[List[ImageFilterValue]]:
         return ImageFilterValue.objects.all()
 
-    def get_lora_by_version(self, version) -> Optional[List[Lora]]:
+    @staticmethod
+    def get_lora_by_version(version) -> Optional[List[Lora]]:
         return Lora.objects.filter_by(version=version).all()
 
     def get_embeddings_by_version(self, version) -> Optional[List[Type[Embedding]]]:
@@ -339,7 +340,8 @@ class SettingsMixin:
             user = User.objects.first()
         return user
 
-    def add_chatbot_document_to_chatbot(self, chatbot, file_path):
+    @staticmethod
+    def add_chatbot_document_to_chatbot(chatbot, file_path):
         document = TargetFiles.objects.filter_by(
             chatbot_id=chatbot.id, file_path=file_path
         ).first()
@@ -465,10 +467,12 @@ class SettingsMixin:
         setattr(controlnet_settings, column_name, val)
         self.update_controlnet_settings(column_name, val)
 
-    def load_schedulers(self) -> List[Schedulers]:
+    @staticmethod
+    def load_schedulers() -> List[Schedulers]:
         return Schedulers.objects.all()
 
-    def load_settings_from_db(self, model_class_):
+    @staticmethod
+    def load_settings_from_db(model_class_):
         settings = model_class_.objects.first()
         if settings is None:
             settings = model_class_()
@@ -487,7 +491,8 @@ class SettingsMixin:
         else:
             self.logger.error("Failed to update settings: No setting found")
 
-    def reset_settings(self):
+    @staticmethod
+    def reset_settings():
         """
         Reset all settings to their default values by deleting all 
         settings from the database. When applications are
@@ -515,7 +520,8 @@ class SettingsMixin:
         for cls in settings_models:
             cls.objects.delete_all()
 
-    def get_saved_prompt_by_id(self, prompt_id) -> Type[SavedPrompt]:
+    @staticmethod
+    def get_saved_prompt_by_id(prompt_id) -> Type[SavedPrompt]:
         return SavedPrompt.objects.filter_by(id=prompt_id).first()
 
     def update_saved_prompt(self, saved_prompt: SavedPrompt):
@@ -531,17 +537,21 @@ class SettingsMixin:
             saved_prompt.save()
         self.__settings_updated()
 
-    def create_saved_prompt(self, data: dict):
+    @staticmethod
+    def create_saved_prompt(data: dict):
         new_saved_prompt = SavedPrompt(**data)
         new_saved_prompt.save()
 
-    def load_saved_prompts(self) -> List[Type[SavedPrompt]]:
+    @staticmethod
+    def load_saved_prompts() -> List[Type[SavedPrompt]]:
         return SavedPrompt.objects.all()
 
-    def load_font_settings(self) -> List[Type[FontSetting]]:
+    @staticmethod
+    def load_font_settings() -> List[Type[FontSetting]]:
         return FontSetting.objects.all()
 
-    def get_font_setting_by_name(self, name) -> Type[FontSetting]:
+    @staticmethod
+    def get_font_setting_by_name(name) -> Type[FontSetting]:
         return FontSetting.objects.filter_by(
             name=name
         ).first()
@@ -559,16 +569,20 @@ class SettingsMixin:
             font_setting.save()
         self.__settings_updated()
 
-    def load_ai_models(self) -> List[Type[AIModels]]:
+    @staticmethod
+    def load_ai_models() -> List[Type[AIModels]]:
         return AIModels.objects.all()
 
-    def load_chatbots(self) -> List[Type[Chatbot]]:
+    @staticmethod
+    def load_chatbots() -> List[Type[Chatbot]]:
         return Chatbot.objects.all()
 
-    def delete_chatbot_by_name(self, chatbot_name):
+    @staticmethod
+    def delete_chatbot_by_name(chatbot_name):
         Chatbot.objects.filter_by(name=chatbot_name).delete()
 
-    def create_chatbot(self, chatbot_name) -> Chatbot:
+    @staticmethod
+    def create_chatbot(chatbot_name) -> Chatbot:
         new_chatbot = Chatbot(name=chatbot_name)
         new_chatbot.save()
         return new_chatbot
@@ -577,7 +591,8 @@ class SettingsMixin:
         PathSettings.objects.delete_all()
         self.set_default_values(PathSettings)
 
-    def set_default_values(self, model_name_):
+    @staticmethod
+    def set_default_values(model_name_):
         with session_scope() as session:
             default_values = {}
             for column in model_name_.__table__.columns:
@@ -589,16 +604,20 @@ class SettingsMixin:
             )
             session.commit()
 
-    def load_lora(self) -> List[Type[Lora]]:
+    @staticmethod
+    def load_lora() -> List[Type[Lora]]:
         return Lora.objects.all()
 
-    def get_lora_by_name(self, name):
+    @staticmethod
+    def get_lora_by_name(name):
         return Lora.objects.filter_by(name=name).first()
 
-    def add_lora(self, lora: Lora):
+    @staticmethod
+    def add_lora(lora: Lora):
         lora.save()
 
-    def delete_lora(self, lora: Lora):
+    @staticmethod
+    def delete_lora(lora: Lora):
         loras = Lora.objects.filter_by(name=lora.name)
         for lora in loras:
             lora.delete()
@@ -626,15 +645,18 @@ class SettingsMixin:
                 lora.save()
         self.__settings_updated()
 
-    def create_lora(self, lora: Lora):
+    @staticmethod
+    def create_lora(lora: Lora):
         lora.save()
 
-    def delete_lora_by_name(self, lora_name, version):
+    @staticmethod
+    def delete_lora_by_name(lora_name, version):
         loras = Lora.objects.filter_by(name=lora_name, version=version)
         for lora in loras:
             lora.delete()
 
-    def delete_embedding(self, embedding: Embedding):
+    @staticmethod
+    def delete_embedding(embedding: Embedding):
         Embedding.objects.filter_by(
             name=embedding.name,
             path=embedding.path,
@@ -669,28 +691,36 @@ class SettingsMixin:
                 embedding.save()
         self.__settings_updated()
 
-    def get_embedding_by_name(self, name):
+    @staticmethod
+    def get_embedding_by_name(name):
         return Embedding.objects.filter_by(name=name).first()
 
-    def add_embedding(self, embedding: Embedding):
+    @staticmethod
+    def add_embedding(embedding: Embedding):
         embedding.save()
 
-    def load_prompt_templates(self) -> List[Type[PromptTemplate]]:
+    @staticmethod
+    def load_prompt_templates() -> List[Type[PromptTemplate]]:
         return PromptTemplate.objects.all()
 
-    def get_prompt_template_by_name(self, name) -> Type[PromptTemplate]:
+    @staticmethod
+    def get_prompt_template_by_name(name) -> Type[PromptTemplate]:
         return PromptTemplate.objects.filter_by(template_name=name).first()
 
-    def load_controlnet_models(self) -> List[Type[ControlnetModel]]:
+    @staticmethod
+    def load_controlnet_models() -> List[Type[ControlnetModel]]:
         return ControlnetModel.objects.all()
 
-    def controlnet_model_by_name(self, name) -> Type[ControlnetModel]:
+    @staticmethod
+    def controlnet_model_by_name(name) -> Type[ControlnetModel]:
         return ControlnetModel.objects.filter_by(name=name).first()
 
-    def load_pipelines(self) -> List[Type[PipelineModel]]:
+    @staticmethod
+    def load_pipelines() -> List[Type[PipelineModel]]:
         return PipelineModel.objects.all()
 
-    def load_shortcut_keys(self) -> List[Type[ShortcutKeys]]:
+    @staticmethod
+    def load_shortcut_keys() -> List[Type[ShortcutKeys]]:
         return ShortcutKeys.objects.all()
 
     def save_window_settings(self, column_name, val):
@@ -705,7 +735,8 @@ class SettingsMixin:
         else:
             window_settings.save()
 
-    def save_object(self, database_object):
+    @staticmethod
+    def save_object(database_object):
         database_object.save()
 
     def get_chatbot_by_id(self, chatbot_id) -> Chatbot:

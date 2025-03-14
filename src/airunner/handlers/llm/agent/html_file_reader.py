@@ -4,7 +4,8 @@ from llama_index.core.schema import Document
 
 
 class HtmlFileReader(BasePydanticReader):
-    def read(self, file_path):
+    @staticmethod
+    def read(file_path):
         with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
         soup = BeautifulSoup(content, 'html.parser')

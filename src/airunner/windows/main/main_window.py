@@ -423,7 +423,8 @@ class MainWindow(
     """
     End slot functions
     """
-    def download_url(self, url, save_path):
+    @staticmethod
+    def download_url(url, save_path):
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
         title = soup.title.string if soup.title else url
@@ -437,7 +438,8 @@ class MainWindow(
             file.write(response.content)
         return filename
 
-    def download_pdf(self, url, save_path):
+    @staticmethod
+    def download_pdf(url, save_path):
         response = requests.get(url)
         filename = url.split('/')[-1]  # Get the filename from the URL
         save_path = os.path.join(save_path, filename)
@@ -542,7 +544,8 @@ class MainWindow(
         # Start a new instance of the application
         QProcess.startDetached(sys.executable, sys.argv)
 
-    def on_write_file_signal(self, data: Dict):
+    @staticmethod
+    def on_write_file_signal(data: Dict):
         """
         Writes data to a file.
         :param data: Dict
@@ -556,7 +559,8 @@ class MainWindow(
         with open("output.txt", "w") as f:
             f.write(message)
 
-    def on_bash_execute_signal(self, data: Dict) -> str:
+    @staticmethod
+    def on_bash_execute_signal(data: Dict) -> str:
         """
         Takes a message from the LLM and strips bash commands from it.
         Passes bash command to the bash_execute function.
@@ -942,7 +946,8 @@ class MainWindow(
     def show_update_popup(self):
         self.update_popup = UpdateWindow()
 
-    def show_setup_wizard(self):
+    @staticmethod
+    def show_setup_wizard():
         AppInstaller(close_on_cancel=False)
 
     def showEvent(self, event):
@@ -1017,7 +1022,8 @@ class MainWindow(
             action = self.ui.menuFilters.addAction(image_filter.display_name)
             action.triggered.connect(partial(self.display_filter_window, image_filter))
 
-    def display_filter_window(self, image_filter):
+    @staticmethod
+    def display_filter_window(image_filter):
         FilterWindow(image_filter.id)
 
     def _initialize_default_buttons(self):
