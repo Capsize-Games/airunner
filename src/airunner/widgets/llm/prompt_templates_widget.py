@@ -28,7 +28,7 @@ class PromptTemplatesWidget(BaseWidget):
         self.ui.template_name.setCurrentIndex(0)
 
     @Slot(int)
-    def template_changed(self, index:int):
+    def template_changed(self, index: int):
         self.current_template_index = index
         template = self._prompt_templates[index]
         self.ui.system_prompt.blockSignals(True)
@@ -59,20 +59,20 @@ class PromptTemplatesWidget(BaseWidget):
         self._prompt_templates[self.current_template_index] = template
 
     @Slot(bool)
-    def toggle_use_guardrails(self, val:bool):
+    def toggle_use_guardrails(self, val: bool):
         template = self._prompt_templates[self.current_template_index]
         template.use_guardrails = val
         template.save()
         self._prompt_templates[self.current_template_index] = template
 
     @Slot(bool)
-    def toggle_use_datetime(self, val:bool):
+    def toggle_use_datetime(self, val: bool):
         template = self._prompt_templates[self.current_template_index]
         template.use_system_datetime_in_system_prompt = val
         template.save()
         self._prompt_templates[self.current_template_index] = template
 
-    Slot()
+    @Slot()
     def reset_system_prompt(self):
         template = self._prompt_templates[self.current_template_index]
 
@@ -96,7 +96,7 @@ class PromptTemplatesWidget(BaseWidget):
         self.ui.system_prompt.setPlainText(default)
         self._prompt_templates[self.current_template_index] = template
 
-    Slot()
+    @Slot()
     def reset_guardrails_prompt(self):
         template = self._prompt_templates[self.current_template_index]
 

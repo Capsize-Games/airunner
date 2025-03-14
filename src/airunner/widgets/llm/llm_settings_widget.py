@@ -59,10 +59,19 @@ class LLMSettingsWidget(
             element.blockSignals(True)
 
         self.ui.top_p.init(slider_callback=self.callback, current_value=self.llm_generator_settings.top_p)
-        self.ui.max_new_tokens.init(slider_callback=self.callback, current_value=self.llm_generator_settings.max_new_tokens)
-        self.ui.repetition_penalty.init(slider_callback=self.callback, current_value=self.llm_generator_settings.repetition_penalty)
+        self.ui.max_new_tokens.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.max_new_tokens
+        )
+        self.ui.repetition_penalty.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.repetition_penalty
+        )
         self.ui.min_length.init(slider_callback=self.callback, current_value=self.llm_generator_settings.min_length)
-        self.ui.length_penalty.init(slider_callback=self.callback, current_value=self.llm_generator_settings.length_penalty)
+        self.ui.length_penalty.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.length_penalty
+        )
         self.ui.num_beams.init(slider_callback=self.callback, current_value=self.llm_generator_settings.num_beams)
         self.ui.ngram_size.init(slider_callback=self.callback, current_value=self.llm_generator_settings.ngram_size)
         self.ui.temperature.init(slider_callback=self.callback, current_value=self.llm_generator_settings.temperature)

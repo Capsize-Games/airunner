@@ -49,6 +49,7 @@ def scan_path_for_lora(base_path) -> bool:
             db_handler.session.commit()
     return lora_deleted or lora_added
 
+
 def scan_path_for_embeddings(base_path) -> bool:
     embedding_added = False
     embedding_deleted = False

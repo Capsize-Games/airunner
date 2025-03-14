@@ -76,8 +76,8 @@ def add_column_with_fk(
 ) -> None:
     """
     Adds a column with a foreign key constraint to a table.
-    
-    :param table_name: Name of the table to alter.
+
+    :param cls: SQLAlchemy model class.
     :param column_name: Name of the new column.
     :param column_type: SQLAlchemy column type for the new column.
     :param fk_table: Name of the foreign key table.
@@ -91,14 +91,14 @@ def add_column_with_fk(
 
 
 def drop_column_with_fk(
-    cls, 
-    column_name: str, 
+    cls,
+    column_name: str,
     fk_name: str
 ) -> None:
     """
     Drops a column with a foreign key constraint from a table.
-    
-    :param table_name: Name of the table to alter.
+
+    :param cls: SQLAlchemy model class.
     :param column_name: Name of the column to drop.
     :param fk_name: Name of the foreign key constraint.
     """
@@ -162,6 +162,7 @@ def safe_alter_columns(cls, columns: List[sa.Column]):
             column.type, 
             column.nullable
         )
+
 
 def set_default_and_create_fk(
     table_name, 

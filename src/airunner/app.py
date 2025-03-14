@@ -82,13 +82,12 @@ class App(
             return True
         return app_version_tuple < current_version_tuple
 
-
     def handle_upgrade(self, current_version):
         from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
         from airunner.data.models import PipelineModel
         for model in pipeline_bootstrap_data:
             pipelinemodel = PipelineModel.objects.filter_by(
-                pipeline_action= model["pipeline_action"],
+                pipeline_action=model["pipeline_action"],
                 version=model["version"],
                 category=model["category"],
                 classname=model["classname"],

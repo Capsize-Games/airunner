@@ -14,14 +14,14 @@ class OpenAI(BaseAgent):
     
     def chat(self, prompt: str):
         completion = self.llm.chat.completions.create(
-        extra_body={},
-        model="",
-        messages=[
-            {
-            "role": "user",
-            "content": prompt
-            }
-        ]
+            extra_body={},
+            model="",
+            messages=[
+                {
+                "role": "user",
+                "content": prompt
+                }
+            ]
         )
         print(completion.choices[0].message.content)
 

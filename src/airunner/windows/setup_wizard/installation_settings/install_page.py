@@ -443,12 +443,12 @@ class InstallWorker(
             self.current_step = 7
             self.download_stt()
         elif self.current_step == 7:
-             self.hf_downloader.download_model(
-                 requested_path="",
-                 requested_file_name="",
-                 requested_file_path="",
-                 requested_callback=self.finalize_installation
-             )
+            self.hf_downloader.download_model(
+                requested_path="",
+                requested_file_name="",
+                requested_file_path="",
+                requested_callback=self.finalize_installation
+            )
 
 
 class InstallPage(BaseWizard):

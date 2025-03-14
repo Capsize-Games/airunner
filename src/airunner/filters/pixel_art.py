@@ -1,6 +1,7 @@
 from PIL import Image, ImageFilter
 from airunner.filters.base_filter import BaseFilter
 
+
 class PixelFilter(BaseFilter):
     current_number_of_colors = 0
     smoothing = 0  # Default smoothing value

@@ -40,8 +40,7 @@ class GeneratorForm(BaseWidget):
     @Slot(int)
     def on_tab_section_changed(self, index: int):
         Tab.update_tabs("left", self.ui.generator_form_tabs, index)
-        
-        
+
     @property
     def is_txt2img(self):
         return self.pipeline_action == GeneratorSection.TXT2IMG.value

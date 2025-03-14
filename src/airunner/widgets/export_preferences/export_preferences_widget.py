@@ -37,7 +37,9 @@ class ExportPreferencesWidget(BaseWidget):
             element.blockSignals(True)
         # initialize values:
         self.ui.metadata_prompt.setChecked(self.metadata_settings.image_export_metadata_prompt is True)
-        self.ui.metadata_negative_prompt.setChecked(self.metadata_settings.image_export_metadata_negative_prompt is True)
+        self.ui.metadata_negative_prompt.setChecked(
+            self.metadata_settings.image_export_metadata_negative_prompt is True
+        )
         self.ui.metadata_scale.setChecked(self.metadata_settings.image_export_metadata_scale is True)
         self.ui.metadata_seed.setChecked(self.metadata_settings.image_export_metadata_seed is True)
         self.ui.metadata_steps.setChecked(self.metadata_settings.image_export_metadata_steps is True)

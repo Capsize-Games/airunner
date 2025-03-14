@@ -44,7 +44,7 @@ class ChatEngineTool(AsyncBaseTool):
         description: Optional[str] = None,
         return_direct: bool = False,
         resolve_input_errors: bool = True,
-        agent = None
+        agent=None
     ) -> "ChatEngineTool":
         name = name or "chat_engine_tool"
         description = description or """Useful for chatting with the LLM."""
@@ -117,5 +117,5 @@ class ChatEngineTool(AsyncBaseTool):
             )
         return query_str
 
-    def update_system_prompt(self, system_prompt:str):
+    def update_system_prompt(self, system_prompt: str):
         self.chat_engine.update_system_prompt(system_prompt)

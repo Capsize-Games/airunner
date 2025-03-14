@@ -21,6 +21,7 @@ from airunner.data.models import Conversation
 
 class RAGMixin:
     def __init__(self):
+        self.__file_extractor = None
         self.__rag_engine: Optional[RefreshContextChatEngine] = None
         self.__document_reader: Optional[SimpleDirectoryReader] = None
         self.__prompt_helper: Optional[PromptHelper] = None
@@ -46,7 +47,7 @@ class RAGMixin:
                     raise ValueError("No retriever found.")
                 self.rag_engine = RefreshContextChatEngine.from_defaults(
                     retriever=self.retriever,
-                    #chat_history=self.history,
+                    # chat_history=self.history,
                     memory=self.chat_memory,
                     system_prompt=self._rag_system_prompt,
                     node_postprocessors=[],
@@ -91,7 +92,7 @@ class RAGMixin:
                     metadata={
                         "id": article.id,
                         "title": article.title,
-                        #"description": article.description,
+                        # "description": article.description,
                     }
                 ) for article in articles[:50]
             ]
