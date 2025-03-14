@@ -1,7 +1,6 @@
 import json
 import re
 import time
-from abc import ABC
 
 from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot
 from PySide6.QtWidgets import QApplication
@@ -98,7 +97,7 @@ class SaveGeneratorSettingsWorker(
             time.sleep(0.1)
 
 
-class StableDiffusionGeneratorForm(BaseWidget, ABC):
+class StableDiffusionGeneratorForm(BaseWidget):
     widget_class_ = Ui_stablediffusion_generator_form
     changed_signal = Signal(str, object)
 

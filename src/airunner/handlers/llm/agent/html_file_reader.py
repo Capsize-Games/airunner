@@ -1,11 +1,9 @@
-from abc import ABC
-
 from bs4 import BeautifulSoup
 from llama_index.core.readers.base import BasePydanticReader
 from llama_index.core.schema import Document
 
 
-class HtmlFileReader(BasePydanticReader, ABC):
+class HtmlFileReader(BasePydanticReader):
     def read(self, file_path):
         with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()

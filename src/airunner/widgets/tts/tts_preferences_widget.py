@@ -1,11 +1,10 @@
-from abc import ABC
 
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.tts.templates.tts_preferences_ui import Ui_tts_preferences
 
 
-class TTSPreferencesWidget(BaseWidget, ABC):
+class TTSPreferencesWidget(BaseWidget):
     widget_class_ = Ui_tts_preferences
 
     def __init__(self, *args, **kwargs):

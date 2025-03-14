@@ -1,11 +1,9 @@
-from abc import ABC
-
 import pyttsx3
 from airunner.handlers.tts.tts_handler import TTSHandler
 from airunner.enums import ModelType, ModelStatus, Gender
 
 
-class EspeakHandler(TTSHandler, ABC):
+class EspeakHandler(TTSHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._rate = None

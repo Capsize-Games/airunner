@@ -1,10 +1,9 @@
-from abc import ABC
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.templates.folder_widget_ui import Ui_folder_widget
 
 
-class FolderWidget(BaseWidget, ABC):
+class FolderWidget(BaseWidget):
     widget_class_ = Ui_folder_widget
     path = None
     callback = None

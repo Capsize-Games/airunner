@@ -1,4 +1,3 @@
-from abc import ABC
 
 import pyttsx3
 
@@ -8,7 +7,7 @@ from airunner.widgets.tts.templates.espeak_preferences_ui import Ui_espeak_prefe
 import pycountry
 
 
-class ESpeakPreferencesWidget(BaseWidget, ABC):
+class ESpeakPreferencesWidget(BaseWidget):
     widget_class_ = Ui_espeak_preferences
 
     def __init__(self, *args, **kwargs):

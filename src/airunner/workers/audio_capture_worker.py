@@ -1,6 +1,5 @@
 import queue
 import time
-from abc import ABC
 
 import sounddevice as sd
 import numpy as np
@@ -11,7 +10,7 @@ from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
 
-class AudioCaptureWorker(Worker, ABC):
+class AudioCaptureWorker(Worker):
     """
     This class is responsible for capturing audio from the microphone.
     It will capture audio when it detects voice activity and then send the audio to the audio_processor_worker.

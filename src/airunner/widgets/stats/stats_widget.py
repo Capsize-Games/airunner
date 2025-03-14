@@ -1,5 +1,4 @@
 import os
-from abc import ABC
 
 import psutil
 import torch
@@ -15,7 +14,7 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 class StatsWidget(
     BaseWidget,
     PipelineMixin,
-    StylesMixin, ABC
+    StylesMixin
 ):
     widget_class_ = Ui_stats_widget
 

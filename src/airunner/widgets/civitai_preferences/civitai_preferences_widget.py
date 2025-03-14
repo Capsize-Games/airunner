@@ -1,4 +1,3 @@
-from abc import ABC
 
 from PySide6.QtWidgets import QLineEdit
 
@@ -6,7 +5,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.civitai_preferences.templates.civitai_preferences_widget_ui import Ui_civitai_preferences
 
 
-class CivitAIPreferencesWidget(BaseWidget, ABC):
+class CivitAIPreferencesWidget(BaseWidget):
     widget_class_ = Ui_civitai_preferences
 
     def __init__(self, *args, **kwargs):

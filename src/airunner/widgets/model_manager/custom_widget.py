@@ -1,4 +1,3 @@
-from abc import ABC
 
 from PySide6.QtCore import Slot, QTimer
 
@@ -18,7 +17,7 @@ from airunner.workers.model_scanner_worker import ModelScannerWorker
 class CustomModelWidget(
     BaseWidget,
     PipelineMixin,
-    AIModelMixin, ABC
+    AIModelMixin
 ):
     widget_class_ = Ui_custom_model_widget
     model_widgets = []
