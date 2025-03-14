@@ -578,10 +578,17 @@ class MainWindow(
 
         self.set_stylesheet()
         self.restore_state()
+        
+        settings = SplitterSetting.objects.filter_by(name="main_window_splitter").first()
+        if settings:
+            self.ui.main_window_splitter.restoreState(settings.splitter_settings)
+        self.ui.center_tab_container.currentChanged.connect(self.on_tab_section_changed)
+
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
         self.initialize_widget_elements()
+
         self.ui.actionUndo.setEnabled(False)
         self.ui.actionRedo.setEnabled(False)
         self.ui.document_tab.layout().addWidget(MarkdownViewer(
@@ -598,11 +605,6 @@ class MainWindow(
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, 
             {"main_window": self}
         )
-
-        settings = SplitterSetting.objects.filter_by(name="main_window_splitter").first()
-        if settings:
-            self.ui.main_window_splitter.restoreState(settings.splitter_settings)
-        self.ui.center_tab_container.currentChanged.connect(self.on_tab_section_changed)
 
     @Slot(int)
     def on_tab_section_changed(self, index: int):
