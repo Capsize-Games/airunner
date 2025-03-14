@@ -1,4 +1,5 @@
 import os
+from abc import ABC
 
 from PySide6.QtGui import QMovie
 from PySide6.QtCore import QSize
@@ -7,7 +8,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.loading_ui import Ui_loading_message
 
 
-class LoadingWidget(BaseWidget):
+class LoadingWidget(BaseWidget, ABC):
     widget_class_ = Ui_loading_message
 
     def __init__(self, *args, **kwargs):

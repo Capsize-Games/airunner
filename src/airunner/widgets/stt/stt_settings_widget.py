@@ -1,8 +1,10 @@
+from abc import ABC
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stt.templates.stt_settings_ui import Ui_stt_settings
 
 
-class STTSettingsWidget(BaseWidget):
+class STTSettingsWidget(BaseWidget, ABC):
     widget_class_ = Ui_stt_settings
 
     def __init__(self, *args, **kwargs):

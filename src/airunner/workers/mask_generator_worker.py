@@ -1,3 +1,5 @@
+ from abc import ABC
+
 import numpy as np
 from PIL import Image
 from PySide6.QtCore import QRect
@@ -6,7 +8,7 @@ from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
 from airunner.workers.worker import Worker
 
 
-class MaskGeneratorWorker(Worker):
+class MaskGeneratorWorker(Worker, ABC):
     @property
     def active_rect(self):
         rect = QRect(

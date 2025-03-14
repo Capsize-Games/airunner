@@ -1,10 +1,12 @@
+from abc import ABC
+
 from PySide6.QtCore import Slot
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stt.templates.whisper_settings_ui import Ui_whisper_settings
 
 
-class WhisperSettingsWidget(BaseWidget):
+class WhisperSettingsWidget(BaseWidget, ABC):
     widget_class_ = Ui_whisper_settings
 
     def __init__(self, *args, **kwargs):

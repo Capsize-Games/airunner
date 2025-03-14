@@ -1,10 +1,12 @@
+from abc import ABC
+
 from airunner.data.models import ControlnetModel
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.controlnet.templates.controlnet_settings_widget_ui import Ui_controlnet_settings_widget
 
 
-class ControlnetSettingsWidget(BaseWidget):
+class ControlnetSettingsWidget(BaseWidget, ABC):
     widget_class_ = Ui_controlnet_settings_widget
 
     def __init__(self, *args, **kwargs):

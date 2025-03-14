@@ -1,9 +1,12 @@
+from abc import ABC
+
 from PySide6 import QtWidgets
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.model_manager.templates.model_form_ui import Ui_model_form_widget
 
-class ModelFormWidget(BaseWidget):
+
+class ModelFormWidget(BaseWidget, ABC):
     widget_class_ = Ui_model_form_widget
     model_widgets = []
 

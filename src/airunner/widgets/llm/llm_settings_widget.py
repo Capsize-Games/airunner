@@ -1,6 +1,5 @@
-"""
-This class should be used to create a window widget for the LLM.
-"""
+from abc import ABC
+
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 
@@ -13,7 +12,7 @@ from airunner.windows.main.ai_model_mixin import AIModelMixin
 
 class LLMSettingsWidget(
     BaseWidget,
-    AIModelMixin
+    AIModelMixin, ABC
 ):
     widget_class_ = Ui_llm_settings_widget
 

@@ -1,9 +1,12 @@
+from abc import ABC
+
 from PySide6.QtCore import Slot
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stablediffusion_tool_tab_ui import Ui_stablediffusion_tool_tab_widget
 from airunner.data.models import ApplicationSettings, Tab
 
-class StablediffusionToolTabWidget(BaseWidget):
+
+class StablediffusionToolTabWidget(BaseWidget, ABC):
     widget_class_ = Ui_stablediffusion_tool_tab_widget
 
     def __init__(self, *args, **kwargs):
