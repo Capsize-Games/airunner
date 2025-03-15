@@ -123,9 +123,7 @@ class MainWindow(
         self.token_signal = Signal(str)
         self.api = None
         self.input_event_manager = None
-        self.current_filter = None
         self.tqdm_callback_triggered = False
-        self.is_saved = False
         self.action = GeneratorSection.TXT2IMG.value
         self.progress_bar_started = False
         self.window = None
@@ -517,7 +515,6 @@ class MainWindow(
             (SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal),
             (SignalCode.NAVIGATE_TO_URL, self.on_navigate_to_url),
             (SignalCode.MISSING_REQUIRED_MODELS, self.display_missing_models_error),
-            (SignalCode.CANVAS_CLEAR, self.new_document),
             (SignalCode.TOGGLE_TOOL, self.on_toggle_tool_signal)
         ):
             self.register(item[0], item[1])
@@ -875,6 +872,9 @@ class MainWindow(
     @Slot(bool)
     def action_toggle_grid(self, val):
         self.update_grid_settings("show_grid", val)
+        self.emit_signal(SignalCode.TOGGLE_GRID, {
+            "show_grid": val
+        })
     
     def on_toggle_tool_signal(self, data: Dict):
         self.toggle_tool(data["tool"], data["active"])
@@ -1030,42 +1030,12 @@ class MainWindow(
         self.ui.actionSafety_Checker.setChecked(self.application_settings.nsfw_filter)
         self.ui.actionSafety_Checker.blockSignals(False)
 
-    @staticmethod
-    def __toggle_button(ui_element, state):
-        ui_element.blockSignals(True)
-        ui_element.setChecked(state)
-        ui_element.blockSignals(False)
-
     def toggle_tool(self, tool: CanvasToolName, active: bool):
-        self.initialize_widget_elements()
-        if not active:
-            tool = CanvasToolName.NONE
-        else:
-            if tool is CanvasToolName.BRUSH:
-                self.__toggle_button(self.ui.actionToggle_Brush, True)
-                self.__toggle_button(self.ui.actionToggle_Eraser, False)
-                self.__toggle_button(self.ui.actionToggle_Selection, False)
-                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
-            elif tool is CanvasToolName.ERASER:
-                self.__toggle_button(self.ui.actionToggle_Brush, False)
-                self.__toggle_button(self.ui.actionToggle_Eraser, True)
-                self.__toggle_button(self.ui.actionToggle_Selection, False)
-                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
-            elif tool is CanvasToolName.SELECTION:
-                self.__toggle_button(self.ui.actionToggle_Brush, False)
-                self.__toggle_button(self.ui.actionToggle_Eraser, False)
-                self.__toggle_button(self.ui.actionToggle_Selection, True)
-                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
-            elif tool is CanvasToolName.ACTIVE_GRID_AREA:
-                self.__toggle_button(self.ui.actionToggle_Brush, False)
-                self.__toggle_button(self.ui.actionToggle_Eraser, False)
-                self.__toggle_button(self.ui.actionToggle_Selection, False)
-                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, True)
         self.update_application_settings("current_tool", tool.value)
         self.emit_signal(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, {
-            "tool": tool
+            "tool": tool,
+            "active": active
         })
-        self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
 
     def _initialize_window(self):
         self.center()
@@ -1083,11 +1053,6 @@ class MainWindow(
         :return:
         """
         self.setWindowTitle(self._window_title)
-
-    def new_document(self):
-        self.is_saved = False
-        self.set_window_title()
-        self.current_filter = None
 
     def handle_unknown(self, message):
         self.logger.error(f"Unknown message code: {message}")

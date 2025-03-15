@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>788</width>
-    <height>536</height>
+    <width>843</width>
+    <height>579</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -373,7 +373,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
-     <y>-11</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -389,7 +389,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>473</x>
-     <y>-4</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -405,7 +405,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>228</x>
-     <y>-3</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -421,7 +421,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>28</x>
-     <y>-12</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -437,7 +437,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>39</x>
-     <y>-6</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -452,7 +452,7 @@
      <y>34</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-5</x>
+     <x>0</x>
      <y>13</y>
     </hint>
    </hints>
@@ -468,7 +468,7 @@
      <y>36</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-8</x>
+     <x>0</x>
      <y>51</y>
     </hint>
    </hints>
@@ -484,7 +484,7 @@
      <y>35</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-4</x>
+     <x>0</x>
      <y>109</y>
     </hint>
    </hints>
@@ -500,8 +500,24 @@
      <y>34</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-6</x>
+     <x>0</x>
      <y>158</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionToggle_Grid</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>canvas</receiver>
+   <slot>action_toggle_grid(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>231</x>
+     <y>32</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>255</x>
+     <y>-15</y>
     </hint>
    </hints>
   </connection>

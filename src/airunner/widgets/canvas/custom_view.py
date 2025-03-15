@@ -58,15 +58,14 @@ class CustomGraphicsView(
     @property
     def scene(self) -> Optional[CustomScene]:
         scene = self._scene
-        if scene and scene.painter:
-            scene.painter.end()
-        if self.canvas_type == CanvasType.IMAGE.value:
-            scene = CustomScene(self.canvas_type)
-        elif self.canvas_type == CanvasType.BRUSH.value:
-            scene = BrushScene(self.canvas_type)
-        else:
-            self.logger.error(f"Unknown canvas type: {self.canvas_type}")
-            return
+        if not scene:
+            if self.canvas_type == CanvasType.IMAGE.value:
+                scene = CustomScene(self.canvas_type)
+            elif self.canvas_type == CanvasType.BRUSH.value:
+                scene = BrushScene(self.canvas_type)
+            else:
+                self.logger.error(f"Unknown canvas type: {self.canvas_type}")
+                return
         
         if scene:
             self._scene = scene
@@ -349,7 +348,6 @@ class CustomGraphicsView(
         original_mouse_event(event)
 
     def on_tool_changed_signal(self, message):
-        _tool: CanvasToolName = message["tool"]
         self.toggle_drag_mode()
 
     def toggle_drag_mode(self):
