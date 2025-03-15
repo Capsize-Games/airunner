@@ -29,7 +29,7 @@ class Ui_canvas(object):
     def setupUi(self, canvas):
         if not canvas.objectName():
             canvas.setObjectName(u"canvas")
-        canvas.resize(788, 536)
+        canvas.resize(843, 579)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -216,6 +216,7 @@ class Ui_canvas(object):
         self.actionExport.clicked.connect(canvas.action_export)
         self.actionImport.clicked.connect(canvas.action_import)
         self.actionNew.clicked.connect(canvas.action_new)
+        self.actionToggle_Grid.toggled.connect(canvas.action_toggle_grid)
 
         QMetaObject.connectSlotsByName(canvas)
     # setupUi
