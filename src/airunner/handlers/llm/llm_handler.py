@@ -196,7 +196,7 @@ class LLMHandler(
         """
         self._chat_agent.on_load_conversation(message)
 
-    def reload_rag(self):
+    def reload_rag_engine(self):
         """
         Public method to reload the RAG model
         """
