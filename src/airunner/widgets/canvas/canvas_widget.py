@@ -65,7 +65,9 @@ class CanvasWidget(
             (SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True)),
             (SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True)),
             (SignalCode.QUIT_APPLICATION, lambda message: self.save_state()),
+            (SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, self.on_toggle_tool_signal),
             (SignalCode.TOGGLE_TOOL, self.on_toggle_tool_signal),
+            (SignalCode.TOGGLE_GRID, self.on_toggle_grid_signal),
         ):
             self.register(item[0], item[1])
 
@@ -162,7 +164,7 @@ class CanvasWidget(
         self.ui.actionToggle_Active_Grid_Area.setChecked(tool is CanvasToolName.ACTIVE_GRID_AREA and active)
         self.ui.actionToggle_Brush.setChecked(tool is CanvasToolName.BRUSH and active)
         self.ui.actionToggle_Eraser.setChecked(tool is CanvasToolName.ERASER and active)
-        self.ui.actionToggle_Grid.setChecked(tool is CanvasToolName.GRID and active)
+        self.ui.actionToggle_Grid.setChecked(self.grid_settings.show_grid)
     
     def showEvent(self, event):
         super().showEvent(event)

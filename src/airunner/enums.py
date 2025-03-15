@@ -177,10 +177,13 @@ class SignalCode(Enum):
     TTS_MODEL_CHANGED = enum.auto()
 
     TOGGLE_TOOL = enum.auto()
+    TOGGLE_GRID = enum.auto()
 
     SECTION_CHANGED = enum.auto()
 
     WEB_BROWSER_PAGE_HTML = enum.auto()
+
+    CLEAR_PROMPTS = enum.auto()
 
 
 class EngineResponseCode(Enum):
@@ -272,6 +275,7 @@ class CanvasToolName(Enum):
     BRUSH = "brush"
     ERASER = "eraser"
     SELECTION = "selection"
+    GRID = "grid"
     NONE = "none"
 
 
