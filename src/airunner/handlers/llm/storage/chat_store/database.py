@@ -1,27 +1,24 @@
 from typing import Optional, List
 from urllib.parse import urlparse
 import datetime
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
 from llama_index.core.llms import ChatMessage
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from llama_index.core.storage.chat_store.base import BaseChatStore
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
 
 
 class DatabaseChatStore(BaseChatStore):
-    @classmethod
-    def _connect(
-        cls, connection_string: str, async_connection_string: str, debug: bool
-    ) -> tuple[sessionmaker, sessionmaker]:
-        _engine = create_engine(connection_string, echo=debug)
-        session = sessionmaker(_engine)
-
-        _async_engine = create_async_engine(async_connection_string)
-        async_session = sessionmaker(_async_engine, class_=AsyncSession)
-        return session, async_session
+    # @classmethod
+    # def _connect(
+    #     cls, connection_string: str, async_connection_string: str, debug: bool
+    # ) -> tuple[sessionmaker, sessionmaker]:
+    #     _engine = create_engine(connection_string, echo=debug)
+    #     session = sessionmaker(_engine)
+    #
+    #     _async_engine = create_async_engine(async_connection_string)
+    #     async_session = sessionmaker(_async_engine, class_=AsyncSession)
+    #     return session, async_session
 
     def set_messages(self, key: str, messages: list[ChatMessage]) -> None:
         """Set messages for a key."""
