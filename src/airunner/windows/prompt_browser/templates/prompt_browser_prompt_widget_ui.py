@@ -23,7 +23,7 @@ class Ui_prompt_widget(object):
     def setupUi(self, prompt_widget):
         if not prompt_widget.objectName():
             prompt_widget.setObjectName(u"prompt_widget")
-        prompt_widget.resize(938, 434)
+        prompt_widget.resize(938, 437)
         self.gridLayout = QGridLayout(prompt_widget)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -123,8 +123,10 @@ class Ui_prompt_widget(object):
         self.retranslateUi(prompt_widget)
         self.load_button.clicked.connect(prompt_widget.action_clicked_button_load)
         self.delete_button.clicked.connect(prompt_widget.action_clicked_button_delete)
-        self.prompt.textChanged.connect(prompt_widget.action_text_changed_prompt)
-        self.negative_prompt.textChanged.connect(prompt_widget.action_text_changed_negative_prompt)
+        self.prompt.textChanged.connect(prompt_widget.action_text_changed)
+        self.secondary_prompt.textChanged.connect(prompt_widget.action_text_changed)
+        self.negative_prompt.textChanged.connect(prompt_widget.action_text_changed)
+        self.secondary_negative_prompt.textChanged.connect(prompt_widget.action_text_changed)
 
         QMetaObject.connectSlotsByName(prompt_widget)
     # setupUi
