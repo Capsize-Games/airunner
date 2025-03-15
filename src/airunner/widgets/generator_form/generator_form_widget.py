@@ -243,9 +243,3 @@ class GeneratorForm(BaseWidget):
                 active_index = tab.index
                 break
         self.ui.generator_form_tabs.setCurrentIndex(active_index)
-        
-    def clear_prompts(self):
-        self.ui.prompt.setPlainText("")
-        self.ui.negative_prompt.setPlainText("")
-        self.ui.secondary_prompt.setPlainText("")
-        self.ui.secondary_negative_prompt.setPlainText("")

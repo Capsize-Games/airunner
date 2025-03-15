@@ -119,6 +119,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated,
             SignalCode.KEYBOARD_SHORTCUTS_UPDATED: self.on_keyboard_shortcuts_updated,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
+            SignalCode.CLEAR_PROMPTS: self.clear_prompts,
         }
         self.thread = QThread()
         self.worker = SaveGeneratorSettingsWorker(parent=self)
@@ -502,4 +503,3 @@ class StableDiffusionGeneratorForm(BaseWidget):
         if interrupt_key:
             self.ui.interrupt_button.setShortcut(interrupt_key.key)
             self.ui.interrupt_button.setToolTip(f"{interrupt_key.display_name} ({interrupt_key.text})")
-        
