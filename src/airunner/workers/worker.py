@@ -1,4 +1,3 @@
-import inspect
 import queue
 import threading
 
