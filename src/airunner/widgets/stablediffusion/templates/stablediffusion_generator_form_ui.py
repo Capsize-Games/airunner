@@ -260,6 +260,9 @@ class Ui_stablediffusion_generator_form(object):
         self.retranslateUi(stablediffusion_generator_form)
         self.generate_button.clicked.connect(stablediffusion_generator_form.handle_generate_button_clicked)
         self.interrupt_button.clicked.connect(stablediffusion_generator_form.handle_interrupt_button_clicked)
+        self.pushButton.clicked.connect(stablediffusion_generator_form.action_clicked_button_save_prompts)
+        self.image_presets.currentTextChanged.connect(stablediffusion_generator_form.handle_image_presets_changed)
+        self.quality_effects.currentTextChanged.connect(stablediffusion_generator_form.handle_quality_effects_changed)
 
         QMetaObject.connectSlotsByName(stablediffusion_generator_form)
     # setupUi
