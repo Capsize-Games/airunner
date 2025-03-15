@@ -797,7 +797,7 @@ class BaseAgent(
     def reset_memory(self):
         self.chat_memory = None
         self.chat_store = None
-        messages = self.chat_store.get_messages(self.conversation.id)
+        messages = self.chat_store.get_messages(key=str(self.conversation.id))
         self.chat_memory.set(messages)
         self.chat_engine.memory = self.chat_memory
         self.react_tool_agent.memory = self.chat_memory
