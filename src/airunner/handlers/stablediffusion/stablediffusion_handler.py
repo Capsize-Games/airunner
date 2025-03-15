@@ -140,7 +140,6 @@ class StableDiffusionHandler(BaseHandler):
     def on_application_settings_changed(self):
         if self._pipe:
             pipeline_class = self._pipe.__class__
-            print(pipeline_class)
             if (
                 pipeline_class in self.img2img_pipelines and 
                 not self.image_to_image_settings.enabled

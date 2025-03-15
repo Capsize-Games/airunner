@@ -282,7 +282,6 @@ class LLMHandler(
             )
         else:
             self.logger.warning("No chat agent to load")
-            print(self.llm_settings)
         self.logger.info("Chat agent loaded")
 
     def _unload_model(self):
