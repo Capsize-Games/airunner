@@ -1,6 +1,6 @@
 import queue
 import threading
-from abc import abstractmethod
+from abc import abstractmethod, ABC, ABCMeta
 
 from PySide6.QtCore import Signal, QThread, QObject
 
@@ -9,8 +9,14 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.windows.main.settings_mixin import SettingsMixin
 
+QObjectMeta = type(QObject)
 
-class Worker(QObject, MediatorMixin, SettingsMixin):
+
+class CombinedMeta(QObjectMeta, ABCMeta):
+    pass
+
+
+class Worker(QObject, MediatorMixin, SettingsMixin, ABC, metaclass=CombinedMeta):
     queue_type = QueueType.GET_NEXT_ITEM
     finished = Signal()
     prefix = "Worker"

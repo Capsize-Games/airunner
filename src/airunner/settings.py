@@ -143,44 +143,51 @@ BASE_PATH = os.environ.get("BASE_PATH", "~/.local/share/airunner")
 DEFAULT_PATH_SETTINGS = {
     "documents_path": os.path.expanduser(
         os.path.join(
-            "text/other",
+            "text",
+            "other",
             "documents"
         )
     ),
     "ebook_path": os.path.expanduser(
         os.path.join(
-            "text/other",
+            "text",
+            "other",
             "ebooks"
         )
     ),
     "image_path": os.path.expanduser(
         os.path.join(
-            "art/other",
+            "art",
+            "other",
             "images"
         )
     ),
     "llama_index_path": os.path.expanduser(
         os.path.join(
-            "text/rag",
+            "text",
+            "rag",
             "db"
         )
     ),
     "webpages_path": os.path.expanduser(
         os.path.join(
-            "text/other",
+            "text",
+            "other",
             "webpages"
         )
     ),
     "stt_model_path": os.path.expanduser(
         os.path.join(
-            "text/models/stt",
-            "models"
+            "text",
+            "models",
+            "stt"
         )
     ),
     "tts_model_path": os.path.expanduser(
         os.path.join(
-            "text/models/tts",
-            "models"
+            "text",
+            "models",
+            "tts"
         )
     ),
 }

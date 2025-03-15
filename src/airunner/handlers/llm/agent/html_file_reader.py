@@ -1,11 +1,17 @@
-from abc import ABC
+from abc import ABCMeta, ABC
 
 from bs4 import BeautifulSoup
 from llama_index.core.readers.base import BasePydanticReader
 from llama_index.core.schema import Document
 
+BasePydanticReaderMeta = type(BasePydanticReader)
 
-class HtmlFileReader(BasePydanticReader, ABC):
+
+class CombinedMeta(BasePydanticReaderMeta, ABCMeta):
+    pass
+
+
+class HtmlFileReader(BasePydanticReader, ABC, metaclass=CombinedMeta):
     @staticmethod
     def read(file_path):
         with open(file_path, 'r', encoding='utf-8') as file:
