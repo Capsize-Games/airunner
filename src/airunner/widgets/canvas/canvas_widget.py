@@ -119,7 +119,6 @@ class CanvasWidget(
 
     @Slot(bool)
     def action_toggle_brush(self, val: bool):
-        print("action_toggle_brush", val)
         self.emit_signal(SignalCode.TOGGLE_TOOL, {
             "tool": CanvasToolName.BRUSH,
             "active": val
@@ -153,7 +152,13 @@ class CanvasWidget(
     def on_toggle_tool_signal(self, message: dict):
         tool = message.get("tool", None)
         active = message.get("active", False)
-        print("ON TOGGLE TOOGL SIGNAL", tool, active)
+        self._update_action_buttons(tool, active)
+        self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
+    
+    def on_toggle_grid_signal(self, message: dict):
+        self.ui.actionToggle_Grid.setChecked(message.get("show_grid", True))
+    
+    def _update_action_buttons(self, tool, active):
         self.ui.actionToggle_Active_Grid_Area.setChecked(tool is CanvasToolName.ACTIVE_GRID_AREA and active)
         self.ui.actionToggle_Brush.setChecked(tool is CanvasToolName.BRUSH and active)
         self.ui.actionToggle_Eraser.setChecked(tool is CanvasToolName.ERASER and active)

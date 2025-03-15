@@ -440,7 +440,6 @@ class CustomScene(
 
     def delete_image(self):
         self.logger.debug("Deleting image from canvas")
-
         item_scene = self.item.scene()
         if item_scene is not None:
             item_scene.removeItem(self.item)
