@@ -5,6 +5,10 @@ from llama_index.core.memory import BaseMemory
 
 class RefreshContextChatEngine(ContextChatEngine):
     @property
+    def llm(self):
+        return self._llm
+
+    @property
     def memory(self) -> BaseMemory:
         return self._memory
 
