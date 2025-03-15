@@ -11,4 +11,3 @@ class WatchStateWorker(QObject):
     def run(self):
         QApplication.processEvents()
         self.signal.emit()
-        print("test")
