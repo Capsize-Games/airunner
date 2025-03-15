@@ -9,7 +9,6 @@ from typing import (
 import datetime
 import platform
 
-from llama_index.core.base.llms.base import BaseLLM
 from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
 from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.base.llms.types import ChatMessage
@@ -28,7 +27,6 @@ from airunner.handlers.llm.storage.chat_store.database import DatabaseChatStore
 from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuffer
 from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
 from airunner.utils.strip_names_from_message import strip_names_from_message
-from airunner.settings import DB_URL
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
@@ -734,7 +732,7 @@ class BaseAgent(
     @property
     def chat_store(self) -> DatabaseChatStore:
         if not self._chat_store:
-            self._chat_store = DatabaseChatStore.from_uri(DB_URL)
+            self._chat_store = DatabaseChatStore()
         return self._chat_store
 
     @chat_store.setter
