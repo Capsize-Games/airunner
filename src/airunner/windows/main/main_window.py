@@ -1060,7 +1060,7 @@ class MainWindow(
     def clear_all_prompts(self):
         self.prompt = ""
         self.negative_prompt = ""
-        self.generator_tab_widget.clear_prompts()
+        self.emit_signal(SignalCode.CLEAR_PROMPTS)
 
     def new_batch(self, index, image, data):
         self.generator_tab_widget.new_batch(index, image, data)
