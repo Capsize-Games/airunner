@@ -1,4 +1,4 @@
-from typing import Any, Optional, List
+from typing import Optional, List
 from urllib.parse import urlparse
 import datetime
 from sqlalchemy import create_engine
@@ -6,65 +6,12 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
 from llama_index.core.llms import ChatMessage
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from llama_index.core.bridge.pydantic import Field, PrivateAttr
 from llama_index.core.storage.chat_store.base import BaseChatStore
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
 
 
 class DatabaseChatStore(BaseChatStore):
-    table_name: Optional[str] = Field(
-        default="chatstore", description="SQLite table name."
-    )
-    schema_name: Optional[str] = Field(
-        default="", description="SQLite schema name."
-    )
-
-    _table_class: Optional[Any] = PrivateAttr()
-
-    def __init__(
-        self,
-        table_name: str,
-        schema_name: str = "",
-    ):
-        super().__init__(
-            table_name=table_name.lower(),
-            schema_name=schema_name.lower(),
-        )
-
-    @classmethod
-    def from_params(
-        cls,
-        _database: Optional[str] = None,
-        table_name: str = "chatstore",
-        schema_name: str = "",
-        _connection_string: Optional[str] = None,
-        _async_connection_string: Optional[str] = None,
-        _debug: bool = False,
-    ) -> "DatabaseChatStore":
-        """Return connection string from database parameters."""
-        return cls(
-            table_name=table_name,
-            schema_name=schema_name,
-        )
-
-    @classmethod
-    def from_uri(
-        cls,
-        uri: str,
-        table_name: str = "chatstore",
-        schema_name: str = "",
-        debug: bool = False,
-        use_jsonb: bool = False,
-    ) -> "DatabaseChatStore":
-        """Return connection string from database parameters."""
-        params = params_from_uri(uri)
-        return cls.from_params(
-            **params,
-            table_name=table_name,
-            schema_name=schema_name,
-        )
-
     @classmethod
     def _connect(
         cls, connection_string: str, async_connection_string: str, debug: bool
