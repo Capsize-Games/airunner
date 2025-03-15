@@ -1,5 +1,6 @@
 import queue
 import threading
+from abc import abstractmethod
 
 from PySide6.QtCore import Signal, QThread, QObject
 
@@ -29,6 +30,10 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         self.register_signals()
 
         threading.Thread(target=self.start_worker_thread).start()
+
+    @abstractmethod
+    def handle_message(self, message):
+        raise NotImplementedError
 
     def start_worker_thread(self):
         pass
@@ -106,9 +111,6 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
 
     def resume(self):
         self.paused = False
-
-    def handle_message(self, message):
-        raise NotImplementedError
 
     def add_to_queue(self, message):
         if (
