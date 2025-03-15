@@ -478,6 +478,54 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>action_clicked_button_save_prompts()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>473</x>
+     <y>24</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>416</x>
+     <y>-7</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>image_presets</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_image_presets_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>107</x>
+     <y>742</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-2</x>
+     <y>795</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>quality_effects</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_quality_effects_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>477</x>
+     <y>739</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>524</x>
+     <y>700</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>handle_prompt_changed()</slot>
