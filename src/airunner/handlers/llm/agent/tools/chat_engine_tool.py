@@ -70,7 +70,7 @@ class ChatEngineTool(AsyncBaseTool):
         query_str = self._get_query_str(*args, **kwargs)
         do_not_display = kwargs.get("do_not_display", False)
         chat_history = kwargs.get("chat_history", [])
-        self.chat_engine._llm.llm_request = kwargs.get("llm_request", None)
+        self.chat_engine.llm.llm_request = kwargs.get("llm_request", None)
         streaming_response = self.chat_engine.stream_chat(
             query_str, 
             chat_history=chat_history
