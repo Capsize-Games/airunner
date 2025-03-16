@@ -1,7 +1,7 @@
 import io
 import os
 import subprocess
-from typing import Optional
+from typing import Optional, Tuple, Dict
 
 import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
@@ -236,8 +236,8 @@ class CustomScene(
             elif message:
                 self._create_image(
                     image=images[0].convert("RGBA"),
-                    is_outpaint=message["is_outpaint"],
-                    outpaint_box_rect=message["active_rect"]
+                    is_outpaint=message.get("is_outpaint", False),
+                    outpaint_box_rect=message.get("active_rect", None)
                 )
         else:
             self.logger.error(f"Unhandled response code: {code}")
@@ -616,9 +616,15 @@ class CustomScene(
             self.logger.error("xclip not found. Please install xclip to copy image to clipboard.")
         return image
 
-    def _create_image(self, image, is_outpaint, outpaint_box_rect):
+    def _create_image(
+        self, 
+        image: Image.Image, 
+        is_outpaint: bool, 
+        outpaint_box_rect: Optional[Dict] = None
+    ):
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
+        
         if image is not None:
             self._add_image_to_scene(
                 image,
@@ -639,9 +645,9 @@ class CustomScene(
 
     def _add_image_to_scene(
         self,
-        image: Image,
+        image: Image.Image,
         is_outpaint: bool = False,
-        outpaint_box_rect: QPoint = None,
+        outpaint_box_rect: Optional[Dict] = None
     ):
         """
         Adds a given image to the scene
@@ -657,10 +663,14 @@ class CustomScene(
             return
 
         if is_outpaint:
-            image, root_point, pivot_point = self._handle_outpaint(
+            image, root_point, _pivot_point = self._handle_outpaint(
                 outpaint_box_rect,
                 image
             )
+        else:
+            root_point = QPoint(outpaint_box_rect["x"], outpaint_box_rect["y"])
+        self.item.setPos(root_point.x(), root_point.y())
+
         # self._set_current_active_image(image)
         self.current_active_image = image
         q_image = ImageQt.ImageQt(image)
@@ -669,9 +679,13 @@ class CustomScene(
         self.update()
         self.initialize_image(image)
 
-    def _handle_outpaint(self, outpaint_box_rect, outpainted_image) -> [Image, QPoint, QPoint]:
+    def _handle_outpaint(
+        self, 
+        outpaint_box_rect: Dict, 
+        outpainted_image: Image
+    ) -> Tuple[Image.Image, QPoint, QPoint]:
         if self.current_active_image is None:
-            point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
+            point = QPoint(outpaint_box_rect["x"], outpaint_box_rect["y"])
             return outpainted_image, QPoint(0, 0), point
 
         # make a copy of the current canvas image
@@ -685,21 +699,21 @@ class CustomScene(
         root_point = QPoint(0, 0)
         current_image_position = QPoint(0, 0)
 
-        is_drawing_left = outpaint_box_rect.x() < current_image_position.x()
-        is_drawing_right = outpaint_box_rect.x() > current_image_position.x()
-        is_drawing_up = outpaint_box_rect.y() < current_image_position.y()
-        is_drawing_down = outpaint_box_rect.y() > current_image_position.y()
+        is_drawing_left = outpaint_box_rect["x"] < current_image_position.x()
+        is_drawing_right = outpaint_box_rect["x"] > current_image_position.x()
+        is_drawing_up = outpaint_box_rect["y"] < current_image_position.y()
+        is_drawing_down = outpaint_box_rect["y"] > current_image_position.y()
 
         if is_drawing_down:
-            height += outpaint_box_rect.y()
+            height += outpaint_box_rect["y"]
         if is_drawing_right:
-            width += outpaint_box_rect.x()
+            width += outpaint_box_rect["x"]
         if is_drawing_up:
             height += current_image_position.y()
-            root_point.setY(outpaint_box_rect.y())
+            root_point.setY(outpaint_box_rect["y"])
         if is_drawing_left:
             width += current_image_position.x()
-            root_point.setX(outpaint_box_rect.x())
+            root_point.setX(outpaint_box_rect["x"])
 
         new_dimensions = (width, height)
 
@@ -710,7 +724,7 @@ class CustomScene(
         image_root_point = QPoint(root_point.x(), root_point.y())
         image_pivot_point = QPoint(pivot_point.x(), pivot_point.y())
 
-        new_image_a.paste(outpainted_image, (int(outpaint_box_rect.x()), int(outpaint_box_rect.y())))
+        new_image_a.paste(outpainted_image, (int(outpaint_box_rect["x"]), int(outpaint_box_rect["y"])))
         new_image_b.paste(existing_image_copy, (current_image_position.x(), current_image_position.y()))
 
         # Convert mask to binary mask
