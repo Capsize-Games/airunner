@@ -14,7 +14,7 @@ from PIL import (
     ImageFont
 )
 from PIL.Image import Image
-from PySide6.QtCore import QRect, Slot
+from PySide6.QtCore import QRect
 from PySide6.QtWidgets import QApplication
 from compel import (
     Compel, 
@@ -222,28 +222,6 @@ class StableDiffusionHandler(BaseHandler):
     def model_status(self):
         return self._model_status
 
-    @Slot(str)
-    def _handle_worker_error(self, error_message):
-        self.logger.error("Worker error: %s", error_message)
-
-    @property
-    def is_single_file(self) -> bool:
-        return self.is_ckpt_file or self.is_safetensors
-
-    @property
-    def is_ckpt_file(self) -> bool:
-        if not self.model_path:
-            self.logger.error("ckpt path is empty")
-            return False
-        return self.model_path.endswith(".ckpt")
-
-    @property
-    def is_safetensors(self) -> bool:
-        if not self.model_path:
-            self.logger.error("safetensors path is empty")
-            return False
-        return self.model_path.endswith(".safetensors")
-
     @property
     def version(self) -> str:
         version = self.generator_settings_cached.version
@@ -274,12 +252,6 @@ class StableDiffusionHandler(BaseHandler):
         if self._application_settings is None:
             self._application_settings = self.application_settings
         return self._application_settings
-
-    @property
-    def drawing_pad_settings_cached(self):
-        if self._drawing_pad_settings is None:
-            self._drawing_pad_settings = self.drawing_pad_settings
-        return self._drawing_pad_settings
 
     @property
     def outpaint_settings_cached(self):
@@ -361,10 +333,6 @@ class StableDiffusionHandler(BaseHandler):
         return self.model_status[ModelType.CONTROLNET] is ModelStatus.LOADING
 
     @property
-    def controlnet_is_unloaded(self) -> bool:
-        return self.model_status[ModelType.CONTROLNET] is ModelStatus.UNLOADED
-
-    @property
     def section(self) -> GeneratorSection:
         section = GeneratorSection.TXT2IMG
         if (
@@ -411,19 +379,6 @@ class StableDiffusionHandler(BaseHandler):
     @property
     def use_safety_checker(self) -> bool:
         return self.application_settings_cached.nsfw_filter
-
-    @property
-    def safety_checker_initialized(self) -> bool:
-        try:
-            return not self.use_safety_checker or (
-                self._safety_checker is not None and
-                self._feature_extractor is not None and
-                self._pipe.safety_checker is not None and
-                self._pipe.feature_extractor is not None
-            )
-        except AttributeError:
-            pass
-        return False
 
     @property
     def is_txt2img(self) -> bool:
