@@ -565,7 +565,7 @@ class MainWindow(
         self.logger.debug("Loading UI")
         self.ui.setupUi(self)
         active_index = 0
-        tabs = Tab.objects.filter_by(section="center").all()
+        tabs = Tab.objects.filter_by(section="center")
         for tab in tabs:
             if (tab.active):
                 active_index = tab.index
@@ -575,7 +575,7 @@ class MainWindow(
         self.set_stylesheet()
         self.restore_state()
         
-        settings = SplitterSetting.objects.filter_by(name="main_window_splitter").first()
+        settings = SplitterSetting.objects.filter_by_first(name="main_window_splitter")
         if settings:
             self.ui.main_window_splitter.restoreState(settings.splitter_settings)
         self.ui.center_tab_container.currentChanged.connect(self.on_tab_section_changed)
@@ -800,7 +800,7 @@ class MainWindow(
             self.ui.generator_widget.ui.generator_form_tabs.currentIndex()
         )
 
-        settings = SplitterSetting.objects.filter_by(name="main_window_splitter").first()
+        settings = SplitterSetting.objects.filter_by_first(name="main_window_splitter")
         if not settings:
             SplitterSetting.objects.create(
                 name="main_window_splitter",
@@ -839,9 +839,9 @@ class MainWindow(
         self.move(x_pos, y_pos)
         self.raise_()
 
-        # settings = SplitterSetting.objects.filter_by(
+        # settings = SplitterSetting.objects.filter_by_first(
         #     name="main_window_splitter"
-        # ).first()
+        # )
         # if settings:
         #     self.ui.main_window_splitter.restoreState(
         #         settings.splitter_settings
@@ -974,11 +974,11 @@ class MainWindow(
 
     def _set_keyboard_shortcuts(self):
         
-        quit_key = ShortcutKeys.objects.filter_by(display_name="Quit").first()
-        brush_key = ShortcutKeys.objects.filter_by(display_name="Brush").first()
-        eraser_key = ShortcutKeys.objects.filter_by(display_name="Eraser").first()
-        move_tool_key = ShortcutKeys.objects.filter_by(display_name="Move Tool").first()
-        select_tool_key = ShortcutKeys.objects.filter_by(display_name="Select Tool").first()
+        quit_key = ShortcutKeys.objects.filter_by_first(display_name="Quit")
+        brush_key = ShortcutKeys.objects.filter_by_first(display_name="Brush")
+        eraser_key = ShortcutKeys.objects.filter_by_first(display_name="Eraser")
+        move_tool_key = ShortcutKeys.objects.filter_by_first(display_name="Move Tool")
+        select_tool_key = ShortcutKeys.objects.filter_by_first(display_name="Select Tool")
 
         if quit_key is not None:
             key_sequence = QKeySequence(quit_key.key | quit_key.modifiers)

@@ -21,7 +21,7 @@ class StablediffusionToolTabWidget(BaseWidget):
         section = "stablediffusion_tool_tab"
         for index in range(self.ui.tool_tab_widget_container.count()):
             tab_text = self.ui.tool_tab_widget_container.tabText(index)
-            tab = Tab.objects.filter_by(section=section, name=tab_text).first()
+            tab = Tab.objects.filter_by_first(section=section, name=tab_text)
             if not tab:
                 Tab.objects.create(
                     section=section,
@@ -30,7 +30,7 @@ class StablediffusionToolTabWidget(BaseWidget):
                     active=False
                 )
 
-        tabs = Tab.objects.filter_by(section=section).all()
+        tabs = Tab.objects.filter_by(section=section)
         for tab in tabs:
             if tab.active:
                 self.ui.tool_tab_widget_container.setCurrentIndex(tab.index)

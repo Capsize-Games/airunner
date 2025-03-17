@@ -85,7 +85,7 @@ class RAGMixin:
         if self.__news_articles is None:
             articles = Article.objects.filter(
                 Article.status == "scraped"
-            ).all()[:50]
+            )[:50]
             self.__news_articles = [
                 Document(
                     text=article.description,
@@ -203,7 +203,7 @@ class RAGMixin:
     def _update_conversations_status(status: str):
         conversations = Conversation.objects.filter(
             (Conversation.status != status) | (Conversation.status is None)
-        ).all()
+        )
         total_conversations = len(conversations)
         if total_conversations == 1:
             conversations = []
@@ -345,7 +345,7 @@ class RAGMixin:
     def conversations(self) -> List[Conversation]:
         conversations = Conversation.objects.filter(
             (Conversation.status != "indexed") | (Conversation.status is None)
-        ).all()
+        )
         total_conversations = len(conversations)
         if total_conversations == 1:
             conversations = []
@@ -358,7 +358,7 @@ class RAGMixin:
         conversation_documents = []
         conversations = Conversation.objects.filter(
             (Conversation.status != "indexed") | (Conversation.status is None)
-        ).all()
+        )
         total_conversations = len(conversations)
         if total_conversations == 1:
             conversations = []

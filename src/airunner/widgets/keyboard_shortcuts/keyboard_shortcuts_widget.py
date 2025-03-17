@@ -76,7 +76,7 @@ class KeyboardShortcutsWidget(BaseWidget):
             existing_keys = ShortcutKeys.objects.filter(
                 ShortcutKeys.text == shortcut_key.text,
                 ShortcutKeys.id != shortcut_key.id
-            ).all()
+            )
             for existing_key in existing_keys:
                 existing_key.text = ""
                 existing_key.key = 0

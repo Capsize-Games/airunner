@@ -491,12 +491,12 @@ class StableDiffusionGeneratorForm(BaseWidget):
             progressbar.setFormat("Complete")
 
     def _set_keyboard_shortcuts(self):
-        generate_image_key = ShortcutKeys.objects.filter_by(
+        generate_image_key = ShortcutKeys.objects.filter_by_first(
             display_name="Generate Image"
-        ).first()
-        interrupt_key = ShortcutKeys.objects.filter_by(
+        )
+        interrupt_key = ShortcutKeys.objects.filter_by_first(
             display_name="Interrupt"
-        ).first()
+        )
         if generate_image_key:
             self.ui.generate_button.setShortcut(generate_image_key.key)
             self.ui.generate_button.setToolTip(f"{generate_image_key.display_name} ({generate_image_key.text})")
