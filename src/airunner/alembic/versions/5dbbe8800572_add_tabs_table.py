@@ -65,10 +65,10 @@ def upgrade() -> None:
     }
     for section in default_tabs.keys():
         for tab in default_tabs[section]:
-            item = Tab.objects.filter_by(
+            item = Tab.objects.filter_by_first(
                 section=section,
                 name=tab["name"],
-            ).first()
+            )
             if not item:
                 Tab.objects.create(
                     section=section,
