@@ -37,7 +37,7 @@ class BaseManager:
                 logger.error(f"Error in first(): {e}")
                 return None
 
-    def all(self) -> List:
+    def all(self) -> List[_T]:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).all()
@@ -48,7 +48,7 @@ class BaseManager:
                 logger.error(f"Error in all(): {e}")
                 return []
 
-    def filter_by(self, **kwargs) -> Optional[Query]:
+    def filter_by(self, **kwargs) -> Optional[List[_T]]:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).filter_by(**kwargs)
@@ -59,7 +59,7 @@ class BaseManager:
                 logger.error(f"Error in filter_by({kwargs}): {e}")
                 return None
     
-    def filter(self, *args) -> Optional[Query]:
+    def filter_first(self, *args) -> Optional[_T]:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).filter(*args)
