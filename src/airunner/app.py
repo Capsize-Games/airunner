@@ -86,13 +86,13 @@ class App(
         from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
         from airunner.data.models import PipelineModel
         for model in pipeline_bootstrap_data:
-            pipelinemodel = PipelineModel.objects.filter_by(
+            pipelinemodel = PipelineModel.objects.filter_by_first(
                 pipeline_action=model["pipeline_action"],
                 version=model["version"],
                 category=model["category"],
                 classname=model["classname"],
                 default=model["default"]
-            ).first()
+            )
             if pipelinemodel:
                 continue
             pipelinemodel = PipelineModel()

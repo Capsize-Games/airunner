@@ -290,7 +290,7 @@ class SettingsMixin:
 
     @staticmethod
     def get_lora_by_version(version) -> Optional[List[Lora]]:
-        return Lora.objects.filter_by(version=version).all()
+        return Lora.objects.filter_by(version=version)
 
     def get_embeddings_by_version(self, version) -> Optional[List[Type[Embedding]]]:
         return [
@@ -342,9 +342,9 @@ class SettingsMixin:
 
     @staticmethod
     def add_chatbot_document_to_chatbot(chatbot, file_path):
-        document = TargetFiles.objects.filter_by(
+        document = TargetFiles.objects.filter_by_first(
             chatbot_id=chatbot.id, file_path=file_path
-        ).first()
+        )
         if document is None:
             document = TargetFiles(file_path=file_path, chatbot_id=chatbot.id)
         TargetFiles.objects.merge(document)
@@ -437,7 +437,7 @@ class SettingsMixin:
         self.__settings_updated()
 
     def update_ai_model(self, model: AIModels):
-        ai_model = AIModels.objects.filter_by(
+        ai_model = AIModels.objects.filter_by_first(
             name=model.name,
             path=model.path,
             branch=model.branch,
@@ -447,7 +447,7 @@ class SettingsMixin:
             enabled=model.enabled,
             model_type=model.model_type,
             is_default=model.is_default
-        ).first()
+        )
         if ai_model:
             for key in model.__dict__.keys():
                 if key != "_sa_instance_state":
@@ -522,12 +522,12 @@ class SettingsMixin:
 
     @staticmethod
     def get_saved_prompt_by_id(prompt_id) -> Type[SavedPrompt]:
-        return SavedPrompt.objects.filter_by(id=prompt_id).first()
+        return SavedPrompt.objects.filter_by_first(id=prompt_id)
 
     def update_saved_prompt(self, saved_prompt: SavedPrompt):
-        new_saved_prompt = SavedPrompt.objects.filter_by(
+        new_saved_prompt = SavedPrompt.objects.filter_by_first(
             id=saved_prompt.id
-        ).first()
+        )
         if new_saved_prompt:
             for key in saved_prompt.__dict__.keys():
                 if key != "_sa_instance_state":
@@ -552,14 +552,14 @@ class SettingsMixin:
 
     @staticmethod
     def get_font_setting_by_name(name) -> Type[FontSetting]:
-        return FontSetting.objects.filter_by(
+        return FontSetting.objects.filter_by_first(
             name=name
-        ).first()
+        )
 
     def update_font_setting(self, font_setting: FontSetting):
-        new_font_setting = FontSetting.objects.filter_by(
+        new_font_setting = FontSetting.objects.filter_by_first(
             name=font_setting.name
-        ).first()
+        )
         if new_font_setting:
             for key in font_setting.__dict__.keys():
                 if key != "_sa_instance_state":
@@ -579,7 +579,7 @@ class SettingsMixin:
 
     @staticmethod
     def delete_chatbot_by_name(chatbot_name):
-        Chatbot.objects.filter_by(name=chatbot_name).delete()
+        Chatbot.objects.delete_by(name=chatbot_name)
 
     @staticmethod
     def create_chatbot(chatbot_name) -> Chatbot:
@@ -610,7 +610,7 @@ class SettingsMixin:
 
     @staticmethod
     def get_lora_by_name(name):
-        return Lora.objects.filter_by(name=name).first()
+        return Lora.objects.filter_by_first(name=name)
 
     @staticmethod
     def add_lora(lora: Lora):
@@ -623,7 +623,7 @@ class SettingsMixin:
             lora.delete()
 
     def update_lora(self, lora: Lora):
-        new_lora = Lora.objects.filter_by(name=lora.name).first()
+        new_lora = Lora.objects.filter_by_first(name=lora.name)
         if new_lora:
             for key in lora.__dict__.keys():
                 if key != "_sa_instance_state":
@@ -635,7 +635,7 @@ class SettingsMixin:
 
     def update_loras(self, loras: List[Lora]):
         for lora in loras:
-            new_lora = Lora.objects.filter_by(name=lora.name).first()
+            new_lora = Lora.objects.filter_by_first(name=lora.name)
             if new_lora:
                 for key in lora.__dict__.keys():
                     if key != "_sa_instance_state":
@@ -657,7 +657,7 @@ class SettingsMixin:
 
     @staticmethod
     def delete_embedding(embedding: Embedding):
-        Embedding.objects.filter_by(
+        Embedding.objects.delete_by(
             name=embedding.name,
             path=embedding.path,
             branch=embedding.branch,
@@ -667,11 +667,11 @@ class SettingsMixin:
             enabled=embedding.enabled,
             model_type=embedding.model_type,
             is_default=embedding.is_default
-        ).delete()
+        )
 
     def update_embeddings(self, embeddings: List[Embedding]):
         for embedding in embeddings:
-            new_embedding = Embedding.objects.filter_by(
+            new_embedding = Embedding.objects.filter_by_first(
                 name=embedding.name,
                 path=embedding.path,
                 branch=embedding.branch,
@@ -681,7 +681,7 @@ class SettingsMixin:
                 enabled=embedding.enabled,
                 model_type=embedding.model_type,
                 is_default=embedding.is_default
-            ).first()
+            )
             if new_embedding:
                 for key in embedding.__dict__.keys():
                     if key != "_sa_instance_state":
@@ -693,7 +693,7 @@ class SettingsMixin:
 
     @staticmethod
     def get_embedding_by_name(name):
-        return Embedding.objects.filter_by(name=name).first()
+        return Embedding.objects.filter_by_first(name=name)
 
     @staticmethod
     def add_embedding(embedding: Embedding):
@@ -705,7 +705,7 @@ class SettingsMixin:
 
     @staticmethod
     def get_prompt_template_by_name(name) -> Type[PromptTemplate]:
-        return PromptTemplate.objects.filter_by(template_name=name).first()
+        return PromptTemplate.objects.filter_by_first(template_name=name)
 
     @staticmethod
     def load_controlnet_models() -> List[Type[ControlnetModel]]:
@@ -713,7 +713,7 @@ class SettingsMixin:
 
     @staticmethod
     def controlnet_model_by_name(name) -> Type[ControlnetModel]:
-        return ControlnetModel.objects.filter_by(name=name).first()
+        return ControlnetModel.objects.filter_by_first(name=name)
 
     @staticmethod
     def load_pipelines() -> List[Type[PipelineModel]]:

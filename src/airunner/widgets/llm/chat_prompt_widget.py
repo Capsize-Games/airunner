@@ -90,9 +90,9 @@ class ChatPromptWidget(BaseWidget):
     def conversation_id(self, val: Optional[int]):
         self._conversation_id = val
         if val:
-            self._conversation = Conversation.objects.filter_by(
+            self._conversation = Conversation.objects.filter_by_first(
                 id=val
-            ).first()
+            )
         else:
             self._conversation = None
 
@@ -158,9 +158,9 @@ class ChatPromptWidget(BaseWidget):
         self._clear_conversation_widgets()
         if len(message["messages"]) > 0:
             conversation_id = message["messages"][0]["conversation_id"]
-            self.conversation = Conversation.objects.filter_by(
+            self.conversation = Conversation.objects.filter_by_first(
                 id=conversation_id
-            ).first()
+            )
         self._set_conversation_widgets([{
                 "name": message["additional_kwargs"]["name"],
                 "content": message["text"],
@@ -213,7 +213,7 @@ class ChatPromptWidget(BaseWidget):
         self.enable_send_button()
     
     def save_state(self):
-        settings = SplitterSetting.objects.filter_by(name="chat_prompt_splitter").first()
+        settings = SplitterSetting.objects.filter_by_first(name="chat_prompt_splitter")
         state = self.ui.chat_prompt_splitter.saveState()
         if not settings:
             SplitterSetting.objects.create(
@@ -226,7 +226,7 @@ class ChatPromptWidget(BaseWidget):
             )
     
     def restore_state(self):
-        settings = SplitterSetting.objects.filter_by(name="chat_prompt_splitter").first()
+        settings = SplitterSetting.objects.filter_by_first(name="chat_prompt_splitter")
         if settings:
             self.ui.chat_prompt_splitter.restoreState(settings.splitter_settings)
 

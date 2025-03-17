@@ -27,7 +27,7 @@ class ControlnetSettingsWidget(BaseWidget):
             
             controlnet_models = ControlnetModel.objects.filter_by(
                 version=self.generator_settings.version
-            ).all()
+            )
             self.ui.controlnet.blockSignals(True)
             self.ui.controlnet.clear()
             for index, item in enumerate(controlnet_models):

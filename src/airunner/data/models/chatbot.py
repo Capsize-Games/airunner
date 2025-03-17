@@ -12,7 +12,7 @@ from airunner.settings import (
 class Chatbot(BaseModel):
     __tablename__ = 'chatbots'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, default="Chatbot")
+    name = Column(String, default="Chatbot", unique=True)
     botname = Column(String, default="Computer")
     use_personality = Column(Boolean, default=True)
     use_mood = Column(Boolean, default=True)

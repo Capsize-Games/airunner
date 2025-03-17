@@ -171,7 +171,7 @@ class CanvasWidget(
         QTimer.singleShot(100, lambda: self.do_draw(force_draw=True))
 
     def save_state(self):
-        settings = SplitterSetting.objects.filter_by(name="canvas_splitter").first()
+        settings = SplitterSetting.objects.filter_by_first(name="canvas_splitter")
         if not settings:
             SplitterSetting.objects.create(
                 name="canvas_splitter",
@@ -184,7 +184,7 @@ class CanvasWidget(
             )
     
     def restore_state(self):
-        settings = SplitterSetting.objects.filter_by(name="canvas_splitter").first()
+        settings = SplitterSetting.objects.filter_by_first(name="canvas_splitter")
         if settings:
             self.ui.canvas_splitter.restoreState(settings.splitter_settings)
 

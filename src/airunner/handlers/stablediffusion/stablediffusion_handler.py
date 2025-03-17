@@ -309,10 +309,10 @@ class StableDiffusionHandler(BaseHandler):
             self._controlnet_model.display_name != self.controlnet_settings_cached.controlnet
         ):
             
-            self._controlnet_model = ControlnetModel.objects.filter_by(
+            self._controlnet_model = ControlnetModel.objects.filter_by_first(
                 display_name=self.controlnet_settings_cached.controlnet,
                 version=self.version
-            ).first()
+            )
             
         return self._controlnet_model
 
@@ -941,9 +941,9 @@ class StableDiffusionHandler(BaseHandler):
             )
         )
         
-        scheduler = Schedulers.objects.filter_by(
+        scheduler = Schedulers.objects.filter_by_first(
             display_name=scheduler_name
-        ).first()
+        )
         if not scheduler:
             self.logger.error(f"Failed to find scheduler {scheduler_name}")
             return None
@@ -1133,7 +1133,7 @@ class StableDiffusionHandler(BaseHandler):
         enabled_lora = Lora.objects.filter_by(
             version=self.version,
             enabled=True
-        ).all()
+        )
         for lora in enabled_lora:
             self._load_lora_weights(lora)
 
@@ -1171,7 +1171,9 @@ class StableDiffusionHandler(BaseHandler):
         self.logger.debug("Setting LORA adapters")
         
         loaded_lora_id = [lora.id for lora in self._loaded_lora.values()]
-        enabled_lora = Lora.objects.filter(Lora.id.in_(loaded_lora_id)).all()
+        enabled_lora = Lora.objects.filter_by(
+            Lora.id.in_(loaded_lora_id)
+        )
         adapter_weights = []
         adapter_names = []
         for lora in enabled_lora:
@@ -1195,7 +1197,7 @@ class StableDiffusionHandler(BaseHandler):
         
         embeddings = Embedding.objects.filter_by(
             version=self.version
-        ).all()
+        )
         
         for embedding in embeddings:
             embedding_path = embedding.path
