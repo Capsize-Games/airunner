@@ -4,6 +4,7 @@ from typing import Any, List, Dict, Optional
 
 import PIL
 import diffusers
+import transformers
 import numpy as np
 import tomesd
 import torch
