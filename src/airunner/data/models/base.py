@@ -51,7 +51,7 @@ class BaseManager:
     def filter_by(self, **kwargs) -> Optional[List[_T]]:
         with session_scope() as session:
             try:
-                result = session.query(self.cls).filter_by(**kwargs)
+                result = session.query(self.cls).filter_by(**kwargs).all()
                 logger.debug(f"Query result for filter_by({kwargs}): {result}")
                 session.expunge_all()
                 return result
@@ -62,12 +62,34 @@ class BaseManager:
     def filter_first(self, *args) -> Optional[_T]:
         with session_scope() as session:
             try:
-                result = session.query(self.cls).filter(*args)
+                result = session.query(self.cls).filter(*args).first()
                 logger.debug(f"Query result for filter({args}): {result}")
                 session.expunge_all()
                 return result
             except Exception as e:
                 logger.error(f"Error in filter({args}): {e}")
+                return None
+
+    def filter(self, *args) -> Optional[List[_T]]:
+        with session_scope() as session:
+            try:
+                result = session.query(self.cls).filter(*args).all()
+                logger.debug(f"Query result for filter({args}): {result}")
+                session.expunge_all()
+                return result
+            except Exception as e:
+                logger.error(f"Error in filter({args}): {e}")
+                return None
+
+    def filter_by_first(self, **kwargs) -> Optional[_T]:
+        with session_scope() as session:
+            try:
+                result = session.query(self.cls).filter_by(**kwargs).first()
+                logger.debug(f"Query result for filter_by({kwargs}): {result}")
+                session.expunge_all()
+                return result
+            except Exception as e:
+                logger.error(f"Error in filter_by({kwargs}): {e}")
                 return None
     
     def order_by(self, *args) -> Optional[Query]:
@@ -102,6 +124,17 @@ class BaseManager:
             except Exception as e:
                 logger.error(f"Error in delete(): {e}")
                 return 0
+
+    def delete_by(self, **kwargs) -> bool:
+        with session_scope() as session:
+            try:
+                result = session.query(self.cls).filter_by(**kwargs).delete()
+                session.commit()
+                logger.debug(f"Deleted {result} {self.cls.__name__} objects")
+                return result
+            except Exception as e:
+                logger.error(f"Error in delete_by({kwargs}): {e}")
+                return False
 
     def delete(self, pk=None, **kwargs) -> bool:
         with session_scope() as session:
