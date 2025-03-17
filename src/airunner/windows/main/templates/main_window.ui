@@ -329,6 +329,32 @@
     <property name="title">
      <string>Tools</string>
     </property>
+    <widget class="QMenu" name="menuCanvas">
+     <property name="title">
+      <string>Canvas</string>
+     </property>
+     <addaction name="actionToggle_Active_Grid_Area_2"/>
+     <addaction name="actionToggle_Selection_2"/>
+     <addaction name="actionToggle_Brush_2"/>
+     <addaction name="actionToggle_Eraser_2"/>
+     <addaction name="actionToggle_Grid_2"/>
+    </widget>
+    <widget class="QMenu" name="menuStable_Diffusion">
+     <property name="title">
+      <string>Stable Diffusion</string>
+     </property>
+     <addaction name="actionToggle_Safety_Checker"/>
+     <addaction name="actionToggle_Stable_Diffusion_2"/>
+     <addaction name="actionToggle_Controlnet_2"/>
+    </widget>
+    <widget class="QMenu" name="menuLLM">
+     <property name="title">
+      <string>LLM</string>
+     </property>
+     <addaction name="actionToggle_LLM_2"/>
+     <addaction name="actionToggle_Text_to_Speech_2"/>
+     <addaction name="actionToggle_Speech_to_Text_2"/>
+    </widget>
     <addaction name="actionSafety_Checker"/>
     <addaction name="actionToggle_Stable_Diffusion"/>
     <addaction name="actionToggle_Controlnet"/>
@@ -336,10 +362,15 @@
     <addaction name="actionToggle_LLM"/>
     <addaction name="actionToggle_Text_to_Speech"/>
     <addaction name="actionToggle_Speech_to_Text"/>
+    <addaction name="menuStable_Diffusion"/>
+    <addaction name="menuCanvas"/>
+    <addaction name="separator"/>
+    <addaction name="menuLLM"/>
     <addaction name="separator"/>
     <addaction name="actionStats"/>
     <addaction name="separator"/>
     <addaction name="actionRun_setup_wizard_2"/>
+    <addaction name="separator"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -1381,6 +1412,94 @@
   <action name="actionDelete_conversation">
    <property name="text">
     <string>Delete conversation</string>
+   </property>
+  </action>
+  <action name="actionToggle_Active_Grid_Area_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Active Grid Area</string>
+   </property>
+  </action>
+  <action name="actionToggle_Selection_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Selection</string>
+   </property>
+  </action>
+  <action name="actionToggle_Brush_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Brush</string>
+   </property>
+  </action>
+  <action name="actionToggle_Eraser_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Eraser</string>
+   </property>
+  </action>
+  <action name="actionToggle_Grid_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Grid</string>
+   </property>
+  </action>
+  <action name="actionToggle_Stable_Diffusion_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Stable Diffusion</string>
+   </property>
+  </action>
+  <action name="actionToggle_Controlnet_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Controlnet</string>
+   </property>
+  </action>
+  <action name="actionToggle_Safety_Checker">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Safety Checker</string>
+   </property>
+  </action>
+  <action name="actionToggle_LLM_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle LLM</string>
+   </property>
+  </action>
+  <action name="actionToggle_Text_to_Speech_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Text-to-Speech</string>
+   </property>
+  </action>
+  <action name="actionToggle_Speech_to_Text_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Speech-to-Text</string>
    </property>
   </action>
  </widget>

@@ -150,6 +150,12 @@ class MainWindow(
         
         self.logger.debug("Starting AI Runnner")
         super().__init__(*args, **kwargs)
+        
+        # Add plugins directory to Python path
+        plugins_path = os.path.join(self.path_settings.base_path, "plugins")
+        if plugins_path not in sys.path:
+            sys.path.append(plugins_path)
+
         self._updating_settings = True
         PipelineMixin.__init__(self)
         AIModelMixin.__init__(self)
