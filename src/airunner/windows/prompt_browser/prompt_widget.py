@@ -45,9 +45,9 @@ class PromptWidget(BaseWidget):
         self.save()
     
     def save(self):
-        new_saved_prompt = SavedPrompt.objects.filter_by(
+        new_saved_prompt = SavedPrompt.objects.filter_by_first(
             id=self.saved_prompt.id
-        ).first()
+        )
         if new_saved_prompt:
             for key in self.saved_prompt.__dict__.keys():
                 if key != "_sa_instance_state":

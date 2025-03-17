@@ -73,16 +73,16 @@ class StableDiffusionSettingsWidget(
         generator_settings = GeneratorSettings.objects.first()
         do_reload = False
         if val == GeneratorSection.TXT2IMG.value:
-            model = AIModels.objects.filter(
+            model = AIModels.objects.filter_first(
                 AIModels.id == generator_settings.model
-            ).first()
+            )
             if model.pipeline_action == GeneratorSection.INPAINT.value:
-                model = AIModels.objects.filter(
+                model = AIModels.objects.filter_first(
                     AIModels.version == generator_settings.version,
                     AIModels.pipeline_action == val,
                     AIModels.enabled is True,
                     AIModels.is_default is False
-                ).first()
+                )
                 if model is not None:
                     generator_settings.model = model.id
                 else:
@@ -103,12 +103,12 @@ class StableDiffusionSettingsWidget(
         self.update_generator_settings("version", val)
         
         generator_settings = GeneratorSettings.objects.first()
-        model = AIModels.objects.filter(
+        model = AIModels.objects.filter_first(
             AIModels.version == val,
             AIModels.pipeline_action == generator_settings.pipeline_action,
             AIModels.enabled.is_(True),
             AIModels.is_default.is_(False)
-        ).first()
+        )
         generator_settings.version = val
         generator_settings.model = model.id
         generator_settings.save()
@@ -179,13 +179,14 @@ class StableDiffusionSettingsWidget(
             AIModels.version == version,
             AIModels.enabled.is_(True),
             AIModels.is_default.is_(False)
-        ).all()
+        )
 
         model_id = generator_settings.model
         if model_id is None and len(models) > 0:
             current_model = models[0]
             generator_settings.model = current_model.id
             generator_settings.save()
+        
         for model in models:
             self.ui.model.addItem(model.name, model.id)
         

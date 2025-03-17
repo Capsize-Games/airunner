@@ -237,7 +237,7 @@ class GeneratorForm(BaseWidget):
         super().showEvent(event)
         self.initialized = True
         active_index = 0
-        tabs = Tab.objects.filter_by(section="left").all()
+        tabs = Tab.objects.filter_by(section="left")
         for tab in tabs:
             if tab.active:
                 active_index = tab.index

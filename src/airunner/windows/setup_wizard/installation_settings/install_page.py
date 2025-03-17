@@ -474,7 +474,7 @@ class InstallPage(BaseWizard):
         controlnet_model_versions = ControlnetModel.objects.distinct(ControlnetModel.version).all()
         controlnet_version_count = len(controlnet_model_versions)
 
-        llm_model_count_query = AIModels.objects.filter(AIModels.category == 'llm').all()
+        llm_model_count_query = AIModels.objects.filter_by(category="llm")
         llm_model_count = len(llm_model_count_query)
 
         self.total_steps += controlnet_model_count * controlnet_version_count

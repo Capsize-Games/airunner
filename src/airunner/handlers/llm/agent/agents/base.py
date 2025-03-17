@@ -90,10 +90,10 @@ class BaseAgent(
     @property
     def current_tab(self) -> Optional[Tab]:
         if not self._current_tab:
-            self._current_tab = Tab.objects.filter_by(
+            self._current_tab = Tab.objects.filter_by_first(
                 section="center",
                 active=True
-            ).first()
+            )
         return self._current_tab
 
     @current_tab.setter
@@ -131,9 +131,9 @@ class BaseAgent(
                     self.conversation.user_id
                 )
             if not user:
-                user = User.objects.filter(
+                user = User.objects.filter_first(
                     User.username == self.username
-                ).first()
+                )
             if not user:
                 user = User()
                 user.save()

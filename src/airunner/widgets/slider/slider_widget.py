@@ -141,7 +141,7 @@ class SliderWidget(BaseWidget):
         if self.table_id is not None and self.table_name is not None and self.table_column is not None:
             
             if self.table_name == "lora":
-                self.table_item = Lora.objects.filter_by(id=self.table_id).first()
+                self.table_item = Lora.objects.filter_by_first(id=self.table_id)
                 current_value = getattr(self.table_item, self.table_column)
             
         elif current_value is None:

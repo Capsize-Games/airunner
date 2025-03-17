@@ -24,7 +24,7 @@ class ToolTabWidget(BaseWidget):
         Tab.update_tabs("right", self.ui.tool_tab_widget_container, index)
 
     def save_state(self):
-        settings = SplitterSetting.objects.filter_by(name="llm_splitter").first()
+        settings = SplitterSetting.objects.filter_by_first(name="llm_splitter")
         if not settings:
             SplitterSetting.objects.create(
                 name="llm_splitter",
@@ -38,13 +38,13 @@ class ToolTabWidget(BaseWidget):
     
     def restore_state(self):
         active_index = 0
-        tabs = Tab.objects.filter_by(section="right").all()
+        tabs = Tab.objects.filter_by(section="right")
         for tab in tabs:
             if tab.active:
                 active_index = tab.index
                 break
         self.ui.tool_tab_widget_container.setCurrentIndex(active_index)
 
-        settings = SplitterSetting.objects.filter_by(name="llm_splitter").first()
+        settings = SplitterSetting.objects.filter_by_first(name="llm_splitter")
         if settings:
             self.ui.llm_splitter.restoreState(settings.splitter_settings)

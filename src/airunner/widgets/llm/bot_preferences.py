@@ -85,11 +85,10 @@ class BotPreferencesWidget(BaseWidget):
             self.update_llm_generator_settings("current_chatbot", chatbot_name)
             self.load_saved_chatbots()
 
-    def saved_chatbots_changed(self, val):
-        
-        chatbot = Chatbot.objects.filter(Chatbot.name == val).first()
+    @Slot(str)
+    def saved_chatbots_changed(self, val: str):
+        chatbot = Chatbot.objects.filter_first(Chatbot.name == val)
         chatbot_id = chatbot.id
-        
         self.update_llm_generator_settings("current_chatbot", chatbot_id)
         self.load_form_elements()
         self.emit_signal(SignalCode.CHATBOT_CHANGED)
