@@ -125,7 +125,10 @@ class SettingsMixin:
             chatbots = self.chatbots
             if len(chatbots) > 0:
                 settings.current_chatbot = self.chatbots[0].id
-                self.update_settings_by_name("llm_generator_settings", "current_chatbot", settings.current_chatbot)
+                self.update_llm_generator_settings(
+                    "current_chatbot", 
+                    settings.current_chatbot
+                )
         return settings
 
     @property
@@ -348,40 +351,6 @@ class SettingsMixin:
         if document is None:
             document = TargetFiles(file_path=file_path, chatbot_id=chatbot.id)
         TargetFiles.objects.merge(document)
-
-    def update_settings_by_name(self, setting_name, column_name, val):
-        if setting_name == "application_settings":
-            self.update_application_settings(column_name, val)
-        elif setting_name == "generator_settings":
-            self.update_generator_settings(column_name, val)
-        elif setting_name == "controlnet_image_settings":
-            self.update_controlnet_image_settings(column_name, val)
-        elif setting_name == "brush_settings":
-            self.update_brush_settings(column_name, val)
-        elif setting_name == "controlnet_settings":
-            self.update_controlnet_settings(column_name, val)
-        elif setting_name == "image_to_image_settings":
-            self.update_image_to_image_settings(column_name, val)
-        elif setting_name == "outpaint_settings":
-            self.update_outpaint_settings(column_name, val)
-        elif setting_name == "drawing_pad_settings":
-            self.update_drawing_pad_settings(column_name, val)
-        elif setting_name == "grid_settings":
-            self.update_grid_settings(column_name, val)
-        elif setting_name == "active_grid_settings":
-            self.update_active_grid_settings(column_name, val)
-        elif setting_name == "path_settings":
-            self.update_path_settings(column_name, val)
-        elif setting_name == "memory_settings":
-            self.update_memory_settings(column_name, val)
-        elif setting_name == "llm_generator_settings":
-            self.update_llm_generator_settings(column_name, val)
-        elif setting_name == "whisper_settings":
-            self.update_whisper_settings(column_name, val)
-        elif setting_name == "speech_t5_settings":
-            self.update_speech_t5_settings(column_name, val)
-        else:
-            logging.error(f"Invalid setting name: {setting_name}")
 
     def update_application_settings(self, column_name, val):
         self.update_setting(ApplicationSettings, column_name, val)
