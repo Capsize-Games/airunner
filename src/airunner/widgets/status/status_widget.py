@@ -11,14 +11,15 @@ class StatusWidget(BaseWidget):
     widget_class_ = Ui_status_widget
 
     def __init__(self, *args, **kwargs):
+        self.signal_handlers = {
+            {SignalCode.APPLICATION_STATUS_INFO_SIGNAL: self.on_status_info_signal},
+            {SignalCode.APPLICATION_STATUS_ERROR_SIGNAL: self.on_status_error_signal},
+            {SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL: self.on_clear_status_message_signal},
+            {SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal},
+            {SignalCode.SD_PIPELINE_LOADED_SIGNAL: self.set_sd_pipeline_label},
+            {SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed},
+        }
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.APPLICATION_STATUS_INFO_SIGNAL, self.on_status_info_signal)
-        self.register(SignalCode.APPLICATION_STATUS_ERROR_SIGNAL, self.on_status_error_signal)
-        self.register(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL, self.on_clear_status_message_signal)
-        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
-        self.register(SignalCode.SD_PIPELINE_LOADED_SIGNAL, self.set_sd_pipeline_label)
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed)
-
         self.set_sd_pipeline_label({"pipeline": ""})
         self.version = None
 

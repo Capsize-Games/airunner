@@ -9,10 +9,12 @@ class InputImageContainer(BaseWidget):
     widget_class_ = Ui_input_image_container
 
     def __init__(self, *args, **kwargs):
+        self.signal_handlers = {
+            SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
+            SignalCode.MASK_UPDATED: self.on_mask_generator_worker_response_signal,
+            SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL: self.on_load_image_from_grid_signal,
+        }
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL, self.on_mask_generator_worker_response_signal)
-        self.register(SignalCode.MASK_UPDATED, self.on_mask_generator_worker_response_signal)
-        self.register(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL, self.on_load_image_from_grid_signal)
         self.input_image = None
         self.mask_image = None
         self.generated_image = None

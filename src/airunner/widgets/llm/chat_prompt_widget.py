@@ -20,9 +20,22 @@ from airunner.data.models import SplitterSetting
 
 class ChatPromptWidget(BaseWidget):
     widget_class_ = Ui_chat_prompt
-
+    
     def __init__(self, *args, **kwargs):
+        self.signal_handlers = {
+            SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL: self.on_hear_signal,
+            SignalCode.SET_CONVERSATION: self.on_set_conversation,
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
+            SignalCode.CHATBOT_CHANGED: self.on_chatbot_changed,
+            SignalCode.CONVERSATION_DELETED: self.on_delete_conversation,
+            SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_clear_conversation,
+            SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
+            SignalCode.QUIT_APPLICATION: self.save_state,
+            SignalCode.LLM_TOKEN_SIGNAL: self.on_token_signal,
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
+        }
         super().__init__()
+        registered: bool = False
         self.scroll_bar = None
         self.is_modal = True
         self.generating = False
@@ -60,14 +73,6 @@ class ChatPromptWidget(BaseWidget):
         self.ui.action.blockSignals(False)
         self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
-        self.register(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, self.on_hear_signal)
-        self.register(SignalCode.SET_CONVERSATION, self.on_set_conversation)
-        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
-        self.register(SignalCode.CHATBOT_CHANGED, self.on_chatbot_changed)
-        self.register(SignalCode.CONVERSATION_DELETED, self.on_delete_conversation)
-        self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_conversation)
-        self.register(SignalCode.LOAD_CONVERSATION, self.on_load_conversation)
-        self.register(SignalCode.QUIT_APPLICATION, self.save_state)
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
@@ -299,14 +304,9 @@ class ChatPromptWidget(BaseWidget):
     def on_token_signal(self, val):
         self.handle_token_signal(val)
 
-    registered = False
-
     def showEvent(self, event):
         super().showEvent(event)
         if not self.registered:
-            self.register(SignalCode.LLM_TOKEN_SIGNAL, self.on_token_signal)
-            self.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_add_bot_message_to_conversation)
-            self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed)
             self.registered = True
 
         # handle return pressed on QPlainTextEdit
@@ -322,13 +322,6 @@ class ChatPromptWidget(BaseWidget):
 
         self.ui.conversation.hide()
         self.ui.chat_container.show()
-
-    def on_model_status_changed(self, data):
-        if data["model"] == ModelType.LLM:
-            if data["status"] is ModelStatus.LOADED:
-                self.enable_send_button()
-            else:
-                self.disable_send_button()
 
     def llm_action_changed(self, val: str):
         if val == "Chat":

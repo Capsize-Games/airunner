@@ -19,15 +19,17 @@ class LoraContainerWidget(BaseWidget):
     spacer = None
 
     def __init__(self, *args, **kwargs):
+        self.signal_handlers = {
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
+            SignalCode.LORA_UPDATED_SIGNAL: self.on_lora_updated_signal,
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
+            SignalCode.LORA_STATUS_CHANGED: self.on_lora_modified,
+            SignalCode.LORA_DELETE_SIGNAL: self._delete_lora,
+        }
         self._version = None
         super().__init__(*args, **kwargs)
         self.initialized = False
         self._deleting = False
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
-        self.register(SignalCode.LORA_UPDATED_SIGNAL, self.on_lora_updated_signal)
-        self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
-        self.register(SignalCode.LORA_STATUS_CHANGED, self.on_lora_modified)
-        self.register(SignalCode.LORA_DELETE_SIGNAL, self._delete_lora)
         self.ui.loading_icon.hide()
         self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
         self._apply_button_enabled = False

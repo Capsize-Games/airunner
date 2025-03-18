@@ -9,8 +9,10 @@ class ControlnetSettingsWidget(BaseWidget):
     widget_class_ = Ui_controlnet_settings_widget
 
     def __init__(self, *args, **kwargs):
+        self.signal_handlers = {
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal
+        }
         super().__init__(*args, **kwargs)
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
         self._version = None
         self._load_controlnet_models()
 

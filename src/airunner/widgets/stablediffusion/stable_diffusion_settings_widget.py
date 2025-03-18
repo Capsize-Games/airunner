@@ -15,11 +15,13 @@ class StableDiffusionSettingsWidget(
     widget_class_ = Ui_stable_diffusion_settings_widget
 
     def __init__(self, *args, **kwargs):
+        self.signal_handlers = {
+            SignalCode.AI_MODELS_CREATE_SIGNAL: self.on_models_changed_signal,
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.update_form,
+        }
         super().__init__(*args, **kwargs)
         PipelineMixin.__init__(self)
         self.model_scanner_worker = create_worker(ModelScannerWorker)
-        self.register(SignalCode.AI_MODELS_CREATE_SIGNAL, self.on_models_changed_signal)
-        self.register(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, self.update_form)
 
     def showEvent(self, event):
         super().showEvent(event)
