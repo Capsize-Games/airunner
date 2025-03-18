@@ -1,3 +1,4 @@
+
 from airunner.data.models import AIModels, GeneratorSettings
 from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
 from airunner.widgets.base_widget import BaseWidget
@@ -50,7 +51,7 @@ class StableDiffusionSettingsWidget(
     def toggled_use_compel(self, val):
         self.update_generator_settings("use_compel", val)
 
-    def handle_model_changed(self, model_name):
+    def handle_model_changed(self, _model_name):
         index = self.ui.model.currentIndex()
         model_id = self.ui.model.itemData(index)
         self.update_generator_settings("model", model_id)
@@ -72,16 +73,16 @@ class StableDiffusionSettingsWidget(
         generator_settings = GeneratorSettings.objects.first()
         do_reload = False
         if val == GeneratorSection.TXT2IMG.value:
-            model = AIModels.objects.filter(
+            model = AIModels.objects.filter_first(
                 AIModels.id == generator_settings.model
-            ).first()
+            )
             if model.pipeline_action == GeneratorSection.INPAINT.value:
-                model = AIModels.objects.filter(
+                model = AIModels.objects.filter_first(
                     AIModels.version == generator_settings.version,
                     AIModels.pipeline_action == val,
-                    AIModels.enabled == True,
-                    AIModels.is_default == False
-                ).first()
+                    AIModels.enabled is True,
+                    AIModels.is_default is False
+                )
                 if model is not None:
                     generator_settings.model = model.id
                 else:
@@ -102,12 +103,12 @@ class StableDiffusionSettingsWidget(
         self.update_generator_settings("version", val)
         
         generator_settings = GeneratorSettings.objects.first()
-        model = AIModels.objects.filter(
+        model = AIModels.objects.filter_first(
             AIModels.version == val,
             AIModels.pipeline_action == generator_settings.pipeline_action,
-            AIModels.enabled == True,
-            AIModels.is_default == False
-        ).first()
+            AIModels.enabled.is_(True),
+            AIModels.is_default.is_(False)
+        )
         generator_settings.version = val
         generator_settings.model = model.id
         generator_settings.save()
@@ -159,28 +160,33 @@ class StableDiffusionSettingsWidget(
         self.ui.model.clear()
 
     def load_models(self):
+        self.logger.info("Loading models")
         self.ui.model.blockSignals(True)
         self.clear_models()
+
         image_generator = ImageGenerator.STABLEDIFFUSION.value
-        
         generator_settings = GeneratorSettings.objects.first()
         pipeline = generator_settings.pipeline_action
         version = generator_settings.version
         pipeline_actions = [GeneratorSection.TXT2IMG.value]
+        
         if pipeline == GeneratorSection.INPAINT.value:
             pipeline_actions.append(GeneratorSection.INPAINT.value)
+        
         models = AIModels.objects.filter(
             AIModels.category == image_generator,
             AIModels.pipeline_action.in_(pipeline_actions),
             AIModels.version == version,
-            AIModels.enabled == True,
-            AIModels.is_default == False
-        ).all()
+            AIModels.enabled.is_(True),
+            AIModels.is_default.is_(False)
+        )
+
         model_id = generator_settings.model
         if model_id is None and len(models) > 0:
             current_model = models[0]
             generator_settings.model = current_model.id
             generator_settings.save()
+        
         for model in models:
             self.ui.model.addItem(model.name, model.id)
         

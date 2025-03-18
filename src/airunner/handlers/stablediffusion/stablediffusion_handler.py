@@ -14,7 +14,7 @@ from PIL import (
     ImageFont
 )
 from PIL.Image import Image
-from PySide6.QtCore import QRect, Slot
+from PySide6.QtCore import QRect
 from PySide6.QtWidgets import QApplication
 from compel import (
     Compel, 
@@ -68,13 +68,15 @@ from airunner.exceptions import PipeNotLoadedException, InterruptedException
 from airunner.handlers.stablediffusion.prompt_weight_bridge import \
     PromptWeightBridge
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
-from airunner.utils.clear_memory import clear_memory
+from airunner.utils.memory.clear_memory import clear_memory
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
 from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
 from airunner.utils.image.export_image import export_images
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.data.models import GeneratorSettings
 from airunner.handlers.stablediffusion.image_response import ImageResponse
+from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
+
 
 class StableDiffusionHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
@@ -139,7 +141,6 @@ class StableDiffusionHandler(BaseHandler):
     def on_application_settings_changed(self):
         if self._pipe:
             pipeline_class = self._pipe.__class__
-            print(pipeline_class)
             if (
                 pipeline_class in self.img2img_pipelines and 
                 not self.image_to_image_settings.enabled
@@ -222,28 +223,6 @@ class StableDiffusionHandler(BaseHandler):
     def model_status(self):
         return self._model_status
 
-    @Slot(str)
-    def _handle_worker_error(self, error_message):
-        self.logger.error("Worker error: %s", error_message)
-
-    @property
-    def is_single_file(self) -> bool:
-        return self.is_ckpt_file or self.is_safetensors
-
-    @property
-    def is_ckpt_file(self) -> bool:
-        if not self.model_path:
-            self.logger.error("ckpt path is empty")
-            return False
-        return self.model_path.endswith(".ckpt")
-
-    @property
-    def is_safetensors(self) -> bool:
-        if not self.model_path:
-            self.logger.error("safetensors path is empty")
-            return False
-        return self.model_path.endswith(".safetensors")
-
     @property
     def version(self) -> str:
         version = self.generator_settings_cached.version
@@ -274,12 +253,6 @@ class StableDiffusionHandler(BaseHandler):
         if self._application_settings is None:
             self._application_settings = self.application_settings
         return self._application_settings
-
-    @property
-    def drawing_pad_settings_cached(self):
-        if self._drawing_pad_settings is None:
-            self._drawing_pad_settings = self.drawing_pad_settings
-        return self._drawing_pad_settings
 
     @property
     def outpaint_settings_cached(self):
@@ -337,10 +310,10 @@ class StableDiffusionHandler(BaseHandler):
             self._controlnet_model.display_name != self.controlnet_settings_cached.controlnet
         ):
             
-            self._controlnet_model = ControlnetModel.objects.filter_by(
+            self._controlnet_model = ControlnetModel.objects.filter_by_first(
                 display_name=self.controlnet_settings_cached.controlnet,
                 version=self.version
-            ).first()
+            )
             
         return self._controlnet_model
 
@@ -359,10 +332,6 @@ class StableDiffusionHandler(BaseHandler):
     @property
     def controlnet_is_loading(self) -> bool:
         return self.model_status[ModelType.CONTROLNET] is ModelStatus.LOADING
-
-    @property
-    def controlnet_is_unloaded(self) -> bool:
-        return self.model_status[ModelType.CONTROLNET] is ModelStatus.UNLOADED
 
     @property
     def section(self) -> GeneratorSection:
@@ -411,19 +380,6 @@ class StableDiffusionHandler(BaseHandler):
     @property
     def use_safety_checker(self) -> bool:
         return self.application_settings_cached.nsfw_filter
-
-    @property
-    def safety_checker_initialized(self) -> bool:
-        try:
-            return not self.use_safety_checker or (
-                self._safety_checker is not None and
-                self._feature_extractor is not None and
-                self._pipe.safety_checker is not None and
-                self._pipe.feature_extractor is not None
-            )
-        except AttributeError:
-            pass
-        return False
 
     @property
     def is_txt2img(self) -> bool:
@@ -986,9 +942,9 @@ class StableDiffusionHandler(BaseHandler):
             )
         )
         
-        scheduler = Schedulers.objects.filter_by(
+        scheduler = Schedulers.objects.filter_by_first(
             display_name=scheduler_name
-        ).first()
+        )
         if not scheduler:
             self.logger.error(f"Failed to find scheduler {scheduler_name}")
             return None
@@ -1123,6 +1079,7 @@ class StableDiffusionHandler(BaseHandler):
             ))
         else:
             config_path = os.path.dirname(self.model_path)
+
         try:
             self._pipe = pipeline_class_.from_single_file(
                 self.model_path,
@@ -1130,22 +1087,21 @@ class StableDiffusionHandler(BaseHandler):
                 add_watermarker=False,
                 **data
             )
-        except FileNotFoundError as e:
+        except (
+            FileNotFoundError, 
+            EnvironmentError, 
+            torch.OutOfMemoryError, 
+            ValueError
+        ) as e:
             self.logger.error(
                 f"Failed to load model from {self.model_path}: {e}"
             )
-            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
-            return
-        except EnvironmentError as e:
-            self.logger.warning(
-                f"Failed to load model from {self.model_path}: {e}"
+            self.change_model_status(
+                ModelType.SD, 
+                ModelStatus.FAILED
             )
-        except ValueError as e:
-            self.logger.error(
-                f"Failed to load model from {self.model_path}: {e}"
-            )
-            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
+
         self._send_pipeline_loaded_signal()
         self._move_pipe_to_device()
     
@@ -1178,7 +1134,7 @@ class StableDiffusionHandler(BaseHandler):
         enabled_lora = Lora.objects.filter_by(
             version=self.version,
             enabled=True
-        ).all()
+        )
         for lora in enabled_lora:
             self._load_lora_weights(lora)
 
@@ -1216,7 +1172,9 @@ class StableDiffusionHandler(BaseHandler):
         self.logger.debug("Setting LORA adapters")
         
         loaded_lora_id = [lora.id for lora in self._loaded_lora.values()]
-        enabled_lora = Lora.objects.filter(Lora.id.in_(loaded_lora_id)).all()
+        enabled_lora = Lora.objects.filter_by(
+            Lora.id.in_(loaded_lora_id)
+        )
         adapter_weights = []
         adapter_names = []
         for lora in enabled_lora:
@@ -1240,7 +1198,7 @@ class StableDiffusionHandler(BaseHandler):
         
         embeddings = Embedding.objects.filter_by(
             version=self.version
-        ).all()
+        )
         
         for embedding in embeddings:
             embedding_path = embedding.path
@@ -1767,8 +1725,7 @@ class StableDiffusionHandler(BaseHandler):
                 controlnet_image = self._resize_image(controlnet_image, width, height)
                 control_image = self._controlnet_processor(controlnet_image, to_pil=True)
                 if control_image is not None:
-                    self.update_settings_by_name(
-                        "controlnet_settings",
+                    self.update_controlnet_settings(
                         "generated_image",
                         convert_image_to_binary(control_image)
                     )
@@ -1799,7 +1756,8 @@ class StableDiffusionHandler(BaseHandler):
             })
         return args
 
-    def _resize_image(self, image: Image, max_width: int, max_height: int) -> Optional[Image]:
+    @staticmethod
+    def _resize_image(image: Image, max_width: int, max_height: int) -> Optional[Image]:
         """
         Resize the image to ensure it is not larger than max_width and max_height,
         while maintaining the aspect ratio.

@@ -4,9 +4,8 @@ import threading
 from typing import Optional
 
 from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
-from airunner.handlers.tts.espeak_handler import EspeakHandler
-from airunner.handlers.tts.speecht5_handler import SpeechT5Handler
 from airunner.workers.worker import Worker
+from airunner.handlers.llm.llm_response import LLMResponse
 
 
 class TTSGeneratorWorker(Worker):
@@ -21,7 +20,7 @@ class TTSGeneratorWorker(Worker):
         self.play_queue_started = False
         self.do_interrupt = False
         self._current_model: Optional[str] = None
-        super().__init__(*args, signals=(
+        super().__init__(signals=(
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.on_interrupt_process_signal),
             (SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL, self.on_unblock_tts_generator_signal),
             (SignalCode.TTS_ENABLE_SIGNAL, self.on_enable_tts_signal),
@@ -29,25 +28,28 @@ class TTSGeneratorWorker(Worker):
             (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self.on_llm_text_streamed_signal),
             (SignalCode.TTS_MODEL_CHANGED, self._reload_tts_handler),
             (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal),
-        ), **kwargs)
+        ))
 
     def on_llm_text_streamed_signal(self, data):
         if not self.application_settings.tts_enabled:
             return
 
-        action = data.get("action", LLMActionType.CHAT)
-        if action is LLMActionType.GENERATE_IMAGE:
+        llm_response: LLMResponse = data.get("response", None)
+        if not llm_response:
+            raise ValueError("No LLMResponse object found in data")
+
+        if llm_response.action is LLMActionType.GENERATE_IMAGE:
             return
 
         if self.tts.model_status is not ModelStatus.LOADED:
-            self.tts.load()
+            self._load_tts()
 
-        message = data.get("message", "")
-        is_end_of_message = data.get("is_end_of_message", False)
         self.add_to_queue({
-            'message': message.replace("</s>", "") + ("." if is_end_of_message else ""),
+            'message': llm_response.message.replace("</s>", "") + (
+                "." if llm_response.is_end_of_message else ""
+            ),
             'tts_settings': self.tts_settings,
-            'is_end_of_message': is_end_of_message,
+            'is_end_of_message': llm_response.is_end_of_message,
         })
 
     def on_interrupt_process_signal(self):
@@ -79,17 +81,16 @@ class TTSGeneratorWorker(Worker):
     def start_worker_thread(self):
         self._initialize_tts_handler()
         if self.application_settings.tts_enabled:
-            self.tts.load()
+            self._load_tts()
 
     def _reload_tts_handler(self, data: dict):
-        if not self.application_settings.tts_enabled:
-            return
-
+        self.logger.info("Reloading TTS handler...")
+        self.logger.info(f"Current model: {self._current_model} | New model: {data['model']}")
         if self._current_model != data["model"]:
             self._current_model = data["model"]
             self.tts.unload()
             self._initialize_tts_handler()
-            self.tts.load()
+            self._load_tts()
 
     def on_application_settings_changed_signal(self, data):
         if data and data.get("setting_name", "") == "speech_t5_settings" and data.get("column_name", "") == "voice":
@@ -97,8 +98,9 @@ class TTSGeneratorWorker(Worker):
 
     def _initialize_tts_handler(self):
         self.logger.info("Initializing TTS handler...")
+        from airunner.handlers.tts.speecht5_handler import SpeechT5Handler
+        from airunner.handlers.tts.espeak_handler import EspeakHandler
         tts_model = self.tts_settings.model.lower()
-        print(tts_model, TTSModel.ESPEAK.value, tts_model == TTSModel.ESPEAK.value)
         if tts_model == TTSModel.ESPEAK.value:
             tts_handler_class_ = EspeakHandler
         else:
@@ -166,6 +168,10 @@ class TTSGeneratorWorker(Worker):
             self.on_interrupt_process_signal()
 
     def _load_tts(self):
+        if not self.application_settings.tts_enabled:
+            self.logger.info("TTS is disabled. Skipping load.")
+            return
+        
         if self.tts:
             self.tts.load()
 

@@ -1,3 +1,4 @@
+
 from PySide6.QtWidgets import QColorDialog
 
 from airunner.widgets.base_widget import BaseWidget

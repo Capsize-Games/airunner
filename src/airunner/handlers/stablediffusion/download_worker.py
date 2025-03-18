@@ -5,9 +5,8 @@ import requests
 from PySide6.QtCore import QObject, Signal
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
-DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 from airunner.windows.main.settings_mixin import SettingsMixin
-
+DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 
 
 class DownloadWorker(
@@ -29,7 +28,8 @@ class DownloadWorker(
     def add_to_queue(self, data: tuple):
         self.queue.put(data)
 
-    def get_size(self, url: str):
+    @staticmethod
+    def get_size(url: str):
         try:
             response = requests.head(url, allow_redirects=True)
             size_kb = int(response.headers.get("content-length", 0))
@@ -48,8 +48,6 @@ class DownloadWorker(
             if self.queue.empty():
                 time.sleep(0.1)
                 continue
-
-            queue_size = self.queue.qsize()
 
             path, file_name, file_path, callback = self.queue.get()
             if path == "" and file_name == "" and file_path == "":

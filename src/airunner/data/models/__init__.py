@@ -37,6 +37,8 @@ from airunner.data.models.image_filter import ImageFilter
 from airunner.data.models.image_filter_value import ImageFilterValue
 from airunner.data.models.whisper_settings import WhisperSettings
 from airunner.data.models.news import RSSFeed, Category, Article
+from airunner.data.models.splitter_setting import SplitterSetting
+from airunner.data.models.tab import Tab
 from airunner.data.models.base import Base
 
 __all__ = [
@@ -81,5 +83,7 @@ __all__ = [
     'RSSFeed',
     'Category',
     'Article',
+    'SplitterSetting',
+    'Tab',
     'Base',
 ]

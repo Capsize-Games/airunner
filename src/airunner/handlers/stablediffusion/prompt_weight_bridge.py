@@ -106,8 +106,8 @@ class PromptWeightBridge:
         matches = compiled.findall(prompt)
 
         for match in matches:
-            #total_opening_parentheses = match.count("(")
-            #weight = cls.get_weight(total_opening_parentheses)
+            # total_opening_parentheses = match.count("(")
+            # weight = cls.get_weight(total_opening_parentheses)
             pattern = r"\)(?!\d)"
             total_opening_parentheses = len(re.findall(pattern, match))
             weight = cls.get_weight(total_opening_parentheses)

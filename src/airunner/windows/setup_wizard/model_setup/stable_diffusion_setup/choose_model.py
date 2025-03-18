@@ -58,11 +58,11 @@ class ChooseModel(BaseWizard):
         pass
 
     @Slot(bool)
-    def custom_model_toggled(self, val: bool):
+    def custom_model_toggled(self, _val: bool):
         self.using_custom_model = bool
         self.ui.tabWidget.setCurrentIndex(1)
 
     @Slot(bool)
-    def model_type_toggled(self, val: bool):
+    def model_type_toggled(self, _val: bool):
         self.using_custom_model = not bool
         self.ui.tabWidget.setCurrentIndex(0)

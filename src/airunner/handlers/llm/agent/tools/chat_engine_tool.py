@@ -3,6 +3,8 @@ from typing import (
     Optional,
     Union,
 )
+
+from airunner.handlers.llm.agent.chat_engine.react_agent_engine import ReactAgentEngine
 from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import (
     RefreshContextChatEngine
 )
@@ -11,7 +13,6 @@ from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import (
 )
 from llama_index.core.tools.types import AsyncBaseTool, ToolMetadata, ToolOutput
 from llama_index.core.langchain_helpers.agents.tools import IndexToolConfig, LlamaIndexTool
-from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 
 class ChatEngineTool(AsyncBaseTool):
@@ -22,14 +23,15 @@ class ChatEngineTool(AsyncBaseTool):
     
     def __init__(
         self,
-        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine],
+        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine, ReactAgentEngine],
         metadata: ToolMetadata,
         resolve_input_errors: bool = True,
         agent=None
     ):
         self.chat_engine: Union[
             RefreshSimpleChatEngine, 
-            RefreshContextChatEngine
+            RefreshContextChatEngine,
+            ReactAgentEngine
         ] = chat_engine
         if not chat_engine:
             raise ValueError("Chat engine must be provided.")
@@ -40,12 +42,12 @@ class ChatEngineTool(AsyncBaseTool):
     @classmethod
     def from_defaults(
         cls,
-        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine],
+        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine, ReactAgentEngine],
         name: Optional[str] = None,
         description: Optional[str] = None,
         return_direct: bool = False,
         resolve_input_errors: bool = True,
-        agent = None
+        agent=None
     ) -> "ChatEngineTool":
         name = name or "chat_engine_tool"
         description = description or """Useful for chatting with the LLM."""
@@ -68,6 +70,7 @@ class ChatEngineTool(AsyncBaseTool):
         query_str = self._get_query_str(*args, **kwargs)
         do_not_display = kwargs.get("do_not_display", False)
         chat_history = kwargs.get("chat_history", [])
+        self.chat_engine.llm.llm_request = kwargs.get("llm_request", None)
         streaming_response = self.chat_engine.stream_chat(
             query_str, 
             chat_history=chat_history
@@ -92,27 +95,8 @@ class ChatEngineTool(AsyncBaseTool):
             raw_output=response,
         )
 
-    async def acall(self, *args: Any, **kwargs: Any) -> ToolOutput:
-        query_str = self._get_query_str(*args, **kwargs)
-        chat_history = kwargs.get("chat_history", None)
-        streaming_response = await self.chat_engine.astream_chat(
-            query_str,
-            chat_history=chat_history
-        )
-
-        response = ""
-        is_first_message = True
-        for token in streaming_response.response_gen:
-            response += token
-            self.agent.handle_response(token, is_first_message)
-            is_first_message = False
-
-        return ToolOutput(
-            content=str(response),
-            tool_name=self.metadata.name,
-            raw_input={"input": query_str},
-            raw_output=response,
-        )
+    async def acall(self, *args, **kwargs):
+        pass
 
     def as_langchain_tool(self) -> "LlamaIndexTool":
         tool_config = IndexToolConfig(
@@ -136,5 +120,5 @@ class ChatEngineTool(AsyncBaseTool):
             )
         return query_str
 
-    def update_system_prompt(self, system_prompt:str):
+    def update_system_prompt(self, system_prompt: str):
         self.chat_engine.update_system_prompt(system_prompt)

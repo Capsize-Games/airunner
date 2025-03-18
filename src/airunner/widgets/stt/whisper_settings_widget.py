@@ -1,3 +1,4 @@
+
 from PySide6.QtCore import Slot
 
 from airunner.widgets.base_widget import BaseWidget
@@ -23,16 +24,16 @@ class WhisperSettingsWidget(BaseWidget):
         self.ui.language.blockSignals(False)
 
     @Slot(bool)
-    def is_multilingual_changed(self, bool):
-        self.update_settings_by_name("whisper_settings", "is_multilingual", bool)
+    def is_multilingual_changed(self, val: bool):
+        self.update_whisper_settings("is_multilingual", val)
 
     @Slot(str)
     def on_language_changed(self, language):
-        self.update_settings_by_name("whisper_settings", "language", language)
+        self.update_whisper_settings("language", language)
 
     @Slot(int)
     def on_task_changed(self, value):
-        self.update_settings_by_name("whisper_settings", "task", value)
+        self.update_whisper_settings("task", value)
 
     @Slot()
     def on_reset_default_clicked(self):

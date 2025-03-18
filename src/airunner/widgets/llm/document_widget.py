@@ -1,3 +1,4 @@
+
 from PySide6.QtCore import Slot
 
 from airunner.widgets.base_widget import BaseWidget

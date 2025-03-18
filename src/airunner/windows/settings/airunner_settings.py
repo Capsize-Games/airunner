@@ -53,7 +53,8 @@ class SettingsWindow(BaseWindow):
         super().showEvent(event)
         self.setWindowTitle("AI Runner Preferences")
 
-    def available_widgets(self, name):
+    @staticmethod
+    def available_widgets(name):
         if name == "paths":
             return PathsWidget
         elif name == "keyboard_shortcuts":

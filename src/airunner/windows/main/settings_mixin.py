@@ -1,6 +1,5 @@
 import os
 import logging
-import datetime
 from typing import List, Type, Optional
 
 from sqlalchemy.orm import joinedload
@@ -35,8 +34,6 @@ from airunner.data.models import (
     BrushSettings, 
     GridSettings,
     MemorySettings, 
-    Conversation, 
-    Summary, 
     ImageFilterValue, 
     TargetFiles, 
     WhisperSettings, 
@@ -44,7 +41,6 @@ from airunner.data.models import (
 )
 from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
-from airunner.enums import LLMChatRole
 from airunner.data.session_manager import session_scope
 
 
@@ -60,7 +56,6 @@ class SettingsMixinSharedInstance:
     def __init__(self):
         if self._initialized:
             return
-        self.conversation_id = None
 
         # Configure the logger
         self.logger = logging.getLogger("AI Runner")
@@ -87,11 +82,11 @@ class SettingsMixin:
 
     @property
     def llm_perform_analysis(self) -> bool:
-        return os.getenv("AI_RUNNER_PERFORM_ANALYSIS", "False").lower() == "1"
+        return os.getenv("AI_RUNNER_PERFORM_ANALYSIS", "0").lower() == "1"
 
     @property
     def print_llm_system_prompt(self) -> bool:
-        return os.getenv("AI_RUNNER_PRINT_LLM_SYSTEM_PROMPT", "False").lower() == "1"
+        return os.getenv("AI_RUNNER_PRINT_LLM_SYSTEM_PROMPT", "0").lower() == "1"
 
     @property
     def session_manager(self):
@@ -128,7 +123,10 @@ class SettingsMixin:
             chatbots = self.chatbots
             if len(chatbots) > 0:
                 settings.current_chatbot = self.chatbots[0].id
-                self.update_settings_by_name("llm_generator_settings", "current_chatbot", settings.current_chatbot)
+                self.update_llm_generator_settings(
+                    "current_chatbot", 
+                    settings.current_chatbot
+                )
         return settings
 
     @property
@@ -291,31 +289,22 @@ class SettingsMixin:
     def image_filter_values(self) -> Optional[List[ImageFilterValue]]:
         return ImageFilterValue.objects.all()
 
-    def get_lora_by_version(self, version) -> Optional[List[Lora]]:
-        return Lora.objects.filter_by(version=version).all()
+    @staticmethod
+    def get_lora_by_version(version) -> Optional[List[Lora]]:
+        return Lora.objects.filter_by(version=version)
 
-    def get_embeddings_by_version(self, version) -> Optional[List[Embedding]]:
+    def get_embeddings_by_version(self, version) -> Optional[List[Type[Embedding]]]:
         return [
-            embedding for embedding in self.embeddings 
-                if embedding.version == version
+            embedding for embedding in self.embeddings if embedding.version == version
         ]
 
     @property
     def chatbot(self) -> Optional[Chatbot]:
-        chatbot = self._chatbot
         current_chatbot_id = self.llm_generator_settings.current_chatbot
         
-        if (
-            not chatbot 
-            and current_chatbot_id
-        ) or (
-            chatbot
-            and current_chatbot_id 
-            and chatbot.id != current_chatbot_id
-        ):
-            chatbot = Chatbot.objects.options(
-                joinedload(Chatbot.target_files),
-            ).get(current_chatbot_id)
+        chatbot = Chatbot.objects.options(
+            joinedload(Chatbot.target_files),
+        ).get(current_chatbot_id)
         
         if chatbot is None:
             chatbot = Chatbot.objects.options(
@@ -328,10 +317,8 @@ class SettingsMixin:
             chatbot = Chatbot.objects.options(
                 joinedload(Chatbot.target_files),
             ).first()
-        
-        self._chatbot = chatbot
 
-        return self._chatbot
+        return chatbot
 
     @property
     def user(self) -> Type[User]:
@@ -343,47 +330,14 @@ class SettingsMixin:
             user = User.objects.first()
         return user
 
-    def add_chatbot_document_to_chatbot(self, chatbot, file_path):
-        document = TargetFiles.objects.filter_by(
+    @staticmethod
+    def add_chatbot_document_to_chatbot(chatbot, file_path):
+        document = TargetFiles.objects.filter_by_first(
             chatbot_id=chatbot.id, file_path=file_path
-        ).first()
+        )
         if document is None:
             document = TargetFiles(file_path=file_path, chatbot_id=chatbot.id)
         TargetFiles.objects.merge(document)
-
-    def update_settings_by_name(self, setting_name, column_name, val):
-        if setting_name == "application_settings":
-            self.update_application_settings(column_name, val)
-        elif setting_name == "generator_settings":
-            self.update_generator_settings(column_name, val)
-        elif setting_name == "controlnet_image_settings":
-            self.update_controlnet_image_settings(column_name, val)
-        elif setting_name == "brush_settings":
-            self.update_brush_settings(column_name, val)
-        elif setting_name == "controlnet_settings":
-            self.update_controlnet_settings(column_name, val)
-        elif setting_name == "image_to_image_settings":
-            self.update_image_to_image_settings(column_name, val)
-        elif setting_name == "outpaint_settings":
-            self.update_outpaint_settings(column_name, val)
-        elif setting_name == "drawing_pad_settings":
-            self.update_drawing_pad_settings(column_name, val)
-        elif setting_name == "grid_settings":
-            self.update_grid_settings(column_name, val)
-        elif setting_name == "active_grid_settings":
-            self.update_active_grid_settings(column_name, val)
-        elif setting_name == "path_settings":
-            self.update_path_settings(column_name, val)
-        elif setting_name == "memory_settings":
-            self.update_memory_settings(column_name, val)
-        elif setting_name == "llm_generator_settings":
-            self.update_llm_generator_settings(column_name, val)
-        elif setting_name == "whisper_settings":
-            self.update_whisper_settings(column_name, val)
-        elif setting_name == "speech_t5_settings":
-            self.update_speech_t5_settings(column_name, val)
-        else:
-            logging.error(f"Invalid setting name: {setting_name}")
 
     def update_application_settings(self, column_name, val):
         self.update_setting(ApplicationSettings, column_name, val)
@@ -439,7 +393,7 @@ class SettingsMixin:
         self.__settings_updated()
 
     def update_ai_model(self, model: AIModels):
-        ai_model = AIModels.objects.filter_by(
+        ai_model = AIModels.objects.filter_by_first(
             name=model.name,
             path=model.path,
             branch=model.branch,
@@ -449,7 +403,7 @@ class SettingsMixin:
             enabled=model.enabled,
             model_type=model.model_type,
             is_default=model.is_default
-        ).first()
+        )
         if ai_model:
             for key in model.__dict__.keys():
                 if key != "_sa_instance_state":
@@ -469,10 +423,12 @@ class SettingsMixin:
         setattr(controlnet_settings, column_name, val)
         self.update_controlnet_settings(column_name, val)
 
-    def load_schedulers(self) -> List[Schedulers]:
+    @staticmethod
+    def load_schedulers() -> List[Schedulers]:
         return Schedulers.objects.all()
 
-    def load_settings_from_db(self, model_class_):
+    @staticmethod
+    def load_settings_from_db(model_class_):
         settings = model_class_.objects.first()
         if settings is None:
             settings = model_class_()
@@ -491,7 +447,8 @@ class SettingsMixin:
         else:
             self.logger.error("Failed to update settings: No setting found")
 
-    def reset_settings(self):
+    @staticmethod
+    def reset_settings():
         """
         Reset all settings to their default values by deleting all 
         settings from the database. When applications are
@@ -519,13 +476,14 @@ class SettingsMixin:
         for cls in settings_models:
             cls.objects.delete_all()
 
-    def get_saved_prompt_by_id(self, prompt_id) -> Type[SavedPrompt]:
-        return SavedPrompt.objects.filter_by(id=prompt_id).first()
+    @staticmethod
+    def get_saved_prompt_by_id(prompt_id) -> Type[SavedPrompt]:
+        return SavedPrompt.objects.filter_by_first(id=prompt_id)
 
     def update_saved_prompt(self, saved_prompt: SavedPrompt):
-        new_saved_prompt = SavedPrompt.objects.filter_by(
+        new_saved_prompt = SavedPrompt.objects.filter_by_first(
             id=saved_prompt.id
-        ).first()
+        )
         if new_saved_prompt:
             for key in saved_prompt.__dict__.keys():
                 if key != "_sa_instance_state":
@@ -535,25 +493,29 @@ class SettingsMixin:
             saved_prompt.save()
         self.__settings_updated()
 
-    def create_saved_prompt(self, data: dict):
+    @staticmethod
+    def create_saved_prompt(data: dict):
         new_saved_prompt = SavedPrompt(**data)
         new_saved_prompt.save()
 
-    def load_saved_prompts(self) -> List[Type[SavedPrompt]]:
+    @staticmethod
+    def load_saved_prompts() -> List[Type[SavedPrompt]]:
         return SavedPrompt.objects.all()
 
-    def load_font_settings(self) -> List[Type[FontSetting]]:
+    @staticmethod
+    def load_font_settings() -> List[Type[FontSetting]]:
         return FontSetting.objects.all()
 
-    def get_font_setting_by_name(self, name) -> Type[FontSetting]:
-        return FontSetting.objects.filter_by(
+    @staticmethod
+    def get_font_setting_by_name(name) -> Type[FontSetting]:
+        return FontSetting.objects.filter_by_first(
             name=name
-        ).first()
+        )
 
-    def update_font_setting(self, font_setting: Type[FontSetting]):
-        new_font_setting = FontSetting.objects.filter_by(
+    def update_font_setting(self, font_setting: FontSetting):
+        new_font_setting = FontSetting.objects.filter_by_first(
             name=font_setting.name
-        ).first()
+        )
         if new_font_setting:
             for key in font_setting.__dict__.keys():
                 if key != "_sa_instance_state":
@@ -563,24 +525,30 @@ class SettingsMixin:
             font_setting.save()
         self.__settings_updated()
 
-    def load_ai_models(self) -> List[Type[AIModels]]:
+    @staticmethod
+    def load_ai_models() -> List[Type[AIModels]]:
         return AIModels.objects.all()
 
-    def load_chatbots(self) -> List[Type[Chatbot]]:
+    @staticmethod
+    def load_chatbots() -> List[Type[Chatbot]]:
         return Chatbot.objects.all()
 
-    def delete_chatbot_by_name(self, chatbot_name):
-        Chatbot.objects.filter_by(name=chatbot_name).delete()
+    @staticmethod
+    def delete_chatbot_by_name(chatbot_name):
+        Chatbot.objects.delete_by(name=chatbot_name)
 
-    def create_chatbot(self, chatbot_name):
+    @staticmethod
+    def create_chatbot(chatbot_name) -> Chatbot:
         new_chatbot = Chatbot(name=chatbot_name)
         new_chatbot.save()
+        return new_chatbot
 
     def reset_path_settings(self):
         PathSettings.objects.delete_all()
         self.set_default_values(PathSettings)
 
-    def set_default_values(self, model_name_):
+    @staticmethod
+    def set_default_values(model_name_):
         with session_scope() as session:
             default_values = {}
             for column in model_name_.__table__.columns:
@@ -592,22 +560,26 @@ class SettingsMixin:
             )
             session.commit()
 
-    def load_lora(self) -> List[Type[Lora]]:
+    @staticmethod
+    def load_lora() -> List[Type[Lora]]:
         return Lora.objects.all()
 
-    def get_lora_by_name(self, name):
-        return Lora.objects.filter_by(name=name).first()
+    @staticmethod
+    def get_lora_by_name(name):
+        return Lora.objects.filter_by_first(name=name)
 
-    def add_lora(self, lora: Lora):
+    @staticmethod
+    def add_lora(lora: Lora):
         lora.save()
 
-    def delete_lora(self, lora: Lora):
+    @staticmethod
+    def delete_lora(lora: Lora):
         loras = Lora.objects.filter_by(name=lora.name)
         for lora in loras:
             lora.delete()
 
     def update_lora(self, lora: Lora):
-        new_lora = Lora.objects.filter_by(name=lora.name).first()
+        new_lora = Lora.objects.filter_by_first(name=lora.name)
         if new_lora:
             for key in lora.__dict__.keys():
                 if key != "_sa_instance_state":
@@ -619,7 +591,7 @@ class SettingsMixin:
 
     def update_loras(self, loras: List[Lora]):
         for lora in loras:
-            new_lora = Lora.objects.filter_by(name=lora.name).first()
+            new_lora = Lora.objects.filter_by_first(name=lora.name)
             if new_lora:
                 for key in lora.__dict__.keys():
                     if key != "_sa_instance_state":
@@ -629,16 +601,19 @@ class SettingsMixin:
                 lora.save()
         self.__settings_updated()
 
-    def create_lora(self, lora: Lora):
+    @staticmethod
+    def create_lora(lora: Lora):
         lora.save()
 
-    def delete_lora_by_name(self, lora_name, version):
+    @staticmethod
+    def delete_lora_by_name(lora_name, version):
         loras = Lora.objects.filter_by(name=lora_name, version=version)
         for lora in loras:
             lora.delete()
 
-    def delete_embedding(self, embedding: Embedding):
-        Embedding.objects.filter_by(
+    @staticmethod
+    def delete_embedding(embedding: Embedding):
+        Embedding.objects.delete_by(
             name=embedding.name,
             path=embedding.path,
             branch=embedding.branch,
@@ -648,11 +623,11 @@ class SettingsMixin:
             enabled=embedding.enabled,
             model_type=embedding.model_type,
             is_default=embedding.is_default
-        ).delete()
+        )
 
     def update_embeddings(self, embeddings: List[Embedding]):
         for embedding in embeddings:
-            new_embedding = Embedding.objects.filter_by(
+            new_embedding = Embedding.objects.filter_by_first(
                 name=embedding.name,
                 path=embedding.path,
                 branch=embedding.branch,
@@ -662,7 +637,7 @@ class SettingsMixin:
                 enabled=embedding.enabled,
                 model_type=embedding.model_type,
                 is_default=embedding.is_default
-            ).first()
+            )
             if new_embedding:
                 for key in embedding.__dict__.keys():
                     if key != "_sa_instance_state":
@@ -672,28 +647,36 @@ class SettingsMixin:
                 embedding.save()
         self.__settings_updated()
 
-    def get_embedding_by_name(self, name):
-        return Embedding.objects.filter_by(name=name).first()
+    @staticmethod
+    def get_embedding_by_name(name):
+        return Embedding.objects.filter_by_first(name=name)
 
-    def add_embedding(self, embedding: Embedding):
+    @staticmethod
+    def add_embedding(embedding: Embedding):
         embedding.save()
 
-    def load_prompt_templates(self) -> List[Type[PromptTemplate]]:
+    @staticmethod
+    def load_prompt_templates() -> List[Type[PromptTemplate]]:
         return PromptTemplate.objects.all()
 
-    def get_prompt_template_by_name(self, name) -> Type[PromptTemplate]:
-        return PromptTemplate.objects.filter_by(template_name=name).first()
+    @staticmethod
+    def get_prompt_template_by_name(name) -> Type[PromptTemplate]:
+        return PromptTemplate.objects.filter_by_first(template_name=name)
 
-    def load_controlnet_models(self) -> List[Type[ControlnetModel]]:
+    @staticmethod
+    def load_controlnet_models() -> List[Type[ControlnetModel]]:
         return ControlnetModel.objects.all()
 
-    def controlnet_model_by_name(self, name) -> Type[ControlnetModel]:
-        return ControlnetModel.objects.filter_by(name=name).first()
+    @staticmethod
+    def controlnet_model_by_name(name) -> Type[ControlnetModel]:
+        return ControlnetModel.objects.filter_by_first(name=name)
 
-    def load_pipelines(self) -> List[Type[PipelineModel]]:
+    @staticmethod
+    def load_pipelines() -> List[Type[PipelineModel]]:
         return PipelineModel.objects.all()
 
-    def load_shortcut_keys(self) -> List[Type[ShortcutKeys]]:
+    @staticmethod
+    def load_shortcut_keys() -> List[Type[ShortcutKeys]]:
         return ShortcutKeys.objects.all()
 
     def save_window_settings(self, column_name, val):
@@ -708,27 +691,6 @@ class SettingsMixin:
         else:
             window_settings.save()
 
-    def save_object(self, database_object):
-        database_object.save()
-
-    def load_history_from_db(self, conversation_id):
-        conversation = Conversation.objects.filter_by(
-            id=conversation_id
-        ).first()
-        messages = conversation.value
-        return [
-            {
-                "id": id,
-                "role": LLMChatRole.HUMAN if message["role"] == "user"  else LLMChatRole.ASSISTANT,
-                "content": message["blocks"][0]["text"],
-                "name": self.username if message["role"] == "user" else self.chatbot.name,
-                "is_bot": message["role"] == "bot",
-                "timestamp": message["timestamp"],
-                "conversation_id": conversation_id
-
-            } for id, message in enumerate(messages)
-        ]
-
     def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
         if not self.settings_mixin_shared_instance.chatbot:
             chatbot = Chatbot.objects.options(
@@ -739,80 +701,6 @@ class SettingsMixin:
                 chatbot = self.create_chatbot("Default")
             self.settings_mixin_shared_instance.chatbot = chatbot
         return self.settings_mixin_shared_instance.chatbot
-
-    def create_conversation(self, chat_store_key: str):
-        # get prev conversation by key != chat_store_key
-        # order by id desc
-        # get first
-        previous_conversation = Conversation.objects.options(
-            joinedload(Conversation.summaries)
-        ).filter(
-            Conversation.key != chat_store_key
-        ).order_by(
-            Conversation.id.desc()
-        ).first()
-        # find conversation which has no title, bot_mood or messages
-        conversation = Conversation.objects.options(
-            joinedload(Conversation.summaries)
-        ).filter_by(
-            key=chat_store_key
-        ).first()
-        if (
-            previous_conversation 
-            and previous_conversation.bot_mood 
-            and conversation 
-            and conversation.bot_mood is None
-        ):
-            conversation.bot_mood = previous_conversation.bot_mood
-            conversation.save()
-        if conversation:
-            return conversation
-        conversation = Conversation(
-            timestamp=datetime.datetime.now(datetime.timezone.utc),
-            title="",
-            key=chat_store_key,
-            value=None,
-            chatbot_id=self.chatbot.id,
-            user_id=self.user.id,
-            chatbot_name=self.chatbot.name,
-            user_name=self.user.username,
-            bot_mood=previous_conversation.bot_mood if previous_conversation else None
-        )
-        conversation.save()
-        return Conversation.objects.options(
-            joinedload(Conversation.summaries)
-        ).filter_by(
-            key=chat_store_key
-        ).first()
-
-    def update_conversation_title(self, conversation_id, title):
-        conversation = Conversation.objects.filter_by(
-            id=conversation_id
-        ).first()
-        if conversation:
-            conversation.title = title
-            conversation.save()
-
-    def add_summary(self, content, conversation_id):
-        timestamp = datetime.datetime.now()  # Ensure timestamp is a datetime object
-        summary = Summary(
-            content=content,
-            timestamp=timestamp,
-            conversation_id=conversation_id
-        )
-        summary.save()
-    
-    def get_all_conversations(self) -> Optional[List[Conversation]]:
-        return Conversation.objects.all()
-
-    def delete_conversation(self, conversation_id):
-        Summary.objects.delete(conversation_id=conversation_id)
-        Conversation.objects.delete(id=conversation_id)
-
-    def get_most_recent_conversation(self) -> Optional[Conversation]:
-        return Conversation.objects.order_by(
-            Conversation.timestamp.desc()
-        ).first()
 
     def __settings_updated(self, setting_name=None, column_name=None, val=None):
         data = None

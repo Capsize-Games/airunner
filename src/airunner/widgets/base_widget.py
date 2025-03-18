@@ -1,3 +1,5 @@
+from abc import ABC, ABCMeta
+from abc import abstractmethod
 import os
 
 from PySide6 import QtGui
@@ -9,16 +11,38 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.utils.create_worker import create_worker
 
 
-class BaseWidget(
+class BaseABCMeta(type(QWidget), ABCMeta):
+    pass
+
+
+class AbstractBaseWidget(
     QWidget,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    ABC,
+    metaclass=BaseABCMeta
 ):
+    @abstractmethod
+    def save_state(self):
+        pass
+
+    @abstractmethod
+    def restore_state(self):
+        pass
+
+
+class BaseWidget(AbstractBaseWidget):
     widget_class_ = None
     icons = ()
     ui = None
     qss_filename = None
     threads = []
+
+    def save_state(self):
+        pass
+
+    def restore_state(self):
+        pass
 
     @property
     def current_tool(self):
@@ -41,7 +65,7 @@ class BaseWidget(
         self.signal_handlers: dict = {}
         self.services: dict = {}
         self.worker_class_map: dict = {}
-
+    
     def initialize(self):
         """
         Call this function to initialize the widget.
@@ -83,9 +107,6 @@ class BaseWidget(
 
     def initialize_form(self):
         pass
-
-    def add_to_grid(self, widget, row, column, row_span=1, column_span=1):
-        self.layout().addWidget(widget, row, column, row_span, column_span)
     
     def showEvent(self, event):
         super().showEvent(event)
@@ -95,6 +116,7 @@ class BaseWidget(
         using __init__.
         """
         self.initialize()
+        self.restore_state()
 
     def set_icons(self):
         theme = "dark" if self.is_dark else "light"
@@ -116,7 +138,7 @@ class BaseWidget(
                     os.path.join(f"src/icons/{icon}{'-light' if is_dark else ''}.png")
                 )
             )
-        except AttributeError as e:
+        except AttributeError as _e:
             pass
 
     def get_form_element(self, element):

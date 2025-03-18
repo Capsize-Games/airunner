@@ -1,5 +1,6 @@
 import os
 import json
+
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QLabel
 from PySide6.QtCore import Qt
@@ -111,7 +112,7 @@ class ImageWidget(BaseWidget):
             # Execute the drag operation
             drag.exec(Qt.DropAction.MoveAction)
         elif event.button() == Qt.MouseButton.RightButton:
-            #self.send_image_to_grid()
+            # self.send_image_to_grid()
             self.display_image_menu(event)
 
     def display_image_menu(self, event):
@@ -132,7 +133,6 @@ class ImageWidget(BaseWidget):
     def load_meta_data(self, image_path):
         # load the png metadata from image_path
         # check if image_path is Image
-        image = None
         if isinstance(image_path, Image.Image):
             image = image_path
         else:
@@ -166,7 +166,10 @@ class ImageWidget(BaseWidget):
         view.setRenderHint(QPainter.RenderHint.Antialiasing)
         view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
         view.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-        view.setOptimizationFlags(QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing | QGraphicsView.OptimizationFlag.DontSavePainterState)
+        view.setOptimizationFlags(
+            QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing |
+            QGraphicsView.OptimizationFlag.DontSavePainterState
+        )
         view.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
         view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         view.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
@@ -174,7 +177,11 @@ class ImageWidget(BaseWidget):
         view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         view.setInteractive(True)
         view.setMouseTracking(True)
-        view.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform | QPainter.RenderHint.TextAntialiasing)
+        view.setRenderHints(
+            QPainter.RenderHint.Antialiasing |
+            QPainter.RenderHint.SmoothPixmapTransform |
+            QPainter.RenderHint.TextAntialiasing
+        )
 
         # Create a layout and add the QGraphicsView to it
         layout = QVBoxLayout()

@@ -1,9 +1,10 @@
 import threading
 from typing import Dict, Optional
 
-from airunner.handlers.llm.llm_handler import LLMHandler
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
+from airunner.handlers.llm.llm_handler import LLMHandler
+
 
 
 class LLMGenerateWorker(Worker):
@@ -11,7 +12,6 @@ class LLMGenerateWorker(Worker):
         self.llm = None
         super().__init__()
         for signal in (
-            (SignalCode.LLM_REQUEST_WORKER_RESPONSE_SIGNAL, self.on_llm_request_worker_response_signal),
             (SignalCode.LLM_UNLOAD_SIGNAL, self.on_llm_on_unload_signal),
             (SignalCode.LLM_LOAD_SIGNAL, self.on_llm_load_model_signal),
             (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_llm_clear_history_signal),
@@ -21,9 +21,22 @@ class LLMGenerateWorker(Worker):
             (SignalCode.LOAD_CONVERSATION, self.on_llm_load_conversation),
             (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.llm_on_interrupt_process_signal),
             (SignalCode.QUIT_APPLICATION, self.on_quit_application_signal),
+            (SignalCode.CONVERSATION_DELETED, self.on_conversation_deleted_signal),
+            (SignalCode.SECTION_CHANGED, self.on_section_changed_signal),
+            (SignalCode.WEB_BROWSER_PAGE_HTML, self.on_web_browser_page_html_signal),
         ):
             self.register(signal[0], signal[1])
         self._llm_thread = None
+
+    def on_conversation_deleted_signal(self, data):
+        self.llm.on_conversation_deleted(data)
+    
+    def on_section_changed_signal(self):
+        self.llm.on_section_changed()
+    
+    def on_web_browser_page_html_signal(self, data):
+        if self.llm:
+            self.llm.on_web_browser_page_html(data.get("content", ""))
 
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")
@@ -33,10 +46,9 @@ class LLMGenerateWorker(Worker):
         if self._llm_thread is not None:
             self._llm_thread.join()
 
-    def on_llm_request_worker_response_signal(self, message: dict):
-        self.add_to_queue(message)
-
     def on_llm_on_unload_signal(self, data=None):
+        if not self.llm:
+            return
         data = data or {}
         self.logger.debug("Unloading LLM")
         self.llm.unload()
@@ -47,7 +59,7 @@ class LLMGenerateWorker(Worker):
     def on_llm_load_model_signal(self, data):
         self._load_llm_thread(data)
 
-    def on_llm_clear_history_signal(self, data:Optional[Dict] = None):
+    def on_llm_clear_history_signal(self, data: Optional[Dict] = None):
         if self.llm:
             self.llm.clear_history(data)
 

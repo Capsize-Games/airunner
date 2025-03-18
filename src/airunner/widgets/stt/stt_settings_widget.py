@@ -1,3 +1,4 @@
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stt.templates.stt_settings_ui import Ui_stt_settings
 

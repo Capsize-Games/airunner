@@ -1,6 +1,6 @@
-import inspect
 import queue
 import threading
+from abc import abstractmethod, ABC, ABCMeta
 
 from PySide6.QtCore import Signal, QThread, QObject
 
@@ -9,8 +9,14 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import SLEEP_TIME_IN_MS
 from airunner.windows.main.settings_mixin import SettingsMixin
 
+QObjectMeta = type(QObject)
 
-class Worker(QObject, MediatorMixin, SettingsMixin):
+
+class CombinedMeta(QObjectMeta, ABCMeta):
+    pass
+
+
+class Worker(QObject, MediatorMixin, SettingsMixin, ABC, metaclass=CombinedMeta):
     queue_type = QueueType.GET_NEXT_ITEM
     finished = Signal()
     prefix = "Worker"
@@ -30,6 +36,10 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         self.register_signals()
 
         threading.Thread(target=self.start_worker_thread).start()
+
+    @abstractmethod
+    def handle_message(self, message):
+        raise NotImplementedError
 
     def start_worker_thread(self):
         pass
@@ -53,12 +63,9 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
             try:
                 msg = self.get_item_from_queue()
                 if msg is not None:
-                    if len(inspect.signature(self.handle_message).parameters) == 0:
-                        self.handle_message()
-                    else:
-                        self.handle_message(msg)
+                    self.handle_message(msg)
             except queue.Empty:
-                msg = None
+                pass
             if self.paused:
                 self.logger.debug("Paused")
                 while self.paused:
@@ -77,7 +84,6 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
         return msg
     
     def get_last_item(self):
-        msg = None
         index = None
         while not self.queue.empty():
             try:
@@ -111,9 +117,6 @@ class Worker(QObject, MediatorMixin, SettingsMixin):
 
     def resume(self):
         self.paused = False
-
-    def handle_message(self, message):
-        raise NotImplementedError
 
     def add_to_queue(self, message):
         if (
