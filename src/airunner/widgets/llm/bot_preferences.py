@@ -184,4 +184,4 @@ class BotPreferencesWidget(BaseWidget):
         except TypeError:
             self.logger.error(f"Attribute {key} does not exist in Chatbot")
             return
-        self.save_object(chatbot)
+        chatbot.save()
