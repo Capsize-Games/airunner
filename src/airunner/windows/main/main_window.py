@@ -581,19 +581,35 @@ class MainWindow(
         self.set_stylesheet()
         self.restore_state()
         
+        print("GETTING SETTINGS")
         settings = SplitterSetting.objects.filter_by_first(name="main_window_splitter")
         if settings:
-            self.ui.main_window_splitter.restoreState(settings.splitter_settings)
+            try:
+                print("RESTORING STATE")
+                self.ui.main_window_splitter.restoreState(
+                    settings.splitter_settings
+                )
+            except Exception as e:
+                self.logger.error(f"Error restoring main window splitter state: {e}")
+            
+        print("connecting tabs")
+            
         self.ui.center_tab_container.currentChanged.connect(self.on_tab_section_changed)
 
+        print("creating status widget")
         self.status_widget = StatusWidget()
+        print("adding status widget")
         self.statusBar().addPermanentWidget(self.status_widget)
+        print("emitting signal")
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
+        print("initializing widget elements")
         self.initialize_widget_elements()
 
         self.ui.actionUndo.setEnabled(False)
         self.ui.actionRedo.setEnabled(False)
+        print("load_plugins")
         self._load_plugins()
+        print("emit application main window loaded signal")
         self.emit_signal(
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, 
             {"main_window": self}
@@ -807,7 +823,9 @@ class MainWindow(
             self.ui.generator_widget.ui.generator_form_tabs.currentIndex()
         )
 
-        settings = SplitterSetting.objects.filter_by_first(name="main_window_splitter")
+        settings = SplitterSetting.objects.filter_by_first(
+            name="main_window_splitter"
+        )
         if not settings:
             SplitterSetting.objects.create(
                 name="main_window_splitter",

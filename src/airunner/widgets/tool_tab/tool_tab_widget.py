@@ -10,14 +10,13 @@ class ToolTabWidget(BaseWidget):
     widget_class_ = Ui_tool_tab_widget
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        for item in (
-            (SignalCode.QUIT_APPLICATION, lambda message: self.save_state()),
-        ):
-            self.register(item[0], item[1])
-        
-        self.ui.tool_tab_widget_container.currentChanged.connect(self.on_tab_section_changed)
+        self.signal_handlers = {
+            SignalCode.QUIT_APPLICATION: lambda _message: self.save_state(),
+        }
+        super().__init__(*args, **kwargs)        
+        self.ui.tool_tab_widget_container.currentChanged.connect(
+            self.on_tab_section_changed
+        )
 
     @Slot(int)
     def on_tab_section_changed(self, index: int):
