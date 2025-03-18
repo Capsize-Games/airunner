@@ -41,7 +41,7 @@ class EmbeddingWidget(BaseWidget):
         )
 
     def update_embedding(self, embedding: Embedding):
-        self.save_object(embedding)
+        embedding.save()
 
     @Slot(bool)
     def action_toggled_embedding(self, val, _emit_signal=True):
