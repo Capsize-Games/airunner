@@ -75,6 +75,7 @@ from airunner.utils.image.export_image import export_images
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.data.models import GeneratorSettings
 from airunner.handlers.stablediffusion.image_response import ImageResponse
+from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 
 
 class StableDiffusionHandler(BaseHandler):
@@ -1085,22 +1086,21 @@ class StableDiffusionHandler(BaseHandler):
                 add_watermarker=False,
                 **data
             )
-        except FileNotFoundError as e:
+        except (
+            FileNotFoundError, 
+            EnvironmentError, 
+            torch.OutOfMemoryError, 
+            ValueError
+        ) as e:
             self.logger.error(
                 f"Failed to load model from {self.model_path}: {e}"
             )
-            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
-            return
-        except EnvironmentError as e:
-            self.logger.warning(
-                f"Failed to load model from {self.model_path}: {e}"
+            self.change_model_status(
+                ModelType.SD, 
+                ModelStatus.FAILED
             )
-        except ValueError as e:
-            self.logger.error(
-                f"Failed to load model from {self.model_path}: {e}"
-            )
-            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
+
         self._send_pipeline_loaded_signal()
         self._move_pipe_to_device()
     
