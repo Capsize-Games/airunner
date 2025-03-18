@@ -19,7 +19,7 @@ from transformers import SpeechT5HifiGan
 
 from airunner.handlers.tts.tts_handler import TTSHandler
 from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
-from airunner.utils.clear_memory import clear_memory
+from airunner.utils.memory.clear_memory import clear_memory
 
 
 class SpeechT5Handler(TTSHandler):
