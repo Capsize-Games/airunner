@@ -2,6 +2,7 @@ import random
 import os
 import torch
 from typing import Optional, Dict, List, Union
+import transformers
 from peft import PeftModel
 
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
@@ -13,7 +14,7 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import MAX_SEED
-from airunner.utils.clear_memory import clear_memory
+from airunner.utils.memory.clear_memory import clear_memory
 from airunner.handlers.llm.agent.agents import (
     MistralAgentQObject, 
     OpenRouterQObject
