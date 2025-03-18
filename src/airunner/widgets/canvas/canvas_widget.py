@@ -32,6 +32,16 @@ class CanvasWidget(
     ]
 
     def __init__(self, *args, **kwargs):
+        self.signal_handlers = {
+            SignalCode.ENABLE_BRUSH_TOOL_SIGNAL: lambda _message: self.action_toggle_brush(True),
+            SignalCode.ENABLE_ERASER_TOOL_SIGNAL: lambda _message: self.action_toggle_eraser(True),
+            SignalCode.ENABLE_MOVE_TOOL_SIGNAL: lambda _message: self.action_toggle_active_grid_area(True),
+            SignalCode.ENABLE_SELECTION_TOOL_SIGNAL: lambda _message: self.action_toggle_select(True),
+            SignalCode.QUIT_APPLICATION: lambda _message: self.save_state(),
+            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_toggle_tool_signal,
+            SignalCode.TOGGLE_TOOL: self.on_toggle_tool_signal,
+            SignalCode.TOGGLE_GRID: self.on_toggle_grid_signal,
+        }
         super().__init__(*args, **kwargs)
         current_tool = self.current_tool
         show_grid = self.grid_settings.show_grid
@@ -58,18 +68,6 @@ class CanvasWidget(
         set_widget_state(self.ui.actionToggle_Eraser, current_tool is CanvasToolName.ERASER)
         set_widget_state(self.ui.actionToggle_Grid, show_grid is True)
         set_widget_state(self.ui.actionMask_toggle, self.drawing_pad_settings.mask_layer_enabled is True)
-
-        for item in (
-            (SignalCode.ENABLE_BRUSH_TOOL_SIGNAL, lambda _message: self.action_toggle_brush(True)),
-            (SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda _message: self.action_toggle_eraser(True)),
-            (SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True)),
-            (SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True)),
-            (SignalCode.QUIT_APPLICATION, lambda message: self.save_state()),
-            (SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, self.on_toggle_tool_signal),
-            (SignalCode.TOGGLE_TOOL, self.on_toggle_tool_signal),
-            (SignalCode.TOGGLE_GRID, self.on_toggle_grid_signal),
-        ):
-            self.register(item[0], item[1])
 
     @property
     def current_tool(self):

@@ -7,6 +7,12 @@ from airunner.workers.worker import Worker
 
 
 class MaskGeneratorWorker(Worker):
+    def __init__(self, *args, **kwargs):
+        self.signals = [
+            (SignalCode.GENERATE_MASK, self.on_generate_mask_signal)
+        ]
+        super().__init__(*args, **kwargs)
+
     @property
     def active_rect(self):
         rect = QRect(
@@ -17,9 +23,6 @@ class MaskGeneratorWorker(Worker):
         )
         rect.translate(-self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos)
         return rect
-
-    def register_signals(self):
-        self.register(SignalCode.GENERATE_MASK, self.on_generate_mask_signal)
 
     def on_generate_mask_signal(self, _message: dict):
         mask = self.generate_mask()

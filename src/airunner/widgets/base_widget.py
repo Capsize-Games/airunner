@@ -1,3 +1,4 @@
+from typing import Dict
 from abc import ABC, ABCMeta
 from abc import abstractmethod
 import os
@@ -33,6 +34,7 @@ class AbstractBaseWidget(
 
 class BaseWidget(AbstractBaseWidget):
     widget_class_ = None
+    signal_handlers: Dict = {}
     icons = ()
     ui = None
     qss_filename = None
@@ -62,9 +64,8 @@ class BaseWidget(AbstractBaseWidget):
             self.ui.setupUi(self)
             self.set_icons()
 
-        self.signal_handlers: dict = {}
-        self.services: dict = {}
-        self.worker_class_map: dict = {}
+        self.services: Dict = {}
+        self.worker_class_map: Dict = {}
     
     def initialize(self):
         """
@@ -77,7 +78,7 @@ class BaseWidget(AbstractBaseWidget):
 
     def register_signals(self):
         """
-        Set signal_handlers dict in order to register signals.
+        Set signal_handlers Dict in order to register signals.
 
         signal_handlers should be a dictionary of SignalCode enums and functions.
         Example:
