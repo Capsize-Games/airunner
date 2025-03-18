@@ -40,7 +40,7 @@
         <x>0</x>
         <y>0</y>
         <width>812</width>
-        <height>1153</height>
+        <height>1170</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -59,74 +59,6 @@
        <property name="verticalSpacing">
         <number>10</number>
        </property>
-       <item row="8" column="0">
-        <widget class="QGroupBox" name="system_instructions_groupbox">
-         <property name="title">
-          <string>System Instructions</string>
-         </property>
-         <property name="checkable">
-          <bool>true</bool>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
-          <item>
-           <widget class="QPlainTextEdit" name="system_instructions">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>150</height>
-             </size>
-            </property>
-            <property name="placeholderText">
-             <string>Instructions for the LLM</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_2">
-         <property name="title">
-          <string>Agent Type</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_8">
-          <item row="0" column="0">
-           <widget class="QComboBox" name="comboBox">
-            <item>
-             <property name="text">
-              <string>Chatbot</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Tool</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QCheckBox" name="use_weather_prompt">
-         <property name="text">
-          <string>Use Weather Prompt</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>Check this and set zipcode in User Settings to give agents access to local weather.</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="0">
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
@@ -177,6 +109,27 @@
          </layout>
         </widget>
        </item>
+       <item row="3" column="0">
+        <widget class="Line" name="line_2">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="Line" name="line">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Check this and set zipcode in User Settings to give agents access to local weather.</string>
+         </property>
+        </widget>
+       </item>
        <item row="2" column="0">
         <widget class="QGroupBox" name="groupBox_3">
          <property name="title">
@@ -223,7 +176,61 @@
          </layout>
         </widget>
        </item>
-       <item row="10" column="0">
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="title">
+          <string>Agent Type</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_8">
+          <item row="0" column="0">
+           <widget class="QComboBox" name="comboBox">
+            <item>
+             <property name="text">
+              <string>Chatbot</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Tool</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="11" column="0">
+        <widget class="QGroupBox" name="guardrails_groupbox">
+         <property name="title">
+          <string>Guardrails</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QPlainTextEdit" name="guardrails_prompt">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>150</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>The guardrails prompt is used to moderate results.</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="12" column="0">
         <widget class="QGroupBox" name="personality_groupbox">
          <property name="title">
           <string>Bot Personality</string>
@@ -261,7 +268,38 @@
          </layout>
         </widget>
        </item>
-       <item row="7" column="0">
+       <item row="10" column="0">
+        <widget class="QGroupBox" name="system_instructions_groupbox">
+         <property name="title">
+          <string>System Instructions</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QPlainTextEdit" name="system_instructions">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>150</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>Instructions for the LLM</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="9" column="0">
         <widget class="QGroupBox" name="names_groupbox">
          <property name="title">
           <string>Use names</string>
@@ -303,49 +341,22 @@
         </widget>
        </item>
        <item row="6" column="0">
-        <widget class="Line" name="line">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="9" column="0">
-        <widget class="QGroupBox" name="guardrails_groupbox">
-         <property name="title">
-          <string>Guardrails</string>
-         </property>
-         <property name="checkable">
-          <bool>true</bool>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
-          <item>
-           <widget class="QPlainTextEdit" name="guardrails_prompt">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>150</height>
-             </size>
-            </property>
-            <property name="placeholderText">
-             <string>The guardrails prompt is used to moderate results.</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="Line" name="line_2">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
-        </widget>
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QCheckBox" name="use_weather_prompt">
+           <property name="text">
+            <string>Use Weather Prompt</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="use_datetime">
+           <property name="text">
+            <string>Use Datetime</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </widget>
@@ -395,7 +406,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>51</x>
-     <y>490</y>
+     <y>500</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -426,8 +437,8 @@
    <slot>guardrails_prompt_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>214</x>
-     <y>836</y>
+     <x>226</x>
+     <y>871</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -475,7 +486,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>100</x>
-     <y>594</y>
+     <y>607</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -579,6 +590,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>use_datetime</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>toggle_use_datetime(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>466</x>
+     <y>435</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>306</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>botname_changed(QString)</slot>
@@ -598,5 +625,6 @@
   <slot>agent_type_changed(QString)</slot>
   <slot>browse_documents()</slot>
   <slot>use_weather_prompt_toggled(bool)</slot>
+  <slot>toggle_use_datetime(bool)</slot>
  </slots>
 </ui>

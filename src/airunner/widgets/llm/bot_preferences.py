@@ -32,6 +32,7 @@ class BotPreferencesWidget(BaseWidget):
             "guardrails_groupbox",
             "target_files",
             "use_weather_prompt",
+            "use_datetime",
         ]
         self.toggle_signals(self.ui, elements)
         self.ui.botname.setText(self.chatbot.botname)
@@ -43,6 +44,7 @@ class BotPreferencesWidget(BaseWidget):
         self.ui.guardrails_prompt.setPlainText(self.chatbot.guardrails_prompt)
         self.ui.guardrails_groupbox.setChecked(self.chatbot.use_guardrails)
         self.ui.use_weather_prompt.setChecked(self.chatbot.use_weather_prompt)
+        self.ui.use_datetime.setChecked(self.chatbot.use_datetime)
         self.load_documents()
         self.toggle_signals(self.ui, elements, False)
 
@@ -138,6 +140,10 @@ class BotPreferencesWidget(BaseWidget):
     @Slot(bool)
     def use_weather_prompt_toggled(self, val: bool):
         self.update_chatbot("use_weather_prompt", val)
+
+    @Slot(bool)
+    def toggle_use_datetime(self, val: bool):
+        self.update_chatbot("use_datetime", val)
 
     @Slot()
     def browse_documents(self):
