@@ -300,20 +300,11 @@ class SettingsMixin:
 
     @property
     def chatbot(self) -> Optional[Chatbot]:
-        chatbot = self._chatbot
         current_chatbot_id = self.llm_generator_settings.current_chatbot
         
-        if (
-            not chatbot 
-            and current_chatbot_id
-        ) or (
-            chatbot
-            and current_chatbot_id 
-            and chatbot.id != current_chatbot_id
-        ):
-            chatbot = Chatbot.objects.options(
-                joinedload(Chatbot.target_files),
-            ).get(current_chatbot_id)
+        chatbot = Chatbot.objects.options(
+            joinedload(Chatbot.target_files),
+        ).get(current_chatbot_id)
         
         if chatbot is None:
             chatbot = Chatbot.objects.options(
@@ -326,10 +317,8 @@ class SettingsMixin:
             chatbot = Chatbot.objects.options(
                 joinedload(Chatbot.target_files),
             ).first()
-        
-        self._chatbot = chatbot
 
-        return self._chatbot
+        return chatbot
 
     @property
     def user(self) -> Type[User]:
