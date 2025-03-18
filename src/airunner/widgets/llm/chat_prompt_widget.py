@@ -1,9 +1,9 @@
-import uuid
+import base64
 import json
 
 from typing import Optional
 
-from PySide6.QtCore import Slot, QTimer, QPropertyAnimation
+from PySide6.QtCore import Slot, QTimer, QPropertyAnimation, QByteArray
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
 
@@ -13,6 +13,9 @@ from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
+from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.data.models import SplitterSetting
 
 
 class ChatPromptWidget(BaseWidget):
@@ -43,7 +46,7 @@ class ChatPromptWidget(BaseWidget):
         self.ui.action.addItem("Image")
         self.ui.action.addItem("RAG")
         self.ui.action.addItem("Store Data")
-        action = LLMActionType[self.action]
+        action = self.action
         if action is LLMActionType.APPLICATION_COMMAND:
             self.ui.action.setCurrentIndex(0)
         elif action is LLMActionType.CHAT:
@@ -61,7 +64,10 @@ class ChatPromptWidget(BaseWidget):
         self.register(SignalCode.SET_CONVERSATION, self.on_set_conversation)
         self.register(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal)
         self.register(SignalCode.CHATBOT_CHANGED, self.on_chatbot_changed)
-        self.register(SignalCode.CONVERSATION_DELETED, self.on_conversation_deleted)
+        self.register(SignalCode.CONVERSATION_DELETED, self.on_delete_conversation)
+        self.register(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_clear_conversation)
+        self.register(SignalCode.LOAD_CONVERSATION, self.on_load_conversation)
+        self.register(SignalCode.QUIT_APPLICATION, self.save_state)
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
@@ -84,32 +90,46 @@ class ChatPromptWidget(BaseWidget):
     def conversation_id(self, val: Optional[int]):
         self._conversation_id = val
         if val:
-            self._conversation = Conversation.objects.filter_by(
+            self._conversation = Conversation.objects.filter_by_first(
                 id=val
-            ).first()
+            )
         else:
             self._conversation = None
 
-    def load_conversation(self):
-        conversation = Conversation.objects.order_by(
-            Conversation.id.desc()
-        ).first()
+    def on_load_conversation(self, data):
+        self.load_conversation(data["conversation_id"])
+    
+    def on_delete_conversation(self, data):
+        if self.conversation_id == data["conversation_id"] or self.conversation_id is None:
+            self._clear_conversation_widgets()
+        self.conversation_id = data["conversation_id"]            
+
+    def load_conversation(self, index: Optional[int] = None):
+        conversation = None
+        if index is not None:
+            conversation = Conversation.objects.get(index)
+        
+        if conversation is None:
+            conversation = Conversation.objects.order_by(
+                Conversation.id.desc()
+            ).first()
         if conversation is not None:
             self.conversation = conversation
             self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
                 "conversation_id": self.conversation_id
             })
-            self._set_conversation_widgets([{
-                "name": (
-                    self.user.username 
-                    if message["role"] == "user" 
-                    else self.chatbot.name
-                ),
-                "content": message["blocks"][0]["text"],
-                "is_bot": message["role"] == "assistant",
-                "id": id
-            } for id, message in enumerate(self.conversation.value or [])
-        ])
+            self._set_conversation_widgets([
+                {
+                    "name": (
+                        self.user.username
+                        if message["role"] == "user"
+                        else self.chatbot.name
+                    ),
+                    "content": message["blocks"][0]["text"],
+                    "is_bot": message["role"] == "assistant",
+                    "id": message_id
+                } for message_id, message in enumerate(self.conversation.value or [])
+            ])
 
     @Slot(str)
     def handle_token_signal(self, val: str):
@@ -132,26 +152,21 @@ class ChatPromptWidget(BaseWidget):
             self.enable_send_button()
 
     def on_chatbot_changed(self):
-        self._clear_conversation()
-
-    def on_conversation_deleted(self, data):
-        if self.conversation_id == data["conversation_id"]:
-            self.conversation_id = None
-            self._clear_conversation()
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
 
     def on_set_conversation(self, message):
         self._clear_conversation_widgets()
         if len(message["messages"]) > 0:
             conversation_id = message["messages"][0]["conversation_id"]
-            self.conversation = Conversation.objects.filter_by(
+            self.conversation = Conversation.objects.filter_by_first(
                 id=conversation_id
-            ).first()
+            )
         self._set_conversation_widgets([{
                 "name": message["additional_kwargs"]["name"],
                 "content": message["text"],
                 "is_bot": message["role"] == "assistant",
-                "id": id
-            } for id, message in enumerate(json.loads(self.conversation.value))
+                "id": index
+            } for index, message in enumerate(json.loads(self.conversation.value))
         ])
 
     def _set_conversation_widgets(self, messages):
@@ -160,8 +175,7 @@ class ChatPromptWidget(BaseWidget):
                 name=message["name"],
                 message=message["content"],
                 is_bot=message["is_bot"],
-                message_id=message["id"],
-                first_message=True
+                first_message=True,
             )
         QTimer.singleShot(100, self.scroll_to_bottom)
 
@@ -174,27 +188,21 @@ class ChatPromptWidget(BaseWidget):
         self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
 
     def on_add_bot_message_to_conversation(self, data: dict):
-        try:
-            name = data["name"]
-            message = data["message"]
-            is_first_message = data["is_first_message"]
-            is_end_of_message = data["is_end_of_message"]
-        except TypeError as e:
-            self.logger.error("Error parsing data: "+str(e))
-            self.enable_generate()
-            return
+        llm_response: LLMResponse = data.get("response", None)
+        if not llm_response:
+            raise ValueError("No LLMResponse object found in data")
 
-        if is_first_message:
+        if llm_response.is_first_message:
             self.stop_progress_bar()
 
         self.add_message_to_conversation(
-            name=name,
-            message=message,
-            is_bot=True, 
-            first_message=is_first_message
+            name=llm_response.name or self.chatbot.name,
+            message=llm_response.message,
+            is_bot=True,
+            first_message=llm_response.is_first_message
         )
 
-        if is_end_of_message:
+        if llm_response.is_end_of_message:
             self.enable_generate()
 
     def enable_generate(self):
@@ -203,20 +211,35 @@ class ChatPromptWidget(BaseWidget):
             self.do_generate(prompt_override=self.held_message)
             self.held_message = None
         self.enable_send_button()
+    
+    def save_state(self):
+        settings = SplitterSetting.objects.filter_by_first(name="chat_prompt_splitter")
+        state = self.ui.chat_prompt_splitter.saveState()
+        if not settings:
+            SplitterSetting.objects.create(
+                name="chat_prompt_splitter", splitter_settings=state
+            )
+        else:
+            SplitterSetting.objects.update(
+                settings.id, 
+                chat_prompt_splitter=state
+            )
+    
+    def restore_state(self):
+        settings = SplitterSetting.objects.filter_by_first(name="chat_prompt_splitter")
+        if settings:
+            self.ui.chat_prompt_splitter.restoreState(settings.splitter_settings)
 
     @Slot()
     def action_button_clicked_clear_conversation(self):
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
+    
+    def on_clear_conversation(self):
         self._clear_conversation()
 
     def _clear_conversation(self):
         self.conversation_history = []
         self._clear_conversation_widgets()
-
-    def _create_conversation(self):
-        self.conversation = self.create_conversation("cpw_" + uuid.uuid4().hex)
-        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
-            "conversation_id": self.conversation_id
-        })
 
     def _clear_conversation_widgets(self):
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
@@ -233,10 +256,10 @@ class ChatPromptWidget(BaseWidget):
         self.enable_send_button()
 
     @property
-    def action(self) -> str:
-        return self.llm_generator_settings.action
+    def action(self) -> LLMActionType:
+        return LLMActionType[self.llm_generator_settings.action]
 
-    def do_generate(self, image_override=None, prompt_override=None, callback=None, generator_name="causallm"):
+    def do_generate(self, prompt_override=None):
         prompt = self.prompt if (prompt_override is None or prompt_override == "") else prompt_override
         if prompt is None or prompt == "":
             self.logger.warning("Prompt is empty")
@@ -268,7 +291,7 @@ class ChatPromptWidget(BaseWidget):
                 "request_data": {
                     "action": self.action,
                     "prompt": prompt,
-                    "llm_request_data": None  # override as needed
+                    "llm_request": LLMRequest.from_default()
                 }
             }
         )
@@ -365,14 +388,6 @@ class ChatPromptWidget(BaseWidget):
 
     def insert_newline(self):
         self.ui.prompt.insertPlainText("\n")
-    
-    def describe_image(self, image, callback):
-        self.do_generate(
-            image_override=image, 
-            prompt_override="What is in this picture?",
-            callback=callback,
-            generator_name="visualqa"
-        )
 
     def add_message_to_conversation(
         self,
@@ -380,7 +395,7 @@ class ChatPromptWidget(BaseWidget):
         message,
         is_bot, 
         first_message=True,
-        message_id=None
+        _message_id=None
     ):
         message = strip_names_from_message(
             message, 

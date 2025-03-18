@@ -9,6 +9,7 @@ class DownloadThread(QThread):
 
     def __init__(self, models_to_download):
         super().__init__()
+        self.hf_downloader = None
         self.models_to_download = models_to_download
         self._stop_event = False
 
@@ -35,6 +36,7 @@ class DownloadThread(QThread):
                         self.hf_downloader.download_model(
                             requested_path=model["path"],
                             requested_file_name=filename,
+                            requested_file_path=model["path"],
                             requested_callback=self.progress_updated.emit
                         )
                 else:

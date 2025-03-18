@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>788</width>
-    <height>708</height>
+    <width>843</width>
+    <height>579</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -74,20 +74,262 @@
       <property name="bottomMargin">
        <number>0</number>
       </property>
-      <property name="spacing">
+      <property name="verticalSpacing">
        <number>0</number>
       </property>
-      <item row="0" column="0">
-       <widget class="CustomGraphicsView" name="canvas_container">
-        <property name="verticalScrollBarPolicy">
-         <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
+      <item row="1" column="0">
+       <widget class="QWidget" name="widget" native="true">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>70</height>
+         </size>
         </property>
-        <property name="horizontalScrollBarPolicy">
-         <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QWidget" name="widget" native="true">
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>56</height>
+            </size>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QPushButton" name="actionNew">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="document-new"/>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionImport">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="document-open"/>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionExport">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="document-save"/>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="Line" name="line">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionToggle_Active_Grid_Area">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../resources_light.qrc">
+                <normaloff>:/icons/light/object-selected-icon.svg</normaloff>:/icons/light/object-selected-icon.svg</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionToggle_Brush">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../resources_light.qrc">
+                <normaloff>:/icons/light/pencil-icon.svg</normaloff>:/icons/light/pencil-icon.svg</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionToggle_Eraser">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../resources_light.qrc">
+                <normaloff>:/icons/light/eraser-icon.svg</normaloff>:/icons/light/eraser-icon.svg</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionToggle_Grid">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../resources_light.qrc">
+                <normaloff>:/icons/light/frame-grid-icon.svg</normaloff>:/icons/light/frame-grid-icon.svg</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionMask_toggle">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../resources_light.qrc">
+                <normaloff>:/icons/light/layer-icon.svg</normaloff>:/icons/light/layer-icon.svg</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="Line" name="line_2">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionUndo">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="undo"/>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionRedo">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="redo"/>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>425</width>
+                <height>9</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="Line" name="line_3">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QSplitter" name="canvas_splitter">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
-        <property name="canvas_type" stdset="0">
-         <string>brush</string>
-        </property>
+        <widget class="StableDiffusionGeneratorForm" name="prompts" native="true"/>
+        <widget class="CustomGraphicsView" name="canvas_container">
+         <property name="verticalScrollBarPolicy">
+          <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="canvas_type" stdset="0">
+          <string>brush</string>
+         </property>
+        </widget>
+        <widget class="StablediffusionToolTabWidget" name="widget" native="true"/>
        </widget>
       </item>
      </layout>
@@ -101,12 +343,198 @@
    <extends>QGraphicsView</extends>
    <header>airunner/widgets/canvas/custom_view</header>
   </customwidget>
+  <customwidget>
+   <class>StableDiffusionGeneratorForm</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/stablediffusion/stablediffusion_generator_form</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>StablediffusionToolTabWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/widgets/stablediffusion/stablediffusion_tool_tab_widget</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
- <resources/>
- <connections/>
+ <resources>
+  <include location="../../../resources_dark.qrc"/>
+  <include location="../../../resources_light.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>actionUndo</sender>
+   <signal>clicked()</signal>
+   <receiver>canvas</receiver>
+   <slot>action_undo()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>297</x>
+     <y>35</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>299</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionRedo</sender>
+   <signal>clicked()</signal>
+   <receiver>canvas</receiver>
+   <slot>action_redo()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>346</x>
+     <y>33</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>473</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionMask_toggle</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>canvas</receiver>
+   <slot>action_toggle_mask(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>265</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>228</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionToggle_Eraser</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>canvas</receiver>
+   <slot>action_toggle_eraser(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>194</x>
+     <y>34</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>28</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionToggle_Brush</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>canvas</receiver>
+   <slot>action_toggle_brush(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>148</x>
+     <y>26</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>39</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionToggle_Active_Grid_Area</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>canvas</receiver>
+   <slot>action_toggle_active_grid_area(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>130</x>
+     <y>34</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>13</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExport</sender>
+   <signal>clicked()</signal>
+   <receiver>canvas</receiver>
+   <slot>action_export()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>86</x>
+     <y>36</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>51</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionImport</sender>
+   <signal>clicked()</signal>
+   <receiver>canvas</receiver>
+   <slot>action_import()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>49</x>
+     <y>35</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>109</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionNew</sender>
+   <signal>clicked()</signal>
+   <receiver>canvas</receiver>
+   <slot>action_new()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>18</x>
+     <y>34</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>158</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionToggle_Grid</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>canvas</receiver>
+   <slot>action_toggle_grid(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>231</x>
+     <y>32</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>255</x>
+     <y>-15</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
  <slots>
   <slot>toggle_controlnet(bool)</slot>
   <slot>toggle_drawing_pad(bool)</slot>
   <slot>toggle_outpaint(bool)</slot>
+  <slot>action_new()</slot>
+  <slot>action_import()</slot>
+  <slot>action_export()</slot>
+  <slot>action_redo()</slot>
+  <slot>action_undo()</slot>
+  <slot>action_toggle_brush(bool)</slot>
+  <slot>action_toggle_eraser(bool)</slot>
+  <slot>action_toggle_grid(bool)</slot>
+  <slot>action_toggle_active_grid_area(bool)</slot>
+  <slot>action_toggle_mask(bool)</slot>
  </slots>
 </ui>

@@ -1,3 +1,4 @@
+
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit, QApplication, QWidget
 from PySide6.QtGui import QFontMetrics
@@ -9,6 +10,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.message_ui import Ui_message
 from airunner.data.models import Conversation
 from airunner.data.session_manager import session_scope
+
 
 class AutoResizingTextEdit(QTextEdit):
     def __init__(self, *args, **kwargs):
@@ -44,7 +46,7 @@ class MessageWidget(BaseWidget):
         self.ui.delete_button.setVisible(False)
         self.ui.message_container.installEventFilter(self)
         self.set_cursor(Qt.CursorShape.ArrowCursor)
-    
+
     def on_delete_messages_after_id(self, data):
         message_id = data.get("message_id", None)
         if self.message_id > message_id:
@@ -127,8 +129,6 @@ class MessageWidget(BaseWidget):
                 Conversation.id == self.conversation_id
             ).first()
             messages = conversation.value
-            print("messages start delete", 0, self.message_id)
-            print(messages, conversation.value, self.conversation_id, conversation.key)
             if self.message_id == 0:
                 conversation.value = []
             else:

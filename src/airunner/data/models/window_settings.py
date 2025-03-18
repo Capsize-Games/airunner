@@ -1,6 +1,9 @@
-from sqlalchemy import Column, Integer, LargeBinary, Boolean
+from typing import Optional
+from sqlalchemy import Column, Integer, LargeBinary, Boolean, JSON
+from PySide6.QtCore import QByteArray
 
 from airunner.data.models.base import BaseModel
+import base64
 
 
 class WindowSettings(BaseModel):

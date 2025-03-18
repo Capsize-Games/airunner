@@ -1,3 +1,5 @@
+from typing import Optional
+
 from PIL.ImageQt import QImage
 
 from PySide6.QtCore import QRect, QPoint
@@ -18,11 +20,11 @@ class ActiveGridArea(DraggablePixmap):
         self._do_draw = True
         self._do_render_fill = False
         self._active_grid_settings_enabled = False
-        self._draggable_rect: QRect = None
-        self._border_pen: QPen = None
-        self._outer_border_pen: QPen = None
-        self._border_color: QColor = None
-        self._border_brush: QBrush = None
+        self._draggable_rect: Optional[QRect] = None
+        self._border_pen: Optional[QPen] = None
+        self._outer_border_pen: Optional[QPen] = None
+        self._border_color: Optional[QColor] = None
+        self._border_brush: Optional[QBrush] = None
 
         super().__init__(QPixmap())
         self.render_fill()
@@ -93,13 +95,13 @@ class ActiveGridArea(DraggablePixmap):
     def toggle_render_fill(self, _render_fill):
         self.update_selection_fill()
 
-    def change_fill_opacity(self, value):
+    def change_fill_opacity(self, _value):
         self.update_selection_fill()
 
     def update_selection_fill(self):
         self.pixmap.fill(self.get_fill_color())
 
-    def draw_border(self, painter: QPainter = None):
+    def draw_border(self, painter: QPainter = None) -> QPainter:
         if painter is None:
             painter = QPainter(self.pixmap)
 

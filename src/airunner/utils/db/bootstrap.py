@@ -18,6 +18,7 @@ from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_d
 from airunner.data.bootstrap.prompt_templates_bootstrap_data import prompt_templates_bootstrap_data
 from airunner.settings import SCHEDULER_CLASSES, DEFAULT_SHORTCUTS
 
+
 def set_default_ai_models():
     values = []
     for model in model_bootstrap_data:
@@ -27,17 +28,20 @@ def set_default_ai_models():
         values
     )
 
+
 def set_default_schedulers():
     op.bulk_insert(
         Schedulers.__table__,
         SCHEDULER_CLASSES
     )
 
+
 def set_default_shortcut_keys():
     op.bulk_insert(
         ShortcutKeys.__table__,
         DEFAULT_SHORTCUTS
     )
+
 
 def set_default_prompt_templates():
     values = []
@@ -48,6 +52,7 @@ def set_default_prompt_templates():
         values
     )
 
+
 def set_default_controlnet_models():
     values = []
     for template in controlnet_bootstrap_data:
@@ -57,6 +62,7 @@ def set_default_controlnet_models():
         values
     )
 
+
 def set_default_font_settings():
     for font_setting in font_settings_bootstrap_data:
         op.bulk_insert(
@@ -64,12 +70,14 @@ def set_default_font_settings():
             [font_setting]
         )
 
+
 def set_default_pipeline_values():
     for pipeline in pipeline_bootstrap_data:
         op.bulk_insert(
             PipelineModel.__table__,
             [pipeline]
         )
+
 
 def set_image_filter_settings():
     connection = op.get_bind()

@@ -10,7 +10,7 @@ from transformers.models.whisper.feature_extraction_whisper import WhisperFeatur
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.exceptions import NaNException
-from airunner.utils.clear_memory import clear_memory
+from airunner.utils.memory.clear_memory import clear_memory
 
 
 class WhisperHandler(BaseHandler):
@@ -25,7 +25,7 @@ class WhisperHandler(BaseHandler):
         self._model = None
         self._processor = None
         self._feature_extractor = None
-        self._fs = 16000
+        self._sampling_rate = 16000
 
     @property
     def dtype(self):
@@ -71,7 +71,7 @@ class WhisperHandler(BaseHandler):
             if transcription:
                 self._send_transcription(transcription)
 
-    def load(self, retry:bool = False):
+    def load(self, retry: bool = False):
         if self.stt_is_loading or self.stt_is_loaded:
             return
         self.logger.debug("Loading Whisper (text-to-speech)")
@@ -172,14 +172,23 @@ class WhisperHandler(BaseHandler):
         if torch.isnan(inputs).any():
             raise NaNException
 
-        # Move inputs to CPU and ensure they are in float32 before passing to _feature_extractor
+        # Move inputs to CPU and ensure they are in float32 before 
+        # passing to _feature_extractor
         inputs = inputs.cpu().to(torch.float32)
-        inputs = self._feature_extractor(inputs, sampling_rate=self._fs, return_tensors="pt")
+        inputs = self._feature_extractor(
+            inputs, 
+            sampling_rate=self._sampling_rate, 
+            return_tensors="pt"
+        )
 
         if torch.isnan(inputs.input_features).any():
             raise NaNException
 
-        inputs["input_features"] = inputs["input_features"].to(self.dtype).to(self.device)
+        inputs["input_features"] = inputs["input_features"].to(
+            self.dtype
+        ).to(
+            self.device
+        )
         if torch.isnan(inputs.input_features).any():
             raise NaNException
 

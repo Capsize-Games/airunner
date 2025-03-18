@@ -1,7 +1,6 @@
 from dataclasses import dataclass, asdict
 from typing import Optional, Dict
 from airunner.data.models import Chatbot, LLMGeneratorSettings
-from airunner.data.session_manager import session_scope
 
 
 @dataclass
@@ -55,6 +54,20 @@ class LLMRequest:
             "temperature": temperature
         })
 
+        """
+        Length penalty flag is only used in beam-based generation modes
+        so num_beams should be > 1 for length penalty to be used.
+        """
+        if self.num_beams == 1 and length_penalty != 0.0:
+            del data["length_penalty"]
+
+        """
+        early_stopping flag is only used in beam-based generation modes
+        so num_beams should be > 1 for early stopping to be used.
+        """
+        if self.num_beams == 1:
+            del data["early_stopping"]
+
         return data
     
     @classmethod
@@ -76,91 +89,78 @@ class LLMRequest:
         use_cache: bool,
     ) -> 'LLMRequest':
         return cls(
-            do_sample = do_sample,
-            early_stopping = early_stopping,
-            eta_cutoff = eta_cutoff,
-            length_penalty = length_penalty / 1000.0,
-            max_new_tokens = max_new_tokens,
-            min_length = min_length,
-            no_repeat_ngram_size = no_repeat_ngram_size,
-            num_beams = num_beams,
-            num_return_sequences = num_return_sequences,
-            repetition_penalty = repetition_penalty / 100.0,
-            temperature = temperature / 10000.0,
-            top_k = top_k,
-            top_p = top_p / 1000.0,
-            use_cache = use_cache,
+            do_sample=do_sample,
+            early_stopping=early_stopping,
+            eta_cutoff=eta_cutoff,
+            length_penalty=length_penalty / 1000.0,
+            max_new_tokens=max_new_tokens,
+            min_length=min_length,
+            no_repeat_ngram_size=no_repeat_ngram_size,
+            num_beams=num_beams,
+            num_return_sequences=num_return_sequences,
+            repetition_penalty=repetition_penalty / 100.0,
+            temperature=temperature / 10000.0,
+            top_k=top_k,
+            top_p=top_p / 1000.0,
+            use_cache=use_cache,
         )
         
-
     @classmethod
     def from_chatbot(
         cls, 
         chatbot_id: int = None
-    ) -> 'LLMRequest':
-        with session_scope() as session:
-            with session.begin():
-                query = session.query(
-                    Chatbot
-                )
-                if chatbot_id:
-                    query = query.filter(
-                        Chatbot.id == chatbot_id
-                    )
-                chatbot = query.first()
-                return cls.from_values(
-                    do_sample=chatbot.do_sample,
-                    early_stopping=chatbot.early_stopping,
-                    eta_cutoff=chatbot.eta_cutoff,
-                    length_penalty=chatbot.length_penalty,
-                    max_new_tokens=chatbot.max_new_tokens,
-                    min_length=chatbot.min_length,
-                    no_repeat_ngram_size=chatbot.ngram_size,
-                    num_beams=chatbot.num_beams,
-                    num_return_sequences=chatbot.num_return_sequences,
-                    repetition_penalty=chatbot.repetition_penalty,
-                    temperature=chatbot.temperature,
-                    top_k=chatbot.top_k,
-                    top_p=chatbot.top_p,
-                    use_cache=chatbot.use_cache
-                )
+    ) -> 'LLMRequest':   
+        if chatbot_id:
+            chatbot = Chatbot.objects.get(chatbot_id)
+        else:
+            chatbot = Chatbot.objects.first()
+        
+        return cls.from_values(
+            do_sample=chatbot.do_sample,
+            early_stopping=chatbot.early_stopping,
+            eta_cutoff=chatbot.eta_cutoff,
+            length_penalty=chatbot.length_penalty,
+            max_new_tokens=chatbot.max_new_tokens,
+            min_length=chatbot.min_length,
+            no_repeat_ngram_size=chatbot.ngram_size,
+            num_beams=chatbot.num_beams,
+            num_return_sequences=chatbot.num_return_sequences,
+            repetition_penalty=chatbot.repetition_penalty,
+            temperature=chatbot.temperature,
+            top_k=chatbot.top_k,
+            top_p=chatbot.top_p,
+            use_cache=chatbot.use_cache
+        )
 
     @classmethod
     def from_llm_settings(
         cls, 
         llm_settings_id: Optional[int] = None
     ) -> 'LLMRequest':
-        with session_scope() as session:
-            with session.begin():
-                query = llm_settings = session.query(
-                    LLMGeneratorSettings
-                )
-                if llm_settings_id:
-                    query = query.filter(
-                        LLMGeneratorSettings.id == llm_settings_id
-                    )
-                llm_settings = query.first()
-                if llm_settings.override_parameters:
-                    return cls.from_values(
-                        do_sample=llm_settings.do_sample,
-                        early_stopping=llm_settings.early_stopping,
-                        eta_cutoff=llm_settings.eta_cutoff,
-                        length_penalty=llm_settings.length_penalty,
-                        max_new_tokens=llm_settings.max_new_tokens,
-                        min_length=llm_settings.min_length,
-                        no_repeat_ngram_size=llm_settings.ngram_size,
-                        num_beams=llm_settings.num_beams,
-                        num_return_sequences=llm_settings.sequences,
-                        repetition_penalty=llm_settings.repetition_penalty,
-                        temperature=llm_settings.temperature,
-                        top_k=llm_settings.top_k,
-                        top_p=llm_settings.top_p,
-                        use_cache=llm_settings.use_cache
-                    )
-                else:
-                    return cls.from_chatbot(
-                        llm_settings.current_chatbot
-                    )
+        if llm_settings_id:
+            llm_settings = LLMGeneratorSettings.objects.get(llm_settings_id)
+        else:
+            llm_settings = LLMGeneratorSettings.objects.first()
+        
+        if llm_settings.override_parameters:
+            return cls.from_values(
+                do_sample=llm_settings.do_sample,
+                early_stopping=llm_settings.early_stopping,
+                eta_cutoff=llm_settings.eta_cutoff,
+                length_penalty=llm_settings.length_penalty,
+                max_new_tokens=llm_settings.max_new_tokens,
+                min_length=llm_settings.min_length,
+                no_repeat_ngram_size=llm_settings.ngram_size,
+                num_beams=llm_settings.num_beams,
+                num_return_sequences=llm_settings.sequences,
+                repetition_penalty=llm_settings.repetition_penalty,
+                temperature=llm_settings.temperature,
+                top_k=llm_settings.top_k,
+                top_p=llm_settings.top_p,
+                use_cache=llm_settings.use_cache
+            )
+        else:
+            return cls.from_chatbot(llm_settings.current_chatbot)
 
     @classmethod
     def from_default(cls) -> 'LLMRequest':

@@ -1,70 +1,67 @@
-"""Mistral Agent.
-
-Simple wrapper around AgentRunner + MistralAgentWorker.
-"""
-import os
 from typing import (
     Any,
     List,
     Optional,
     Union,
     Dict,
+    Type,
 )
-import uuid
 import datetime
-import platform
-from PySide6.QtCore import QObject
+from abc import abstractmethod
+
+from llama_cloud import MessageRole
 from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
-from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from llama_index.core.chat_engine.types import AgentChatResponse
-from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import RefreshSimpleChatEngine
 from llama_index.core.base.llms.types import ChatMessage
+from llama_index.core.memory import BaseMemory
+from llama_index.core.llms.llm import LLM
+
+from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import RefreshSimpleChatEngine
 from airunner.enums import LLMActionType, SignalCode
-from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models import Conversation, User
 from airunner.handlers.llm.agent.rag_mixin import RAGMixin
 from airunner.handlers.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 from airunner.handlers.llm.agent.tools.rag_engine_tool import RAGEngineTool
-from airunner.handlers.llm.agent.weather_mixin import WeatherMixin
-from airunner.handlers.llm.storage.chat_store.sqlite import SQLiteChatStore
+from airunner.handlers.llm.storage.chat_store.database import DatabaseChatStore
 from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuffer
-from llama_index.core.memory import BaseMemory
 from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
 from airunner.utils.strip_names_from_message import strip_names_from_message
-from airunner.settings import DB_URL
 from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.handlers.llm.llm_settings import LLMSettings
+from airunner.data.models import Tab
 
 
 DEFAULT_MAX_FUNCTION_CALLS = 5
 
 
-class MistralAgent(
-    RAGMixin,
-    WeatherMixin
+class BaseAgent(
+    RAGMixin
 ):
-    """QObject wrapper for Mistral Agent"""
     def __init__(
         self,
-        model: Any,
-        tokenizer: Any,
         default_tool_choice: Optional[Union[str, dict]] = None,
         max_function_calls: int = DEFAULT_MAX_FUNCTION_CALLS,
+        llm_settings: LLMSettings = LLMSettings(),
+        *args,
         **kwargs
     ) -> None:
         RAGMixin.__init__(self)
+        self.thread = None
+        self._chat_prompt: str = ""
+        self._chatbot = None
+        self.llm_settings: LLMSettings = llm_settings
+        self._current_tab: Optional[Tab] = None
         self.update_mood_after_n_turns = 3
         self.summarize_after_n_turns = 5
-        self.model = model
-        self.tokenizer = tokenizer
         self._streaming_stopping_criteria: Optional[ExternalConditionStoppingCriteria] = None
         self._do_interrupt: bool = False
         self.history: Optional[List[ChatMessage]] = []
-        self._llm: Optional[HuggingFaceLLM] = None
-        # self.news_scraper_worker: NewsScraperWorker = create_worker(NewsScraperWorker)
-        self._conversation_summaries: Optional[str] = None
+        self._llm: Optional[Type[LLM]] = None
         self._conversation: Optional[Conversation] = None
+        self._conversation_id: Optional[int] = None
+        self._user: Optional[User] = None
         self._chat_engine: Optional[RefreshSimpleChatEngine] = None
         self._mood_engine: Optional[RefreshSimpleChatEngine] = None
         self._summary_engine: Optional[RefreshSimpleChatEngine] = None
@@ -76,24 +73,47 @@ class MistralAgent(
         self._information_scraper_tool: Optional[ChatEngineTool] = None
         self._information_scraper_engine: Optional[RefreshSimpleChatEngine] = None
         self._rag_engine_tool: Optional[RAGEngineTool] = None
-        self._chat_store: Optional[SQLiteChatStore] = None
+        self._chat_store: Optional[DatabaseChatStore] = None
         self._chat_memory: Optional[ChatMemoryBuffer] = None
         self._current_action: LLMActionType = LLMActionType.NONE
         self._memory: Optional[BaseMemory] = None
-        self.load_rag()
+        # self.load_rag()
         self._react_tool_agent: Optional[ReActAgentTool] = None
         self.default_tool_choice: Optional[Union[str, dict]] = default_tool_choice
         self.max_function_calls: int = max_function_calls
         self._complete_response: str = ""
         self._store_user_tool: Optional[FunctionTool] = None
+        self.webpage_html: str = ""
         self.register(SignalCode.DELETE_MESSAGES_AFTER_ID, self.on_delete_messages_after_id)
-        super().__init__(**kwargs)
     
+    @property
+    def current_tab(self) -> Optional[Tab]:
+        if not self._current_tab:
+            self._current_tab = Tab.objects.filter_by_first(
+                section="center",
+                active=True
+            )
+        return self._current_tab
+
+    @current_tab.setter
+    def current_tab(self, value: Optional[Tab]):
+        self._current_tab = value
+
+    def on_web_browser_page_html(self, content: str):
+        self.webpage_html = content
+
+    def on_delete_messages_after_id(self):
+        conversation = self.conversation
+        if conversation:
+            messages = conversation.value
+            self.chat_memory.set(messages)
+            if self._chat_engine:
+                self._chat_engine.memory = self.chat_memory
+        
     @property
     def do_summarize_conversation(self) -> bool:
         messages = self.conversation.value or []
         total_messages = len(messages)
-        print("total messages", total_messages, self.summarize_after_n_turns)
         if (
             total_messages > self.summarize_after_n_turns and
             self.conversation.summary is None
@@ -103,13 +123,26 @@ class MistralAgent(
     
     @property
     def user(self) -> User:
-        user = User.objects.filter(
-            User.username == self.username
-        ).first()
-        if not user:
-            user = User()
-            user.save()
-        return user
+        if not self._user:
+            user = None
+            if self.conversation:
+                user = User.objects.get(
+                    self.conversation.user_id
+                )
+            if not user:
+                user = User.objects.filter_first(
+                    User.username == self.username
+                )
+            if not user:
+                user = User()
+                user.save()
+            self.user = user
+        return self._user
+    
+    @user.setter
+    def user(self, value: Optional[User]):
+        self._user = value
+        self._update_conversation("user_id", value.id)
 
     def _update_user(self, key: str, value: Any):
         setattr(self.user, key, value)
@@ -193,25 +226,21 @@ class MistralAgent(
         return self._streaming_stopping_criteria
 
     @property
-    def llm(self) -> HuggingFaceLLM:
-        if not self._llm:
-            self.logger.info("Loading HuggingFaceLLM")
-            self._llm = HuggingFaceLLM(
-                model=self.model, 
-                tokenizer=self.tokenizer,
-                streaming_stopping_criteria=self.streaming_stopping_criteria
-            )
-        return self._llm
+    def llm(self) -> LLM:
+        pass
 
     @property
     def chat_engine(self) -> RefreshSimpleChatEngine:
         if not self._chat_engine:
             self.logger.info("Loading RefreshSimpleChatEngine")
-            self._chat_engine = RefreshSimpleChatEngine.from_defaults(
-                system_prompt=self._system_prompt,
-                memory=self.chat_memory,
-                llm=self.llm
-            )
+            try:
+                self._chat_engine = RefreshSimpleChatEngine.from_defaults(
+                    system_prompt=self._system_prompt,
+                    memory=self.chat_memory,
+                    llm=self.llm
+                )
+            except Exception as e:
+                self.logger.error(f"Error loading chat engine: {str(e)}")
         return self._chat_engine
     
     @property
@@ -323,17 +352,17 @@ class MistralAgent(
         return self._rag_engine_tool
 
     @property
-    def do_interrupt(self):
+    def do_interrupt(self) -> bool:
         return self._do_interrupt
 
     @do_interrupt.setter
-    def do_interrupt(self, value):
+    def do_interrupt(self, value: bool):
         self._do_interrupt = value
     
     @property
     def bot_mood(self) -> str:
         mood = None
-        conversation = self._get_conversation()
+        conversation = self.conversation
         if conversation:
             mood = conversation.bot_mood
         return "neutral" if mood is None or mood == "" else mood
@@ -341,16 +370,49 @@ class MistralAgent(
     @property
     def conversation(self) -> Conversation:
         if not self._conversation:
-            self._conversation = self._get_conversation()
+            self.conversation = self._create_conversation()
         return self._conversation
     
-    def _set_conversation_by_id(self, conversation_id: int):
-        self._conversation = self._get_conversation(conversation_id=conversation_id)
+    @conversation.setter
+    def conversation(self, value: Optional[Conversation]):
+        self._conversation = value
+        if value and self.conversation_id != value.id:
+            self.chat_memory.chat_store_key = str(value.id)
+            self._conversation_id = value.id
+        self._user = None
+        self._chatbot = None
+    
+    def _create_conversation(self) -> Conversation:
+        conversation = None
+        if self.conversation_id:
+            self.logger.info(f"Loading conversation with ID: {self.conversation_id}")
+            conversation = Conversation.objects.get(self.conversation_id)
+        
+        if not conversation:
+            self.logger.info("No conversation found, looking for most recent")
+            conversation = Conversation.most_recent()
+        
+        if not conversation:
+            self.logger.info("Creating new conversation")
+            conversation = Conversation.create()
+            
+        return conversation
+    
+    @property
+    def conversation_id(self) -> int:
+        return self._conversation_id
+    
+    @conversation_id.setter
+    def conversation_id(self, value: int):
+        if value != self._conversation_id:
+            self._conversation_id = value
+            if self.conversation.id != self._conversation_id:
+                self.conversation = None
     
     def _update_conversation(self, key: str, value: Any):
-        if self._conversation:
-            setattr(self._conversation, key, value)
-            self._conversation.save()
+        if self.conversation:
+            setattr(self.conversation, key, value)
+            Conversation.objects.update(self.conversation.id, **{key: value})
 
     @bot_mood.setter
     def bot_mood(self, value: str):
@@ -401,65 +463,6 @@ class MistralAgent(
         return datetime.datetime.now().astimezone().tzname()
     
     @property
-    def _date_time_prompt(self) -> str:
-        return (
-            "Current Date / time information:\n"
-            f"- Date: {self.current_date}.\n"
-            f"- Time: {self.current_time}.\n"
-            f"- Timezone: {self.timezone}.\n"
-        )
-    
-    @property
-    def _operating_system_prompt(self) -> str:
-        return (
-            "Operating system information:\n"
-            f"- System: {platform.system()}\n"
-            f"- Release: {platform.release()}\n"
-            f"- Version: {platform.version()}\n"
-            f"- Machine: {platform.machine()}\n"
-            f"- Processor: {platform.processor()}\n"
-        )
-
-    @property
-    def _speakers_prompt(self) -> str:
-        metadata_prompt = None
-        if self.conversation:
-            data = self.conversation.user_data or []
-            if data is not None:
-                metadata_prompt = ""
-                for item in data:
-                    metadata_prompt += f"-- {item}\n"
-            if metadata_prompt:
-                metadata_prompt = f"- Metadata:\n{metadata_prompt}"
-        metadata_prompt = metadata_prompt or ""
-        return (
-            "User information:\n"
-            f"- Username: {self.username}\n"
-            f"- Location: {self.location_display_name}\n"
-            f"{metadata_prompt}"
-            
-            "Chatbot information:\n"
-            f"- Chatbot name: {self.botname}\n"
-            f"- Chatbot mood: {self.bot_mood}\n"
-            f"- Chatbot personality: {self.bot_personality}\n"
-        )
-    
-    @property
-    def personality_prompt(self) -> str:
-        return (
-            f"{self.botname}'s personality: {self.chatbot.bot_personality}\n"
-            if self.chatbot.use_personality 
-            else ""
-        )
-    
-    @property
-    def mood_prompt(self) -> str:
-        return (
-            "You are a living being, one that has feelings, emotions, a personality with needs and desires.\n"
-            f"{self.botname}'s current mood: {self.bot_mood}\n"
-        ) if self.chatbot.use_mood else ""
-    
-    @property
     def _information_scraper_prompt(self) -> str:
         prompt = (
             "You are an information scraper. You will examine a given text and extract relevant information from it.\n"
@@ -503,87 +506,8 @@ class MistralAgent(
         return prompt
     
     @property
-    def _conversation_summary_prompt(self) -> str:
-        return (
-            f"- Conversation summary:\n{self.conversation.summary}\n"
-            if self.conversation and self.conversation.summary else ""
-        )
-        
-    @property
-    def conversation_summaries(self) -> str:
-        summaries = ""
-        conversations = Conversation.objects.order_by(
-            Conversation.id.desc()
-        )[:5]
-        conversations = list(conversations)
-        conversations = sorted(conversations, key=lambda x: x.id, reverse=True)
-        for conversation in conversations:
-            if conversation.summary:
-                summaries += f"- {conversation.summary}\n"
-        if summaries != "":
-            summaries = f"Recent conversation summaries:\n{summaries}"
-        return summaries
-
-    @property
     def _system_prompt(self) -> str:
-        system_instructions = ""
-        guardrails = ""
-        if (
-            self.chatbot.use_system_instructions and
-            self.chatbot.system_instructions and
-            self.chatbot.system_instructions != ""
-        ):
-            system_instructions = f"Always follow these instructions:\n{self.chatbot.system_instructions}\n"
-        if self.chatbot.use_guardrails and self.chatbot.guardrails_prompt and self.chatbot.guardrails_prompt != "":
-            guardrails = f"Always follow these guardrails:\n{self.chatbot.guardrails_prompt}\n"
-        backstory_prompt = ""
-        if self.chatbot.use_backstory and self.chatbot.backstory and self.chatbot.backstory != "":
-            backstory_prompt = (
-                "------\n"
-                f"**Here is {self.botname}'s backstory:**\n"
-                f"{self.chatbot.backstory}\n"
-                "------\n"
-            )
-        prompt = (
-            f"Your name is {self.botname}.\n"
-            f"- The user ({self.username}) is having a conversation with the assistant ({self.botname}).\n"
-            "**Here are the rules that you must always remember:**\n"
-            "- You will ONLY generate dialogue, nothing more.\n"
-            "- Only generate responses in pure dialogue form without including any actions, descriptions or stage "
-            "directions in parentheses. Only return spoken words.\n"
-            "- Do not generate redundant dialogue. Examine the conversation and context close and keep responses "
-            "interesting and creative.\n"
-            "- Do not format the response with the character's name or any other text. Only return the dialogue.\n"
-            f"- As {self.botname}, you will avoid repeating previous dialogue.\n"
-            f"- {self.botname} and {self.username} are both humans. They are not AI or bots.\n"
-            f"- As {self.botname}, you will always respond in a way that is consistent with {self.botname}'s emotions, "
-            f"personality, and the context of the conversation.\n"
-            f"- As {self.botname}, you will respond emotionally, persuasively, and realistically.\n"
-            f"- As {self.botname}, you will not ask how you they can provide assistance, or how they can help.\n"
-            f"- As {self.botname}, you must respond and talk like a real human user.\n"
-            f"- As {self.botname}, you can ask questions, make statements, and provide information.\n"
-            f"- As {self.botname}, you should respond in character with emotionally charged responses that are consistent with your personality and mood.\n"
-            f"{backstory_prompt}"
-            f"{system_instructions}"
-            f"{guardrails}"
-            f"{self.conversation_summaries}"
-            "------\n"
-            "**Here is more context that you can use to generate a response:**\n"
-            f"{self.personality_prompt}"
-            f"{self.mood_prompt}"
-            f"{self._date_time_prompt}"
-            f"{self._operating_system_prompt}"
-            f"{self._speakers_prompt}"
-            f"{self._weather_prompt}"
-            f"{self._conversation_summary_prompt}"
-            f"------\n"
-            "**More information about the current conversation:**\n"
-            f"The conversation is between user ({self.username}) and assistant ({self.botname}).\n"
-            f"The conversation started on {self.conversation.timestamp}."
-        )
-        prompt = prompt.replace("{{ username }}", self.username)
-        prompt = prompt.replace("{{ botname }}", self.botname)
-        return prompt
+        return self.build_system_prompt()
     
     @property
     def _update_user_data_prompt(self) -> str:
@@ -651,26 +575,14 @@ class MistralAgent(
         return prompt
     
     @property
-    def chat_store(self) -> SQLiteChatStore:
+    def chat_store(self) -> DatabaseChatStore:
         if not self._chat_store:
-            self._chat_store = SQLiteChatStore.from_uri(DB_URL)
+            self._chat_store = DatabaseChatStore()
         return self._chat_store
 
-    _conversation_key: Optional[str] = None
-
-    @property
-    def chat_store_key(self) -> str:
-        if not self._conversation_key:
-            key = "agnt_" + uuid.uuid4().hex
-            latest_conversation = self.create_conversation(key)
-            print("GOT LATEST CONVERSATION", latest_conversation)
-            if latest_conversation:
-                self._conversation_key = latest_conversation.key
-        return self._conversation_key
-    
-    @chat_store_key.setter
-    def chat_store_key(self, value: str):
-        self._conversation_key = value
+    @chat_store.setter
+    def chat_store(self, value: Optional[DatabaseChatStore]):
+        self._chat_store = value
 
     @property
     def chat_memory(self) -> ChatMemoryBuffer:
@@ -679,16 +591,25 @@ class MistralAgent(
             self._chat_memory = ChatMemoryBuffer.from_defaults(
                 token_limit=3000,
                 chat_store=self.chat_store,
-                chat_store_key=self.chat_store_key
+                chat_store_key=str(self.conversation.id)
             )
         return self._chat_memory
 
+    @chat_memory.setter
+    def chat_memory(self, value: Optional[ChatMemoryBuffer]):
+        self._chat_memory = value
+
+    @abstractmethod
+    def build_system_prompt(self) -> str:
+        pass
+
+    def on_load_conversation(self, data: Optional[Dict] = None):
+        data = data or {}
+        conversation_id = data.get("conversation_id", None)
+        self.conversation = Conversation.objects.get(conversation_id)
+
     def unload(self):
         self.unload_rag()
-        del self.model
-        del self.tokenizer
-        self.model = None
-        self.tokenizer = None
         self.thread = None
         del self._chat_engine
         del self._chat_engine_tool
@@ -703,28 +624,34 @@ class MistralAgent(
         self.reload_rag()
         self._rag_engine_tool = None
 
+    def on_conversation_deleted(self, data: Optional[Dict] = None):
+        data = data or {}
+        conversation_id = data.get("conversation_id", None)
+        if conversation_id == self.conversation_id or self.conversation_id is None:
+            self.conversation = None
+            self.conversation_id = None
+            self.reset_memory()
+
     def clear_history(self, data: Optional[Dict] = None):
         data = data or {}
-        conversation_id = data.get("conversation_id")
-        self._set_conversation_by_id(conversation_id)
-        if self._chat_memory and self.conversation:
-            self.chat_store_key = self.conversation.key
-            self._chat_memory.chat_store_key = self.conversation.key
-            messages = self.chat_store.get_messages(self.conversation.key)
-            if messages:
-                self._chat_memory.set(messages)
-            if self._chat_engine:
-                self._chat_engine.memory = self._chat_memory
+        conversation_id = data.get("conversation_id", None)
+        
+        self.conversation_id = conversation_id
+
+        if not conversation_id:
+            self.conversation = Conversation.create()
+        
+        self.reset_memory()
+    
+    def reset_memory(self):
+        self.chat_memory = None
+        self.chat_store = None
+        messages = self.chat_store.get_messages(key=str(self.conversation.id))
+        self.chat_memory.set(messages)
+        self.chat_engine.memory = self.chat_memory
+        self.react_tool_agent.memory = self.chat_memory
         self.reload_rag_engine()
     
-    def on_delete_messages_after_id(self):
-        conversation = self._get_conversation()
-        if conversation:
-            messages = conversation.value
-            self._chat_memory.set(messages)
-            if self._chat_engine:
-                self._chat_engine.memory = self._chat_memory
-
     def _update_system_prompt(
         self, 
         system_prompt: Optional[str] = None,
@@ -741,9 +668,11 @@ class MistralAgent(
         rag_system_prompt: Optional[str] = None,
         llm_request: Optional[LLMRequest] = None
     ) -> AgentChatResponse:
+        self._chat_prompt = message
         self._complete_response = ""
         self.do_interrupt = False
         message = f"{self.username}: {message}"
+        self._update_memory(action)
         kwargs = {
             "input": f"{message}",
             "chat_history": self._memory.get_all() if self._memory else None,
@@ -755,6 +684,7 @@ class MistralAgent(
 
         if self.print_llm_system_prompt:
             self.logger.info(self._system_prompt)
+            self.logger.info(llm_request.to_dict())
 
         self._update_system_prompt(system_prompt, rag_system_prompt)
 
@@ -813,35 +743,28 @@ class MistralAgent(
             self._strip_previous_messages_from_conversation()
             self.llm.llm_request = kwargs.get("llm_request", None)
             self._perform_tool_call("chat_engine_tool", **kwargs)
-
-    def _get_conversation(self, conversation_id: Optional[int] = None) -> Optional[Conversation]:
-        if conversation_id:
-            return Conversation.objects.filter_by(id=conversation_id).first()
-        return Conversation.objects.filter(
-            Conversation.key == self.chat_store_key
-        ).first()
     
     def _strip_previous_messages_from_conversation(self):
         """
         Strips the previous messages from the conversation.
         """
-        conversation = self._get_conversation()
+        conversation = self.conversation
         if conversation:
             conversation.value = conversation.value[:-2]
             conversation.save()
     
     def _update_memory(self, action: LLMActionType):
         if action is LLMActionType.CHAT:
-            memory = self.chat_engine._memory
+            memory = self.chat_engine.memory
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            memory = self.rag_engine._memory
+            memory = self.rag_engine.memory
         else:
-            memory = self.react_tool_agent.chat_engine._memory
+            memory = self.react_tool_agent.chat_engine.memory
         self._memory = memory
 
     def _update_mood(self):
         self.logger.info("Attempting to update mood")
-        conversation = self._get_conversation()
+        conversation = self.conversation
         if not conversation or not conversation.value or len(conversation.value) == 0:
             self.logger.info("No conversation found")
             return
@@ -878,7 +801,6 @@ class MistralAgent(
             do_not_display=True, 
             **kwargs
         )
-        chat_history = chat_history[:-2]
         self.logger.info(f"Updated mood: {response.content}")
         conversation.bot_mood = response.content
         conversation.value = conversation.value[:-2]
@@ -888,7 +810,7 @@ class MistralAgent(
     
     def _update_user_data(self):
         self.logger.info("Attempting to update user preferences")
-        conversation = self._get_conversation()
+        conversation = self.conversation
         self.logger.info("Updating user preferences")
         chat_history = self._memory.get_all() if self._memory else None
         if not chat_history:
@@ -916,7 +838,7 @@ class MistralAgent(
     
     def _summarize_conversation(self):
         self.logger.info("Summarizing conversation")
-        conversation = self._get_conversation()
+        conversation = self.conversation
         if not conversation or not conversation.value or len(conversation.value) == 0:
             self.logger.info("No conversation found")
             return
@@ -947,32 +869,6 @@ class MistralAgent(
             input=message,
             chat_history=self._memory.get_all() if self._memory else None
         )
-            # conversation = self._get_conversation()
-            # if not conversation or not conversation.value or len(conversation.value) == 0:
-            #     self.logger.info("No conversation found")
-            #     return
-            # chat_history = self._memory.get_all() if self._memory else None
-            # if not chat_history:
-            #     messages = conversation.value
-            #     chat_history = [
-            #         ChatMessage(
-            #             role=message["role"],
-            #             blocks=message["blocks"],
-            #         ) for message in messages
-            #     ]
-                
-            # response = self.information_scraper_tool.call(
-            #     do_not_display=True,
-            #     input="Scrape information from this conversation",
-            #     chat_history=chat_history
-            # )
-            # chat_history = chat_history[:-2]
-            # self.logger.info(f"Updated summary: {response.content}")
-            # conversation.summary = response.content
-            # conversation.value = conversation.value[:-2]
-            # self.logger.info(f"Saving conversation with summary: {response.content}")
-            # session.add(conversation)
-            # session.commit()
 
     def save_chat_history(self):
         pass
@@ -982,41 +878,21 @@ class MistralAgent(
     
     def do_interrupt_process(self):
         if self.do_interrupt:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                dict(
-                    message="",
-                    is_first_message=False,
-                    is_end_of_message=False,
-                    name=self.botname,
-                    action=LLMActionType.CHAT
-                )
-            )
+            self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
+                "response": LLMResponse(name=self.botname,)
+            })
         return self.do_interrupt
     
     def handle_response(self, response, is_first_message=False, is_last_message=False, do_not_display=False):
         if response != self._complete_response and not do_not_display:
             response = strip_names_from_message(response, self.username, self.botname)
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {
-                    "message": response,
-                    "is_first_message": is_first_message,
-                    "is_end_of_message": is_last_message,
-                    "name": self.botname,
-                    "action": LLMActionType.CHAT
-                }
-            )
+            self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
+                "response": LLMResponse(
+                    message=response,
+                    is_first_message=is_first_message,
+                    is_end_of_message=is_last_message,
+                    name=self.botname,
+                )
+            })
         self._complete_response += response
 
-
-class MistralAgentQObject(
-    QObject,
-    MediatorMixin,
-    SettingsMixin,
-    MistralAgent
-):
-    def __init__(self, *args, **kwargs):
-        MediatorMixin.__init__(self)
-        MistralAgent.__init__(self, *args, **kwargs)
-        super().__init__(*args, **kwargs)

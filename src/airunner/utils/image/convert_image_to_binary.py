@@ -1,7 +1,9 @@
+from typing import Optional
 import io
 from PIL import Image
 
-def convert_image_to_binary(image: Image) -> bytes:
+
+def convert_image_to_binary(image: Image) -> Optional[bytes]:
     if image is None:
         raise ValueError("Image is None")
     img_byte_arr = io.BytesIO()

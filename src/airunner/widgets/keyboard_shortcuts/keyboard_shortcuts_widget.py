@@ -1,3 +1,4 @@
+
 from PySide6.QtCore import Qt
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QWidget
@@ -69,15 +70,13 @@ class KeyboardShortcutsWidget(BaseWidget):
             shortcut_key.key = event.key()
             shortcut_key.modifiers = event.modifiers().value
 
-            
             shortcut_key.save()
-
 
             # clear existing key if it exists
             existing_keys = ShortcutKeys.objects.filter(
                 ShortcutKeys.text == shortcut_key.text,
                 ShortcutKeys.id != shortcut_key.id
-            ).all()
+            )
             for existing_key in existing_keys:
                 existing_key.text = ""
                 existing_key.key = 0
@@ -91,12 +90,12 @@ class KeyboardShortcutsWidget(BaseWidget):
                     widget.line_edit.setText("")
 
             line_edit.setText(shortcut_key.text)
-            
 
             self.pressed_keys.clear()
             self.emit_signal(SignalCode.KEYBOARD_SHORTCUTS_UPDATED)
 
-    def get_key_text(self, event):
+    @staticmethod
+    def get_key_text(event):
         key_sequence = QtGui.QKeySequence(event.key() | event.modifiers().value)
         return key_sequence.toString(QtGui.QKeySequence.SequenceFormat.NativeText)
 
@@ -111,7 +110,6 @@ class KeyboardShortcutsWidget(BaseWidget):
                 "key": v.key,
                 "modifiers": ",".join(v.modifiers)  # Convert list to comma-separated string
             })
-        
 
     def clear_shortcut_setting(self, key=""):
         for index, v in enumerate(self.shortcut_keys):

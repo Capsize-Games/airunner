@@ -12,8 +12,8 @@ class LoadingWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        HERE = os.path.dirname(os.path.abspath(__file__))
-        movie = QMovie(os.path.join(HERE, "../../icons/dark/Spinner-1s-200px.gif"))
+        here = os.path.dirname(os.path.abspath(__file__))
+        movie = QMovie(os.path.join(here, "../../icons/dark/Spinner-1s-200px.gif"))
         movie.setScaledSize(QSize(64, 64))  # Resize the GIF
         self.ui.label.setMovie(movie)  # Set the QMovie object to the label
         movie.start()  # Start the animation

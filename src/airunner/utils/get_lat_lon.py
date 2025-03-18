@@ -1,11 +1,11 @@
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Any
 import requests
 
 
 def get_lat_lon(
     zipcode: str, 
     country_code: str = "US"
-) -> Optional[Tuple[str, str, str]]:
+) -> Optional[Tuple[float, float, Any]]:
     url = f"https://nominatim.openstreetmap.org/search?postalcode={zipcode}&country={country_code}&format=json"
     payload = {}
     headers = {

@@ -10,7 +10,7 @@ Do not change the order of the imports.
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
-from airunner.data.models import WindowSettings
+from airunner.data.models import WindowSettings, SplitterSetting
 import os
 import argparse
 base_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
@@ -42,9 +42,9 @@ from airunner.data.models import ApplicationSettings
 
 
 def setup_database():
-    base_path = Path(os.path.dirname(os.path.realpath(__file__)))
-    alembic_file = base_path / "alembic.ini"
-    alembic_dir = base_path / "alembic"
+    base = Path(os.path.dirname(os.path.realpath(__file__)))
+    alembic_file = base / "alembic.ini"
+    alembic_dir = base / "alembic"
     alembic_cfg = Config(alembic_file)
     alembic_cfg.set_main_option("script_location", str(alembic_dir))
     command.upgrade(alembic_cfg, "head")
@@ -64,6 +64,11 @@ def main():
 
     if args.clear_window_settings:
         WindowSettings.objects.delete_all()
+        for splitter_settings in SplitterSetting.objects.all():
+            SplitterSetting.objects.update(
+                splitter_settings.id,
+                splitter_settings=None
+            )
     
     if args.print_llm_system_prompt:
         os.environ["AI_RUNNER_PRINT_LLM_SYSTEM_PROMPT"] = "1"

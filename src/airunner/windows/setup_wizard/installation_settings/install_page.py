@@ -358,14 +358,15 @@ class InstallWorker(
         )
         self.download_finished()
 
-    def finalize_installation(self, *args):
+    def finalize_installation(self, *_args):
         self.parent.on_set_downloading_status_label({
             "label": "Installation complete."
         })
         self.parent.update_progress_bar()
         self.parent.parent.show_final_page()
 
-    def update_progress(self, current, total):
+    @staticmethod
+    def update_progress(current, total):
         print("update progress", current, total)
 
     @Slot()
@@ -443,12 +444,12 @@ class InstallWorker(
             self.current_step = 7
             self.download_stt()
         elif self.current_step == 7:
-             self.hf_downloader.download_model(
-                 requested_path="",
-                 requested_file_name="",
-                 requested_file_path="",
-                 requested_callback=self.finalize_installation
-             )
+            self.hf_downloader.download_model(
+                requested_path="",
+                requested_file_name="",
+                requested_file_path="",
+                requested_callback=self.finalize_installation
+            )
 
 
 class InstallPage(BaseWizard):
@@ -473,7 +474,7 @@ class InstallPage(BaseWizard):
         controlnet_model_versions = ControlnetModel.objects.distinct(ControlnetModel.version).all()
         controlnet_version_count = len(controlnet_model_versions)
 
-        llm_model_count_query = AIModels.objects.filter(AIModels.category == 'llm').all()
+        llm_model_count_query = AIModels.objects.filter_by(category="llm")
         llm_model_count = len(llm_model_count_query)
 
         self.total_steps += controlnet_model_count * controlnet_version_count

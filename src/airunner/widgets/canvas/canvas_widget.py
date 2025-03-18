@@ -1,11 +1,14 @@
 from typing import Optional
 
 from PySide6.QtCore import Qt, QPoint, QTimer
+from PySide6.QtCore import Slot
 
-from airunner.cursors.circle_brush import CircleCursor
+from airunner.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
+from airunner.utils.set_widget_state import set_widget_state
+from airunner.data.models import SplitterSetting
 
 
 class CanvasWidget(
@@ -20,9 +23,19 @@ class CanvasWidget(
     - Handles the active grid area.
     """
     widget_class_ = Ui_canvas
+    icons = [
+        ("object-selected-icon", "actionToggle_Active_Grid_Area"),
+        ("pencil-icon", "actionToggle_Brush"),
+        ("eraser-icon", "actionToggle_Eraser"),
+        ("frame-grid-icon", "actionToggle_Grid"),
+        ("layer-icon", "actionMask_toggle"),
+    ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        current_tool = self.current_tool
+        show_grid = self.grid_settings.show_grid
+
         self._startPos = QPoint(0, 0)
         self.images = {}
         self.active_grid_area_pivot_point = QPoint(0, 0)
@@ -35,6 +48,32 @@ class CanvasWidget(
         self.signal_handlers = {
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
         }
+
+        self.ui.actionToggle_Grid.blockSignals(True)
+        self.ui.actionToggle_Grid.setChecked(show_grid)
+        self.ui.actionToggle_Grid.blockSignals(False)
+
+        set_widget_state(self.ui.actionToggle_Active_Grid_Area, current_tool is CanvasToolName.ACTIVE_GRID_AREA)
+        set_widget_state(self.ui.actionToggle_Brush, current_tool is CanvasToolName.BRUSH)
+        set_widget_state(self.ui.actionToggle_Eraser, current_tool is CanvasToolName.ERASER)
+        set_widget_state(self.ui.actionToggle_Grid, show_grid is True)
+        set_widget_state(self.ui.actionMask_toggle, self.drawing_pad_settings.mask_layer_enabled is True)
+
+        for item in (
+            (SignalCode.ENABLE_BRUSH_TOOL_SIGNAL, lambda _message: self.action_toggle_brush(True)),
+            (SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda _message: self.action_toggle_eraser(True)),
+            (SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True)),
+            (SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True)),
+            (SignalCode.QUIT_APPLICATION, lambda message: self.save_state()),
+            (SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, self.on_toggle_tool_signal),
+            (SignalCode.TOGGLE_TOOL, self.on_toggle_tool_signal),
+            (SignalCode.TOGGLE_GRID, self.on_toggle_grid_signal),
+        ):
+            self.register(item[0], item[1])
+
+    @property
+    def current_tool(self):
+        return CanvasToolName(self.application_settings.current_tool)
 
     @property
     def image_pivot_point(self):
@@ -56,33 +95,122 @@ class CanvasWidget(
         self.update_application_settings("pivot_point_x", value.x())
         self.update_application_settings("pivot_point_y", value.y())
 
+    @Slot()
+    def action_new(self):
+        self.emit_signal(SignalCode.CANVAS_CLEAR)
+
+    @Slot()
+    def action_import(self):
+        self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
+
+    @Slot()
+    def action_export(self):
+        self.emit_signal(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
+
+    @Slot()
+    def action_undo(self):
+        self.emit_signal(SignalCode.UNDO_SIGNAL)
+
+    @Slot()
+    def action_redo(self):
+        self.emit_signal(SignalCode.REDO_SIGNAL)
+
+    @Slot(bool)
+    def action_toggle_grid(self, val: bool):
+        self.update_grid_settings("show_grid", val)
+
+    @Slot(bool)
+    def action_toggle_brush(self, val: bool):
+        self.emit_signal(SignalCode.TOGGLE_TOOL, {
+            "tool": CanvasToolName.BRUSH,
+            "active": val
+        })
+
+    @Slot(bool)
+    def action_toggle_eraser(self, val: bool):
+        self.emit_signal(SignalCode.TOGGLE_TOOL, {
+            "tool": CanvasToolName.ERASER,
+            "active": val
+        })
+
+    @Slot(bool)
+    def action_toggle_mask(self, val: bool):
+        self.drawing_pad_settings.mask_layer_enabled = val
+
+    @Slot(bool)
+    def action_toggle_active_grid_area(self, val: bool):
+        self.emit_signal(SignalCode.TOGGLE_TOOL, {
+            "tool": CanvasToolName.ACTIVE_GRID_AREA,
+            "active": val
+        })
+
+    @Slot(bool)
+    def action_toggle_select(self, val: bool):
+        self.emit_signal(SignalCode.TOGGLE_TOOL, {
+            "tool": CanvasToolName.SELECTION,
+            "active": val
+        })
+
+    def on_toggle_tool_signal(self, message: dict):
+        tool = message.get("tool", None)
+        active = message.get("active", False)
+        self._update_action_buttons(tool, active)
+        self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
+    
+    def on_toggle_grid_signal(self, message: dict):
+        self.ui.actionToggle_Grid.setChecked(message.get("show_grid", True))
+    
+    def _update_action_buttons(self, tool, active):
+        self.ui.actionToggle_Active_Grid_Area.setChecked(tool is CanvasToolName.ACTIVE_GRID_AREA and active)
+        self.ui.actionToggle_Brush.setChecked(tool is CanvasToolName.BRUSH and active)
+        self.ui.actionToggle_Eraser.setChecked(tool is CanvasToolName.ERASER and active)
+        self.ui.actionToggle_Grid.setChecked(self.grid_settings.show_grid)
+    
+    def showEvent(self, event):
+        super().showEvent(event)
+        QTimer.singleShot(100, lambda: self.do_draw(force_draw=True))
+
+    def save_state(self):
+        settings = SplitterSetting.objects.filter_by_first(name="canvas_splitter")
+        if not settings:
+            SplitterSetting.objects.create(
+                name="canvas_splitter",
+                splitter_settings=self.ui.canvas_splitter.saveState()
+            )
+        else:
+            SplitterSetting.objects.update(
+                settings.id,
+                splitter_settings=self.ui.canvas_splitter.saveState()
+            )
+    
+    def restore_state(self):
+        settings = SplitterSetting.objects.filter_by_first(name="canvas_splitter")
+        if settings:
+            self.ui.canvas_splitter.restoreState(settings.splitter_settings)
+
     def on_canvas_update_cursor_signal(self, message: dict):
         event = message.get("event", None)
-        if self.current_tool in (
-            CanvasToolName.BRUSH,
-            CanvasToolName.ERASER
-        ):
-            cursor = CircleCursor(
-                Qt.GlobalColor.white,
-                Qt.GlobalColor.transparent,
-                self.brush_settings.size,
-            )
-        elif self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
-            if event and event.buttons() == Qt.MouseButton.LeftButton:
-                cursor = Qt.CursorShape.ClosedHandCursor
-            else:
-                cursor = Qt.CursorShape.OpenHandCursor
+        if message.get("apply_cursor", None):
+            if self.current_tool in (
+                CanvasToolName.BRUSH,
+                CanvasToolName.ERASER
+            ):
+                cursor = circle_cursor(
+                    Qt.GlobalColor.white,
+                    Qt.GlobalColor.transparent,
+                    self.brush_settings.size,
+                )
+            elif self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
+                if event and event.buttons() == Qt.MouseButton.LeftButton:
+                    cursor = Qt.CursorShape.ClosedHandCursor
+                else:
+                    cursor = Qt.CursorShape.OpenHandCursor
         else:
             cursor = Qt.CursorShape.ArrowCursor
         self.setCursor(cursor)
 
-    def toggle_grid(self, val):
+    def toggle_grid(self, _val):
         self.do_draw()
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        # Delay the initial draw slightly to ensure viewport is properly sized
-        QTimer.singleShot(100, lambda: self.do_draw(force_draw=True))
 
     def do_draw(
         self,

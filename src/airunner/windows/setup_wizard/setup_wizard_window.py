@@ -108,9 +108,10 @@ class SetupWizardWindow(
 
                 # final page conditional
                 if current_id == self.final_page_id:
+                    age_restriction_warning = self.pages["age_restriction_warning"].read_age_restriction_agreement
                     self.setup_settings = dict(
                         age_restriction_agreed=self.pages["age_restriction_warning"].age_restriction_agreed,
-                        read_age_restriction_agreement=self.pages["age_restriction_warning"].read_age_restriction_agreement,
+                        read_age_restriction_agreement=age_restriction_warning,
                         user_agreement_completed=self.pages["user_agreement"].agreed,
                         airunner_license_completed=self.pages["airunner_license"].agreed,
                         sd_license_completed=self.pages["stable_diffusion_license"].agreed,

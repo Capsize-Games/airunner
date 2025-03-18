@@ -4,7 +4,7 @@ def get_version():
     try:
         with open("./VERSION", "r") as f:
             version = f.read()
-    except Exception as e:
+    except Exception as _e:
         pass
 
     if not version:
@@ -13,7 +13,7 @@ def get_version():
             with open("./setup.py", "r") as f:
                 version = f.read().strip()
                 version = version.split("version=")[1].split(",")[0]
-        except Exception as e:
+        except Exception as _e:
             pass
 
     if not version:
@@ -22,7 +22,7 @@ def get_version():
             with open("../../setup.py", "r") as f:
                 version = f.read().strip()
                 version = version.split("version=")[1].split(",")[0]
-        except Exception as e:
+        except Exception as _e:
             pass
     if version:
         # remove anything other than numbers and dots

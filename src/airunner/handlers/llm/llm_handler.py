@@ -1,23 +1,28 @@
 import random
 import os
 import torch
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
+import transformers
 from peft import PeftModel
 
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
 
-from llama_index.llms.groq import Groq
 from llama_index.core.chat_engine.types import AgentChatResponse
 
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import MAX_SEED
-from airunner.utils.clear_memory import clear_memory
-from airunner.handlers.llm.agent.mistral_agent import MistralAgentQObject
+from airunner.utils.memory.clear_memory import clear_memory
+from airunner.handlers.llm.agent.agents import (
+    MistralAgentQObject, 
+    OpenRouterQObject
+)
 from airunner.handlers.llm.training_mixin import TrainingMixin
 from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.handlers.llm.llm_settings import LLMSettings
 
 
 class LLMHandler(
@@ -26,13 +31,10 @@ class LLMHandler(
 ):
     model_type: ModelType = ModelType.LLM
     model_class: str = "llm"
-    _model: Optional[object] = None
-    _streamer: Optional[object] = None
-    _chat_engine: Optional[object] = None
-    _chat_agent: Optional[MistralAgentQObject] = None
-    _llm_with_tools: Optional[object] = None
+    _model: Optional[AutoModelForCausalLM] = None
+    _streamer: Optional[TextIteratorStreamer] = None
+    _chat_agent: Optional[Union[MistralAgentQObject, OpenRouterQObject]] = None
     _agent_executor: Optional[object] = None
-    _embed_model: Optional[object] = None
     _service_context_model: Optional[object] = None
     _use_query_engine: bool = False
     _use_chat_engine: bool = True
@@ -46,6 +48,11 @@ class LLMHandler(
     _generator: Optional[object] = None
     _history: Optional[List] = []
     _current_model_path: Optional[str] = None
+    llm_settings: LLMSettings
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.llm_settings = LLMSettings()
 
     @property
     def is_mistral(self) -> bool:
@@ -58,16 +65,6 @@ class LLMHandler(
         if "instruct" in path and "llama" in path:
             return True
         return False
-
-    @property
-    def username(self):
-        return self.user.username
-
-    @property
-    def botname(self):
-        if self.chatbot.assign_names:
-            return self.chatbot.botname
-        return "Assistant"
 
     @property
     def _quantization_config(self):
@@ -128,13 +125,17 @@ class LLMHandler(
         self.unload()
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
         self._current_model_path = self.model_path
-        self._load_tokenizer()
-        self._load_model()
-        self._load_streamer()
+        if self.llm_settings.use_local_llm:
+            self._load_tokenizer()
+            self._load_model()
         self._load_agent()
-        if self._model and self._tokenizer and self._streamer and self._chat_agent:
+        if self._model and self._tokenizer and self._chat_agent:
             self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
         else:
+            if not self._model:
+                self.logger.error("Model failed to load")
+            if not self._chat_agent:
+                self.logger.error("Chat agent failed to load")
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
 
     def unload(self):
@@ -145,10 +146,6 @@ class LLMHandler(
             return
         self.logger.debug("Unloading LLM")
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
-        self._unload_streamer()
-        self._unload_llm_with_tools()
-        self._unload_agent_executor()
-        self._unload_embed_model()
         self._unload_model()
         self._unload_tokenizer()
         self._unload_agent()
@@ -159,27 +156,11 @@ class LLMHandler(
         self.logger.debug("Handling request")
         self._do_set_seed()
         self.load()
-        action = self.llm_generator_settings.action
-        if type(action) is str:
-            action = LLMActionType[action]
         return self._do_generate(
             prompt=data["request_data"]["prompt"],
-            action=action,
-            llm_request=data.get("llm_request_data", None),
+            action=data["request_data"]["action"],
+            llm_request=data["request_data"]["llm_request"],
         )
-
-    # def chat(
-    #     self,
-    #     prompt: str,
-    #     system_prompt: Optional[str] = None,
-    #     rag_system_prompt: Optional[str] = None
-    # ) -> AgentChatResponse:
-    #     return self._do_generate(
-    #         prompt=prompt,
-    #         action=LLMActionType.CHAT,
-    #         system_prompt=system_prompt,
-    #         rag_system_prompt=rag_system_prompt
-    #     )
 
     def do_interrupt(self):
         """
@@ -187,6 +168,13 @@ class LLMHandler(
         """
         if self._chat_agent:
             self._chat_agent.interrupt_process()
+
+    def on_conversation_deleted(self, data):
+        """
+        Public method to handle conversation deletion
+        """
+        if self._chat_agent:
+            self._chat_agent.on_conversation_deleted(data)
 
     def clear_history(self, data: Optional[Dict] = None):
         """
@@ -209,11 +197,20 @@ class LLMHandler(
         """
         self._chat_agent.on_load_conversation(message)
 
-    def reload_rag(self):
+    def reload_rag_engine(self):
         """
         Public method to reload the RAG model
         """
         self._chat_agent.reload_rag_engine()
+
+    def on_section_changed(self):
+        self._chat_agent.current_tab = None
+    
+    def on_web_browser_page_html(self, content: str):
+        if self._chat_agent:
+            self._chat_agent.on_web_browser_page_html(content)
+        else:
+            self.logger.error("Chat agent not loaded")
 
     def _load_tokenizer(self):
         if self._tokenizer is not None:
@@ -239,77 +236,54 @@ class LLMHandler(
 
     def _load_model(self):
         if self._model is not None:
-            return
-        self.logger.debug("transformer_base_handler.load_model Loading model")
-        if self.llm_generator_settings.use_api:
-            self._model = Groq(
-                model=self.llm_generator_settings.api_model,
-                api_key=self.llm_generator_settings.api_key,
+            return        
+        self.logger.debug(f"Loading local LLM model from {self.model_path}")
+        try:
+            # Use the same path as tokenizer
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_path,
+                local_files_only=True,
+                use_cache=self.use_cache,
+                trust_remote_code=False,
+                torch_dtype=self.torch_dtype,
+                device_map=self.device,
             )
-        else:
-            self._load_model_local()
-
-    def _load_streamer(self):
-        if self._streamer is not None:
+        except Exception as e:
+            self.logger.error(f"Error loading model: {e}")
             return
-        self.logger.debug("Loading LLM text streamer")
-        self._streamer = TextIteratorStreamer(self._tokenizer)
+        
+        try:
+            if os.path.exists(self.adapter_path):
+                # Convert base model to PEFT format
+                self._model = PeftModel.from_pretrained(
+                    self._model, 
+                    self.adapter_path
+                )
+        except Exception as e:
+            self.logger.error(
+                f"Error loading adapter (continuing with base model): {e}"
+            )
 
     def _load_agent(self):
         if self._chat_agent is not None:
             return
         self.logger.debug("Loading agent")
-        # def get_weather(
-        #     location: str = Field(
-        #         description="The location to get the weather for.",
-        #     )
-        # ) -> str:
-        #     """Get the weather report for a given location."""
-        #     return f"{location} is sunny today."
-
-        tools = [
-            # FunctionTool.from_defaults(
-            #     get_weather,
-            #     return_direct=True
-            # ),
-        ]
-        self._chat_agent = MistralAgentQObject(
-            model=self._model,
-            tokenizer=self._tokenizer,
-            default_tool_choice=None
-        )
-
-    def _unload_streamer(self):
-        self.logger.debug("Unloading streamer")
-        try:
-            del self._streamer
-        except AttributeError as e:
-            self.logger.warning(f"Error unloading streamer: {e}")
-        self._streamer = None
-
-    def _unload_llm_with_tools(self):
-        self.logger.debug("Unloading LLM with tools")
-        try:
-            del self._llm_with_tools
-        except AttributeError as e:
-            self.logger.warning(f"Error unloading LLM with tools: {e}")
-        self._llm_with_tools = None
-
-    def _unload_agent_executor(self):
-        self.logger.debug("Unloading agent executor")
-        try:
-            del self._agent_executor
-        except AttributeError as e:
-            self.logger.warning(f"Error unloading agent executor: {e}")
-        self._agent_executor = None
-
-    def _unload_embed_model(self):
-        self.logger.debug("Unloading embed model")
-        try:
-            del self._embed_model
-        except AttributeError as e:
-            self.logger.warning(f"Error unloading embed model: {e}")
-        self._embed_model = None
+        if self.llm_settings.use_local_llm:
+            self.logger.info("Loading local chat agent")
+            self._chat_agent = MistralAgentQObject(
+                model=self._model,
+                tokenizer=self._tokenizer,
+                default_tool_choice=None,
+                llm_settings=self.llm_settings
+            )
+        elif self.llm_settings.use_open_router:
+            self.logger.info("Loading openrouter chat agent")
+            self._chat_agent = OpenRouterQObject(
+                llm_settings=self.llm_settings
+            )
+        else:
+            self.logger.warning("No chat agent to load")
+        self.logger.info("Chat agent loaded")
 
     def _unload_model(self):
         self.logger.debug("Unloading model")
@@ -339,29 +313,6 @@ class LLMHandler(
             self._chat_agent = None
             do_clear_memory = True
         return do_clear_memory
-
-    def _load_model_local(self):
-        self.logger.debug(f"Loading local LLM model from {self.model_path}")
-        try:
-            # Use the same path as tokenizer
-            self._model = AutoModelForCausalLM.from_pretrained(
-                self.model_path,
-                local_files_only = True,
-                use_cache = self.use_cache,
-                trust_remote_code = False,
-                torch_dtype = self.torch_dtype,
-                device_map = self.device,
-            )
-        except Exception as e:
-            self.logger.error(f"Error loading model: {e}")
-            return
-        
-        try:
-            if os.path.exists(self.adapter_path):
-                # Convert base model to PEFT format
-                self._model = PeftModel.from_pretrained(self._model, self.adapter_path)
-        except Exception as e:
-            self.logger.error(f"Error loading adapter (continuing with base model): {e}")
         
     def _do_generate(
         self, 
@@ -388,21 +339,12 @@ class LLMHandler(
             self._send_final_message()
         return response
 
-    def _emit_streamed_text_signal(self, **kwargs):
-        self.logger.debug("Emitting streamed text signal")
-        kwargs["name"] = self.botname
-        self.emit_signal(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-            kwargs
-        )
-
     def _send_final_message(self):
         self.logger.debug("Sending final message")
-        self._emit_streamed_text_signal(
-            message="",
-            is_first_message=False,
-            is_end_of_message=True
-        )
+        self.logger.debug("Emitting streamed text signal")
+        self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
+            "response": LLMResponse(is_end_of_message=True)
+        })
 
     def _do_set_seed(self):
         self.logger.debug("Setting seed")

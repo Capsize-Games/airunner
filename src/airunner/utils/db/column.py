@@ -76,8 +76,8 @@ def add_column_with_fk(
 ) -> None:
     """
     Adds a column with a foreign key constraint to a table.
-    
-    :param table_name: Name of the table to alter.
+
+    :param cls: SQLAlchemy model class.
     :param column_name: Name of the new column.
     :param column_type: SQLAlchemy column type for the new column.
     :param fk_table: Name of the foreign key table.
@@ -91,14 +91,14 @@ def add_column_with_fk(
 
 
 def drop_column_with_fk(
-    cls, 
-    column_name: str, 
+    cls,
+    column_name: str,
     fk_name: str
 ) -> None:
     """
     Drops a column with a foreign key constraint from a table.
-    
-    :param table_name: Name of the table to alter.
+
+    :param cls: SQLAlchemy model class.
     :param column_name: Name of the column to drop.
     :param fk_name: Name of the foreign key constraint.
     """
@@ -163,6 +163,7 @@ def safe_alter_columns(cls, columns: List[sa.Column]):
             column.nullable
         )
 
+
 def set_default_and_create_fk(
     table_name, 
     column_name, 
@@ -187,3 +188,68 @@ def set_default_and_create_fk(
         nullable=False,
         existing_server_default=sa.text(str(default_value))
     )
+
+def set_default(
+    cls,
+    column_name: str,
+    default_value: Any
+) -> None:
+    """
+    Sets a default value for a column in a table.
+    """
+    safe_alter_column(
+        cls,
+        column_name,
+        existing_type=sa.INTEGER(),
+        nullable=False,
+        existing_server_default=sa.text(str(default_value))
+    )
+
+
+def create_unique_constraint(
+    cls, 
+    columns: List[str], 
+    constraint_name: str
+) -> None:
+    """
+    Creates a unique constraint on the specified columns of a table.
+
+    :param cls: SQLAlchemy model class.
+    :param constraint_name: Name of the unique constraint.
+    :param columns: List of column names to include in the unique constraint.
+    """
+    table_name = cls.__tablename__
+    try:
+        with op.batch_alter_table(table_name, recreate="always") as batch_op:
+            batch_op.create_unique_constraint(constraint_name, columns)
+        print(
+            f"Unique constraint '{constraint_name}' "
+            f"created on table '{table_name}' for columns {columns}."
+        )
+    except sa.exc.OperationalError as e:
+        print(f"Error creating unique constraint '{constraint_name}' on table '{table_name}':", e)
+    except NotImplementedError as e:
+        print(f"SQLite limitation: {e}")
+
+
+def drop_constraint(
+    cls, 
+    constraint_name: str, 
+    constraint_type: str = "unique"
+) -> None:
+    """
+    Drops a constraint from the specified table.
+
+    :param cls: SQLAlchemy model class.
+    :param constraint_name: Name of the constraint to drop.
+    :param constraint_type: Type of the constraint (e.g., 'unique', 'foreignkey', etc.).
+    """
+    table_name = cls.__tablename__
+    try:
+        with op.batch_alter_table(table_name, recreate="always") as batch_op:
+            batch_op.drop_constraint(constraint_name, type_=constraint_type)
+        print(f"Constraint '{constraint_name}' of type '{constraint_type}' dropped from table '{table_name}'.")
+    except sa.exc.OperationalError as e:
+        print(f"Error dropping constraint '{constraint_name}' from table '{table_name}':", e)
+    except NotImplementedError as e:
+        print(f"SQLite limitation: {e}")

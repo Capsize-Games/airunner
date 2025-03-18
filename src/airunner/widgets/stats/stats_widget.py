@@ -4,11 +4,12 @@ import psutil
 import torch
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QTableWidgetItem, QApplication
-from airunner.enums import SignalCode, ModelStatus
+from airunner.enums import SignalCode
 from airunner.styles_mixin import StylesMixin
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stats.templates.stats_ui import Ui_stats_widget
 from airunner.windows.main.pipeline_mixin import PipelineMixin
+from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 
 
 class StatsWidget(
@@ -49,17 +50,19 @@ class StatsWidget(
 
         for i in range(device_count):
             device = torch.device(f'cuda:{i}')
+            
             try:
                 torch.cuda.set_device(device)
-                total_mem = torch.cuda.get_device_properties(device).total_memory / (1024 ** 3)  # Convert bytes to GB
-                allocated_mem = torch.cuda.memory_allocated() / (1024 ** 3)  # Convert bytes to GB
-                free_mem = total_mem - allocated_mem
-                device_name = torch.cuda.get_device_name(device)
-            except RuntimeError:
-                free_mem = 0
-                allocated_mem = 0
-                total_mem = 0
-                device_name = "N/A"
+            except RuntimeError as e:
+                self.logger.error(f"Error setting device: {e}")
+                continue
+                
+            
+            stats = gpu_memory_stats(device)
+            total_mem = stats["total"]
+            allocated_mem = stats["allocated"]
+            free_mem = stats["free"]
+            device_name = stats["device_name"]
 
             # truncate to 2 decimal places
             total_mem = round(total_mem, 2)
@@ -80,8 +83,7 @@ class StatsWidget(
         try:
             process = psutil.Process(os.getpid())
             memory_info = process.memory_info()
-        except Exception as e:
-            memory_info = None
+        except Exception as _e:
             return
 
         used = memory_info.rss / (1024.0 ** 3)  # Resident Set Size
@@ -105,18 +107,9 @@ class StatsWidget(
 
         QApplication.processEvents()
 
-    def set_color(self, row, col, status):
-        # Set the color of the text according to the status
-        if status == ModelStatus.LOADED:
-            color = Qt.GlobalColor.green
-        elif status == ModelStatus.READY:
-            color = Qt.GlobalColor.yellow
-        elif status == ModelStatus.LOADING:
-            color = Qt.GlobalColor.darkYellow
-        elif status == ModelStatus.FAILED:
-            color = Qt.GlobalColor.red
-        else:
-            color = Qt.GlobalColor.lightGray
+    @staticmethod
+    def set_color(_row, _col, status):
+        pass
 
     def on_log_logged_signal(self, data: dict = None):
         """

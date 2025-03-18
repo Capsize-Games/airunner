@@ -1,3 +1,4 @@
+
 from PySide6.QtCore import Slot
 
 from airunner.data.models import Embedding
@@ -40,10 +41,10 @@ class EmbeddingWidget(BaseWidget):
         )
 
     def update_embedding(self, embedding: Embedding):
-        self.save_object(embedding)
+        embedding.save()
 
     @Slot(bool)
-    def action_toggled_embedding(self, val, emit_signal=True):
+    def action_toggled_embedding(self, val, _emit_signal=True):
         self.embedding.active = val
         self.ui.enabledCheckbox.blockSignals(True)
         self.ui.enabledCheckbox.setChecked(val)

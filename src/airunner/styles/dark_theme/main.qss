@@ -98,10 +98,6 @@ QCheckBox:indicator:checked {
     height: 12px;
 }
 
-QPushButton#prompt_builder_settings_button {
-    border: none;
-}
-
 QPushButton {
     border-radius: none;
     padding: 4px 4px 3px 4px;
@@ -116,10 +112,6 @@ QPushButton:hover {
 
 QPushButton:checked {
     border: 1px solid @primary-color;
-}
-
-QPushButton#prompt_builder_settings_button {
-    border: none;
 }
 
 QProgressBar {

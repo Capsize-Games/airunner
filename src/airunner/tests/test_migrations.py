@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 # Define a temporary in-memory SQLite database URL
 TEST_DB_URL = "sqlite:///:memory:"
 
+
 @pytest.fixture(scope="module")
 def alembic_config():
     # Create a temporary Alembic configuration for testing
@@ -17,6 +18,7 @@ def alembic_config():
     alembic_cfg.set_main_option("script_location", os.path.join(os.path.dirname(__file__), '../alembic'))
     return alembic_cfg
 
+
 @pytest.fixture(scope="module")
 def connection(alembic_config):
     # Create an engine and connection to the temporary database
@@ -25,6 +27,7 @@ def connection(alembic_config):
     yield connection
     connection.close()
 
+
 @pytest.fixture(scope="module")
 def setup_database(connection, alembic_config):
     # Bind the connection to the Alembic configuration
@@ -32,6 +35,7 @@ def setup_database(connection, alembic_config):
     command.upgrade(alembic_config, 'head')
     yield
     command.downgrade(alembic_config, '72d9134823cb')
+
 
 def test_migrations_up_down(setup_database, alembic_config):
     # Run migrations up to the latest version

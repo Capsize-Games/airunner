@@ -9,9 +9,11 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 # Get the metaclass of QObject
 QObjectMeta = type(QObject)
 
+
 # Create a metaclass that combines ABCMeta and QObject's metaclass
 class CombinedMeta(QObjectMeta, ABCMeta):
     pass
+
 
 # Use the combined metaclass
 class BaseHandler(

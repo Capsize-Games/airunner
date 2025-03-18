@@ -13,7 +13,7 @@ class TestPromptWeightConvert(unittest.TestCase):
         prompt = "Example (ABC): 1.23 XYZ (DEF) (GHI:1.4)"
         expected_prompt = "Example (ABC)1.1: 1.23 XYZ (DEF)1.1 (GHI)1.4"
         self.assertEqual(PromptWeightBridge.convert(prompt), expected_prompt)
-    #
+
     def test_use_case_b(self):
         prompt = "(a dog:0.5) and a cat"
         expected_prompt = "(a dog)0.5 and a cat"
@@ -25,8 +25,11 @@ class TestPromptWeightConvert(unittest.TestCase):
         self.assertEqual(PromptWeightBridge.convert(prompt), expected_prompt)
 
     def test_use_case_d(self):
-        prompt = "(worst quality:0.8), fantasy, cartoon, halftone print, (cinematic:1.2), verybadimagenegative_v1.3, easynegative, (surreal:0.8), (modernism:0.8), (art deco:0.8), (art nouveau:0.8)"
-        expected_prompt = "(worst quality)0.8, fantasy, cartoon, halftone print, (cinematic)1.2, verybadimagenegative_v1.3, easynegative, (surreal)0.8, (modernism)0.8, (art deco)0.8, (art nouveau)0.8"
+        prompt = "(worst quality:0.8), fantasy, cartoon, halftone print, (cinematic:1.2), verybadimagenegative_v1.3, " \
+                 "easynegative, (surreal:0.8), (modernism:0.8), (art deco:0.8), (art nouveau:0.8)"
+        expected_prompt = "(worst quality)0.8, fantasy, cartoon, halftone print, (cinematic)1.2, " \
+                          "verybadimagenegative_v1.3, easynegative, (surreal)0.8, (modernism)0.8, (art deco)0.8, " \
+                          "(art nouveau)0.8"
         self.assertEqual(PromptWeightBridge.convert(prompt), expected_prompt)
 
     def test_convert_basic_parentheses(self):

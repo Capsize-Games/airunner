@@ -1,3 +1,4 @@
+
 from PySide6.QtCore import Slot
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.memory_preferences.templates.memory_preferences_ui import Ui_memory_preferences
@@ -113,5 +114,5 @@ class MemoryPreferencesWidget(BaseWidget):
     def action_toggled_use_tome(self, val):
         self.update_memory_settings("use_tome_sd", val)
 
-    def tome_sd_ratio_value_change(self, prop, val):
+    def tome_sd_ratio_value_change(self, _prop, val):
         self.update_memory_settings("tome_sd_ratio", val)

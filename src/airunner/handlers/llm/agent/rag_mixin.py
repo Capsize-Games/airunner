@@ -21,6 +21,7 @@ from airunner.data.models import Conversation
 
 class RAGMixin:
     def __init__(self):
+        self.__file_extractor = None
         self.__rag_engine: Optional[RefreshContextChatEngine] = None
         self.__document_reader: Optional[SimpleDirectoryReader] = None
         self.__prompt_helper: Optional[PromptHelper] = None
@@ -46,7 +47,7 @@ class RAGMixin:
                     raise ValueError("No retriever found.")
                 self.rag_engine = RefreshContextChatEngine.from_defaults(
                     retriever=self.retriever,
-                    #chat_history=self.history,
+                    # chat_history=self.history,
                     memory=self.chat_memory,
                     system_prompt=self._rag_system_prompt,
                     node_postprocessors=[],
@@ -84,14 +85,14 @@ class RAGMixin:
         if self.__news_articles is None:
             articles = Article.objects.filter(
                 Article.status == "scraped"
-            ).all()[:50]
+            )[:50]
             self.__news_articles = [
                 Document(
                     text=article.description,
                     metadata={
                         "id": article.id,
                         "title": article.title,
-                        #"description": article.description,
+                        # "description": article.description,
                     }
                 ) for article in articles[:50]
             ]
@@ -198,10 +199,11 @@ class RAGMixin:
                 self._save_index_to_disc()
         return self.__index
 
-    def _update_conversations_status(self, status: str):
+    @staticmethod
+    def _update_conversations_status(status: str):
         conversations = Conversation.objects.filter(
             (Conversation.status != status) | (Conversation.status is None)
-        ).all()
+        )
         total_conversations = len(conversations)
         if total_conversations == 1:
             conversations = []
@@ -209,7 +211,7 @@ class RAGMixin:
             conversations = conversations[:-1]
         for conversation in conversations:
             conversation.status = status
-        conversation.save()
+            conversation.save()
     
     @index.setter
     def index(self, value: Optional[RAKEKeywordTableIndex]):
@@ -277,8 +279,8 @@ class RAGMixin:
 
             try:
                 self.__embedding = HuggingFaceEmbedding(path)
-            except NotImplementedError:
-                self.logger.error("Error loading embeddings.")
+            except NotImplementedError as e:
+                self.logger.error("Error loading embeddings " + e)
         return self.__embedding
     
     @embedding.setter
@@ -343,7 +345,7 @@ class RAGMixin:
     def conversations(self) -> List[Conversation]:
         conversations = Conversation.objects.filter(
             (Conversation.status != "indexed") | (Conversation.status is None)
-        ).all()
+        )
         total_conversations = len(conversations)
         if total_conversations == 1:
             conversations = []
@@ -356,7 +358,7 @@ class RAGMixin:
         conversation_documents = []
         conversations = Conversation.objects.filter(
             (Conversation.status != "indexed") | (Conversation.status is None)
-        ).all()
+        )
         total_conversations = len(conversations)
         if total_conversations == 1:
             conversations = []
@@ -375,7 +377,6 @@ class RAGMixin:
                         text=f'{message["role"]}: \"{message["blocks"][0]["text"]}\"',
                         metadata={
                             "id": str(conversation.id) + "_" + str(message_id),
-                            "key": conversation.key + "_" + str(message_id),
                             "speaker": username,
                             "role": message["role"],
                         }

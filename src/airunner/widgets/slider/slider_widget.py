@@ -141,7 +141,7 @@ class SliderWidget(BaseWidget):
         if self.table_id is not None and self.table_name is not None and self.table_column is not None:
             
             if self.table_name == "lora":
-                self.table_item = Lora.objects.filter_by(id=self.table_id).first()
+                self.table_item = Lora.objects.filter_by_first(id=self.table_id)
                 current_value = getattr(self.table_item, self.table_column)
             
         elif current_value is None:
@@ -190,14 +190,12 @@ class SliderWidget(BaseWidget):
         is changed.
         :param attr_name: the name of the attribute to change
         :param value: the value to set the attribute to
-        :param widget: the widget that triggered the callback
         :return:
         """
         if not attr_name:
             return
         if self._callback:
-            callback = getattr(self, self._callback)
-            callback(attr_name, value)
+            self._callback(attr_name, value)
         else:
             self.set_settings_value(attr_name, value)
 
@@ -221,7 +219,41 @@ class SliderWidget(BaseWidget):
             
         elif settings_property is not None:
             keys = settings_property.split(".")
-            self.update_settings_by_name(keys[0], keys[1], val)
+            setting_name = keys[0]
+            column_name = keys[1]
+
+            if setting_name == "application_settings":
+                self.update_application_settings(column_name, val)
+            elif setting_name == "generator_settings":
+                self.update_generator_settings(column_name, val)
+            elif setting_name == "controlnet_image_settings":
+                self.update_controlnet_image_settings(column_name, val)
+            elif setting_name == "brush_settings":
+                self.update_brush_settings(column_name, val)
+            elif setting_name == "controlnet_settings":
+                self.update_controlnet_settings(column_name, val)
+            elif setting_name == "image_to_image_settings":
+                self.update_image_to_image_settings(column_name, val)
+            elif setting_name == "outpaint_settings":
+                self.update_outpaint_settings(column_name, val)
+            elif setting_name == "drawing_pad_settings":
+                self.update_drawing_pad_settings(column_name, val)
+            elif setting_name == "grid_settings":
+                self.update_grid_settings(column_name, val)
+            elif setting_name == "active_grid_settings":
+                self.update_active_grid_settings(column_name, val)
+            elif setting_name == "path_settings":
+                self.update_path_settings(column_name, val)
+            elif setting_name == "memory_settings":
+                self.update_memory_settings(column_name, val)
+            elif setting_name == "llm_generator_settings":
+                self.update_llm_generator_settings(column_name, val)
+            elif setting_name == "whisper_settings":
+                self.update_whisper_settings(column_name, val)
+            elif setting_name == "speech_t5_settings":
+                self.update_speech_t5_settings(column_name, val)
+            else:
+                self.logger.error(f"Invalid setting name: {setting_name}")
 
     def set_slider_and_spinbox_values(self, val):
         if val is None:

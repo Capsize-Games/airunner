@@ -1,3 +1,4 @@
+
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.tts.templates.tts_preferences_ui import Ui_tts_preferences
@@ -43,5 +44,6 @@ class TTSPreferencesWidget(BaseWidget):
         self.ui.speecht5_preferences.setVisible(tts_model == "SpeechT5")
         self.ui.espeak_preferences.setVisible(tts_model == "Espeak")
 
-    def handle_value_change(self, prop, val):
+    @staticmethod
+    def handle_value_change(prop, val):
         print(prop, val)

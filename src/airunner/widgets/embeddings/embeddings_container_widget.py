@@ -30,7 +30,11 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
         self._apply_button_enabled = False
         self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
-        self._scanner_worker = DirectoryWatcher(self.path_settings.base_path, self._scan_path_for_embeddings, self.on_scan_completed)
+        self._scanner_worker = DirectoryWatcher(
+            self.path_settings.base_path,
+            self._scan_path_for_embeddings,
+            self.on_scan_completed
+        )
         self._scanner_thread = QThread()
         self._scanner_worker.moveToThread(self._scanner_thread)
         self._scanner_thread.started.connect(self._scanner_worker.run)
@@ -112,7 +116,6 @@ class EmbeddingsContainerWidget(BaseWidget):
 
         # Remove lora from database
         embedding_widget.embedding.delete()
-        
 
         self._apply_button_enabled = True
         self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
@@ -125,7 +128,7 @@ class EmbeddingsContainerWidget(BaseWidget):
             self.initialized = True
         self.load_embeddings()
 
-    def load_embeddings(self, force_reload:bool=False):
+    def load_embeddings(self, force_reload: bool = False):
         version = self.generator_settings.version
 
         if self._version is None or self._version != version or force_reload:
@@ -170,7 +173,7 @@ class EmbeddingsContainerWidget(BaseWidget):
         if self.spacer:
             try:
                 self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
-            except RuntimeError as e:
+            except RuntimeError as _e:
                 pass
         for i in reversed(range(self.ui.scrollAreaWidgetContents.layout().count())):
             widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()

@@ -98,7 +98,7 @@
         <number>0</number>
        </property>
        <item row="0" column="0">
-        <widget class="QSplitter" name="content_splitter">
+        <widget class="QSplitter" name="main_window_splitter">
          <property name="orientation">
           <enum>Qt::Orientation::Horizontal</enum>
          </property>
@@ -110,7 +110,7 @@
             <height>0</height>
            </size>
           </property>
-          <layout class="QGridLayout" name="gridLayout_2">
+          <layout class="QGridLayout" name="gridLayout_4">
            <property name="leftMargin">
             <number>0</number>
            </property>
@@ -123,35 +123,64 @@
            <property name="bottomMargin">
             <number>0</number>
            </property>
-           <property name="spacing">
-            <number>0</number>
-           </property>
            <item row="0" column="0">
-            <widget class="CanvasWidget" name="canvas_widget_2" native="true">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Ignored" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+            <widget class="QTabWidget" name="center_tab_container">
+             <property name="currentIndex">
+              <number>0</number>
              </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="cursor">
-              <cursorShape>ArrowCursor</cursorShape>
-             </property>
-             <property name="acceptDrops">
+             <property name="tabsClosable">
               <bool>true</bool>
              </property>
+             <property name="movable">
+              <bool>true</bool>
+             </property>
+             <widget class="QWidget" name="art_tab">
+              <attribute name="title">
+               <string>Art</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_2">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="CanvasWidget" name="canvas" native="true">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Ignored" vsizetype="MinimumExpanding">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="cursor">
+                  <cursorShape>ArrowCursor</cursorShape>
+                 </property>
+                 <property name="acceptDrops">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </item>
           </layout>
@@ -191,7 +220,7 @@
      <x>0</x>
      <y>0</y>
      <width>829</width>
-     <height>22</height>
+     <height>23</height>
     </rect>
    </property>
    <property name="font">
@@ -209,10 +238,27 @@
     <property name="separatorsCollapsible">
      <bool>false</bool>
     </property>
+    <widget class="QMenu" name="menuArt">
+     <property name="title">
+      <string>Art</string>
+     </property>
+     <addaction name="artActionNew"/>
+     <addaction name="actionImport_image"/>
+     <addaction name="actionExport_image_2"/>
+    </widget>
+    <widget class="QMenu" name="menuChat">
+     <property name="title">
+      <string>Chat</string>
+     </property>
+     <addaction name="actionNew_Conversation"/>
+     <addaction name="actionDelete_conversation"/>
+    </widget>
+    <addaction name="menuArt"/>
     <addaction name="actionNew"/>
-    <addaction name="separator"/>
     <addaction name="actionImport"/>
     <addaction name="actionExport_3"/>
+    <addaction name="separator"/>
+    <addaction name="menuChat"/>
     <addaction name="separator"/>
     <addaction name="actionReset_Settings_2"/>
     <addaction name="separator"/>
@@ -273,11 +319,42 @@
     <addaction name="separator"/>
     <addaction name="actionBrowse_Images_Path_2"/>
     <addaction name="separator"/>
+    <addaction name="actionArt"/>
+    <addaction name="actionEditor"/>
+    <addaction name="actionChat"/>
+    <addaction name="actionLLM"/>
+    <addaction name="actionChat_History"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
      <string>Tools</string>
     </property>
+    <widget class="QMenu" name="menuCanvas">
+     <property name="title">
+      <string>Canvas</string>
+     </property>
+     <addaction name="actionToggle_Active_Grid_Area_2"/>
+     <addaction name="actionToggle_Selection_2"/>
+     <addaction name="actionToggle_Brush_2"/>
+     <addaction name="actionToggle_Eraser_2"/>
+     <addaction name="actionToggle_Grid_2"/>
+    </widget>
+    <widget class="QMenu" name="menuStable_Diffusion">
+     <property name="title">
+      <string>Stable Diffusion</string>
+     </property>
+     <addaction name="actionToggle_Safety_Checker"/>
+     <addaction name="actionToggle_Stable_Diffusion_2"/>
+     <addaction name="actionToggle_Controlnet_2"/>
+    </widget>
+    <widget class="QMenu" name="menuLLM">
+     <property name="title">
+      <string>LLM</string>
+     </property>
+     <addaction name="actionToggle_LLM_2"/>
+     <addaction name="actionToggle_Text_to_Speech_2"/>
+     <addaction name="actionToggle_Speech_to_Text_2"/>
+    </widget>
     <addaction name="actionSafety_Checker"/>
     <addaction name="actionToggle_Stable_Diffusion"/>
     <addaction name="actionToggle_Controlnet"/>
@@ -285,10 +362,15 @@
     <addaction name="actionToggle_LLM"/>
     <addaction name="actionToggle_Text_to_Speech"/>
     <addaction name="actionToggle_Speech_to_Text"/>
+    <addaction name="menuStable_Diffusion"/>
+    <addaction name="menuCanvas"/>
+    <addaction name="separator"/>
+    <addaction name="menuLLM"/>
     <addaction name="separator"/>
     <addaction name="actionStats"/>
     <addaction name="separator"/>
     <addaction name="actionRun_setup_wizard_2"/>
+    <addaction name="separator"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -299,44 +381,6 @@
    <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QToolBar" name="toolBar">
-   <property name="windowTitle">
-    <string>toolBar</string>
-   </property>
-   <property name="toolTip">
-    <string>Export Image</string>
-   </property>
-   <property name="movable">
-    <bool>true</bool>
-   </property>
-   <property name="iconSize">
-    <size>
-     <width>18</width>
-     <height>18</height>
-    </size>
-   </property>
-   <property name="floatable">
-    <bool>false</bool>
-   </property>
-   <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
-   </attribute>
-   <attribute name="toolBarBreak">
-    <bool>false</bool>
-   </attribute>
-   <addaction name="actionNew"/>
-   <addaction name="actionImport"/>
-   <addaction name="actionExport_3"/>
-   <addaction name="separator"/>
-   <addaction name="actionToggle_Active_Grid_Area"/>
-   <addaction name="actionToggle_Brush"/>
-   <addaction name="actionToggle_Eraser"/>
-   <addaction name="actionToggle_Grid"/>
-   <addaction name="actionMask_toggle"/>
-   <addaction name="separator"/>
-   <addaction name="actionUndo"/>
-   <addaction name="actionRedo"/>
-  </widget>
   <widget class="QToolBar" name="model_toolbar">
    <property name="windowTitle">
     <string>toolBar_2</string>
@@ -786,7 +830,7 @@
   <action name="actionUndo_2">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</normaloff>../../../../../../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</normaloff>../../../../../../../../../../../../../../../../../../../../../../../../../../../../../.designer/src/icons/007-undo.png</iconset>
    </property>
    <property name="text">
     <string>Undo</string>
@@ -798,7 +842,7 @@
   <action name="actionRedo_2">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</normaloff>../../../../../../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</normaloff>../../../../../../../../../../../../../../../../../../../../../../../../../../../../../.designer/src/icons/008-redo.png</iconset>
    </property>
    <property name="text">
     <string>Redo</string>
@@ -1118,7 +1162,7 @@
    </property>
    <property name="icon">
     <iconset theme="applications-internet">
-     <normalon>../../../../../../../.designer/backup/applications-internet</normalon>
+     <normalon>../../../../../../../../../../../../../../../../../.designer/backup/applications-internet</normalon>
     </iconset>
    </property>
    <property name="text">
@@ -1142,7 +1186,7 @@
    </property>
    <property name="icon">
     <iconset theme="audio-input-microphone">
-     <normalon>../../../../../../../.designer/backup/audio-input-microphone</normalon>
+     <normalon>../../../../../../../../../../../../../../../../../.designer/backup/audio-input-microphone</normalon>
     </iconset>
    </property>
    <property name="text">
@@ -1267,6 +1311,195 @@
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionArt">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Art</string>
+   </property>
+  </action>
+  <action name="actionEditor">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Editor</string>
+   </property>
+  </action>
+  <action name="actionChat">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Chat</string>
+   </property>
+  </action>
+  <action name="actionLLM">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>LLM Settings</string>
+   </property>
+  </action>
+  <action name="actionChat_History">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Chat History</string>
+   </property>
+  </action>
+  <action name="artActionNew">
+   <property name="icon">
+    <iconset resource="../../../resources_light.qrc">
+     <normaloff>:/icons/light/add-plus-icon.svg</normaloff>:/icons/light/add-plus-icon.svg</iconset>
+   </property>
+   <property name="text">
+    <string>New</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionImport_image">
+   <property name="icon">
+    <iconset resource="../../../resources_light.qrc">
+     <normaloff>:/icons/light/upload-icon.svg</normaloff>:/icons/light/upload-icon.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Import image</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="actionExport_image_2">
+   <property name="icon">
+    <iconset resource="../../../resources_light.qrc">
+     <normaloff>:/icons/light/download-icon.svg</normaloff>:/icons/light/download-icon.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Export image</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="actionNew_Conversation">
+   <property name="text">
+    <string>New Conversation</string>
+   </property>
+  </action>
+  <action name="actionDelete_conversation">
+   <property name="text">
+    <string>Delete conversation</string>
+   </property>
+  </action>
+  <action name="actionToggle_Active_Grid_Area_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Active Grid Area</string>
+   </property>
+  </action>
+  <action name="actionToggle_Selection_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Selection</string>
+   </property>
+  </action>
+  <action name="actionToggle_Brush_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Brush</string>
+   </property>
+  </action>
+  <action name="actionToggle_Eraser_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Eraser</string>
+   </property>
+  </action>
+  <action name="actionToggle_Grid_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Grid</string>
+   </property>
+  </action>
+  <action name="actionToggle_Stable_Diffusion_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Stable Diffusion</string>
+   </property>
+  </action>
+  <action name="actionToggle_Controlnet_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Controlnet</string>
+   </property>
+  </action>
+  <action name="actionToggle_Safety_Checker">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Safety Checker</string>
+   </property>
+  </action>
+  <action name="actionToggle_LLM_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle LLM</string>
+   </property>
+  </action>
+  <action name="actionToggle_Text_to_Speech_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Text-to-Speech</string>
+   </property>
+  </action>
+  <action name="actionToggle_Speech_to_Text_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Speech-to-Text</string>
    </property>
   </action>
  </widget>
@@ -1552,22 +1785,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionModel_Manager_2</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_model_manager()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>628</x>
-     <y>436</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionBug_report</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -1628,22 +1845,6 @@
     <hint type="destinationlabel">
      <x>600</x>
      <y>592</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionModel_Manager_3</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_show_model_manager()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>561</x>
-     <y>661</y>
     </hint>
    </hints>
   </connection>
@@ -2079,6 +2280,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>artActionNew</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_new_document_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>414</x>
+     <y>367</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -2100,7 +2317,6 @@
  <slots>
   <slot>action_show_about_window()</slot>
   <slot>action_show_model_merger_window()</slot>
-  <slot>action_show_model_manager()</slot>
   <slot>action_toggle_grid(bool)</slot>
   <slot>action_toggle_darkmode()</slot>
   <slot>action_show_settings()</slot>

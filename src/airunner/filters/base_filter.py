@@ -9,7 +9,7 @@ class BaseFilter(ImageFilter.Filter, SettingsMixin):
         self.image = None
         self.image_id = None
 
-        for k,v in kwargs.items():
+        for k, v in kwargs.items():
             setattr(self, k, v)
 
     def filter(self, image):

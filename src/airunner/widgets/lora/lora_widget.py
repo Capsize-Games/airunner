@@ -1,3 +1,4 @@
+
 from PySide6.QtCore import QTimer, Slot
 
 from airunner.data.models import Lora
@@ -19,7 +20,7 @@ class LoraWidget(BaseWidget):
         self.icons = [
             ("recycle-bin-line-icon", "delete_button"),
         ]
-        self.current_lora:Lora = kwargs.pop("lora")
+        self.current_lora: Lora = kwargs.pop("lora")
         super().__init__(*args, **kwargs)
         name = self.current_lora.name
         enabled = self.current_lora.enabled

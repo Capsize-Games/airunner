@@ -4,7 +4,7 @@ import sys
 import urllib
 import webbrowser
 from functools import partial
-from typing import Optional
+from typing import Dict
 
 import requests
 from PIL import Image
@@ -37,7 +37,9 @@ from airunner.enums import (
     SignalCode,
     CanvasToolName,
     GeneratorSection,
-    LLMAction, ModelType, ModelStatus
+    LLMActionType, 
+    ModelType, 
+    ModelStatus
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import (
@@ -57,8 +59,6 @@ from airunner.workers.tts_generator_worker import TTSGeneratorWorker
 from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 
 from airunner.utils.get_version import get_version
-from airunner.utils.set_widget_state import set_widget_state
-from airunner.widgets.model_manager.model_manager_widget import ModelManagerWidget
 from airunner.widgets.stats.stats_widget import StatsWidget
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -70,7 +70,9 @@ from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
-from airunner.data.models import WindowSettings
+from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.data.models import SplitterSetting, Tab
+from airunner.plugin_loader import PluginLoader
 
 
 class MainWindow(
@@ -89,7 +91,6 @@ class MainWindow(
     snap_to_grid_changed_signal = Signal(bool)
     image_generated = Signal(bool)
     generator_tab_changed_signal = Signal()
-    tab_section_changed_signal = Signal()
     load_image = Signal(str)
     load_image_object = Signal(object)
     loaded = Signal()
@@ -122,9 +123,7 @@ class MainWindow(
         self.token_signal = Signal(str)
         self.api = None
         self.input_event_manager = None
-        self.current_filter = None
         self.tqdm_callback_triggered = False
-        self.is_saved = False
         self.action = GeneratorSection.TXT2IMG.value
         self.progress_bar_started = False
         self.window = None
@@ -133,12 +132,11 @@ class MainWindow(
         self.client = None
         self._version = None
         self._latest_version = None
-        self.data = None  # this is set in the generator_mixin image_handler function and used for deterministic generation
         self.status_error_color = STATUS_ERROR_COLOR
         self.status_normal_color_light = STATUS_NORMAL_COLOR_LIGHT
         self.status_normal_color_dark = STATUS_NORMAL_COLOR_DARK
         self._themes = None
-        self.button_clicked_signal = Signal(dict)
+        self.button_clicked_signal = Signal(Dict)
         self.status_widget = None
         self.header_widget_spacer = None
         self.deterministic_window = None
@@ -152,6 +150,12 @@ class MainWindow(
         
         self.logger.debug("Starting AI Runnner")
         super().__init__(*args, **kwargs)
+        
+        # Add plugins directory to Python path
+        plugins_path = os.path.join(self.path_settings.base_path, "plugins")
+        if plugins_path not in sys.path:
+            sys.path.append(plugins_path)
+
         self._updating_settings = True
         PipelineMixin.__init__(self)
         AIModelMixin.__init__(self)
@@ -182,10 +186,6 @@ class MainWindow(
     @property
     def document_name(self):
         return "Untitled"
-
-    @property
-    def current_tool(self):
-        return CanvasToolName(self.application_settings.current_tool)
 
     """
     Slot functions
@@ -238,19 +238,19 @@ class MainWindow(
 
     @Slot()
     def import_controlnet_image(self):
-        self.emit_signal(SignalCode.CONTROLNET_IMPORT_IMAGE_SIGNAL)
+        pass
 
     @Slot()
     def export_controlnet_image(self):
-        self.emit_signal(SignalCode.CONTROLNET_EXPORT_IMAGE_SIGNAL)
+        pass
 
     @Slot()
     def import_drawingpad_image(self):
-        self.emit_signal(SignalCode.DRAWINGPAD_IMPORT_IMAGE_SIGNAL)
+        pass
 
     @Slot()
     def export_drawingpad_image(self):
-        self.emit_signal(SignalCode.DRAWINGPAD_EXPORT_IMAGE_SIGNAL)
+        pass
 
     @Slot()
     def action_export_image_triggered(self):
@@ -262,7 +262,6 @@ class MainWindow(
 
     @Slot()
     def action_new_document_triggered(self):
-        self.new_document()
         self.emit_signal(SignalCode.CANVAS_CLEAR)
 
     @Slot()
@@ -300,10 +299,6 @@ class MainWindow(
     @Slot()
     def action_clear_all_prompts_triggered(self):
         self.clear_all_prompts()
-
-    @Slot()
-    def action_show_model_manager(self):
-        ModelManagerWidget()
 
     @Slot()
     def action_triggered_browse_ai_runner_path(self):
@@ -370,11 +365,11 @@ class MainWindow(
 
     @Slot()
     def action_outpaint_export(self):
-        self.emit_signal(SignalCode.OUTPAINT_EXPORT_SIGNAL)
+        pass
 
     @Slot()
     def action_outpaint_import(self):
-        self.emit_signal(SignalCode.OUTPAINT_IMPORT_SIGNAL)
+        pass
 
     @Slot()
     def action_run_setup_wizard_clicked(self):
@@ -431,7 +426,8 @@ class MainWindow(
     """
     End slot functions
     """
-    def download_url(self, url, save_path):
+    @staticmethod
+    def download_url(url, save_path):
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
         title = soup.title.string if soup.title else url
@@ -445,7 +441,8 @@ class MainWindow(
             file.write(response.content)
         return filename
 
-    def download_pdf(self, url, save_path):
+    @staticmethod
+    def download_pdf(url, save_path):
         response = requests.get(url)
         filename = url.split('/')[-1]  # Get the filename from the URL
         save_path = os.path.join(save_path, filename)
@@ -453,7 +450,7 @@ class MainWindow(
             file.write(response.content)
         return filename
 
-    def on_navigate_to_url(self, data: dict = None):
+    def on_navigate_to_url(self, _data: Dict = None):
         url, ok = QInputDialog.getText(self, 'Browse Web', 'Enter your URL:')
         if ok:
             try:
@@ -490,19 +487,13 @@ class MainWindow(
                 {
                     "llm_request": True,
                     "request_data": {
-                        "action": LLMAction.RAG,
-                        "prompt": "Summarize the text and provide a synopsis of the content. Be concise and informative.",
+                        "action": LLMActionType.RAG,
+                        "prompt": "Summarize the text and provide a synopsis of the content. "
+                                  "Be concise and informative.",
+                        "llm_request": LLMRequest.from_default()
                     }
                 }
             )
-
-    def on_describe_image_signal(self, data):
-        image = data["image"]
-        callback = data["callback"]
-        self.generator_tab_widget.ui.ai_tab_widget.describe_image(
-            image=image,
-            callback=callback
-        )
 
     def show_layers(self):
         self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
@@ -513,10 +504,6 @@ class MainWindow(
             (SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal),
             (SignalCode.QUIT_APPLICATION, self.action_quit_triggered),
             (SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal),
-            (SignalCode.ENABLE_BRUSH_TOOL_SIGNAL, lambda _message: self.action_toggle_brush(True)),
-            (SignalCode.ENABLE_ERASER_TOOL_SIGNAL, lambda _message: self.action_toggle_eraser(True)),
-            (SignalCode.ENABLE_SELECTION_TOOL_SIGNAL, lambda _message: self.action_toggle_select(True)),
-            (SignalCode.ENABLE_MOVE_TOOL_SIGNAL, lambda _message: self.action_toggle_active_grid_area(True)),
             (SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal),
             (SignalCode.WRITE_FILE, self.on_write_file_signal),
             (SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal),
@@ -533,7 +520,8 @@ class MainWindow(
             (SignalCode.REFRESH_STYLESHEET_SIGNAL, self.on_theme_changed_signal),
             (SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal),
             (SignalCode.NAVIGATE_TO_URL, self.on_navigate_to_url),
-            (SignalCode.MISSING_REQUIRED_MODELS, self.display_missing_models_error)
+            (SignalCode.MISSING_REQUIRED_MODELS, self.display_missing_models_error),
+            (SignalCode.TOGGLE_TOOL, self.on_toggle_tool_signal)
         ):
             self.register(item[0], item[1])
 
@@ -550,10 +538,11 @@ class MainWindow(
         # Start a new instance of the application
         QProcess.startDetached(sys.executable, sys.argv)
 
-    def on_write_file_signal(self, data: dict):
+    @staticmethod
+    def on_write_file_signal(data: Dict):
         """
         Writes data to a file.
-        :param data: dict
+        :param data: Dict
         :return: None
         """
         args = data["args"]
@@ -564,11 +553,12 @@ class MainWindow(
         with open("output.txt", "w") as f:
             f.write(message)
 
-    def on_bash_execute_signal(self, data: dict) -> str:
+    @staticmethod
+    def on_bash_execute_signal(data: Dict) -> str:
         """
         Takes a message from the LLM and strips bash commands from it.
         Passes bash command to the bash_execute function.
-        :param data: dict
+        :param data: Dict
         :return:
         """
         args = data["args"]
@@ -580,15 +570,54 @@ class MainWindow(
     def initialize_ui(self):
         self.logger.debug("Loading UI")
         self.ui.setupUi(self)
+        active_index = 0
+        tabs = Tab.objects.filter_by(section="center")
+        for tab in tabs:
+            if (tab.active):
+                active_index = tab.index
+                break
+        self.ui.center_tab_container.setCurrentIndex(active_index)
+
         self.set_stylesheet()
         self.restore_state()
+        
+        settings = SplitterSetting.objects.filter_by_first(name="main_window_splitter")
+        if settings:
+            self.ui.main_window_splitter.restoreState(settings.splitter_settings)
+        self.ui.center_tab_container.currentChanged.connect(self.on_tab_section_changed)
+
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
         self.initialize_widget_elements()
+
         self.ui.actionUndo.setEnabled(False)
         self.ui.actionRedo.setEnabled(False)
-        self.emit_signal(SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, {"main_window": self})
+        self._load_plugins()
+        self.emit_signal(
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, 
+            {"main_window": self}
+        )
+
+    def _load_plugins(self):
+        base_path = self.path_settings.base_path
+        path = os.path.join(base_path, "plugins")
+        plugin_loader = PluginLoader(plugin_dir=path)
+        plugins = plugin_loader.load_plugins()
+
+        if len(plugins) == 0:
+            self.logger.info("No plugins found at " + path)
+        else:
+            self.logger.info("Loading plugins from " + path)
+            for plugin in plugins:
+                if hasattr(plugin, "get_widget"):
+                    widget = plugin.get_widget()
+                    self.ui.center_tab_container.addTab(widget, plugin.name)
+
+    @Slot(int)
+    def on_tab_section_changed(self, index: int):
+        Tab.update_tabs("center", self.ui.center_tab_container, index)
+        self.emit_signal(SignalCode.SECTION_CHANGED)
 
     def initialize_widget_elements(self):
         for item in (
@@ -603,7 +632,7 @@ class MainWindow(
             item[0].blockSignals(False)
         self.initialized = True
 
-    def layer_opacity_changed(self, attr_name, value=None, widget=None):
+    def layer_opacity_changed(self, _attr_name, value=None, _widget=None):
         self.emit_signal(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
 
     def keyPressEvent(self, event):
@@ -621,7 +650,7 @@ class MainWindow(
                 return shortcutkey.text
         return ""
 
-    def on_save_stablediffusion_prompt_signal(self, data: dict):
+    def on_save_stablediffusion_prompt_signal(self, data: Dict):
         self.create_saved_prompt({
             'prompt': data["prompt"],
             'negative_prompt': data["negative_prompt"],
@@ -631,7 +660,6 @@ class MainWindow(
 
     def set_path_settings(self, key, val):
         self.update_path_settings(key, val)
-
 
     def action_quit_triggered(self):
         QApplication.quit()
@@ -649,7 +677,6 @@ class MainWindow(
         self.save_state()
         self.emit_signal(SignalCode.QUIT_APPLICATION)
 
-
     def show_settings_path(self, name, default_path=None):
         path = getattr(self.path_settings, name)
         show_path(default_path if default_path and path == "" else path)
@@ -666,7 +693,6 @@ class MainWindow(
         getattr(self.ui, widget_name).setIcon(icon)
         self.update()
 
-
     def toggle_nsfw_filter(self):
         self.set_nsfw_filter_tooltip()
 
@@ -681,7 +707,7 @@ class MainWindow(
         else:
             self.showFullScreen()
 
-    def on_unload_non_sd_models(self, data:dict=None):
+    def on_unload_non_sd_models(self, data: Dict = None):
         self._llm_generate_worker.on_llm_on_unload_signal()
         self._tts_generator_worker.unload()
         self._stt_audio_processor_worker.unload()
@@ -689,8 +715,9 @@ class MainWindow(
         if callback:
             callback(data)
 
-    def on_load_non_sd_models(self, data:dict=None):
-        self._llm_generate_worker.load()
+    def on_load_non_sd_models(self, data: Dict = None):
+        if self.application_settings.llm_enabled:
+            self._llm_generate_worker.load()
         if self.application_settings.tts_enabled:
             self._tts_generator_worker.load()
         if self.application_settings.stt_enabled:
@@ -699,7 +726,7 @@ class MainWindow(
         if callback:
             callback(data)
 
-    def on_toggle_llm(self, data:dict=None, val=None):
+    def on_toggle_llm(self, data: Dict = None, val=None):
         if val is None:
             val = not self.application_settings.llm_enabled
         self._update_action_button(
@@ -712,7 +739,7 @@ class MainWindow(
             data
         )
 
-    def on_toggle_sd(self, data:dict=None, val=None):
+    def on_toggle_sd(self, data: Dict = None, val=None):
         if val is None:
             val = not self.application_settings.sd_enabled
         self._update_action_button(
@@ -725,7 +752,7 @@ class MainWindow(
             data
         )
 
-    def on_toggle_tts(self, data:dict=None, val=None):
+    def on_toggle_tts(self, data: Dict = None, val=None):
         if val is None:
             val = not self.application_settings.sd_enabled
         self._update_action_button(
@@ -742,11 +769,11 @@ class MainWindow(
         self,
         model_type,
         element,
-        val:bool,
+        val: bool,
         load_signal: SignalCode,
         unload_signal: SignalCode,
-        application_setting:str=None,
-        data:dict=None
+        application_setting: str = None,
+        data: Dict = None
     ):
         if self._model_status[model_type] is ModelStatus.LOADING:
             val = not val
@@ -771,15 +798,26 @@ class MainWindow(
         self.save_window_settings("is_maximized", self.isMaximized())
         self.save_window_settings("is_fullscreen", self.isFullScreen())
         self.save_window_settings("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter.saveState())
-        self.save_window_settings("content_splitter", self.ui.content_splitter.saveState())
-        self.save_window_settings("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter.saveState())
-        self.save_window_settings("tool_tab_widget_index", self.ui.tool_tab_widget.ui.tool_tab_widget_container.currentIndex())
-        self.save_window_settings("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter.saveState())
         self.save_window_settings("width", self.width())
         self.save_window_settings("height", self.height())
         self.save_window_settings("x_pos", self.pos().x())
         self.save_window_settings("y_pos", self.pos().y())
-        self.save_window_settings("mode_tab_widget_index", self.ui.generator_widget.ui.generator_form_tabs.currentIndex())
+        self.save_window_settings(
+            "mode_tab_widget_index",
+            self.ui.generator_widget.ui.generator_form_tabs.currentIndex()
+        )
+
+        settings = SplitterSetting.objects.filter_by_first(name="main_window_splitter")
+        if not settings:
+            SplitterSetting.objects.create(
+                name="main_window_splitter",
+                splitter_settings=self.ui.main_window_splitter.saveState()
+            )
+        else:
+            SplitterSetting.objects.update(
+                settings.id,
+                splitter_settings=self.ui.main_window_splitter.saveState()
+            )
 
     def restore_state(self):
         self.logger.debug("Restoring state")
@@ -790,26 +828,7 @@ class MainWindow(
         else:
             self.showNormal()
 
-        self.ui.actionToggle_Grid.blockSignals(True)
-        self.ui.actionToggle_Grid.setChecked(self.grid_settings.show_grid)
-        self.ui.actionToggle_Grid.blockSignals(False)
-
-        first_run = False
-        splitters = [
-            ("content_splitter", self.ui.content_splitter),
-            ("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter),
-            ("generator_form_splitter", self.ui.generator_widget.ui.generator_form_splitter),
-            ("grid_settings_splitter", self.ui.tool_tab_widget.ui.grid_settings_splitter),
-        ]
-        for splitter_name, splitter in splitters:
-            splitter_state = getattr(self.window_settings, splitter_name)
-            if splitter_state is not None:
-                splitter.blockSignals(True)
-                splitter.restoreState(splitter_state)
-                splitter.blockSignals(False)
-            elif splitter_name == "content_splitter":
-                first_run = True
-                splitter.setSizes([self.width() - 200, 512, 200])
+        first_run = False   
 
         self.setMinimumSize(100, 100)  # Set a reasonable minimum size
 
@@ -822,13 +841,6 @@ class MainWindow(
         else:
             x_pos = int(self.window_settings.x_pos)
             y_pos = int(self.window_settings.y_pos)
-        self.ui.generator_widget.ui.generator_form_tabs.setCurrentIndex(
-            int(self.window_settings.mode_tab_widget_index)
-        )
-
-        self.ui.tool_tab_widget.ui.tool_tab_widget_container.setCurrentIndex(
-            int(self.window_settings.tool_tab_widget_index)
-        )
 
         self.resize(width, height)
         self.move(x_pos, y_pos)
@@ -856,8 +868,15 @@ class MainWindow(
     def action_ai_toggled(self, val):
         self.update_application_settings("ai_mode", val)
 
+    @Slot(bool)
     def action_toggle_grid(self, val):
         self.update_grid_settings("show_grid", val)
+        self.emit_signal(SignalCode.TOGGLE_GRID, {
+            "show_grid": val
+        })
+    
+    def on_toggle_tool_signal(self, data: Dict):
+        self.toggle_tool(data["tool"], data["active"])
 
     def show_nsfw_warning_popup(self):
         if self.application_settings.show_nsfw_warning:
@@ -873,8 +892,10 @@ class MainWindow(
                     "You are attempting to disable the safety checker (NSFW filter).\n"
                     "It is strongly recommended that you keep this enabled at all times.\n"
                     "The Safety Checker prevents potentially harmful content from being displayed.\n"
-                    "Only disable it if you are sure the Image model you are using is not capable of generating harmful content.\n"
-                    "Disabling the safety checker is intended as a last resort for continual false positives and as a research feature.\n"
+                    "Only disable it if you are sure the Image model you are using is not capable of generating "
+                    "harmful content.\n"
+                    "Disabling the safety checker is intended as a last resort for continual false positives and as a "
+                    "research feature.\n"
                     "\n\n"
                     "Are you sure you want to disable the filter?"
                 )
@@ -923,7 +944,8 @@ class MainWindow(
     def show_update_popup(self):
         self.update_popup = UpdateWindow()
 
-    def show_setup_wizard(self):
+    @staticmethod
+    def show_setup_wizard():
         AppInstaller(close_on_cancel=False)
 
     def showEvent(self, event):
@@ -951,11 +973,11 @@ class MainWindow(
 
     def _set_keyboard_shortcuts(self):
         
-        quit_key = ShortcutKeys.objects.filter_by(display_name="Quit").first()
-        brush_key = ShortcutKeys.objects.filter_by(display_name="Brush").first()
-        eraser_key = ShortcutKeys.objects.filter_by(display_name="Eraser").first()
-        move_tool_key = ShortcutKeys.objects.filter_by(display_name="Move Tool").first()
-        select_tool_key = ShortcutKeys.objects.filter_by(display_name="Select Tool").first()
+        quit_key = ShortcutKeys.objects.filter_by_first(display_name="Quit")
+        brush_key = ShortcutKeys.objects.filter_by_first(display_name="Brush")
+        eraser_key = ShortcutKeys.objects.filter_by_first(display_name="Eraser")
+        move_tool_key = ShortcutKeys.objects.filter_by_first(display_name="Move Tool")
+        select_tool_key = ShortcutKeys.objects.filter_by_first(display_name="Select Tool")
 
         if quit_key is not None:
             key_sequence = QKeySequence(quit_key.key | quit_key.modifiers)
@@ -982,8 +1004,6 @@ class MainWindow(
             self.ui.actionToggle_Selection.setShortcut(key_sequence)
             self.ui.actionToggle_Selection.setToolTip(f"{select_tool_key.display_name} ({select_tool_key.text})")
 
-        
-
     def _initialize_workers(self):
         self.logger.debug("Initializing worker manager")
         self._mask_generator_worker = create_worker(MaskGeneratorWorker)
@@ -999,71 +1019,32 @@ class MainWindow(
         for image_filter in image_filters:
             action = self.ui.menuFilters.addAction(image_filter.display_name)
             action.triggered.connect(partial(self.display_filter_window, image_filter))
-        
 
-    def display_filter_window(self, image_filter):
+    @staticmethod
+    def display_filter_window(image_filter):
         FilterWindow(image_filter.id)
 
     def _initialize_default_buttons(self):
-        show_grid = self.grid_settings.show_grid
-        current_tool = self.current_tool
-
-        set_widget_state(self.ui.actionToggle_Active_Grid_Area, current_tool is CanvasToolName.ACTIVE_GRID_AREA)
-        set_widget_state(self.ui.actionToggle_Brush, current_tool is CanvasToolName.BRUSH)
-        set_widget_state(self.ui.actionToggle_Eraser, current_tool is CanvasToolName.ERASER)
-        set_widget_state(self.ui.actionToggle_Grid, show_grid is True)
-        set_widget_state(self.ui.actionMask_toggle, self.drawing_pad_settings.mask_layer_enabled is True)
-
         self.ui.actionSafety_Checker.blockSignals(True)
         self.ui.actionSafety_Checker.setChecked(self.application_settings.nsfw_filter)
         self.ui.actionSafety_Checker.blockSignals(False)
 
-    @staticmethod
-    def __toggle_button(ui_element, state):
-        ui_element.blockSignals(True)
-        ui_element.setChecked(state)
-        ui_element.blockSignals(False)
-
     def toggle_tool(self, tool: CanvasToolName, active: bool):
-        self.initialize_widget_elements()
-        if not active:
-            tool = CanvasToolName.NONE
-        else:
-            if tool is CanvasToolName.BRUSH:
-                self.__toggle_button(self.ui.actionToggle_Brush, True)
-                self.__toggle_button(self.ui.actionToggle_Eraser, False)
-                self.__toggle_button(self.ui.actionToggle_Selection, False)
-                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
-            elif tool is CanvasToolName.ERASER:
-                self.__toggle_button(self.ui.actionToggle_Brush, False)
-                self.__toggle_button(self.ui.actionToggle_Eraser, True)
-                self.__toggle_button(self.ui.actionToggle_Selection, False)
-                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
-            elif tool is CanvasToolName.SELECTION:
-                self.__toggle_button(self.ui.actionToggle_Brush, False)
-                self.__toggle_button(self.ui.actionToggle_Eraser, False)
-                self.__toggle_button(self.ui.actionToggle_Selection, True)
-                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, False)
-            elif tool is CanvasToolName.ACTIVE_GRID_AREA:
-                self.__toggle_button(self.ui.actionToggle_Brush, False)
-                self.__toggle_button(self.ui.actionToggle_Eraser, False)
-                self.__toggle_button(self.ui.actionToggle_Selection, False)
-                self.__toggle_button(self.ui.actionToggle_Active_Grid_Area, True)
         self.update_application_settings("current_tool", tool.value)
         self.emit_signal(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, {
-            "tool": tool
+            "tool": tool,
+            "active": active
         })
-        self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
 
     def _initialize_window(self):
         self.center()
         self.set_window_title()
 
     def center(self):
-        availableGeometry = QGuiApplication.primaryScreen().availableGeometry()
-        frameGeometry = self.frameGeometry()
-        frameGeometry.moveCenter(availableGeometry.center())
-        self.move(frameGeometry.topLeft())
+        available_geometry = QGuiApplication.primaryScreen().availableGeometry()
+        frame_geometry = self.frameGeometry()
+        frame_geometry.moveCenter(available_geometry.center())
+        self.move(frame_geometry.topLeft())
 
     def set_window_title(self):
         """
@@ -1072,18 +1053,13 @@ class MainWindow(
         """
         self.setWindowTitle(self._window_title)
 
-    def new_document(self):
-        self.is_saved = False
-        self.set_window_title()
-        self.current_filter = None
-
     def handle_unknown(self, message):
         self.logger.error(f"Unknown message code: {message}")
 
     def clear_all_prompts(self):
         self.prompt = ""
         self.negative_prompt = ""
-        self.generator_tab_widget.clear_prompts()
+        self.emit_signal(SignalCode.CLEAR_PROMPTS)
 
     def new_batch(self, index, image, data):
         self.generator_tab_widget.new_batch(index, image, data)
@@ -1105,6 +1081,7 @@ class MainWindow(
         elif model is ModelType.LLM:
             self.ui.actionToggle_LLM.setDisabled(status is ModelStatus.LOADING)
             if status is ModelStatus.FAILED:
+                self.logger.warning("LLM failed to load")
                 self.ui.actionToggle_LLM.setChecked(False)
         elif model is ModelType.TTS:
             self.ui.actionToggle_Text_to_Speech.setDisabled(status is ModelStatus.LOADING)

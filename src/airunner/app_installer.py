@@ -32,7 +32,7 @@ class AppInstaller(
     """
     def __init__(
         self,
-        close_on_cancel:bool = True
+        close_on_cancel: bool = True
     ):
         """
         Initialize the application and run as a GUI application or a socket server.

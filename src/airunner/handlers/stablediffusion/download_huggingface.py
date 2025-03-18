@@ -13,11 +13,12 @@ class DownloadHuggingface(
         self.worker = None
         self.file_name = None
 
-    def download_model(self, url, callback=None):
+    def download_model(self, url, _callback=None):
         path = self.extract_path_from_url(url)
         hf_hub_download(repo_id=path, filename="config.json")
 
-    def extract_path_from_url(self, url) -> str:
+    @staticmethod
+    def extract_path_from_url(url) -> str:
         parsed_url = urlparse(url)
         return parsed_url.path.lstrip('/')  # remove leading slash
 

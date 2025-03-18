@@ -18,7 +18,7 @@ class AudioCaptureWorker(Worker):
 
     def __init__(self):
         super().__init__(signals=(
-            (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_AudioCaptureWorker_response_signal),
+            (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_audio_capture_worker_response_signal),
             (SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal),
             (SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal),
             (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
@@ -31,7 +31,7 @@ class AudioCaptureWorker(Worker):
         self.running = False
         self._audio_process_queue = queue.Queue()
 
-    def on_AudioCaptureWorker_response_signal(self, message: dict):
+    def on_audio_capture_worker_response_signal(self, message: dict):
         item: np.ndarray = message["item"]
         self.logger.debug("Heard signal")
         self.add_to_queue(item)

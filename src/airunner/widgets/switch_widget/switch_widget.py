@@ -2,6 +2,7 @@ from PySide6.QtCore import QObject, QPropertyAnimation, QEasingCurve, Property, 
 from PySide6.QtGui import QGradient, QLinearGradient, QPalette, Qt, QPainter, QColor
 from PySide6.QtWidgets import QAbstractButton, QApplication
 
+
 class SwitchPrivate(QObject):
     def __init__(self, q, parent=None):
         QObject.__init__(self, parent=parent)
@@ -68,8 +69,11 @@ class SwitchPrivate(QObject):
     @Slot(bool, name='animate')
     def animate(self, checked):
         self.checked = checked
-        self.animation.setDirection(QPropertyAnimation.Direction.Forward if checked else QPropertyAnimation.Direction.Backward)
+        self.animation.setDirection(
+            QPropertyAnimation.Direction.Forward if checked else QPropertyAnimation.Direction.Backward
+        )
         self.animation.start()
+
 
 class SwitchWidget(QAbstractButton):
     toggled = Signal(bool)
@@ -106,6 +110,7 @@ class SwitchWidget(QAbstractButton):
     def backgroundColor(self, color):
         self._backgroundColor = color  # Set the internal attribute
         self.update()
+
 
 if __name__ == '__main__':
     import sys

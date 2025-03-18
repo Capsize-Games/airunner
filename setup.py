@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.2.4",
+    version="3.3.0",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -26,6 +26,7 @@ setup(
         "pillow==11.1.0",
         "alembic==1.14.1",
         "aiosqlite==0.21.0",
+        "sqlalchemy==2.0.38",
     ],
     extras_require={
         "gui": [
@@ -70,12 +71,15 @@ setup(
             "llama-index-embeddings-mistralai==0.3.0",
             "llama-index-vector-stores-faiss==0.3.0",
             "llama-index-embeddings-huggingface==0.5.1",
+            "llama-index-llms-openrouter==0.3.1",
             "langchain-community==0.3.17",
             "EbookLib==0.18",
             "html2text==2024.2.26",
             "rake_nltk==1.0.6",
             "tf-keras==2.18.0",
             "peft==0.14.0",
+            "trafilatura==2.0.0",
+            "lxml_html_clean==0.4.1",
         ],
         "tts": [
             "inflect==7.5.0",
