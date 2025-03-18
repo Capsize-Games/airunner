@@ -1079,6 +1079,7 @@ class StableDiffusionHandler(BaseHandler):
             ))
         else:
             config_path = os.path.dirname(self.model_path)
+
         try:
             self._pipe = pipeline_class_.from_single_file(
                 self.model_path,
@@ -1724,8 +1725,7 @@ class StableDiffusionHandler(BaseHandler):
                 controlnet_image = self._resize_image(controlnet_image, width, height)
                 control_image = self._controlnet_processor(controlnet_image, to_pil=True)
                 if control_image is not None:
-                    self.update_settings_by_name(
-                        "controlnet_settings",
+                    self.update_controlnet_settings(
                         "generated_image",
                         convert_image_to_binary(control_image)
                     )
