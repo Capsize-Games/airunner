@@ -1,7 +1,6 @@
 
 import torch
 from PySide6.QtCore import QTimer
-import psutil
 from PySide6.QtWidgets import QApplication
 from airunner.enums import SignalCode, ModelStatus, ModelType, StatusColors
 from airunner.widgets.base_widget import BaseWidget
