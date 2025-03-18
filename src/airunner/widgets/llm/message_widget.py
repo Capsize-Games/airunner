@@ -23,6 +23,10 @@ class MessageWidget(BaseWidget):
     textChanged = Signal()
 
     def __init__(self, *args, **kwargs):
+        self.signal_handlers = {
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
+            SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id,
+        }
         self.name = kwargs.pop("name")
         self.message = kwargs.pop("message")
         self.message_id = kwargs.pop("message_id")
@@ -33,8 +37,6 @@ class MessageWidget(BaseWidget):
         self.ui.content.insertPlainText(self.message)
         self.ui.content.document().contentsChanged.connect(self.sizeChange)
         self.ui.user_name.setText(f"{self.name}")
-        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed_signal)
-        self.register(SignalCode.DELETE_MESSAGES_AFTER_ID, self.on_delete_messages_after_id)
         self.font_family = None
         self.font_size = None
         self.set_chat_font()

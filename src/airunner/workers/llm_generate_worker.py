@@ -10,8 +10,7 @@ from airunner.handlers.llm.llm_handler import LLMHandler
 class LLMGenerateWorker(Worker):
     def __init__(self):
         self.llm = None
-        super().__init__()
-        for signal in (
+        self.signals = [
             (SignalCode.LLM_UNLOAD_SIGNAL, self.on_llm_on_unload_signal),
             (SignalCode.LLM_LOAD_SIGNAL, self.on_llm_load_model_signal),
             (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_llm_clear_history_signal),
@@ -24,8 +23,8 @@ class LLMGenerateWorker(Worker):
             (SignalCode.CONVERSATION_DELETED, self.on_conversation_deleted_signal),
             (SignalCode.SECTION_CHANGED, self.on_section_changed_signal),
             (SignalCode.WEB_BROWSER_PAGE_HTML, self.on_web_browser_page_html_signal),
-        ):
-            self.register(signal[0], signal[1])
+        ]
+        super().__init__()
         self._llm_thread = None
 
     def on_conversation_deleted_signal(self, data):

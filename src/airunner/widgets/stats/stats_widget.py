@@ -20,9 +20,10 @@ class StatsWidget(
     widget_class_ = Ui_stats_widget
 
     def __init__(self, *args, **kwargs):
+        self.signal_handlers = {
+            SignalCode.LOG_LOGGED_SIGNAL: self.on_log_logged_signal,
+        }
         super().__init__(*args, **kwargs)
-
-        self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
 
         # Track console history
         self.console_history = []
