@@ -3,6 +3,8 @@ from typing import Dict, Optional
 
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
+from airunner.handlers.llm.llm_handler import LLMHandler
+
 
 
 class LLMGenerateWorker(Worker):
@@ -45,6 +47,8 @@ class LLMGenerateWorker(Worker):
             self._llm_thread.join()
 
     def on_llm_on_unload_signal(self, data=None):
+        if not self.llm:
+            return
         data = data or {}
         self.logger.debug("Unloading LLM")
         self.llm.unload()
@@ -96,7 +100,6 @@ class LLMGenerateWorker(Worker):
     def _load_llm(self, data=None):
         data = data or {}
         if self.llm is None:
-            from airunner.handlers.llm.llm_handler import LLMHandler
             self.llm = LLMHandler()
 
         self.llm.load()
