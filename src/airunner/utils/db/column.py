@@ -189,6 +189,22 @@ def set_default_and_create_fk(
         existing_server_default=sa.text(str(default_value))
     )
 
+def set_default(
+    cls,
+    column_name: str,
+    default_value: Any
+) -> None:
+    """
+    Sets a default value for a column in a table.
+    """
+    safe_alter_column(
+        cls,
+        column_name,
+        existing_type=sa.INTEGER(),
+        nullable=False,
+        existing_server_default=sa.text(str(default_value))
+    )
+
 
 def create_unique_constraint(
     cls, 
