@@ -57,7 +57,7 @@ class WeatherMixin:
         return 1
     
     @property
-    def _weather_prompt(self) -> str:
+    def weather_prompt(self) -> str:
         weather = self.get_weather()
         if not weather:
             return ""
