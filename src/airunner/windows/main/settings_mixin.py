@@ -82,11 +82,11 @@ class SettingsMixin:
 
     @property
     def llm_perform_analysis(self) -> bool:
-        return os.getenv("AI_RUNNER_PERFORM_ANALYSIS", "False").lower() == "1"
+        return os.getenv("AI_RUNNER_PERFORM_ANALYSIS", "0").lower() == "1"
 
     @property
     def print_llm_system_prompt(self) -> bool:
-        return os.getenv("AI_RUNNER_PRINT_LLM_SYSTEM_PROMPT", "False").lower() == "1"
+        return os.getenv("AI_RUNNER_PRINT_LLM_SYSTEM_PROMPT", "0").lower() == "1"
 
     @property
     def session_manager(self):
