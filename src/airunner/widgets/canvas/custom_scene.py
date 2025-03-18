@@ -414,8 +414,7 @@ class CustomScene(
             self.handling_event = False
 
     def leaveEvent(self, event):
-        self._handle_cursor(event)
-        super(CustomScene, self).leaveEvent(event)
+        self._handle_cursor(event, False)
 
     def refresh_image(self, image: Image = None):
         # Save the current viewport position
@@ -827,11 +826,12 @@ class CustomScene(
     def _handle_left_mouse_release(self, event) -> bool:
         return self._handle_mouse_event(event, False)
 
-    def _handle_cursor(self, event):
+    def _handle_cursor(self, event, apply_cursor: bool = True):
         self.emit_signal(
             SignalCode.CANVAS_UPDATE_CURSOR,
             {
-                "event": event
+                "event": event,
+                "apply_cursor": apply_cursor
             }
         )
 

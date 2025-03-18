@@ -190,20 +190,21 @@ class CanvasWidget(
 
     def on_canvas_update_cursor_signal(self, message: dict):
         event = message.get("event", None)
-        if self.current_tool in (
-            CanvasToolName.BRUSH,
-            CanvasToolName.ERASER
-        ):
-            cursor = circle_cursor(
-                Qt.GlobalColor.white,
-                Qt.GlobalColor.transparent,
-                self.brush_settings.size,
-            )
-        elif self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
-            if event and event.buttons() == Qt.MouseButton.LeftButton:
-                cursor = Qt.CursorShape.ClosedHandCursor
-            else:
-                cursor = Qt.CursorShape.OpenHandCursor
+        if message.get("apply_cursor", None):
+            if self.current_tool in (
+                CanvasToolName.BRUSH,
+                CanvasToolName.ERASER
+            ):
+                cursor = circle_cursor(
+                    Qt.GlobalColor.white,
+                    Qt.GlobalColor.transparent,
+                    self.brush_settings.size,
+                )
+            elif self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
+                if event and event.buttons() == Qt.MouseButton.LeftButton:
+                    cursor = Qt.CursorShape.ClosedHandCursor
+                else:
+                    cursor = Qt.CursorShape.OpenHandCursor
         else:
             cursor = Qt.CursorShape.ArrowCursor
         self.setCursor(cursor)

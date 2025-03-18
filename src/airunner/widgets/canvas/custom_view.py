@@ -25,6 +25,7 @@ class CustomGraphicsView(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         MediatorMixin.__init__(self)
+        self.setMouseTracking(True)
         
         self._scene: Optional[CustomScene] = None
         self.current_background_color: Optional[QColor] = None
@@ -60,9 +61,9 @@ class CustomGraphicsView(
         scene = self._scene
         if not scene:
             if self.canvas_type == CanvasType.IMAGE.value:
-                scene = CustomScene(self.canvas_type)
+                scene = CustomScene(canvas_type=self.canvas_type)
             elif self.canvas_type == CanvasType.BRUSH.value:
-                scene = BrushScene(self.canvas_type)
+                scene = BrushScene(canvas_type=self.canvas_type)
             else:
                 self.logger.error(f"Unknown canvas type: {self.canvas_type}")
                 return
@@ -388,3 +389,11 @@ class CustomGraphicsView(
     def mousePressEvent(self, event: QMouseEvent):
         new_event = self.snap_to_grid(event)
         super().mousePressEvent(new_event)
+
+    def leaveEvent(self, event: QEvent) -> None:
+        """
+        Handle the event when the mouse leaves the CustomGraphicsView widget.
+        Resets the cursor to a normal pointer.
+        """
+        self.scene.leaveEvent(event)
+        super().leaveEvent(event)
