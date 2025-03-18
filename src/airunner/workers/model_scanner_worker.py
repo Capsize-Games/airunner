@@ -85,7 +85,6 @@ class ModelScannerWorker(
         self.emit_signal(SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {"models": models})
 
     def remove_missing_models(self):
-        self.logger.debug("Remove missing models")
         # remove all models that are not in the model path
         model_path = os.path.expanduser(
             os.path.join(
@@ -98,5 +97,6 @@ class ModelScannerWorker(
         existing_models = AIModels.objects.all()
         for model in existing_models:
             if not os.path.exists(model.path):
+                self.logger.debug("Remove missing model " + model.id)
                 AIModels.objects.delete(model.id)
                 self.logger.debug(f"Removed missing model: {model.name}")
