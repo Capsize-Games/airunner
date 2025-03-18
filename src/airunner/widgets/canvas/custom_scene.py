@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Dict
 import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QEvent
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent, QMessageBox
@@ -661,14 +661,15 @@ class CustomScene(
             self.logger.warning("Image is None, unable to add to scene")
             return
 
-        if is_outpaint:
-            image, root_point, _pivot_point = self._handle_outpaint(
-                outpaint_box_rect,
-                image
-            )
-        else:
-            root_point = QPoint(outpaint_box_rect["x"], outpaint_box_rect["y"])
-        self.item.setPos(root_point.x(), root_point.y())
+        if outpaint_box_rect:
+            if is_outpaint:
+                image, root_point, _pivot_point = self._handle_outpaint(
+                    outpaint_box_rect,
+                    image
+                )
+            else:
+                root_point = QPoint(outpaint_box_rect["x"], outpaint_box_rect["y"])
+            self.item.setPos(root_point.x(), root_point.y())
 
         # self._set_current_active_image(image)
         self.current_active_image = image
@@ -691,9 +692,7 @@ class CustomScene(
         existing_image_copy = self.current_active_image.copy()
         width = existing_image_copy.width
         height = existing_image_copy.height
-
-        mask_image = self.drawing_pad_mask
-
+        
         pivot_point = self.image_pivot_point
         root_point = QPoint(0, 0)
         current_image_position = QPoint(0, 0)
@@ -703,13 +702,23 @@ class CustomScene(
         is_drawing_up = outpaint_box_rect["y"] < current_image_position.y()
         is_drawing_down = outpaint_box_rect["y"] > current_image_position.y()
 
-        if is_drawing_down:
-            height += outpaint_box_rect["y"]
+        x_pos = outpaint_box_rect["x"]
+        y_pos = outpaint_box_rect["y"]
+        outpaint_width = outpaint_box_rect["width"]
+        outpaint_height = outpaint_box_rect["height"]
+        
         if is_drawing_right:
-            width += outpaint_box_rect["x"]
+            if x_pos + outpaint_width > width:
+                width = x_pos + outpaint_width
+        
+        if is_drawing_down:
+            if y_pos + outpaint_height > height:
+                height = y_pos + outpaint_height
+        
         if is_drawing_up:
             height += current_image_position.y()
             root_point.setY(outpaint_box_rect["y"])
+        
         if is_drawing_left:
             width += current_image_position.x()
             root_point.setX(outpaint_box_rect["x"])
@@ -723,13 +732,49 @@ class CustomScene(
         image_root_point = QPoint(root_point.x(), root_point.y())
         image_pivot_point = QPoint(pivot_point.x(), pivot_point.y())
 
-        new_image_a.paste(outpainted_image, (int(outpaint_box_rect["x"]), int(outpaint_box_rect["y"])))
-        new_image_b.paste(existing_image_copy, (current_image_position.x(), current_image_position.y()))
+        new_image_a.paste(
+            outpainted_image, 
+            (
+                int(outpaint_box_rect["x"]), 
+                int(outpaint_box_rect["y"])
+            )
+        )
+        new_image_b.paste(
+            existing_image_copy, 
+            (
+                current_image_position.x(), 
+                current_image_position.y()
+            )
+        )
 
         # Convert mask to binary mask
+        mask_image = self.drawing_pad_mask
         mask = mask_image.convert("L").point(lambda p: p > 128 and 255)
         inverted_mask = Image.eval(mask, lambda p: 255 - p)
-        new_image_b = Image.composite(new_image_b, Image.new("RGBA", new_image_b.size), inverted_mask)
+        # create a new mask with new_dimensions which is all white and
+        # paste the inverted mask into it.
+        pos_x = outpaint_box_rect["x"]
+        pos_y = outpaint_box_rect["y"]
+        if pos_x < 0:
+            pos_x = 0
+        if pos_y < 0:
+            pos_y = 0
+        new_mask = Image.new("L", new_dimensions, 255)
+        new_mask.paste(
+            inverted_mask, 
+            (
+                pos_x, 
+                pos_y
+            )
+        )
+        new_image_b = Image.composite(
+            new_image_b, 
+            Image.new(
+                "RGBA", 
+                new_image_b.size
+            ), 
+            new_mask
+        )
 
         new_image = Image.alpha_composite(new_image, new_image_a)
         new_image = Image.alpha_composite(new_image, new_image_b)
