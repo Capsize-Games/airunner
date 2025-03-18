@@ -704,10 +704,6 @@ class SettingsMixin:
         else:
             window_settings.save()
 
-    @staticmethod
-    def save_object(database_object):
-        database_object.save()
-
     def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
         if not self.settings_mixin_shared_instance.chatbot:
             chatbot = Chatbot.objects.options(
