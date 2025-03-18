@@ -9,17 +9,6 @@ from airunner.utils.strip_names_from_message import strip_names_from_message
 
 
 class DatabaseChatStore(BaseChatStore):
-    # @classmethod
-    # def _connect(
-    #     cls, connection_string: str, async_connection_string: str, debug: bool
-    # ) -> tuple[sessionmaker, sessionmaker]:
-    #     _engine = create_engine(connection_string, echo=debug)
-    #     session = sessionmaker(_engine)
-    #
-    #     _async_engine = create_async_engine(async_connection_string)
-    #     async_session = sessionmaker(_async_engine, class_=AsyncSession)
-    #     return session, async_session
-
     def set_messages(self, key: str, messages: list[ChatMessage]) -> None:
         """Set messages for a key."""
         index = int(key)
