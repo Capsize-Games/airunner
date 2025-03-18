@@ -716,7 +716,8 @@ class MainWindow(
             callback(data)
 
     def on_load_non_sd_models(self, data: Dict = None):
-        self._llm_generate_worker.load()
+        if self.application_settings.llm_enabled:
+            self._llm_generate_worker.load()
         if self.application_settings.tts_enabled:
             self._tts_generator_worker.load()
         if self.application_settings.stt_enabled:
