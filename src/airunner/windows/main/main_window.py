@@ -846,14 +846,6 @@ class MainWindow(
         self.move(x_pos, y_pos)
         self.raise_()
 
-        # settings = SplitterSetting.objects.filter_by_first(
-        #     name="main_window_splitter"
-        # )
-        # if settings:
-        #     self.ui.main_window_splitter.restoreState(
-        #         settings.splitter_settings
-        #     )
-
     ##### End window properties #####
     #################################
 
