@@ -1,6 +1,6 @@
+
 import torch
 from PySide6.QtCore import QTimer
-import psutil
 from PySide6.QtWidgets import QApplication
 from airunner.enums import SignalCode, ModelStatus, ModelType, StatusColors
 from airunner.widgets.base_widget import BaseWidget
@@ -35,6 +35,20 @@ class StatusWidget(BaseWidget):
             self.feature_extractor_status = ModelStatus.LOADING
 
         self.update_system_stats()
+
+        for item in [
+            (ModelType.LLM, "llm_enabled"),
+            (ModelType.TTS, "tts_enabled"),
+            (ModelType.STT, "stt_enabled"),
+            (ModelType.SD, "sd_enabled"),
+            (ModelType.CONTROLNET, "controlnet_enabled"),
+        ]:
+            if getattr(self.application_settings, item[1]):
+                self._model_status[item[0]] = ModelStatus.LOADING
+                self.update_model_status({
+                    "model": item[0],
+                    "status": ModelStatus.LOADING
+                })
     
     def on_application_settings_changed(self):
         self.set_sd_status_text()
@@ -46,7 +60,6 @@ class StatusWidget(BaseWidget):
         else:
             self.ui.pipeline_label.setText("")
             self.ui.pipeline_divider.hide()
-
 
     def showEvent(self, event):
         super().showEvent(event)

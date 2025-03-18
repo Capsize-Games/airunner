@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta, ABC
 from typing import Optional, Type, ClassVar
 
 from transformers import PreTrainedModel, ProcessorMixin
@@ -8,7 +8,14 @@ from airunner.enums import ModelType
 from airunner.utils.text_preprocessing import prepare_text_for_tts
 
 
-class TTSHandler(BaseHandler):
+BaseHandlerMeta = type(BaseHandler)
+
+
+class CombinedMeta(BaseHandlerMeta, ABCMeta):
+    pass
+
+
+class TTSHandler(BaseHandler, ABC, metaclass=CombinedMeta):
     """
     Abstract base class for text-to-speech handlers.
     Responsible for managing the model, processor, vocoder, and speaker embeddings.
@@ -29,6 +36,11 @@ class TTSHandler(BaseHandler):
         # Runtime instances of the models should be instance attributes
         self._model = None
         self._processor = None
+    
+    @abstractmethod
+    def reload_speaker_embeddings(self):
+        """Reload speaker embeddings."""
+        pass
 
     @abstractmethod
     def interrupt_process_signal(self):

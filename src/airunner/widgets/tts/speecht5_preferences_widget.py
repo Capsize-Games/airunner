@@ -1,3 +1,4 @@
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.tts.templates.speecht5_preferences_ui import Ui_speecht5_preferences
 

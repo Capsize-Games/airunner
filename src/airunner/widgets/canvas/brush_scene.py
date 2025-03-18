@@ -60,13 +60,6 @@ class BrushScene(CustomScene):
             return QColor(Qt.GlobalColor.black)
         return QColor(Qt.GlobalColor.transparent)
 
-    @property
-    def is_brush_or_eraser(self):
-        return self.current_tool in (
-            CanvasToolName.BRUSH,
-            CanvasToolName.ERASER
-        )
-
     def on_brush_color_changed(self, data):
         self._brush_color = QColor(data["color"])
 
@@ -96,8 +89,6 @@ class BrushScene(CustomScene):
         if self.painter is None:
             self.refresh_image(self.current_active_image)
         if self.painter is not None and self.painter.isActive():
-            #self.painter.drawImage(0, 0, self.active_image)
-
             if self.last_pos:
                 if self.current_tool is CanvasToolName.BRUSH:
                     self._draw_at(self.painter)
@@ -134,7 +125,13 @@ class BrushScene(CustomScene):
             color=self.active_eraser_color
         )
 
-    def _create_line(self, drawing=False, erasing=False, painter=None, color: QColor=None):
+    def _create_line(
+        self,
+        drawing: bool = False,
+        erasing: bool = False,
+        painter: QPainter = None,
+        color: QColor = None
+    ):
         if (drawing and not self._is_drawing) or (erasing and not self._is_erasing):
             self._is_drawing = drawing
             self._is_erasing = erasing
@@ -234,13 +231,13 @@ class BrushScene(CustomScene):
             r, g, b, alpha = mask.split()
 
             # Make black areas fully transparent and white areas 50% transparent
-            def adjust_alpha(r, g, b, a):
-                if r == 0 and g == 0 and b == 0:
+            def adjust_alpha(red, green, blue, alpha):
+                if red == 0 and green == 0 and blue == 0:
                     return 0
-                elif r == 255 and g == 255 and b == 255:
+                elif red == 255 and green == 255 and blue == 255:
                     return 128
                 else:
-                    return a
+                    return alpha
 
             # Apply the adjust_alpha function to each pixel
             new_alpha = [
@@ -265,7 +262,14 @@ class BrushScene(CustomScene):
                 self.mask_item = None
 
     def _create_mask_image(self):
-        mask_image = PIL.Image.new("RGBA", (self.active_grid_settings.width, self.active_grid_settings.height), (0, 0, 0, 255))
+        mask_image = PIL.Image.new(
+            "RGBA",
+            (
+                self.active_grid_settings.width,
+                self.active_grid_settings.height
+            ),
+            (0, 0, 0, 255)
+        )
         self.update_drawing_pad_settings("mask", convert_image_to_binary(mask_image))
         self.mask_image = ImageQt.ImageQt(mask_image)
         self.initialize_image()

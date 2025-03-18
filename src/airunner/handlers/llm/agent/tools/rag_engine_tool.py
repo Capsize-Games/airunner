@@ -5,6 +5,7 @@ from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import 
 from llama_index.core.tools.types import ToolMetadata
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 
+
 class RAGEngineTool(ChatEngineTool):
     """RAG tool.
     
@@ -18,7 +19,7 @@ class RAGEngineTool(ChatEngineTool):
         description: Optional[str] = None,
         return_direct: bool = False,
         resolve_input_errors: bool = True,
-        agent = None
+        agent=None
     ) -> "RAGEngineTool":
         name = name or "rag_engine_tool"
         description = description or """Useful for querying data with RAG."""

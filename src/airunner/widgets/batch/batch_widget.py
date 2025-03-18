@@ -1,3 +1,4 @@
+
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.batch.templates.batch_widget_ui import Ui_batch_widget
 

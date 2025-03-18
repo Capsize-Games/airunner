@@ -61,7 +61,7 @@ class DraggablePixmap(
         y += self.last_pos.y()
         self.update_position(x, y, save)
 
-    def update_position(self, x:int, y:int, save:bool=True):
+    def update_position(self, x: int, y: int, save: bool = True):
         self.setPos(QPoint(x, y))
         if save:
             self.update_drawing_pad_settings("x_pos", x)

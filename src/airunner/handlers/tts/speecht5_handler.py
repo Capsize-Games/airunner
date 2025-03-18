@@ -1,6 +1,5 @@
 import os
 import time
-from abc import ABC
 from queue import Queue
 from typing import Optional, Union, ClassVar, Type, Dict, Any
 
@@ -20,10 +19,10 @@ from transformers import SpeechT5HifiGan
 
 from airunner.handlers.tts.tts_handler import TTSHandler
 from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
-from airunner.utils.clear_memory import clear_memory
+from airunner.utils.memory.clear_memory import clear_memory
 
 
-class SpeechT5Handler(TTSHandler, ABC):
+class SpeechT5Handler(TTSHandler):
     """
     SpeechT5 implementation of the TTSHandler.
     Uses the SpeechT5ForTextToSpeech model and SpeechT5Processor.
@@ -276,7 +275,8 @@ class SpeechT5Handler(TTSHandler, ABC):
         else:
             self.logger.error("Failed to load speaker embeddings")
         
-    def _extract_speaker_key(self, filename):
+    @staticmethod
+    def _extract_speaker_key(filename):
         return filename.split("_")[2]
 
     def _load_dataset_by_speaker_key(

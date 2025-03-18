@@ -40,7 +40,6 @@ class SDWorker(Worker):
         
         super().__init__(
             signals=(
-                (SignalCode.RESET_APPLIED_MEMORY_SETTINGS, self.on_reset_applied_memory_settings),
                 (SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal),
                 (SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL, self.on_start_auto_image_generation_signal),
                 (SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL, self.on_stop_auto_image_generation_signal),
@@ -55,7 +54,6 @@ class SDWorker(Worker):
                 (SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal),
                 (SignalCode.EMBEDDING_UPDATE_SIGNAL, self.on_update_embeddings_signal),
                 (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings),
-                (SignalCode.SD_STATE_CHANGED_SIGNAL, self.handle_sd_state_changed_signal),
                 (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_load_safety_checker),
                 (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.on_unload_safety_checker),
                 (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed),
@@ -64,10 +62,6 @@ class SDWorker(Worker):
         self.__requested_action = ModelAction.NONE
         self._threads = []
         self._workers = []
-
-    def handle_sd_state_changed_signal(self, _data=None):
-        self.sd.controlnet_handle_sd_state_changed_signal()
-        self.sd.scheduler_handle_sd_state_changed_signal()
 
     def on_load_safety_checker(self):
         if self.sd:
@@ -121,7 +115,7 @@ class SDWorker(Worker):
             thread = threading.Thread(target=self._unload_controlnet)
             thread.start()
 
-    def on_load_stablediffusion_signal(self, data:dict=None):
+    def on_load_stablediffusion_signal(self, data: dict = None):
         if self.sd:
             thread = threading.Thread(target=self._load_sd, args=(data,))
             thread.start()
@@ -131,7 +125,7 @@ class SDWorker(Worker):
             thread = threading.Thread(target=self._unload_sd, args=(data,))
             thread.start()
 
-    def _load_sd(self, data:dict=None):
+    def _load_sd(self, data: dict = None):
         do_reload = data.get("do_reload", False)
         if do_reload:
             self.sd.reload()
@@ -142,7 +136,7 @@ class SDWorker(Worker):
             if callback is not None:
                 callback(data)
 
-    def _unload_sd(self, data:dict=None):
+    def _unload_sd(self, data: dict = None):
         self.sd.unload()
         if data:
             callback = data.get("callback", None)
@@ -174,20 +168,15 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.run()
 
-    def on_reset_applied_memory_settings(self, _data=None):
-        if self.sd:
-            self.sd.reset_applied_memory_settings()
-
-    def on_sd_cancel_signal(self, _data=None):
+    @staticmethod
+    def on_sd_cancel_signal(_data=None):
         print("on_sd_cancel_signal")
 
     def on_start_auto_image_generation_signal(self, _data=None):
-        # self.sd_mode = SDMode.DRAWING
-        # self.generate()
         pass
 
     def on_stop_auto_image_generation_signal(self, _data=None):
-        #self.sd_mode = SDMode.STANDARD
+        # self.sd_mode = SDMode.STANDARD
         pass
 
     def on_do_generate_signal(self, message: dict):
@@ -204,7 +193,8 @@ class SDWorker(Worker):
             self._workers.append(worker)
             thread.start()
 
-    def handle_error(self, error_message):
+    @staticmethod
+    def handle_error(error_message):
         print(f"Error: {error_message}")
 
     def on_interrupt_image_generation_signal(self, _data=None):

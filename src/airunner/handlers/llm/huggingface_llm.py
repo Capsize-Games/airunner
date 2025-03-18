@@ -370,7 +370,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             stopping_criteria=self._stopping_criteria,
             **self.generate_kwargs,
         )
-        completion_tokens = tokens[0][inputs["input_ids"].size(1) :]
+        completion_tokens = tokens[0][inputs["input_ids"].size(1):]
         completion = self._tokenizer.decode(completion_tokens, skip_special_tokens=True)
 
         return CompletionResponse(text=completion, raw={"model_output": tokens})

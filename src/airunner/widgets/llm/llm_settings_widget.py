@@ -1,10 +1,7 @@
-"""
-This class should be used to create a window widget for the LLM.
-"""
+
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 
-from airunner.enums import SignalCode
 from airunner.settings import DEFAULT_LLM_HF_PATH
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
@@ -59,10 +56,19 @@ class LLMSettingsWidget(
             element.blockSignals(True)
 
         self.ui.top_p.init(slider_callback=self.callback, current_value=self.llm_generator_settings.top_p)
-        self.ui.max_new_tokens.init(slider_callback=self.callback, current_value=self.llm_generator_settings.max_new_tokens)
-        self.ui.repetition_penalty.init(slider_callback=self.callback, current_value=self.llm_generator_settings.repetition_penalty)
+        self.ui.max_new_tokens.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.max_new_tokens
+        )
+        self.ui.repetition_penalty.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.repetition_penalty
+        )
         self.ui.min_length.init(slider_callback=self.callback, current_value=self.llm_generator_settings.min_length)
-        self.ui.length_penalty.init(slider_callback=self.callback, current_value=self.llm_generator_settings.length_penalty)
+        self.ui.length_penalty.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.length_penalty
+        )
         self.ui.num_beams.init(slider_callback=self.callback, current_value=self.llm_generator_settings.num_beams)
         self.ui.ngram_size.init(slider_callback=self.callback, current_value=self.llm_generator_settings.ngram_size)
         self.ui.temperature.init(slider_callback=self.callback, current_value=self.llm_generator_settings.temperature)
@@ -118,7 +124,7 @@ class LLMSettingsWidget(
         for element in elements:
             element.blockSignals(False)
 
-    def callback(self, attr_name, value, widget=None):
+    def callback(self, attr_name, value, _widget=None):
         keys = attr_name.split(".")
         self.update_llm_generator_settings(keys[1], value)
         print(getattr(self.llm_generator_settings, keys[1]) == value)
@@ -186,4 +192,4 @@ class LLMSettingsWidget(
         except TypeError:
             self.logger.error(f"Attribute {key} does not exist in Chatbot")
             return
-        self.save_object(chatbot)
+        chatbot.save()

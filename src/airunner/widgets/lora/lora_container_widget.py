@@ -32,7 +32,11 @@ class LoraContainerWidget(BaseWidget):
         self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
         self._apply_button_enabled = False
         self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
-        self._scanner_worker = DirectoryWatcher(self.path_settings.base_path, self._scan_path_for_lora, self.on_scan_completed)
+        self._scanner_worker = DirectoryWatcher(
+            self.path_settings.base_path,
+            self._scan_path_for_lora,
+            self.on_scan_completed
+        )
         self._scanner_thread = QThread()
         self._scanner_worker.moveToThread(self._scanner_thread)
         self._scanner_thread.started.connect(self._scanner_worker.run)
@@ -176,14 +180,13 @@ class LoraContainerWidget(BaseWidget):
         # Remove lora from database
         
         Lora.objects.delete(lora_widget.current_lora.id)
-        
 
         self._apply_button_enabled = True
         self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
         self._load_lora(force_reload=True)
         self._deleting = False
 
-    def available_lora(self, action):
+    def available_lora(self, _action):
         available_lora = []
         for lora in self.lora:
             if lora.enabled and lora.scale > 0:
@@ -194,7 +197,6 @@ class LoraContainerWidget(BaseWidget):
         for lora in self.lora:
             trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
             for tab_name in self.tabs.keys():
-                tab = self.tabs[tab_name]
                 for i in range(self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget().layout().count()):
                     lora_widget = self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget().layout().itemAt(
                         i).widget()
@@ -204,18 +206,18 @@ class LoraContainerWidget(BaseWidget):
                         if trigger_word != "":
                             lora_widget.trigger_word.setText(trigger_word)
                         lora_widget.trigger_word.textChanged.connect(
-                            lambda value, _lora_widget=lora_widget, _lora=lora,
-                                   _tab_name=tab_name: self.handle_lora_trigger_word(_lora, _lora_widget, value))
+                            lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_trigger_word(_lora, _lora_widget, value)
+                        )
                         break
 
-    def handle_lora_trigger_word(self, lora, lora_widget, value):
+    def handle_lora_trigger_word(self, lora, _lora_widget, value):
         for n in range(len(self.lora)):
             lora_object = self.lora[n]
             if lora_object.name == lora.name:
                 lora_object.trigger_word = value
                 self.update_lora(lora_object)
 
-    def handle_lora_slider(self, lora, lora_widget, value, tab_name):
+    def handle_lora_slider(self, lora, lora_widget, value, _tab_name):
         float_val = value / 100
         for n in range(len(self.lora)):
             lora_object = self.lora[n]
@@ -224,7 +226,7 @@ class LoraContainerWidget(BaseWidget):
                 self.update_lora(lora_object)
         lora_widget.scaleSpinBox.setValue(float_val)
 
-    def handle_lora_spinbox(self, lora, lora_widget, value, tab_name):
+    def handle_lora_spinbox(self, lora, lora_widget, value, _tab_name):
         for n in range(len(self.lora)):
             lora_object = self.lora[n]
             if lora_object.name == lora.name:

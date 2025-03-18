@@ -1,4 +1,4 @@
-# airunner/widgets/llm/llm_history_widget.py
+
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 
@@ -6,6 +6,7 @@ from airunner.data.models import LLMGeneratorSettings
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_history_item_ui import Ui_llm_history_item_widget
+from airunner.data.models import Conversation
 
 
 class LLMHistoryItemWidget(BaseWidget):
@@ -16,7 +17,7 @@ class LLMHistoryItemWidget(BaseWidget):
         super(LLMHistoryItemWidget, self).__init__(*args, **kwargs)
         self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
-        self.ui.conversation_description.setText(self.conversation.title)
+        self.ui.conversation_description.setText(self.conversation.summarize())
 
         chatbot_name = "Unknown"
         chatbot = self.get_chatbot_by_id(self.conversation.chatbot_id)
@@ -30,9 +31,10 @@ class LLMHistoryItemWidget(BaseWidget):
     def action_load_conversation_clicked(self):
         chatbot_id = self.conversation.chatbot_id
         llm_generator_settings = LLMGeneratorSettings.objects.first()
-        LLMGeneratorSettings.objects.update(llm_generator_settings.id, {
-            "current_chatbot": chatbot_id
-        })
+        LLMGeneratorSettings.objects.update(
+            llm_generator_settings.id, 
+            current_chatbot=chatbot_id
+        )
         self.emit_signal(SignalCode.LOAD_CONVERSATION, {
             "conversation_id": self.conversation.id,
             "conversation": self.conversation,
@@ -42,7 +44,7 @@ class LLMHistoryItemWidget(BaseWidget):
     @Slot()
     def action_delete_conversation_clicked(self):
         conversation_id = self.conversation.id
-        self.delete_conversation(conversation_id)
+        Conversation.delete(conversation_id)
         self.emit_signal(SignalCode.CONVERSATION_DELETED, {
             "conversation_id": conversation_id
         })

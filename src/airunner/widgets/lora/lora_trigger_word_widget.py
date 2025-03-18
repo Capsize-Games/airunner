@@ -1,3 +1,4 @@
+
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.templates.lora_trigger_word_ui import Ui_lora_trigger_word
@@ -18,7 +19,10 @@ class LoraTriggerWordWidget(BaseWidget):
         self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
 
     def action_click_button_to_negative_prompt(self):
-        self.update_generator_settings("negative_prompt", f"{self.generator_settings.negative_prompt} {self.trigger_word}")
+        self.update_generator_settings(
+            "negative_prompt",
+            f"{self.generator_settings.negative_prompt} {self.trigger_word}"
+        )
         self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
     
     def action_click_button_copy(self):

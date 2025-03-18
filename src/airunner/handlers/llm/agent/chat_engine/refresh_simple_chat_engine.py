@@ -1,10 +1,29 @@
 from llama_index.core.chat_engine.simple import SimpleChatEngine
 from llama_index.core.base.llms.types import ChatMessage
+from llama_index.core.memory import BaseMemory
 
 
 class RefreshSimpleChatEngine(SimpleChatEngine):
-    def update_system_prompt(self, system_prompt:str):
+    @property
+    def llm(self):
+        return self._llm
+
+    @property
+    def memory(self) -> BaseMemory:
+        return self._memory
+
+    @memory.setter
+    def memory(self, memory: BaseMemory):
+        self._memory = memory
+
+    def update_system_prompt(self, system_prompt: str):
         self._prefix_messages[0] = ChatMessage(
             content=system_prompt, 
             role=self._llm.metadata.system_role
         )
+
+    async def achat(self, *args, **kwargs):
+        pass
+
+    async def astream_chat(self, *args, **kwargs):
+        pass

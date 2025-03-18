@@ -1,7 +1,8 @@
 from typing import Any
-from llama_index.core.agent import ReActAgent
 from llama_index.core.tools.types import ToolOutput
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
+
+from airunner.handlers.llm.agent.chat_engine.react_agent_engine import ReactAgentEngine
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 
 
@@ -14,7 +15,7 @@ class ReActAgentTool(ChatEngineTool):
     def from_tools(cls, *args, **kwargs) -> "ReActAgentTool":
         agent = kwargs.pop("agent", None)
         return_direct = kwargs.pop("return_direct", False)
-        chat_engine = ReActAgent.from_tools(*args, **kwargs)
+        chat_engine = ReactAgentEngine.from_tools(*args, **kwargs)
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
         return cls.from_defaults(

@@ -1,16 +1,17 @@
 import io
 import os
 import subprocess
+from typing import Optional, Tuple, Dict
 
 import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QEvent
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent, QMessageBox
 
-from airunner.enums import SignalCode, CanvasToolName, GeneratorSection, EngineResponseCode
+from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import VALID_IMAGE_FILES
 from airunner.utils import platform_info
@@ -28,14 +29,16 @@ class CustomScene(
     SettingsMixin
 ):
     def __init__(self, canvas_type: str):
+        self._is_erasing = None
+        self._is_drawing = None
         self.canvas_type = canvas_type
         MediatorMixin.__init__(self)
         
         self.image_backup = None
         self.previewing_filter = False
         self.painter = None
-        self.image: QImage = None
-        self.item: QGraphicsPixmapItem = None
+        self.image: Optional[QImage] = None
+        self.item: Optional[QGraphicsPixmapItem] = None
         super().__init__()
         self.last_export_path = None
         self._target_size = None
@@ -95,7 +98,7 @@ class CustomScene(
         elif self.settings_key == "drawing_pad_settings":
             settings = self.drawing_pad_settings
         if not settings:
-            raise ValueError(f"Settings not found for key: {self.settings_key}")
+            raise ValueError(f"Settings is not set. Settings not found for key: {self.settings_key}")
         return settings
 
     @property
@@ -121,6 +124,13 @@ class CustomScene(
         if self.settings_key == "drawing_pad_settings":
             self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
 
+    @property
+    def is_brush_or_eraser(self):
+        return self.current_tool in (
+            CanvasToolName.BRUSH,
+            CanvasToolName.ERASER
+        )
+
     @image_pivot_point.setter
     def image_pivot_point(self, value):
         self.emit_signal(SignalCode.LAYER_UPDATE_CURRENT_SIGNAL, {
@@ -140,7 +150,12 @@ class CustomScene(
             # Use the last export path if available
             initial_dir = self.last_export_path if self.last_export_path else ""
 
-            file_dialog = QFileDialog(parent_window, "Save Image", initial_dir, f"Image Files ({' '.join(VALID_IMAGE_FILES)})")
+            file_dialog = QFileDialog(
+                parent_window,
+                "Save Image",
+                initial_dir,
+                f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
+            )
             file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
             if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
                 file_path = file_dialog.selectedFiles()[0]
@@ -221,8 +236,8 @@ class CustomScene(
             elif message:
                 self._create_image(
                     image=images[0].convert("RGBA"),
-                    is_outpaint=message["is_outpaint"],
-                    outpaint_box_rect=message["active_rect"]
+                    is_outpaint=message.get("is_outpaint", False),
+                    outpaint_box_rect=message.get("active_rect", None)
                 )
         else:
             self.logger.error(f"Unhandled response code: {code}")
@@ -236,13 +251,12 @@ class CustomScene(
     
     def display_gpu_memory_error(self):
         msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setIcon(QMessageBox.Icon.Critical)
         msg_box.setWindowTitle("Error: Unable to Generate Image")
         msg_box.setText("You are out of GPU memory (VRAM). Enable CPU offload and try again.")
         
-        enable_cpu_offload_button = msg_box.addButton("Enable CPU offload", QMessageBox.AcceptRole)
-        cancel_button = msg_box.addButton(QMessageBox.Cancel)
-        
+        enable_cpu_offload_button = msg_box.addButton("Enable CPU offload", QMessageBox.ButtonRole.AcceptRole)
+
         msg_box.exec()
         
         if msg_box.clickedButton() == enable_cpu_offload_button:
@@ -400,8 +414,7 @@ class CustomScene(
             self.handling_event = False
 
     def leaveEvent(self, event):
-        self._handle_cursor(event)
-        super(CustomScene, self).leaveEvent(event)
+        self._handle_cursor(event, False)
 
     def refresh_image(self, image: Image = None):
         # Save the current viewport position
@@ -426,7 +439,6 @@ class CustomScene(
 
     def delete_image(self):
         self.logger.debug("Deleting image from canvas")
-
         item_scene = self.item.scene()
         if item_scene is not None:
             item_scene.removeItem(self.item)
@@ -603,9 +615,15 @@ class CustomScene(
             self.logger.error("xclip not found. Please install xclip to copy image to clipboard.")
         return image
 
-    def _create_image(self, image, is_outpaint, outpaint_box_rect):
+    def _create_image(
+        self, 
+        image: Image.Image, 
+        is_outpaint: bool, 
+        outpaint_box_rect: Optional[Dict] = None
+    ):
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
+        
         if image is not None:
             self._add_image_to_scene(
                 image,
@@ -626,19 +644,15 @@ class CustomScene(
 
     def _add_image_to_scene(
         self,
-        image: Image,
+        image: Image.Image,
         is_outpaint: bool = False,
-        outpaint_box_rect: QPoint = None,
-        border_size: int = 1,  # size of the border
-        border_color: tuple = (255, 0, 0, 255)  # color of the border in RGBA format
+        outpaint_box_rect: Optional[Dict] = None
     ):
         """
         Adds a given image to the scene
         :param image: Image object to add to the scene
         :param is_outpaint: bool indicating if the image is an outpaint
         :param outpaint_box_rect: QPoint indicating the root point of the image
-        :param border_size: int indicating the size of the border
-        :param border_color: tuple indicating the color of the border
         :return:
         """
         # image = ImageOps.expand(image, border=border_size, fill=border_color)
@@ -647,12 +661,16 @@ class CustomScene(
             self.logger.warning("Image is None, unable to add to scene")
             return
 
-        if is_outpaint:
-            image, root_point, pivot_point = self._handle_outpaint(
-                outpaint_box_rect,
-                image,
-                action=GeneratorSection.OUTPAINT.value
-            )
+        if outpaint_box_rect:
+            if is_outpaint:
+                image, root_point, _pivot_point = self._handle_outpaint(
+                    outpaint_box_rect,
+                    image
+                )
+            else:
+                root_point = QPoint(outpaint_box_rect["x"], outpaint_box_rect["y"])
+            self.item.setPos(root_point.x(), root_point.y())
+
         # self._set_current_active_image(image)
         self.current_active_image = image
         q_image = ImageQt.ImageQt(image)
@@ -661,37 +679,49 @@ class CustomScene(
         self.update()
         self.initialize_image(image)
 
-    def _handle_outpaint(self, outpaint_box_rect, outpainted_image, action=None) -> [Image, QPoint, QPoint]:
+    def _handle_outpaint(
+        self, 
+        outpaint_box_rect: Dict, 
+        outpainted_image: Image
+    ) -> Tuple[Image.Image, QPoint, QPoint]:
         if self.current_active_image is None:
-            point = QPoint(outpaint_box_rect.x(), outpaint_box_rect.y())
+            point = QPoint(outpaint_box_rect["x"], outpaint_box_rect["y"])
             return outpainted_image, QPoint(0, 0), point
 
         # make a copy of the current canvas image
         existing_image_copy = self.current_active_image.copy()
         width = existing_image_copy.width
         height = existing_image_copy.height
-
-        mask_image = self.drawing_pad_mask
-
+        
         pivot_point = self.image_pivot_point
         root_point = QPoint(0, 0)
         current_image_position = QPoint(0, 0)
 
-        is_drawing_left = outpaint_box_rect.x() < current_image_position.x()
-        is_drawing_right = outpaint_box_rect.x() > current_image_position.x()
-        is_drawing_up = outpaint_box_rect.y() < current_image_position.y()
-        is_drawing_down = outpaint_box_rect.y() > current_image_position.y()
+        is_drawing_left = outpaint_box_rect["x"] < current_image_position.x()
+        is_drawing_right = outpaint_box_rect["x"] > current_image_position.x()
+        is_drawing_up = outpaint_box_rect["y"] < current_image_position.y()
+        is_drawing_down = outpaint_box_rect["y"] > current_image_position.y()
 
-        if is_drawing_down:
-            height += outpaint_box_rect.y()
+        x_pos = outpaint_box_rect["x"]
+        y_pos = outpaint_box_rect["y"]
+        outpaint_width = outpaint_box_rect["width"]
+        outpaint_height = outpaint_box_rect["height"]
+        
         if is_drawing_right:
-            width += outpaint_box_rect.x()
+            if x_pos + outpaint_width > width:
+                width = x_pos + outpaint_width
+        
+        if is_drawing_down:
+            if y_pos + outpaint_height > height:
+                height = y_pos + outpaint_height
+        
         if is_drawing_up:
             height += current_image_position.y()
-            root_point.setY(outpaint_box_rect.y())
+            root_point.setY(outpaint_box_rect["y"])
+        
         if is_drawing_left:
             width += current_image_position.x()
-            root_point.setX(outpaint_box_rect.x())
+            root_point.setX(outpaint_box_rect["x"])
 
         new_dimensions = (width, height)
 
@@ -702,13 +732,49 @@ class CustomScene(
         image_root_point = QPoint(root_point.x(), root_point.y())
         image_pivot_point = QPoint(pivot_point.x(), pivot_point.y())
 
-        new_image_a.paste(outpainted_image, (int(outpaint_box_rect.x()), int(outpaint_box_rect.y())))
-        new_image_b.paste(existing_image_copy, (current_image_position.x(), current_image_position.y()))
+        new_image_a.paste(
+            outpainted_image, 
+            (
+                int(outpaint_box_rect["x"]), 
+                int(outpaint_box_rect["y"])
+            )
+        )
+        new_image_b.paste(
+            existing_image_copy, 
+            (
+                current_image_position.x(), 
+                current_image_position.y()
+            )
+        )
 
         # Convert mask to binary mask
+        mask_image = self.drawing_pad_mask
         mask = mask_image.convert("L").point(lambda p: p > 128 and 255)
         inverted_mask = Image.eval(mask, lambda p: 255 - p)
-        new_image_b = Image.composite(new_image_b, Image.new("RGBA", new_image_b.size), inverted_mask)
+        # create a new mask with new_dimensions which is all white and
+        # paste the inverted mask into it.
+        pos_x = outpaint_box_rect["x"]
+        pos_y = outpaint_box_rect["y"]
+        if pos_x < 0:
+            pos_x = 0
+        if pos_y < 0:
+            pos_y = 0
+        new_mask = Image.new("L", new_dimensions, 255)
+        new_mask.paste(
+            inverted_mask, 
+            (
+                pos_x, 
+                pos_y
+            )
+        )
+        new_image_b = Image.composite(
+            new_image_b, 
+            Image.new(
+                "RGBA", 
+                new_image_b.size
+            ), 
+            new_mask
+        )
 
         new_image = Image.alpha_composite(new_image, new_image_a)
         new_image = Image.alpha_composite(new_image, new_image_b)
@@ -805,15 +871,17 @@ class CustomScene(
     def _handle_left_mouse_release(self, event) -> bool:
         return self._handle_mouse_event(event, False)
 
-    def _handle_cursor(self, event):
+    def _handle_cursor(self, event, apply_cursor: bool = True):
         self.emit_signal(
             SignalCode.CANVAS_UPDATE_CURSOR,
             {
-                "event": event
+                "event": event,
+                "apply_cursor": apply_cursor
             }
         )
 
-    def _load_image(self, image_path: str) -> Image:
+    @staticmethod
+    def _load_image(image_path: str) -> Image:
         image = Image.open(image_path)
         return image
 

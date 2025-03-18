@@ -1,8 +1,8 @@
 import threading
 
-from airunner.handlers.stt.whisper_handler import WhisperHandler
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
+from airunner.handlers.stt.whisper_handler import WhisperHandler
 
 
 class AudioProcessorWorker(Worker):
@@ -14,7 +14,7 @@ class AudioProcessorWorker(Worker):
 
     def __init__(self):
         self._stt = None
-        super().__init__(signals = (
+        super().__init__(signals=(
             (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.update_properties),
             (SignalCode.STT_LOAD_SIGNAL, self.on_stt_load_signal),
             (SignalCode.STT_UNLOAD_SIGNAL, self.on_stt_unload_signal),

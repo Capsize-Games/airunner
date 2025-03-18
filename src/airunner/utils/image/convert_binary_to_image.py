@@ -3,6 +3,7 @@ import io
 import PIL
 from PIL import Image
 
+
 def convert_binary_to_image(binary_data: bytes) -> Image:
     if binary_data is None:
         return None

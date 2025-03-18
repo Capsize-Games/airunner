@@ -1,3 +1,4 @@
+
 from airunner.enums import SignalCode
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.paths.templates.paths_ui import Ui_paths_form

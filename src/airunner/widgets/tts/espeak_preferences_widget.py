@@ -1,9 +1,11 @@
+
 import pyttsx3
 
 from airunner.settings import ESPEAK_SETTINGS
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.tts.templates.espeak_preferences_ui import Ui_espeak_preferences
 import pycountry
+
 
 class ESpeakPreferencesWidget(BaseWidget):
     widget_class_ = Ui_espeak_preferences
@@ -47,7 +49,7 @@ class ESpeakPreferencesWidget(BaseWidget):
         self.ui.volume.init(slider_callback=self.callback, current_value=self.espeak_settings.volume)
         self.ui.pitch.init(slider_callback=self.callback, current_value=self.espeak_settings.pitch)
 
-    def callback(self, attr_name, value, widget=None):
+    def callback(self, attr_name, value, _widget=None):
         self.update_espeak_settings(attr_name, value)
 
     def language_changed(self, text):
