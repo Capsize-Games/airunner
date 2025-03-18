@@ -4,11 +4,12 @@ import psutil
 import torch
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QTableWidgetItem, QApplication
-from airunner.enums import SignalCode, ModelStatus
+from airunner.enums import SignalCode
 from airunner.styles_mixin import StylesMixin
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stats.templates.stats_ui import Ui_stats_widget
 from airunner.windows.main.pipeline_mixin import PipelineMixin
+from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 
 
 class StatsWidget(
@@ -49,17 +50,19 @@ class StatsWidget(
 
         for i in range(device_count):
             device = torch.device(f'cuda:{i}')
+            
             try:
                 torch.cuda.set_device(device)
-                total_mem = torch.cuda.get_device_properties(device).total_memory / (1024 ** 3)  # Convert bytes to GB
-                allocated_mem = torch.cuda.memory_allocated() / (1024 ** 3)  # Convert bytes to GB
-                free_mem = total_mem - allocated_mem
-                device_name = torch.cuda.get_device_name(device)
-            except RuntimeError:
-                free_mem = 0
-                allocated_mem = 0
-                total_mem = 0
-                device_name = "N/A"
+            except RuntimeError as e:
+                self.logger.error(f"Error setting device: {e}")
+                continue
+                
+            
+            stats = gpu_memory_stats(device)
+            total_mem = stats["total"]
+            allocated_mem = stats["allocated"]
+            free_mem = stats["free"]
+            device_name = stats["device_name"]
 
             # truncate to 2 decimal places
             total_mem = round(total_mem, 2)
