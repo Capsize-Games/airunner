@@ -1,6 +1,5 @@
 import os
 import logging
-import datetime
 from typing import List, Type, Optional
 
 from sqlalchemy.orm import joinedload
@@ -42,7 +41,6 @@ from airunner.data.models import (
 )
 from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
-from airunner.enums import LLMChatRole
 from airunner.data.session_manager import session_scope
 
 
