@@ -4,7 +4,6 @@ from typing import Any, List, Dict, Optional
 
 import PIL
 import diffusers
-import transformers
 import numpy as np
 import tomesd
 import torch
@@ -69,7 +68,7 @@ from airunner.exceptions import PipeNotLoadedException, InterruptedException
 from airunner.handlers.stablediffusion.prompt_weight_bridge import \
     PromptWeightBridge
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
-from airunner.utils.clear_memory import clear_memory
+from airunner.utils.memory.clear_memory import clear_memory
 from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
 from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
 from airunner.utils.image.export_image import export_images
