@@ -13,8 +13,6 @@ class DownloadCivitAI(
     SettingsMixin
 ):
     def __init__(self):
-        MediatorMixin.__init__(self)
-        
         super().__init__()
         self.thread = None
         self.worker = None

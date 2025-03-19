@@ -80,6 +80,9 @@ class SettingsMixinSharedInstance:
 class SettingsMixin:
     _chatbot: Optional[Chatbot] = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @property
     def llm_perform_analysis(self) -> bool:
         return os.getenv("AI_RUNNER_PERFORM_ANALYSIS", "0").lower() == "1"
