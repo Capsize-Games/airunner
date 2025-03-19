@@ -30,7 +30,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(829, 736)
+        MainWindow.resize(1054, 778)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -486,6 +486,8 @@ class Ui_MainWindow(object):
         self.main_window_splitter.setOrientation(Qt.Orientation.Horizontal)
         self.generator_widget = GeneratorForm(self.main_window_splitter)
         self.generator_widget.setObjectName(u"generator_widget")
+        self.generator_widget.setEnabled(True)
+        self.generator_widget.setMinimumSize(QSize(50, 0))
         self.main_window_splitter.addWidget(self.generator_widget)
         self.canvas_widget = QWidget(self.main_window_splitter)
         self.canvas_widget.setObjectName(u"canvas_widget")
@@ -495,8 +497,8 @@ class Ui_MainWindow(object):
         self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
         self.center_tab_container = QTabWidget(self.canvas_widget)
         self.center_tab_container.setObjectName(u"center_tab_container")
-        self.center_tab_container.setTabsClosable(True)
-        self.center_tab_container.setMovable(True)
+        self.center_tab_container.setTabsClosable(False)
+        self.center_tab_container.setMovable(False)
         self.art_tab = QWidget()
         self.art_tab.setObjectName(u"art_tab")
         self.gridLayout_2 = QGridLayout(self.art_tab)
@@ -529,6 +531,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.tool_tab_widget = ToolTabWidget(self.panel_container)
         self.tool_tab_widget.setObjectName(u"tool_tab_widget")
+        self.tool_tab_widget.setMinimumSize(QSize(50, 0))
 
         self.verticalLayout_2.addWidget(self.tool_tab_widget)
 
@@ -542,7 +545,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 829, 23))
+        self.menubar.setGeometry(QRect(0, 0, 1054, 23))
         font1 = QFont()
         font1.setPointSize(11)
         self.menubar.setFont(font1)

@@ -24,10 +24,6 @@ class GeneratorForm(BaseWidget):
     changed_signal = Signal(str, object)
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.seed_override = None
-        self.parent = None
-        self.initialized = False
         self.signal_handlers = {
             SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL: self.on_llm_image_prompt_generated_signal,
             SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.handle_generate_image_from_image,
@@ -35,6 +31,10 @@ class GeneratorForm(BaseWidget):
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
             SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated,
         }
+        super().__init__(*args, **kwargs)
+        self.seed_override = None
+        self.parent = None
+        self.initialized = False
         self.ui.generator_form_tabs.currentChanged.connect(self.on_tab_section_changed)
     
     @Slot(int)

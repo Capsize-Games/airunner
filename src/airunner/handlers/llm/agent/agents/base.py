@@ -85,6 +85,7 @@ class BaseAgent(
         self._store_user_tool: Optional[FunctionTool] = None
         self.webpage_html: str = ""
         self.register(SignalCode.DELETE_MESSAGES_AFTER_ID, self.on_delete_messages_after_id)
+        super().__init__(*args, **kwargs)
     
     @property
     def current_tab(self) -> Optional[Tab]:

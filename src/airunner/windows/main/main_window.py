@@ -57,8 +57,9 @@ from airunner.workers.mask_generator_worker import MaskGeneratorWorker
 from airunner.workers.sd_worker import SDWorker
 from airunner.workers.tts_generator_worker import TTSGeneratorWorker
 from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
-
 from airunner.utils.get_version import get_version
+from airunner.utils.widgets.save_splitter_settings import save_splitter_settings
+from airunner.utils.widgets.load_splitter_settings import load_splitter_settings
 from airunner.widgets.stats.stats_widget import StatsWidget
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -71,17 +72,17 @@ from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.data.models import SplitterSetting, Tab
+from airunner.data.models import Tab
 from airunner.plugin_loader import PluginLoader
 
 
 class MainWindow(
-    QMainWindow,
     MediatorMixin,
     SettingsMixin,
     StylesMixin,
     PipelineMixin,
-    AIModelMixin
+    AIModelMixin,
+    QMainWindow,
 ):
     show_grid_toggled = Signal(bool)
     cell_size_changed_signal = Signal(int)
@@ -146,10 +147,31 @@ class MainWindow(
         self.listening = False
         self.initialized = False
         self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
-        MediatorMixin.__init__(self)
-        
+        self.signal_handlers = {
+            SignalCode.SD_SAVE_PROMPT_SIGNAL: self.on_save_stablediffusion_prompt_signal,
+            SignalCode.QUIT_APPLICATION: self.action_quit_triggered,
+            SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL: self.on_nsfw_content_detected_signal,
+            SignalCode.BASH_EXECUTE_SIGNAL: self.on_bash_execute_signal,
+            SignalCode.WRITE_FILE: self.on_write_file_signal,
+            SignalCode.TOGGLE_FULLSCREEN_SIGNAL: self.on_toggle_fullscreen_signal,
+            SignalCode.TOGGLE_TTS_SIGNAL: self.on_toggle_tts,
+            SignalCode.TOGGLE_SD_SIGNAL: self.on_toggle_sd,
+            SignalCode.TOGGLE_LLM_SIGNAL: self.on_toggle_llm,
+            SignalCode.UNLOAD_NON_SD_MODELS: self.on_unload_non_sd_models,
+            SignalCode.LOAD_NON_SD_MODELS: self.on_load_non_sd_models,
+            SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL: self.action_reset_settings,
+            SignalCode.APPLICATION_RESET_PATHS_SIGNAL: self.on_reset_paths_signal,
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
+            SignalCode.KEYBOARD_SHORTCUTS_UPDATED: self.on_keyboard_shortcuts_updated,
+            SignalCode.HISTORY_UPDATED: self.on_history_updated,
+            SignalCode.REFRESH_STYLESHEET_SIGNAL: self.on_theme_changed_signal,
+            SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL: self.on_ai_models_save_or_update_signal,
+            SignalCode.NAVIGATE_TO_URL: self.on_navigate_to_url,
+            SignalCode.MISSING_REQUIRED_MODELS: self.display_missing_models_error,
+            SignalCode.TOGGLE_TOOL: self.on_toggle_tool_signal,
+        }
         self.logger.debug("Starting AI Runnner")
-        super().__init__(*args, **kwargs)
+        super().__init__()
         
         # Add plugins directory to Python path
         plugins_path = os.path.join(self.path_settings.base_path, "plugins")
@@ -157,11 +179,8 @@ class MainWindow(
             sys.path.append(plugins_path)
 
         self._updating_settings = True
-        PipelineMixin.__init__(self)
-        AIModelMixin.__init__(self)
         self._updating_settings = False
         self._worker_manager = None
-        self.register_signals()
         self.initialize_ui()
         self._initialize_workers()
 
@@ -498,33 +517,6 @@ class MainWindow(
     def show_layers(self):
         self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
-    def register_signals(self):
-        self.logger.debug("Connecting signals")
-        for item in (
-            (SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal),
-            (SignalCode.QUIT_APPLICATION, self.action_quit_triggered),
-            (SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal),
-            (SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal),
-            (SignalCode.WRITE_FILE, self.on_write_file_signal),
-            (SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal),
-            (SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts),
-            (SignalCode.TOGGLE_SD_SIGNAL, self.on_toggle_sd),
-            (SignalCode.TOGGLE_LLM_SIGNAL, self.on_toggle_llm),
-            (SignalCode.UNLOAD_NON_SD_MODELS, self.on_unload_non_sd_models),
-            (SignalCode.LOAD_NON_SD_MODELS, self.on_load_non_sd_models),
-            (SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.action_reset_settings),
-            (SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal),
-            (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
-            (SignalCode.KEYBOARD_SHORTCUTS_UPDATED, self.on_keyboard_shortcuts_updated),
-            (SignalCode.HISTORY_UPDATED, self.on_history_updated),
-            (SignalCode.REFRESH_STYLESHEET_SIGNAL, self.on_theme_changed_signal),
-            (SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal),
-            (SignalCode.NAVIGATE_TO_URL, self.on_navigate_to_url),
-            (SignalCode.MISSING_REQUIRED_MODELS, self.display_missing_models_error),
-            (SignalCode.TOGGLE_TOOL, self.on_toggle_tool_signal)
-        ):
-            self.register(item[0], item[1])
-
     def on_reset_paths_signal(self):
         self.reset_path_settings()
 
@@ -571,45 +563,32 @@ class MainWindow(
         self.logger.debug("Loading UI")
         self.ui.setupUi(self)
         active_index = 0
+
         tabs = Tab.objects.filter_by(section="center")
         for tab in tabs:
             if (tab.active):
                 active_index = tab.index
                 break
+
         self.ui.center_tab_container.setCurrentIndex(active_index)
 
         self.set_stylesheet()
+
+        load_splitter_settings(
+            self.ui, 
+            ["main_window_splitter"]
+        )
+
         self.restore_state()
         
-        print("GETTING SETTINGS")
-        settings = SplitterSetting.objects.filter_by_first(name="main_window_splitter")
-        if settings:
-            try:
-                print("RESTORING STATE")
-                self.ui.main_window_splitter.restoreState(
-                    settings.splitter_settings
-                )
-            except Exception as e:
-                self.logger.error(f"Error restoring main window splitter state: {e}")
-            
-        print("connecting tabs")
-            
-        self.ui.center_tab_container.currentChanged.connect(self.on_tab_section_changed)
-
-        print("creating status widget")
         self.status_widget = StatusWidget()
-        print("adding status widget")
         self.statusBar().addPermanentWidget(self.status_widget)
-        print("emitting signal")
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
-        print("initializing widget elements")
         self.initialize_widget_elements()
 
         self.ui.actionUndo.setEnabled(False)
         self.ui.actionRedo.setEnabled(False)
-        print("load_plugins")
         self._load_plugins()
-        print("emit application main window loaded signal")
         self.emit_signal(
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, 
             {"main_window": self}
@@ -822,20 +801,7 @@ class MainWindow(
             "mode_tab_widget_index",
             self.ui.generator_widget.ui.generator_form_tabs.currentIndex()
         )
-
-        settings = SplitterSetting.objects.filter_by_first(
-            name="main_window_splitter"
-        )
-        if not settings:
-            SplitterSetting.objects.create(
-                name="main_window_splitter",
-                splitter_settings=self.ui.main_window_splitter.saveState()
-            )
-        else:
-            SplitterSetting.objects.update(
-                settings.id,
-                splitter_settings=self.ui.main_window_splitter.saveState()
-            )
+        save_splitter_settings(self.ui, ["main_window_splitter"])
 
     def restore_state(self):
         self.logger.debug("Restoring state")

@@ -4,6 +4,9 @@ from airunner.enums import SignalCode
 
 
 class AIModelMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     def ai_models_find(self, search="", default=False):
         return [
             model for model in self.ai_models

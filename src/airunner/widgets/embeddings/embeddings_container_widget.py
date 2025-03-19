@@ -28,9 +28,6 @@ class EmbeddingsContainerWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.initialized = False
         self._deleting = False
-        self.signal_handlers = {
-
-        }
         self.ui.loading_icon.hide()
         self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
         self._apply_button_enabled = False

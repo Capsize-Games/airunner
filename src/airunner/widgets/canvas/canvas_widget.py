@@ -8,7 +8,6 @@ from airunner.enums import SignalCode, CanvasToolName
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
 from airunner.utils.set_widget_state import set_widget_state
-from airunner.data.models import SplitterSetting
 
 
 class CanvasWidget(
@@ -37,11 +36,14 @@ class CanvasWidget(
             SignalCode.ENABLE_ERASER_TOOL_SIGNAL: lambda _message: self.action_toggle_eraser(True),
             SignalCode.ENABLE_MOVE_TOOL_SIGNAL: lambda _message: self.action_toggle_active_grid_area(True),
             SignalCode.ENABLE_SELECTION_TOOL_SIGNAL: lambda _message: self.action_toggle_select(True),
-            SignalCode.QUIT_APPLICATION: lambda _message: self.save_state(),
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_toggle_tool_signal,
             SignalCode.TOGGLE_TOOL: self.on_toggle_tool_signal,
             SignalCode.TOGGLE_GRID: self.on_toggle_grid_signal,
+            SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
         }
+        self.splitters = [
+            "canvas_splitter"
+        ]
         super().__init__(*args, **kwargs)
         current_tool = self.current_tool
         show_grid = self.grid_settings.show_grid
@@ -55,9 +57,6 @@ class CanvasWidget(
         self.drag_pos: QPoint = Optional[None]
         self._grid_settings = {}
         self._active_grid_settings = {}
-        self.signal_handlers = {
-            SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
-        }
 
         self.ui.actionToggle_Grid.blockSignals(True)
         self.ui.actionToggle_Grid.setChecked(show_grid)
@@ -167,24 +166,6 @@ class CanvasWidget(
     def showEvent(self, event):
         super().showEvent(event)
         QTimer.singleShot(100, lambda: self.do_draw(force_draw=True))
-
-    def save_state(self):
-        settings = SplitterSetting.objects.filter_by_first(name="canvas_splitter")
-        if not settings:
-            SplitterSetting.objects.create(
-                name="canvas_splitter",
-                splitter_settings=self.ui.canvas_splitter.saveState()
-            )
-        else:
-            SplitterSetting.objects.update(
-                settings.id,
-                splitter_settings=self.ui.canvas_splitter.saveState()
-            )
-    
-    def restore_state(self):
-        settings = SplitterSetting.objects.filter_by_first(name="canvas_splitter")
-        if settings:
-            self.ui.canvas_splitter.restoreState(settings.splitter_settings)
 
     def on_canvas_update_cursor_signal(self, message: dict):
         event = message.get("event", None)

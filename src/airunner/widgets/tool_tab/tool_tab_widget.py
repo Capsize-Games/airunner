@@ -10,9 +10,9 @@ class ToolTabWidget(BaseWidget):
     widget_class_ = Ui_tool_tab_widget
 
     def __init__(self, *args, **kwargs):
-        self.signal_handlers = {
-            SignalCode.QUIT_APPLICATION: lambda _message: self.save_state(),
-        }
+        self.splitters = [
+            "llm_splitter"
+        ]
         super().__init__(*args, **kwargs)        
         self.ui.tool_tab_widget_container.currentChanged.connect(
             self.on_tab_section_changed
@@ -21,19 +21,6 @@ class ToolTabWidget(BaseWidget):
     @Slot(int)
     def on_tab_section_changed(self, index: int):
         Tab.update_tabs("right", self.ui.tool_tab_widget_container, index)
-
-    def save_state(self):
-        settings = SplitterSetting.objects.filter_by_first(name="llm_splitter")
-        if not settings:
-            SplitterSetting.objects.create(
-                name="llm_splitter",
-                splitter_settings=self.ui.llm_splitter.saveState()
-            )
-        else:
-            SplitterSetting.objects.update(
-                settings.id,
-                llm_splitter=self.ui.llm_splitter.saveState()
-            )
     
     def restore_state(self):
         active_index = 0
@@ -43,7 +30,4 @@ class ToolTabWidget(BaseWidget):
                 active_index = tab.index
                 break
         self.ui.tool_tab_widget_container.setCurrentIndex(active_index)
-
-        settings = SplitterSetting.objects.filter_by_first(name="llm_splitter")
-        if settings:
-            self.ui.llm_splitter.restoreState(settings.splitter_settings)
+        super().restore_state()

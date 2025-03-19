@@ -10,9 +10,9 @@ DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 
 
 class DownloadWorker(
-    QObject,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    QObject,
 ):
     progress = Signal(int, int)  # current, total
     finished = Signal()
@@ -22,8 +22,7 @@ class DownloadWorker(
     is_cancelled = False
 
     def __init__(self, *args, **kwargs):
-        MediatorMixin.__init__(self)
-        super(DownloadWorker, self).__init__(*args, **kwargs)
+        super().__init__()
 
     def add_to_queue(self, data: tuple):
         self.queue.put(data)

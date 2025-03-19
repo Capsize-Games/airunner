@@ -17,12 +17,13 @@ class AudioCaptureWorker(Worker):
     """
 
     def __init__(self):
-        super().__init__(signals=(
-            (SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, self.on_audio_capture_worker_response_signal),
-            (SignalCode.STT_START_CAPTURE_SIGNAL, self.on_stt_start_capture_signal),
-            (SignalCode.STT_STOP_CAPTURE_SIGNAL, self.on_stt_stop_capture_signal),
-            (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
-        ))
+        self.signal_handlers = {
+            SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL: self.on_audio_capture_worker_response_signal,
+            SignalCode.STT_START_CAPTURE_SIGNAL: self.on_stt_start_capture_signal,
+            SignalCode.STT_STOP_CAPTURE_SIGNAL: self.on_stt_stop_capture_signal,
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
+        }
+        super().__init__()
         self.listening: bool = False
         self.voice_input_start_time: time.time = None
         self.chunk_duration = self.stt_settings.chunk_duration  # duration of chunks in milliseconds
