@@ -10,7 +10,6 @@ from airunner.handlers.llm.llm_handler import LLMHandler
 class LLMGenerateWorker(Worker):
     def __init__(self):
         self.llm = None
-        print("CREATING LLMGenerateWorker")
         self.signal_handlers = {
             SignalCode.LLM_UNLOAD_SIGNAL: self.on_llm_on_unload_signal,
             SignalCode.LLM_LOAD_SIGNAL: self.on_llm_load_model_signal,
