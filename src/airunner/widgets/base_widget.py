@@ -34,7 +34,7 @@ class AbstractBaseWidget(
 
 class BaseWidget(AbstractBaseWidget):
     widget_class_ = None
-    signal_handlers: Dict = {}
+    _signal_handlers: Dict = {}
     icons = ()
     ui = None
     qss_filename = None
@@ -45,6 +45,14 @@ class BaseWidget(AbstractBaseWidget):
 
     def restore_state(self):
         pass
+
+    @property
+    def signal_handlers(self) -> Dict:
+        return self._signal_handlers
+    
+    @signal_handlers.setter
+    def signal_handlers(self, value):
+        self._signal_handlers = value
 
     @property
     def current_tool(self):
