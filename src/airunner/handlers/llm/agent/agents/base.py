@@ -9,7 +9,6 @@ from typing import (
 import datetime
 from abc import abstractmethod
 
-from llama_cloud import MessageRole
 from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
 from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.base.llms.types import ChatMessage
@@ -751,8 +750,10 @@ class BaseAgent(
         """
         conversation = self.conversation
         if conversation:
-            conversation.value = conversation.value[:-2]
-            conversation.save()
+            Conversation.objects.update(
+                conversation.id,
+                value=conversation.value[:-2]
+            )
     
     def _update_memory(self, action: LLMActionType):
         if action is LLMActionType.CHAT:
@@ -783,7 +784,6 @@ class BaseAgent(
         self.logger.info("Updating mood")
         conversation.last_updated_message_id = latest_message_id
         start_index = last_updated_message_id
-        end_index = latest_message_id
         chat_history = self._memory.get_all() if self._memory else None
         if not chat_history:
             messages = conversation.value
@@ -793,7 +793,7 @@ class BaseAgent(
                     blocks=message["blocks"],
                 ) for message in messages
             ]
-        chat_history = chat_history[start_index:end_index]
+        chat_history = chat_history[start_index:]
         kwargs = {
             "input": f"What is {self.botname}'s mood based on this conversation?",
             "chat_history": chat_history
@@ -802,11 +802,12 @@ class BaseAgent(
             do_not_display=True, 
             **kwargs
         )
-        self.logger.info(f"Updated mood: {response.content}")
-        conversation.bot_mood = response.content
-        conversation.value = conversation.value[:-2]
         self.logger.info(f"Saving conversation with mood: {response.content}")
-        conversation.save()
+        Conversation.objects.update(
+            conversation.id,
+            bot_mood=response.content,
+            value=conversation.value[:-2]
+        )
         self._update_user_data()
     
     def _update_user_data(self):
@@ -832,10 +833,10 @@ class BaseAgent(
         )
         self.logger.info(f"Updated user data: {response.content}")
         self.logger.info(f"Saving user with data: {response.content}")
-        conversation.user_data = [response.content] + (
-            conversation.user_data or []
+        Conversation.objects.update(
+            conversation.id,
+            user_data=[response.content] + (conversation.user_data or []),
         )
-        conversation.save()
     
     def _summarize_conversation(self):
         self.logger.info("Summarizing conversation")
@@ -857,11 +858,12 @@ class BaseAgent(
             input="Provide a brief summary of this conversation",
             chat_history=chat_history
         )
-        self.logger.info("Updated summary")
-        conversation.summary = response.content
-        conversation.value = conversation.value[:-2]
         self.logger.info(f"Saving conversation with summary: {response.content}")
-        conversation.save()
+        Conversation.objects.update(
+            conversation.id,
+            summary=response.content,
+            value=conversation.value[:-2]
+        )
     
     def _scrape_information(self, message: str):
         self.logger.info("Attempting to scrape information")
