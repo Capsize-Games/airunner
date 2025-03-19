@@ -35,7 +35,7 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
         }
         super().__init__()
-        registered: bool = False
+        self.registered: bool = False
         self.scroll_bar = None
         self.is_modal = True
         self.generating = False
