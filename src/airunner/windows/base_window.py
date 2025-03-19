@@ -9,11 +9,11 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class BaseWindow(
-    QDialog,
     MediatorMixin,
     SettingsMixin,
     StylesMixin,
-    AIModelMixin
+    AIModelMixin,
+    QDialog,
 ):
     template_class_ = None
     template = None
@@ -21,9 +21,6 @@ class BaseWindow(
     title: str = "Base Window"
 
     def __init__(self, **kwargs):
-        MediatorMixin.__init__(self)
-        
-        AIModelMixin.__init__(self)
         super().__init__()
         self.do_exec = kwargs.get("exec", True)
 

@@ -47,8 +47,7 @@ class AppInstaller(
         Mediator and Settings mixins are initialized here, enabling the application
         to easily access the application settings dictionary.
         """
-        MediatorMixin.__init__(self)
-        super(AppInstaller, self).__init__()
+        super().__init__()
 
         self.start()
 

@@ -16,7 +16,6 @@ class LLMSettingsWidget(
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        AIModelMixin.__init__(self)
         self.ui.model_type_container.hide()
         self.ui.model_version_container.hide()
         self.ui.prompt_template_container.hide()
@@ -127,7 +126,6 @@ class LLMSettingsWidget(
     def callback(self, attr_name, value, _widget=None):
         keys = attr_name.split(".")
         self.update_llm_generator_settings(keys[1], value)
-        print(getattr(self.llm_generator_settings, keys[1]) == value)
 
     def model_text_changed(self, val):
         self.update_application_settings("current_llm_generator", val)

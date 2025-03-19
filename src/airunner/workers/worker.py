@@ -17,9 +17,9 @@ class CombinedMeta(QObjectMeta, ABCMeta):
 
 
 class Worker(
-    QObject, 
     MediatorMixin, 
     SettingsMixin, 
+    QObject, 
     ABC, 
     metaclass=CombinedMeta
 ):
@@ -27,10 +27,7 @@ class Worker(
     finished = Signal()
     prefix = "Worker"
 
-    def __init__(self, signals=None):
-        self.signals = signals or []
-        MediatorMixin.__init__(self)
-        
+    def __init__(self):
         super().__init__()
         self.state = WorkerState.HALTED
         self.running = False
@@ -39,7 +36,6 @@ class Worker(
         self.current_index = 0
         self.paused = False
         self.register(SignalCode.QUIT_APPLICATION, self.stop)
-        self.register_signals()
 
         threading.Thread(target=self.start_worker_thread).start()
 
@@ -49,10 +45,6 @@ class Worker(
 
     def start_worker_thread(self):
         pass
-
-    def register_signals(self):
-        for signal in self.signals:
-            self.register(signal[0], signal[1])
 
     def start(self):
         import traceback

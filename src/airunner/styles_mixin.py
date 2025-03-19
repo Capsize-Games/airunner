@@ -5,6 +5,9 @@ from airunner.settings import DARK_THEME_NAME, LIGHT_THEME_NAME
 
 
 class StylesMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     """
     Dependent on the SettingsMixin being used in the same class
     """

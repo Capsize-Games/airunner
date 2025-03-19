@@ -18,13 +18,12 @@ from airunner.widgets.canvas.zoom_handler import ZoomHandler
 
 
 class CustomGraphicsView(
-    QGraphicsView,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    QGraphicsView,
 ):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        MediatorMixin.__init__(self)
+        super().__init__()
         self.setMouseTracking(True)
         
         self._scene: Optional[CustomScene] = None

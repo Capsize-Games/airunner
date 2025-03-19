@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>829</width>
-    <height>736</height>
+    <width>1054</width>
+    <height>778</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -102,7 +102,17 @@
          <property name="orientation">
           <enum>Qt::Orientation::Horizontal</enum>
          </property>
-         <widget class="GeneratorForm" name="generator_widget" native="true"/>
+         <widget class="GeneratorForm" name="generator_widget" native="true">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
          <widget class="QWidget" name="canvas_widget" native="true">
           <property name="minimumSize">
            <size>
@@ -129,10 +139,10 @@
               <number>0</number>
              </property>
              <property name="tabsClosable">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
              <property name="movable">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
              <widget class="QWidget" name="art_tab">
               <attribute name="title">
@@ -203,7 +213,14 @@
             <number>0</number>
            </property>
            <item>
-            <widget class="ToolTabWidget" name="tool_tab_widget" native="true"/>
+            <widget class="ToolTabWidget" name="tool_tab_widget" native="true">
+             <property name="minimumSize">
+              <size>
+               <width>50</width>
+               <height>0</height>
+              </size>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -219,7 +236,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>829</width>
+     <width>1054</width>
      <height>23</height>
     </rect>
    </property>

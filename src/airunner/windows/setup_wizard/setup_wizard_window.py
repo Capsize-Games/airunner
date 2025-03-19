@@ -15,14 +15,12 @@ from airunner.windows.setup_wizard.ai_runner_license.ai_runner_license import AI
 
 
 class SetupWizardWindow(
-    QWizard,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    QWizard,
 ):
     def __init__(self, *args):
-        MediatorMixin.__init__(self)
-        
-        super(SetupWizardWindow, self).__init__(*args)
+        super().__init__(*args)
 
         self.canceled = False
 

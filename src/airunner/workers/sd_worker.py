@@ -5,7 +5,6 @@ from PySide6.QtCore import QThread
 from PySide6.QtCore import QObject, Signal, Slot
 
 from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
-from airunner.mediator_mixin import MediatorMixin
 from airunner.workers.worker import Worker
 from airunner.handlers.stablediffusion.stablediffusion_handler import StableDiffusionHandler
 
@@ -36,29 +35,26 @@ class SDWorker(Worker):
 
     def __init__(self):
         self.sd = None
-        MediatorMixin.__init__(self)
-        
-        super().__init__(
-            signals=(
-                (SignalCode.SD_CANCEL_SIGNAL, self.on_sd_cancel_signal),
-                (SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL, self.on_start_auto_image_generation_signal),
-                (SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL, self.on_stop_auto_image_generation_signal),
-                (SignalCode.DO_GENERATE_SIGNAL, self.on_do_generate_signal),
-                (SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL, self.on_interrupt_image_generation_signal),
-                (SignalCode.CHANGE_SCHEDULER_SIGNAL, self.on_change_scheduler_signal),
-                (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
-                (SignalCode.SD_LOAD_SIGNAL, self.on_load_stablediffusion_signal),
-                (SignalCode.SD_UNLOAD_SIGNAL, self.on_unload_stablediffusion_signal),
-                (SignalCode.CONTROLNET_LOAD_SIGNAL, self.on_load_controlnet_signal),
-                (SignalCode.CONTROLNET_UNLOAD_SIGNAL, self.on_unload_controlnet_signal),
-                (SignalCode.LORA_UPDATE_SIGNAL, self.on_update_lora_signal),
-                (SignalCode.EMBEDDING_UPDATE_SIGNAL, self.on_update_embeddings_signal),
-                (SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL, self.delete_missing_embeddings),
-                (SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.on_load_safety_checker),
-                (SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.on_unload_safety_checker),
-                (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_application_settings_changed),
-            )
-        )
+        self.signal_handlers = {
+            SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
+            SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
+            SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
+            SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
+            SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
+            SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
+            SignalCode.SD_LOAD_SIGNAL: self.on_load_stablediffusion_signal,
+            SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_stablediffusion_signal,
+            SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
+            SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
+            SignalCode.LORA_UPDATE_SIGNAL: self.on_update_lora_signal,
+            SignalCode.EMBEDDING_UPDATE_SIGNAL: self.on_update_embeddings_signal,
+            SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL: self.delete_missing_embeddings,
+            SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_load_safety_checker,
+            SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.on_unload_safety_checker,
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
+        }
+        super().__init__()
         self.__requested_action = ModelAction.NONE
         self._threads = []
         self._workers = []

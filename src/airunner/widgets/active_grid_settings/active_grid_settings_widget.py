@@ -10,6 +10,10 @@ class ActiveGridSettingsWidget(BaseWidget):
     widget_class_ = Ui_active_grid_settings_widget
 
     def __init__(self, *args, **kwargs):
+        self.signal_handlers = {
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.update_size,
+            SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED: self.update_size
+        }
         super().__init__(*args, **kwargs)
         self.ui.width_slider_widget.setProperty("current_value", self.application_settings.is_maximized)
         self.ui.height_slider_widget.setProperty("current_value", self.application_settings.working_height)
@@ -46,12 +50,6 @@ class ActiveGridSettingsWidget(BaseWidget):
         self.ui.fill_choose_color_button.setStyleSheet(
             f"background-color: {self.active_grid_settings.fill_color}"
         )
-
-        self.signal_handlers = {
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.update_size,
-            SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED: self.update_size
-        }
-
         self.current_active_grid_width = self.application_settings.working_width
         self.current_active_grid_height = self.application_settings.working_height
 

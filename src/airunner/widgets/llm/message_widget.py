@@ -135,7 +135,6 @@ class MessageWidget(BaseWidget):
                 conversation.value = []
             else:
                 conversation.value = messages[0:self.message_id]
-            print(conversation.value)
             session.add(conversation)
             session.commit()
             self.emit_signal(SignalCode.DELETE_MESSAGES_AFTER_ID, {

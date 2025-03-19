@@ -17,9 +17,9 @@ class CombinedMeta(QObjectMeta, ABCMeta):
 
 # Use the combined metaclass
 class BaseHandler(
-    QObject,
     MediatorMixin,
     SettingsMixin,
+    QObject,
     ABC,
     metaclass=CombinedMeta
 ):
@@ -33,9 +33,7 @@ class BaseHandler(
     def __init__(self, *args, **kwargs):
         self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
         self.use_gpu = True
-        MediatorMixin.__init__(self)
-        
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self._requested_action: ModelAction = ModelAction.NONE
 
     @property

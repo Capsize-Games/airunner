@@ -30,13 +30,11 @@ from airunner.handlers.llm.llm_response import LLMResponse
 
 
 class SaveGeneratorSettingsWorker(
-    QObject,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    QObject,
 ):
     def __init__(self, parent):
-        MediatorMixin.__init__(self)
-        
         super().__init__()
         self.parent = parent
         self.current_prompt_value = None
@@ -102,10 +100,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
     changed_signal = Signal(str, object)
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.seed_override = None
-        self.parent = None
-        self.initialized = False
         self.signal_handlers = {
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.SD_GENERATE_IMAGE_SIGNAL: self.on_generate_image_signal,
@@ -121,6 +115,10 @@ class StableDiffusionGeneratorForm(BaseWidget):
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.CLEAR_PROMPTS: self.clear_prompts,
         }
+        super().__init__(*args, **kwargs)
+        self.seed_override = None
+        self.parent = None
+        self.initialized = False
         self.thread = QThread()
         self.worker = SaveGeneratorSettingsWorker(parent=self)
         self.worker.moveToThread(self.thread)

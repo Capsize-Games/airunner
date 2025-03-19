@@ -10,20 +10,21 @@ from airunner.handlers.llm.llm_handler import LLMHandler
 class LLMGenerateWorker(Worker):
     def __init__(self):
         self.llm = None
-        self.signals = [
-            (SignalCode.LLM_UNLOAD_SIGNAL, self.on_llm_on_unload_signal),
-            (SignalCode.LLM_LOAD_SIGNAL, self.on_llm_load_model_signal),
-            (SignalCode.LLM_CLEAR_HISTORY_SIGNAL, self.on_llm_clear_history_signal),
-            (SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, self.on_llm_request_signal),
-            (SignalCode.RAG_RELOAD_INDEX_SIGNAL, self.on_llm_reload_rag_index_signal),
-            (SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL, self.on_llm_add_chatbot_response_to_history),
-            (SignalCode.LOAD_CONVERSATION, self.on_llm_load_conversation),
-            (SignalCode.INTERRUPT_PROCESS_SIGNAL, self.llm_on_interrupt_process_signal),
-            (SignalCode.QUIT_APPLICATION, self.on_quit_application_signal),
-            (SignalCode.CONVERSATION_DELETED, self.on_conversation_deleted_signal),
-            (SignalCode.SECTION_CHANGED, self.on_section_changed_signal),
-            (SignalCode.WEB_BROWSER_PAGE_HTML, self.on_web_browser_page_html_signal),
-        ]
+        print("CREATING LLMGenerateWorker")
+        self.signal_handlers = {
+            SignalCode.LLM_UNLOAD_SIGNAL: self.on_llm_on_unload_signal,
+            SignalCode.LLM_LOAD_SIGNAL: self.on_llm_load_model_signal,
+            SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_llm_clear_history_signal,
+            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_signal,
+            SignalCode.RAG_RELOAD_INDEX_SIGNAL: self.on_llm_reload_rag_index_signal,
+            SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL: self.on_llm_add_chatbot_response_to_history,
+            SignalCode.LOAD_CONVERSATION: self.on_llm_load_conversation,
+            SignalCode.INTERRUPT_PROCESS_SIGNAL: self.llm_on_interrupt_process_signal,
+            SignalCode.QUIT_APPLICATION: self.on_quit_application_signal,
+            SignalCode.CONVERSATION_DELETED: self.on_conversation_deleted_signal,
+            SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
+            SignalCode.WEB_BROWSER_PAGE_HTML: self.on_web_browser_page_html_signal,
+        }
         super().__init__()
         self._llm_thread = None
 
