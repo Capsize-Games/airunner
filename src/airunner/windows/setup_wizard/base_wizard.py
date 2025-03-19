@@ -4,16 +4,15 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class BaseWizard(
-    QWizardPage,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    QWizardPage,
 ):
     class_name_ = None
     widget_class_ = None
 
     def __init__(self, parent: QWizard):
-        MediatorMixin.__init__(self)
-        super(BaseWizard, self).__init__()
+        super().__init__()
         
         if self.class_name_:
             self.ui = self.class_name_()

@@ -26,7 +26,7 @@ class Ui_generator_form(object):
     def setupUi(self, generator_form):
         if not generator_form.objectName():
             generator_form.setObjectName(u"generator_form")
-        generator_form.resize(620, 946)
+        generator_form.resize(620, 942)
         font = QFont()
         font.setPointSize(8)
         generator_form.setFont(font)
@@ -37,8 +37,8 @@ class Ui_generator_form(object):
         self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
         self.generator_form_tabs = QTabWidget(generator_form)
         self.generator_form_tabs.setObjectName(u"generator_form_tabs")
-        self.generator_form_tabs.setTabsClosable(True)
-        self.generator_form_tabs.setMovable(True)
+        self.generator_form_tabs.setTabsClosable(False)
+        self.generator_form_tabs.setMovable(False)
         self.tab_2 = QWidget()
         self.tab_2.setObjectName(u"tab_2")
         self.gridLayout_5 = QGridLayout(self.tab_2)

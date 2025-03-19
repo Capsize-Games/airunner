@@ -72,17 +72,17 @@ from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.data.models import SplitterSetting, Tab
+from airunner.data.models import Tab
 from airunner.plugin_loader import PluginLoader
 
 
 class MainWindow(
-    QMainWindow,
     MediatorMixin,
     SettingsMixin,
     StylesMixin,
     PipelineMixin,
-    AIModelMixin
+    AIModelMixin,
+    QMainWindow,
 ):
     show_grid_toggled = Signal(bool)
     cell_size_changed_signal = Signal(int)
@@ -147,10 +147,31 @@ class MainWindow(
         self.listening = False
         self.initialized = False
         self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
-        MediatorMixin.__init__(self)
-        
+        self.signal_handlers = {
+            SignalCode.SD_SAVE_PROMPT_SIGNAL: self.on_save_stablediffusion_prompt_signal,
+            SignalCode.QUIT_APPLICATION: self.action_quit_triggered,
+            SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL: self.on_nsfw_content_detected_signal,
+            SignalCode.BASH_EXECUTE_SIGNAL: self.on_bash_execute_signal,
+            SignalCode.WRITE_FILE: self.on_write_file_signal,
+            SignalCode.TOGGLE_FULLSCREEN_SIGNAL: self.on_toggle_fullscreen_signal,
+            SignalCode.TOGGLE_TTS_SIGNAL: self.on_toggle_tts,
+            SignalCode.TOGGLE_SD_SIGNAL: self.on_toggle_sd,
+            SignalCode.TOGGLE_LLM_SIGNAL: self.on_toggle_llm,
+            SignalCode.UNLOAD_NON_SD_MODELS: self.on_unload_non_sd_models,
+            SignalCode.LOAD_NON_SD_MODELS: self.on_load_non_sd_models,
+            SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL: self.action_reset_settings,
+            SignalCode.APPLICATION_RESET_PATHS_SIGNAL: self.on_reset_paths_signal,
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
+            SignalCode.KEYBOARD_SHORTCUTS_UPDATED: self.on_keyboard_shortcuts_updated,
+            SignalCode.HISTORY_UPDATED: self.on_history_updated,
+            SignalCode.REFRESH_STYLESHEET_SIGNAL: self.on_theme_changed_signal,
+            SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL: self.on_ai_models_save_or_update_signal,
+            SignalCode.NAVIGATE_TO_URL: self.on_navigate_to_url,
+            SignalCode.MISSING_REQUIRED_MODELS: self.display_missing_models_error,
+            SignalCode.TOGGLE_TOOL: self.on_toggle_tool_signal,
+        }
         self.logger.debug("Starting AI Runnner")
-        super().__init__(*args, **kwargs)
+        super().__init__()
         
         # Add plugins directory to Python path
         plugins_path = os.path.join(self.path_settings.base_path, "plugins")
@@ -158,11 +179,8 @@ class MainWindow(
             sys.path.append(plugins_path)
 
         self._updating_settings = True
-        PipelineMixin.__init__(self)
-        AIModelMixin.__init__(self)
         self._updating_settings = False
         self._worker_manager = None
-        self.register_signals()
         self.initialize_ui()
         self._initialize_workers()
 
@@ -498,33 +516,6 @@ class MainWindow(
 
     def show_layers(self):
         self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
-
-    def register_signals(self):
-        self.logger.debug("Connecting signals")
-        for item in (
-            (SignalCode.SD_SAVE_PROMPT_SIGNAL, self.on_save_stablediffusion_prompt_signal),
-            (SignalCode.QUIT_APPLICATION, self.action_quit_triggered),
-            (SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL, self.on_nsfw_content_detected_signal),
-            (SignalCode.BASH_EXECUTE_SIGNAL, self.on_bash_execute_signal),
-            (SignalCode.WRITE_FILE, self.on_write_file_signal),
-            (SignalCode.TOGGLE_FULLSCREEN_SIGNAL, self.on_toggle_fullscreen_signal),
-            (SignalCode.TOGGLE_TTS_SIGNAL, self.on_toggle_tts),
-            (SignalCode.TOGGLE_SD_SIGNAL, self.on_toggle_sd),
-            (SignalCode.TOGGLE_LLM_SIGNAL, self.on_toggle_llm),
-            (SignalCode.UNLOAD_NON_SD_MODELS, self.on_unload_non_sd_models),
-            (SignalCode.LOAD_NON_SD_MODELS, self.on_load_non_sd_models),
-            (SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL, self.action_reset_settings),
-            (SignalCode.APPLICATION_RESET_PATHS_SIGNAL, self.on_reset_paths_signal),
-            (SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self.on_model_status_changed_signal),
-            (SignalCode.KEYBOARD_SHORTCUTS_UPDATED, self.on_keyboard_shortcuts_updated),
-            (SignalCode.HISTORY_UPDATED, self.on_history_updated),
-            (SignalCode.REFRESH_STYLESHEET_SIGNAL, self.on_theme_changed_signal),
-            (SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, self.on_ai_models_save_or_update_signal),
-            (SignalCode.NAVIGATE_TO_URL, self.on_navigate_to_url),
-            (SignalCode.MISSING_REQUIRED_MODELS, self.display_missing_models_error),
-            (SignalCode.TOGGLE_TOOL, self.on_toggle_tool_signal)
-        ):
-            self.register(item[0], item[1])
 
     def on_reset_paths_signal(self):
         self.reset_path_settings()

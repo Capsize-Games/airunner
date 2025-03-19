@@ -18,11 +18,11 @@ from airunner.data.models import Conversation
 
 
 class MistralAgentQObject(
-    QObject,
-    BaseAgent,
-    WeatherMixin,
     MediatorMixin,
     SettingsMixin,
+    WeatherMixin,
+    BaseAgent,
+    QObject,
 ):
     """QObject wrapper for Mistral Agent"""
     def __init__(
@@ -34,8 +34,7 @@ class MistralAgentQObject(
     ):
         self.model = model
         self.tokenizer = tokenizer
-        MediatorMixin.__init__(self)
-        super().__init__(*args, **kwargs)
+        super().__init__()
     
     @property
     def conversation_summaries(self) -> str:
