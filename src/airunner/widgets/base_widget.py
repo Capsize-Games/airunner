@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 from abc import ABC, ABCMeta
 from abc import abstractmethod
 import os
@@ -10,6 +10,8 @@ from airunner.enums import CanvasToolName
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.mediator_mixin import MediatorMixin
 from airunner.utils.create_worker import create_worker
+from airunner.utils.widgets.save_splitter_settings import save_splitter_settings
+from airunner.utils.widgets.load_splitter_settings import load_splitter_settings
 
 
 class BaseABCMeta(type(QWidget), ABCMeta):
@@ -35,16 +37,23 @@ class AbstractBaseWidget(
 class BaseWidget(AbstractBaseWidget):
     widget_class_ = None
     _signal_handlers: Dict = {}
+    _splitters: List[str] = []
     icons = ()
     ui = None
     qss_filename = None
     threads = []
 
     def save_state(self):
-        pass
-
+        save_splitter_settings(
+            self.ui,
+            self.splitters
+        )
+    
     def restore_state(self):
-        pass
+        load_splitter_settings(
+            self.ui,
+            self.splitters
+        )
 
     @property
     def signal_handlers(self) -> Dict:
@@ -53,6 +62,14 @@ class BaseWidget(AbstractBaseWidget):
     @signal_handlers.setter
     def signal_handlers(self, value):
         self._signal_handlers = value
+    
+    @property
+    def splitters(self) -> List:
+        return self._splitters
+    
+    @splitters.setter
+    def splitters(self, value):
+        self._splitters = value
 
     @property
     def current_tool(self):
@@ -126,6 +143,10 @@ class BaseWidget(AbstractBaseWidget):
         """
         self.initialize()
         self.restore_state()
+    
+    def closeEvent(self, event):
+        self.save_state()
+        super().closeEvent(event)
 
     def set_icons(self):
         theme = "dark" if self.is_dark else "light"
