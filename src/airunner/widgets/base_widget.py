@@ -12,6 +12,7 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.utils.create_worker import create_worker
 from airunner.utils.widgets.save_splitter_settings import save_splitter_settings
 from airunner.utils.widgets.load_splitter_settings import load_splitter_settings
+from airunner.enums import SignalCode
 
 
 class BaseABCMeta(type(QWidget), ABCMeta):
@@ -115,6 +116,7 @@ class BaseWidget(AbstractBaseWidget):
         """
         for signal, handler in self.signal_handlers.items():
             self.register(signal, handler)
+        self.register(SignalCode.QUIT_APPLICATION, self.handle_close)
 
     def initialize_workers(self):
         """
@@ -144,9 +146,8 @@ class BaseWidget(AbstractBaseWidget):
         self.initialize()
         self.restore_state()
     
-    def closeEvent(self, event):
+    def handle_close(self):
         self.save_state()
-        super().closeEvent(event)
 
     def set_icons(self):
         theme = "dark" if self.is_dark else "light"
