@@ -38,7 +38,7 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>0</y>
+        <y>-80</y>
         <width>812</width>
         <height>1170</height>
        </rect>
@@ -59,75 +59,42 @@
        <property name="verticalSpacing">
         <number>10</number>
        </property>
-       <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox">
-         <property name="title">
-          <string>Existing Agents</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_3">
-          <item row="0" column="1">
-           <widget class="QPushButton" name="create_new_button">
-            <property name="maximumSize">
-             <size>
-              <width>40</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="toolTip">
-             <string>Add new agent</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset theme="list-add"/>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QComboBox" name="saved_chatbots"/>
-          </item>
-          <item row="0" column="2">
-           <widget class="QPushButton" name="delete_button">
-            <property name="maximumSize">
-             <size>
-              <width>40</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="toolTip">
-             <string>Delete agent</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset theme="process-stop"/>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="Line" name="line_2">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="8" column="0">
-        <widget class="Line" name="line">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
        <item row="7" column="0">
         <widget class="QLabel" name="label_3">
          <property name="text">
           <string>Check this and set zipcode in User Settings to give agents access to local weather.</string>
          </property>
+        </widget>
+       </item>
+       <item row="10" column="0">
+        <widget class="QGroupBox" name="system_instructions_groupbox">
+         <property name="title">
+          <string>System Instructions</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QPlainTextEdit" name="system_instructions">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>150</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>Instructions for the LLM</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
        <item row="2" column="0">
@@ -176,27 +143,11 @@
          </layout>
         </widget>
        </item>
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_2">
-         <property name="title">
-          <string>Agent Type</string>
+       <item row="8" column="0">
+        <widget class="Line" name="line">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
          </property>
-         <layout class="QGridLayout" name="gridLayout_8">
-          <item row="0" column="0">
-           <widget class="QComboBox" name="comboBox">
-            <item>
-             <property name="text">
-              <string>Chatbot</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Tool</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-         </layout>
         </widget>
        </item>
        <item row="11" column="0">
@@ -268,37 +219,6 @@
          </layout>
         </widget>
        </item>
-       <item row="10" column="0">
-        <widget class="QGroupBox" name="system_instructions_groupbox">
-         <property name="title">
-          <string>System Instructions</string>
-         </property>
-         <property name="checkable">
-          <bool>true</bool>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
-          <item>
-           <widget class="QPlainTextEdit" name="system_instructions">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>150</height>
-             </size>
-            </property>
-            <property name="placeholderText">
-             <string>Instructions for the LLM</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
        <item row="9" column="0">
         <widget class="QGroupBox" name="names_groupbox">
          <property name="title">
@@ -357,6 +277,86 @@
           </widget>
          </item>
         </layout>
+       </item>
+       <item row="3" column="0">
+        <widget class="Line" name="line_2">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="title">
+          <string>Agent Type</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_8">
+          <item row="0" column="0">
+           <widget class="QComboBox" name="comboBox">
+            <item>
+             <property name="text">
+              <string>Chatbot</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Tool</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Existing Agents</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="1">
+           <widget class="QPushButton" name="create_new_button">
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Add new agent</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="list-add"/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QComboBox" name="saved_chatbots"/>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="delete_button">
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Delete agent</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="process-stop"/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </item>
       </layout>
      </widget>

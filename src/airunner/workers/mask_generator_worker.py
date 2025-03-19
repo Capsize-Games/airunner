@@ -8,9 +8,9 @@ from airunner.workers.worker import Worker
 
 class MaskGeneratorWorker(Worker):
     def __init__(self, *args, **kwargs):
-        self.signals = [
-            (SignalCode.GENERATE_MASK, self.on_generate_mask_signal)
-        ]
+        self.signal_handlers = {
+            SignalCode.GENERATE_MASK: self.on_generate_mask_signal,
+        }
         super().__init__(*args, **kwargs)
 
     @property

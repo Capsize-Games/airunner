@@ -2,6 +2,9 @@ from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_d
 
 
 class PipelineMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @staticmethod
     def pipeline_get_by_filter(filter_dict):
         return [item for item in pipeline_bootstrap_data if all(item.get(k) == v for k, v in filter_dict.items())]

@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 from abc import ABC, ABCMeta
 from abc import abstractmethod
 import os
@@ -10,6 +10,9 @@ from airunner.enums import CanvasToolName
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.mediator_mixin import MediatorMixin
 from airunner.utils.create_worker import create_worker
+from airunner.utils.widgets.save_splitter_settings import save_splitter_settings
+from airunner.utils.widgets.load_splitter_settings import load_splitter_settings
+from airunner.enums import SignalCode
 
 
 class BaseABCMeta(type(QWidget), ABCMeta):
@@ -17,9 +20,9 @@ class BaseABCMeta(type(QWidget), ABCMeta):
 
 
 class AbstractBaseWidget(
-    QWidget,
     MediatorMixin,
     SettingsMixin,
+    QWidget,
     ABC,
     metaclass=BaseABCMeta
 ):
@@ -34,17 +37,31 @@ class AbstractBaseWidget(
 
 class BaseWidget(AbstractBaseWidget):
     widget_class_ = None
-    signal_handlers: Dict = {}
+    _splitters: List[str] = []
     icons = ()
     ui = None
     qss_filename = None
     threads = []
 
     def save_state(self):
-        pass
-
+        save_splitter_settings(
+            self.ui,
+            self.splitters
+        )
+    
     def restore_state(self):
-        pass
+        load_splitter_settings(
+            self.ui,
+            self.splitters
+        )
+    
+    @property
+    def splitters(self) -> List:
+        return self._splitters
+    
+    @splitters.setter
+    def splitters(self, value):
+        self._splitters = value
 
     @property
     def current_tool(self):
@@ -55,9 +72,11 @@ class BaseWidget(AbstractBaseWidget):
         return self.application_settings.dark_mode_enabled
 
     def __init__(self, *args, **kwargs):
-        MediatorMixin.__init__(self)
-        
-        super().__init__(*args, **kwargs)
+        self.signal_handlers = {} if not self.signal_handlers else self.signal_handlers
+        self.signal_handlers.update({
+            SignalCode.QUIT_APPLICATION: self.handle_close
+        })
+        super().__init__()
         if self.widget_class_:
             self.ui = self.widget_class_()
         if self.ui:
@@ -72,24 +91,8 @@ class BaseWidget(AbstractBaseWidget):
         Call this function to initialize the widget.
         :return:
         """
-        self.register_signals()
         self.initialize_workers()
         self.initialize_form()
-
-    def register_signals(self):
-        """
-        Set signal_handlers Dict in order to register signals.
-
-        signal_handlers should be a dictionary of SignalCode enums and functions.
-        Example:
-        signal_handlers = {
-            SignalCode.GET_SETTINGS: self.get_settings,
-            SignalCode.SET_SETTINGS: self.set_settings
-        }
-        :return:
-        """
-        for signal, handler in self.signal_handlers.items():
-            self.register(signal, handler)
 
     def initialize_workers(self):
         """
@@ -118,6 +121,9 @@ class BaseWidget(AbstractBaseWidget):
         """
         self.initialize()
         self.restore_state()
+    
+    def handle_close(self):
+        self.save_state()
 
     def set_icons(self):
         theme = "dark" if self.is_dark else "light"

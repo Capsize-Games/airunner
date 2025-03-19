@@ -7,6 +7,9 @@ from openmeteo_sdk.VariablesWithTime import VariablesWithTime
 
 
 class WeatherMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @property
     def weather_cache_expiration(self) -> int:
         return 3600

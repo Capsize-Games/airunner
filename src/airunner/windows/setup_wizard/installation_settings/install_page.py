@@ -54,17 +54,15 @@ CONTROLNET_PATHS = [
 
 
 class InstallWorker(
-    QObject,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    QObject,
 ):
     file_download_finished = Signal()
     progress_updated = Signal(int, int)
 
     def __init__(self, parent):
-        MediatorMixin.__init__(self)
-        
-        super(InstallWorker, self).__init__()
+        super().__init__()
         self.parent = parent
         self.current_step = -1
         self.total_models_in_current_step = 0

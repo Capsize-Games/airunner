@@ -24,16 +24,14 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class CustomScene(
-    QGraphicsScene,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    QGraphicsScene,
 ):
     def __init__(self, canvas_type: str):
         self._is_erasing = None
         self._is_drawing = None
         self.canvas_type = canvas_type
-        MediatorMixin.__init__(self)
-        
         self.image_backup = None
         self.previewing_filter = False
         self.painter = None

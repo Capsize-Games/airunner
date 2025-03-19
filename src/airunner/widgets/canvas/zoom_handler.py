@@ -5,12 +5,9 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class ZoomHandler(
+    MediatorMixin,
     SettingsMixin,
-    MediatorMixin
 ):
-    def __init__(self):
-        MediatorMixin.__init__(self)
-
     @property
     def zoom_in_step(self) -> float:
         zoom_level = self.grid_settings.zoom_level

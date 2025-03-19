@@ -7,16 +7,14 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 
 
 class HuggingfaceDownloader(
-    QObject,
     MediatorMixin,
-    SettingsMixin
+    SettingsMixin,
+    QObject,
 ):
     completed = Signal()
 
     def __init__(self, callback=None):
-        MediatorMixin.__init__(self)
-        
-        super(HuggingfaceDownloader, self).__init__()
+        super().__init__()
         self.thread = None
         self.worker = None
         self.downloading = False

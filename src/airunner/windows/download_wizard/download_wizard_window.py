@@ -7,7 +7,11 @@ from airunner.windows.setup_wizard.installation_settings.install_success_page im
 from airunner.windows.setup_wizard.path_settings.path_settings import PathSettings
 
 
-class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
+class DownloadWizardWindow(
+    MediatorMixin, 
+    SettingsMixin,
+    QWizard, 
+):
     """
     The download wizard window class for AI Runner.
     This class is used to download models and other resources required for AI Runner.
@@ -17,9 +21,7 @@ class DownloadWizardWindow(QWizard, MediatorMixin, SettingsMixin):
         Initialize the download wizard window.
         :param setup_settings: The setup settings dictionary.
         """
-        MediatorMixin.__init__(self)
-        
-        super(DownloadWizardWindow, self).__init__()
+        super().__init__()
         self.setWindowTitle("AI Runner Download Wizard")
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         self.setOption(QWizard.WizardOption.IndependentPages, True)
