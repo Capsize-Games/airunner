@@ -241,7 +241,6 @@ class ChatPromptWidget(BaseWidget):
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
             widget.deleteLater()
         self.sending = False
-        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
     
     @Slot(bool)
     def action_button_clicked_send(self):
