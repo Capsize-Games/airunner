@@ -30,10 +30,12 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.CONVERSATION_DELETED: self.on_delete_conversation,
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_clear_conversation,
             SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
-            SignalCode.QUIT_APPLICATION: self.save_state,
             SignalCode.LLM_TOKEN_SIGNAL: self.on_token_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
         }
+        self.splitters = [
+            "chat_prompt_splitter"
+        ]
         super().__init__()
         self.registered: bool = False
         self.scroll_bar = None
@@ -216,24 +218,6 @@ class ChatPromptWidget(BaseWidget):
             self.do_generate(prompt_override=self.held_message)
             self.held_message = None
         self.enable_send_button()
-    
-    def save_state(self):
-        settings = SplitterSetting.objects.filter_by_first(name="chat_prompt_splitter")
-        state = self.ui.chat_prompt_splitter.saveState()
-        if not settings:
-            SplitterSetting.objects.create(
-                name="chat_prompt_splitter", splitter_settings=state
-            )
-        else:
-            SplitterSetting.objects.update(
-                settings.id, 
-                chat_prompt_splitter=state
-            )
-    
-    def restore_state(self):
-        settings = SplitterSetting.objects.filter_by_first(name="chat_prompt_splitter")
-        if settings:
-            self.ui.chat_prompt_splitter.restoreState(settings.splitter_settings)
 
     @Slot()
     def action_button_clicked_clear_conversation(self):
