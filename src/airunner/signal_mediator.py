@@ -23,16 +23,23 @@ class Signal(QObject):
     def __init__(self, callback: Callable):
         super().__init__()
         self.callback = callback
-
+        
+        try:
+            self.param_count = len(inspect.signature(self.callback).parameters)
+        except (ValueError, TypeError, RecursionError):
+            self.param_count = 1
+            
         self.signal.connect(self.on_signal_received)
 
     @Slot(object)
     def on_signal_received(self, data: dict):
-        # Check if the callback expects a parameter
-        if len(inspect.signature(self.callback).parameters) == 0:
-            self.callback()
-        else:
-            self.callback(data)
+        try:
+            if self.param_count == 0:
+                self.callback()
+            else:
+                self.callback(data)
+        except Exception as e:
+            print(f"Error in signal callback: {e}")
 
 
 class SignalMediator(metaclass=SingletonMeta):
