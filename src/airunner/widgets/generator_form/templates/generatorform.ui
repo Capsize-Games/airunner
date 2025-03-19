@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>620</width>
-    <height>946</height>
+    <height>942</height>
    </rect>
   </property>
   <property name="font">
@@ -43,10 +43,10 @@
       <number>0</number>
      </property>
      <property name="tabsClosable">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="movable">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">

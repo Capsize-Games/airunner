@@ -8,7 +8,6 @@ from airunner.enums import SignalCode, CanvasToolName
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
 from airunner.utils.set_widget_state import set_widget_state
-from airunner.data.models import SplitterSetting
 
 
 class CanvasWidget(
@@ -40,6 +39,7 @@ class CanvasWidget(
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_toggle_tool_signal,
             SignalCode.TOGGLE_TOOL: self.on_toggle_tool_signal,
             SignalCode.TOGGLE_GRID: self.on_toggle_grid_signal,
+            SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
         }
         self.splitters = [
             "canvas_splitter"
@@ -57,9 +57,6 @@ class CanvasWidget(
         self.drag_pos: QPoint = Optional[None]
         self._grid_settings = {}
         self._active_grid_settings = {}
-        self.signal_handlers = {
-            SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
-        }
 
         self.ui.actionToggle_Grid.blockSignals(True)
         self.ui.actionToggle_Grid.setChecked(show_grid)

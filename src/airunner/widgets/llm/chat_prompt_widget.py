@@ -125,6 +125,7 @@ class ChatPromptWidget(BaseWidget):
             self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {
                 "conversation_id": self.conversation_id
             })
+            self.on_clear_conversation()
             self._set_conversation_widgets([
                 {
                     "name": (
@@ -160,6 +161,7 @@ class ChatPromptWidget(BaseWidget):
 
     def on_chatbot_changed(self):
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
+        self.on_clear_conversation()
 
     def on_set_conversation(self, message):
         self._clear_conversation_widgets()
@@ -219,9 +221,14 @@ class ChatPromptWidget(BaseWidget):
             self.held_message = None
         self.enable_send_button()
 
+    sending: bool = False
+
     @Slot()
     def action_button_clicked_clear_conversation(self):
-        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
+        if self.sending:
+            return
+        self.sending = True
+        self.on_clear_conversation()
     
     def on_clear_conversation(self):
         self._clear_conversation()
@@ -233,6 +240,8 @@ class ChatPromptWidget(BaseWidget):
     def _clear_conversation_widgets(self):
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
             widget.deleteLater()
+        self.sending = False
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
     
     @Slot(bool)
     def action_button_clicked_send(self):

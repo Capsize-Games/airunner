@@ -20,9 +20,9 @@ class BaseABCMeta(type(QWidget), ABCMeta):
 
 
 class AbstractBaseWidget(
-    QWidget,
     MediatorMixin,
     SettingsMixin,
+    QWidget,
     ABC,
     metaclass=BaseABCMeta
 ):
@@ -37,7 +37,6 @@ class AbstractBaseWidget(
 
 class BaseWidget(AbstractBaseWidget):
     widget_class_ = None
-    _signal_handlers: Dict = {}
     _splitters: List[str] = []
     icons = ()
     ui = None
@@ -55,14 +54,6 @@ class BaseWidget(AbstractBaseWidget):
             self.ui,
             self.splitters
         )
-
-    @property
-    def signal_handlers(self) -> Dict:
-        return self._signal_handlers
-    
-    @signal_handlers.setter
-    def signal_handlers(self, value):
-        self._signal_handlers = value
     
     @property
     def splitters(self) -> List:
@@ -81,9 +72,11 @@ class BaseWidget(AbstractBaseWidget):
         return self.application_settings.dark_mode_enabled
 
     def __init__(self, *args, **kwargs):
-        MediatorMixin.__init__(self)
-        
-        super().__init__(*args, **kwargs)
+        self.signal_handlers = {} if not self.signal_handlers else self.signal_handlers
+        self.signal_handlers.update({
+            SignalCode.QUIT_APPLICATION: self.handle_close
+        })
+        super().__init__()
         if self.widget_class_:
             self.ui = self.widget_class_()
         if self.ui:
@@ -98,25 +91,8 @@ class BaseWidget(AbstractBaseWidget):
         Call this function to initialize the widget.
         :return:
         """
-        self.register_signals()
         self.initialize_workers()
         self.initialize_form()
-
-    def register_signals(self):
-        """
-        Set signal_handlers Dict in order to register signals.
-
-        signal_handlers should be a dictionary of SignalCode enums and functions.
-        Example:
-        signal_handlers = {
-            SignalCode.GET_SETTINGS: self.get_settings,
-            SignalCode.SET_SETTINGS: self.set_settings
-        }
-        :return:
-        """
-        for signal, handler in self.signal_handlers.items():
-            self.register(signal, handler)
-        self.register(SignalCode.QUIT_APPLICATION, self.handle_close)
 
     def initialize_workers(self):
         """

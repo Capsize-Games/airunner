@@ -35,9 +35,9 @@ from airunner.windows.main.main_window import MainWindow
 
 
 class App(
-    QObject,
+    MediatorMixin,
     SettingsMixin,
-    MediatorMixin
+    QObject
 ):
     """
     The main application class for AI Runner.
@@ -59,8 +59,7 @@ class App(
         Mediator and Settings mixins are initialized here, enabling the application
         to easily access the application settings dictionary.
         """
-        MediatorMixin.__init__(self)
-        super(App, self).__init__()
+        super().__init__()
 
         self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
 
