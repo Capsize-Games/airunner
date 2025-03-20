@@ -7,6 +7,9 @@ def load_splitter_settings(
     splitters: List[str],
     orientations: dict = None  # Dictionary mapping splitter_name to orientation
 ):
+    """
+    Load the state of splitter widgets from the database.
+    """
     if orientations is None:
         orientations = {}
         

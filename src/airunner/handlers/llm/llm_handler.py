@@ -129,7 +129,14 @@ class LLMHandler(
             self._load_tokenizer()
             self._load_model()
         self._load_agent()
-        if self._model and self._tokenizer and self._chat_agent:
+        if (
+            self._model and 
+            self._tokenizer and 
+            self._chat_agent
+        ) or (
+            self._chat_agent and
+            self.llm_settings.use_api
+        ):
             self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
         else:
             if not self._model:
@@ -276,7 +283,7 @@ class LLMHandler(
                 default_tool_choice=None,
                 llm_settings=self.llm_settings
             )
-        elif self.llm_settings.use_open_router:
+        elif self.llm_settings.use_openrouter:
             self.logger.info("Loading openrouter chat agent")
             self._chat_agent = OpenRouterQObject(
                 llm_settings=self.llm_settings
