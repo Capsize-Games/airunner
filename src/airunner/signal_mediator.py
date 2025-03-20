@@ -77,5 +77,4 @@ class SignalMediator(metaclass=SingletonMeta):
         data = {} if data is None else data
         if code in self.signals:
             for _n, signal in enumerate(self.signals[code]):
-                print(signal, signal.signal, data)
                 signal.signal.emit(data)
