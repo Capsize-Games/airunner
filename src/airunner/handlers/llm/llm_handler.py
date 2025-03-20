@@ -23,6 +23,7 @@ from airunner.handlers.llm.training_mixin import TrainingMixin
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
+from airunner.data.models import Conversation, LLMGeneratorSettings
 
 
 class LLMHandler(
@@ -187,10 +188,23 @@ class LLMHandler(
         """
         Public method to clear the chat agent history
         """
-        if not self._chat_agent:
-            return
         self.logger.debug("Clearing chat history")
-        self._chat_agent.clear_history(data)
+
+        conversation_id = data.get("conversation_id", None)
+        llm_generator_settings = LLMGeneratorSettings.objects.first()
+        conversation = Conversation.objects.first()
+        
+        if not conversation_id:
+            conversation = Conversation.create()
+            data["conversation_id"] = conversation.id
+        
+        LLMGeneratorSettings.objects.update(
+            llm_generator_settings.id,
+            current_conversation=conversation.id
+        )
+
+        if self._chat_agent:
+            self._chat_agent.clear_history(data)
 
     def add_chatbot_response_to_history(self, message):
         """
