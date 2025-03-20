@@ -261,7 +261,7 @@
      </property>
      <addaction name="artActionNew"/>
      <addaction name="actionImport_image"/>
-     <addaction name="actionExport_image_2"/>
+     <addaction name="actionExport_image_button"/>
     </widget>
     <widget class="QMenu" name="menuChat">
      <property name="title">
@@ -271,9 +271,6 @@
      <addaction name="actionDelete_conversation"/>
     </widget>
     <addaction name="menuArt"/>
-    <addaction name="actionNew"/>
-    <addaction name="actionImport"/>
-    <addaction name="actionExport_3"/>
     <addaction name="separator"/>
     <addaction name="menuChat"/>
     <addaction name="separator"/>
@@ -313,6 +310,8 @@
     <addaction name="actionAbout"/>
     <addaction name="actionBug_report"/>
     <addaction name="actionReport_vulnerability"/>
+    <addaction name="separator"/>
+    <addaction name="actionDiscord"/>
    </widget>
    <widget class="QMenu" name="menuImage">
     <property name="title">
@@ -346,32 +345,6 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <widget class="QMenu" name="menuCanvas">
-     <property name="title">
-      <string>Canvas</string>
-     </property>
-     <addaction name="actionToggle_Active_Grid_Area_2"/>
-     <addaction name="actionToggle_Selection_2"/>
-     <addaction name="actionToggle_Brush_2"/>
-     <addaction name="actionToggle_Eraser_2"/>
-     <addaction name="actionToggle_Grid_2"/>
-    </widget>
-    <widget class="QMenu" name="menuStable_Diffusion">
-     <property name="title">
-      <string>Stable Diffusion</string>
-     </property>
-     <addaction name="actionToggle_Safety_Checker"/>
-     <addaction name="actionToggle_Stable_Diffusion_2"/>
-     <addaction name="actionToggle_Controlnet_2"/>
-    </widget>
-    <widget class="QMenu" name="menuLLM">
-     <property name="title">
-      <string>LLM</string>
-     </property>
-     <addaction name="actionToggle_LLM_2"/>
-     <addaction name="actionToggle_Text_to_Speech_2"/>
-     <addaction name="actionToggle_Speech_to_Text_2"/>
-    </widget>
     <addaction name="actionSafety_Checker"/>
     <addaction name="actionToggle_Stable_Diffusion"/>
     <addaction name="actionToggle_Controlnet"/>
@@ -379,10 +352,6 @@
     <addaction name="actionToggle_LLM"/>
     <addaction name="actionToggle_Text_to_Speech"/>
     <addaction name="actionToggle_Speech_to_Text"/>
-    <addaction name="menuStable_Diffusion"/>
-    <addaction name="menuCanvas"/>
-    <addaction name="separator"/>
-    <addaction name="menuLLM"/>
     <addaction name="separator"/>
     <addaction name="actionStats"/>
     <addaction name="separator"/>
@@ -678,11 +647,6 @@
   <action name="actionReport_vulnerability">
    <property name="text">
     <string>Report vulnerability</string>
-   </property>
-  </action>
-  <action name="actionDiscord">
-   <property name="text">
-    <string>Discord</string>
    </property>
   </action>
   <action name="actionExtensions">
@@ -1409,7 +1373,7 @@
     <string>Ctrl+I</string>
    </property>
   </action>
-  <action name="actionExport_image_2">
+  <action name="actionExport_image_button">
    <property name="icon">
     <iconset resource="../../../resources_light.qrc">
      <normaloff>:/icons/light/download-icon.svg</normaloff>:/icons/light/download-icon.svg</iconset>
@@ -1519,6 +1483,16 @@
     <string>Toggle Speech-to-Text</string>
    </property>
   </action>
+  <action name="actionDiscord_2">
+   <property name="text">
+    <string>Discord</string>
+   </property>
+  </action>
+  <action name="actionDiscord">
+   <property name="text">
+    <string>Discord</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -1562,42 +1536,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionExport</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_export_image_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionNew</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>action_new_document_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>442</x>
-     <y>432</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionImport</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_import_image_triggered()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -1806,22 +1748,6 @@
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>action_open_bug_report()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>567</x>
-     <y>517</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionDiscord</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_open_discord()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -2234,22 +2160,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionExport_3</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_export_image_triggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>414</x>
-     <y>367</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionMask_toggle</sender>
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
@@ -2310,6 +2220,86 @@
     <hint type="destinationlabel">
      <x>414</x>
      <y>367</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionNew_Conversation</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_conversation_triggered_new()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>526</x>
+     <y>388</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionDelete_conversation</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_conversation_triggered_delete()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>526</x>
+     <y>388</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionImport_image</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_import_image_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>526</x>
+     <y>388</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExport_image_button</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_export_image_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>526</x>
+     <y>388</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionDiscord</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_open_discord()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>526</x>
+     <y>388</y>
     </hint>
    </hints>
   </connection>
@@ -2409,5 +2399,7 @@
   <slot>action_invert_image()</slot>
   <slot>action_film_image()</slot>
   <slot>action_toggle_mask_layer(bool)</slot>
+  <slot>action_conversation_triggered_new()</slot>
+  <slot>action_conversation_triggered_delete()</slot>
  </slots>
 </ui>
