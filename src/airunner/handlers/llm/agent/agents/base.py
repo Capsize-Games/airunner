@@ -56,7 +56,6 @@ class BaseAgent(
         self.summarize_after_n_turns = 5
         self._streaming_stopping_criteria: Optional[ExternalConditionStoppingCriteria] = None
         self._do_interrupt: bool = False
-        self.history: Optional[List[ChatMessage]] = []
         self._llm: Optional[Type[LLM]] = None
         self._conversation: Optional[Conversation] = None
         self._conversation_id: Optional[int] = None
@@ -637,9 +636,6 @@ class BaseAgent(
         conversation_id = data.get("conversation_id", None)
         
         self.conversation_id = conversation_id
-
-        if not conversation_id:
-            self.conversation = Conversation.create()
         
         self.reset_memory()
     
