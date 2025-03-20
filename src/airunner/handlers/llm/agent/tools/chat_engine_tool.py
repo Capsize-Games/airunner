@@ -4,15 +4,24 @@ from typing import (
     Union,
 )
 
-from airunner.handlers.llm.agent.chat_engine.react_agent_engine import ReactAgentEngine
+from airunner.handlers.llm.agent.chat_engine.react_agent_engine import (
+    ReactAgentEngine
+)
 from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import (
     RefreshContextChatEngine
 )
 from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import (
     RefreshSimpleChatEngine
 )
-from llama_index.core.tools.types import AsyncBaseTool, ToolMetadata, ToolOutput
-from llama_index.core.langchain_helpers.agents.tools import IndexToolConfig, LlamaIndexTool
+from llama_index.core.tools.types import (
+    AsyncBaseTool, 
+    ToolMetadata,
+    ToolOutput
+)
+from llama_index.core.langchain_helpers.agents.tools import (
+    IndexToolConfig, 
+    LlamaIndexTool
+)
 
 
 class ChatEngineTool(AsyncBaseTool):
@@ -23,7 +32,11 @@ class ChatEngineTool(AsyncBaseTool):
     
     def __init__(
         self,
-        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine, ReactAgentEngine],
+        chat_engine: Union[
+            RefreshSimpleChatEngine, 
+            RefreshContextChatEngine, 
+            ReactAgentEngine
+        ],
         metadata: ToolMetadata,
         resolve_input_errors: bool = True,
         agent=None
@@ -42,7 +55,11 @@ class ChatEngineTool(AsyncBaseTool):
     @classmethod
     def from_defaults(
         cls,
-        chat_engine: Union[RefreshSimpleChatEngine, RefreshContextChatEngine, ReactAgentEngine],
+        chat_engine: Union[
+            RefreshSimpleChatEngine, 
+            RefreshContextChatEngine, 
+            ReactAgentEngine
+        ],
         name: Optional[str] = None,
         description: Optional[str] = None,
         return_direct: bool = False,
@@ -67,14 +84,20 @@ class ChatEngineTool(AsyncBaseTool):
         return self._metadata
     
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
+        print("CALL", args, kwargs)
         query_str = self._get_query_str(*args, **kwargs)
         do_not_display = kwargs.get("do_not_display", False)
         chat_history = kwargs.get("chat_history", [])
         if hasattr(self.chat_engine.llm, "llm_request"):
             self.chat_engine.llm.llm_request = kwargs.get("llm_request", None)
+        
+        params = { 
+            "chat_history": chat_history 
+        } if len(chat_history) > 0 else {}
+        
         streaming_response = self.chat_engine.stream_chat(
             query_str, 
-            chat_history=chat_history
+            **params
         )
 
         response = ""

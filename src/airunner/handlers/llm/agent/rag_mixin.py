@@ -47,7 +47,6 @@ class RAGMixin:
                     raise ValueError("No retriever found.")
                 self.rag_engine = RefreshContextChatEngine.from_defaults(
                     retriever=self.retriever,
-                    # chat_history=self.history,
                     memory=self.chat_memory,
                     system_prompt=self._rag_system_prompt,
                     node_postprocessors=[],
