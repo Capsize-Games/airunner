@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 import inspect
 from typing import Callable
 from PySide6.QtCore import QObject, Signal as BaseSignal, Slot
@@ -22,7 +22,7 @@ class Signal(QObject):
     """
     Represents a signal that can be emitted and received.
     """
-    signal: BaseSignal = BaseSignal(Dict)
+    signal: BaseSignal = BaseSignal(dict)
 
     def __init__(self, callback: Callable):
         super().__init__()
@@ -69,12 +69,13 @@ class SignalMediator(metaclass=SingletonMeta):
     def emit_signal(
         self,
         code: SignalCode,
-        data: object = None
+        data: Optional[Dict] = None
     ):
         """
         Emit a signal to be received by a function.
         """
         data = {} if data is None else data
         if code in self.signals:
-            for n, signal in enumerate(self.signals[code]):
+            for _n, signal in enumerate(self.signals[code]):
+                print(signal, signal.signal, data)
                 signal.signal.emit(data)
