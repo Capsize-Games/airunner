@@ -17,7 +17,11 @@ class RefreshContextChatEngine(ContextChatEngine):
         self._memory = memory
 
     def update_system_prompt(self, system_prompt: str):
-        self._prefix_messages[0] = ChatMessage(
+        message = ChatMessage(
             content=system_prompt, 
             role=self._llm.metadata.system_role
         )
+        if len(self._prefix_messages) == 0:
+            self._prefix_messages = [message]
+        else:
+            self._prefix_messages[0] = message

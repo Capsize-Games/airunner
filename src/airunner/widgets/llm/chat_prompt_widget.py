@@ -221,14 +221,9 @@ class ChatPromptWidget(BaseWidget):
             self.held_message = None
         self.enable_send_button()
 
-    sending: bool = False
-
     @Slot()
     def action_button_clicked_clear_conversation(self):
-        if self.sending:
-            return
-        self.sending = True
-        self.on_clear_conversation()
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
     
     def on_clear_conversation(self):
         self._clear_conversation()
@@ -240,7 +235,6 @@ class ChatPromptWidget(BaseWidget):
     def _clear_conversation_widgets(self):
         for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
             widget.deleteLater()
-        self.sending = False
     
     @Slot(bool)
     def action_button_clicked_send(self):
