@@ -688,7 +688,8 @@ class BaseAgent(
 
         self._update_system_prompt(system_prompt, rag_system_prompt)
 
-        self.llm.llm_request = llm_request
+        if hasattr(self.llm, "llm_request"):
+            self.llm.llm_request = llm_request
 
         if action is LLMActionType.CHAT:
             self._perform_tool_call("chat_engine_tool", **kwargs)
