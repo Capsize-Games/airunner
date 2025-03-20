@@ -442,6 +442,19 @@ class MainWindow(
         # display in a window
         widget.show()
 
+    @Slot()
+    def action_conversation_triggered_new(self):
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
+
+    @Slot()
+    def action_conversation_triggered_delete(self):
+        current_conversation = self.llm_generator_settings.current_conversation
+        self.emit_signal(
+            SignalCode.CONVERSATION_DELETED, {
+                "conversation_id": current_conversation.id
+            }
+        )
+
     """
     End slot functions
     """

@@ -87,7 +87,7 @@ class ChatPromptWidget(BaseWidget):
     @conversation.setter
     def conversation(self, val: Optional[Conversation]):
         self._conversation = val
-        self._conversation_id = val.id
+        self._conversation_id = val.id if val else None
 
     @property
     def conversation_id(self) -> Optional[int]:
@@ -109,7 +109,7 @@ class ChatPromptWidget(BaseWidget):
     def on_delete_conversation(self, data):
         if self.conversation_id == data["conversation_id"] or self.conversation_id is None:
             self._clear_conversation_widgets()
-        self.conversation_id = data["conversation_id"]            
+        self.conversation = None
 
     def load_conversation(self, index: Optional[int] = None):
         conversation = None
