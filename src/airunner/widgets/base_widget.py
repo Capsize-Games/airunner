@@ -36,13 +36,16 @@ class AbstractBaseWidget(
 
 
 class BaseWidget(AbstractBaseWidget):
+    """
+    Base class for all widgets.
+    """
     widget_class_: Optional[object] = None
     icons: List[Optional[Tuple[str, str]]] = []
     ui: Optional[object] = Optional[None]
     _splitters: List[str] = []
 
     def __init__(self, *args, **kwargs):
-        self.signal_handlers = {} if not self.signal_handlers else self.signal_handlers
+        self.signal_handlers = self.signal_handlers or {}
         self.signal_handlers.update({
             SignalCode.QUIT_APPLICATION: self.handle_close
         })
