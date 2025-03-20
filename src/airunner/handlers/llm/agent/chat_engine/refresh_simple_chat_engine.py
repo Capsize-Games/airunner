@@ -20,11 +20,14 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
         self._memory = memory
 
     def update_system_prompt(self, system_prompt: str):
-        print("self._prefix_messages", self._prefix_messages)
-        self._prefix_messages.insert(0, ChatMessage(
+        message = ChatMessage(
             content=system_prompt, 
-            role=self.llm.metadata.system_role
-        ))
+            role=self._llm.metadata.system_role
+        )
+        if len(self._prefix_messages) == 0:
+            self._prefix_messages = [message]
+        else:
+            self._prefix_messages[0] = message
 
     async def achat(self, *args, **kwargs):
         pass
