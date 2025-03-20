@@ -1,11 +1,14 @@
+from typing import Type
+
 from llama_index.core.chat_engine.simple import SimpleChatEngine
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.memory import BaseMemory
+from llama_index.core.llms.llm import LLM
 
 
 class RefreshSimpleChatEngine(SimpleChatEngine):
     @property
-    def llm(self):
+    def llm(self) -> Type[LLM]:
         return self._llm
 
     @property
@@ -17,10 +20,11 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
         self._memory = memory
 
     def update_system_prompt(self, system_prompt: str):
-        self._prefix_messages[0] = ChatMessage(
+        print("self._prefix_messages", self._prefix_messages)
+        self._prefix_messages.insert(0, ChatMessage(
             content=system_prompt, 
-            role=self._llm.metadata.system_role
-        )
+            role=self.llm.metadata.system_role
+        ))
 
     async def achat(self, *args, **kwargs):
         pass

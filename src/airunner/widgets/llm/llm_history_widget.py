@@ -59,29 +59,3 @@ class LLMHistoryWidget(BaseWidget):
         layout.addItem(self.spacer)
 
         self.ui.scrollAreaWidgetContents.setLayout(layout)
-
-    def on_conversation_click(self, conversation):
-        llm_generator_settings = LLMGeneratorSettings.objects.first()
-        LLMGeneratorSettings.objects.update(
-            llm_generator_settings.id,
-            {"current_chatbot": conversation.chatbot_id}
-        )
-        self.emit_signal(SignalCode.LOAD_CONVERSATION, {
-            "conversation_id": conversation.id,
-            "conversation": conversation,
-            "chatbot_id": conversation.chatbot_id
-        })
-
-    def on_delete_conversation(self, layout, conversation):
-        conversation_id = conversation.id
-        Conversation.delete(conversation_id)
-        for i in reversed(range(layout.count())):
-            widget = layout.itemAt(i).widget()
-            if widget:
-                widget.setParent(None)
-        parent_layout = self.ui.conversations_scroll_area.layout()
-        if parent_layout:
-            parent_layout.removeItem(layout)
-        self.emit_signal(SignalCode.CONVERSATION_DELETED, {
-            "conversation_id": conversation_id
-        })
