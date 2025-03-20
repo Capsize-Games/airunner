@@ -32,6 +32,7 @@ from airunner.settings import (
     STATUS_NORMAL_COLOR_LIGHT,
     STATUS_NORMAL_COLOR_DARK,
     NSFW_CONTENT_DETECTED_MESSAGE,
+    DISCORD_URL,
 )
 from airunner.enums import (
     SignalCode,
@@ -368,7 +369,8 @@ class MainWindow(
 
     @Slot()
     def action_open_discord(self):
-        pass
+        if DISCORD_URL:
+            webbrowser.open(DISCORD_URL)
 
     @Slot(bool)
     def action_toggle_mask_layer(self, val: bool):
@@ -606,6 +608,9 @@ class MainWindow(
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, 
             {"main_window": self}
         )
+
+        if not DISCORD_URL:
+            self.ui.actionDiscord.deleteLater()
 
     def _load_plugins(self):
         base_path = self.path_settings.base_path
