@@ -33,7 +33,8 @@ class LLMHistoryItemWidget(BaseWidget):
         llm_generator_settings = LLMGeneratorSettings.objects.first()
         LLMGeneratorSettings.objects.update(
             llm_generator_settings.id, 
-            current_chatbot=chatbot_id
+            current_chatbot=chatbot_id,
+            current_conversation=self.conversation.id
         )
         self.emit_signal(SignalCode.LOAD_CONVERSATION, {
             "conversation_id": self.conversation.id,
@@ -45,6 +46,10 @@ class LLMHistoryItemWidget(BaseWidget):
     def action_delete_conversation_clicked(self):
         conversation_id = self.conversation.id
         Conversation.delete(conversation_id)
+        LLMGeneratorSettings.objects.update(
+            self.llm_generator_settings.id,
+            current_conversation=None
+        )
         self.emit_signal(SignalCode.CONVERSATION_DELETED, {
             "conversation_id": conversation_id
         })
