@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 from abc import ABC, ABCMeta
 from abc import abstractmethod
 import os
@@ -36,47 +36,17 @@ class AbstractBaseWidget(
 
 
 class BaseWidget(AbstractBaseWidget):
-    widget_class_ = None
+    widget_class_: Optional[object] = None
+    icons: List[Optional[Tuple[str, str]]] = []
+    ui: Optional[object] = Optional[None]
     _splitters: List[str] = []
-    icons = ()
-    ui = None
-    qss_filename = None
-    threads = []
-
-    def save_state(self):
-        save_splitter_settings(
-            self.ui,
-            self.splitters
-        )
-    
-    def restore_state(self):
-        load_splitter_settings(
-            self.ui,
-            self.splitters
-        )
-    
-    @property
-    def splitters(self) -> List:
-        return self._splitters
-    
-    @splitters.setter
-    def splitters(self, value):
-        self._splitters = value
-
-    @property
-    def current_tool(self):
-        return CanvasToolName(self.application_settings.current_tool)
-
-    @property
-    def is_dark(self):
-        return self.application_settings.dark_mode_enabled
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {} if not self.signal_handlers else self.signal_handlers
         self.signal_handlers.update({
             SignalCode.QUIT_APPLICATION: self.handle_close
         })
-        super().__init__()
+        super().__init__(*args, **kwargs)
         if self.widget_class_:
             self.ui = self.widget_class_()
         if self.ui:
@@ -85,6 +55,28 @@ class BaseWidget(AbstractBaseWidget):
 
         self.services: Dict = {}
         self.worker_class_map: Dict = {}
+    
+    @property
+    def splitters(self) -> List[str]:
+        """
+        Return a list of splitter names as they appear in the UI.
+        """
+        return self._splitters
+    
+    @splitters.setter
+    def splitters(self, value: List[str]):
+        """
+        Set the list of splitter names as they appear in the UI.
+        """
+        self._splitters = value
+
+    @property
+    def current_tool(self) -> CanvasToolName:
+        return CanvasToolName(self.application_settings.current_tool)
+
+    @property
+    def is_dark(self) -> bool:
+        return self.application_settings.dark_mode_enabled
     
     def initialize(self):
         """
@@ -122,10 +114,35 @@ class BaseWidget(AbstractBaseWidget):
         self.initialize()
         self.restore_state()
     
+    def save_state(self):
+        """
+        Called on close and saves the state of all splitter widgets
+        """
+        save_splitter_settings(
+            self.ui,
+            self.splitters
+        )
+    
+    def restore_state(self):
+        """
+        Restore the state of the widget.
+        """
+        load_splitter_settings(
+            self.ui,
+            self.splitters
+        )
+    
     def handle_close(self):
+        """
+        Callback for the QUIT_APPLICATION signal.
+        """
         self.save_state()
 
     def set_icons(self):
+        """
+        Set the icons for the widget which alternate between 
+        light and dark mode.
+        """
         theme = "dark" if self.is_dark else "light"
         for icon_data in self.icons:
             icon_name = icon_data[0]
@@ -142,7 +159,9 @@ class BaseWidget(AbstractBaseWidget):
         try:
             getattr(self, button_name).setIcon(
                 QtGui.QIcon(
-                    os.path.join(f"src/icons/{icon}{'-light' if is_dark else ''}.png")
+                    os.path.join(
+                        f"src/icons/{icon}{'-light' if is_dark else ''}.png"
+                    )
                 )
             )
         except AttributeError as _e:
