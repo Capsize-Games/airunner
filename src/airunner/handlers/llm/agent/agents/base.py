@@ -17,7 +17,7 @@ from llama_index.core.llms.llm import LLM
 
 from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import RefreshSimpleChatEngine
 from airunner.enums import LLMActionType, SignalCode
-from airunner.data.models import Conversation, User
+from airunner.data.models import Conversation, User, LLMGeneratorSettings
 from airunner.handlers.llm.agent.rag_mixin import RAGMixin
 from airunner.handlers.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
@@ -640,6 +640,11 @@ class BaseAgent(
 
         if not conversation_id:
             self.conversation = Conversation.create()
+        
+        LLMGeneratorSettings.objects.update(
+            self.llm_generator_settings.id,
+            current_conversation=self.conversation.id
+        )
         
         self.reset_memory()
     
