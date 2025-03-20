@@ -6,6 +6,9 @@ def save_splitter_settings(
     ui: object,
     splitters: List[str]
 ):
+    """
+    Save the state splitter widgets to the database.
+    """
     for splitter_name in splitters:
         widget = getattr(ui, splitter_name)
         sizes = widget.sizes()
