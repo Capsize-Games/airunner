@@ -1,14 +1,9 @@
 from typing import Type, Optional
 
-from PySide6.QtCore import QObject
-
 from llama_index.core.llms.llm import LLM
 from llama_index.llms.openrouter import OpenRouter
 from llama_index.core.chat_engine.types import AgentChatResponse
 
-from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.handlers.llm.agent.agents.base import BaseAgent
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.enums import LLMActionType
 from airunner.handlers.llm.agent.agents.local import MistralAgentQObject
