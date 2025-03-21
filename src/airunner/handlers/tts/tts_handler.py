@@ -39,28 +39,33 @@ class TTSHandler(BaseHandler, ABC, metaclass=CombinedMeta):
     
     @abstractmethod
     def reload_speaker_embeddings(self):
-        """Reload speaker embeddings."""
-        pass
+        """
+        Reload speaker embeddings.
+        """
 
     @abstractmethod
     def interrupt_process_signal(self):
-        """Signal to interrupt the current TTS process."""
-        pass
+        """
+        Signal to interrupt the current TTS process.
+        """
     
     @abstractmethod
     def offload_to_cpu(self):
-        """Move model to CPU to free up GPU memory."""
-        pass
+        """
+        Move model to CPU to free up GPU memory.
+        """
     
     @abstractmethod
     def move_to_device(self, device=None):
-        """Move model to the specified device."""
-        pass
+        """
+        Move model to the specified device.
+        """
 
     @abstractmethod
     def generate(self, message):
-        """Generate speech from text."""
-        pass
+        """
+        Generate speech from text.
+        """
 
     @staticmethod
     def _prepare_text(text: str) -> str:
