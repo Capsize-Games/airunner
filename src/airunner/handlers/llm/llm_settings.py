@@ -23,13 +23,10 @@ from airunner.settings import (
 @dataclass
 class LLMSettings:
     use_local_llm: bool = AIRUNNER_USE_LOCAL_LLM
-    
     use_openrouter: bool = AIRUNNER_USE_OPENROUTER
     openrouter_api_key: str = AIRUNNER_OPENROUTER_API_KEY
-    
     use_openai: bool = AIRUNNER_USE_OPENAI
     openai_api_key: str = AIRUNNER_OPENAI_API_KEY
-
     model: str = ""
 
     def __init__(self, *args, **kwargs):

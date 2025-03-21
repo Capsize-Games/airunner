@@ -28,11 +28,15 @@ class AbstractBaseWidget(
 ):
     @abstractmethod
     def save_state(self):
-        pass
+        """
+        Save the state of the widget.
+        """
 
     @abstractmethod
     def restore_state(self):
-        pass
+        """
+        Restore the state of the widget.
+        """
 
 
 class BaseWidget(AbstractBaseWidget):
