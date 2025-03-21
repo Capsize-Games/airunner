@@ -85,6 +85,9 @@ class DatabaseChatStore(BaseChatStore):
         else:
             messages = []
         messages = messages or []
+
+        # Remove whitespace from front of message
+        message.blocks[0].text = message.blocks[0].text.lstrip()
     
         # Append the new message
         message.blocks[0].text = strip_names_from_message(

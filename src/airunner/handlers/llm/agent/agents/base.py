@@ -797,18 +797,20 @@ class BaseAgent(
         action: LLMActionType = LLMActionType.CHAT,
         system_prompt: Optional[str] = None,
         rag_system_prompt: Optional[str] = None,
-        llm_request: Optional[LLMRequest] = None
+        llm_request: Optional[LLMRequest] = None,
+        **kwargs
     ) -> AgentChatResponse:
         self._chat_prompt = message
         self._complete_response = ""
         self.do_interrupt = False
         message = f"{self.username}: {message}"
         self._update_memory(action)
-        kwargs = {
+        kwargs = kwargs or {}
+        kwargs.update({
             "input": f"{message}",
             "chat_history": self._memory.get_all() if self._memory else None,
             "llm_request": llm_request
-        }
+        })
         
         if self.llm_perform_analysis:
             self._perform_analysis()
@@ -824,16 +826,20 @@ class BaseAgent(
             self.llm.llm_request = llm_request
 
         if action is LLMActionType.CHAT:
-            self._perform_tool_call("chat_engine_tool", **kwargs)
+            tool_name = "chat_engine_tool"
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            self._perform_tool_call("rag_engine_tool", **kwargs)
+            tool_name = "rag_engine_tool"
         elif action is LLMActionType.STORE_DATA:
-            self._perform_tool_call("store_user_tool", **kwargs)
+            tool_name = "store_user_tool"
+        
+        self._perform_tool_call(tool_name, **kwargs)
+
         self._update_memory(action)
         
         # strip "{self.botname}: " from response
-        if self._complete_response.startswith(f"{self.botname}: "):
-            self._complete_response = self._complete_response[len(f"{self.botname}: "):]
+        name = f"{self.botname}: "
+        if self._complete_response.startswith(name):
+            self._complete_response = self._complete_response[len(name):]
 
         return AgentChatResponse(response=self._complete_response)
 
