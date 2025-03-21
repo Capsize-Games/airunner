@@ -6,16 +6,13 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.utils.get_torch_device import get_torch_device
 from airunner.windows.main.settings_mixin import SettingsMixin
 
-# Get the metaclass of QObject
 QObjectMeta = type(QObject)
 
 
-# Create a metaclass that combines ABCMeta and QObject's metaclass
 class CombinedMeta(QObjectMeta, ABCMeta):
     pass
 
 
-# Use the combined metaclass
 class BaseHandler(
     MediatorMixin,
     SettingsMixin,
@@ -58,13 +55,15 @@ class BaseHandler(
 
     @abstractmethod
     def load(self):
-        """Load the model and related components."""
-        pass
+        """
+        Load the model and related components.
+        """
 
     @abstractmethod
     def unload(self):
-        """Unload the model and free resources."""
-        pass
+        """
+        Unload the model and free resources.
+        """
 
     @property
     def device(self):
