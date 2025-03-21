@@ -7,7 +7,7 @@ from typing import (
     Type,
 )
 import datetime
-from abc import abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 
 from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
 from llama_index.core.chat_engine.types import AgentChatResponse
@@ -30,7 +30,14 @@ from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
 from airunner.data.models import Tab
+from airunner.settings import (
+    AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS,
+    AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS,
+    AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS
+)
 
+
+RAGMixinMeta = type(RAGMixin)
 
 DEFAULT_MAX_FUNCTION_CALLS = 5
 
@@ -41,7 +48,7 @@ class BaseAgent(
     def __init__(
         self,
         default_tool_choice: Optional[Union[str, dict]] = None,
-        max_function_calls: int = DEFAULT_MAX_FUNCTION_CALLS,
+        max_function_calls: int = AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS,
         llm_settings: LLMSettings = LLMSettings(),
         *args,
         **kwargs
@@ -52,8 +59,8 @@ class BaseAgent(
         self._chatbot = None
         self.llm_settings: LLMSettings = llm_settings
         self._current_tab: Optional[Tab] = None
-        self.update_mood_after_n_turns = 3
-        self.summarize_after_n_turns = 5
+        self.update_mood_after_n_turns = AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS
+        self.summarize_after_n_turns = AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS
         self._streaming_stopping_criteria: Optional[ExternalConditionStoppingCriteria] = None
         self._do_interrupt: bool = False
         self._llm: Optional[Type[LLM]] = None
@@ -98,17 +105,6 @@ class BaseAgent(
     def current_tab(self, value: Optional[Tab]):
         self._current_tab = value
 
-    def on_web_browser_page_html(self, content: str):
-        self.webpage_html = content
-
-    def on_delete_messages_after_id(self):
-        conversation = self.conversation
-        if conversation:
-            messages = conversation.value
-            self.chat_memory.set(messages)
-            if self._chat_engine:
-                self._chat_engine.memory = self.chat_memory
-        
     @property
     def do_summarize_conversation(self) -> bool:
         messages = self.conversation.value or []
@@ -142,10 +138,6 @@ class BaseAgent(
     def user(self, value: Optional[User]):
         self._user = value
         self._update_conversation("user_id", value.id)
-
-    def _update_user(self, key: str, value: Any):
-        setattr(self.user, key, value)
-        self.user.save()
 
     @property
     def information_scraper_tool(self) -> FunctionTool:
@@ -366,6 +358,14 @@ class BaseAgent(
             mood = conversation.bot_mood
         return "neutral" if mood is None or mood == "" else mood
     
+    @bot_mood.setter
+    def bot_mood(self, value: str):
+        if self.conversation:
+            self._update_conversation("bot_mood", value)
+            self.emit_signal(SignalCode.BOT_MOOD_UPDATED, {
+                "mood": value
+            })
+    
     @property
     def conversation(self) -> Conversation:
         if not self._conversation:
@@ -381,22 +381,6 @@ class BaseAgent(
         self._user = None
         self._chatbot = None
     
-    def _create_conversation(self) -> Conversation:
-        conversation = None
-        if self.conversation_id:
-            self.logger.info(f"Loading conversation with ID: {self.conversation_id}")
-            conversation = Conversation.objects.get(self.conversation_id)
-        
-        if not conversation:
-            self.logger.info("No conversation found, looking for most recent")
-            conversation = Conversation.most_recent()
-        
-        if not conversation:
-            self.logger.info("Creating new conversation")
-            conversation = Conversation.create()
-            
-        return conversation
-    
     @property
     def conversation_id(self) -> int:
         return self._conversation_id
@@ -407,20 +391,7 @@ class BaseAgent(
             self._conversation_id = value
             if self.conversation.id != self._conversation_id:
                 self.conversation = None
-    
-    def _update_conversation(self, key: str, value: Any):
-        if self.conversation:
-            setattr(self.conversation, key, value)
-            Conversation.objects.update(self.conversation.id, **{key: value})
 
-    @bot_mood.setter
-    def bot_mood(self, value: str):
-        if self.conversation:
-            self._update_conversation("bot_mood", value)
-            self.emit_signal(SignalCode.BOT_MOOD_UPDATED, {
-                "mood": value
-            })
-    
     @property
     def bot_personality(self) -> str:
         return self.chatbot.bot_personality
@@ -598,56 +569,26 @@ class BaseAgent(
     def chat_memory(self, value: Optional[ChatMemoryBuffer]):
         self._chat_memory = value
 
+    def on_web_browser_page_html(self, content: str):
+        self.webpage_html = content
+
+    def on_delete_messages_after_id(self):
+        conversation = self.conversation
+        if conversation:
+            messages = conversation.value
+            self.chat_memory.set(messages)
+            if self._chat_engine:
+                self._chat_engine.memory = self.chat_memory
+        
     @abstractmethod
     def build_system_prompt(self) -> str:
-        pass
+        """
+        Build the system prompt for the agent.
 
-    def on_load_conversation(self, data: Optional[Dict] = None):
-        data = data or {}
-        conversation_id = data.get("conversation_id", None)
-        self.conversation = Conversation.objects.get(conversation_id)
+        Returns:
+            str: The system prompt.
+        """
 
-    def unload(self):
-        self.unload_rag()
-        self.thread = None
-        del self._chat_engine
-        del self._chat_engine_tool
-        del self._rag_engine_tool
-        del self._react_tool_agent
-        self._chat_engine = None
-        self._chat_engine_tool = None
-        self._rag_engine_tool = None
-        self._react_tool_agent = None
-    
-    def reload_rag_engine(self):
-        self.reload_rag()
-        self._rag_engine_tool = None
-
-    def on_conversation_deleted(self, data: Optional[Dict] = None):
-        data = data or {}
-        conversation_id = data.get("conversation_id", None)
-        if conversation_id == self.conversation_id or self.conversation_id is None:
-            self.conversation = None
-            self.conversation_id = None
-            self.reset_memory()
-
-    def clear_history(self, data: Optional[Dict] = None):
-        data = data or {}
-        conversation_id = data.get("conversation_id", None)
-        
-        self.conversation_id = conversation_id
-        
-        self.reset_memory()
-    
-    def reset_memory(self):
-        self.chat_memory = None
-        self.chat_store = None
-        messages = self.chat_store.get_messages(key=str(self.conversation.id))
-        self.chat_memory.set(messages)
-        self.chat_engine.memory = self.chat_memory
-        self.react_tool_agent.memory = self.chat_memory
-        self.reload_rag_engine()
-    
     def _update_system_prompt(
         self, 
         system_prompt: Optional[str] = None,
@@ -655,51 +596,6 @@ class BaseAgent(
     ):
         self.chat_engine_tool.update_system_prompt(system_prompt or self._system_prompt)
         self.rag_engine_tool.update_system_prompt(rag_system_prompt or self._rag_system_prompt)
-
-    def chat(
-        self,
-        message: str,
-        action: LLMActionType = LLMActionType.CHAT,
-        system_prompt: Optional[str] = None,
-        rag_system_prompt: Optional[str] = None,
-        llm_request: Optional[LLMRequest] = None
-    ) -> AgentChatResponse:
-        self._chat_prompt = message
-        self._complete_response = ""
-        self.do_interrupt = False
-        message = f"{self.username}: {message}"
-        self._update_memory(action)
-        kwargs = {
-            "input": f"{message}",
-            "chat_history": self._memory.get_all() if self._memory else None,
-            "llm_request": llm_request
-        }
-        
-        if self.llm_perform_analysis:
-            self._perform_analysis()
-
-        if self.print_llm_system_prompt:
-            self.logger.info(self._system_prompt)
-            self.logger.info(llm_request.to_dict())
-
-        self._update_system_prompt(system_prompt, rag_system_prompt)
-
-        if hasattr(self.llm, "llm_request"):
-            self.llm.llm_request = llm_request
-
-        if action is LLMActionType.CHAT:
-            self._perform_tool_call("chat_engine_tool", **kwargs)
-        elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            self._perform_tool_call("rag_engine_tool", **kwargs)
-        elif action is LLMActionType.STORE_DATA:
-            self._perform_tool_call("store_user_tool", **kwargs)
-        self._update_memory(action)
-        
-        # strip "{self.botname}: " from response
-        if self._complete_response.startswith(f"{self.botname}: "):
-            self._complete_response = self._complete_response[len(f"{self.botname}: "):]
-
-        return AgentChatResponse(response=self._complete_response)
 
     def _perform_analysis(self):
         """
@@ -870,6 +766,123 @@ class BaseAgent(
             chat_history=self._memory.get_all() if self._memory else None
         )
 
+    def _create_conversation(self) -> Conversation:
+        conversation = None
+        if self.conversation_id:
+            self.logger.info(f"Loading conversation with ID: {self.conversation_id}")
+            conversation = Conversation.objects.get(self.conversation_id)
+        
+        if not conversation:
+            self.logger.info("No conversation found, looking for most recent")
+            conversation = Conversation.most_recent()
+        
+        if not conversation:
+            self.logger.info("Creating new conversation")
+            conversation = Conversation.create()
+            
+        return conversation
+
+    def _update_conversation(self, key: str, value: Any):
+        if self.conversation:
+            setattr(self.conversation, key, value)
+            Conversation.objects.update(self.conversation.id, **{key: value})
+
+    def _update_user(self, key: str, value: Any):
+        setattr(self.user, key, value)
+        self.user.save()
+
+    def chat(
+        self,
+        message: str,
+        action: LLMActionType = LLMActionType.CHAT,
+        system_prompt: Optional[str] = None,
+        rag_system_prompt: Optional[str] = None,
+        llm_request: Optional[LLMRequest] = None
+    ) -> AgentChatResponse:
+        self._chat_prompt = message
+        self._complete_response = ""
+        self.do_interrupt = False
+        message = f"{self.username}: {message}"
+        self._update_memory(action)
+        kwargs = {
+            "input": f"{message}",
+            "chat_history": self._memory.get_all() if self._memory else None,
+            "llm_request": llm_request
+        }
+        
+        if self.llm_perform_analysis:
+            self._perform_analysis()
+
+        if self.print_llm_system_prompt:
+            print("*"*50)
+            self.logger.info(self._system_prompt)
+            self.logger.info(llm_request.to_dict())
+
+        self._update_system_prompt(system_prompt, rag_system_prompt)
+
+        if hasattr(self.llm, "llm_request"):
+            self.llm.llm_request = llm_request
+
+        if action is LLMActionType.CHAT:
+            self._perform_tool_call("chat_engine_tool", **kwargs)
+        elif action is LLMActionType.PERFORM_RAG_SEARCH:
+            self._perform_tool_call("rag_engine_tool", **kwargs)
+        elif action is LLMActionType.STORE_DATA:
+            self._perform_tool_call("store_user_tool", **kwargs)
+        self._update_memory(action)
+        
+        # strip "{self.botname}: " from response
+        if self._complete_response.startswith(f"{self.botname}: "):
+            self._complete_response = self._complete_response[len(f"{self.botname}: "):]
+
+        return AgentChatResponse(response=self._complete_response)
+
+    def on_load_conversation(self, data: Optional[Dict] = None):
+        data = data or {}
+        conversation_id = data.get("conversation_id", None)
+        self.conversation = Conversation.objects.get(conversation_id)
+
+    def unload(self):
+        self.unload_rag()
+        self.thread = None
+        del self._chat_engine
+        del self._chat_engine_tool
+        del self._rag_engine_tool
+        del self._react_tool_agent
+        self._chat_engine = None
+        self._chat_engine_tool = None
+        self._rag_engine_tool = None
+        self._react_tool_agent = None
+    
+    def reload_rag_engine(self):
+        self.reload_rag()
+        self._rag_engine_tool = None
+
+    def on_conversation_deleted(self, data: Optional[Dict] = None):
+        data = data or {}
+        conversation_id = data.get("conversation_id", None)
+        if conversation_id == self.conversation_id or self.conversation_id is None:
+            self.conversation = None
+            self.conversation_id = None
+            self.reset_memory()
+
+    def clear_history(self, data: Optional[Dict] = None):
+        data = data or {}
+        conversation_id = data.get("conversation_id", None)
+        
+        self.conversation_id = conversation_id
+        
+        self.reset_memory()
+    
+    def reset_memory(self):
+        self.chat_memory = None
+        self.chat_store = None
+        messages = self.chat_store.get_messages(key=str(self.conversation.id))
+        self.chat_memory.set(messages)
+        self.chat_engine.memory = self.chat_memory
+        self.react_tool_agent.memory = self.chat_memory
+        self.reload_rag_engine()
+
     def save_chat_history(self):
         pass
     
@@ -895,4 +908,22 @@ class BaseAgent(
                 )
             })
         self._complete_response += response
+
+# Expose the helper function at module level
+def create_qt_agent_base(qt_metaclass):
+    """
+    Creates a base class for Qt-compatible agent classes.
+    
+    Usage:
+        from PyQt5.QtCore import QObject
+        from airunner.handlers.llm.agent.agents.base import create_qt_agent_base
+        
+        QtAgentBase = create_qt_agent_base(type(QObject))
+        
+        class MyQtAgent(QObject, QtAgentBase):
+            def __init__(self, *args, **kwargs):
+                QObject.__init__(self)
+                QtAgentBase.__init__(self, *args, **kwargs)
+    """
+    return qt_compatible_base_agent(qt_metaclass)
 

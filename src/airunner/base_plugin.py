@@ -7,4 +7,9 @@ class BasePlugin(ABC):
 
     @abstractmethod
     def get_widget(self) -> QWidget:
-        pass
+        """
+        Get the widget for the plugin.
+
+        Returns:
+            QWidget: The widget for the plugin.
+        """
