@@ -169,6 +169,7 @@ class CanvasWidget(
 
     def on_canvas_update_cursor_signal(self, message: dict):
         event = message.get("event", None)
+        cursor = None
         if message.get("apply_cursor", None):
             if self.current_tool in (
                 CanvasToolName.BRUSH,
@@ -186,7 +187,9 @@ class CanvasWidget(
                     cursor = Qt.CursorShape.OpenHandCursor
         else:
             cursor = Qt.CursorShape.ArrowCursor
-        self.setCursor(cursor)
+        
+        if cursor:
+            self.setCursor(cursor)
 
     def toggle_grid(self, _val):
         self.do_draw()
