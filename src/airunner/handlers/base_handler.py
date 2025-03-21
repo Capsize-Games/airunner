@@ -55,13 +55,15 @@ class BaseHandler(
 
     @abstractmethod
     def load(self):
-        """Load the model and related components."""
-        pass
+        """
+        Load the model and related components.
+        """
 
     @abstractmethod
     def unload(self):
-        """Unload the model and free resources."""
-        pass
+        """
+        Unload the model and free resources.
+        """
 
     @property
     def device(self):
