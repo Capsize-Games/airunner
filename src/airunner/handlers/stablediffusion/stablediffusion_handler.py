@@ -69,8 +69,7 @@ from airunner.handlers.stablediffusion.prompt_weight_bridge import \
     PromptWeightBridge
 from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils.memory import (
-    clear_memory, 
-    gpu_memory_stats
+    clear_memory
 )
 from airunner.utils.image import (
     convert_binary_to_image, 
@@ -1675,7 +1674,22 @@ class StableDiffusionHandler(BaseHandler):
             if self.is_sd_xl_or_turbo:
                 args.update({
                     "pooled_prompt_embeds": self._pooled_prompt_embeds,
-                    "negative_pooled_prompt_embeds": self._negative_pooled_prompt_embeds
+                    "negative_pooled_prompt_embeds": self._negative_pooled_prompt_embeds,
+                })
+
+                args.update({
+                    "negative_target_size": (
+                        self.generator_settings_cached.negative_target_size["width"],
+                        self.generator_settings_cached.negative_target_size["height"]
+                    ),
+                    "negative_original_size": (
+                        self.generator_settings_cached.negative_original_size["width"],
+                        self.generator_settings_cached.negative_original_size["height"]
+                    ),
+                    "crops_coords_top_left": (
+                        self.generator_settings_cached.crops_coord_top_left["x"],
+                        self.generator_settings_cached.crops_coord_top_left["y"]
+                    )
                 })
         else:
             args.update({
