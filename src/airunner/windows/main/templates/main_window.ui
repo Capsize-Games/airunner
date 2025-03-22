@@ -345,9 +345,16 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionSafety_Checker"/>
-    <addaction name="actionToggle_Stable_Diffusion"/>
-    <addaction name="actionToggle_Controlnet"/>
+    <widget class="QMenu" name="menuStable_Diffusion">
+     <property name="title">
+      <string>Stable Diffusion</string>
+     </property>
+     <addaction name="actionSafety_Checker"/>
+     <addaction name="actionToggle_Stable_Diffusion"/>
+     <addaction name="actionToggle_Controlnet"/>
+    </widget>
+    <action name=""/>
+    <addaction name="menuStable_Diffusion"/>
     <addaction name="separator"/>
     <addaction name="actionToggle_LLM"/>
     <addaction name="actionToggle_Text_to_Speech"/>
@@ -1491,6 +1498,11 @@
   <action name="actionDiscord">
    <property name="text">
     <string>Discord</string>
+   </property>
+  </action>
+  <action name="actionFoo">
+   <property name="text">
+    <string>Foo</string>
    </property>
   </action>
  </widget>
