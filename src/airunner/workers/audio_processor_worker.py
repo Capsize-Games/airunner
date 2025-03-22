@@ -2,7 +2,7 @@ import threading
 
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
-from airunner.handlers.stt.whisper_handler import WhisperHandler
+from airunner.handlers import WhisperHandler
 
 
 class AudioProcessorWorker(Worker):
