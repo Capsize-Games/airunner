@@ -719,8 +719,7 @@ class BaseAgent(
             do_not_display=True, 
             **kwargs
         )
-        self.logger.info(f"Updated user data: {response.content}")
-        self.logger.info(f"Saving user with data: {response.content}")
+        self.logger.info(f"Updating user with new information")
         Conversation.objects.update(
             conversation.id,
             user_data=[response.content] + (conversation.user_data or []),
