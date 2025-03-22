@@ -7,7 +7,7 @@ from typing import (
     Type,
 )
 import datetime
-from abc import ABC, ABCMeta, abstractmethod
+from abc import abstractmethod
 
 from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
 from llama_index.core.chat_engine.types import AgentChatResponse
