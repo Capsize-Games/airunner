@@ -11,6 +11,7 @@ except ImportError:
     # python-dotenv is not installed, continue without it
     # environment variables will be read directly from the OS
     pass
+
 from airunner.settings import (
     AIRUNNER_USE_LOCAL_LLM,
     AIRUNNER_USE_OPENROUTER,

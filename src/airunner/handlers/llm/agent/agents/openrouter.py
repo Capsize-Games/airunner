@@ -4,8 +4,8 @@ from llama_index.core.llms.llm import LLM
 from llama_index.llms.openrouter import OpenRouter
 from llama_index.core.chat_engine.types import AgentChatResponse
 
-from airunner.handlers.llm.llm_request import OpenrouterMistralRequest
 from airunner.enums import LLMActionType
+from airunner.handlers.llm.llm_request import OpenrouterMistralRequest
 from airunner.handlers.llm.agent.agents.local import MistralAgentQObject
 
 
