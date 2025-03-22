@@ -2,7 +2,7 @@ from typing import Any
 from llama_index.core.tools.types import ToolOutput
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
-from airunner.handlers.llm.agent.chat_engine.react_agent_engine import ReactAgentEngine
+from airunner.handlers.llm.agent.chat_engine import ReactAgentEngine
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 
 
