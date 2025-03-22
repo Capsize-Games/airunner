@@ -6,7 +6,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 
 from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
 from airunner.workers.worker import Worker
-from airunner.handlers.stablediffusion.stablediffusion_handler import StableDiffusionHandler
+from airunner.handlers import StableDiffusionHandler
 
 torch.backends.cuda.matmul.allow_tf32 = True
 

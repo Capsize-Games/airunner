@@ -6,6 +6,10 @@ from typing import Optional
 from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
 from airunner.workers.worker import Worker
 from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.handlers import (
+    SpeechT5Handler,
+    EspeakHandler,
+)
 
 
 class TTSGeneratorWorker(Worker):
@@ -99,8 +103,6 @@ class TTSGeneratorWorker(Worker):
 
     def _initialize_tts_handler(self):
         self.logger.info("Initializing TTS handler...")
-        from airunner.handlers.tts.speecht5_handler import SpeechT5Handler
-        from airunner.handlers.tts.espeak_handler import EspeakHandler
         tts_model = self.tts_settings.model.lower()
         if tts_model == TTSModel.ESPEAK.value:
             tts_handler_class_ = EspeakHandler
