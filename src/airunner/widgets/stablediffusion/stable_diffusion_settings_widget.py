@@ -5,7 +5,7 @@ from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.utils.create_worker import create_worker
-from airunner.workers.model_scanner_worker import ModelScannerWorker
+from airunner.workers import ModelScannerWorker
 
 
 class StableDiffusionSettingsWidget(
