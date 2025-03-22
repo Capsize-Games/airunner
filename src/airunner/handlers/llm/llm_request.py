@@ -165,3 +165,61 @@ class LLMRequest:
     @classmethod
     def from_default(cls) -> 'LLMRequest':
         return cls.from_llm_settings()
+
+
+@dataclass
+class OpenrouterMistralRequest(LLMRequest):
+    max_tokens: int = 256
+    temperature: float = 0.1
+    seed: int = 42
+    top_p: float = 0.9
+    top_k: int = 50
+    
+    frequency_penalty: float = 0  # Range: [-2, 2]
+    presence_penalty: float = 0  # Range: [-2, 2]
+    repetition_penalty: float = 0 # Range: [-2, 2]
+    logit_bias: float = 0
+    top_logprobs: int = 0
+    min_p: float = 0
+    top_a: int = 0
+
+    def to_dict(self) -> Dict:
+        min_val = 0.0001
+
+        frequency_penalty = self.frequency_penalty
+        presence_penalty = self.presence_penalty
+        repetition_penalty = self.repetition_penalty
+        top_p = self.top_p
+        temperature = self.temperature
+
+        if frequency_penalty < min_val:
+            frequency_penalty = min_val
+
+        if presence_penalty < min_val:
+            presence_penalty = min_val
+
+        if repetition_penalty < min_val:
+            repetition_penalty = min_val
+
+        if top_p < min_val:
+            top_p = min_val
+
+        if temperature < min_val:
+            temperature = min_val
+
+        data = {
+            "max_tokens": self.max_tokens,
+            "temperature": temperature,
+            "seed": self.seed,
+            "top_p": top_p,
+            "top_k": self.top_k,
+            "frequency_penalty": frequency_penalty,
+            "presence_penalty": presence_penalty,
+            "repetition_penalty": repetition_penalty,
+            "logit_bias": self.logit_bias,
+            "top_logprobs": self.top_logprobs,
+            "min_p": self.min_p,
+            "top_a": self.top_a,
+        }
+
+        return data

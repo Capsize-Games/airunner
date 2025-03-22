@@ -5,7 +5,7 @@ from transformers import PreTrainedModel, ProcessorMixin
 
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import ModelType
-from airunner.utils.text_preprocessing import prepare_text_for_tts
+from airunner.utils import prepare_text_for_tts
 
 
 BaseHandlerMeta = type(BaseHandler)

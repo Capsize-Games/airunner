@@ -40,7 +40,7 @@ from airunner.data.models import (
     User
 )
 from airunner.enums import SignalCode
-from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
+from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
 
 

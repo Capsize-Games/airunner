@@ -4,11 +4,11 @@ from PySide6.QtCore import Slot, QSize, QThread
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.utils.models.scan_path_for_items import scan_path_for_lora
+from airunner.utils.models import scan_path_for_lora
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.lora.lora_widget import LoraWidget
 from airunner.widgets.lora.templates.lora_container_ui import Ui_lora_container
-from airunner.workers.directory_watcher import DirectoryWatcher
+from airunner.workers import DirectoryWatcher
 
 from airunner.data.models import Lora
 

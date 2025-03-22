@@ -21,7 +21,7 @@ from airunner.settings import (
     PHOTO_REALISTIC_NEGATIVE_PROMPT, 
     ILLUSTRATION_NEGATIVE_PROMPT
 )
-from airunner.utils.random_seed import random_seed
+from airunner.utils import random_seed
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stablediffusion.templates.stablediffusion_generator_form_ui import \
     Ui_stablediffusion_generator_form
