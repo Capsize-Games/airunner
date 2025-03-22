@@ -36,8 +36,8 @@ from transformers import (
 )
 
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.settings import DEFAULT_LLM_HF_PATH
+from airunner.handlers.llm.llm_request import LLMRequest
 
 
 class HuggingFaceLLM(CustomLLM, SettingsMixin):

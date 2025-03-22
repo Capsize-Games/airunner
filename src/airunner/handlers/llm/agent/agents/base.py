@@ -15,21 +15,24 @@ from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.memory import BaseMemory
 from llama_index.core.llms.llm import LLM
 
-from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import RefreshSimpleChatEngine
+from airunner.handlers.llm.agent import (
+    RAGMixin,
+    ExternalConditionStoppingCriteria
+)
+from airunner.handlers.llm.agent.tools import (
+    ChatEngineTool,
+    RAGEngineTool,
+    ReActAgentTool
+)
+from airunner.handlers.llm.agent.chat_engine import RefreshSimpleChatEngine
+from airunner.handlers.llm.agent.memory import ChatMemoryBuffer
 from airunner.enums import LLMActionType, SignalCode
-from airunner.data.models import Conversation, User
-from airunner.handlers.llm.agent.rag_mixin import RAGMixin
-from airunner.handlers.llm.agent.external_condition_stopping_criteria import ExternalConditionStoppingCriteria
-from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
-from airunner.handlers.llm.agent.tools.rag_engine_tool import RAGEngineTool
-from airunner.handlers.llm.storage.chat_store.database import DatabaseChatStore
-from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuffer
-from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
+from airunner.data.models import Conversation, User, Tab
 from airunner.utils import strip_names_from_message
+from airunner.handlers.llm.storage.chat_store import DatabaseChatStore
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
-from airunner.data.models import Tab
 from airunner.settings import (
     AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS,
     AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS,
@@ -719,8 +722,7 @@ class BaseAgent(
             do_not_display=True, 
             **kwargs
         )
-        self.logger.info(f"Updated user data: {response.content}")
-        self.logger.info(f"Saving user with data: {response.content}")
+        self.logger.info(f"Updating user with new information")
         Conversation.objects.update(
             conversation.id,
             user_data=[response.content] + (conversation.user_data or []),

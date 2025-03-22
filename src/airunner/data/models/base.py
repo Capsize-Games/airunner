@@ -3,6 +3,9 @@ import logging
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import Query
+
+import traceback
+
 from airunner.data.session_manager import session_scope
 
 _T = TypeVar("_T", bound=Any)
@@ -227,7 +230,7 @@ class BaseModel(Base):
             session.add(self)
             try:
                 session.commit()
-                logger.debug(f"Saved {self.cls}")
+                logger.debug(f"Saved {self}")
             except Exception as e:
                 logger.error(f"Error in save(): {e}")
             finally:
