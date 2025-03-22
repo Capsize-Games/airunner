@@ -185,6 +185,8 @@ class SignalCode(Enum):
 
     CLEAR_PROMPTS = enum.auto()
 
+    WIDGET_ELEMENT_CHANGED = enum.auto()  # Use this for generic widget events
+
 
 class EngineResponseCode(Enum):
     NONE = 0

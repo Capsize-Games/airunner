@@ -1,3 +1,4 @@
+from typing import Dict
 import json
 import re
 import time
@@ -86,10 +87,10 @@ class SaveGeneratorSettingsWorker(
                 generator_settings.negative_prompt = self.current_negative_prompt_value
                 generator_settings.second_prompt = self.current_secondary_prompt_value
                 generator_settings.second_negative_prompt = self.current_secondary_negative_prompt_value
-                generator_settings.crops_coord_top_left = dict(
-                    x=self.crops_coord_top_left_x,
-                    y=self.crops_coord_top_left_y
-                )
+                generator_settings.crops_coord_top_left = {
+                    "x": self.crops_coord_top_left_x,
+                    "y": self.crops_coord_top_left_y
+                }
                 generator_settings.save()
 
             time.sleep(0.1)
@@ -101,7 +102,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.SD_GENERATE_IMAGE_SIGNAL: self.on_generate_image_signal,
             SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL: self.on_stop_image_generator_progress_bar_signal,
             SignalCode.SD_PROGRESS_SIGNAL: self.on_progress_signal,
@@ -114,6 +114,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             SignalCode.KEYBOARD_SHORTCUTS_UPDATED: self.on_keyboard_shortcuts_updated,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.CLEAR_PROMPTS: self.clear_prompts,
+            SignalCode.WIDGET_ELEMENT_CHANGED: self.on_widget_element_changed,
         }
         super().__init__(*args, **kwargs)
         self.seed_override = None
@@ -123,6 +124,37 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.worker = SaveGeneratorSettingsWorker(parent=self)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
+        self._sd_version: str = self.generator_settings.version
+        self._toggle_sdxl_form_elements()
+
+    @property
+    def is_sd_xl_or_turbo(self) -> bool:
+        return (
+            self._sd_version == StableDiffusionVersion.SDXL1_0.value or
+            self._sd_version == StableDiffusionVersion.SDXL_TURBO.value
+        )
+
+    def on_widget_element_changed(self, data: Dict):
+        print("ON SETTINGS CHANGED", data)
+        if data.get("element") in (
+            "sd_version",
+        ):
+            self._sd_version = data.get("version")
+            self._toggle_sdxl_form_elements()
+
+    def _toggle_sdxl_form_elements(self):
+        if self.is_sd_xl_or_turbo:
+            self.ui.croops_coord_top_left_groupbox.show()
+            self.ui.secondary_prompt.show()
+            self.ui.secondary_negative_prompt.show()
+            for widget in self.ui.quality_effects_container.children():
+                widget.show()
+        else:
+            self.ui.croops_coord_top_left_groupbox.hide()
+            self.ui.secondary_prompt.hide()
+            self.ui.secondary_negative_prompt.hide()
+            for widget in self.ui.quality_effects_container.children():
+                widget.hide()
 
     @property
     def is_txt2img(self):
@@ -162,9 +194,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     def on_keyboard_shortcuts_updated(self):
         self._set_keyboard_shortcuts()
-
-    def on_application_settings_changed_signal(self, _data):
-        self.toggle_secondary_prompts()
 
     def on_bot_mood_updated(self, data):
         pass
@@ -264,12 +293,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     def handle_generate_image_from_image(self, image):
         pass
-
-    def toggle_secondary_prompts(self):
-        if self.generator_settings.version != StableDiffusionVersion.SDXL1_0.value:
-            self.ui.croops_coord_top_left_groupbox.hide()
-        else:
-            self.ui.croops_coord_top_left_groupbox.show()
 
     def on_load_saved_stablediffuion_prompt_signal(self, data: dict):
         saved_prompt = data.get("saved_prompt")
@@ -422,7 +445,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self.set_form_values()
-        self.toggle_secondary_prompts()
         self.initialized = True
         self.thread.start()
 
