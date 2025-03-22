@@ -370,14 +370,14 @@ class ChatPromptWidget(BaseWidget):
 
     def add_message_to_conversation(
         self,
-        name,
-        message,
-        is_bot, 
-        first_message=True,
-        _message_id=None
+        name: str,
+        message: str,
+        is_bot: bool, 
+        first_message: bool = True,
+        _message_id: Optional[int] = None
     ):
         message = strip_names_from_message(
-            message, 
+            message.lstrip() if first_message else message, 
             self.user.username, 
             self.chatbot.botname
         )

@@ -23,17 +23,22 @@ from PySide6.QtWidgets import (
 )
 from bs4 import BeautifulSoup
 
-from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
-from airunner.handlers.llm.agent.actions.show_path import show_path
-from airunner.data.models import ShortcutKeys, ImageFilter, DrawingPadSettings
-from airunner.app_installer import AppInstaller
 from airunner.settings import (
     STATUS_ERROR_COLOR,
     STATUS_NORMAL_COLOR_LIGHT,
     STATUS_NORMAL_COLOR_DARK,
     NSFW_CONTENT_DETECTED_MESSAGE,
     DISCORD_URL,
+    BASE_PATH,
+    BUG_REPORT_LINK,
+    VULNERABILITY_REPORT_LINK,
 )
+from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
+from airunner.handlers.llm.agent.actions.show_path import show_path
+from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.data.models import ShortcutKeys, ImageFilter, DrawingPadSettings
+from airunner.data.models import Tab
+from airunner.app_installer import AppInstaller
 from airunner.enums import (
     SignalCode,
     CanvasToolName,
@@ -43,24 +48,22 @@ from airunner.enums import (
     ModelStatus
 )
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import (
-    BASE_PATH,
-    BUG_REPORT_LINK,
-    VULNERABILITY_REPORT_LINK
-)
 from airunner.styles_mixin import StylesMixin
-from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
-from airunner.utils.create_worker import create_worker
-from airunner.workers.audio_capture_worker import AudioCaptureWorker
-from airunner.workers.audio_processor_worker import AudioProcessorWorker
-from airunner.workers.llm_generate_worker import LLMGenerateWorker
-from airunner.workers.mask_generator_worker import MaskGeneratorWorker
-from airunner.workers.sd_worker import SDWorker
-from airunner.workers.tts_generator_worker import TTSGeneratorWorker
-from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
-from airunner.utils.get_version import get_version
-from airunner.utils.widgets.save_splitter_settings import save_splitter_settings
-from airunner.utils.widgets.load_splitter_settings import load_splitter_settings
+from airunner.workers import (
+    AudioCaptureWorker,
+    AudioProcessorWorker,
+    LLMGenerateWorker,
+    MaskGeneratorWorker,
+    SDWorker,
+    TTSGeneratorWorker,
+    TTSVocalizerWorker,
+)
+from airunner.utils import get_version, create_worker
+from airunner.utils.widgets import (
+    save_splitter_settings,
+    load_splitter_settings,
+)
+from airunner.utils.image import convert_image_to_binary
 from airunner.widgets.stats.stats_widget import StatsWidget
 from airunner.widgets.status.status_widget import StatusWidget
 from airunner.windows.about.about import AboutWindow
@@ -72,8 +75,6 @@ from airunner.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
-from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.data.models import Tab
 from airunner.plugin_loader import PluginLoader
 
 

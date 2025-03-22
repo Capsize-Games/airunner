@@ -7,7 +7,7 @@ from typing import (
     Type,
 )
 import datetime
-from abc import ABC, ABCMeta, abstractmethod
+from abc import abstractmethod
 
 from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
 from llama_index.core.chat_engine.types import AgentChatResponse
@@ -25,7 +25,7 @@ from airunner.handlers.llm.agent.tools.rag_engine_tool import RAGEngineTool
 from airunner.handlers.llm.storage.chat_store.database import DatabaseChatStore
 from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuffer
 from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
-from airunner.utils.strip_names_from_message import strip_names_from_message
+from airunner.utils import strip_names_from_message
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
@@ -35,11 +35,6 @@ from airunner.settings import (
     AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS,
     AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS
 )
-
-
-RAGMixinMeta = type(RAGMixin)
-
-DEFAULT_MAX_FUNCTION_CALLS = 5
 
 
 class BaseAgent(
@@ -675,7 +670,6 @@ class BaseAgent(
             self.logger.info("Not enough messages")
             return
         self.logger.info("Updating mood")
-        conversation.last_updated_message_id = latest_message_id
         start_index = last_updated_message_id
         chat_history = self._memory.get_all() if self._memory else None
         if not chat_history:
@@ -699,7 +693,8 @@ class BaseAgent(
         Conversation.objects.update(
             conversation.id,
             bot_mood=response.content,
-            value=conversation.value[:-2]
+            value=conversation.value[:-2],
+            last_updated_message_id=latest_message_id
         )
         self._update_user_data()
     
@@ -797,18 +792,20 @@ class BaseAgent(
         action: LLMActionType = LLMActionType.CHAT,
         system_prompt: Optional[str] = None,
         rag_system_prompt: Optional[str] = None,
-        llm_request: Optional[LLMRequest] = None
+        llm_request: Optional[LLMRequest] = None,
+        **kwargs
     ) -> AgentChatResponse:
         self._chat_prompt = message
         self._complete_response = ""
         self.do_interrupt = False
         message = f"{self.username}: {message}"
         self._update_memory(action)
-        kwargs = {
+        kwargs = kwargs or {}
+        kwargs.update({
             "input": f"{message}",
             "chat_history": self._memory.get_all() if self._memory else None,
             "llm_request": llm_request
-        }
+        })
         
         if self.llm_perform_analysis:
             self._perform_analysis()
@@ -824,16 +821,20 @@ class BaseAgent(
             self.llm.llm_request = llm_request
 
         if action is LLMActionType.CHAT:
-            self._perform_tool_call("chat_engine_tool", **kwargs)
+            tool_name = "chat_engine_tool"
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            self._perform_tool_call("rag_engine_tool", **kwargs)
+            tool_name = "rag_engine_tool"
         elif action is LLMActionType.STORE_DATA:
-            self._perform_tool_call("store_user_tool", **kwargs)
+            tool_name = "store_user_tool"
+        
+        self._perform_tool_call(tool_name, **kwargs)
+
         self._update_memory(action)
         
         # strip "{self.botname}: " from response
-        if self._complete_response.startswith(f"{self.botname}: "):
-            self._complete_response = self._complete_response[len(f"{self.botname}: "):]
+        name = f"{self.botname}: "
+        if self._complete_response.startswith(name):
+            self._complete_response = self._complete_response[len(name):]
 
         return AgentChatResponse(response=self._complete_response)
 
@@ -908,22 +909,3 @@ class BaseAgent(
                 )
             })
         self._complete_response += response
-
-# Expose the helper function at module level
-def create_qt_agent_base(qt_metaclass):
-    """
-    Creates a base class for Qt-compatible agent classes.
-    
-    Usage:
-        from PyQt5.QtCore import QObject
-        from airunner.handlers.llm.agent.agents.base import create_qt_agent_base
-        
-        QtAgentBase = create_qt_agent_base(type(QObject))
-        
-        class MyQtAgent(QObject, QtAgentBase):
-            def __init__(self, *args, **kwargs):
-                QObject.__init__(self)
-                QtAgentBase.__init__(self, *args, **kwargs)
-    """
-    return qt_compatible_base_agent(qt_metaclass)
-

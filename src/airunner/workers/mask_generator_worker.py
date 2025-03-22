@@ -2,7 +2,7 @@ import numpy as np
 from PIL import Image
 from PySide6.QtCore import QRect
 from airunner.enums import SignalCode
-from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
+from airunner.utils.image import convert_binary_to_image
 from airunner.workers.worker import Worker
 
 

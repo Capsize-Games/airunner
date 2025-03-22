@@ -5,7 +5,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from llama_index.core.llms import ChatMessage
 from llama_index.core.storage.chat_store.base import BaseChatStore
 from airunner.data.models import Conversation
-from airunner.utils.strip_names_from_message import strip_names_from_message
+from airunner.utils import strip_names_from_message
 
 
 class DatabaseChatStore(BaseChatStore):
@@ -85,6 +85,9 @@ class DatabaseChatStore(BaseChatStore):
         else:
             messages = []
         messages = messages or []
+
+        # Remove whitespace from front of message
+        message.blocks[0].text = message.blocks[0].text.lstrip()
     
         # Append the new message
         message.blocks[0].text = strip_names_from_message(

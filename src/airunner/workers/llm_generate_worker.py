@@ -3,7 +3,7 @@ from typing import Dict, Optional
 
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
-from airunner.handlers.llm.llm_handler import LLMHandler
+from airunner.handlers import LLMHandler
 
 
 

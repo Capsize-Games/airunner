@@ -1,6 +1,6 @@
 import unittest
-from airunner.handlers.tts.speecht5_handler import SpeechT5Handler
-from airunner.utils.text_preprocessing import (
+from airunner.handlers import SpeechT5Handler
+from airunner.utils import (
     replace_numbers_with_words,
     roman_to_int,
     replace_unspeakable_characters,

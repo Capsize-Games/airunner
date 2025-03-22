@@ -10,7 +10,7 @@ from transformers.models.whisper.feature_extraction_whisper import WhisperFeatur
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.exceptions import NaNException
-from airunner.utils.memory.clear_memory import clear_memory
+from airunner.utils.memory import clear_memory
 
 
 class WhisperHandler(BaseHandler):
