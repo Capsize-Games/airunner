@@ -1,9 +1,11 @@
+import datetime
 from typing import Optional, List
 from urllib.parse import urlparse
-import datetime
 from sqlalchemy.orm.attributes import flag_modified
+
 from llama_index.core.llms import ChatMessage
 from llama_index.core.storage.chat_store.base import BaseChatStore
+
 from airunner.data.models import Conversation
 from airunner.utils import strip_names_from_message
 
