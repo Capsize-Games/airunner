@@ -2,13 +2,13 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.3.0",
+    version="3.3.1",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     keywords="ai, stable diffusion, art, ai art, stablediffusion",
-    license="GPL-3.0",
+    license="Apache-2.0",
     author_email="contact@capsizegames.com",
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "src"},
