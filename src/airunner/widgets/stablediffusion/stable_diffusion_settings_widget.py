@@ -103,6 +103,10 @@ class StableDiffusionSettingsWidget(
 
     def handle_version_changed(self, val):
         self.update_generator_settings("version", val)
+        self.emit_signal(SignalCode.WIDGET_ELEMENT_CHANGED, {
+            "element": "sd_version",
+            "version": val
+        })
         
         generator_settings = GeneratorSettings.objects.first()
         model = AIModels.objects.filter_first(
