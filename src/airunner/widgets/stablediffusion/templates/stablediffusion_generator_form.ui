@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>524</width>
-    <height>874</height>
+    <width>565</width>
+    <height>813</height>
    </rect>
   </property>
   <property name="font">
@@ -71,8 +71,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>524</width>
-           <height>824</height>
+           <width>565</width>
+           <height>763</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayout">
@@ -94,41 +94,6 @@
           <property name="verticalSpacing">
            <number>10</number>
           </property>
-          <item row="11" column="0">
-           <widget class="QGroupBox" name="croops_coord_top_left_groupbox">
-            <property name="title">
-             <string>Crops Coord (top left)</string>
-            </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_2">
-             <property name="leftMargin">
-              <number>2</number>
-             </property>
-             <property name="topMargin">
-              <number>2</number>
-             </property>
-             <property name="rightMargin">
-              <number>2</number>
-             </property>
-             <property name="bottomMargin">
-              <number>2</number>
-             </property>
-             <item>
-              <widget class="QLineEdit" name="crops_coord_top_left_x">
-               <property name="placeholderText">
-                <string>x position</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="crops_coord_top_left_y">
-               <property name="placeholderText">
-                <string>y position</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
           <item row="2" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout">
             <item>
@@ -153,7 +118,7 @@
              </layout>
             </item>
             <item>
-             <layout class="QVBoxLayout" name="verticalLayout_2">
+             <layout class="QVBoxLayout" name="quality_effects_container">
               <item>
                <widget class="QLabel" name="label_3">
                 <property name="text">
@@ -218,13 +183,6 @@
               <property name="bottomMargin">
                <number>9</number>
               </property>
-              <item row="1" column="0" colspan="2">
-               <widget class="QPlainTextEdit" name="prompt">
-                <property name="placeholderText">
-                 <string>Enter a prompt...</string>
-                </property>
-               </widget>
-              </item>
               <item row="0" column="1">
                <layout class="QHBoxLayout" name="horizontalLayout_6">
                 <property name="topMargin">
@@ -252,13 +210,6 @@
                 </item>
                </layout>
               </item>
-              <item row="2" column="0" colspan="2">
-               <widget class="QPlainTextEdit" name="secondary_prompt">
-                <property name="placeholderText">
-                 <string>Enter a second prompt...</string>
-                </property>
-               </widget>
-              </item>
               <item row="0" column="0">
                <widget class="QLabel" name="label">
                 <property name="font">
@@ -271,6 +222,24 @@
                  <string>Prompt</string>
                 </property>
                </widget>
+              </item>
+              <item row="1" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_5">
+                <item>
+                 <widget class="QPlainTextEdit" name="prompt">
+                  <property name="placeholderText">
+                   <string>Enter prompt</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPlainTextEdit" name="secondary_prompt">
+                  <property name="placeholderText">
+                   <string>Enter optional second prompt</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </widget>
@@ -302,21 +271,60 @@
                </widget>
               </item>
               <item>
-               <widget class="QPlainTextEdit" name="negative_prompt">
-                <property name="placeholderText">
-                 <string>Enter a negative prompt...</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPlainTextEdit" name="secondary_negative_prompt">
-                <property name="placeholderText">
-                 <string>Enter a second negative prompt...</string>
-                </property>
-               </widget>
+               <layout class="QHBoxLayout" name="horizontalLayout_8">
+                <item>
+                 <widget class="QPlainTextEdit" name="negative_prompt">
+                  <property name="placeholderText">
+                   <string>Enter negative prompt</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPlainTextEdit" name="secondary_negative_prompt">
+                  <property name="placeholderText">
+                   <string>Enter optional second negative prompt</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </widget>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QGroupBox" name="croops_coord_top_left_groupbox">
+            <property name="title">
+             <string>Crops Coord (top left)</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <property name="leftMargin">
+              <number>2</number>
+             </property>
+             <property name="topMargin">
+              <number>2</number>
+             </property>
+             <property name="rightMargin">
+              <number>2</number>
+             </property>
+             <property name="bottomMargin">
+              <number>2</number>
+             </property>
+             <item>
+              <widget class="QLineEdit" name="crops_coord_top_left_x">
+               <property name="placeholderText">
+                <string>x position</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="crops_coord_top_left_y">
+               <property name="placeholderText">
+                <string>y position</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -431,10 +439,6 @@
  <tabstops>
   <tabstop>generator_form_tabs</tabstop>
   <tabstop>stable_diffusion_generator_form</tabstop>
-  <tabstop>prompt</tabstop>
-  <tabstop>secondary_prompt</tabstop>
-  <tabstop>negative_prompt</tabstop>
-  <tabstop>secondary_negative_prompt</tabstop>
   <tabstop>pushButton</tabstop>
   <tabstop>crops_coord_top_left_x</tabstop>
   <tabstop>crops_coord_top_left_y</tabstop>
@@ -453,11 +457,11 @@
    <slot>handle_generate_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>455</x>
-     <y>842</y>
+     <x>496</x>
+     <y>781</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-1</x>
+     <x>0</x>
      <y>705</y>
     </hint>
    </hints>
@@ -469,11 +473,11 @@
    <slot>handle_interrupt_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>499</x>
-     <y>853</y>
+     <x>540</x>
+     <y>792</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-2</x>
+     <x>0</x>
      <y>745</y>
     </hint>
    </hints>
@@ -490,7 +494,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>416</x>
-     <y>-7</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -501,11 +505,11 @@
    <slot>handle_image_presets_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>107</x>
-     <y>742</y>
+     <x>108</x>
+     <y>621</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-2</x>
+     <x>0</x>
      <y>795</y>
     </hint>
    </hints>
@@ -517,8 +521,8 @@
    <slot>handle_quality_effects_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>477</x>
-     <y>739</y>
+     <x>532</x>
+     <y>621</y>
     </hint>
     <hint type="destinationlabel">
      <x>524</x>
