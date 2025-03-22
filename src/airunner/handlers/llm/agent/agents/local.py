@@ -13,7 +13,7 @@ from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
 from airunner.mediator_mixin import MediatorMixin
 from airunner.handlers.llm.agent.weather_mixin import WeatherMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.handlers.llm.agent.agents.base import BaseAgent
+from airunner.handlers.llm.agent.agents import BaseAgent
 from airunner.data.models import Conversation
 
 
@@ -34,7 +34,7 @@ class MistralAgentQObject(
     ):
         self.model = model
         self.tokenizer = tokenizer
-        super().__init__()
+        super().__init__(*args, **kwargs)
     
     @property
     def conversation_summaries(self) -> str:
