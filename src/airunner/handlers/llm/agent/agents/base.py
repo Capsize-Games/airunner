@@ -37,11 +37,6 @@ from airunner.settings import (
 )
 
 
-RAGMixinMeta = type(RAGMixin)
-
-DEFAULT_MAX_FUNCTION_CALLS = 5
-
-
 class BaseAgent(
     RAGMixin
 ):
