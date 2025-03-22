@@ -4,15 +4,6 @@ from typing import (
     Union,
 )
 
-from airunner.handlers.llm.agent.chat_engine.react_agent_engine import (
-    ReactAgentEngine
-)
-from airunner.handlers.llm.agent.chat_engine.refresh_context_chat_engine import (
-    RefreshContextChatEngine
-)
-from airunner.handlers.llm.agent.chat_engine.refresh_simple_chat_engine import (
-    RefreshSimpleChatEngine
-)
 from llama_index.core.tools.types import (
     AsyncBaseTool, 
     ToolMetadata,
@@ -21,6 +12,12 @@ from llama_index.core.tools.types import (
 from llama_index.core.langchain_helpers.agents.tools import (
     IndexToolConfig, 
     LlamaIndexTool
+)
+
+from airunner.handlers.llm.agent.chat_engine import ReactAgentEngine
+from airunner.handlers.llm.agent.chat_engine import (
+    RefreshContextChatEngine,
+    RefreshSimpleChatEngine
 )
 
 
@@ -84,7 +81,6 @@ class ChatEngineTool(AsyncBaseTool):
         return self._metadata
     
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
-        print("CALL", args, kwargs)
         query_str = self._get_query_str(*args, **kwargs)
         do_not_display = kwargs.get("do_not_display", False)
         chat_history = kwargs.get("chat_history", [])

@@ -9,11 +9,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from llama_index.core.llms.llm import LLM
 
-from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
+from airunner.handlers.llm import HuggingFaceLLM
+from airunner.handlers.llm.agent import WeatherMixin
+from airunner.handlers.llm.agent.agents.base import BaseAgent
 from airunner.mediator_mixin import MediatorMixin
-from airunner.handlers.llm.agent.weather_mixin import WeatherMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.handlers.llm.agent.agents import BaseAgent
 from airunner.data.models import Conversation
 
 

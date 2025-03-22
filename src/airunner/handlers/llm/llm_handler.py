@@ -2,7 +2,6 @@ import random
 import os
 import torch
 from typing import Optional, Dict, List, Union
-import transformers
 from peft import PeftModel
 
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
@@ -19,11 +18,11 @@ from airunner.handlers.llm.agent.agents import (
     MistralAgentQObject, 
     OpenRouterQObject
 )
+from airunner.data.models import Conversation, LLMGeneratorSettings
 from airunner.handlers.llm.training_mixin import TrainingMixin
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
-from airunner.data.models import Conversation, LLMGeneratorSettings
 
 
 class LLMHandler(
