@@ -84,7 +84,6 @@ class ChatEngineTool(AsyncBaseTool):
         return self._metadata
     
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
-        print("CALL", args, kwargs)
         query_str = self._get_query_str(*args, **kwargs)
         do_not_display = kwargs.get("do_not_display", False)
         chat_history = kwargs.get("chat_history", [])
