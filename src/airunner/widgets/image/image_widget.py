@@ -10,8 +10,7 @@ from PySide6.QtWidgets import QMessageBox
 from PIL import Image
 from PIL.ImageQt import ImageQt
 from airunner.enums import SignalCode, CanvasToolName
-from airunner.utils.image.load_metadata_from_image import load_metadata_from_image
-from airunner.utils.image.delete_image import delete_image
+from airunner.utils.image import load_metadata_from_image, delete_image
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.image.templates.image_widget_ui import Ui_image_widget
 from PySide6.QtGui import QDrag

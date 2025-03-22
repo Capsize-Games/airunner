@@ -15,11 +15,11 @@ from airunner.data.bootstrap.speech_t5 import SPEECH_T5_FILES
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import NLTK_DOWNLOAD_DIR
-from airunner.utils.network.huggingface_downloader import HuggingfaceDownloader
+from airunner.utils.network import HuggingfaceDownloader
+from airunner.utils.os import create_airunner_paths
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.windows.setup_wizard.installation_settings.templates.install_page_ui import Ui_install_page
-from airunner.utils.os.create_airunner_directory import create_airunner_paths
 
 nltk.data.path.append(NLTK_DOWNLOAD_DIR)
 

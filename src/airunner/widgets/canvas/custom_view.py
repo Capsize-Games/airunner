@@ -8,8 +8,8 @@ from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsLineIt
 
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
-from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
-from airunner.utils.snap_to_grid import snap_to_grid
+from airunner.utils.image import convert_image_to_binary
+from airunner.utils import snap_to_grid
 from airunner.widgets.canvas.brush_scene import BrushScene
 from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea

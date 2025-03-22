@@ -9,9 +9,11 @@ from PySide6.QtWidgets import QWidget
 from airunner.enums import CanvasToolName
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.mediator_mixin import MediatorMixin
-from airunner.utils.create_worker import create_worker
-from airunner.utils.widgets.save_splitter_settings import save_splitter_settings
-from airunner.utils.widgets.load_splitter_settings import load_splitter_settings
+from airunner.utils import create_worker
+from airunner.utils.widgets import (
+    save_splitter_settings, 
+    load_splitter_settings
+)
 from airunner.enums import SignalCode
 
 

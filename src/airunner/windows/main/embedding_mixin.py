@@ -1,6 +1,6 @@
 import os
 from airunner.enums import SignalCode
-from airunner.utils.models.scan_path_for_items import scan_path_for_embeddings
+from airunner.utils.models import scan_path_for_embeddings
 
 
 class EmbeddingMixin:

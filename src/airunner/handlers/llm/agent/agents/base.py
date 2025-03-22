@@ -25,7 +25,7 @@ from airunner.handlers.llm.agent.tools.rag_engine_tool import RAGEngineTool
 from airunner.handlers.llm.storage.chat_store.database import DatabaseChatStore
 from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuffer
 from airunner.handlers.llm.agent.tools.react_agent_tool import ReActAgentTool
-from airunner.utils.strip_names_from_message import strip_names_from_message
+from airunner.utils import strip_names_from_message
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
