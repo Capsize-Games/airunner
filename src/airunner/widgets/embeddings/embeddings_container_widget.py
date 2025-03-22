@@ -4,7 +4,7 @@ from PySide6.QtCore import Slot, QThread, QSize
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.utils.models.scan_path_for_items import scan_path_for_embeddings
+from airunner.utils.models import scan_path_for_embeddings
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container

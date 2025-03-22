@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Dict
 import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint, QEvent
+from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent, QMessageBox
@@ -14,11 +14,12 @@ from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, 
 from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.settings import VALID_IMAGE_FILES
-from airunner.utils import platform_info
-from airunner.utils.image.export_image import export_image
-from airunner.utils.snap_to_grid import snap_to_grid
-from airunner.utils.image.convert_binary_to_image import convert_binary_to_image
-from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
+from airunner.utils import snap_to_grid, is_windows
+from airunner.utils.image import (
+    export_image,
+    convert_binary_to_image, 
+    convert_image_to_binary
+)
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.windows.main.settings_mixin import SettingsMixin
 
@@ -540,7 +541,7 @@ class CustomScene(
         return image
 
     def _get_image_from_clipboard(self):
-        if platform_info.is_windows():
+        if is_windows():
             return self._image_from_system_clipboard_windows()
         return self._image_from_system_clipboard_linux()
 
@@ -579,7 +580,7 @@ class CustomScene(
         return self._move_pixmap_to_clipboard(image)
 
     def _move_pixmap_to_clipboard(self, image: Image) -> Image:
-        if platform_info.is_windows():
+        if is_windows():
             return self._image_to_system_clipboard_windows(image)
         return self._image_to_system_clipboard_linux(image)
 
