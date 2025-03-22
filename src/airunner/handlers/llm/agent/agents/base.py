@@ -670,7 +670,6 @@ class BaseAgent(
             self.logger.info("Not enough messages")
             return
         self.logger.info("Updating mood")
-        conversation.last_updated_message_id = latest_message_id
         start_index = last_updated_message_id
         chat_history = self._memory.get_all() if self._memory else None
         if not chat_history:
@@ -694,7 +693,8 @@ class BaseAgent(
         Conversation.objects.update(
             conversation.id,
             bot_mood=response.content,
-            value=conversation.value[:-2]
+            value=conversation.value[:-2],
+            last_updated_message_id=latest_message_id
         )
         self._update_user_data()
     
