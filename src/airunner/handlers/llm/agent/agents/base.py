@@ -909,22 +909,3 @@ class BaseAgent(
                 )
             })
         self._complete_response += response
-
-# Expose the helper function at module level
-def create_qt_agent_base(qt_metaclass):
-    """
-    Creates a base class for Qt-compatible agent classes.
-    
-    Usage:
-        from PyQt5.QtCore import QObject
-        from airunner.handlers.llm.agent.agents.base import create_qt_agent_base
-        
-        QtAgentBase = create_qt_agent_base(type(QObject))
-        
-        class MyQtAgent(QObject, QtAgentBase):
-            def __init__(self, *args, **kwargs):
-                QObject.__init__(self)
-                QtAgentBase.__init__(self, *args, **kwargs)
-    """
-    return qt_compatible_base_agent(qt_metaclass)
-
