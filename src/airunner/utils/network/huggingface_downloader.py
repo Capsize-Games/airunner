@@ -1,6 +1,6 @@
 from typing import Callable
 from PySide6.QtCore import QObject, QThread, Signal
-from airunner.handlers.stablediffusion.download_worker import DownloadWorker
+from airunner.handlers.stablediffusion import DownloadWorker
 from airunner.enums import SignalCode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
