@@ -58,7 +58,7 @@ setup(
             "sentence_transformers==3.4.1",
             "sounddevice==0.5.1",
             "pyttsx3==2.91",
-            "cryptography==44.0.0",
+            "cryptography==44.0.2",
             "setuptools==75.8.0",
             "openmeteo_requests==1.3.0",
             "requests-cache==1.2.1",
