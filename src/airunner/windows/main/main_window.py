@@ -51,13 +51,15 @@ from airunner.settings import (
 from airunner.styles_mixin import StylesMixin
 from airunner.utils.image.convert_image_to_binary import convert_image_to_binary
 from airunner.utils.create_worker import create_worker
-from airunner.workers.audio_capture_worker import AudioCaptureWorker
-from airunner.workers.audio_processor_worker import AudioProcessorWorker
-from airunner.workers.llm_generate_worker import LLMGenerateWorker
-from airunner.workers.mask_generator_worker import MaskGeneratorWorker
-from airunner.workers.sd_worker import SDWorker
-from airunner.workers.tts_generator_worker import TTSGeneratorWorker
-from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
+from airunner.workers import (
+    AudioCaptureWorker,
+    AudioProcessorWorker,
+    LLMGenerateWorker,
+    MaskGeneratorWorker,
+    SDWorker,
+    TTSGeneratorWorker,
+    TTSVocalizerWorker,
+)
 from airunner.utils.get_version import get_version
 from airunner.utils.widgets.save_splitter_settings import save_splitter_settings
 from airunner.utils.widgets.load_splitter_settings import load_splitter_settings
