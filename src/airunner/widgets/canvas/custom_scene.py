@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Dict
 import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint, QRect
+from PySide6.QtCore import Qt, QPoint, QRect, QPointF
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent, QMessageBox
@@ -55,6 +55,7 @@ class CustomScene(
         self.redo_history = []
         self.right_mouse_button_pressed = False
         self.handling_event = False
+        self._original_item_positions = {}  # Store original positions of items
 
         for signal, handler in [
             (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
@@ -676,6 +677,8 @@ class CustomScene(
             else:
                 root_point = QPoint(outpaint_box_rect["x"], outpaint_box_rect["y"])
             self.item.setPos(root_point.x(), root_point.y())
+            # Store original position when adding image
+            self._original_item_positions[self.item] = QPointF(root_point.x(), root_point.y())
 
         # self._set_current_active_image(image)
         self.current_active_image = image
@@ -918,3 +921,21 @@ class CustomScene(
             image = self.image_backup.copy()
         filtered_image = filter_object.filter(image)
         return filtered_image
+
+    def update_image_position(self, canvas_offset):
+        """Update the position of all image items in the scene based on the canvas offset."""
+        for item in self.items():
+            # Adjust all QGraphicsPixmapItem and DraggablePixmap items by canvas offset
+            if isinstance(item, QGraphicsPixmapItem) and not isinstance(item, DraggablePixmap):
+                continue
+                
+            if hasattr(item, 'pixmap') and callable(getattr(item, 'pixmap', None)):
+                # Store the original position in our dictionary if not already done
+                if item not in self._original_item_positions:
+                    self._original_item_positions[item] = item.pos()
+                
+                # Get original position
+                original_pos = self._original_item_positions[item]
+                
+                # Set position adjusted by canvas offset
+                item.setPos(original_pos.x() - canvas_offset.x(), original_pos.y() - canvas_offset.y())
