@@ -30,7 +30,6 @@ from airunner.data.models.prompt_template import PromptTemplate
 from airunner.data.models.controlnet_model import ControlnetModel
 from airunner.data.models.font_setting import FontSetting
 from airunner.data.models.pipeline_model import PipelineModel
-from airunner.data.models.window_settings import WindowSettings
 from airunner.data.models.conversation import Conversation
 from airunner.data.models.summary import Summary
 from airunner.data.models.image_filter import ImageFilter
@@ -73,7 +72,6 @@ __all__ = [
     'ControlnetModel',
     'FontSetting',
     'PipelineModel',
-    'WindowSettings',
     'Conversation',
     'Summary',
     'ImageFilter',
