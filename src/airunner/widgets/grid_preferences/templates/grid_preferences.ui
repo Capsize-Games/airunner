@@ -70,7 +70,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Grid Size</string>
+          <string>Cell Size</string>
          </property>
         </widget>
        </item>
@@ -104,14 +104,14 @@
           </font>
          </property>
          <property name="text">
-          <string>Show Grid</string>
+          <string>Show</string>
          </property>
         </widget>
        </item>
        <item row="6" column="0">
         <widget class="QPushButton" name="gridLineColorButton">
          <property name="text">
-          <string>Grid Line Color</string>
+          <string>Line Color</string>
          </property>
         </widget>
        </item>
@@ -136,7 +136,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Snap to Grid</string>
+          <string>Snap to</string>
          </property>
         </widget>
        </item>
@@ -148,7 +148,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Grid Line Width</string>
+          <string>Line Width</string>
          </property>
         </widget>
        </item>

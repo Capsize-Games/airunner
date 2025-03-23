@@ -123,12 +123,12 @@ class Ui_grid_preferences(object):
 
     def retranslateUi(self, grid_preferences):
         grid_preferences.setWindowTitle(QCoreApplication.translate("grid_preferences", u"Form", None))
-        self.label.setText(QCoreApplication.translate("grid_preferences", u"Grid Size", None))
+        self.label.setText(QCoreApplication.translate("grid_preferences", u"Cell Size", None))
         self.canvas_color.setText(QCoreApplication.translate("grid_preferences", u"Canvas Color", None))
         self.label_3.setText(QCoreApplication.translate("grid_preferences", u"Grid Settings", None))
-        self.show_grid_checkbox.setText(QCoreApplication.translate("grid_preferences", u"Show Grid", None))
-        self.gridLineColorButton.setText(QCoreApplication.translate("grid_preferences", u"Grid Line Color", None))
-        self.snap_to_grid_checkbox.setText(QCoreApplication.translate("grid_preferences", u"Snap to Grid", None))
-        self.label_2.setText(QCoreApplication.translate("grid_preferences", u"Grid Line Width", None))
+        self.show_grid_checkbox.setText(QCoreApplication.translate("grid_preferences", u"Show", None))
+        self.gridLineColorButton.setText(QCoreApplication.translate("grid_preferences", u"Line Color", None))
+        self.snap_to_grid_checkbox.setText(QCoreApplication.translate("grid_preferences", u"Snap to", None))
+        self.label_2.setText(QCoreApplication.translate("grid_preferences", u"Line Width", None))
     # retranslateUi
 
