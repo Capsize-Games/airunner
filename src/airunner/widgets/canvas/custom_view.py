@@ -398,12 +398,6 @@ class CustomGraphicsView(
         return new_event
 
     def mouseMoveEvent(self, event: QMouseEvent):
-        if self.canvas_type == CanvasType.BRUSH.value:
-            if self._middle_mouse_pressed:
-                delta = event.pos() - self.last_pos
-                self.canvas_offset += delta
-                self.last_pos = event.pos()
-                self.do_draw()
         if self._middle_mouse_pressed:
             delta = event.pos() - self.last_pos
             self.canvas_offset += delta
@@ -419,8 +413,18 @@ class CustomGraphicsView(
             self.do_draw()
             
             # Tell the scene to update the image position
-            if self.scene:
-                self.scene.update_image_position(self.canvas_offset)
+            if self.scene and hasattr(self.scene, 'item') and self.scene.item:
+                # Update image position directly
+                if self.scene.item in self.scene._original_item_positions:
+                    original_pos = self.scene._original_item_positions[self.scene.item]
+                    self.scene.item.setPos(original_pos.x() - self.canvas_offset.x(), 
+                                         original_pos.y() - self.canvas_offset.y())
+                else:
+                    # Store the original position if not already done
+                    self.scene._original_item_positions[self.scene.item] = self.scene.item.pos()
+                    
+            # Force scene update
+            self.scene.update()
                 
         super().mouseMoveEvent(event)
 
