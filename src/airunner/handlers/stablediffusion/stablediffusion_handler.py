@@ -84,6 +84,7 @@ from airunner.handlers.stablediffusion.image_response import ImageResponse
 class StableDiffusionHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._additional_prompts: List[Dict[str, str]] = []
         self._current_model_path = ""
         self._controlnet_model = None
         self._controlnet: Optional[ControlNetModel] = None
@@ -452,22 +453,48 @@ class StableDiffusionHandler(BaseHandler):
         return self.outpaint_settings_cached.mask_blur
 
     @property
-    def prompt(self):
+    def prompt(self) -> str:
         prompt = self.generator_settings_cached.prompt
-        return PromptWeightBridge.convert(prompt)
+
+        # Format the prompt
+        formatted_prompt = None
+        if self.use_compel and len(self._additional_prompts) > 0:
+            prompts = [f'"{prompt}"']
+            for additional_prompt_settings in self._additional_prompts:
+                addtional_prompt = additional_prompt_settings['prompt']
+                prompts.append(f'"{addtional_prompt}"')
+            formatted_prompt = f'({", ".join(prompts)}).and()'       
+        formatted_prompt = formatted_prompt or prompt
+
+        return PromptWeightBridge.convert(formatted_prompt)
 
     @property
-    def second_prompt(self):
+    def second_prompt(self) -> str:
+        if not self.is_sd_xl_or_turbo:
+            return ""
         prompt = self.generator_settings_cached.second_prompt
-        return PromptWeightBridge.convert(prompt)
+
+        # Format the prompt
+        formatted_prompt = None
+        if self.use_compel and len(self._additional_prompts) > 0:
+            prompts = [f'"{prompt}"']
+            for additional_prompt_settings in self._additional_prompts:
+                addtional_prompt = additional_prompt_settings['prompt_secondary']
+                prompts.append(f'"{addtional_prompt}"')
+            formatted_prompt = f'({", ".join(prompts)}).and()'
+        formatted_prompt = formatted_prompt or prompt
+
+        return PromptWeightBridge.convert(formatted_prompt)
 
     @property
-    def negative_prompt(self):
+    def negative_prompt(self) -> str:
         prompt = self.generator_settings_cached.negative_prompt
         return PromptWeightBridge.convert(prompt)
 
     @property
-    def second_negative_prompt(self):
+    def second_negative_prompt(self) -> str:
+        if not self.is_sd_xl_or_turbo:
+            return ""
         prompt = self.generator_settings_cached.second_negative_prompt
         return PromptWeightBridge.convert(prompt)
 
@@ -563,6 +590,7 @@ class StableDiffusionHandler(BaseHandler):
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
 
     def handle_generate_signal(self, message: Optional[Dict] = None):
+        self._additional_prompts = message.get("additional_prompts", [])
         self.load()
         self._clear_cached_properties()
         self._swap_pipeline()
