@@ -15,20 +15,36 @@ class MediatorMixin:
     """
     _signal_handlers: Dict = {}
 
-    def __init__(self, mediator: Optional[SignalMediator] = None, *args, **kwargs):
+    def __init__(
+        self, 
+        mediator: Optional[SignalMediator] = None, 
+        message_backend: Optional[Dict] = None,
+        *args, 
+        **kwargs
+    ):
         """
         Initialize the mixin with an optional SignalMediator instance.
         :param mediator: Custom SignalMediator instance (e.g., with RabbitMQ backend).
         """
         if type(mediator) is not SignalMediator:
             mediator = None
-            
+        
+        message_backend = message_backend or json.loads(
+            AIRUNNER_MESSAGE_BACKEND or "{}"
+        )
+
         if not mediator:
             backend = None
-            if AIRUNNER_MESSAGE_BACKEND:
-                data = json.loads(AIRUNNER_MESSAGE_BACKEND)
-                rabbitmq_url = f"amqp://{data.get('username')}:{data.get('password')}@{data.get('url')}:{data.get('port')}/"
-                backend = RabbitMQBackend(rabbitmq_url)
+            if message_backend:
+                backend_name = message_backend.pop("type", None)
+                
+                available_backends = {
+                    "rabbitmq": RabbitMQBackend
+                }
+
+                if backend_name in available_backends:
+                    available_backends[backend_name](**message_backend)
+
             mediator = SignalMediator(backend=backend)
 
         self.mediator = mediator
