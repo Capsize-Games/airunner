@@ -1,6 +1,11 @@
-from typing import Callable, Dict
+import json
+
+from typing import Callable, Dict, Optional
+
 from airunner.enums import SignalCode
 from airunner.signal_mediator import SignalMediator
+from airunner.messaging.backends import RabbitMQBackend
+from airunner.settings import AIRUNNER_MESSAGE_BACKEND
 
 
 class MediatorMixin:
@@ -10,8 +15,24 @@ class MediatorMixin:
     """
     _signal_handlers: Dict = {}
 
-    def __init__(self, *args, **kwargs):
-        self.mediator = SignalMediator()
+    def __init__(self, mediator: Optional[SignalMediator] = None, *args, **kwargs):
+        """
+        Initialize the mixin with an optional SignalMediator instance.
+        :param mediator: Custom SignalMediator instance (e.g., with RabbitMQ backend).
+        """
+        if type(mediator) is not SignalMediator:
+            mediator = None
+            
+        if not mediator:
+            backend = None
+            if AIRUNNER_MESSAGE_BACKEND:
+                data = json.loads(AIRUNNER_MESSAGE_BACKEND)
+                rabbitmq_url = f"amqp://{data.get('username')}:{data.get('password')}@{data.get('url')}:{data.get('port')}/"
+                backend = RabbitMQBackend(rabbitmq_url)
+            mediator = SignalMediator(backend=backend)
+
+        self.mediator = mediator
+
         self.register_signals()
         super().__init__(*args, **kwargs)
     
