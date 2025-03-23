@@ -813,7 +813,6 @@ class BaseAgent(
             self._perform_analysis()
 
         if self.print_llm_system_prompt:
-            print("*"*50)
             self.logger.info(self._system_prompt)
             self.logger.info(llm_request.to_dict())
 
