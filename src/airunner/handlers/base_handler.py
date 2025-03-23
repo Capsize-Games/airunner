@@ -1,12 +1,27 @@
 import torch
 from abc import ABC, abstractmethod, ABCMeta
-from PySide6.QtCore import QObject
+
+"""
+The following code ensures that we only use PySide6 if it is available.
+If it is not available, we use a placeholder class instead.
+"""
+try:
+    from PySide6.QtCore import QObject
+    class OptionalQObject(QObject):
+        pass
+except ImportError:
+    class OptionalQObject:
+        """
+        A placeholder class to avoid hard dependency on PySide6.
+        """
+        pass
+
 from airunner.enums import HandlerType, SignalCode, ModelType, ModelStatus, ModelAction
 from airunner.mediator_mixin import MediatorMixin
 from airunner.utils import get_torch_device
 from airunner.windows.main.settings_mixin import SettingsMixin
 
-QObjectMeta = type(QObject)
+QObjectMeta = type(OptionalQObject)
 
 
 class CombinedMeta(QObjectMeta, ABCMeta):
@@ -16,7 +31,7 @@ class CombinedMeta(QObjectMeta, ABCMeta):
 class BaseHandler(
     MediatorMixin,
     SettingsMixin,
-    QObject,
+    OptionalQObject,
     ABC,
     metaclass=CombinedMeta
 ):

@@ -1,7 +1,8 @@
 from typing import List, Optional, Any, Dict
-from PySide6.QtCore import QRect
 from PIL.Image import Image
 from dataclasses import dataclass
+
+from airunner.handlers.stablediffusion.rect import Rect
 
 
 @dataclass
@@ -9,7 +10,7 @@ class ImageResponse:
     images: Optional[List[Image]]
     data: Dict[str, Any]
     nsfw_content_detected: bool
-    active_rect: QRect
+    active_rect: Rect
     is_outpaint: bool
 
     def to_dict(self) -> Dict:
