@@ -2,8 +2,7 @@ from PySide6.QtCore import Slot
 
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.tool_tab.templates.tool_tab_ui import Ui_tool_tab_widget
-from airunner.enums import SignalCode
-from airunner.data.models import SplitterSetting, Tab
+from airunner.data.models import Tab
 
 
 class ToolTabWidget(BaseWidget):
