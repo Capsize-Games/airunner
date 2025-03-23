@@ -166,6 +166,7 @@ class CanvasWidget(
     def showEvent(self, event):
         super().showEvent(event)
         QTimer.singleShot(100, lambda: self.do_draw(force_draw=True))
+        self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
 
     def on_canvas_update_cursor_signal(self, message: dict):
         event = message.get("event", None)
