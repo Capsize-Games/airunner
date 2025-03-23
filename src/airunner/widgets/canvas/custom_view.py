@@ -409,24 +409,44 @@ class CustomGraphicsView(
                 pos_y = self.active_grid_settings.pos_y - self.canvas_offset.y()
                 self.active_grid_area.setPos(pos_x, pos_y)
             
-            # Update the scene to reflect changes
-            self.do_draw()
+            # First update the image position for immediate visual feedback
+            self.updateImagePositions()
             
-            # Tell the scene to update the image position
-            if self.scene and hasattr(self.scene, 'item') and self.scene.item:
-                # Update image position directly
-                if self.scene.item in self.scene._original_item_positions:
-                    original_pos = self.scene._original_item_positions[self.scene.item]
-                    self.scene.item.setPos(original_pos.x() - self.canvas_offset.x(), 
-                                         original_pos.y() - self.canvas_offset.y())
-                else:
-                    # Store the original position if not already done
-                    self.scene._original_item_positions[self.scene.item] = self.scene.item.pos()
-                    
-            # Force scene update
-            self.scene.update()
+            # Then update the grid
+            self.do_draw()
                 
         super().mouseMoveEvent(event)
+    
+    def updateImagePositions(self):
+        """Update positions of all images in the scene based on canvas offset."""
+        if not self.scene or not hasattr(self.scene, 'item') or not self.scene.item:
+            return
+            
+        # Get the item directly from the scene
+        item = self.scene.item
+        
+        # Ensure the item is visible and not hidden
+        item.setVisible(True)
+        
+        # Store the original position if not already tracked
+        if item not in self.scene._original_item_positions:
+            self.scene._original_item_positions[item] = item.pos()
+            
+        # Get the original position from stored data
+        original_pos = self.scene._original_item_positions[item]
+            
+        # Calculate the new position based on canvas offset
+        new_x = original_pos.x() - self.canvas_offset.x()
+        new_y = original_pos.y() - self.canvas_offset.y()
+        
+        # Update the position of the item
+        item.setPos(new_x, new_y)
+        
+        # Ensure the item is brought to front
+        item.setZValue(5)  # Higher than default (0) but below active grid area (10)
+        
+        # Force immediate redraw
+        self.scene.update(item.boundingRect())
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.MiddleButton:

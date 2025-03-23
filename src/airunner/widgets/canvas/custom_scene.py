@@ -61,7 +61,7 @@ class CustomScene(
             (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
             (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
-            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
+            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counterclockwise_signal),
             (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.on_paste_image_from_clipboard),
             (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.on_export_image_signal),
             (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.on_import_image_signal),
@@ -289,7 +289,7 @@ class CustomScene(
     def on_canvas_rotate_90_clockwise_signal(self):
         self._rotate_90_clockwise()
 
-    def on_canvas_rotate_90_counter_clockwise_signal(self):
+    def on_canvas_rotate_90_counterclockwise_signal(self):
         self._rotate_90_counterclockwise()
 
     def on_action_undo_signal(self):
@@ -504,14 +504,28 @@ class CustomScene(
         self.selection_stop_pos = None
 
     def initialize_image(self, image: Image = None):
+        """Initialize the image in the scene."""
         self.stop_painter()
         self.set_image(image)
+        
+        # Save the current position before updating the item
+        old_pos = self.item.pos() if self.item else QPointF(0, 0)
+        
         self.set_item(self.image)
         self.set_painter(self.image)
         
-        # Store initial position of item
-        if self.item and self.item not in self._original_item_positions:
-            self._original_item_positions[self.item] = self.item.pos()
+        # If we had an original position stored for the previous item, use it for the new item
+        if self.item:
+            # Store the position if not already tracked
+            if self.item not in self._original_item_positions:
+                # Use the old position if it was a replacement item
+                if old_pos != QPointF(0, 0):
+                    self._original_item_positions[self.item] = old_pos
+                else:
+                    self._original_item_positions[self.item] = self.item.pos()
+            
+            # Make sure item is visible
+            self.item.setVisible(True)
 
     def stop_painter(self):
         if self.painter is not None and self.painter.isActive():
@@ -929,19 +943,26 @@ class CustomScene(
         return filtered_image
 
     def update_image_position(self, canvas_offset):
-        """Update the position of all image items in the scene based on the canvas offset."""
-        for item in self.items():
-            # Adjust all QGraphicsPixmapItem and DraggablePixmap items by canvas offset
-            if isinstance(item, QGraphicsPixmapItem) and not isinstance(item, DraggablePixmap):
-                continue
-                
-            if hasattr(item, 'pixmap') and callable(getattr(item, 'pixmap', None)):
-                # Store the original position in our dictionary if not already done
-                if item not in self._original_item_positions:
-                    self._original_item_positions[item] = item.pos()
-                
-                # Get original position
-                original_pos = self._original_item_positions[item]
-                
-                # Set position adjusted by canvas offset
-                item.setPos(original_pos.x() - canvas_offset.x(), original_pos.y() - canvas_offset.y())
+        """Update the position of image items in the scene based on the canvas offset."""
+        # If we don't have an item, there's nothing to update
+        if not self.item:
+            return
+            
+        # Store the original position if we haven't already
+        if self.item not in self._original_item_positions:
+            self._original_item_positions[self.item] = self.item.pos()
+        
+        # Get the original position
+        original_pos = self._original_item_positions[self.item]
+        
+        # Calculate and set the new position
+        new_x = original_pos.x() - canvas_offset.x() 
+        new_y = original_pos.y() - canvas_offset.y()
+        self.item.setPos(new_x, new_y)
+        
+        # Make sure the item is visible and in focus
+        self.item.setVisible(True)
+        self.item.setZValue(5)  # Priority rendering
+        
+        # Force immediate update of the image area
+        self.update(self.item.boundingRect())
