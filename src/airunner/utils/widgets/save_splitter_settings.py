@@ -1,5 +1,5 @@
 from typing import List
-from airunner.data.models import SplitterSetting
+from PySide6.QtCore import QSettings
 
 
 def save_splitter_settings(
@@ -7,8 +7,10 @@ def save_splitter_settings(
     splitters: List[str]
 ):
     """
-    Save the state splitter widgets to the database.
+    Save the state of splitter widgets to PySide6 application settings.
     """
+    settings = QSettings("YourOrganization", "YourApplication")
+
     for splitter_name in splitters:
         widget = getattr(ui, splitter_name)
         sizes = widget.sizes()
@@ -21,16 +23,4 @@ def save_splitter_settings(
         
         if valid_state:
             splitter_state = widget.saveState()
-            settings = SplitterSetting.objects.filter_by_first(
-                name=splitter_name
-            )
-            if not settings:
-                SplitterSetting.objects.create(
-                    name=splitter_name,
-                    splitter_settings=splitter_state
-                )
-            else:
-                SplitterSetting.objects.update(
-                    settings.id,
-                    splitter_settings=splitter_state
-                )
+            settings.setValue(f"splitters/{splitter_name}", splitter_state)
