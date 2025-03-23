@@ -496,6 +496,8 @@ class CustomScene(
             self.item.setZValue(z_index)
             if self.item.scene() is None:
                 self.addItem(self.item)
+                # Store initial position when adding to scene
+                self._original_item_positions[self.item] = self.item.pos()
 
     def clear_selection(self):
         self.selection_start_pos = None
@@ -506,6 +508,10 @@ class CustomScene(
         self.set_image(image)
         self.set_item(self.image)
         self.set_painter(self.image)
+        
+        # Store initial position of item
+        if self.item and self.item not in self._original_item_positions:
+            self._original_item_positions[self.item] = self.item.pos()
 
     def stop_painter(self):
         if self.painter is not None and self.painter.isActive():
