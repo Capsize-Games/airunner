@@ -4,7 +4,12 @@ from functools import partial
 from PySide6 import QtGui
 from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, QSettings
 from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen
-from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsLineItem
+from PySide6.QtWidgets import (
+    QGraphicsView, 
+    QGraphicsItemGroup, 
+    QGraphicsLineItem, 
+    QGraphicsScene
+)
 
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.mediator_mixin import MediatorMixin
@@ -45,6 +50,13 @@ class CustomGraphicsView(
         self.settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
         self._middle_mouse_pressed: bool = False
         self.load_canvas_offset()
+
+        # Add settings to handle negative coordinates properly
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
+        
+        # Use setOptimizationFlags directly instead of the enum that doesn't exist in your PySide6 version
+        self.setOptimizationFlags(QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing | 
+                                 QGraphicsView.OptimizationFlag.DontSavePainterState)
 
         # register signal handlers
         signal_handlers = {
@@ -409,7 +421,7 @@ class CustomGraphicsView(
                 pos_y = self.active_grid_settings.pos_y - self.canvas_offset.y()
                 self.active_grid_area.setPos(pos_x, pos_y)
             
-            # First update the image position for immediate visual feedback
+            # Update image positions directly without relying on complex logic
             self.updateImagePositions()
             
             # Then update the grid
@@ -421,32 +433,38 @@ class CustomGraphicsView(
         """Update positions of all images in the scene based on canvas offset."""
         if not self.scene or not hasattr(self.scene, 'item') or not self.scene.item:
             return
-            
-        # Get the item directly from the scene
+        
+        # Get the main item directly
         item = self.scene.item
         
-        # Ensure the item is visible and not hidden
+        # Make sure the item is visible
         item.setVisible(True)
         
-        # Store the original position if not already tracked
+        # Store original position if needed
         if item not in self.scene._original_item_positions:
             self.scene._original_item_positions[item] = item.pos()
-            
-        # Get the original position from stored data
+        
+        # Get original position
         original_pos = self.scene._original_item_positions[item]
-            
-        # Calculate the new position based on canvas offset
+        
+        # Calculate new position
         new_x = original_pos.x() - self.canvas_offset.x()
         new_y = original_pos.y() - self.canvas_offset.y()
         
-        # Update the position of the item
+        # Set new position
         item.setPos(new_x, new_y)
         
-        # Ensure the item is brought to front
-        item.setZValue(5)  # Higher than default (0) but below active grid area (10)
+        # Ensure image has high Z value for visibility
+        item.setZValue(5)
         
-        # Force immediate redraw
-        self.scene.update(item.boundingRect())
+        # Ensure the item's bounding rect is properly updated
+        item.prepareGeometryChange()
+        
+        # Force the scene to update the entire viewport
+        self.scene.invalidate(item.boundingRect(), QGraphicsScene.SceneLayer.ItemLayer)
+        
+        # Force entire viewport update to handle negative coordinates
+        self.viewport().update()
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.MiddleButton:
