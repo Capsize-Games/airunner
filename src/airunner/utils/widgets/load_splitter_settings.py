@@ -1,6 +1,11 @@
 from typing import List
 from PySide6.QtCore import QSettings
 
+from airunner.settings import (
+    AIRUNNER_ORGANIZATION,
+    AIRUNNER_APPLICATION_NAME
+)
+
 
 def load_splitter_settings(
     ui: object,
@@ -13,7 +18,7 @@ def load_splitter_settings(
     if orientations is None:
         orientations = {}
         
-    settings = QSettings("YourOrganization", "YourApplication")
+    settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
 
     for splitter_name in splitters:
         splitter = getattr(ui, splitter_name)

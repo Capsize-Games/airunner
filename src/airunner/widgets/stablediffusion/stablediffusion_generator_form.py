@@ -28,6 +28,7 @@ from airunner.widgets.stablediffusion.templates.stablediffusion_generator_form_u
     Ui_stablediffusion_generator_form
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.utils.widgets import load_splitter_settings
 
 
 class SaveGeneratorSettingsWorker(
@@ -448,15 +449,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.initialized = True
         self.thread.start()
 
-        splitter_name = "generator_form_splitter"
-        splitter = self.ui.generator_form_splitter
-        splitter_state = getattr(self.window_settings, splitter_name)
-        if splitter_state is not None:
-            splitter.blockSignals(True)
-            splitter.restoreState(splitter_state)
-            splitter.blockSignals(False)
-        elif splitter_name == "content_splitter":
-            splitter.setSizes([self.width() - 200, 512, 200])
+        load_splitter_settings(self.ui, ["generator_form_splitter"])
 
     def set_form_values(self, _data=None):
         self.ui.prompt.blockSignals(True)
