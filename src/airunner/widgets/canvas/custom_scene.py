@@ -57,6 +57,9 @@ class CustomScene(
         self.handling_event = False
         self._original_item_positions = {}  # Store original positions of items
 
+        # Add viewport rectangle that includes negative space
+        self._extended_viewport_rect = QRect(-2000, -2000, 4000, 4000)
+
         for signal, handler in [
             (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
             (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
@@ -485,19 +488,25 @@ class CustomScene(
             )
             self.image.fill(Qt.GlobalColor.transparent)
 
-    def set_item(self, image: QImage = None, z_index: int = 1):
-        self.setSceneRect(0, 0, 512, 512)
+    def set_item(self, image: QImage = None, z_index: int = 5):  # Change default z_index to 5
+        # Instead of fixed scene rect, use extended viewport
+        self.setSceneRect(self._extended_viewport_rect)
+        
         if image is not None:
             pixmap = QPixmap.fromImage(image)
             if self.item is None:
                 self.item = DraggablePixmap(pixmap)
             else:
                 self.item.setPixmap(pixmap)
-            self.item.setZValue(z_index)
+            self.item.setZValue(z_index)  # Higher Z-value for better visibility
             if self.item.scene() is None:
                 self.addItem(self.item)
                 # Store initial position when adding to scene
                 self._original_item_positions[self.item] = self.item.pos()
+            
+            # Ensure item is visible and prepare its geometry
+            self.item.setVisible(True)
+            self.item.prepareGeometryChange()
 
     def clear_selection(self):
         self.selection_start_pos = None
@@ -524,8 +533,12 @@ class CustomScene(
                 else:
                     self._original_item_positions[self.item] = self.item.pos()
             
-            # Make sure item is visible
+            # Make sure item is visible with priority rendering
             self.item.setVisible(True)
+            self.item.setZValue(5)  # Higher Z ensures it appears above background
+            
+            # Force immediate update of the image area
+            self.update(self.item.boundingRect())
 
     def stop_painter(self):
         if self.painter is not None and self.painter.isActive():
@@ -944,7 +957,6 @@ class CustomScene(
 
     def update_image_position(self, canvas_offset):
         """Update the position of image items in the scene based on the canvas offset."""
-        # If we don't have an item, there's nothing to update
         if not self.item:
             return
             
@@ -958,11 +970,14 @@ class CustomScene(
         # Calculate and set the new position
         new_x = original_pos.x() - canvas_offset.x() 
         new_y = original_pos.y() - canvas_offset.y()
+        
+        # Before changing position, prepare the item for geometry change
+        self.item.prepareGeometryChange()
         self.item.setPos(new_x, new_y)
         
         # Make sure the item is visible and in focus
         self.item.setVisible(True)
         self.item.setZValue(5)  # Priority rendering
         
-        # Force immediate update of the image area
-        self.update(self.item.boundingRect())
+        # Update the entire viewport to ensure image is visible even at negative coordinates
+        self.invalidate(self._extended_viewport_rect, QGraphicsScene.SceneLayer.ItemLayer)
