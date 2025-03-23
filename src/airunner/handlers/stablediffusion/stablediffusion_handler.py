@@ -14,8 +14,6 @@ from PIL import (
     ImageFont
 )
 from PIL.Image import Image
-from PySide6.QtCore import QRect
-from PySide6.QtWidgets import QApplication
 from compel import (
     Compel, 
     DiffusersTextualInversionManager, 
@@ -79,6 +77,7 @@ from airunner.utils.image import (
 from airunner.utils import get_torch_device
 from airunner.data.models import GeneratorSettings
 from airunner.handlers.stablediffusion.image_response import ImageResponse
+from airunner.handlers.stablediffusion.rect import Rect
 
 
 class StableDiffusionHandler(BaseHandler):
@@ -688,7 +687,7 @@ class StableDiffusionHandler(BaseHandler):
             raise PipeNotLoadedException()
         self._load_prompt_embeds()
         clear_memory()
-        active_rect = QRect(
+        active_rect = Rect(
             self.active_grid_settings.pos_x,
             self.active_grid_settings.pos_y,
             self.application_settings_cached.working_width,
@@ -1851,7 +1850,6 @@ class StableDiffusionHandler(BaseHandler):
         })
         if self._latents is None:
             self._latents = latents
-        QApplication.processEvents()
         return {}
 
     def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
