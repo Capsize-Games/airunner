@@ -1,10 +1,10 @@
-from typing import Dict
+from typing import Dict, List
 import json
 import re
 import time
 
-from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot, QSettings
+from PySide6.QtWidgets import QApplication, QWidget
 
 from airunner.data.models import ShortcutKeys
 from airunner.enums import (
@@ -24,8 +24,13 @@ from airunner.settings import (
 )
 from airunner.utils import random_seed
 from airunner.widgets.base_widget import BaseWidget
-from airunner.widgets.stablediffusion.templates.stablediffusion_generator_form_ui import \
+from airunner.widgets.stablediffusion.\
+templates.stablediffusion_generator_form_ui import (
     Ui_stablediffusion_generator_form
+)
+from airunner.widgets.stablediffusion.prompt_container_widget import (
+    PromptContainerWidget
+)
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.utils.widgets import load_splitter_settings
@@ -100,6 +105,7 @@ class SaveGeneratorSettingsWorker(
 class StableDiffusionGeneratorForm(BaseWidget):
     widget_class_ = Ui_stablediffusion_generator_form
     changed_signal = Signal(str, object)
+    _prompt_containers: Dict[str, QWidget] = {}
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
@@ -116,6 +122,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.CLEAR_PROMPTS: self.clear_prompts,
             SignalCode.WIDGET_ELEMENT_CHANGED: self.on_widget_element_changed,
+            SignalCode.SD_ADDITIONAL_PROMPT_DELETE_SIGNAL: self.on_delete_prompt_clicked,
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
         }
         super().__init__(*args, **kwargs)
         self.seed_override = None
@@ -135,13 +143,42 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self._sd_version == StableDiffusionVersion.SDXL_TURBO.value
         )
 
+    def on_delete_prompt_clicked(self, data: Dict):
+        prompt_id = data.get("prompt_id", None)
+        if prompt_id is None:
+            self.logger.error(f"Unable to delete prompt")
+            return
+        prompt_container = self._prompt_containers[prompt_id]
+        self.ui.additional_prompts_container_layout.removeWidget(prompt_container)
+        prompt_container.deleteLater()
+        self._prompt_containers.pop(prompt_id)
+        
+        # Save the updated prompt containers after deletion
+        self.save_prompt_containers_to_settings()
+
+    def on_application_settings_changed(self, data: Dict):
+        if data.get("setting_name") == "generator_settings":
+            if data.get("column_name") in (
+                "use_compel",
+            ):
+                self._toggle_compel_form_elements(data.get("value", True))
+
     def on_widget_element_changed(self, data: Dict):
-        print("ON SETTINGS CHANGED", data)
+        self._toggle_compel_form_elements(self.generator_settings.use_compel)
+        
         if data.get("element") in (
             "sd_version",
         ):
             self._sd_version = data.get("version")
             self._toggle_sdxl_form_elements()
+    
+    def _toggle_compel_form_elements(self, value: bool):
+        self.logger.info("Toggle compel form elements")
+        # Iterate over all widgets in the layout and enable/disable them
+        for i in range(self.ui.additional_prompts_container_layout.count()):
+            widget = self.ui.additional_prompts_container_layout.itemAt(i).widget()
+            if widget:
+                widget.show() if value else widget.hide()
 
     def _toggle_sdxl_form_elements(self):
         if self.is_sd_xl_or_turbo:
@@ -292,6 +329,19 @@ class StableDiffusionGeneratorForm(BaseWidget):
     # End LLM Generated Image handlers
     ##########################################################################
 
+    @Slot()
+    def handle_add_prompt_clicked(self):
+        additional_prompts_container_layout = self.ui.additional_prompts_container_layout
+        prompt_container = PromptContainerWidget()
+        prompt_container.prompt_id = len(self._prompt_containers.keys())
+        additional_prompts_container_layout.addWidget(prompt_container)
+
+        # store prompt container in self._prompt_containers
+        self._prompt_containers[prompt_container.prompt_id] = prompt_container
+        
+        # Save the updated prompt containers
+        self.save_prompt_containers_to_settings()
+
     def handle_generate_image_from_image(self, image):
         pass
 
@@ -325,6 +375,18 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 )
             else:
                 data = None
+
+        # Update data with additional prompt data from self._prompt_containers
+        additional_prompts = [{
+            "prompt": container.get_prompt(),
+            "prompt_secondary": container.get_prompt_secondary()
+        } for _prompt_id, container in self._prompt_containers.items()]
+
+        data = {
+            **(data or {}),
+            "additional_prompts": additional_prompts
+        }
+
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, data)
 
     def action_clicked_button_save_prompts(self):
@@ -450,6 +512,19 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.thread.start()
 
         load_splitter_settings(self.ui, ["generator_form_splitter"])
+        
+        # Restore prompt containers when widget is shown
+        self.restore_prompt_containers_from_settings()
+
+    def hideEvent(self, event):
+        """When widget is hidden, save prompt containers."""
+        super().hideEvent(event)
+        self.save_prompt_containers_to_settings()
+
+    def closeEvent(self, event):
+        """When widget is closed, save prompt containers."""
+        self.save_prompt_containers_to_settings()
+        super().closeEvent(event)
 
     def set_form_values(self, _data=None):
         self.ui.prompt.blockSignals(True)
@@ -516,3 +591,55 @@ class StableDiffusionGeneratorForm(BaseWidget):
         if interrupt_key:
             self.ui.interrupt_button.setShortcut(interrupt_key.key)
             self.ui.interrupt_button.setToolTip(f"{interrupt_key.display_name} ({interrupt_key.text})")
+
+    def save_prompt_containers_to_settings(self):
+        """Save all additional prompt containers to QSettings."""
+        if not self.initialized:
+            return
+            
+        settings = QSettings()
+        settings.beginGroup("sd_additional_prompts")
+        
+        # Clear existing settings first
+        settings.remove("")
+        
+        # Save the number of containers
+        settings.setValue("count", len(self._prompt_containers))
+        
+        # Save each container's data
+        for i, (prompt_id, container) in enumerate(self._prompt_containers.items()):
+            settings.setValue(f"prompt_{i}_id", prompt_id)
+            settings.setValue(f"prompt_{i}_text", container.get_prompt())
+            settings.setValue(f"prompt_{i}_text_secondary", container.get_prompt_secondary())
+        
+        settings.endGroup()
+        settings.sync()
+    
+    def restore_prompt_containers_from_settings(self):
+        """Restore additional prompt containers from QSettings."""
+        # Clear existing containers first
+        for container in list(self._prompt_containers.values()):
+            self.ui.additional_prompts_container_layout.removeWidget(container)
+            container.deleteLater()
+        self._prompt_containers.clear()
+        
+        settings = QSettings()
+        settings.beginGroup("sd_additional_prompts")
+        
+        count = settings.value("count", 0, type=int)
+        
+        for i in range(count):
+            prompt_id = settings.value(f"prompt_{i}_id", i, type=int)
+            prompt_text = settings.value(f"prompt_{i}_text", "", type=str)
+            prompt_text_secondary = settings.value(f"prompt_{i}_text_secondary", "", type=str)
+            
+            # Create and add the container
+            prompt_container = PromptContainerWidget()
+            prompt_container.prompt_id = prompt_id
+            prompt_container.set_prompt(prompt_text)
+            prompt_container.set_prompt_secondary(prompt_text_secondary)
+            
+            self.ui.additional_prompts_container_layout.addWidget(prompt_container)
+            self._prompt_containers[prompt_id] = prompt_container
+        
+        settings.endGroup()

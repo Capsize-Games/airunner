@@ -170,7 +170,7 @@
              <bool>false</bool>
             </property>
             <widget class="QWidget" name="layoutWidget">
-             <layout class="QGridLayout" name="gridLayout_2">
+             <layout class="QGridLayout" name="prompt_container_layout">
               <property name="leftMargin">
                <number>0</number>
               </property>
@@ -183,6 +183,47 @@
               <property name="bottomMargin">
                <number>9</number>
               </property>
+              <item row="3" column="0">
+               <widget class="QPushButton" name="add_prompt_button">
+                <property name="text">
+                 <string>Add Prompt</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0" colspan="2">
+               <layout class="QVBoxLayout" name="additional_prompts_container_layout"/>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label">
+                <property name="font">
+                 <font>
+                  <pointsize>8</pointsize>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Prompt</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="prompt_container">
+                <item>
+                 <widget class="QPlainTextEdit" name="prompt">
+                  <property name="placeholderText">
+                   <string>Prompt</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPlainTextEdit" name="secondary_prompt">
+                  <property name="placeholderText">
+                   <string>Second prompt</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
               <item row="0" column="1">
                <layout class="QHBoxLayout" name="horizontalLayout_6">
                 <property name="topMargin">
@@ -205,37 +246,6 @@
                  <widget class="QPushButton" name="pushButton">
                   <property name="text">
                    <string>Save Prompts</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label">
-                <property name="font">
-                 <font>
-                  <pointsize>8</pointsize>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Prompt</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_5">
-                <item>
-                 <widget class="QPlainTextEdit" name="prompt">
-                  <property name="placeholderText">
-                   <string>Enter prompt</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPlainTextEdit" name="secondary_prompt">
-                  <property name="placeholderText">
-                   <string>Enter optional second prompt</string>
                   </property>
                  </widget>
                 </item>
@@ -275,14 +285,14 @@
                 <item>
                  <widget class="QPlainTextEdit" name="negative_prompt">
                   <property name="placeholderText">
-                   <string>Enter negative prompt</string>
+                   <string>Negative prompt</string>
                   </property>
                  </widget>
                 </item>
                 <item>
                  <widget class="QPlainTextEdit" name="secondary_negative_prompt">
                   <property name="placeholderText">
-                   <string>Enter optional second negative prompt</string>
+                   <string>Second negative prompt</string>
                   </property>
                  </widget>
                 </item>
@@ -505,8 +515,8 @@
    <slot>handle_image_presets_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>108</x>
-     <y>621</y>
+     <x>109</x>
+     <y>693</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -521,12 +531,28 @@
    <slot>handle_quality_effects_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>532</x>
-     <y>621</y>
+     <x>552</x>
+     <y>693</y>
     </hint>
     <hint type="destinationlabel">
      <x>524</x>
      <y>700</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>add_prompt_button</sender>
+   <signal>clicked()</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_add_prompt_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>60</x>
+     <y>318</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>291</y>
     </hint>
    </hints>
   </connection>
@@ -548,5 +574,6 @@
   <slot>handle_second_negative_prompt_changed()</slot>
   <slot>handle_quality_effects_changed(QString)</slot>
   <slot>past_conversations_clicked()</slot>
+  <slot>handle_add_prompt_clicked()</slot>
  </slots>
 </ui>

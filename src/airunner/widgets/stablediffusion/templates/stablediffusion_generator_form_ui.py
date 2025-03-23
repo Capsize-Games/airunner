@@ -114,9 +114,43 @@ class Ui_stablediffusion_generator_form(object):
         self.generator_form_splitter.setChildrenCollapsible(False)
         self.layoutWidget = QWidget(self.generator_form_splitter)
         self.layoutWidget.setObjectName(u"layoutWidget")
-        self.gridLayout_2 = QGridLayout(self.layoutWidget)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.gridLayout_2.setContentsMargins(0, 0, 0, 9)
+        self.prompt_container_layout = QGridLayout(self.layoutWidget)
+        self.prompt_container_layout.setObjectName(u"prompt_container_layout")
+        self.prompt_container_layout.setContentsMargins(0, 0, 0, 9)
+        self.add_prompt_button = QPushButton(self.layoutWidget)
+        self.add_prompt_button.setObjectName(u"add_prompt_button")
+
+        self.prompt_container_layout.addWidget(self.add_prompt_button, 3, 0, 1, 1)
+
+        self.additional_prompts_container_layout = QVBoxLayout()
+        self.additional_prompts_container_layout.setObjectName(u"additional_prompts_container_layout")
+
+        self.prompt_container_layout.addLayout(self.additional_prompts_container_layout, 2, 0, 1, 2)
+
+        self.label = QLabel(self.layoutWidget)
+        self.label.setObjectName(u"label")
+        font1 = QFont()
+        font1.setPointSize(8)
+        font1.setBold(True)
+        self.label.setFont(font1)
+
+        self.prompt_container_layout.addWidget(self.label, 0, 0, 1, 1)
+
+        self.prompt_container = QHBoxLayout()
+        self.prompt_container.setObjectName(u"prompt_container")
+        self.prompt = QPlainTextEdit(self.layoutWidget)
+        self.prompt.setObjectName(u"prompt")
+
+        self.prompt_container.addWidget(self.prompt)
+
+        self.secondary_prompt = QPlainTextEdit(self.layoutWidget)
+        self.secondary_prompt.setObjectName(u"secondary_prompt")
+
+        self.prompt_container.addWidget(self.secondary_prompt)
+
+
+        self.prompt_container_layout.addLayout(self.prompt_container, 1, 0, 1, 2)
+
         self.horizontalLayout_6 = QHBoxLayout()
         self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
         self.horizontalLayout_6.setContentsMargins(-1, 10, -1, -1)
@@ -130,31 +164,7 @@ class Ui_stablediffusion_generator_form(object):
         self.horizontalLayout_6.addWidget(self.pushButton)
 
 
-        self.gridLayout_2.addLayout(self.horizontalLayout_6, 0, 1, 1, 1)
-
-        self.label = QLabel(self.layoutWidget)
-        self.label.setObjectName(u"label")
-        font1 = QFont()
-        font1.setPointSize(8)
-        font1.setBold(True)
-        self.label.setFont(font1)
-
-        self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
-
-        self.horizontalLayout_5 = QHBoxLayout()
-        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.prompt = QPlainTextEdit(self.layoutWidget)
-        self.prompt.setObjectName(u"prompt")
-
-        self.horizontalLayout_5.addWidget(self.prompt)
-
-        self.secondary_prompt = QPlainTextEdit(self.layoutWidget)
-        self.secondary_prompt.setObjectName(u"secondary_prompt")
-
-        self.horizontalLayout_5.addWidget(self.secondary_prompt)
-
-
-        self.gridLayout_2.addLayout(self.horizontalLayout_5, 1, 0, 1, 2)
+        self.prompt_container_layout.addLayout(self.horizontalLayout_6, 0, 1, 1, 1)
 
         self.generator_form_splitter.addWidget(self.layoutWidget)
         self.layoutWidget1 = QWidget(self.generator_form_splitter)
@@ -269,6 +279,7 @@ class Ui_stablediffusion_generator_form(object):
         self.pushButton.clicked.connect(stablediffusion_generator_form.action_clicked_button_save_prompts)
         self.image_presets.currentTextChanged.connect(stablediffusion_generator_form.handle_image_presets_changed)
         self.quality_effects.currentTextChanged.connect(stablediffusion_generator_form.handle_quality_effects_changed)
+        self.add_prompt_button.clicked.connect(stablediffusion_generator_form.handle_add_prompt_clicked)
 
         QMetaObject.connectSlotsByName(stablediffusion_generator_form)
     # setupUi
@@ -282,13 +293,14 @@ class Ui_stablediffusion_generator_form(object):
         self.quality_effects.setItemText(2, QCoreApplication.translate("stablediffusion_generator_form", u"Upscaled", None))
         self.quality_effects.setItemText(3, QCoreApplication.translate("stablediffusion_generator_form", u"Downscaled", None))
 
-        self.pushButton.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Save Prompts", None))
+        self.add_prompt_button.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Add Prompt", None))
         self.label.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Prompt", None))
-        self.prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Enter prompt", None))
-        self.secondary_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Enter optional second prompt", None))
+        self.prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Prompt", None))
+        self.secondary_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Second prompt", None))
+        self.pushButton.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Save Prompts", None))
         self.negative_prompt_label.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative Prompt", None))
-        self.negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Enter negative prompt", None))
-        self.secondary_negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Enter optional second negative prompt", None))
+        self.negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative prompt", None))
+        self.secondary_negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Second negative prompt", None))
         self.croops_coord_top_left_groupbox.setTitle(QCoreApplication.translate("stablediffusion_generator_form", u"Crops Coord (top left)", None))
         self.crops_coord_top_left_x.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"x position", None))
         self.crops_coord_top_left_y.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"y position", None))

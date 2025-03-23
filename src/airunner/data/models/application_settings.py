@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Boolean
 
 from airunner.data.models.base import BaseModel
 from airunner.enums import (
