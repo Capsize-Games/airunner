@@ -2,7 +2,7 @@ from typing import Optional, Dict
 from functools import partial
 
 from PySide6 import QtGui
-from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
+from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, QSettings
 from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItemGroup, QGraphicsLineItem
 
@@ -15,6 +15,10 @@ from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.widgets.canvas.zoom_handler import ZoomHandler
+from airunner.settings import (
+    AIRUNNER_ORGANIZATION,
+    AIRUNNER_APPLICATION_NAME,
+)
 
 
 class CustomGraphicsView(
@@ -37,6 +41,9 @@ class CustomGraphicsView(
         self._scene_is_active: bool = False
         self.last_pos: QPoint = QPoint(0, 0)
         self.zoom_handler: ZoomHandler = ZoomHandler()
+        self.canvas_offset = QPoint(0, 0)  # Offset for infinite scrolling
+        self.settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
+        self.load_canvas_offset()
 
         # register signal handlers
         signal_handlers = {
@@ -54,6 +61,17 @@ class CustomGraphicsView(
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
+
+    def load_canvas_offset(self):
+        """Load the canvas offset from QSettings."""
+        x = self.settings.value("canvas_offset_x", 0, type=int)
+        y = self.settings.value("canvas_offset_y", 0, type=int)
+        self.canvas_offset = QPoint(x, y)
+
+    def save_canvas_offset(self):
+        """Save the canvas offset to QSettings."""
+        self.settings.setValue("canvas_offset_x", self.canvas_offset.x())
+        self.settings.setValue("canvas_offset_y", self.canvas_offset.y())
 
     @property
     def scene(self) -> Optional[CustomScene]:
@@ -140,7 +158,7 @@ class CustomGraphicsView(
 
     def draw_grid(self):
         if not self.__can_draw_grid:
-            pass
+            return
 
         if self.line_group is None:
             self.line_group = QGraphicsItemGroup()
@@ -152,8 +170,12 @@ class CustomGraphicsView(
         scene_width = int(self.scene.width())
         scene_height = int(self.scene.height())
 
-        num_vertical_lines = scene_width // cell_size + 1
-        num_horizontal_lines = scene_height // cell_size + 1
+        # Adjust for canvas offset
+        offset_x = self.canvas_offset.x() % cell_size
+        offset_y = self.canvas_offset.y() % cell_size
+
+        num_vertical_lines = scene_width // cell_size + 2
+        num_horizontal_lines = scene_height // cell_size + 2
 
         color = QColor(self.grid_settings.line_color)
         pen = QPen(
@@ -163,7 +185,7 @@ class CustomGraphicsView(
 
         # Create or reuse vertical lines
         for i in range(num_vertical_lines):
-            x = i * cell_size
+            x = i * cell_size - offset_x
             if i < len(self.line_group.childItems()):
                 line = self.line_group.childItems()[i]
                 line.setLine(x, 0, x, scene_height)
@@ -175,7 +197,7 @@ class CustomGraphicsView(
 
         # Create or reuse horizontal lines
         for i in range(num_horizontal_lines):
-            y = i * cell_size
+            y = i * cell_size - offset_y
             index = i + num_vertical_lines
             if index < len(self.line_group.childItems()):
                 line = self.line_group.childItems()[index]
@@ -305,13 +327,6 @@ class CustomGraphicsView(
     def showEvent(self, event):
         super().showEvent(event)
 
-        if self.canvas_type == CanvasType.IMAGE.value:
-            original_mouse_event = self.mouseMoveEvent
-            self.mouseMoveEvent = partial(
-                self.handle_mouse_event,
-                original_mouse_event
-            )
-
         self.setContentsMargins(0, 0, 0, 0)
 
         self.do_draw(True)
@@ -332,20 +347,6 @@ class CustomGraphicsView(
         color = QColor(self.current_background_color)
         brush = QBrush(color)
         scene.setBackgroundBrush(brush)
-
-    def handle_mouse_event(self, original_mouse_event, event):
-        if event.buttons() == Qt.MouseButton.MiddleButton:
-            if self.last_pos:
-                delta = event.pos() - self.last_pos
-                horizontal_value = self.horizontalScrollBar().value()
-                vertical_value = self.verticalScrollBar().value()
-                horizontal_value -= delta.x()
-                vertical_value -= delta.y()
-                self.horizontalScrollBar().setValue(horizontal_value)
-                self.verticalScrollBar().setValue(vertical_value)
-            self.last_pos = event.pos()
-            self.do_draw()
-        original_mouse_event(event)
 
     def on_tool_changed_signal(self, message):
         self.toggle_drag_mode()
@@ -385,9 +386,31 @@ class CustomGraphicsView(
         )
         return new_event
 
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if self.canvas_type == CanvasType.BRUSH.value:
+            if self._middle_mouse_pressed:
+                delta = event.pos() - self.last_pos
+                self.canvas_offset += delta
+                self.last_pos = event.pos()
+                self.do_draw()
+        super().mouseMoveEvent(event)
+
+    _middle_mouse_pressed: bool = False
+
     def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.MiddleButton:
+            self._middle_mouse_pressed = True
+            self.last_pos = event.pos()
+
         new_event = self.snap_to_grid(event)
+
         super().mousePressEvent(new_event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.MiddleButton:
+            self._middle_mouse_pressed = False
+            self.last_pos = None
+        super().mouseReleaseEvent(event)
 
     def leaveEvent(self, event: QEvent) -> None:
         """
@@ -396,3 +419,8 @@ class CustomGraphicsView(
         """
         self.scene.leaveEvent(event)
         super().leaveEvent(event)
+
+    def closeEvent(self, event):
+        """Save canvas offset on close."""
+        self.save_canvas_offset()
+        super().closeEvent(event)
