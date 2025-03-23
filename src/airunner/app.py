@@ -32,6 +32,7 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models import ApplicationSettings
 from airunner.windows.main.main_window import MainWindow
+from airunner.settings import DISCORD_URL
 
 
 class App(
@@ -240,9 +241,9 @@ class App(
             traceback.print_exc()
             print(e)
             splash.finish(None)
-            sys.exit("""
+            sys.exit(f"""
                 An error occurred while initializing the application.
-                Please report this issue on GitHub or Discord."
+                Please report this issue on GitHub or Discord {DISCORD_URL}."
             """)
         app.main_window = window
         splash.finish(window)
