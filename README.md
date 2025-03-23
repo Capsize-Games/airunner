@@ -1,7 +1,5 @@
 [![Banner](banner.png)](https://github.com/Capsize-Games/airunner)
 
-[![Discord logo](discord-logo.png)](https://discord.gg/PUVDDCJ7gz)
-
 [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz)
 [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml)
 ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner)
