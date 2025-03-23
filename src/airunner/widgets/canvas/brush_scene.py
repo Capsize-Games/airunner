@@ -3,9 +3,8 @@ from PIL import ImageQt
 from PIL.Image import Image
 from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QPainterPath
-from PySide6.QtGui import QPen, QPixmap, QPainter
-from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QGraphicsPixmapItem
+from PySide6.QtGui import QPen, QPixmap, QPainter, QColor
+from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsLineItem
 
 from airunner.data.models import DrawingPadSettings
 from airunner.enums import SignalCode, CanvasToolName
@@ -23,6 +22,7 @@ class BrushScene(CustomScene):
         super().__init__(canvas_type)
         brush_color = self.brush_settings.primary_color
         self._brush_color = QColor(brush_color)
+        self.draw_button_down: bool = False
         self.pen = QPen(
             self._brush_color,
             self.brush_settings.size,
@@ -91,7 +91,7 @@ class BrushScene(CustomScene):
         if self.painter is None:
             self.refresh_image(self.current_active_image)
         if self.painter is not None and self.painter.isActive():
-            if self.last_pos:
+            if self.last_pos and self.draw_button_down:
                 if self.current_tool is CanvasToolName.BRUSH:
                     self._draw_at(self.painter)
                 elif self.current_tool is CanvasToolName.ERASER:
@@ -158,27 +158,35 @@ class BrushScene(CustomScene):
             # Create a QPainterPath object
             self.path = QPainterPath()
 
+        # Get canvas offset from parent view
+        view = self.views()[0]
+        canvas_offset = view.canvas_offset if hasattr(view, 'canvas_offset') else QPointF(0, 0)
+        
         if not self.start_pos:
             return
 
-        self.path.moveTo(self.start_pos)
-
-        # Calculate the midpoint and use it as control point for quadTo
-        start_pos = self.start_pos
-        last_pos = self.last_pos
-
+        # Convert scene coordinates to image coordinates by applying canvas_offset
+        image_start_pos = QPointF(self.start_pos.x() + canvas_offset.x(), 
+                                  self.start_pos.y() + canvas_offset.y())
+        image_last_pos = QPointF(self.last_pos.x() + canvas_offset.x(), 
+                                 self.last_pos.y() + canvas_offset.y())
+        
+        # Move to start position in image coordinates
+        self.path.moveTo(image_start_pos)
+        
+        # Create control point in image coordinates
         control_point = QPointF(
-            (start_pos.x() + last_pos.x()) * 0.5,
-            (start_pos.y() + last_pos.y()) * 0.5
+            (image_start_pos.x() + image_last_pos.x()) * 0.5,
+            (image_start_pos.y() + image_last_pos.y()) * 0.5
         )
-        self.path.quadTo(
-            control_point,
-            self.last_pos
-        )
-
+        
+        # Draw quadratic curve to end position in image coordinates
+        self.path.quadTo(control_point, image_last_pos)
+        
         # Draw the path
         painter.drawPath(self.path)
-
+        
+        # Update start position for next segment
         self.start_pos = self.last_pos
 
         # Create a QPixmap from the image and set it to the QGraphicsPixmapItem
@@ -189,14 +197,40 @@ class BrushScene(CustomScene):
         # save the image
         self.active_item.setPixmap(pixmap)
 
-    def mousePressEvent(self, event):
+    def create_line(self, event):
+        scene_pt = event.scenePos()
+        
+        # Get canvas offset from parent view
+        view = self.views()[0]
+        canvas_offset = view.canvas_offset if hasattr(view, 'canvas_offset') else QPointF(0, 0)
+        
+        # Apply canvas offset to convert scene coordinates to image coordinates
+        x = scene_pt.x() + canvas_offset.x()
+        y = scene_pt.y() + canvas_offset.y()
+        
+        new_line = QGraphicsLineItem(
+            x, y,
+            x + 10, y + 10
+        )
+        self.addItem(new_line)
+
+    def _handle_left_mouse_press(self, event):
+        # Use scenePos() so this matches the scene's offset
+        self.draw_button_down = True
+        self.start_pos = event.scenePos()
         if self.drawing_pad_settings.mask_layer_enabled and self.mask_image is None:
             self._create_mask_image()
         elif self.is_brush_or_eraser:
             self._add_image_to_undo()
-        return super().mousePressEvent(event)
+        return super()._handle_left_mouse_press(event)
+
+    def mouseMoveEvent(self, event):
+        # Update last_pos with scenePos() for consistent drawing
+        self.last_pos = event.scenePos()
+        super().mouseMoveEvent(event)
 
     def _handle_left_mouse_release(self, event) -> bool:
+        self.draw_button_down = False
         drawing_pad_settings = DrawingPadSettings.objects.first()
         if self.drawing_pad_settings.mask_layer_enabled:
             mask_image: Image = ImageQt.fromqimage(self.mask_image)
