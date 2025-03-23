@@ -8,6 +8,7 @@ from typing import Dict
 
 import requests
 from PIL import Image
+from PySide6.QtCore import QSettings
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
@@ -32,6 +33,8 @@ from airunner.settings import (
     BASE_PATH,
     BUG_REPORT_LINK,
     VULNERABILITY_REPORT_LINK,
+    AIRUNNER_ORGANIZATION,
+    AIRUNNER_APPLICATION_NAME,
 )
 from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
 from airunner.handlers.llm.agent.actions.show_path import show_path
@@ -809,44 +812,53 @@ class MainWindow(
         self.quitting = True
         self.logger.debug("Saving window state")
 
-        self.save_window_settings("is_maximized", self.isMaximized())
-        self.save_window_settings("is_fullscreen", self.isFullScreen())
-        self.save_window_settings("llm_splitter", self.ui.tool_tab_widget.ui.llm_splitter.saveState())
-        self.save_window_settings("width", self.width())
-        self.save_window_settings("height", self.height())
-        self.save_window_settings("x_pos", self.pos().x())
-        self.save_window_settings("y_pos", self.pos().y())
-        self.save_window_settings(
+        settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
+        settings.beginGroup("window_settings")
+        settings.setValue("is_maximized", self.isMaximized())
+        settings.setValue("is_fullscreen", self.isFullScreen())
+        settings.setValue("width", self.width())
+        settings.setValue("height", self.height())
+        settings.setValue("x_pos", self.pos().x())
+        settings.setValue("y_pos", self.pos().y())
+        settings.setValue(
             "mode_tab_widget_index",
             self.ui.generator_widget.ui.generator_form_tabs.currentIndex()
         )
+        settings.endGroup()
         save_splitter_settings(self.ui, ["main_window_splitter"])
 
     def restore_state(self):
+        """
+        Restore the window based on the previous state.
+        """
         self.logger.debug("Restoring state")
-        if self.window_settings is not None and self.window_settings.is_maximized:
+
+        # Get the window settings
+        settings = self.window_settings
+        
+        # Resize the window
+        self.setMinimumSize(100, 100)
+        width = int(settings["width"])
+        height = int(settings["height"])
+        self.resize(width, height)
+
+        # Move the window
+        x_pos = int(settings["x_pos"])
+        y_pos = int(settings["y_pos"])
+        self.move(x_pos, y_pos)
+
+        # Show the window
+        if settings is not None and settings.get("is_maximized", False):
+            self.logger.info("Restoring window to maximized state")
             self.showMaximized()
-        elif self.window_settings is not None and self.window_settings.is_fullscreen:
+        elif settings is not None and settings.get("is_fullscreen", False):
+            self.logger.info("Restoring window to fullscreen state")
             self.showFullScreen()
         else:
+            self.logger.info("Restoring window to normal state")
             self.showNormal()
 
-        first_run = False   
-
-        self.setMinimumSize(100, 100)  # Set a reasonable minimum size
-
-        width = int(self.window_settings.width)
-        height = int(self.window_settings.height)
-        if first_run:
-            screen_geometry = QGuiApplication.primaryScreen().geometry()
-            x_pos = (screen_geometry.width() - width) // 2
-            y_pos = (screen_geometry.height() - height) // 2
-        else:
-            x_pos = int(self.window_settings.x_pos)
-            y_pos = int(self.window_settings.y_pos)
-
-        self.resize(width, height)
-        self.move(x_pos, y_pos)
+        # Raise the window to the top of the stack
         self.raise_()
 
     ##### End window properties #####
