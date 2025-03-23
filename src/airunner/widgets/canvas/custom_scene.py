@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Dict
 import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QRect
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent, QMessageBox
@@ -233,10 +233,17 @@ class CustomScene(
             if len(images) == 0:
                 self.logger.debug("No images received from engine")
             elif message:
+                rect = message.get("active_rect", None)
+                outpaint_box_rect = QRect(
+                    rect.x,
+                    rect.y,
+                    rect.width,
+                    rect.height
+                ) if rect else None
                 self._create_image(
                     image=images[0].convert("RGBA"),
                     is_outpaint=message.get("is_outpaint", False),
-                    outpaint_box_rect=message.get("active_rect", None)
+                    outpaint_box_rect=outpaint_box_rect
                 )
         else:
             self.logger.error(f"Unhandled response code: {code}")
