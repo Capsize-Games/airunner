@@ -1,5 +1,5 @@
 from typing import List
-from airunner.data.models import SplitterSetting
+from PySide6.QtCore import QSettings
 
 
 def load_splitter_settings(
@@ -8,11 +8,13 @@ def load_splitter_settings(
     orientations: dict = None  # Dictionary mapping splitter_name to orientation
 ):
     """
-    Load the state of splitter widgets from the database.
+    Load the state of splitter widgets from PySide6 application settings.
     """
     if orientations is None:
         orientations = {}
         
+    settings = QSettings("YourOrganization", "YourApplication")
+
     for splitter_name in splitters:
         splitter = getattr(ui, splitter_name)
         splitter.setMinimumWidth(50)
@@ -23,26 +25,23 @@ def load_splitter_settings(
             orientation = orientations[splitter_name]
             splitter.setOrientation(orientation)
         
-        settings = SplitterSetting.objects.filter_by_first(
-            name=splitter_name  # Use the actual splitter name
-        )
+        # Retrieve the splitter state from application settings
+        splitter_state = settings.value(f"splitters/{splitter_name}", None)
 
-        if settings:
-            # Calculate reasonable default sizes
-            default_width = splitter.width() or 800  # Fallback to 800 if width is 0
-            panel_size = max(50, default_width // total_splitter_panels)
-            sizes = [panel_size for _ in range(total_splitter_panels)]
-            
-            try:
-                state = settings.splitter_settings
-                if state and len(state) > 0:
-                    # Check if we're loading the correct state for this splitter
-                    splitter.restoreState(state)
-                else:
-                    splitter.setSizes(sizes)
-            except Exception as e:
-                print(f"Error restoring splitter state for {splitter_name}: {e}")
+        # Calculate reasonable default sizes
+        default_width = splitter.width() or 800  # Fallback to 800 if width is 0
+        panel_size = max(50, default_width // total_splitter_panels)
+        sizes = [panel_size for _ in range(total_splitter_panels)]
+        
+        try:
+            if splitter_state:
+                # Restore the splitter state if available
+                splitter.restoreState(splitter_state)
+            else:
                 splitter.setSizes(sizes)
+        except Exception as e:
+            print(f"Error restoring splitter state for {splitter_name}: {e}")
+            splitter.setSizes(sizes)
         
         # Store back the potentially modified splitter
         setattr(ui, splitter_name, splitter)

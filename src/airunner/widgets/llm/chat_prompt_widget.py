@@ -15,7 +15,6 @@ from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
-from airunner.data.models import SplitterSetting
 
 
 class ChatPromptWidget(BaseWidget):
