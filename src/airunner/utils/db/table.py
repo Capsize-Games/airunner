@@ -1,3 +1,4 @@
+from typing import Optional
 from alembic import op
 import sqlalchemy as sa
 
@@ -29,11 +30,13 @@ def add_tables(classes):
     return
 
 
-def drop_table(cls):
-    if table_exists(cls.__tablename__):
-        op.drop_table(cls.__tablename__)
+def drop_table(cls: Optional[object] = None, table_name: Optional[str] = None):
+    if cls is not None:
+        table_name = cls.__tablename__
+    if table_exists(table_name):
+        op.drop_table(table_name)
     else:
-        print(f"Table '{cls.__tablename__}' does not exist, skipping drop.")
+        print(f"Table '{table_name}' does not exist, skipping drop.")
     return
 
 
