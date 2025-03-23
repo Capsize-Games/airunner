@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 import inspect
 from typing import Callable
 from PySide6.QtCore import QObject, Signal as BaseSignal, Slot
@@ -51,7 +51,13 @@ class SignalMediator(metaclass=SingletonMeta):
     Responsible for mediating signals between classes.
     """
 
-    signals = {}
+    def __init__(self, backend: Optional[object] = None):
+        """
+        Initialize the SignalMediator with an optional backend.
+        :param backend: Custom backend for signal handling (e.g., RabbitMQ).
+        """
+        self.backend = backend
+        self.signals = {} if backend is None else None
 
     def register(
         self,
@@ -61,10 +67,14 @@ class SignalMediator(metaclass=SingletonMeta):
         """
         Register a signal to be received by a function.
         """
-        # Create a new Signal instance for this signal name
-        if code not in self.signals:
-            self.signals[code] = []
-        self.signals[code].append(Signal(callback=slot_function))
+        if self.backend:
+            # Delegate registration to the custom backend
+            self.backend.register(code, slot_function)
+        else:
+            # Default PySide6-based implementation
+            if code not in self.signals:
+                self.signals[code] = []
+            self.signals[code].append(Signal(callback=slot_function))
 
     def emit_signal(
         self,
@@ -75,6 +85,9 @@ class SignalMediator(metaclass=SingletonMeta):
         Emit a signal to be received by a function.
         """
         data = {} if data is None else data
-        if code in self.signals:
-            for _n, signal in enumerate(self.signals[code]):
+        if self.backend:
+            # Delegate emission to the custom backend
+            self.backend.emit_signal(code, data)
+        elif code in self.signals:
+            for signal in self.signals[code]:
                 signal.signal.emit(data)
