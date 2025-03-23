@@ -438,6 +438,11 @@ class SettingsMixin:
         generator_settings = self.generator_settings
         setattr(generator_settings, column_name, val)
         generator_settings.save()
+        self.__settings_updated(
+            setting_name=GeneratorSettings.__tablename__,
+            column_name=column_name,
+            val=val
+        )
 
     def update_controlnet_image_settings(self, column_name, val):
         controlnet_settings = self.controlnet_settings
@@ -712,11 +717,8 @@ class SettingsMixin:
         return self.settings_mixin_shared_instance.chatbot
 
     def __settings_updated(self, setting_name=None, column_name=None, val=None):
-        data = None
-        if setting_name and column_name and val:
-            data = {
-                "setting_name": setting_name,
-                "column_name": column_name,
-                "value": val
-            }
-        self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, data)
+        self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, {
+            "setting_name": setting_name,
+            "column_name": column_name,
+            "value": val
+        })
