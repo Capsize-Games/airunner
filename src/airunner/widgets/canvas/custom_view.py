@@ -43,6 +43,7 @@ class CustomGraphicsView(
         self.zoom_handler: ZoomHandler = ZoomHandler()
         self.canvas_offset = QPoint(0, 0)  # Offset for infinite scrolling
         self.settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
+        self._middle_mouse_pressed: bool = False
         self.load_canvas_offset()
 
         # register signal handlers
@@ -283,8 +284,9 @@ class CustomGraphicsView(
             if height < cell_size:
                 height = cell_size
 
-            x = rect.x()
-            y = rect.y()
+            # Apply canvas offset to the position to maintain relative positioning
+            x = rect.x() + self.canvas_offset.x()
+            y = rect.y() + self.canvas_offset.y()
 
             self.update_active_grid_settings("pos_x", x)
             self.update_active_grid_settings("pos_y", y)
@@ -308,6 +310,15 @@ class CustomGraphicsView(
             self.active_grid_area = ActiveGridArea()
             self.active_grid_area.setZValue(10)
             self.scene.addItem(self.active_grid_area)
+            
+        # Adjust active grid area position based on canvas offset
+        if self.active_grid_area:
+            # Get the position from settings, subtract the canvas offset to display correctly
+            pos_x = self.active_grid_settings.pos_x - self.canvas_offset.x()
+            pos_y = self.active_grid_settings.pos_y - self.canvas_offset.y()
+            
+            # Update the position property of the active grid area
+            self.active_grid_area.setPos(pos_x, pos_y)
 
     def on_zoom_level_changed_signal(self):
         transform = self.zoom_handler.on_zoom_level_changed()
@@ -393,9 +404,25 @@ class CustomGraphicsView(
                 self.canvas_offset += delta
                 self.last_pos = event.pos()
                 self.do_draw()
+        if self._middle_mouse_pressed:
+            delta = event.pos() - self.last_pos
+            self.canvas_offset += delta
+            self.last_pos = event.pos()
+            
+            # Update the active grid area position when panning
+            if self.active_grid_area:
+                pos_x = self.active_grid_settings.pos_x - self.canvas_offset.x()
+                pos_y = self.active_grid_settings.pos_y - self.canvas_offset.y()
+                self.active_grid_area.setPos(pos_x, pos_y)
+            
+            # Update the scene to reflect changes
+            self.do_draw()
+            
+            # Tell the scene to update the image position
+            if self.scene:
+                self.scene.update_image_position(self.canvas_offset)
+                
         super().mouseMoveEvent(event)
-
-    _middle_mouse_pressed: bool = False
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.MiddleButton:
