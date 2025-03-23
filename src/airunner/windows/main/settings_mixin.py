@@ -1,6 +1,8 @@
 import os
 import logging
-from typing import List, Type, Optional
+from typing import List, Type, Optional, Dict, Any
+
+from PySide6.QtCore import QSettings
 
 from sqlalchemy.orm import joinedload
 
@@ -18,7 +20,6 @@ from airunner.data.models import (
     PipelineModel, 
     ShortcutKeys,
     GeneratorSettings, 
-    WindowSettings, 
     ApplicationSettings, 
     ActiveGridSettings, 
     ControlnetSettings,
@@ -42,6 +43,10 @@ from airunner.data.models import (
 from airunner.enums import SignalCode
 from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
+from airunner.settings import (
+    AIRUNNER_ORGANIZATION,
+    AIRUNNER_APPLICATION_NAME
+)
 
 
 class SettingsMixinSharedInstance:
@@ -116,8 +121,21 @@ class SettingsMixin:
         return self.load_settings_from_db(WhisperSettings)
     
     @property
-    def window_settings(self) -> WindowSettings:
-        return self.load_settings_from_db(WindowSettings)
+    def window_settings(self) -> Dict[str, Any]:
+        settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
+        settings.beginGroup("window_settings")
+        window_settings = {
+            "is_maximized": settings.value("is_maximized", False, type=bool),
+            "is_fullscreen": settings.value("is_fullscreen", False, type=bool),
+            "width": settings.value("width", 800, type=int),
+            "height": settings.value("height", 600, type=int),
+            "x_pos": settings.value("x_pos", 0, type=int),
+            "y_pos": settings.value("y_pos", 0, type=int),
+            "mode_tab_widget_index": settings.value("mode_tab_widget_index", 0, type=int),
+        }
+        settings.endGroup()
+        return window_settings
+        
 
     @property
     def llm_generator_settings(self) -> LLMGeneratorSettings:
@@ -681,18 +699,6 @@ class SettingsMixin:
     @staticmethod
     def load_shortcut_keys() -> List[Type[ShortcutKeys]]:
         return ShortcutKeys.objects.all()
-
-    def save_window_settings(self, column_name, val):
-        window_settings = self.window_settings
-        setattr(window_settings, column_name, val)
-        new_window_settings = WindowSettings.objects.first()
-        if new_window_settings:
-            for key in window_settings.__dict__.keys():
-                if key != "_sa_instance_state":
-                    setattr(new_window_settings, key, getattr(window_settings, key))
-            new_window_settings.save()
-        else:
-            window_settings.save()
 
     def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
         if not self.settings_mixin_shared_instance.chatbot:
