@@ -77,9 +77,9 @@ class CustomGraphicsView(
 
     def load_canvas_offset(self):
         """Load the canvas offset from QSettings."""
-        x = self.settings.value("canvas_offset_x", 0, type=int)
-        y = self.settings.value("canvas_offset_y", 0, type=int)
-        self.canvas_offset = QPoint(x, y)
+        x = self.settings.value("canvas_offset_x", 0, type=float)
+        y = self.settings.value("canvas_offset_y", 0, type=float)
+        self.canvas_offset = QPointF(x, y)
 
     def save_canvas_offset(self):
         """Save the canvas offset to QSettings."""
@@ -99,6 +99,7 @@ class CustomGraphicsView(
                 return
         
         if scene:
+            scene.parent = self
             self._scene = scene
             self.setScene(scene)
             self.set_canvas_color(scene)

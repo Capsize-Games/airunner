@@ -363,8 +363,9 @@ class CustomScene(
             if event.button() == Qt.MouseButton.RightButton:
                 self.right_mouse_button_pressed = True
                 self.start_pos = event.scenePos()
-            elif not self._handle_left_mouse_press(event):
-                super(CustomScene, self).mousePressEvent(event)
+            elif event.button() == Qt.MouseButton.LeftButton:
+                if not self._handle_left_mouse_press(event):
+                    super(CustomScene, self).mousePressEvent(event)
         self._handle_cursor(event)
         self.last_pos = event.scenePos()
         self.update()
