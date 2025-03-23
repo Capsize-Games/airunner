@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Dict
 import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
 from PIL.ImageQt import QImage
-from PySide6.QtCore import Qt, QPoint, QRect
+from PySide6.QtCore import Qt, QPoint, QRect, QPointF
 from PySide6.QtGui import QEnterEvent, QDragEnterEvent, QDropEvent, QImageReader, QDragMoveEvent, QMouseEvent
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent, QMessageBox
@@ -55,12 +55,16 @@ class CustomScene(
         self.redo_history = []
         self.right_mouse_button_pressed = False
         self.handling_event = False
+        self._original_item_positions = {}  # Store original positions of items
+
+        # Add viewport rectangle that includes negative space
+        self._extended_viewport_rect = QRect(-2000, -2000, 4000, 4000)
 
         for signal, handler in [
             (SignalCode.CANVAS_COPY_IMAGE_SIGNAL, self.on_canvas_copy_image_signal),
             (SignalCode.CANVAS_CUT_IMAGE_SIGNAL, self.on_canvas_cut_image_signal),
             (SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_clockwise_signal),
-            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counter_clockwise_signal),
+            (SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL, self.on_canvas_rotate_90_counterclockwise_signal),
             (SignalCode.CANVAS_PASTE_IMAGE_SIGNAL, self.on_paste_image_from_clipboard),
             (SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL, self.on_export_image_signal),
             (SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL, self.on_import_image_signal),
@@ -288,7 +292,7 @@ class CustomScene(
     def on_canvas_rotate_90_clockwise_signal(self):
         self._rotate_90_clockwise()
 
-    def on_canvas_rotate_90_counter_clockwise_signal(self):
+    def on_canvas_rotate_90_counterclockwise_signal(self):
         self._rotate_90_counterclockwise()
 
     def on_action_undo_signal(self):
@@ -359,8 +363,9 @@ class CustomScene(
             if event.button() == Qt.MouseButton.RightButton:
                 self.right_mouse_button_pressed = True
                 self.start_pos = event.scenePos()
-            elif not self._handle_left_mouse_press(event):
-                super(CustomScene, self).mousePressEvent(event)
+            elif event.button() == Qt.MouseButton.LeftButton:
+                if not self._handle_left_mouse_press(event):
+                    super(CustomScene, self).mousePressEvent(event)
         self._handle_cursor(event)
         self.last_pos = event.scenePos()
         self.update()
@@ -484,27 +489,57 @@ class CustomScene(
             )
             self.image.fill(Qt.GlobalColor.transparent)
 
-    def set_item(self, image: QImage = None, z_index: int = 1):
-        self.setSceneRect(0, 0, 512, 512)
+    def set_item(self, image: QImage = None, z_index: int = 5):  # Change default z_index to 5
+        # Instead of fixed scene rect, use extended viewport
+        self.setSceneRect(self._extended_viewport_rect)
+        
         if image is not None:
             pixmap = QPixmap.fromImage(image)
             if self.item is None:
                 self.item = DraggablePixmap(pixmap)
             else:
                 self.item.setPixmap(pixmap)
-            self.item.setZValue(z_index)
+            self.item.setZValue(z_index)  # Higher Z-value for better visibility
             if self.item.scene() is None:
                 self.addItem(self.item)
+                # Store initial position when adding to scene
+                self._original_item_positions[self.item] = self.item.pos()
+            
+            # Ensure item is visible and prepare its geometry
+            self.item.setVisible(True)
+            self.item.prepareGeometryChange()
 
     def clear_selection(self):
         self.selection_start_pos = None
         self.selection_stop_pos = None
 
     def initialize_image(self, image: Image = None):
+        """Initialize the image in the scene."""
         self.stop_painter()
         self.set_image(image)
+        
+        # Save the current position before updating the item
+        old_pos = self.item.pos() if self.item else QPointF(0, 0)
+        
         self.set_item(self.image)
         self.set_painter(self.image)
+        
+        # If we had an original position stored for the previous item, use it for the new item
+        if self.item:
+            # Store the position if not already tracked
+            if self.item not in self._original_item_positions:
+                # Use the old position if it was a replacement item
+                if old_pos != QPointF(0, 0):
+                    self._original_item_positions[self.item] = old_pos
+                else:
+                    self._original_item_positions[self.item] = self.item.pos()
+            
+            # Make sure item is visible with priority rendering
+            self.item.setVisible(True)
+            self.item.setZValue(5)  # Higher Z ensures it appears above background
+            
+            # Force immediate update of the image area
+            self.update(self.item.boundingRect())
 
     def stop_painter(self):
         if self.painter is not None and self.painter.isActive():
@@ -676,6 +711,8 @@ class CustomScene(
             else:
                 root_point = QPoint(outpaint_box_rect["x"], outpaint_box_rect["y"])
             self.item.setPos(root_point.x(), root_point.y())
+            # Store original position when adding image
+            self._original_item_positions[self.item] = QPointF(root_point.x(), root_point.y())
 
         # self._set_current_active_image(image)
         self.current_active_image = image
@@ -918,3 +955,30 @@ class CustomScene(
             image = self.image_backup.copy()
         filtered_image = filter_object.filter(image)
         return filtered_image
+
+    def update_image_position(self, canvas_offset):
+        """Update the position of image items in the scene based on the canvas offset."""
+        if not self.item:
+            return
+            
+        # Store the original position if we haven't already
+        if self.item not in self._original_item_positions:
+            self._original_item_positions[self.item] = self.item.pos()
+        
+        # Get the original position
+        original_pos = self._original_item_positions[self.item]
+        
+        # Calculate and set the new position
+        new_x = original_pos.x() - canvas_offset.x() 
+        new_y = original_pos.y() - canvas_offset.y()
+        
+        # Before changing position, prepare the item for geometry change
+        self.item.prepareGeometryChange()
+        self.item.setPos(new_x, new_y)
+        
+        # Make sure the item is visible and in focus
+        self.item.setVisible(True)
+        self.item.setZValue(5)  # Priority rendering
+        
+        # Update the entire viewport to ensure image is visible even at negative coordinates
+        self.invalidate(self._extended_viewport_rect, QGraphicsScene.SceneLayer.ItemLayer)
