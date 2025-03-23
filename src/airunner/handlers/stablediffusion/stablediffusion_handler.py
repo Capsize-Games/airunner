@@ -452,22 +452,26 @@ class StableDiffusionHandler(BaseHandler):
         return self.outpaint_settings_cached.mask_blur
 
     @property
-    def prompt(self):
+    def prompt(self) -> str:
         prompt = self.generator_settings_cached.prompt
         return PromptWeightBridge.convert(prompt)
 
     @property
-    def second_prompt(self):
+    def second_prompt(self) -> str:
+        if not self.is_sd_xl_or_turbo:
+            return ""
         prompt = self.generator_settings_cached.second_prompt
         return PromptWeightBridge.convert(prompt)
 
     @property
-    def negative_prompt(self):
+    def negative_prompt(self) -> str:
         prompt = self.generator_settings_cached.negative_prompt
         return PromptWeightBridge.convert(prompt)
 
     @property
-    def second_negative_prompt(self):
+    def second_negative_prompt(self) -> str:
+        if not self.is_sd_xl_or_turbo:
+            return ""
         prompt = self.generator_settings_cached.second_negative_prompt
         return PromptWeightBridge.convert(prompt)
 
