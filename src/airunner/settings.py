@@ -139,7 +139,10 @@ DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
         "Ensure replies promote fairness and positivity."
     )
 )
-BASE_PATH = os.environ.get("BASE_PATH", "~/.local/share/airunner")
+BASE_PATH = os.environ.get(
+    "BASE_PATH",
+    os.path.expanduser("~/.local/share/airunner")
+)
 DEFAULT_PATH_SETTINGS = {
     "documents_path": os.path.expanduser(
         os.path.join(
@@ -419,15 +422,21 @@ DB_URL = os.environ.get("AIRUNNER_DATABASE_URL", default_url)
 if DB_URL == "" or not DB_URL:
     DB_URL = default_url
 
-# Default LLM Settings
-AIRUNNER_USE_LOCAL_LLM = os.environ.get("AIRUNNER_USE_LOCAL_LLM", True)
-AIRUNNER_USE_OPENROUTER = os.environ.get("AIRUNNER_USE_OPENROUTER", False)
-AIRUNNER_OPENROUTER_API_KEY = os.environ.get("AIRUNNER_OPENROUTER_API_KEY", "")
-AIRUNNER_USE_OPENAI = os.environ.get("AIRUNNER_USE_OPENAI", False)
-AIRUNNER_OPENAI_API_KEY = os.environ.get("AIRUNNER_OPENAI_API_KEY", "")
+# LLM Behavior Control
 AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS = int(os.environ.get("AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS", 5))
 AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS = int(os.environ.get("AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS", 3))
 AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS = int(os.environ.get("AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS", 5))
+AIRUNNER_LLM_PERFORM_ANALYSIS = os.getenv("AIRUNNER_LLM_PERFORM_ANALYSIS", "1") == "1"
+AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY = os.getenv("AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY", "1") == "1"
+AIRUNNER_LLM_PRINT_SYSTEM_PROMPT = os.getenv("AIRUNNER_LLM_PRINT_SYSTEM_PROMPT", "0") == "1"
+AIRUNNER_LLM_OPENROUTER_MODEL = os.getenv("AIRUNNER_LLM_OPENROUTER_MODEL", "mistralai/mistral-7b-instruct:free")
+AIRUNNER_LLM_USE_LOCAL = os.environ.get("AIRUNNER_LLM_USE_LOCAL", "1") == "1"
+AIRUNNER_LLM_USE_OPENROUTER = os.environ.get("AIRUNNER_LLM_USE_OPENROUTER", "0") == "1"
+AIRUNNER_LLM_OPENROUTER_API_KEY = os.environ.get("AIRUNNER_LLM_OPENROUTER_API_KEY", "")
+AIRUNNER_LLM_USE_OPENAI = os.environ.get("AIRUNNER_LLM_USE_OPENAI", "0") == "1"
+AIRUNNER_LLM_OPENAI_API_KEY = os.environ.get("AIRUNNER_LLM_OPENAI_API_KEY", "")
+
+# Identity
 AIRUNNER_ORGANIZATION = os.environ.get("AIRUNNER_ORGANIZATION", "Capsize LLC")
 AIRUNNER_APPLICATION_NAME = os.environ.get("AIRUNNER_APPLICATION_NAME", "AI Runner")
 AIRUNNER_MESSAGE_BACKEND = os.environ.get("AIRUNNER_MESSAGE_BACKEND", None)
