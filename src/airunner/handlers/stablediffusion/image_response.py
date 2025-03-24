@@ -19,10 +19,10 @@ class ImageResponse:
             "data": self.data,
             "nsfw_content_detected": self.nsfw_content_detected,
             "active_rect": {
-                "x": self.active_rect.x(),
-                "y": self.active_rect.y(),
-                "width": self.active_rect.width(),
-                "height": self.active_rect.height(),
+                "x": self.active_rect.x,
+                "y": self.active_rect.y,
+                "width": self.active_rect.width,
+                "height": self.active_rect.height,
             },
             "is_outpaint": self.is_outpaint,
         }
