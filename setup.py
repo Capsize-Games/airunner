@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.3.13",
+    version="3.3.14",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -27,6 +27,7 @@ setup(
         "alembic==1.14.1",
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
+        "setuptools==75.8.0",
     ],
     extras_require={
         "gui": [
@@ -59,10 +60,6 @@ setup(
             "sounddevice==0.5.1",
             "pyttsx3==2.91",
             "cryptography==44.0.0",
-            "setuptools==75.8.0",
-            "openmeteo_requests==1.3.0",
-            "requests-cache==1.2.1",
-            "retry-requests==2.0.0",
             "llama-index==0.12.14",
             "llama-index-readers-file==0.4.4",
             "llama-index-readers-web==0.3.5",
@@ -78,8 +75,12 @@ setup(
             "rake_nltk==1.0.6",
             "tf-keras==2.18.0",
             "peft==0.14.0",
-            "trafilatura==2.0.0",
             "lxml_html_clean==0.4.1",
+        ],
+        "llm_weather": [
+            "requests-cache==1.2.1",
+            "retry-requests==2.0.0",
+            "openmeteo_requests==1.3.0",
         ],
         "tts": [
             "inflect==7.5.0",
