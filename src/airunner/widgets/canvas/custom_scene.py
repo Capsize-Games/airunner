@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, 
 
 from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import VALID_IMAGE_FILES
+from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
 from airunner.utils import snap_to_grid, is_windows
 from airunner.utils.image import (
     export_image,
@@ -157,7 +157,7 @@ class CustomScene(
                 parent_window,
                 "Save Image",
                 initial_dir,
-                f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
+                f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})"
             )
             file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
             if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
@@ -169,7 +169,7 @@ class CustomScene(
                 self.last_export_path = os.path.dirname(file_path)
 
                 # If missing file extension, add it
-                if not file_path.endswith(VALID_IMAGE_FILES):
+                if not file_path.endswith(AIRUNNER_VALID_IMAGE_FILES):
                     file_path = f"{file_path}.png"
 
                 export_image(image, file_path)
@@ -179,7 +179,7 @@ class CustomScene(
             None,
             "Open Image",
             "",
-            f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
+            f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})"
         )
         if file_path == "":
             return
