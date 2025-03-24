@@ -6,14 +6,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Define a temporary in-memory SQLite database URL
-TEST_DB_URL = "sqlite:///:memory:"
+TEST_AIRUNNER_DB_URL = "sqlite:///:memory:"
 
 
 @pytest.fixture(scope="module")
 def alembic_config():
     # Create a temporary Alembic configuration for testing
     alembic_cfg = Config(os.path.join(os.path.dirname(__file__), '../alembic.ini'))
-    alembic_cfg.set_main_option("sqlalchemy.url", TEST_DB_URL)
+    alembic_cfg.set_main_option("sqlalchemy.url", TEST_AIRUNNER_DB_URL)
     # Set the script location explicitly
     alembic_cfg.set_main_option("script_location", os.path.join(os.path.dirname(__file__), '../alembic'))
     return alembic_cfg
@@ -22,7 +22,7 @@ def alembic_config():
 @pytest.fixture(scope="module")
 def connection(alembic_config):
     # Create an engine and connection to the temporary database
-    engine = create_engine(TEST_DB_URL)
+    engine = create_engine(TEST_AIRUNNER_DB_URL)
     connection = engine.connect()
     yield connection
     connection.close()

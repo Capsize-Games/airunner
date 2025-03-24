@@ -6,7 +6,7 @@ from PySide6.QtCore import Signal, QThread, QObject
 
 from airunner.enums import QueueType, SignalCode, WorkerState
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import SLEEP_TIME_IN_MS
+from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.windows.main.settings_mixin import SettingsMixin
 
 QObjectMeta = type(QObject)
@@ -67,9 +67,9 @@ class Worker(
             if self.paused:
                 self.logger.debug("Paused")
                 while self.paused:
-                    QThread.msleep(SLEEP_TIME_IN_MS)
+                    QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
                 self.logger.debug("Resumed")
-            QThread.msleep(SLEEP_TIME_IN_MS)
+            QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
 
     def preprocess(self):
         pass

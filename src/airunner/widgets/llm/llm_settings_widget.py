@@ -2,7 +2,7 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 
-from airunner.settings import DEFAULT_LLM_HF_PATH
+from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
 from airunner.windows.main.ai_model_mixin import AIModelMixin
@@ -90,7 +90,7 @@ class LLMSettingsWidget(
         templates = {
             "Mistral 7B Instruct: Default Chatbot": dict(
                 name="Mistral 7B Instruct: Default Chatbot",
-                model=DEFAULT_LLM_HF_PATH,
+                model=AIRUNNER_DEFAULT_LLM_HF_PATH,
                 llm_category="causallm",
             ),
         }

@@ -17,11 +17,9 @@ within this file.
 from dotenv import load_dotenv
 import os
 import sys
-from PySide6 import QtCore
-from airunner.enums import (
-    Scheduler,
-    SignalCode,
-)
+
+from airunner.enums import Scheduler
+
 load_dotenv()
 python_venv_dir = os.path.dirname(sys.executable)
 NLTK_DOWNLOAD_DIR = os.path.join(
@@ -29,9 +27,15 @@ NLTK_DOWNLOAD_DIR = os.path.join(
     "..",
     "lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/"
 )
-DEFAULT_LLM_HF_PATH = "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
-DEFAULT_STT_HF_PATH = "openai/whisper-tiny"
-DEFAULT_IMAGE_SYSTEM_PROMPT = os.environ.get(
+AIRUNNER_DEFAULT_LLM_HF_PATH = os.environ.get(
+    "AIRUNNER_AIRUNNER_DEFAULT_LLM_HF_PATH",
+    "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
+)
+AIRUNNER_DEFAULT_STT_HF_PATH = os.environ.get(
+    "AIRUNNER_DEFAULT_STT_HF_PATH",
+    "openai/whisper-tiny"
+)
+AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT = os.environ.get(
     "AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT", 
     (
         "You are an image generator. "
@@ -59,14 +63,14 @@ DEFAULT_IMAGE_SYSTEM_PROMPT = os.environ.get(
         "`composition`: This should describe the attributes of the image such as color, composition and other details\n"
     )
 )
-DEFAULT_IMAGE_LLM_GUARDRAILS = os.environ.get(
+AIRUNNER_DEFAULT_IMAGE_LLM_GUARDRAILS = os.environ.get(
     "AIRUNNER_DEFAULT_IMAGE_LLM_GUARDRAILS", (
         "Avoid generating images that are illegal, "
         "harmful, or might be seen as offensive."
     )
 )
-DEFAULT_RAG_SEARCH_SYSTEM_PROMPT = os.environ.get(
-    "DEFAULT_RAG_SEARCH_SYSTEM_PROMPT",
+AIRUNNER_DEFAULT_RAG_SEARCH_SYSTEM_PROMPT = os.environ.get(
+    "AIRUNNER_DEFAULT_RAG_SEARCH_SYSTEM_PROMPT",
     (
         "You will be given a prompt. Your goal is to use the prompt to search for information in the ebooks. "
         "You must use the prompt to determine what you are searching for and then search for that information. "
@@ -74,8 +78,8 @@ DEFAULT_RAG_SEARCH_SYSTEM_PROMPT = os.environ.get(
         "Here is the prompt you will use to search for information:"
     )
 )
-DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT = os.environ.get(
-    "DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT",
+AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT = os.environ.get(
+    "AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT",
     (
         "You will be given some text. Your goal is to determine if the text has a request, goal, need "
         "desire or command. If it does, you must determine the best course of action to "
@@ -89,8 +93,8 @@ DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT = os.environ.get(
         "THE LIST of commands you may choose from:\n"
     )
 )
-DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT = os.environ.get(
-    "DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT",
+AIRUNNER_DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT = os.environ.get(
+    "AIRUNNER_DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT",
     (
         "Examine the following chat history and determine how it makes you feel. You will respond with an emotion "
         "and only an emotion.\n"
@@ -101,16 +105,16 @@ DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT = os.environ.get(
         "feel.\n"
     )
 )
-DEFAULT_SUMMARIZE_CHAT_SYSTEM_PROMPT = os.environ.get(
-    "DEFAULT_SUMMARIZE_CHAT_SYSTEM_PROMPT",
+AIRUNNER_DEFAULT_SUMMARIZE_CHAT_SYSTEM_PROMPT = os.environ.get(
+    "AIRUNNER_DEFAULT_SUMMARIZE_CHAT_SYSTEM_PROMPT",
     (
         "You will be given a text prompt. Your goal is to summarize the text prompt in your own words. "
         "Keep your summary short and to the point. Do not include any unnecessary information. "
         "Limit your summary to a single sentence. Do not return more than one sentence. "
     )
 )
-DEFAULT_CHATBOT_SYSTEM_PROMPT = os.environ.get(
-    "DEFAULT_CHATBOT_SYSTEM_PROMPT",
+AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT = os.environ.get(
+    "AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT",
     (
         "You are a dialogue generator. "
         "You will follow all of the rules in order to generate compelling and intriguing dialogue for a given "
@@ -130,8 +134,8 @@ DEFAULT_CHATBOT_SYSTEM_PROMPT = os.environ.get(
         "------\n"
     )
 )
-DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
-    "DEFAULT_CHATBOT_GUARDRAILS_PROMPT",
+AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
+    "AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT",
     (
         "Always assist with care, respect, and truth. "
         "Respond with utmost utility yet securely. "
@@ -139,8 +143,8 @@ DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
         "Ensure replies promote fairness and positivity."
     )
 )
-BASE_PATH = os.environ.get(
-    "BASE_PATH",
+AIRUNNER_BASE_PATH = os.environ.get(
+    "AIRUNNER_BASE_PATH",
     os.path.expanduser("~/.local/share/airunner")
 )
 DEFAULT_PATH_SETTINGS = {
@@ -194,42 +198,42 @@ DEFAULT_PATH_SETTINGS = {
         )
     ),
 }
-PHOTO_REALISTIC_NEGATIVE_PROMPT = os.environ.get(
-    "PHOTO_REALISTIC_NEGATIVE_PROMPT",
+AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT = os.environ.get(
+    "AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT",
     (
         "illustration, drawing, cartoon, not real, fake, cgi, 3d animation, "
         "3d art, sculpture, animation, anime, Digital art, Concept art, Pixel art"
     )
 )
 
-ILLUSTRATION_NEGATIVE_PROMPT = os.environ.get(
-    "ILLUSTRATION_NEGATIVE_PROMPT",
+AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT = os.environ.get(
+    "AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT",
     (
         "photo, photograph, photography, high-definition, video, "
         "realistic, hyper-realistic, film"
     )
 )
-BUG_REPORT_LINK = os.environ.get(
-    "BUG_REPORT_LINK",
+AIRUNNER_BUG_REPORT_LINK = os.environ.get(
+    "AIRUNNER_BUG_REPORT_LINK",
     (
         "https://github.com/Capsize-Games/airunner/issues/new"
         "?assignees=&labels=&template=bug_report.md&title="
     )
 )
-VULNERABILITY_REPORT_LINK = os.environ.get(
-    "VULNERABILITY_REPORT_LINK",
+AIRUNNER_VULNERABILITY_REPORT_LINK = os.environ.get(
+    "AIRUNNER_VULNERABILITY_REPORT_LINK",
     (
         "https://github.com/Capsize-Games/airunner/security/advisories/new"
     )
 )
-SD_DEFAULT_VAE_PATH = os.environ.get("SD_DEFAULT_VAE_PATH", "")
-DEFAULT_BRUSH_PRIMARY_COLOR = os.environ.get("DEFAULT_BRUSH_PRIMARY_COLOR", "#99C1F1")
-DEFAULT_BRUSH_SECONDARY_COLOR = os.environ.get("DEFAULT_BRUSH_SECONDARY_COLOR", "#000000")
-STATUS_ERROR_COLOR = os.environ.get("STATUS_ERROR_COLOR", "#ff0000")
-STATUS_NORMAL_COLOR_LIGHT = os.environ.get("STATUS_NORMAL_COLOR_LIGHT", "#000000")
-STATUS_NORMAL_COLOR_DARK = os.environ.get("STATUS_NORMAL_COLOR_DARK", "#ffffff")
-DARK_THEME_NAME = os.environ.get("DARK_THEME_NAME", "dark_theme")
-LIGHT_THEME_NAME = os.environ.get("LIGHT_THEME_NAME", "light_theme")
+AIRUNNER_SD_DEFAULT_VAE_PATH = os.environ.get("AIRUNNER_SD_DEFAULT_VAE_PATH", "")
+AIRUNNER_DEFAULT_BRUSH_PRIMARY_COLOR = os.environ.get("AIRUNNER_DEFAULT_BRUSH_PRIMARY_COLOR", "#99C1F1")
+AIRUNNER_DEFAULT_BRUSH_SECONDARY_COLOR = os.environ.get("AIRUNNER_DEFAULT_BRUSH_SECONDARY_COLOR", "#000000")
+AIRUNNER_STATUS_ERROR_COLOR = os.environ.get("AIRUNNER_STATUS_ERROR_COLOR", "#ff0000")
+AIRUNNER_STATUS_NORMAL_COLOR_LIGHT = os.environ.get("AIRUNNER_STATUS_NORMAL_COLOR_LIGHT", "#000000")
+AIRUNNER_STATUS_NORMAL_COLOR_DARK = os.environ.get("AIRUNNER_STATUS_NORMAL_COLOR_DARK", "#ffffff")
+AIRUNNER_DARK_THEME_NAME = os.environ.get("AIRUNNER_DARK_THEME_NAME", "dark_theme")
+AIRUNNER_LIGHT_THEME_NAME = os.environ.get("AIRUNNER_LIGHT_THEME_NAME", "light_theme")
 VALID_IMAGE_FILES = os.environ.get("VALID_IMAGE_FILES", "Image Files (*.png *.jpg *.jpeg)")
 ESPEAK_SETTINGS = {
     "voices": {
@@ -257,156 +261,12 @@ ESPEAK_SETTINGS = {
     },
     "punctuation_modes": ["none", "all", "some"],
 }
-SCHEDULER_CLASSES = [
-    dict(
-        display_name=Scheduler.EULER_ANCESTRAL.value,
-        name="EulerAncestralDiscreteScheduler",
-    ),
-    dict(
-        display_name=Scheduler.EULER.value,
-        name="EulerDiscreteScheduler",
-    ),
-    dict(
-        display_name=Scheduler.LMS.value,
-        name="LMSDiscreteScheduler",
-    ),
-    dict(
-        display_name=Scheduler.HEUN.value,
-        name="HeunDiscreteScheduler",
-    ),
-    dict(
-        display_name=Scheduler.DPM2.value,
-        name="DPMSolverSinglestepScheduler",
-    ),
-    dict(
-        display_name=Scheduler.DPM_PP_2M.value,
-        name="DPMSolverMultistepScheduler",
-    ),
-    dict(
-        display_name=Scheduler.DPM2_K.value,
-        name="KDPM2DiscreteScheduler",
-    ),
-    dict(
-        display_name=Scheduler.DPM2_A_K.value,
-        name="KDPM2AncestralDiscreteScheduler",
-    ),
-    dict(
-        display_name=Scheduler.DPM_PP_2M_K.value,
-        name="DPMSolverMultistepScheduler",
-    ),
-    dict(
-        display_name=Scheduler.DPM_PP_2M_SDE_K.value,
-        name="DPMSolverMultistepScheduler",
-    ),
-    dict(
-        display_name=Scheduler.DDIM.value,
-        name="DDIMScheduler",
-    ),
-    dict(
-        display_name=Scheduler.UNIPC.value,
-        name="UniPCMultistepScheduler",
-    ),
-    dict(
-        display_name=Scheduler.DDPM.value,
-        name="DDPMScheduler",
-    ),
-    dict(
-        display_name=Scheduler.DEIS.value,
-        name="DEISMultistepScheduler",
-    ),
-    dict(
-        display_name=Scheduler.DPM_2M_SDE_K.value,
-        name="DPMSolverMultistepScheduler",
-    ),
-    dict(
-        display_name=Scheduler.PLMS.value,
-        name="PNDMScheduler",
-    ),
-    dict(
-        display_name=Scheduler.DPM.value,
-        name="DPMSolverMultistepScheduler",
-    ),
-]
-MAX_SEED = os.environ.get("MAX_SEED", 4294967295)
-DEFAULT_SCHEDULER = os.environ.get("DEFAULT_SCHEDULER", Scheduler.DPM_PP_2M_K.value)
-MIN_NUM_INFERENCE_STEPS_IMG2IMG = os.environ.get("MIN_NUM_INFERENCE_STEPS_IMG2IMG", 3)
+AIRUNNER_MAX_SEED = os.environ.get("AIRUNNER_MAX_SEED", 4294967295)
+AIRUNNER_DEFAULT_SCHEDULER = os.environ.get("AIRUNNER_DEFAULT_SCHEDULER", Scheduler.DPM_PP_2M_K.value)
+AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG = os.environ.get("AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG", 3)
 NSFW_CONTENT_DETECTED_MESSAGE = os.environ.get("NSFW_CONTENT_DETECTED_MESSAGE", "NSFW content detected")
-DISCORD_URL = os.environ.get("AIRUNNER_DISCORD_URL", None)
-SLEEP_TIME_IN_MS = os.environ.get("SLEEP_TIME_IN_MS", 50)
-DEFAULT_SHORTCUTS = [
-    {
-        "display_name": "Generate Image",
-        "text": "F1",
-        "key": QtCore.Qt.Key.Key_F1.value,
-        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
-        "description": "Generate key. Responsible for triggering the generation of a Stable Diffusion image.",
-        "signal": SignalCode.SD_GENERATE_IMAGE_SIGNAL.value
-    },
-    {
-        "display_name": "Brush Tool",
-        "text": "B",
-        "key": QtCore.Qt.Key.Key_B.value,
-        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
-        "description": "Brush tool key. Responsible for selecting the brush tool.",
-        "signal": SignalCode.ENABLE_BRUSH_TOOL_SIGNAL.value
-    },
-    {
-        "display_name": "Eraser Tool",
-        "text": "E",
-        "key": QtCore.Qt.Key.Key_E.value,
-        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
-        "description": "Eraser tool key. Responsible for selecting the eraser tool.",
-        "signal": SignalCode.ENABLE_ERASER_TOOL_SIGNAL.value
-    },
-    {
-        "display_name": "Move Tool",
-        "text": "V",
-        "key": QtCore.Qt.Key.Key_V.value,
-        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
-        "description": "Move tool key. Responsible for selecting the move tool.",
-        "signal": SignalCode.ENABLE_MOVE_TOOL_SIGNAL.value
-    },
-    {
-        "display_name": "Select Tool",
-        "text": "S",
-        "key": QtCore.Qt.Key.Key_S.value,
-        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
-        "description": "Select tool key. Responsible for selecting the select tool.",
-        "signal": SignalCode.ENABLE_SELECTION_TOOL_SIGNAL.value
-    },
-    {
-        "display_name": "Interrupt",
-        "text": "Shift+Ctrl+I",
-        "key": QtCore.Qt.Key.Key_I.value,
-        "modifiers": QtCore.Qt.KeyboardModifier.ShiftModifier.value | QtCore.Qt.KeyboardModifier.ControlModifier.value,
-        "description": "Interrupt key. Responsible for interrupting the current process.",
-        "signal": SignalCode.INTERRUPT_PROCESS_SIGNAL.value
-    },
-    {
-        "display_name": "Navigate",
-        "text": "Shift+Ctrl+P",
-        "key": QtCore.Qt.Key.Key_P.value,
-        "modifiers": QtCore.Qt.KeyboardModifier.ShiftModifier.value | QtCore.Qt.KeyboardModifier.ControlModifier.value,
-        "description": "URL key. Responsible for navigating to a URL.",
-        "signal": SignalCode.NAVIGATE_TO_URL.value
-    },
-    {
-        "display_name": "Quit",
-        "text": "Ctrl+Q",
-        "key": QtCore.Qt.Key.Key_Q.value,
-        "modifiers": QtCore.Qt.KeyboardModifier.ControlModifier.value,
-        "description": "Quit key. Responsible for quitting the application.",
-        "signal": SignalCode.QUIT_APPLICATION.value
-    },
-    {
-        "display_name": "Refresh Stylesheet",
-        "text": "F5",
-        "key": QtCore.Qt.Key.Key_F5.value,
-        "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
-        "description": "Refresh the stylesheet. Useful when creating a template.",
-        "signal": SignalCode.REFRESH_STYLESHEET_SIGNAL.value
-    },
-]
+AIRUNNER_DISCORD_URL = os.environ.get("AIRUNNER_DISCORD_URL", None)
+AIRUNNER_SLEEP_TIME_IN_MS = os.environ.get("AIRUNNER_SLEEP_TIME_IN_MS", 50)
 DB_PATH = os.path.expanduser(
     os.path.join(
         "~",
@@ -418,9 +278,9 @@ DB_PATH = os.path.expanduser(
     )
 )
 default_url = "sqlite:///" + DB_PATH
-DB_URL = os.environ.get("AIRUNNER_DATABASE_URL", default_url)
-if DB_URL == "" or not DB_URL:
-    DB_URL = default_url
+AIRUNNER_DB_URL = os.environ.get("AIRUNNER_DATABASE_URL", default_url)
+if AIRUNNER_DB_URL == "" or not AIRUNNER_DB_URL:
+    AIRUNNER_DB_URL = default_url
 
 # LLM Behavior Control
 AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS = int(os.environ.get("AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS", 5))

@@ -6,7 +6,7 @@ import numpy as np
 from PySide6.QtCore import QThread
 
 from airunner.enums import SignalCode, ModelStatus
-from airunner.settings import SLEEP_TIME_IN_MS
+from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
 
@@ -69,11 +69,11 @@ class AudioCaptureWorker(Worker):
                     chunk, overflowed = self.stream.read(int(chunk_duration * fs))
                 except sd.PortAudioError as e:
                     self.logger.error(f"PortAudioError: {e}")
-                    QThread.msleep(SLEEP_TIME_IN_MS)
+                    QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
                     continue
                 except Exception as e:
                     self.logger.error(e)
-                    QThread.msleep(SLEEP_TIME_IN_MS)
+                    QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
                     continue
                 if np.max(np.abs(chunk)) > volume_input_threshold:  # check if chunk is not silence
                     self.logger.debug("Heard voice")
@@ -99,7 +99,7 @@ class AudioCaptureWorker(Worker):
                     recording.append(chunk_bytes)
 
             while not self.listening and self.running:
-                QThread.msleep(SLEEP_TIME_IN_MS)
+                QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
 
     def _start_listening(self):
         self.logger.debug("Start listening")

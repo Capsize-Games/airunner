@@ -3,14 +3,14 @@ from PySide6.QtCore import Slot
 
 from airunner.data.models import PromptTemplate
 from airunner.settings import (
-    DEFAULT_IMAGE_SYSTEM_PROMPT, 
-    DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT,
-    DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT, 
-    DEFAULT_RAG_SEARCH_SYSTEM_PROMPT, 
-    DEFAULT_CHATBOT_SYSTEM_PROMPT,
-    DEFAULT_SUMMARIZE_CHAT_SYSTEM_PROMPT,
-    DEFAULT_IMAGE_LLM_GUARDRAILS,
-    DEFAULT_CHATBOT_GUARDRAILS_PROMPT
+    AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT, 
+    AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT,
+    AIRUNNER_DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT, 
+    AIRUNNER_DEFAULT_RAG_SEARCH_SYSTEM_PROMPT, 
+    AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,
+    AIRUNNER_DEFAULT_SUMMARIZE_CHAT_SYSTEM_PROMPT,
+    AIRUNNER_DEFAULT_IMAGE_LLM_GUARDRAILS,
+    AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT
 )
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.prompt_templates_ui import Ui_prompt_templates_widget
@@ -78,17 +78,17 @@ class PromptTemplatesWidget(BaseWidget):
         template = self._prompt_templates[self.current_template_index]
 
         if template.template_name == "image":
-            default = DEFAULT_IMAGE_SYSTEM_PROMPT
+            default = AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT
         elif template.template_name == "application_command":
-            default = DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT
+            default = AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT
         elif template.template_name == "update_mood":
-            default = DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT
+            default = AIRUNNER_DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT
         elif template.template_name == "rag_search":
-            default = DEFAULT_RAG_SEARCH_SYSTEM_PROMPT
+            default = AIRUNNER_DEFAULT_RAG_SEARCH_SYSTEM_PROMPT
         elif template.template_name == "chatbot":
-            default = DEFAULT_CHATBOT_SYSTEM_PROMPT
+            default = AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT
         elif template.template_name == "summarize":
-            default = DEFAULT_SUMMARIZE_CHAT_SYSTEM_PROMPT
+            default = AIRUNNER_DEFAULT_SUMMARIZE_CHAT_SYSTEM_PROMPT
         else:
             default = ""
 
@@ -102,9 +102,9 @@ class PromptTemplatesWidget(BaseWidget):
         template = self._prompt_templates[self.current_template_index]
 
         if template.template_name == "image":
-            default = DEFAULT_IMAGE_LLM_GUARDRAILS
+            default = AIRUNNER_DEFAULT_IMAGE_LLM_GUARDRAILS
         elif template.template_name == "chatbot":
-            default = DEFAULT_CHATBOT_GUARDRAILS_PROMPT
+            default = AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT
         else:
             default = ""
 

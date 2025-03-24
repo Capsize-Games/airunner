@@ -3,9 +3,9 @@ from sqlalchemy.orm import relationship
 
 from airunner.data.models.base import BaseModel
 from airunner.settings import (
-    DEFAULT_CHATBOT_GUARDRAILS_PROMPT, 
-    DEFAULT_CHATBOT_SYSTEM_PROMPT, 
-    DEFAULT_LLM_HF_PATH
+    AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT, 
+    AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT, 
+    AIRUNNER_DEFAULT_LLM_HF_PATH
 )
 
 
@@ -28,12 +28,12 @@ class Chatbot(BaseModel):
     sequences = Column(Integer, default=1)
     seed = Column(BigInteger, default=42)
     random_seed = Column(Boolean, default=True)
-    model_version = Column(String, default=DEFAULT_LLM_HF_PATH)
+    model_version = Column(String, default=AIRUNNER_DEFAULT_LLM_HF_PATH)
     model_type = Column(String, default="llm")
     dtype = Column(String, default="4bit")
     return_result = Column(Boolean, default=True)
-    guardrails_prompt = Column(Text, default=DEFAULT_CHATBOT_GUARDRAILS_PROMPT)
-    system_instructions = Column(Text, default=DEFAULT_CHATBOT_SYSTEM_PROMPT)
+    guardrails_prompt = Column(Text, default=AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT)
+    system_instructions = Column(Text, default=AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT)
     top_p = Column(Integer, default=900)
     min_length = Column(Integer, default=1)
     max_new_tokens = Column(Integer, default=1000)

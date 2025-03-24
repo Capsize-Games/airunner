@@ -36,7 +36,7 @@ from transformers import (
 )
 
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.settings import DEFAULT_LLM_HF_PATH
+from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner.handlers.llm.llm_request import LLMRequest
 
 
@@ -102,7 +102,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
     """
 
     model_name: str = Field(
-        default=DEFAULT_LLM_HF_PATH,
+        default=AIRUNNER_DEFAULT_LLM_HF_PATH,
         description=(
             "The model name to use from HuggingFace. "
             "Unused if `model` is passed in directly."
@@ -138,7 +138,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         ),
     )
     tokenizer_name: str = Field(
-        default=DEFAULT_LLM_HF_PATH,
+        default=AIRUNNER_DEFAULT_LLM_HF_PATH,
         description=(
             "The name of the tokenizer to use from HuggingFace. "
             "Unused if `tokenizer` is passed in directly."
@@ -207,8 +207,8 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         context_window: int = DEFAULT_CONTEXT_WINDOW,
         max_new_tokens: int = DEFAULT_NUM_OUTPUTS,
         query_wrapper_prompt: Union[str, PromptTemplate] = "{query_str}",
-        tokenizer_name: str = DEFAULT_LLM_HF_PATH,
-        model_name: str = DEFAULT_LLM_HF_PATH,
+        tokenizer_name: str = AIRUNNER_DEFAULT_LLM_HF_PATH,
+        model_name: str = AIRUNNER_DEFAULT_LLM_HF_PATH,
         model: Optional[Any] = None,
         tokenizer: Optional[Any] = None,
         device_map: Optional[str] = "auto",

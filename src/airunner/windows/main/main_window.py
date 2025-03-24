@@ -25,14 +25,14 @@ from PySide6.QtWidgets import (
 from bs4 import BeautifulSoup
 
 from airunner.settings import (
-    STATUS_ERROR_COLOR,
-    STATUS_NORMAL_COLOR_LIGHT,
-    STATUS_NORMAL_COLOR_DARK,
+    AIRUNNER_STATUS_ERROR_COLOR,
+    AIRUNNER_STATUS_NORMAL_COLOR_LIGHT,
+    AIRUNNER_STATUS_NORMAL_COLOR_DARK,
     NSFW_CONTENT_DETECTED_MESSAGE,
-    DISCORD_URL,
-    BASE_PATH,
-    BUG_REPORT_LINK,
-    VULNERABILITY_REPORT_LINK,
+    AIRUNNER_DISCORD_URL,
+    AIRUNNER_BASE_PATH,
+    AIRUNNER_BUG_REPORT_LINK,
+    AIRUNNER_VULNERABILITY_REPORT_LINK,
     AIRUNNER_ORGANIZATION,
     AIRUNNER_APPLICATION_NAME,
 )
@@ -138,9 +138,9 @@ class MainWindow(
         self.client = None
         self._version = None
         self._latest_version = None
-        self.status_error_color = STATUS_ERROR_COLOR
-        self.status_normal_color_light = STATUS_NORMAL_COLOR_LIGHT
-        self.status_normal_color_dark = STATUS_NORMAL_COLOR_DARK
+        self.status_error_color = AIRUNNER_STATUS_ERROR_COLOR
+        self.status_normal_color_light = AIRUNNER_STATUS_NORMAL_COLOR_LIGHT
+        self.status_normal_color_dark = AIRUNNER_STATUS_NORMAL_COLOR_DARK
         self._themes = None
         self.button_clicked_signal = Signal(Dict)
         self.status_widget = None
@@ -328,7 +328,7 @@ class MainWindow(
     def action_triggered_browse_ai_runner_path(self):
         path = self.path_settings.base_path
         if path == "":
-            path = BASE_PATH
+            path = AIRUNNER_BASE_PATH
         show_path(path)
 
     @Slot()
@@ -365,16 +365,16 @@ class MainWindow(
 
     @Slot()
     def action_open_vulnerability_report(self):
-        webbrowser.open(VULNERABILITY_REPORT_LINK)
+        webbrowser.open(AIRUNNER_VULNERABILITY_REPORT_LINK)
 
     @Slot()
     def action_open_bug_report(self):
-        webbrowser.open(BUG_REPORT_LINK)
+        webbrowser.open(AIRUNNER_BUG_REPORT_LINK)
 
     @Slot()
     def action_open_discord(self):
-        if DISCORD_URL:
-            webbrowser.open(DISCORD_URL)
+        if AIRUNNER_DISCORD_URL:
+            webbrowser.open(AIRUNNER_DISCORD_URL)
 
     @Slot(bool)
     def action_toggle_mask_layer(self, val: bool):
@@ -613,7 +613,7 @@ class MainWindow(
             {"main_window": self}
         )
 
-        if not DISCORD_URL:
+        if not AIRUNNER_DISCORD_URL:
             self.ui.actionDiscord.deleteLater()
 
     def _load_plugins(self):
