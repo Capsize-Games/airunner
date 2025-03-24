@@ -7,7 +7,7 @@ from PIL.ImageQt import ImageQt
 from PySide6.QtGui import QPixmap, QImage, Qt, QPen
 from PySide6.QtWidgets import QGraphicsScene
 
-from airunner.settings import VALID_IMAGE_FILES
+from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
 from airunner.utils.image import (
     convert_binary_to_image, 
     convert_image_to_binary
@@ -137,7 +137,7 @@ class InputImage(BaseWidget):
             self.window(),
             "Open Image",
             self._import_path,
-            f"Image Files ({' '.join(VALID_IMAGE_FILES)})"
+            f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})"
         )
         if self._import_path == "":
             return
