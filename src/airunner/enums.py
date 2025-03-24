@@ -187,6 +187,7 @@ class SignalCode(Enum):
 
     WIDGET_ELEMENT_CHANGED = enum.auto()  # Use this for generic widget events
     SD_ADDITIONAL_PROMPT_DELETE_SIGNAL = enum.auto()
+    RECENTER_GRID_SIGNAL = enum.auto()
 
 
 class EngineResponseCode(Enum):

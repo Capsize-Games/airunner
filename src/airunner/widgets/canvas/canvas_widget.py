@@ -23,6 +23,7 @@ class CanvasWidget(
     """
     widget_class_ = Ui_canvas
     icons = [
+        ("circle-center-icon", "recenter_Grid_Button"),
         ("object-selected-icon", "actionToggle_Active_Grid_Area"),
         ("pencil-icon", "actionToggle_Brush"),
         ("eraser-icon", "actionToggle_Eraser"),
@@ -91,6 +92,10 @@ class CanvasWidget(
         settings.pivot_point_y = value.y()
         self.update_application_settings("pivot_point_x", value.x())
         self.update_application_settings("pivot_point_y", value.y())
+
+    @Slot()
+    def action_recenter(self):
+        self.emit_signal(SignalCode.RECENTER_GRID_SIGNAL)
 
     @Slot()
     def action_new(self):
