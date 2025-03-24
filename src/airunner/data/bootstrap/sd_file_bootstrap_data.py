@@ -1,3 +1,6 @@
+from airunner.settings import AIRUNNER_ART_ENABLED
+
+
 SD_FILE_BOOTSTRAP_DATA = {
     "SD 1.5": {
         "txt2img": [
@@ -112,3 +115,7 @@ SD_FILE_BOOTSTRAP_DATA = {
         ]
     },
 }
+
+
+if not AIRUNNER_ART_ENABLED:
+    SD_FILE_BOOTSTRAP_DATA = {}
