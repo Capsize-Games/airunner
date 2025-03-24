@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QApplication
 from airunner.enums import SignalCode, ModelStatus, ModelType, StatusColors
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.status.templates.status_ui import Ui_status_widget
+from airunner.settings import AIRUNNER_ART_ENABLED
 
 
 class StatusWidget(BaseWidget):
@@ -20,6 +21,12 @@ class StatusWidget(BaseWidget):
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
         }
         super().__init__(*args, **kwargs)
+
+        if not AIRUNNER_ART_ENABLED:
+            self.ui.sd_status.deleteLater()
+            self.ui.controlnet_status.deleteLater()
+            self.ui.nsfw_status.deleteLater()
+
         self.set_sd_pipeline_label({"pipeline": ""})
         self.version = None
 

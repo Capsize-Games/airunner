@@ -71,6 +71,7 @@ class SetupWizardWindow(
             "whisper_license": WhisperLicense(self),
             "speech_t5_license": SpeechT5License(self),
         }
+
         for index, key in enumerate(self.pages.keys()):
             page_id = self.addPage(self.pages[key])
             setattr(self, f"{key}_id", page_id)
