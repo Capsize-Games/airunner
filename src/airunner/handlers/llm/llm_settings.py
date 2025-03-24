@@ -23,6 +23,7 @@ from airunner.settings import (
     AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS,
     AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS,
     AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS,
+    AIRUNNER_LLM_OPENROUTER_MODEL,
 )
 
 
@@ -38,15 +39,8 @@ class LLMSettings:
     openai_api_key: str = AIRUNNER_LLM_OPENAI_API_KEY
     perform_conversation_summary: bool = AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY
     max_function_calls: int = AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS
-    model: str = ""
+    model: str = AIRUNNER_LLM_OPENROUTER_MODEL
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.model = os.getenv(
-            "AIRUNNER_LLM_OPENROUTER_MODEL", 
-            self.model
-        )
-    
     @property
     def use_api(self) -> bool:
         return (
