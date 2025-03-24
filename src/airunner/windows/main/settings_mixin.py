@@ -45,7 +45,9 @@ from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
 from airunner.settings import (
     AIRUNNER_ORGANIZATION,
-    AIRUNNER_APPLICATION_NAME
+    AIRUNNER_APPLICATION_NAME,
+    AIRUNNER_LLM_PERFORM_ANALYSIS,
+    AIRUNNER_LLM_PRINT_SYSTEM_PROMPT,
 )
 
 
@@ -90,11 +92,11 @@ class SettingsMixin:
 
     @property
     def llm_perform_analysis(self) -> bool:
-        return os.getenv("AIRUNNER_PERFORM_ANALYSIS", "0").lower() == "1"
+        return AIRUNNER_LLM_PERFORM_ANALYSIS
 
     @property
     def print_llm_system_prompt(self) -> bool:
-        return os.getenv("AIRUNNER_PRINT_LLM_SYSTEM_PROMPT", "0").lower() == "1"
+        return AIRUNNER_LLM_PRINT_SYSTEM_PROMPT
 
     @property
     def session_manager(self):
