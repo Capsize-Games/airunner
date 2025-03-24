@@ -73,10 +73,10 @@ def main():
         settings.endGroup()
     
     if args.print_llm_system_prompt:
-        os.environ["AIRUNNER_PRINT_LLM_SYSTEM_PROMPT"] = "1"
+        os.environ["AIRUNNER_LLM_PRINT_SYSTEM_PROMPT"] = "1"
     
     if args.perform_llm_analysis:
-        os.environ["AIRUNNER_PERFORM_ANALYSIS"] = "1"
+        os.environ["AIRUNNER_LLM_PERFORM_ANALYSIS"] = "1"
 
     setup_database()
 
