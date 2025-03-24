@@ -80,7 +80,7 @@ class InstallWorker(
             "label": "Downloading Stable Diffusion models..."
         })
 
-        models = model_bootstrap_data        
+        models = model_bootstrap_data
 
         self.total_models_in_current_step += len(models)
         for model in models:
