@@ -88,7 +88,8 @@ class WeatherMixin:
         if (
             not self.user.latitude or 
             not self.user.longitude or 
-            not self.chatbot.use_weather_prompt
+            not self.chatbot.use_weather_prompt or
+            not self.llm_settings.use_weather_prompt
         ):
             return None
         
