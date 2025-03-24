@@ -191,7 +191,9 @@ class SDWorker(Worker):
 
     @staticmethod
     def handle_error(error_message):
-        print(f"Error: {error_message}")
+        import traceback
+        traceback.print_stack()
+        print(f"SDWorker Error: {error_message}")
 
     def on_interrupt_image_generation_signal(self, _data=None):
         if self.sd:

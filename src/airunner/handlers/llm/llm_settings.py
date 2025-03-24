@@ -19,26 +19,28 @@ from airunner.settings import (
     AIRUNNER_LLM_USE_OPENAI,
     AIRUNNER_LLM_OPENAI_API_KEY,
     AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY,
+    AIRUNNER_LLM_USE_WEATHER_PROMPT,
+    AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS,
+    AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS,
+    AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS,
+    AIRUNNER_LLM_OPENROUTER_MODEL,
 )
 
 
 @dataclass
 class LLMSettings:
     use_local_llm: bool = AIRUNNER_LLM_USE_LOCAL
+    use_weather_prompt: bool = AIRUNNER_LLM_USE_WEATHER_PROMPT,
+    update_mood_after_n_turns: int = AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS
+    summarize_after_n_turns: int = AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS
     use_openrouter: bool = AIRUNNER_LLM_USE_OPENROUTER
     openrouter_api_key: str = AIRUNNER_LLM_OPENROUTER_API_KEY
     use_openai: bool = AIRUNNER_LLM_USE_OPENAI
     openai_api_key: str = AIRUNNER_LLM_OPENAI_API_KEY
     perform_conversation_summary: bool = AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY
-    model: str = ""
+    max_function_calls: int = AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS
+    model: str = AIRUNNER_LLM_OPENROUTER_MODEL
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.model = os.getenv(
-            "AIRUNNER_LLM_OPENROUTER_MODEL", 
-            self.model
-        )
-    
     @property
     def use_api(self) -> bool:
         return (
