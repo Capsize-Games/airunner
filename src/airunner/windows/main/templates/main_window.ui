@@ -113,7 +113,7 @@
            </size>
           </property>
          </widget>
-         <widget class="QWidget" name="canvas_widget" native="true">
+         <widget class="QWidget" name="center_widget" native="true">
           <property name="minimumSize">
            <size>
             <width>0</width>

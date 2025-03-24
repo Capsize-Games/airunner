@@ -1,4 +1,8 @@
-pipeline_bootstrap_data = [
+from airunner.settings import AIRUNNER_ART_ENABLED
+
+
+
+art_pipline_data = [
     {
         "pipeline_action": "safety_checker",
         "version": "SD 1.5",
@@ -118,13 +122,9 @@ pipeline_bootstrap_data = [
         "classname": "transformers.AutoFeatureExtractor",
         "default": False
     },
-    {
-        "pipeline_action": "seq2seq",
-        "version": "1",
-        "category": "llm",
-        "classname": "transformers.AutoModelForSeq2SeqLM",
-        "default": False
-    },
+]
+
+llm_pipeline_data = [
     {
         "pipeline_action": "causallm",
         "version": "1",
@@ -145,5 +145,10 @@ pipeline_bootstrap_data = [
         "category": "llm",
         "classname": "transformers.AutoModelForCausalLM",
         "default": False
-    }
+    },
 ]
+
+if AIRUNNER_ART_ENABLED:
+    pipeline_bootstrap_data = art_pipline_data + llm_pipeline_data
+else:
+    pipeline_bootstrap_data = llm_pipeline_data

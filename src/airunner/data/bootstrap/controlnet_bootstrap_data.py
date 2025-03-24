@@ -1,3 +1,6 @@
+from airunner.settings import AIRUNNER_ART_ENABLED
+
+
 controlnet_bootstrap_data = [
     {"display_name": "Canny", "name": "canny", "path": "lllyasviel/control_v11p_sd15_canny", "version": "SD 1.5"},
     {"display_name": "Depth Leres", "name": "depth_leres", "path": "lllyasviel/control_v11f1p_sd15_depth", "version": "SD 1.5"},
@@ -27,3 +30,7 @@ controlnet_bootstrap_data = [
     {"display_name": "Shuffle", "name": "shuffle", "path": "lllyasviel/control_v11e_sd15_shuffle", "version": "SD 1.5"},
     {"display_name": "Canny", "name": "canny", "path": "diffusers/controlnet-canny-sdxl-1.0-small", "version": "SDXL 1.0"},
 ]
+
+
+if not AIRUNNER_ART_ENABLED:
+    controlnet_bootstrap_data = []

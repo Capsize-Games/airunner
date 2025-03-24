@@ -1,4 +1,5 @@
 import os
+from airunner.settings import AIRUNNER_ART_ENABLED
 
 
 PATH_SETTINGS_DATA = {
@@ -14,13 +15,6 @@ PATH_SETTINGS_DATA = {
             "text",
             "other",
             "ebooks"
-        )
-    ),
-    "image_path": os.path.expanduser(
-        os.path.join(
-            "art",
-            "other",
-            "images"
         )
     ),
     "llama_index_path": os.path.expanduser(
@@ -52,3 +46,13 @@ PATH_SETTINGS_DATA = {
         )
     ),
 }
+
+
+if AIRUNNER_ART_ENABLED:
+    PATH_SETTINGS_DATA["image_path"] = os.path.expanduser(
+        os.path.join(
+            "art",
+            "other",
+            "images"
+        )
+    )
