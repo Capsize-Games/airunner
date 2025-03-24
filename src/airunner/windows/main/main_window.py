@@ -28,7 +28,7 @@ from airunner.settings import (
     AIRUNNER_STATUS_ERROR_COLOR,
     AIRUNNER_STATUS_NORMAL_COLOR_LIGHT,
     AIRUNNER_STATUS_NORMAL_COLOR_DARK,
-    NSFW_CONTENT_DETECTED_MESSAGE,
+    AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE,
     AIRUNNER_DISCORD_URL,
     AIRUNNER_BASE_PATH,
     AIRUNNER_BUG_REPORT_LINK,
@@ -686,7 +686,7 @@ class MainWindow(
         # display message in status
         self.emit_signal(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-            NSFW_CONTENT_DETECTED_MESSAGE
+            AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE
         )
 
     def closeEvent(self, event) -> None:
