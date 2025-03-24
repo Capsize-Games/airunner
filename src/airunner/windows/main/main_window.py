@@ -35,6 +35,7 @@ from airunner.settings import (
     AIRUNNER_VULNERABILITY_REPORT_LINK,
     AIRUNNER_ORGANIZATION,
     AIRUNNER_APPLICATION_NAME,
+    AIRUNNER_ART_ENABLED,
 )
 from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
 from airunner.handlers.llm.agent.actions.show_path import show_path
@@ -580,7 +581,12 @@ class MainWindow(
 
     def initialize_ui(self):
         self.logger.debug("Loading UI")
+
         self.ui.setupUi(self)
+
+        if not AIRUNNER_ART_ENABLED:
+            self._disable_aiart_gui_elements()
+
         active_index = 0
 
         tabs = Tab.objects.filter_by(section="center")
@@ -615,6 +621,31 @@ class MainWindow(
 
         if not AIRUNNER_DISCORD_URL:
             self.ui.actionDiscord.deleteLater()
+    
+    def _disable_aiart_gui_elements(self):
+        self.ui.center_widget.hide()
+        self.ui.menuImage.hide()
+        self.ui.menuFilters.hide()
+        self.ui.menuStable_Diffusion.hide()
+        self.ui.menuArt.hide()
+
+        self.ui.center_widget.deleteLater()
+        self.ui.actionToggle_Stable_Diffusion.deleteLater()
+        self.ui.actionToggle_Controlnet.deleteLater()
+        self.ui.menuImage.deleteLater()
+        self.ui.menuFilters.deleteLater()
+        self.ui.menuStable_Diffusion.deleteLater()
+        self.ui.actionBrowse_AI_Runner_Path.deleteLater()
+        self.ui.actionBrowse_Images_Path_2.deleteLater()
+        self.ui.actionArt.deleteLater()
+        self.ui.menuArt.deleteLater()
+        self.ui.actionCut.deleteLater()
+        self.ui.actionCopy.deleteLater()
+        self.ui.actionPaste.deleteLater()
+        self.ui.actionRotate_90_clockwise.deleteLater()
+        self.ui.actionRotate_90_counter_clockwise.deleteLater()
+        self.ui.actionPrompt_Browser.deleteLater()
+            
 
     def _load_plugins(self):
         base_path = self.path_settings.base_path

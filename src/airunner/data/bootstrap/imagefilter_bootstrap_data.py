@@ -1,3 +1,6 @@
+from airunner.settings import AIRUNNER_ART_ENABLED
+
+
 imagefilter_bootstrap_data = {
     'pixel_art': {
         'display_name': 'Pixel Art',
@@ -283,3 +286,7 @@ imagefilter_bootstrap_data = {
         }
     }
 }
+
+
+if not AIRUNNER_ART_ENABLED:
+    imagefilter_bootstrap_data = {}

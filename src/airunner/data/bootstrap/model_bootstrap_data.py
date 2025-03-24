@@ -1,4 +1,7 @@
-model_bootstrap_data = [
+from airunner.settings import AIRUNNER_ART_ENABLED
+
+
+ai_art_models = [
     {
         "name": "Stable Diffusion 1.5",
         "path": "stable-diffusion-v1-5/stable-diffusion-v1-5",
@@ -87,6 +90,9 @@ model_bootstrap_data = [
         "model_type": "art",
         "is_default": True
     },
+]
+
+llm_models = [
     {
         "name": "Mistral 7B Instruct v3",
         "path": "w4ffl35/Ministral-8B-Instruct-2410-doublequant",
@@ -110,3 +116,8 @@ model_bootstrap_data = [
         "is_default": True
     },
 ]
+
+if AIRUNNER_ART_ENABLED:
+    model_bootstrap_data = ai_art_models + llm_models
+else:
+    model_bootstrap_data = llm_models
