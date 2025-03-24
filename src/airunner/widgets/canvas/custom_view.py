@@ -71,6 +71,7 @@ class CustomGraphicsView(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL: self.handle_active_grid_area_moved_signal,
             SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
+            SignalCode.RECENTER_GRID_SIGNAL: self.on_recenter_grid_signal,
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
@@ -133,6 +134,10 @@ class CustomGraphicsView(
 
     def handle_active_grid_area_moved_signal(self):
         self.active_grid_area.snap_to_grid()
+
+    def on_recenter_grid_signal(self):
+        self.canvas_offset = QPoint(0, 0)
+        self.do_draw()
 
     def on_mask_generator_worker_response_signal(self, message: dict):
         mask = message["mask"]

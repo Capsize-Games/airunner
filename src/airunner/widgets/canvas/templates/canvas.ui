@@ -169,7 +169,27 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="recenter_Grid_Button">
+              <property name="toolTip">
+               <string>Recenter grid</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../resources_light.qrc">
+                <normaloff>:/icons/light/circle-center-icon.svg</normaloff>:/icons/light/circle-center-icon.svg</iconset>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="actionToggle_Active_Grid_Area">
+              <property name="toolTip">
+               <string>Move active grid area</string>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -187,6 +207,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionToggle_Brush">
+              <property name="toolTip">
+               <string>Toggle brush tool</string>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -204,6 +227,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionToggle_Eraser">
+              <property name="toolTip">
+               <string>Toggle earser tool</string>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -221,6 +247,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionToggle_Grid">
+              <property name="toolTip">
+               <string>Toggle grid</string>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -238,6 +267,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionMask_toggle">
+              <property name="toolTip">
+               <string>Toggle mask</string>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -368,8 +400,8 @@
    <slot>action_undo()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>297</x>
-     <y>35</y>
+     <x>351</x>
+     <y>42</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -384,8 +416,8 @@
    <slot>action_redo()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>346</x>
-     <y>33</y>
+     <x>385</x>
+     <y>42</y>
     </hint>
     <hint type="destinationlabel">
      <x>473</x>
@@ -400,8 +432,8 @@
    <slot>action_toggle_mask(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>265</x>
-     <y>39</y>
+     <x>308</x>
+     <y>42</y>
     </hint>
     <hint type="destinationlabel">
      <x>228</x>
@@ -416,8 +448,8 @@
    <slot>action_toggle_eraser(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>194</x>
-     <y>34</y>
+     <x>240</x>
+     <y>42</y>
     </hint>
     <hint type="destinationlabel">
      <x>28</x>
@@ -432,8 +464,8 @@
    <slot>action_toggle_brush(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>148</x>
-     <y>26</y>
+     <x>206</x>
+     <y>42</y>
     </hint>
     <hint type="destinationlabel">
      <x>39</x>
@@ -448,8 +480,8 @@
    <slot>action_toggle_active_grid_area(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>130</x>
-     <y>34</y>
+     <x>172</x>
+     <y>42</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -512,12 +544,28 @@
    <slot>action_toggle_grid(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>231</x>
-     <y>32</y>
+     <x>274</x>
+     <y>42</y>
     </hint>
     <hint type="destinationlabel">
      <x>255</x>
      <y>-15</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>recenter_Grid_Button</sender>
+   <signal>clicked()</signal>
+   <receiver>canvas</receiver>
+   <slot>action_recenter()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>134</x>
+     <y>31</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-5</x>
+     <y>199</y>
     </hint>
    </hints>
   </connection>
@@ -536,5 +584,6 @@
   <slot>action_toggle_grid(bool)</slot>
   <slot>action_toggle_active_grid_area(bool)</slot>
   <slot>action_toggle_mask(bool)</slot>
+  <slot>action_recenter()</slot>
  </slots>
 </ui>
