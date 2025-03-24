@@ -147,57 +147,6 @@ AIRUNNER_BASE_PATH = os.environ.get(
     "AIRUNNER_BASE_PATH",
     os.path.expanduser("~/.local/share/airunner")
 )
-DEFAULT_PATH_SETTINGS = {
-    "documents_path": os.path.expanduser(
-        os.path.join(
-            "text",
-            "other",
-            "documents"
-        )
-    ),
-    "ebook_path": os.path.expanduser(
-        os.path.join(
-            "text",
-            "other",
-            "ebooks"
-        )
-    ),
-    "image_path": os.path.expanduser(
-        os.path.join(
-            "art",
-            "other",
-            "images"
-        )
-    ),
-    "llama_index_path": os.path.expanduser(
-        os.path.join(
-            "text",
-            "rag",
-            "db"
-        )
-    ),
-    "webpages_path": os.path.expanduser(
-        os.path.join(
-            "text",
-            "other",
-            "webpages"
-        )
-    ),
-    "stt_model_path": os.path.expanduser(
-        os.path.join(
-            "text",
-            "models",
-            "stt"
-        )
-    ),
-    "tts_model_path": os.path.expanduser(
-        os.path.join(
-            "text",
-            "models",
-            "tts"
-        )
-    ),
-}
 AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT = os.environ.get(
     "AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT",
     (
@@ -234,39 +183,15 @@ AIRUNNER_STATUS_NORMAL_COLOR_LIGHT = os.environ.get("AIRUNNER_STATUS_NORMAL_COLO
 AIRUNNER_STATUS_NORMAL_COLOR_DARK = os.environ.get("AIRUNNER_STATUS_NORMAL_COLOR_DARK", "#ffffff")
 AIRUNNER_DARK_THEME_NAME = os.environ.get("AIRUNNER_DARK_THEME_NAME", "dark_theme")
 AIRUNNER_LIGHT_THEME_NAME = os.environ.get("AIRUNNER_LIGHT_THEME_NAME", "light_theme")
-VALID_IMAGE_FILES = os.environ.get("VALID_IMAGE_FILES", "Image Files (*.png *.jpg *.jpeg)")
-ESPEAK_SETTINGS = {
-    "voices": {
-        "Male": [
-            "m1", "m2", "m3",
-        ],
-        "Female": [
-            "f1", "f2", "f3",
-        ],
-    },
-    "rate": {
-        "min": -100,
-        "max": 100,
-        "default": 0
-    },
-    "pitch": {
-        "min": -100,
-        "max": 100,
-        "default": 0
-    },
-    "volume": {
-        "min": 0,
-        "max": 100,
-        "default": 100
-    },
-    "punctuation_modes": ["none", "all", "some"],
-}
+AIRUNNER_VALID_IMAGE_FILES = os.environ.get("AIRUNNER_VALID_IMAGE_FILES", "Image Files (*.png *.jpg *.jpeg)")
 AIRUNNER_MAX_SEED = os.environ.get("AIRUNNER_MAX_SEED", 4294967295)
 AIRUNNER_DEFAULT_SCHEDULER = os.environ.get("AIRUNNER_DEFAULT_SCHEDULER", Scheduler.DPM_PP_2M_K.value)
 AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG = os.environ.get("AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG", 3)
-NSFW_CONTENT_DETECTED_MESSAGE = os.environ.get("NSFW_CONTENT_DETECTED_MESSAGE", "NSFW content detected")
+AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE = os.environ.get("AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE", "NSFW content detected")
 AIRUNNER_DISCORD_URL = os.environ.get("AIRUNNER_DISCORD_URL", None)
 AIRUNNER_SLEEP_TIME_IN_MS = os.environ.get("AIRUNNER_SLEEP_TIME_IN_MS", 50)
+
+# Set the database URL
 DB_PATH = os.path.expanduser(
     os.path.join(
         "~",
@@ -295,9 +220,9 @@ AIRUNNER_LLM_USE_OPENROUTER = os.environ.get("AIRUNNER_LLM_USE_OPENROUTER", "0")
 AIRUNNER_LLM_OPENROUTER_API_KEY = os.environ.get("AIRUNNER_LLM_OPENROUTER_API_KEY", "")
 AIRUNNER_LLM_USE_OPENAI = os.environ.get("AIRUNNER_LLM_USE_OPENAI", "0") == "1"
 AIRUNNER_LLM_OPENAI_API_KEY = os.environ.get("AIRUNNER_LLM_OPENAI_API_KEY", "")
+AIRUNNER_LLM_USE_WEATHER_PROMPT = os.environ.get("AIRUNNER_LLM_USE_WEATHER_PROMPT", "1") == "1"
 
 # Identity
 AIRUNNER_ORGANIZATION = os.environ.get("AIRUNNER_ORGANIZATION", "Capsize LLC")
 AIRUNNER_APPLICATION_NAME = os.environ.get("AIRUNNER_APPLICATION_NAME", "AI Runner")
 AIRUNNER_MESSAGE_BACKEND = os.environ.get("AIRUNNER_MESSAGE_BACKEND", None)
-AIRUNNER_LLM_USE_WEATHER_PROMPT = os.environ.get("AIRUNNER_LLM_USE_WEATHER_PROMPT", "1") == "1"
