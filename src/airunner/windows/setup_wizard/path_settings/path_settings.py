@@ -2,7 +2,7 @@ import os
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtCore import Slot
 
-from airunner.settings import DEFAULT_PATH_SETTINGS
+from airunner.data.bootstrap.path_settings_data import PATH_SETTINGS_DATA
 from airunner.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.windows.setup_wizard.path_settings.templates.path_settings_ui import Ui_PathSettings
 
@@ -16,7 +16,7 @@ class PathSettings(BaseWizard):
 
     def _update_paths(self, base_path: str):
         self.update_path_settings("base_path", base_path)
-        for k, v in DEFAULT_PATH_SETTINGS.items():
+        for k, v in PATH_SETTINGS_DATA.items():
             self.update_path_settings(
                 k, 
                 os.path.expanduser(os.path.join(
