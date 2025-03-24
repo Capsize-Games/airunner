@@ -601,9 +601,6 @@ class BaseAgent(
         """
         self._update_system_prompt()
         self._update_mood()
-        if self.do_summarize_conversation:
-            self.logger.info("Attempting to summarize conversation")
-            self._summarize_conversation()
 
     def _perform_tool_call(
         self,
@@ -811,6 +808,13 @@ class BaseAgent(
         
         if self.llm_perform_analysis:
             self._perform_analysis()
+        
+        if (
+            self.llm_settings.perform_conversation_summary and 
+            self.do_summarize_conversation
+        ):
+            self.logger.info("Attempting to summarize conversation")
+            self._summarize_conversation()
 
         if self.print_llm_system_prompt:
             self.logger.info(self._system_prompt)
