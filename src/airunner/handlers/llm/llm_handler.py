@@ -12,7 +12,7 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
-from airunner.settings import MAX_SEED
+from airunner.settings import AIRUNNER_MAX_SEED
 from airunner.utils.memory import clear_memory
 from airunner.handlers.llm.agent.agents import (
     MistralAgentQObject, 
@@ -377,7 +377,7 @@ class LLMHandler(
             random_seed = self.chatbot.random_seed
 
         if random_seed:
-            seed = random.randint(-MAX_SEED, MAX_SEED)
+            seed = random.randint(-AIRUNNER_MAX_SEED, AIRUNNER_MAX_SEED)
 
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
