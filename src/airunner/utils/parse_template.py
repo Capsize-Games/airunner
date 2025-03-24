@@ -1,4 +1,4 @@
-from airunner.settings import DEFAULT_LLM_HF_PATH
+from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 
 
 def parse_template(template: dict) -> str:
@@ -9,7 +9,7 @@ def parse_template(template: dict) -> str:
     parsed_template = ""
     if llm_category == "causallm":
         if model in [
-            DEFAULT_LLM_HF_PATH,
+            AIRUNNER_DEFAULT_LLM_HF_PATH,
         ]:
             parsed_template = "\n".join((
                 "[INST]<<SYS>>",

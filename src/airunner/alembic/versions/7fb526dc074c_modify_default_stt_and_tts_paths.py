@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.sql import text  # Add import for text()
 
-from airunner.settings import BASE_PATH
+from airunner.settings import AIRUNNER_BASE_PATH
 from airunner.data.models.path_settings import PathSettings
 from airunner.utils.db import safe_alter_column
 
@@ -23,8 +23,8 @@ down_revision: Union[str, None] = '181e31f78151'
 def upgrade() -> None:
     op.execute("DROP TABLE IF EXISTS _alembic_tmp_path_settings")
 
-    stt_model_path = os.path.expanduser(os.path.join(BASE_PATH, "text", "models", "stt"))
-    tts_model_path = os.path.expanduser(os.path.join(BASE_PATH, "text", "models", "tts"))
+    stt_model_path = os.path.expanduser(os.path.join(AIRUNNER_BASE_PATH, "text", "models", "stt"))
+    tts_model_path = os.path.expanduser(os.path.join(AIRUNNER_BASE_PATH, "text", "models", "tts"))
     safe_alter_column(
         PathSettings,
         "stt_model_path",
@@ -43,8 +43,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    stt_model_path = os.path.expanduser(os.path.join(BASE_PATH, "text", "models", "stt", "models"))
-    tts_model_path = os.path.expanduser(os.path.join(BASE_PATH, "text", "models", "tts", "models"))
+    stt_model_path = os.path.expanduser(os.path.join(AIRUNNER_BASE_PATH, "text", "models", "stt", "models"))
+    tts_model_path = os.path.expanduser(os.path.join(AIRUNNER_BASE_PATH, "text", "models", "tts", "models"))
     safe_alter_column(
         PathSettings,
         "stt_model_path",
@@ -73,8 +73,8 @@ def update_path_values(stt_model_path, tts_model_path):
         path_id = path_setting[0]
         base_path = path_setting[1]
 
-        stt_model_path = stt_model_path.replace(os.path.expanduser(BASE_PATH), base_path)
-        tts_model_path = tts_model_path.replace(os.path.expanduser(BASE_PATH), base_path)
+        stt_model_path = stt_model_path.replace(os.path.expanduser(AIRUNNER_BASE_PATH), base_path)
+        tts_model_path = tts_model_path.replace(os.path.expanduser(AIRUNNER_BASE_PATH), base_path)
         
         try:
             connection.execute(
