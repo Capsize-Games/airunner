@@ -228,7 +228,14 @@ class CustomScene(
 
     def on_image_generated_signal(self, response):
         code = response["code"]
-        if code == EngineResponseCode.IMAGE_GENERATED:
+        if code in (
+            EngineResponseCode.INSUFFICIENT_GPU_MEMORY,
+        ):
+            self.emit_signal(
+                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                "Insufficient GPU memory."
+            )
+        elif code == EngineResponseCode.IMAGE_GENERATED:
             message = response["message"]
             if message is None:
                 self.logger.error("No message received from engine")
@@ -237,13 +244,7 @@ class CustomScene(
             if len(images) == 0:
                 self.logger.debug("No images received from engine")
             elif message:
-                rect = message.get("active_rect", None)
-                outpaint_box_rect = QRect(
-                    rect.x,
-                    rect.y,
-                    rect.width,
-                    rect.height
-                ) if rect else None
+                outpaint_box_rect = message.get("active_rect", {})
                 self._create_image(
                     image=images[0].convert("RGBA"),
                     is_outpaint=message.get("is_outpaint", False),
