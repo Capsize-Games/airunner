@@ -2,7 +2,7 @@ import os
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import DARK_THEME_NAME, LIGHT_THEME_NAME
+from airunner.settings import AIRUNNER_DARK_THEME_NAME, AIRUNNER_LIGHT_THEME_NAME
 from airunner.styles_mixin import StylesMixin
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.settings_mixin import SettingsMixin

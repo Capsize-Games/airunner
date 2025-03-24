@@ -4,14 +4,14 @@ import os
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
-from airunner.settings import DB_URL
+from airunner.settings import AIRUNNER_DB_URL
 
 config = context.config
-config.set_main_option("sqlalchemy.url", DB_URL)
+config.set_main_option("sqlalchemy.url", AIRUNNER_DB_URL)
 
 # check if db file exists
-if DB_URL.__contains__("sqlite") and not os.path.exists(DB_URL.replace("sqlite:///", "")):
-    print(f"Database file not found at {DB_URL}")
+if AIRUNNER_DB_URL.__contains__("sqlite") and not os.path.exists(AIRUNNER_DB_URL.replace("sqlite:///", "")):
+    print(f"Database file not found at {AIRUNNER_DB_URL}")
 
 # Import your models here
 from airunner.data.models.base import Base

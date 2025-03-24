@@ -5,7 +5,7 @@ from queue import Queue
 from PySide6.QtCore import QThread
 
 from airunner.enums import SignalCode
-from airunner.settings import SLEEP_TIME_IN_MS
+from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 
 
@@ -94,7 +94,7 @@ class TTSVocalizerWorker(Worker):
                 self.logger.debug("stream is None")
 
             self.started = True
-        QThread.msleep(SLEEP_TIME_IN_MS)
+        QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
 
     def handle_speech(self, generated_speech):
         self.logger.debug("Adding speech to stream...")

@@ -11,7 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from airunner.data.models.base import BaseModel
-from airunner.settings import SD_DEFAULT_VAE_PATH, DEFAULT_SCHEDULER
+from airunner.settings import AIRUNNER_SD_DEFAULT_VAE_PATH, AIRUNNER_DEFAULT_SCHEDULER
 
 
 class GeneratorSettings(BaseModel):
@@ -29,8 +29,8 @@ class GeneratorSettings(BaseModel):
     model_name = Column(String, default="")
     model = Column(Integer, ForeignKey('aimodels.id'), nullable=True)
     aimodel = relationship("AIModels", back_populates="generator_settings")
-    vae = Column(String, default=SD_DEFAULT_VAE_PATH)
-    scheduler = Column(String, default=DEFAULT_SCHEDULER)
+    vae = Column(String, default=AIRUNNER_SD_DEFAULT_VAE_PATH)
+    scheduler = Column(String, default=AIRUNNER_DEFAULT_SCHEDULER)
     variation = Column(Boolean, default=False)
     use_prompt_builder = Column(Boolean, default=False)
     version = Column(String, default="SD 1.5")

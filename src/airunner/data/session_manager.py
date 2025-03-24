@@ -1,10 +1,10 @@
 from contextlib import contextmanager
 from sqlalchemy.orm import scoped_session, sessionmaker
-from airunner.settings import DB_URL
+from airunner.settings import AIRUNNER_DB_URL
 from sqlalchemy import create_engine
 
 
-engine = create_engine(DB_URL)
+engine = create_engine(AIRUNNER_DB_URL)
 Session = scoped_session(sessionmaker(bind=engine))
 
 

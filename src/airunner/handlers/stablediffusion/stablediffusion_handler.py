@@ -65,7 +65,7 @@ from airunner.enums import (
 from airunner.exceptions import PipeNotLoadedException, InterruptedException
 from airunner.handlers.stablediffusion.prompt_weight_bridge import \
     PromptWeightBridge
-from airunner.settings import MIN_NUM_INFERENCE_STEPS_IMG2IMG
+from airunner.settings import AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner.utils.memory import (
     clear_memory
 )
@@ -1737,8 +1737,8 @@ class StableDiffusionHandler(BaseHandler):
 
         if self.is_img2img:
             image = self.img2img_image
-            if args["num_inference_steps"] < MIN_NUM_INFERENCE_STEPS_IMG2IMG:
-                args["num_inference_steps"] = MIN_NUM_INFERENCE_STEPS_IMG2IMG
+            if args["num_inference_steps"] < AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG:
+                args["num_inference_steps"] = AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
         elif self.is_outpaint:
             image = self.outpaint_image
             if not image:

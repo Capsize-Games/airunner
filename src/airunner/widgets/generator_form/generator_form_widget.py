@@ -10,8 +10,8 @@ from airunner.enums import (
     LLMActionType
 )
 from airunner.settings import (
-    PHOTO_REALISTIC_NEGATIVE_PROMPT, 
-    ILLUSTRATION_NEGATIVE_PROMPT
+    AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT, 
+    AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT
 )
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -105,9 +105,9 @@ class GeneratorForm(BaseWidget):
         secondary_prompt = data.get("secondary_prompt", None)
         prompt_type = data.get("type", ImageCategory.PHOTO.value)
         if prompt_type == "photo":
-            negative_prompt = PHOTO_REALISTIC_NEGATIVE_PROMPT
+            negative_prompt = AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT
         else:
-            negative_prompt = ILLUSTRATION_NEGATIVE_PROMPT
+            negative_prompt = AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT
         self.ui.prompt.setPlainText(prompt)
         self.ui.negative_prompt.setPlainText(negative_prompt)
         self.ui.secondary_prompt.setPlainText(secondary_prompt)

@@ -1,4 +1,4 @@
-from airunner.settings import DEFAULT_LLM_HF_PATH
+from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner.windows.download_wizard.download_thread import DownloadThread
 from airunner.windows.download_wizard.download_wizard_page import DownloadWizardPage
 from airunner.windows.setup_wizard.model_setup.llm.templates.llm_setup_ui import Ui_llm_setup
@@ -11,7 +11,7 @@ class LLMSetup(DownloadWizardPage):
         self.models_to_download = [
             {
                 "model": {
-                    "path": DEFAULT_LLM_HF_PATH
+                    "path": AIRUNNER_DEFAULT_LLM_HF_PATH
                 },
             }
         ]
