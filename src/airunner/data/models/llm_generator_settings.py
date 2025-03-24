@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, Boolean, String, BigInteger, ForeignKey
 
 from airunner.data.models.base import BaseModel
-from airunner.settings import DEFAULT_LLM_HF_PATH
+from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 
 
 class LLMGeneratorSettings(BaseModel):
@@ -11,7 +11,7 @@ class LLMGeneratorSettings(BaseModel):
     use_tool_filter = Column(Boolean, default=False)
     seed = Column(BigInteger, default=0)
     random_seed = Column(Boolean, default=False)
-    model_version = Column(String, default=DEFAULT_LLM_HF_PATH)
+    model_version = Column(String, default=AIRUNNER_DEFAULT_LLM_HF_PATH)
     dtype = Column(String, default="4bit")
     use_gpu = Column(Boolean, default=True)
     message_type = Column(String, default="chat")
