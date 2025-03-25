@@ -764,7 +764,7 @@ class BaseAgent(
             memory = self.chat_engine.memory
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
             memory = self.rag_engine.memory
-        else:
+        elif action is LLMActionType.APPLICATION_COMMAND:
             memory = self.react_tool_agent.chat_engine.memory
         self._memory = memory
 
@@ -952,6 +952,8 @@ class BaseAgent(
             tool_name = "rag_engine_tool"
         elif action is LLMActionType.STORE_DATA:
             tool_name = "store_user_tool"
+        elif action is LLMActionType.APPLICATION_COMMAND:
+            tool_name = "react_tool_agent"
 
 
         print("PERFORMING CHAT REQUEST", kwargs)

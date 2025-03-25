@@ -17,6 +17,7 @@ from airunner.utils import create_worker
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.workers import LLMResponseWorker
+from airunner.settings import AIRUNNER_ART_ENABLED
 
 
 class ChatPromptWidget(BaseWidget):
@@ -64,9 +65,11 @@ class ChatPromptWidget(BaseWidget):
         self.ui.action.blockSignals(True)
         self.ui.action.addItem("Auto")
         self.ui.action.addItem("Chat")
-        self.ui.action.addItem("Image")
         self.ui.action.addItem("RAG")
-        self.ui.action.addItem("Store Data")
+        
+        if AIRUNNER_ART_ENABLED:
+            self.ui.action.addItem("Image")
+        
         action = self.action
         if action is LLMActionType.APPLICATION_COMMAND:
             self.ui.action.setCurrentIndex(0)
@@ -343,8 +346,8 @@ class ChatPromptWidget(BaseWidget):
             llm_action_value = LLMActionType.GENERATE_IMAGE
         elif val == "RAG":
             llm_action_value = LLMActionType.PERFORM_RAG_SEARCH
-        elif val == "Store Data":
-            llm_action_value = LLMActionType.STORE_DATA
+        elif val == "Auto":
+            llm_action_value = LLMActionType.APPLICATION_COMMAND
         else:
             llm_action_value = LLMActionType.APPLICATION_COMMAND
         self.update_llm_generator_settings("action", llm_action_value.name)
