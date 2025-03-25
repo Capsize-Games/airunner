@@ -73,6 +73,9 @@ class Worker(
 
     def preprocess(self):
         pass
+
+    def clear_queue(self):
+        self.queue = queue.Queue()
     
     def get_item_from_queue(self):
         if self.queue_type == QueueType.GET_LAST_ITEM:
