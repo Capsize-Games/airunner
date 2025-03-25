@@ -17,6 +17,7 @@ from airunner.utils import create_worker
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.workers import LLMResponseWorker
+from airunner.settings import AIRUNNER_ART_ENABLED
 
 
 class ChatPromptWidget(BaseWidget):
@@ -64,8 +65,9 @@ class ChatPromptWidget(BaseWidget):
         self.ui.action.blockSignals(True)
         self.ui.action.addItem("Auto")
         self.ui.action.addItem("Chat")
-        self.ui.action.addItem("Image")
         self.ui.action.addItem("RAG")
+        if AIRUNNER_ART_ENABLED:
+            self.ui.action.addItem("Image")
         self.ui.action.addItem("Store Data")
         action = self.action
         if action is LLMActionType.APPLICATION_COMMAND:
