@@ -36,6 +36,7 @@ class CustomGraphicsView(
         self.setMouseTracking(True)
         
         self._scene: Optional[CustomScene] = None
+        self._canvas_color: str = "#000000"
         self.current_background_color: Optional[QColor] = None
         self.active_grid_area: Optional[ActiveGridArea] = None
         self.do_draw_layers: bool = True
@@ -90,12 +91,14 @@ class CustomGraphicsView(
     @property
     def scene(self) -> Optional[CustomScene]:
         scene = self._scene
-        if not scene:
+        if not scene and self.canvas_type:
             if self.canvas_type == CanvasType.IMAGE.value:
                 scene = CustomScene(canvas_type=self.canvas_type)
             elif self.canvas_type == CanvasType.BRUSH.value:
                 scene = BrushScene(canvas_type=self.canvas_type)
             else:
+                import traceback
+                traceback.print_stack()
                 self.logger.error(f"Unknown canvas type: {self.canvas_type}")
                 return
         
@@ -152,8 +155,16 @@ class CustomGraphicsView(
     def on_canvas_do_draw_signal(self, data: dict):
         self.do_draw(force_draw=data.get("force_draw", False))
 
-    def on_application_settings_changed_signal(self):
-        self.set_canvas_color(self.scene)
+    def on_application_settings_changed_signal(self, data: Dict):
+        if (
+            data.get("setting_name") == "grid_settings" and 
+            data.get("column_name") == "canvas_color" and 
+            self._canvas_color != data.get("value", self._canvas_color) and
+            self.scene
+        ):
+            self._canvas_color = data.get("value")
+            self.set_canvas_color(self.scene, self._canvas_color)
+
         if self.grid_settings.show_grid:
             self.do_draw()
         else:
@@ -370,9 +381,14 @@ class CustomGraphicsView(
         self.set_canvas_color(self.scene)
         self.show_active_grid_area()
 
-    def set_canvas_color(self, scene: Optional[CustomScene] = None):
+    def set_canvas_color(
+        self, 
+        scene: Optional[CustomScene] = None,
+        canvas_color: Optional[str] = None
+    ):
         scene = self.scene if not scene else scene
-        self.current_background_color = self.grid_settings.canvas_color
+        canvas_color = canvas_color or self.grid_settings.canvas_color
+        self.current_background_color = canvas_color
         color = QColor(self.current_background_color)
         brush = QBrush(color)
         scene.setBackgroundBrush(brush)
