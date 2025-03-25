@@ -3,12 +3,14 @@ import re
 import threading
 from typing import Optional
 
+from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
 from airunner.workers.worker import Worker
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers import (
     SpeechT5Handler,
     EspeakHandler,
+    OpenVoiceHandler,
 )
 
 
@@ -103,9 +105,12 @@ class TTSGeneratorWorker(Worker):
 
     def _initialize_tts_handler(self):
         self.logger.info("Initializing TTS handler...")
-        tts_model = self.tts_settings.model.lower()
-        if tts_model == TTSModel.ESPEAK.value:
+        model = AIRUNNER_TTS_MODEL_TYPE or self.tts_settings.model
+        model_type = TTSModel(model)
+        if model_type is TTSModel.ESPEAK:
             tts_handler_class_ = EspeakHandler
+        elif model_type is TTSModel.OPENVOICE:
+            tts_handler_class_ = OpenVoiceHandler
         else:
             tts_handler_class_ = SpeechT5Handler
         self.tts = tts_handler_class_()
@@ -206,7 +211,9 @@ class TTSGeneratorWorker(Worker):
             return
 
         if response is not None:
-            self.emit_signal(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, {
-                "message": response
-            })
+            self.emit_signal(
+                SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, {
+                    "message": response
+                }
+            )
 
