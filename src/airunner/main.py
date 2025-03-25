@@ -63,6 +63,7 @@ def main():
     parser.add_argument("--clear-window-settings", action="store_true", help="Clear window settings")
     parser.add_argument("--print-llm-system-prompt", action="store_true", help="Print LLM System prompt to console")
     parser.add_argument("--perform-llm-analysis", action="store_true", help="Perform LLM analysis")
+    parser.add_argument("--chatbot-only", action="store_true", help="Run LLM only")
     args = parser.parse_args()
 
     if args.clear_window_settings:
@@ -77,6 +78,9 @@ def main():
     
     if args.perform_llm_analysis:
         os.environ["AIRUNNER_LLM_PERFORM_ANALYSIS"] = "1"
+    
+    if args.chatbot_only:
+        os.environ["AIRUNNER_ART_ENABLED"] = "0"
 
     setup_database()
 
