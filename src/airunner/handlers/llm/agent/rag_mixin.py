@@ -47,9 +47,9 @@ class RAGMixin:
         self.load_rag()
     
     @property
-    def _rag_system_prompt(self) -> str:
+    def rag_system_prompt(self) -> str:
         prompt = (
-            f"{self._system_prompt}\n"
+            f"{self.system_prompt}\n"
             "------\n"
             "Rules:\n"
             "You must attempt to find answers based on the provided documents.\n"
@@ -113,7 +113,7 @@ class RAGMixin:
                 self.rag_engine = RefreshContextChatEngine.from_defaults(
                     retriever=self.retriever,
                     memory=self.chat_memory,
-                    system_prompt=self._rag_system_prompt,
+                    system_prompt=self.rag_system_prompt,
                     node_postprocessors=[],
                     llm=self.llm,
                 )
