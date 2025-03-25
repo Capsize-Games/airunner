@@ -1,18 +1,16 @@
-import threading
-from typing import Dict, Optional
+from typing import Dict
 
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
-from airunner.handlers import LLMHandler
 
 
 class LLMResponseWorker(Worker):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.signal_handlers = {
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_llm_text_streamed,
             SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process,
         }
-        super().__init__()
+        super().__init__(*args, **kwargs)
         self._do_interrupt: bool = False
     
     def on_llm_text_streamed(self, data: Dict):

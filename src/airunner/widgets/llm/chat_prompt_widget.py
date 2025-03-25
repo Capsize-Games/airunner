@@ -1,4 +1,5 @@
 import json
+import queue
 
 from typing import Dict, Optional
 
@@ -31,12 +32,17 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_clear_conversation,
             SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
             SignalCode.LLM_TOKEN_SIGNAL: self.on_token_signal,
-            SignalCode.LLM_TEXT_STREAM_PROCESS_SIGNAL: self.on_add_bot_message_to_conversation,
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
         }
         self.splitters = [
             "chat_prompt_splitter"
         ]
         super().__init__()
+        self.token_buffer = []
+        self.ui_update_timer = QTimer(self)
+        self.ui_update_timer.setInterval(50)
+        self.ui_update_timer.timeout.connect(self.flush_token_buffer)
+        self.ui_update_timer.start()
         self.registered: bool = False
         self.scroll_bar = None
         self.is_modal = True
@@ -78,7 +84,10 @@ class ChatPromptWidget(BaseWidget):
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
-        self._llm_response_worker = create_worker(LLMResponseWorker)
+        self._llm_response_worker = create_worker(
+            LLMResponseWorker,
+            sleep_time_in_ms=1
+        )
         self.load_conversation()
 
     @property
@@ -201,19 +210,29 @@ class ChatPromptWidget(BaseWidget):
         llm_response: LLMResponse = data.get("response", None)
         if not llm_response:
             raise ValueError("No LLMResponse object found in data")
+    
+        self.token_buffer.append(llm_response.message)
 
         if llm_response.is_first_message:
             self.stop_progress_bar()
 
-        self.add_message_to_conversation(
-            name=llm_response.name or self.chatbot.name,
-            message=llm_response.message,
-            is_bot=True,
-            first_message=llm_response.is_first_message
-        )
-
         if llm_response.is_end_of_message:
             self.enable_generate()
+    
+    def flush_token_buffer(self):
+        """
+        Flush the token buffer and update the UI.
+        """
+
+        combined_message = "".join(self.token_buffer)
+        self.token_buffer.clear()
+
+        self.add_message_to_conversation(
+            name=self.chatbot.name,
+            message=combined_message,
+            is_bot=True,
+            first_message=False
+        )
 
     def enable_generate(self):
         self.generating = False
