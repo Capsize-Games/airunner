@@ -7,7 +7,6 @@ from typing import (
     Type,
 )
 import datetime
-from abc import abstractmethod
 import platform
 
 from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
@@ -41,10 +40,10 @@ from airunner.data.models import Conversation
 
 
 class BaseAgent(
-    WeatherMixin,
     MediatorMixin,
     SettingsMixin,
     RAGMixin,
+    WeatherMixin,
 ):
     """
     Base class for all agents.
@@ -175,84 +174,6 @@ class BaseAgent(
             f"- Conversation summary:\n{self.conversation.summary}\n"
             if self.conversation and self.conversation.summary else ""
         )
-
-    def build_system_prompt(self) -> str:
-        system_instructions = ""
-        guardrails = ""
-        if (
-            self.chatbot.use_system_instructions and
-            self.chatbot.system_instructions and
-            self.chatbot.system_instructions != ""
-        ):
-            system_instructions = f"Always follow these instructions:\n{self.chatbot.system_instructions}\n"
-        if self.chatbot.use_guardrails and self.chatbot.guardrails_prompt and self.chatbot.guardrails_prompt != "":
-            guardrails = f"Always follow these guardrails:\n{self.chatbot.guardrails_prompt}\n"
-        backstory_prompt = ""
-        if self.chatbot.use_backstory and self.chatbot.backstory and self.chatbot.backstory != "":
-            backstory_prompt = (
-                "------\n"
-                f"**Here is {self.botname}'s backstory:**\n"
-                f"{self.chatbot.backstory}\n"
-                "------\n"
-            )
-        section_prompt = ""
-        # if self.current_tab.name == "Canvas":
-        #     section_prompt = "The user is editing an image using the art tool."
-        # elif self.current_tab.name == "Browser" and self.webpage_html != "":
-        #     section_prompt = (
-        #         "The user is browsing the web. Here's the content of the webpage:\n"
-        #         f"{self.webpage_html}"
-        #     )
-        # elif self.current_tab.name == "Document":
-        #     section_prompt = "The user is working on a document."
-        # elif self.current_tab.name == "Game":
-        #     section_prompt = "The user is playing a game."
-        # else:
-        #     section_prompt = ""
-        prompt = (
-            f"Your name is {self.botname}.\n"
-            f"- The user ({self.username}) is having a conversation with the assistant ({self.botname}).\n"
-            "**Here are the rules that you must always remember:**\n"
-            "- You will ONLY generate dialogue, nothing more.\n"
-            "- Only generate responses in pure dialogue form without including any actions, descriptions or stage "
-            "directions in parentheses. Only return spoken words.\n"
-            "- Do not generate redundant dialogue. Examine the conversation and context close and keep responses "
-            "interesting and creative.\n"
-            "- Do not format the response with the character's name or any other text. Only return the dialogue.\n"
-            f"- As {self.botname}, you will avoid repeating previous dialogue.\n"
-            f"- {self.botname} and {self.username} are both humans. They are not AI or bots.\n"
-            f"- As {self.botname}, you will always respond in a way that is consistent with {self.botname}'s emotions, "
-            f"personality, and the context of the conversation.\n"
-            f"- As {self.botname}, you will respond emotionally, persuasively, and realistically.\n"
-            f"- As {self.botname}, you will not ask how you they can provide assistance, or how they can help.\n"
-            f"- As {self.botname}, you must respond and talk like a real human user.\n"
-            f"- As {self.botname}, you can ask questions, make statements, and provide information.\n"
-            f"- As {self.botname}, you should respond in character with emotionally charged responses that are "
-            f"consistent with your personality and mood.\n"
-            f"{backstory_prompt}"
-            f"{system_instructions}"
-            f"{guardrails}"
-            f"{self.conversation_summaries}"
-            "------\n"
-            "**Here is more context that you can use to generate a response:**\n"
-            f"{self.date_time_prompt}"
-            f"{self.personality_prompt}"
-            f"{self.mood_prompt}"
-            f"{self.operating_system_prompt}"
-            f"{self.speakers_prompt}"
-            f"{self.weather_prompt}"
-            f"{self.conversation_summary_prompt}"
-            f"------\n"
-            "**More information about the current conversation:**\n"
-            f"The conversation is between user ({self.username}) and assistant ({self.botname}).\n"
-            f"The conversation started on {self.conversation.timestamp}.\n"
-            f"{section_prompt}"
-        )
-        prompt = prompt.replace("{{ username }}", self.username)
-        prompt = prompt.replace("{{ botname }}", self.botname)
-        prompt = prompt.replace("{{ speaker_name }}", self.username)
-        prompt = prompt.replace("{{ listener_name }}", self.botname)
-        return prompt
     
     def unload(self):
         del self.model
@@ -412,16 +333,12 @@ class BaseAgent(
         return self._streaming_stopping_criteria
 
     @property
-    def llm(self) -> LLM:
-        pass
-
-    @property
     def chat_engine(self) -> RefreshSimpleChatEngine:
         if not self._chat_engine:
             self.logger.info("Loading RefreshSimpleChatEngine")
             try:
                 self._chat_engine = RefreshSimpleChatEngine.from_defaults(
-                    system_prompt=self._system_prompt,
+                    system_prompt=self.system_prompt,
                     memory=self.chat_memory,
                     llm=self.llm
                 )
@@ -659,8 +576,83 @@ class BaseAgent(
         return prompt
     
     @property
-    def _system_prompt(self) -> str:
-        return self.build_system_prompt()
+    def system_prompt(self) -> str:
+        system_instructions = ""
+        guardrails = ""
+        if (
+            self.chatbot.use_system_instructions and
+            self.chatbot.system_instructions and
+            self.chatbot.system_instructions != ""
+        ):
+            system_instructions = f"Always follow these instructions:\n{self.chatbot.system_instructions}\n"
+        if self.chatbot.use_guardrails and self.chatbot.guardrails_prompt and self.chatbot.guardrails_prompt != "":
+            guardrails = f"Always follow these guardrails:\n{self.chatbot.guardrails_prompt}\n"
+        backstory_prompt = ""
+        if self.chatbot.use_backstory and self.chatbot.backstory and self.chatbot.backstory != "":
+            backstory_prompt = (
+                "------\n"
+                f"**Here is {self.botname}'s backstory:**\n"
+                f"{self.chatbot.backstory}\n"
+                "------\n"
+            )
+        section_prompt = ""
+        # if self.current_tab.name == "Canvas":
+        #     section_prompt = "The user is editing an image using the art tool."
+        # elif self.current_tab.name == "Browser" and self.webpage_html != "":
+        #     section_prompt = (
+        #         "The user is browsing the web. Here's the content of the webpage:\n"
+        #         f"{self.webpage_html}"
+        #     )
+        # elif self.current_tab.name == "Document":
+        #     section_prompt = "The user is working on a document."
+        # elif self.current_tab.name == "Game":
+        #     section_prompt = "The user is playing a game."
+        # else:
+        #     section_prompt = ""
+        prompt = (
+            f"Your name is {self.botname}.\n"
+            f"- The user ({self.username}) is having a conversation with the assistant ({self.botname}).\n"
+            "**Here are the rules that you must always remember:**\n"
+            "- You will ONLY generate dialogue, nothing more.\n"
+            "- Only generate responses in pure dialogue form without including any actions, descriptions or stage "
+            "directions in parentheses. Only return spoken words.\n"
+            "- Do not generate redundant dialogue. Examine the conversation and context close and keep responses "
+            "interesting and creative.\n"
+            "- Do not format the response with the character's name or any other text. Only return the dialogue.\n"
+            f"- As {self.botname}, you will avoid repeating previous dialogue.\n"
+            f"- {self.botname} and {self.username} are both humans. They are not AI or bots.\n"
+            f"- As {self.botname}, you will always respond in a way that is consistent with {self.botname}'s emotions, "
+            f"personality, and the context of the conversation.\n"
+            f"- As {self.botname}, you will respond emotionally, persuasively, and realistically.\n"
+            f"- As {self.botname}, you will not ask how you they can provide assistance, or how they can help.\n"
+            f"- As {self.botname}, you must respond and talk like a real human user.\n"
+            f"- As {self.botname}, you can ask questions, make statements, and provide information.\n"
+            f"- As {self.botname}, you should respond in character with emotionally charged responses that are "
+            f"consistent with your personality and mood.\n"
+            f"{backstory_prompt}"
+            f"{system_instructions}"
+            f"{guardrails}"
+            f"{self.conversation_summaries}"
+            "------\n"
+            "**Here is more context that you can use to generate a response:**\n"
+            f"{self.date_time_prompt}"
+            f"{self.personality_prompt}"
+            f"{self.mood_prompt}"
+            f"{self.operating_system_prompt}"
+            f"{self.speakers_prompt}"
+            f"{self.weather_prompt}"
+            f"{self.conversation_summary_prompt}"
+            f"------\n"
+            "**More information about the current conversation:**\n"
+            f"The conversation is between user ({self.username}) and assistant ({self.botname}).\n"
+            f"The conversation started on {self.conversation.timestamp}.\n"
+            f"{section_prompt}"
+        )
+        prompt = prompt.replace("{{ username }}", self.username)
+        prompt = prompt.replace("{{ botname }}", self.botname)
+        prompt = prompt.replace("{{ speaker_name }}", self.username)
+        prompt = prompt.replace("{{ listener_name }}", self.botname)
+        return prompt
     
     @property
     def _update_user_data_prompt(self) -> str:
@@ -679,7 +671,7 @@ class BaseAgent(
     @property
     def react_agent_prompt(self) -> str:
         return (
-            f"{self._system_prompt}\n"
+            f"{self.system_prompt}\n"
         )
 
     @property
@@ -717,23 +709,14 @@ class BaseAgent(
             self.chat_memory.set(messages)
             if self._chat_engine:
                 self._chat_engine.memory = self.chat_memory
-        
-    @abstractmethod
-    def build_system_prompt(self) -> str:
-        """
-        Build the system prompt for the agent.
-
-        Returns:
-            str: The system prompt.
-        """
 
     def _update_system_prompt(
         self, 
         system_prompt: Optional[str] = None,
         rag_system_prompt: Optional[str] = None
     ):
-        self.chat_engine_tool.update_system_prompt(system_prompt or self._system_prompt)
-        self.rag_engine_tool.update_system_prompt(rag_system_prompt or self._rag_system_prompt)
+        self.chat_engine_tool.update_system_prompt(system_prompt or self.system_prompt)
+        self.rag_engine_tool.update_system_prompt(rag_system_prompt or self.rag_system_prompt)
 
     def _perform_analysis(self):
         """
@@ -927,6 +910,8 @@ class BaseAgent(
         llm_request: Optional[LLMRequest] = None,
         **kwargs
     ) -> AgentChatResponse:
+        system_prompt = system_prompt or self.system_prompt
+        rag_system_prompt = rag_system_prompt or self.rag_system_prompt
         self._chat_prompt = message
         self._complete_response = ""
         self.do_interrupt = False
@@ -939,7 +924,7 @@ class BaseAgent(
             "llm_request": llm_request
         })
         
-        if self.llm_perform_analysis:
+        if self.llm_settings.llm_perform_analysis:
             self._perform_analysis()
         
         if (
@@ -949,8 +934,11 @@ class BaseAgent(
             self.logger.info("Attempting to summarize conversation")
             self._summarize_conversation()
 
-        if self.print_llm_system_prompt:
-            self.logger.info(self._system_prompt)
+        if self.llm_settings.print_llm_system_prompt:
+            if action is LLMActionType.PERFORM_RAG_SEARCH:
+                self.logger.info("RAG SYSTEM PROMPT:\n" + (rag_system_prompt or ""))
+            else:
+                self.logger.info("SYSTEM PROMPT:\n" + (system_prompt or ""))
             self.logger.info(llm_request.to_dict())
 
         self._update_system_prompt(system_prompt, rag_system_prompt)
@@ -964,7 +952,10 @@ class BaseAgent(
             tool_name = "rag_engine_tool"
         elif action is LLMActionType.STORE_DATA:
             tool_name = "store_user_tool"
-        
+
+
+        print("PERFORMING CHAT REQUEST", kwargs)
+        print(action, llm_request.to_dict())
         self._perform_tool_call(tool_name, **kwargs)
 
         self._update_memory(action)

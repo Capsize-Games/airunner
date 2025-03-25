@@ -24,6 +24,8 @@ from airunner.settings import (
     AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS,
     AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS,
     AIRUNNER_LLM_OPENROUTER_MODEL,
+    AIRUNNER_LLM_PRINT_SYSTEM_PROMPT,
+    AIRUNNER_LLM_PERFORM_ANALYSIS,
 )
 
 
@@ -40,6 +42,8 @@ class LLMSettings:
     perform_conversation_summary: bool = AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY
     max_function_calls: int = AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS
     model: str = AIRUNNER_LLM_OPENROUTER_MODEL
+    print_llm_system_prompt: bool = AIRUNNER_LLM_PRINT_SYSTEM_PROMPT
+    llm_perform_analysis: bool = AIRUNNER_LLM_PERFORM_ANALYSIS
 
     @property
     def use_api(self) -> bool:
