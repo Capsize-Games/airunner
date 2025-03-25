@@ -18,14 +18,5 @@ def save_splitter_settings(
 
     for splitter_name in splitters:
         widget = getattr(ui, splitter_name)
-        sizes = widget.sizes()
-    
-        valid_state = True
-        for size in sizes:
-            if size < 50:
-                valid_state = False
-                break
-        
-        if valid_state:
-            splitter_state = widget.saveState()
-            settings.setValue(f"splitters/{splitter_name}", splitter_state)
+        splitter_state = widget.saveState()
+        settings.setValue(f"splitters/{splitter_name}", splitter_state)
