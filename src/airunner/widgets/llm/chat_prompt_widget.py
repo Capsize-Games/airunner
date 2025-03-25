@@ -254,8 +254,14 @@ class ChatPromptWidget(BaseWidget):
         self._clear_conversation_widgets()
 
     def _clear_conversation_widgets(self):
-        for widget in self.ui.scrollAreaWidgetContents.findChildren(MessageWidget):
-            widget.deleteLater()
+        # Iterate through the layout items and delete the widgets
+        while self.ui.scrollAreaWidgetContents.layout().count():
+            item = self.ui.scrollAreaWidgetContents.layout().takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        # Ensure the layout is updated
+        self.ui.scrollAreaWidgetContents.layout().update()
     
     @Slot(bool)
     def action_button_clicked_send(self):

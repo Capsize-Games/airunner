@@ -1,8 +1,7 @@
-
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit, QApplication, QWidget
 from PySide6.QtGui import QFontMetrics
-from PySide6.QtCore import Qt, QSize, Slot, QEvent
+from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer
 from PySide6.QtCore import Signal
 
 from airunner.enums import SignalCode
@@ -33,6 +32,7 @@ class MessageWidget(BaseWidget):
         self.conversation_id = kwargs.pop("conversation_id")
         self.is_bot = kwargs.pop("is_bot")
         super().__init__(*args, **kwargs)
+        self._deleted = False
         self.ui.content.setReadOnly(True)
         self.ui.content.insertPlainText(self.message)
         self.ui.content.document().contentsChanged.connect(self.sizeChange)
@@ -52,10 +52,12 @@ class MessageWidget(BaseWidget):
     def on_delete_messages_after_id(self, data):
         message_id = data.get("message_id", None)
         if self.message_id > message_id:
-            try:
-                self.deleteLater()
-            except RuntimeError:
-                pass
+            if not self._deleted:  # Check if the widget has already been deleted
+                try:
+                    if self.parentWidget():  # Check if the widget still has a parent
+                        self.deleteLater()
+                except RuntimeError:
+                    pass
 
     def set_cursor(self, cursor_type):
         self.ui.message_container.setCursor(cursor_type)
@@ -126,22 +128,24 @@ class MessageWidget(BaseWidget):
 
     @Slot()
     def delete(self):
-        with session_scope() as session:
-            conversation = session.query(Conversation).filter(
-                Conversation.id == self.conversation_id
-            ).first()
-            messages = conversation.value
-            if self.message_id == 0:
-                conversation.value = []
-            else:
-                conversation.value = messages[0:self.message_id]
-            session.add(conversation)
-            session.commit()
+        if not self._deleted:  # Check if the widget has already been deleted
+            self._deleted = True
+            with session_scope() as session:
+                conversation = session.query(Conversation).filter(
+                    Conversation.id == self.conversation_id
+                ).first()
+                messages = conversation.value
+                if self.message_id == 0:
+                    conversation.value = []
+                else:
+                    conversation.value = messages[0:self.message_id]
+                session.add(conversation)
+                session.commit()
             self.emit_signal(SignalCode.DELETE_MESSAGES_AFTER_ID, {
-                "message_id": self.message_id,
-            })
+                    "message_id": self.message_id,
+                })
             self.setParent(None)
-            self.deleteLater()
+            QTimer.singleShot(0, self.deleteLater)
 
     @Slot()
     def copy(self):
