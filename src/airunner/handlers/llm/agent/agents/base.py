@@ -724,6 +724,7 @@ class BaseAgent(
         """
         self._update_system_prompt()
         self._update_mood()
+        self._update_user_data()
 
     def _perform_tool_call(
         self,
@@ -812,7 +813,6 @@ class BaseAgent(
             value=conversation.value[:-2],
             last_updated_message_id=latest_message_id
         )
-        self._update_user_data()
     
     def _update_user_data(self):
         self.logger.info("Attempting to update user preferences")
