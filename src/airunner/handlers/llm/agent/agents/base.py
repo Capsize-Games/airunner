@@ -333,10 +333,6 @@ class BaseAgent(
         return self._streaming_stopping_criteria
 
     @property
-    def llm(self) -> LLM:
-        pass
-
-    @property
     def chat_engine(self) -> RefreshSimpleChatEngine:
         if not self._chat_engine:
             self.logger.info("Loading RefreshSimpleChatEngine")

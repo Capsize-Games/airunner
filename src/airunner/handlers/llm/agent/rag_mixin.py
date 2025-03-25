@@ -44,7 +44,7 @@ class RAGMixin:
         self.__storage_context: Optional[StorageContext] = None
         self._rag_engine_tool: Optional[RAGEngineTool] = None
         self._conversations: List[Conversation] = []
-        self.load_rag()
+        # self.load_rag()
     
     @property
     def rag_system_prompt(self) -> str:
