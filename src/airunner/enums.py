@@ -383,6 +383,7 @@ class HandlerState(Enum):
 class TTSModel(Enum):
     ESPEAK = "espeak"
     SPEECHT5 = "speecht5"
+    OPENVOICE = "openvoice"
 
 
 class ImagePreset(Enum):
