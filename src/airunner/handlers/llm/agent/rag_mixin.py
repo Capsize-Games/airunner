@@ -276,8 +276,6 @@ class RAGMixin:
 
                         self.logger.info(f"Added {len(new_nodes)} nodes and updated keyword tables")
                         self._save_index_to_disc()
-                        
-                        self._update_conversations_status("indexed")
                     else:
                         self.logger.info("No new nodes to add to index.")
                         
@@ -329,8 +327,9 @@ class RAGMixin:
         try:
             self.__index.storage_context.persist(persist_dir=self.storage_persist_dir)
             self.logger.info("Index saved successfully.")
-            self.logger.info("Setting conversations status to indexed...")
-            self._update_conversations_status("indexed")
+            if self.llm_settings.perform_conversation_rag:
+                self.logger.info("Setting conversations status to indexed...")
+                self._update_conversations_status("indexed")
         except ValueError:
             self.logger.error("Error saving index to disc.")
 
@@ -477,7 +476,8 @@ class RAGMixin:
     @property
     def documents(self) -> List[Document]:
         documents = self.document_reader.load_data() if self.document_reader else []
-        documents += self.conversation_documents
+        if self.llm_settings.perform_conversation_rag:
+            documents += self.conversation_documents
         documents += self.news_articles
         return documents
 
