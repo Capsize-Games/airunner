@@ -71,7 +71,7 @@ class DatabaseChatStore(BaseChatStore):
                 name = result.user_name
             else:
                 name = result.chatbot_name
-            text = f"{name}: {text}"
+            text = f"{text}"
             formatted_messages.append(ChatMessage.from_str(
                 content=text,
                 role=message["role"],
