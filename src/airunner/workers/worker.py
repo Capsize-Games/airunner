@@ -27,8 +27,12 @@ class Worker(
     finished = Signal()
     prefix = "Worker"
 
-    def __init__(self):
+    def __init__(
+        self,
+        sleep_time_in_ms: int = AIRUNNER_SLEEP_TIME_IN_MS
+    ):
         super().__init__()
+        self._sleep_time_in_ms: int = sleep_time_in_ms
         self.state = WorkerState.HALTED
         self.running = False
         self.queue = queue.Queue()
@@ -67,9 +71,9 @@ class Worker(
             if self.paused:
                 self.logger.debug("Paused")
                 while self.paused:
-                    QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
+                    QThread.msleep(self._sleep_time_in_ms)
                 self.logger.debug("Resumed")
-            QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
+            QThread.msleep(self._sleep_time_in_ms)
 
     def preprocess(self):
         pass
