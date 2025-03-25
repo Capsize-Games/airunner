@@ -26,6 +26,9 @@ from airunner.settings import (
     AIRUNNER_LLM_OPENROUTER_MODEL,
     AIRUNNER_LLM_PRINT_SYSTEM_PROMPT,
     AIRUNNER_LLM_PERFORM_ANALYSIS,
+    AIRUNNER_LLM_UPDATE_USER_DATA_ENABLED,
+    AIRUNNER_LLM_USE_CHATBOT_MOOD,
+    AIRUNNER_LLM_PERFORM_CONVERSATION_RAG,
 )
 
 
@@ -44,6 +47,9 @@ class LLMSettings:
     model: str = AIRUNNER_LLM_OPENROUTER_MODEL
     print_llm_system_prompt: bool = AIRUNNER_LLM_PRINT_SYSTEM_PROMPT
     llm_perform_analysis: bool = AIRUNNER_LLM_PERFORM_ANALYSIS
+    update_user_data_enabled: bool = AIRUNNER_LLM_UPDATE_USER_DATA_ENABLED
+    use_chatbot_mood: bool = AIRUNNER_LLM_USE_CHATBOT_MOOD
+    perform_conversation_rag: bool = AIRUNNER_LLM_PERFORM_CONVERSATION_RAG
 
     @property
     def use_api(self) -> bool:

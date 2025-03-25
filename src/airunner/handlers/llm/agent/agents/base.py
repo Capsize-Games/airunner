@@ -722,15 +722,38 @@ class BaseAgent(
         """
         Perform analysis on the conversation.
         """
+        if not self.llm_settings.llm_perform_analysis:
+            return
+        self.logger.info("Performing analysis")
+        
         self._update_system_prompt()
-        self._update_mood()
+
+        if self.llm_settings.use_chatbot_mood and self.chatbot.use_mood:
+            self._update_mood()
+        
+        if self.llm_settings.update_user_data_enabled:
+            self._update_user_data()
+
+    def _update_llm_request(self, llm_request: Optional[LLMRequest]):
+        if hasattr(self.llm, "llm_request"):
+            self.llm.llm_request = llm_request
 
     def _perform_tool_call(
         self,
-        tool_name: str,
+        action: LLMActionType,
         **kwargs
     ):
+        if action is LLMActionType.CHAT:
+            tool_name = "chat_engine_tool"
+        elif action is LLMActionType.PERFORM_RAG_SEARCH:
+            tool_name = "rag_engine_tool"
+        elif action is LLMActionType.STORE_DATA:
+            tool_name = "store_user_tool"
+        elif action is LLMActionType.APPLICATION_COMMAND:
+            tool_name = "react_tool_agent"
+
         self.logger.info(f"Performing call with tool {tool_name}")
+
         if tool_name == "rag_engine_tool":
             tool_agent = self.rag_engine_tool
         elif tool_name == "chat_engine_tool":
@@ -739,9 +762,7 @@ class BaseAgent(
             tool_agent = self.react_tool_agent
             kwargs["tool_choice"] = tool_name
         response = tool_agent.call(**kwargs)
-        self._handle_tool_response(tool_name, response, **kwargs)
-
-    def _handle_tool_response(self, tool_name: str, response: ToolOutput, **kwargs):
+        
         self.logger.info(f"Handling response from {tool_name}")
         if tool_name == "rag_engine_tool":
             self._handle_rag_engine_tool_response(response, **kwargs)
@@ -812,7 +833,6 @@ class BaseAgent(
             value=conversation.value[:-2],
             last_updated_message_id=latest_message_id
         )
-        self._update_user_data()
     
     def _update_user_data(self):
         self.logger.info("Attempting to update user preferences")
@@ -842,11 +862,17 @@ class BaseAgent(
         )
     
     def _summarize_conversation(self):
-        self.logger.info("Summarizing conversation")
+        if (
+            not self.llm_settings.perform_conversation_summary or
+            not self.do_summarize_conversation
+        ):
+            return
+
         conversation = self.conversation
         if not conversation or not conversation.value or len(conversation.value) == 0:
-            self.logger.info("No conversation found")
             return
+        
+        self.logger.info("Summarizing conversation")
         chat_history = self._memory.get_all() if self._memory else None
         if not chat_history:
             messages = conversation.value
@@ -867,6 +893,14 @@ class BaseAgent(
             summary=response.content,
             value=conversation.value[:-2]
         )
+    
+    def _log_system_prompt(self, action, system_prompt, rag_system_prompt, llm_request):
+        if self.llm_settings.print_llm_system_prompt:
+            if action is LLMActionType.PERFORM_RAG_SEARCH:
+                self.logger.info("RAG SYSTEM PROMPT:\n" + (rag_system_prompt or ""))
+            else:
+                self.logger.info("SYSTEM PROMPT:\n" + (system_prompt or ""))
+            self.logger.info(llm_request.to_dict())
     
     def _scrape_information(self, message: str):
         self.logger.info("Attempting to scrape information")
@@ -915,7 +949,6 @@ class BaseAgent(
         self._chat_prompt = message
         self._complete_response = ""
         self.do_interrupt = False
-        message = f"{self.username}: {message}"
         self._update_memory(action)
         kwargs = kwargs or {}
         kwargs.update({
@@ -923,50 +956,13 @@ class BaseAgent(
             "chat_history": self._memory.get_all() if self._memory else None,
             "llm_request": llm_request
         })
-        
-        if self.llm_settings.llm_perform_analysis:
-            self._perform_analysis()
-        
-        if (
-            self.llm_settings.perform_conversation_summary and 
-            self.do_summarize_conversation
-        ):
-            self.logger.info("Attempting to summarize conversation")
-            self._summarize_conversation()
-
-        if self.llm_settings.print_llm_system_prompt:
-            if action is LLMActionType.PERFORM_RAG_SEARCH:
-                self.logger.info("RAG SYSTEM PROMPT:\n" + (rag_system_prompt or ""))
-            else:
-                self.logger.info("SYSTEM PROMPT:\n" + (system_prompt or ""))
-            self.logger.info(llm_request.to_dict())
-
+        self._perform_analysis()
+        self._summarize_conversation()
+        self._log_system_prompt(action, system_prompt, rag_system_prompt, llm_request)
         self._update_system_prompt(system_prompt, rag_system_prompt)
-
-        if hasattr(self.llm, "llm_request"):
-            self.llm.llm_request = llm_request
-
-        if action is LLMActionType.CHAT:
-            tool_name = "chat_engine_tool"
-        elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            tool_name = "rag_engine_tool"
-        elif action is LLMActionType.STORE_DATA:
-            tool_name = "store_user_tool"
-        elif action is LLMActionType.APPLICATION_COMMAND:
-            tool_name = "react_tool_agent"
-
-
-        print("PERFORMING CHAT REQUEST", kwargs)
-        print(action, llm_request.to_dict())
-        self._perform_tool_call(tool_name, **kwargs)
-
+        self._update_llm_request(llm_request)
+        self._perform_tool_call(action, **kwargs)
         self._update_memory(action)
-        
-        # strip "{self.botname}: " from response
-        name = f"{self.botname}: "
-        if self._complete_response.startswith(name):
-            self._complete_response = self._complete_response[len(name):]
-
         return AgentChatResponse(response=self._complete_response)
 
     def on_load_conversation(self, data: Optional[Dict] = None):
@@ -1029,7 +1025,6 @@ class BaseAgent(
     
     def handle_response(self, response, is_first_message=False, is_last_message=False, do_not_display=False):
         if response != self._complete_response and not do_not_display:
-            response = strip_names_from_message(response, self.username, self.botname)
             self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
                 "response": LLMResponse(
                     message=response,
