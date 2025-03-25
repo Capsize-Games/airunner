@@ -1,9 +1,7 @@
-import threading
-from typing import Dict, Optional
+from typing import Dict
 
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
-from airunner.handlers import LLMHandler
 
 
 class LLMResponseWorker(Worker):
