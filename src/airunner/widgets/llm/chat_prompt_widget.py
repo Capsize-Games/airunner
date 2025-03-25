@@ -1,9 +1,8 @@
-import base64
 import json
 
-from typing import Optional
+from typing import Dict, Optional
 
-from PySide6.QtCore import Slot, QTimer, QPropertyAnimation, QByteArray
+from PySide6.QtCore import Slot, QTimer, QPropertyAnimation
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
 
@@ -13,8 +12,10 @@ from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
 from airunner.data.models import Conversation
 from airunner.utils.strip_names_from_message import strip_names_from_message
+from airunner.utils import create_worker
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.workers import LLMResponseWorker
 
 
 class ChatPromptWidget(BaseWidget):
@@ -30,7 +31,7 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_clear_conversation,
             SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
             SignalCode.LLM_TOKEN_SIGNAL: self.on_token_signal,
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
+            SignalCode.LLM_TEXT_STREAM_PROCESS_SIGNAL: self.on_add_bot_message_to_conversation,
         }
         self.splitters = [
             "chat_prompt_splitter"
@@ -77,6 +78,7 @@ class ChatPromptWidget(BaseWidget):
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
+        self._llm_response_worker = create_worker(LLMResponseWorker)
         self.load_conversation()
 
     @property
@@ -187,7 +189,7 @@ class ChatPromptWidget(BaseWidget):
             )
         QTimer.singleShot(100, self.scroll_to_bottom)
 
-    def on_hear_signal(self, data: dict):
+    def on_hear_signal(self, data: Dict):
         transcription = data["transcription"]
         self.ui.prompt.setPlainText(transcription)
         self.ui.send_button.click()
@@ -195,7 +197,7 @@ class ChatPromptWidget(BaseWidget):
     def on_add_to_conversation_signal(self, name, text, is_bot):
         self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
 
-    def on_add_bot_message_to_conversation(self, data: dict):
+    def on_add_bot_message_to_conversation(self, data: Dict):
         llm_response: LLMResponse = data.get("response", None)
         if not llm_response:
             raise ValueError("No LLMResponse object found in data")

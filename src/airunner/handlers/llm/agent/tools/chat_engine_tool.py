@@ -48,6 +48,7 @@ class ChatEngineTool(AsyncBaseTool):
         self._metadata = metadata
         self._resolve_input_errors = resolve_input_errors
         self.agent = agent
+        self._do_interrupt: bool = False
 
     @classmethod
     def from_defaults(
@@ -82,31 +83,37 @@ class ChatEngineTool(AsyncBaseTool):
     
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
         query_str = self._get_query_str(*args, **kwargs)
-        do_not_display = kwargs.get("do_not_display", False)
-        chat_history = kwargs.get("chat_history", [])
         if hasattr(self.chat_engine.llm, "llm_request"):
             self.chat_engine.llm.llm_request = kwargs.get("llm_request", None)
         
-        params = { 
-            "chat_history": chat_history 
-        } if len(chat_history) > 0 else {}
-        
-        streaming_response = self.chat_engine.stream_chat(
-            query_str, 
-            **params
-        )
-
         response = ""
-        is_first_message = True
-        for token in streaming_response.response_gen:
-            response += token
-            if response != "Empty Response":
-                self.agent.handle_response(
-                    token, 
-                    is_first_message, 
-                    do_not_display=do_not_display
-                )
-            is_first_message = False
+
+        if not self._do_interrupt:
+            do_not_display = kwargs.get("do_not_display", False)
+            chat_history = kwargs.get("chat_history", [])
+            params = { 
+                "chat_history": chat_history 
+            } if len(chat_history) > 0 else {}
+
+            streaming_response = self.chat_engine.stream_chat(
+                query_str, 
+                **params
+            )
+
+            is_first_message = True
+            for token in streaming_response.response_gen:
+                if self._do_interrupt:
+                    break
+                response += token
+                if response != "Empty Response":
+                    self.agent.handle_response(
+                        token, 
+                        is_first_message, 
+                        do_not_display=do_not_display
+                    )
+                is_first_message = False
+
+        self._do_interrupt = False
 
         return ToolOutput(
             content=str(response),
