@@ -662,11 +662,6 @@ class MainWindow(
                     widget = plugin.get_widget()
                     self.ui.center_tab_container.addTab(widget, plugin.name)
 
-    @Slot(int)
-    def on_tab_section_changed(self, index: int):
-        Tab.update_tabs("center", self.ui.center_tab_container, index)
-        self.emit_signal(SignalCode.SECTION_CHANGED)
-
     def initialize_widget_elements(self):
         for item in (
             (self.ui.actionToggle_LLM, self.application_settings.llm_enabled),
