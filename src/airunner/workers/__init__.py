@@ -3,6 +3,7 @@ from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
 from airunner.workers.directory_watcher import DirectoryWatcher
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
+from airunner.workers.llm_response_worker import LLMResponseWorker
 from airunner.workers.mask_generator_worker import MaskGeneratorWorker
 from airunner.workers.model_scanner_worker import ModelScannerWorker
 from airunner.workers.sd_worker import SDWorker
@@ -18,6 +19,7 @@ __all__ = [
     "AudioProcessorWorker",
     "DirectoryWatcher",
     "LLMGenerateWorker",
+    "LLMResponseWorker",
     "MaskGeneratorWorker",
     "ModelScannerWorker",
     "SDWorker",
