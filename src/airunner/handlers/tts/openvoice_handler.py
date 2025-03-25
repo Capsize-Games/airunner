@@ -2,7 +2,6 @@ from typing import Type
 import os
 import torch
 
-import soundfile
 import os
 import librosa
 from openvoice.mel_processing import spectrogram_torch
@@ -14,10 +13,10 @@ import enum
 
 from abc import ABCMeta
 
-import pyttsx3
+from airunner.settings import AIRUNNER_TTS_SPEAKER_RECORDING_PATH
+from airunner.enums import SignalCode
 from airunner.handlers.tts.tts_handler import TTSHandler
 from airunner.enums import ModelType, ModelStatus
-from airunner.enums import SignalCode
 
 
 class AvailableLanguage(enum.Enum):
@@ -88,7 +87,9 @@ class StreamingToneColorConverter(ToneColorConverter):
 class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        speaker_recording_path = os.path.expanduser('~/Desktop/bob_ross.mp3')
+        speaker_recording_path = os.path.expanduser(
+            AIRUNNER_TTS_SPEAKER_RECORDING_PATH
+        )
         
         self.ckpt_converter: str = os.path.join(
             self.path_settings.base_path,
