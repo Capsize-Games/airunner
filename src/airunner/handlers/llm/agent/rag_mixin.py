@@ -370,7 +370,7 @@ class RAGMixin:
             try:
                 self.__embedding = HuggingFaceEmbedding(path)
             except NotImplementedError as e:
-                self.logger.error("Error loading embeddings " + e)
+                self.logger.error("Error loading embeddings " + str(e))
         return self.__embedding
     
     @embedding.setter
