@@ -44,7 +44,7 @@ class RAGMixin:
         self.__storage_context: Optional[StorageContext] = None
         self._rag_engine_tool: Optional[RAGEngineTool] = None
         self._conversations: List[Conversation] = []
-        # self.load_rag()
+        self._load_settings()
     
     @property
     def rag_system_prompt(self) -> str:
@@ -130,6 +130,25 @@ class RAGMixin:
 
     @property
     def document_reader(self) -> SimpleDirectoryReader:
+        if self.target_files is None or len(self.target_files) == 0:
+            return
+        if not self.__document_reader:
+            self.logger.debug("Loading document reader...")
+            try:
+                self.__document_reader = SimpleDirectoryReader(
+                    input_files=self.target_files,
+                    file_extractor={
+                        ".pdf": self.pdf_reader,
+                        ".epub": self.epub_reader,
+                        ".html": self.html_reader,
+                        ".htm": self.html_reader,
+                        ".md": self.markdown_reader,
+                    },
+                    exclude_hidden=False
+                )
+                self.logger.debug("Document reader loaded successfully.")
+            except ValueError as e:
+                self.logger.error(f"Error loading document reader: {str(e)}")
         return self.__document_reader
     
     @document_reader.setter
@@ -138,6 +157,13 @@ class RAGMixin:
 
     @property
     def prompt_helper(self) -> PromptHelper:
+        if not self.__prompt_helper:
+            self.__prompt_helper = PromptHelper(
+                context_window=4096,
+                num_output=1024,
+                chunk_overlap_ratio=0.1,
+                chunk_size_limit=None,
+            )
         return self.__prompt_helper
     
     @prompt_helper.setter
@@ -491,11 +517,6 @@ class RAGMixin:
     @storage_context.setter
     def storage_context(self, value: StorageContext):
         self.__storage_context = value
-
-    def load_rag(self):
-        self._load_document_reader()
-        self._load_prompt_helper()
-        self._load_settings()
     
     def unload_rag(self):
         self._unload_settings()
@@ -527,34 +548,6 @@ class RAGMixin:
             self._strip_previous_messages_from_conversation()
             self.llm.llm_request = kwargs.get("llm_request", None)
             self._perform_tool_call("chat_engine_tool", **kwargs)
-
-    def _load_document_reader(self):
-        if self.target_files is None or len(self.target_files) == 0:
-            return
-        self.logger.debug("Loading document reader...")
-        try:
-            self.document_reader = SimpleDirectoryReader(
-                input_files=self.target_files,
-                file_extractor={
-                    ".pdf": self.pdf_reader,
-                    ".epub": self.epub_reader,
-                    ".html": self.html_reader,
-                    ".htm": self.html_reader,
-                    ".md": self.markdown_reader,
-                },
-                exclude_hidden=False
-            )
-            self.logger.debug("Document reader loaded successfully.")
-        except ValueError as e:
-            self.logger.error(f"Error loading document reader: {str(e)}")
-
-    def _load_prompt_helper(self):
-        self.prompt_helper = PromptHelper(
-            context_window=4096,
-            num_output=1024,
-            chunk_overlap_ratio=0.1,
-            chunk_size_limit=None,
-        )
 
     def _load_settings(self):
         Settings.llm = self.llm
