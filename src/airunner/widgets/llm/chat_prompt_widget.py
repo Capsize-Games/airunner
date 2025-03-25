@@ -227,12 +227,13 @@ class ChatPromptWidget(BaseWidget):
         combined_message = "".join(self.token_buffer)
         self.token_buffer.clear()
 
-        self.add_message_to_conversation(
-            name=self.chatbot.name,
-            message=combined_message,
-            is_bot=True,
-            first_message=False
-        )
+        if combined_message != "":
+            self.add_message_to_conversation(
+                name=self.chatbot.name,
+                message=combined_message,
+                is_bot=True,
+                first_message=False
+            )
 
     def enable_generate(self):
         self.generating = False
