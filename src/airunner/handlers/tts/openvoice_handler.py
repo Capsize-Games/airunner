@@ -46,7 +46,15 @@ class StreamingToneColorConverter(ToneColorConverter):
     ):
         hps = self.hps
         # load audio
-        audio, sample_rate = librosa.load(audio_src_path, sr=hps.data.sampling_rate)
+        try:
+            audio, sample_rate = librosa.load(
+                audio_src_path, 
+                sr=hps.data.sampling_rate
+            )
+        except ValueError as e:
+            print(f"Error: {e}")
+            return None
+        
         audio = torch.tensor(audio).float()
         
         with torch.no_grad():
@@ -74,13 +82,7 @@ class StreamingToneColorConverter(ToneColorConverter):
                 sid_tgt=tgt_se, 
                 tau=tau
             )[0][0, 0].data.cpu().float().numpy()
-            if output_path is None:
-                return audio
-            else:
-                soundfile.write(
-                    output_path, 
-                    audio, hps.data.sampling_rate
-                )
+            return audio
 
 
 class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
@@ -88,14 +90,24 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
         super().__init__(*args, **kwargs)
         speaker_recording_path = os.path.expanduser('~/Desktop/bob_ross.mp3')
         
-        self.ckpt_converter: str = 'checkpoints_v2/converter'
-        self.device: str = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self.output_dir: str = 'outputs_v2'
-        self.tone_color_converter: Type[ToneColorConverter] = StreamingToneColorConverter(
-            f'{self.ckpt_converter}/config.json', 
-            device=self.device
+        self.ckpt_converter: str = os.path.join(
+            self.path_settings.base_path,
+            "text/models/tts/openvoice",
+            'checkpoints_v2/converter'
         )
-        self.tone_color_converter.load_ckpt(f'{self.ckpt_converter}/checkpoint.pth')
+        self._device: str = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self.output_dir: str = os.path.join(
+            self.path_settings.base_path,
+            "text/models/tts/openvoice",
+            'outputs_v2'
+        )
+        self.tone_color_converter: Type[ToneColorConverter] = StreamingToneColorConverter(
+            f'{self.ckpt_converter}/config.json',
+            device=self._device
+        )
+        self.tone_color_converter.load_ckpt(
+            f'{self.ckpt_converter}/checkpoint.pth'
+        )
         self.voice_file_path: str = speaker_recording_path
         self.src_path: str = f'{self.output_dir}/tmp.wav'
         self.speed: float = 1.0
@@ -110,7 +122,7 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
     def generate(self, message: str):
         model = TTS(
             language=self.language.value,
-            device=self.device
+            device=self._device
         )
         speaker_ids = model.hps.data.spk2id
 
@@ -119,20 +131,24 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
             speaker_key = speaker_key.lower().replace('_', '-')
             
             source_se = torch.load(
-                f'checkpoints_v2/base_speakers/ses/{speaker_key}.pth', 
-                map_location=self.device
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts/openvoice",
+                    f'checkpoints_v2/base_speakers/ses/{speaker_key}.pth', 
+                ),
+                map_location=self._device
             )
             
-            start_time = message.time()
             model.tts_to_file(message, speaker_id, self.src_path, speed=self.speed)
-            tts_time = message.time() - start_time
-            print(f"Time spent on tts_to_file for speaker {speaker_key}: {tts_time:.2f} seconds")
 
 
             # Run the tone color converter
-            save_path = f'{self.output_dir}/output_v2_{speaker_key}.wav'
+            save_path = os.path.join(
+                self.path_settings.base_path,
+                "text/models/tts/openvoice",
+                f'{self.output_dir}/output_v2_{speaker_key}.wav'
+            ),
             encode_message = "@MyShell"
-            start_time = message.time()
             response = self.tone_color_converter.convert(
                 audio_src_path=self.src_path, 
                 src_se=source_se, 
@@ -140,12 +156,14 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
                 output_path=save_path,
                 message=encode_message
             )
-            convert_time = message.time() - start_time
-            print(f"Time spent on tone_color_converter.convert for speaker {speaker_key}: {convert_time:.2f} seconds")
 
-            self.emit_signal(SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, {
-                "message": response
-            })
+            if response is not None:
+                self.emit_signal(
+                    SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, 
+                    {
+                        "message": response
+                    }
+                )
 
 
     def load(self, target_model=None):
