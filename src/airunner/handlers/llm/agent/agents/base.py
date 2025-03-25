@@ -40,10 +40,10 @@ from airunner.data.models import Conversation
 
 
 class BaseAgent(
-    WeatherMixin,
     MediatorMixin,
     SettingsMixin,
     RAGMixin,
+    WeatherMixin,
 ):
     """
     Base class for all agents.
@@ -928,7 +928,7 @@ class BaseAgent(
             "llm_request": llm_request
         })
         
-        if self.llm_perform_analysis:
+        if self.llm_settings.llm_perform_analysis:
             self._perform_analysis()
         
         if (
@@ -938,7 +938,7 @@ class BaseAgent(
             self.logger.info("Attempting to summarize conversation")
             self._summarize_conversation()
 
-        if self.print_llm_system_prompt:
+        if self.llm_settings.print_llm_system_prompt:
             if action is LLMActionType.PERFORM_RAG_SEARCH:
                 self.logger.info("RAG SYSTEM PROMPT:\n" + (rag_system_prompt or ""))
             else:
@@ -957,6 +957,9 @@ class BaseAgent(
         elif action is LLMActionType.STORE_DATA:
             tool_name = "store_user_tool"
 
+
+        print("PERFORMING CHAT REQUEST", kwargs)
+        print(action, llm_request.to_dict())
         self._perform_tool_call(tool_name, **kwargs)
 
         self._update_memory(action)
