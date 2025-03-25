@@ -46,8 +46,6 @@ from airunner.data.session_manager import session_scope
 from airunner.settings import (
     AIRUNNER_ORGANIZATION,
     AIRUNNER_APPLICATION_NAME,
-    AIRUNNER_LLM_PERFORM_ANALYSIS,
-    AIRUNNER_LLM_PRINT_SYSTEM_PROMPT,
 )
 
 
@@ -89,15 +87,6 @@ class SettingsMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-    @property
-    def llm_perform_analysis(self) -> bool:
-        return AIRUNNER_LLM_PERFORM_ANALYSIS
-
-    @property
-    def print_llm_system_prompt(self) -> bool:
-        return AIRUNNER_LLM_PRINT_SYSTEM_PROMPT
-
     @property
     def session_manager(self):
         return self.settings_mixin_shared_instance.session_manager
