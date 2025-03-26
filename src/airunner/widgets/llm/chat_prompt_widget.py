@@ -336,8 +336,15 @@ class ChatPromptWidget(BaseWidget):
         if not self.chat_loaded:
             self.disable_send_button()
 
-        self.ui.conversation.hide()
-        self.ui.chat_container.show()
+        try:
+            self.ui.conversation.hide()
+        except RuntimeError:
+            pass
+
+        try:
+            self.ui.chat_container.show()
+        except RuntimeError as e:
+            self.logger.warning(f"Error setting SD status text: {e}")
 
     def llm_action_changed(self, val: str):
         if val == "Chat":
