@@ -8,20 +8,30 @@ from typing import Dict
 
 import requests
 from PIL import Image
-from PySide6.QtCore import QSettings
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
     Signal,
-    QProcess
+    QProcess,
+    QTimer,
 )
-from PySide6.QtGui import QGuiApplication, QKeySequence
+from PySide6.QtGui import (
+    QGuiApplication, 
+    QKeySequence, 
+    QAction, 
+    QCursor
+)
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QMessageBox,
-    QCheckBox, QInputDialog
+    QCheckBox, 
+    QInputDialog,
+    QSystemTrayIcon,
+    QMenu,
 )
+from PySide6.QtGui import QIcon
+
 from bs4 import BeautifulSoup
 
 from airunner.settings import (
@@ -33,10 +43,9 @@ from airunner.settings import (
     AIRUNNER_BASE_PATH,
     AIRUNNER_BUG_REPORT_LINK,
     AIRUNNER_VULNERABILITY_REPORT_LINK,
-    AIRUNNER_ORGANIZATION,
-    AIRUNNER_APPLICATION_NAME,
     AIRUNNER_ART_ENABLED,
 )
+from airunner.utils.settings import get_qsettings
 from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
 from airunner.handlers.llm.agent.actions.show_path import show_path
 from airunner.handlers.llm.llm_request import LLMRequest
@@ -121,6 +130,7 @@ class MainWindow(
         **kwargs
     ):
         self.ui = self.ui_class_()
+        
         self.quitting = False
         self.update_popup = None
         self._document_path = None
@@ -155,7 +165,7 @@ class MainWindow(
         self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
         self.signal_handlers = {
             SignalCode.SD_SAVE_PROMPT_SIGNAL: self.on_save_stablediffusion_prompt_signal,
-            SignalCode.QUIT_APPLICATION: self.action_quit_triggered,
+            SignalCode.QUIT_APPLICATION: self.handle_quit_application_signal,
             SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL: self.on_nsfw_content_detected_signal,
             SignalCode.BASH_EXECUTE_SIGNAL: self.on_bash_execute_signal,
             SignalCode.WRITE_FILE: self.on_write_file_signal,
@@ -178,6 +188,12 @@ class MainWindow(
         }
         self.logger.debug("Starting AI Runnner")
         super().__init__()
+
+        self.single_click_timer = QTimer(self)
+        self.single_click_timer.setSingleShot(True)
+        self.single_click_timer.timeout.connect(self.handle_single_click)
+        
+        self.initialize_system_tray()
         
         # Add plugins directory to Python path
         plugins_path = os.path.join(self.path_settings.base_path, "plugins")
@@ -189,6 +205,13 @@ class MainWindow(
         self._worker_manager = None
         self.initialize_ui()
         self._initialize_workers()
+        self.last_tray_click_time = 0
+
+    @property
+    def close_to_system_tray(self) -> bool:
+        settings = get_qsettings()
+        val = settings.value("close_to_system_tray")
+        return val is True or val is None
 
     @property
     def generator_tab_widget(self):
@@ -218,6 +241,16 @@ class MainWindow(
     The following functions are defined in and connected to the appropriate
     signals in the corresponding ui file.
     """
+    @Slot()
+    def action_quit_triggered(self):
+        self.handle_close()
+
+    @Slot(bool)
+    def action_toggle_close_to_system_tray(self, val):
+        settings = get_qsettings()
+        settings.setValue("close_to_system_tray", val)
+        settings.sync()
+
     @Slot(bool)
     def action_toggle_brush(self, active: bool):
         self.toggle_tool(CanvasToolName.BRUSH, active)
@@ -461,7 +494,13 @@ class MainWindow(
                 "conversation_id": current_conversation.id
             }
         )
-
+    
+    @Slot(bool)
+    def action_toggle_grid(self, val):
+        self.update_grid_settings("show_grid", val)
+        self.emit_signal(SignalCode.TOGGLE_GRID, {
+            "show_grid": val
+        })
     """
     End slot functions
     """
@@ -488,6 +527,33 @@ class MainWindow(
         with open(save_path, 'wb') as file:
             file.write(response.content)
         return filename
+
+    def initialize_system_tray(self):
+        """Initialize the system tray icon with a simple menu."""
+        here = os.path.dirname(os.path.abspath(__file__))
+        self.setWindowIcon(QIcon(os.path.join(here, "../../images/icon64x64.png")))
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(QIcon(os.path.join(here, "../../images/icon64x64.png")))
+
+        # Create a simple tray menu with actions
+        self.tray_menu = QMenu()
+        self.toggle_visibility_action = QAction("Hide Window", self)
+        quit_action = QAction("Quit Application", self)
+        self.tray_menu.addAction(self.toggle_visibility_action)
+        self.tray_menu.addAction(quit_action)
+
+        # Connect actions
+        self.toggle_visibility_action.triggered.connect(self.toggle_window_visibility)
+        quit_action.triggered.connect(self.quit)
+
+        # Set the menu for the tray icon
+        self.tray_icon.setContextMenu(self.tray_menu)
+        
+        # Connect activated signal to our custom handler
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)
+        
+        # Show the tray icon
+        self.tray_icon.show()
 
     def on_navigate_to_url(self, _data: Dict = None):
         url, ok = QInputDialog.getText(self, 'Browse Web', 'Enter your URL:')
@@ -549,6 +615,67 @@ class MainWindow(
 
         # Start a new instance of the application
         QProcess.startDetached(sys.executable, sys.argv)
+
+    def toggle_window_visibility(self):
+        """Toggle window visibility and update the menu text."""
+        if self.isVisible():
+            self.hide()
+            self.toggle_visibility_action.setText("Show Window")
+        else:
+            self.showNormal()
+            self.activateWindow()  # Ensure window gets focus when showing
+            self.toggle_visibility_action.setText("Hide Window")
+        
+        # Update the tray menu so it reflects the current state immediately
+        self.tray_icon.setContextMenu(self.tray_menu)
+
+    def on_tray_icon_activated(self, reason):
+        """Handle tray icon activation events."""
+        print(f"Tray icon activated with reason: {reason}")
+        
+        # For single left click or double click, toggle visibility
+        if (
+            reason is QSystemTrayIcon.ActivationReason.Trigger or
+            reason is QSystemTrayIcon.ActivationReason.DoubleClick
+        ):
+            print(f"Left click detected (reason: {reason})")
+            self.toggle_window_visibility()
+        elif reason == QSystemTrayIcon.ActivationReason.MiddleClick:
+            print("Middle click detected")
+        elif reason == QSystemTrayIcon.ActivationReason.Context:
+            print("Context menu requested")
+            # Update menu text before showing context menu
+            if self.isVisible():
+                self.toggle_visibility_action.setText("Hide Window")
+            else:
+                self.toggle_visibility_action.setText("Show Window")
+
+    def handle_single_click(self):
+        """Handle single-click on the tray icon."""
+        print("Single click handler executing")
+        # Create a dropdown menu
+        menu = QMenu()
+        
+        # Dynamically set the text based on current window visibility
+        show_hide_text = "Hide Window" if self.isVisible() else "Show Window"
+        show_action = QAction(show_hide_text, self)
+        quit_action = QAction("Quit", self)
+
+        # Connect actions to their respective slots
+        show_action.triggered.connect(self.toggle_window_visibility)
+        quit_action.triggered.connect(QApplication.quit)
+
+        # Add actions to the menu
+        menu.addAction(show_action)
+        menu.addAction(quit_action)
+
+        # Display the menu under the tray icon
+        menu.exec(QCursor.pos())
+
+    def handle_double_click(self):
+        """Handle double-click on the tray icon."""
+        print("Double click detected")
+        self.toggle_window_visibility()  # Use toggle instead of just showing
 
     @staticmethod
     def on_write_file_signal(data: Dict):
@@ -621,6 +748,10 @@ class MainWindow(
 
         if not AIRUNNER_DISCORD_URL:
             self.ui.actionDiscord.deleteLater()
+        
+        self.ui.actionCollapse_to_system_tray.setChecked(
+            self.close_to_system_tray
+        )
     
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
@@ -704,10 +835,6 @@ class MainWindow(
     def set_path_settings(self, key, val):
         self.update_path_settings(key, val)
 
-    def action_quit_triggered(self):
-        QApplication.quit()
-        self.close()
-
     def on_nsfw_content_detected_signal(self):
         # display message in status
         self.emit_signal(
@@ -715,10 +842,37 @@ class MainWindow(
             AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE
         )
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, event):
+        event.ignore()
+        self.handle_close()
+    
+    def handle_close(self):
+        """Override close to minimize to tray instead of exiting."""
+        if self.close_to_system_tray:
+            self.hide()
+            # Update menu text when window is hidden
+            self.toggle_visibility_action.setText("Show Window")
+
+            # Update the tray menu so it reflects the current state immediately
+            self.tray_icon.setContextMenu(self.tray_menu)
+            
+            self.tray_icon.showMessage(
+                "AI Runner",
+                "Application minimized to tray. Click the icon to restore.",
+                QSystemTrayIcon.Information,
+                2000
+            )
+        else:
+            self.quit()
+    
+    def quit(self):
         self.logger.debug("Quitting")
         self.save_state()
         self.emit_signal(SignalCode.QUIT_APPLICATION)
+    
+    def handle_quit_application_signal(self):
+        QApplication.quit()
+        self.close()
 
     def show_settings_path(self, name, default_path=None):
         path = getattr(self.path_settings, name)
@@ -838,7 +992,7 @@ class MainWindow(
         self.quitting = True
         self.logger.debug("Saving window state")
 
-        settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
+        settings = get_qsettings()
         settings.beginGroup("window_settings")
         settings.setValue("is_maximized", self.isMaximized())
         settings.setValue("is_fullscreen", self.isFullScreen())
@@ -908,13 +1062,6 @@ class MainWindow(
 
     def action_ai_toggled(self, val):
         self.update_application_settings("ai_mode", val)
-
-    @Slot(bool)
-    def action_toggle_grid(self, val):
-        self.update_grid_settings("show_grid", val)
-        self.emit_signal(SignalCode.TOGGLE_GRID, {
-            "show_grid": val
-        })
     
     def on_toggle_tool_signal(self, data: Dict):
         self.toggle_tool(data["tool"], data["active"])
@@ -990,7 +1137,14 @@ class MainWindow(
         AppInstaller(close_on_cancel=False)
 
     def showEvent(self, event):
+        """Override to update the tray menu text when window is shown."""
         super().showEvent(event)
+        # Make sure we update the menu text whenever the window is shown
+        if hasattr(self, 'toggle_visibility_action'):
+            self.toggle_visibility_action.setText("Hide Window")
+            # Update the tray menu so it reflects the current state immediately
+            self.tray_icon.setContextMenu(self.tray_menu)
+            
         self.logger.debug("showEvent called, initializing window")
         self._initialize_window()
         self._initialize_default_buttons()
@@ -1057,9 +1211,12 @@ class MainWindow(
 
     def _initialize_filter_actions(self):
         image_filters = ImageFilter.objects.all()
-        for image_filter in image_filters:
-            action = self.ui.menuFilters.addAction(image_filter.display_name)
-            action.triggered.connect(partial(self.display_filter_window, image_filter))
+        try:
+            for image_filter in image_filters:
+                action = self.ui.menuFilters.addAction(image_filter.display_name)
+                action.triggered.connect(partial(self.display_filter_window, image_filter))
+        except RuntimeError as e:
+            self.logger.warning(f"Error setting SD status text: {e}")
 
     @staticmethod
     def display_filter_window(image_filter):
