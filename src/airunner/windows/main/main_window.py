@@ -5,7 +5,6 @@ import urllib
 import webbrowser
 from functools import partial
 from typing import Dict
-import time
 
 import requests
 from PIL import Image
@@ -14,7 +13,6 @@ from PySide6.QtCore import (
     Slot,
     Signal,
     QProcess,
-    QSettings, 
     QTimer,
 )
 from PySide6.QtGui import (
@@ -45,10 +43,9 @@ from airunner.settings import (
     AIRUNNER_BASE_PATH,
     AIRUNNER_BUG_REPORT_LINK,
     AIRUNNER_VULNERABILITY_REPORT_LINK,
-    AIRUNNER_ORGANIZATION,
-    AIRUNNER_APPLICATION_NAME,
     AIRUNNER_ART_ENABLED,
 )
+from airunner.utils.settings import get_qsettings
 from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
 from airunner.handlers.llm.agent.actions.show_path import show_path
 from airunner.handlers.llm.llm_request import LLMRequest

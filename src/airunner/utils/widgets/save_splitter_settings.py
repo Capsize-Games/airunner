@@ -1,10 +1,5 @@
 from typing import List
-from PySide6.QtCore import QSettings
-
-from airunner.settings import (
-    AIRUNNER_ORGANIZATION,
-    AIRUNNER_APPLICATION_NAME
-)
+from airunner.utils.settings import get_qsettings
 
 
 def save_splitter_settings(
@@ -14,7 +9,7 @@ def save_splitter_settings(
     """
     Save the state of splitter widgets to PySide6 application settings.
     """
-    settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
+    settings = get_qsettings()
 
     for splitter_name in splitters:
         widget = getattr(ui, splitter_name)
