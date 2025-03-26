@@ -8,20 +8,31 @@ from typing import Dict
 
 import requests
 from PIL import Image
-from PySide6.QtCore import QSettings
 from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
     Signal,
-    QProcess
+    QProcess,
+    QSettings, 
+    QTimer,
 )
-from PySide6.QtGui import QGuiApplication, QKeySequence
+from PySide6.QtGui import (
+    QGuiApplication, 
+    QKeySequence, 
+    QAction, 
+    QCursor
+)
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QMessageBox,
-    QCheckBox, QInputDialog
+    QCheckBox, 
+    QInputDialog,
+    QSystemTrayIcon,
+    QMenu,
 )
+from PySide6.QtGui import QIcon
+
 from bs4 import BeautifulSoup
 
 from airunner.settings import (
@@ -121,6 +132,7 @@ class MainWindow(
         **kwargs
     ):
         self.ui = self.ui_class_()
+        
         self.quitting = False
         self.update_popup = None
         self._document_path = None
@@ -178,6 +190,12 @@ class MainWindow(
         }
         self.logger.debug("Starting AI Runnner")
         super().__init__()
+
+        self.single_click_timer = QTimer(self)
+        self.single_click_timer.setSingleShot(True)
+        self.single_click_timer.timeout.connect(self.handle_single_click)
+        
+        self.initialize_system_tray()
         
         # Add plugins directory to Python path
         plugins_path = os.path.join(self.path_settings.base_path, "plugins")
@@ -489,6 +507,27 @@ class MainWindow(
             file.write(response.content)
         return filename
 
+    def initialize_system_tray(self):
+        here = os.path.dirname(os.path.abspath(__file__))
+        self.setWindowIcon(QIcon(os.path.join(here, "../../images/icon64x64.png")))
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(QIcon(os.path.join(here, "../../images/icon64x64.png")))
+
+        # Context menu for tray
+        tray_menu = QMenu()
+        restore_action = QAction("Restore")
+        quit_action = QAction("Quit")
+        tray_menu.addAction(restore_action)
+        tray_menu.addAction(quit_action)
+
+        restore_action.triggered.connect(self.showNormal)
+        quit_action.triggered.connect(self.quit)
+
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)
+
+        self.tray_icon.show()
+
     def on_navigate_to_url(self, _data: Dict = None):
         url, ok = QInputDialog.getText(self, 'Browse Web', 'Enter your URL:')
         if ok:
@@ -549,6 +588,40 @@ class MainWindow(
 
         # Start a new instance of the application
         QProcess.startDetached(sys.executable, sys.argv)
+
+    def on_tray_icon_activated(self, reason):
+        """Handle tray icon activation events."""
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            # Start the timer for single-click detection
+            self.single_click_timer.start(200)  # 200ms delay for distinguishing single and double clicks
+        elif reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            # Stop the timer to prevent single-click action
+            self.single_click_timer.stop()
+            self.handle_double_click()
+
+    def handle_single_click(self):
+        """Handle single-click on the tray icon."""
+        print("Single click detected")
+        # Create a dropdown menu
+        menu = QMenu()
+        show_action = QAction("Show", self)
+        quit_action = QAction("Quit", self)
+
+        # Connect actions to their respective slots
+        show_action.triggered.connect(self.showNormal)
+        quit_action.triggered.connect(QApplication.quit)
+
+        # Add actions to the menu
+        menu.addAction(show_action)
+        menu.addAction(quit_action)
+
+        # Display the menu under the tray icon
+        menu.exec(QCursor.pos())
+
+    def handle_double_click(self):
+        """Handle double-click on the tray icon."""
+        print("Double click detected")
+        self.showNormal()
 
     @staticmethod
     def on_write_file_signal(data: Dict):
@@ -715,7 +788,18 @@ class MainWindow(
             AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE
         )
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, event):
+        """Override close to minimize to tray instead of exiting."""
+        event.ignore()
+        self.hide()
+        self.tray_icon.showMessage(
+            "AI Runner",
+            "Application minimized to tray. Double-click the icon to restore.",
+            QSystemTrayIcon.Information,
+            2000
+        )
+    
+    def quit(self):
         self.logger.debug("Quitting")
         self.save_state()
         self.emit_signal(SignalCode.QUIT_APPLICATION)
