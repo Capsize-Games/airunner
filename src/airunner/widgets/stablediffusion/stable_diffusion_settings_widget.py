@@ -6,6 +6,7 @@ from airunner.widgets.stablediffusion.templates.stable_diffusion_settings_ui imp
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.utils.create_worker import create_worker
 from airunner.workers import ModelScannerWorker
+from airunner.settings import AIRUNNER_ART_ENABLED
 
 
 class StableDiffusionSettingsWidget(
@@ -40,15 +41,22 @@ class StableDiffusionSettingsWidget(
         if scale != current_scale:
             self.get_form_element("scale_widget").setProperty("current_value", scale)
 
-        self.ui.seed_widget.setProperty("generator_section", self.generator_settings.pipeline_action)
-        self.ui.seed_widget.setProperty("generator_name", ImageGenerator.STABLEDIFFUSION.value)
-
-        self.ui.ddim_eta_slider_widget.hide()
-        self.ui.frames_slider_widget.hide()
+        try:
+            self.ui.seed_widget.setProperty("generator_section", self.generator_settings.pipeline_action)
+            self.ui.seed_widget.setProperty("generator_name", ImageGenerator.STABLEDIFFUSION.value)
+            self.ui.ddim_eta_slider_widget.hide()
+            self.ui.frames_slider_widget.hide()
+        except RuntimeError as e:
+            if AIRUNNER_ART_ENABLED:
+                self.logger.error(f"Error updating form: {e}")
 
         self.model_scanner_worker.add_to_queue("scan_for_models")
 
-        self.ui.use_compel.setChecked(self.generator_settings.use_compel)
+        try:
+            self.ui.use_compel.setChecked(self.generator_settings.use_compel)
+        except RuntimeError as e:
+            if AIRUNNER_ART_ENABLED:
+                self.logger.error(f"Error updating compel: {e}")
 
     def toggled_use_compel(self, val):
         self.update_generator_settings("use_compel", val)
@@ -160,7 +168,8 @@ class StableDiffusionSettingsWidget(
             self.load_models()
             self.load_schedulers_dropdown()
         except RuntimeError as e:
-            self.logger.error(f"Error loading models: {e}")
+            if AIRUNNER_ART_ENABLED:
+                self.logger.error(f"Error loading models: {e}")
 
     def clear_models(self):
         self.ui.model.clear()
