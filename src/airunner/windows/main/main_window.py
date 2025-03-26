@@ -165,7 +165,7 @@ class MainWindow(
         self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
         self.signal_handlers = {
             SignalCode.SD_SAVE_PROMPT_SIGNAL: self.on_save_stablediffusion_prompt_signal,
-            SignalCode.QUIT_APPLICATION: self.action_quit_triggered,
+            SignalCode.QUIT_APPLICATION: self.handle_quit_application_signal,
             SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL: self.on_nsfw_content_detected_signal,
             SignalCode.BASH_EXECUTE_SIGNAL: self.on_bash_execute_signal,
             SignalCode.WRITE_FILE: self.on_write_file_signal,
@@ -208,6 +208,12 @@ class MainWindow(
         self.last_tray_click_time = 0
 
     @property
+    def close_to_system_tray(self) -> bool:
+        settings = get_qsettings()
+        val = settings.value("close_to_system_tray")
+        return val is True or val is None
+
+    @property
     def generator_tab_widget(self):
         return self.ui.generator_widget
 
@@ -235,6 +241,16 @@ class MainWindow(
     The following functions are defined in and connected to the appropriate
     signals in the corresponding ui file.
     """
+    @Slot()
+    def action_quit_triggered(self):
+        self.handle_close()
+
+    @Slot(bool)
+    def action_toggle_close_to_system_tray(self, val):
+        settings = get_qsettings()
+        settings.setValue("close_to_system_tray", val)
+        settings.sync()
+
     @Slot(bool)
     def action_toggle_brush(self, active: bool):
         self.toggle_tool(CanvasToolName.BRUSH, active)
@@ -478,7 +494,13 @@ class MainWindow(
                 "conversation_id": current_conversation.id
             }
         )
-
+    
+    @Slot(bool)
+    def action_toggle_grid(self, val):
+        self.update_grid_settings("show_grid", val)
+        self.emit_signal(SignalCode.TOGGLE_GRID, {
+            "show_grid": val
+        })
     """
     End slot functions
     """
@@ -601,17 +623,21 @@ class MainWindow(
             self.toggle_visibility_action.setText("Show Window")
         else:
             self.showNormal()
+            self.activateWindow()  # Ensure window gets focus when showing
             self.toggle_visibility_action.setText("Hide Window")
-            # Ensure window is brought to front
-            self.activateWindow()
-            self.raise_()
+        
+        # Update the tray menu so it reflects the current state immediately
+        self.tray_icon.setContextMenu(self.tray_menu)
 
     def on_tray_icon_activated(self, reason):
         """Handle tray icon activation events."""
         print(f"Tray icon activated with reason: {reason}")
         
         # For single left click or double click, toggle visibility
-        if reason == QSystemTrayIcon.ActivationReason.Trigger or reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+        if (
+            reason is QSystemTrayIcon.ActivationReason.Trigger or
+            reason is QSystemTrayIcon.ActivationReason.DoubleClick
+        ):
             print(f"Left click detected (reason: {reason})")
             self.toggle_window_visibility()
         elif reason == QSystemTrayIcon.ActivationReason.MiddleClick:
@@ -629,11 +655,14 @@ class MainWindow(
         print("Single click handler executing")
         # Create a dropdown menu
         menu = QMenu()
-        show_action = QAction("Show", self)
+        
+        # Dynamically set the text based on current window visibility
+        show_hide_text = "Hide Window" if self.isVisible() else "Show Window"
+        show_action = QAction(show_hide_text, self)
         quit_action = QAction("Quit", self)
 
         # Connect actions to their respective slots
-        show_action.triggered.connect(self.showNormal)
+        show_action.triggered.connect(self.toggle_window_visibility)
         quit_action.triggered.connect(QApplication.quit)
 
         # Add actions to the menu
@@ -646,7 +675,7 @@ class MainWindow(
     def handle_double_click(self):
         """Handle double-click on the tray icon."""
         print("Double click detected")
-        self.showNormal()
+        self.toggle_window_visibility()  # Use toggle instead of just showing
 
     @staticmethod
     def on_write_file_signal(data: Dict):
@@ -719,6 +748,10 @@ class MainWindow(
 
         if not AIRUNNER_DISCORD_URL:
             self.ui.actionDiscord.deleteLater()
+        
+        self.ui.actionCollapse_to_system_tray.setChecked(
+            self.close_to_system_tray
+        )
     
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
@@ -802,10 +835,6 @@ class MainWindow(
     def set_path_settings(self, key, val):
         self.update_path_settings(key, val)
 
-    def action_quit_triggered(self):
-        QApplication.quit()
-        self.close()
-
     def on_nsfw_content_detected_signal(self):
         # display message in status
         self.emit_signal(
@@ -814,22 +843,36 @@ class MainWindow(
         )
 
     def closeEvent(self, event):
-        """Override close to minimize to tray instead of exiting."""
         event.ignore()
-        self.hide()
-        # Update menu text when window is hidden
-        self.toggle_visibility_action.setText("Show Window")
-        self.tray_icon.showMessage(
-            "AI Runner",
-            "Application minimized to tray. Click the icon to restore.",
-            QSystemTrayIcon.Information,
-            2000
-        )
+        self.handle_close()
+    
+    def handle_close(self):
+        """Override close to minimize to tray instead of exiting."""
+        if self.close_to_system_tray:
+            self.hide()
+            # Update menu text when window is hidden
+            self.toggle_visibility_action.setText("Show Window")
+
+            # Update the tray menu so it reflects the current state immediately
+            self.tray_icon.setContextMenu(self.tray_menu)
+            
+            self.tray_icon.showMessage(
+                "AI Runner",
+                "Application minimized to tray. Click the icon to restore.",
+                QSystemTrayIcon.Information,
+                2000
+            )
+        else:
+            self.quit()
     
     def quit(self):
         self.logger.debug("Quitting")
         self.save_state()
         self.emit_signal(SignalCode.QUIT_APPLICATION)
+    
+    def handle_quit_application_signal(self):
+        QApplication.quit()
+        self.close()
 
     def show_settings_path(self, name, default_path=None):
         path = getattr(self.path_settings, name)
@@ -949,7 +992,7 @@ class MainWindow(
         self.quitting = True
         self.logger.debug("Saving window state")
 
-        settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
+        settings = get_qsettings()
         settings.beginGroup("window_settings")
         settings.setValue("is_maximized", self.isMaximized())
         settings.setValue("is_fullscreen", self.isFullScreen())
@@ -1019,13 +1062,6 @@ class MainWindow(
 
     def action_ai_toggled(self, val):
         self.update_application_settings("ai_mode", val)
-
-    @Slot(bool)
-    def action_toggle_grid(self, val):
-        self.update_grid_settings("show_grid", val)
-        self.emit_signal(SignalCode.TOGGLE_GRID, {
-            "show_grid": val
-        })
     
     def on_toggle_tool_signal(self, data: Dict):
         self.toggle_tool(data["tool"], data["active"])
@@ -1103,8 +1139,12 @@ class MainWindow(
     def showEvent(self, event):
         """Override to update the tray menu text when window is shown."""
         super().showEvent(event)
+        # Make sure we update the menu text whenever the window is shown
         if hasattr(self, 'toggle_visibility_action'):
             self.toggle_visibility_action.setText("Hide Window")
+            # Update the tray menu so it reflects the current state immediately
+            self.tray_icon.setContextMenu(self.tray_menu)
+            
         self.logger.debug("showEvent called, initializing window")
         self._initialize_window()
         self._initialize_default_buttons()
@@ -1171,9 +1211,12 @@ class MainWindow(
 
     def _initialize_filter_actions(self):
         image_filters = ImageFilter.objects.all()
-        for image_filter in image_filters:
-            action = self.ui.menuFilters.addAction(image_filter.display_name)
-            action.triggered.connect(partial(self.display_filter_window, image_filter))
+        try:
+            for image_filter in image_filters:
+                action = self.ui.menuFilters.addAction(image_filter.display_name)
+                action.triggered.connect(partial(self.display_filter_window, image_filter))
+        except RuntimeError as e:
+            self.logger.warning(f"Error setting SD status text: {e}")
 
     @staticmethod
     def display_filter_window(image_filter):

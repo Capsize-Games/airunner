@@ -466,6 +466,9 @@ class Ui_MainWindow(object):
         self.actionDiscord.setObjectName(u"actionDiscord")
         self.actionFoo = QAction(MainWindow)
         self.actionFoo.setObjectName(u"actionFoo")
+        self.actionCollapse_to_system_tray = QAction(MainWindow)
+        self.actionCollapse_to_system_tray.setObjectName(u"actionCollapse_to_system_tray")
+        self.actionCollapse_to_system_tray.setCheckable(True)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setEnabled(True)
@@ -655,6 +658,7 @@ class Ui_MainWindow(object):
         self.menuTools.addSeparator()
         self.menuTools.addAction(self.actionRun_setup_wizard_2)
         self.menuTools.addSeparator()
+        self.menuTools.addAction(self.actionCollapse_to_system_tray)
         self.menuStable_Diffusion.addAction(self.actionSafety_Checker)
         self.menuStable_Diffusion.addAction(self.actionToggle_Stable_Diffusion)
         self.menuStable_Diffusion.addAction(self.actionToggle_Controlnet)
@@ -717,6 +721,7 @@ class Ui_MainWindow(object):
         self.actionImport_image.triggered.connect(MainWindow.action_import_image_triggered)
         self.actionExport_image_button.triggered.connect(MainWindow.action_export_image_triggered)
         self.actionDiscord.triggered.connect(MainWindow.action_open_discord)
+        self.actionCollapse_to_system_tray.toggled.connect(MainWindow.action_toggle_close_to_system_tray)
 
         self.center_tab_container.setCurrentIndex(0)
 
@@ -977,6 +982,7 @@ class Ui_MainWindow(object):
         self.actionDiscord_2.setText(QCoreApplication.translate("MainWindow", u"Discord", None))
         self.actionDiscord.setText(QCoreApplication.translate("MainWindow", u"Discord", None))
         self.actionFoo.setText(QCoreApplication.translate("MainWindow", u"Foo", None))
+        self.actionCollapse_to_system_tray.setText(QCoreApplication.translate("MainWindow", u"Close to System Tray", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.art_tab), QCoreApplication.translate("MainWindow", u"Art", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
