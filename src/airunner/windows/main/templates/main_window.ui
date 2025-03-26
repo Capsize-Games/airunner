@@ -364,6 +364,7 @@
     <addaction name="separator"/>
     <addaction name="actionRun_setup_wizard_2"/>
     <addaction name="separator"/>
+    <addaction name="actionCollapse_to_system_tray"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -1505,6 +1506,14 @@
     <string>Foo</string>
    </property>
   </action>
+  <action name="actionCollapse_to_system_tray">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Close to System Tray</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -2315,6 +2324,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionCollapse_to_system_tray</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_toggle_close_to_system_tray(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>526</x>
+     <y>388</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <designerdata>
   <property name="gridDeltaX">
@@ -2413,5 +2438,6 @@
   <slot>action_toggle_mask_layer(bool)</slot>
   <slot>action_conversation_triggered_new()</slot>
   <slot>action_conversation_triggered_delete()</slot>
+  <slot>action_toggle_close_to_system_tray(bool)</slot>
  </slots>
 </ui>

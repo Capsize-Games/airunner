@@ -158,7 +158,10 @@ class StatusWidget(BaseWidget):
     def set_sd_status_text(self):
         if self.version != self.generator_settings.version:
             version = self.generator_settings.version
-            self.ui.sd_status.setText(version)
+            try:
+                self.ui.sd_status.setText(version)
+            except RuntimeError as e:
+                self.logger.warning(f"Error setting SD status text: {e}")
 
     def on_model_status_changed_signal(self, data):
         self.update_model_status(data)
