@@ -1,17 +1,14 @@
-from typing import Type
+from typing import Type, Optional
+from abc import ABCMeta
 import os
 import torch
-
-import os
+import enum
 import librosa
-from openvoice.mel_processing import spectrogram_torch
 
+from openvoice.mel_processing import spectrogram_torch
 from openvoice import se_extractor
 from openvoice.api import OpenVoiceBaseClass, ToneColorConverter
 from melo.api import TTS
-import enum
-
-from abc import ABCMeta
 
 from airunner.settings import AIRUNNER_TTS_SPEAKER_RECORDING_PATH
 from airunner.enums import SignalCode
@@ -90,42 +87,46 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
         speaker_recording_path = os.path.expanduser(
             AIRUNNER_TTS_SPEAKER_RECORDING_PATH
         )
-        
-        self.ckpt_converter: str = os.path.join(
-            self.path_settings.base_path,
-            "text/models/tts/openvoice",
-            'checkpoints_v2/converter'
+        self._checkpoint_converter_path: str = os.path.join(
+            self.path_settings.tts_model_path,
+            'openvoice/checkpoints_v2/converter'
         )
-        self._device: str = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self.output_dir: str = os.path.join(
-            self.path_settings.base_path,
-            "text/models/tts/openvoice",
-            'outputs_v2'
+        self._output_dir: str = os.path.join(
+            self.path_settings.tts_model_path,
+            'openvoice/outputs_v2'
         )
-        self.tone_color_converter: Type[ToneColorConverter] = StreamingToneColorConverter(
-            f'{self.ckpt_converter}/config.json',
-            device=self._device
-        )
-        self.tone_color_converter.load_ckpt(
-            f'{self.ckpt_converter}/checkpoint.pth'
-        )
-        self.voice_file_path: str = speaker_recording_path
-        self.src_path: str = f'{self.output_dir}/tmp.wav'
-        self.speed: float = 1.0
-        self.language: AvailableLanguage = AvailableLanguage.EN_NEWEST
-        self.reference_speaker = os.path.expanduser(self.voice_file_path)
-        self.target_se, self.audio_name = se_extractor.get_se(
-            self.reference_speaker, 
+        self._tone_color_converter: Optional[Type[ToneColorConverter]] = None
+        self.model: Optional[TTS] = None
+        self.src_path: str = f'{self._output_dir}/tmp.wav'
+        self._speed: float = 1.0
+        self._language: AvailableLanguage = AvailableLanguage.EN_NEWEST
+        self._reference_speaker = os.path.expanduser(speaker_recording_path)
+        self._target_se, self._audio_name = se_extractor.get_se(
+            self._reference_speaker, 
             self.tone_color_converter, 
             vad=True
         )
 
+    @property
+    def device(self):
+        use_cuda = torch.cuda.is_available()
+        card_index = 0
+        return f"cuda:{card_index}" if use_cuda else "cpu"
+    
+    @property
+    def tone_color_converter(self) -> StreamingToneColorConverter:
+        if not self._tone_color_converter:
+            self._tone_color_converter = StreamingToneColorConverter(
+                f'{self._checkpoint_converter_path}/config.json',
+                device=self.device
+            )
+            self._tone_color_converter.load_ckpt(
+                f'{self._checkpoint_converter_path}/checkpoint.pth'
+            )
+        return self._tone_color_converter
+
     def generate(self, message: str):
-        model = TTS(
-            language=self.language.value,
-            device=self._device
-        )
-        speaker_ids = model.hps.data.spk2id
+        speaker_ids = self.model.hps.data.spk2id
 
         for speaker_key in speaker_ids.keys():
             speaker_id = speaker_ids[speaker_key]
@@ -133,28 +134,32 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
             
             source_se = torch.load(
                 os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts/openvoice",
-                    f'checkpoints_v2/base_speakers/ses/{speaker_key}.pth', 
+                    self.path_settings.tts_model_path,
+                    f'openvoice/checkpoints_v2/base_speakers/ses/{speaker_key}.pth', 
                 ),
-                map_location=self._device
+                map_location=self.device
             )
             
-            model.tts_to_file(message, speaker_id, self.src_path, speed=self.speed)
-
+            self.model.tts_to_file(
+                message, 
+                speaker_id, 
+                self.src_path, 
+                speed=self._speed
+            )
 
             # Run the tone color converter
-            save_path = os.path.join(
-                self.path_settings.base_path,
-                "text/models/tts/openvoice",
-                f'{self.output_dir}/output_v2_{speaker_key}.wav'
-            ),
+            output_path = os.path.join(
+                self.path_settings.tts_model_path,
+                f'openvoice/{self._output_dir}/output_v2_{speaker_key}.wav'
+            )
+
             encode_message = "@MyShell"
+            
             response = self.tone_color_converter.convert(
                 audio_src_path=self.src_path, 
                 src_se=source_se, 
-                tgt_se=self.target_se, 
-                output_path=save_path,
+                tgt_se=self._target_se, 
+                output_path=output_path,
                 message=encode_message
             )
 
@@ -166,19 +171,21 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
                     }
                 )
 
-
-    def load(self, target_model=None):
+    def load(self, _target_model=None):
         self.logger.debug("Initializing OpenVoice")
         self.unload()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
-        
         self._initialize()
+        self.model = TTS(
+            language=self._language.value,
+            device=self.device
+        )
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 
     def unload(self):
         self.logger.debug("Unloading OpenVoice")
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
-        
+        self.model = None
         self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED)
 
     def unblock_tts_generator_signal(self):
@@ -194,4 +201,4 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
             force_reload=False,
             onnx=False
         )
-        os.makedirs(self.output_dir, exist_ok=True)
+        os.makedirs(self._output_dir, exist_ok=True)
