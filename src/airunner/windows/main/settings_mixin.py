@@ -2,8 +2,6 @@ import os
 import logging
 from typing import List, Type, Optional, Dict, Any
 
-from PySide6.QtCore import QSettings
-
 from sqlalchemy.orm import joinedload
 
 from airunner.data.models import (
@@ -43,10 +41,7 @@ from airunner.data.models import (
 from airunner.enums import SignalCode
 from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
-from airunner.settings import (
-    AIRUNNER_ORGANIZATION,
-    AIRUNNER_APPLICATION_NAME,
-)
+from airunner.utils.settings import get_qsettings
 
 
 class SettingsMixinSharedInstance:
@@ -113,7 +108,7 @@ class SettingsMixin:
     
     @property
     def window_settings(self) -> Dict[str, Any]:
-        settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
+        settings = get_qsettings()
         settings.beginGroup("window_settings")
         window_settings = {
             "is_maximized": settings.value("is_maximized", False, type=bool),

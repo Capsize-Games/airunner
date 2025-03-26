@@ -1,8 +1,7 @@
 from typing import Optional, Dict
-from functools import partial
 
 from PySide6 import QtGui
-from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, QSettings
+from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
 from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen
 from PySide6.QtWidgets import (
     QGraphicsView, 
@@ -20,10 +19,7 @@ from airunner.widgets.canvas.custom_scene import CustomScene
 from airunner.widgets.canvas.draggables.active_grid_area import ActiveGridArea
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.widgets.canvas.zoom_handler import ZoomHandler
-from airunner.settings import (
-    AIRUNNER_ORGANIZATION,
-    AIRUNNER_APPLICATION_NAME,
-)
+from airunner.utils.settings import get_qsettings
 
 
 class CustomGraphicsView(
@@ -48,7 +44,7 @@ class CustomGraphicsView(
         self.last_pos: QPoint = QPoint(0, 0)
         self.zoom_handler: ZoomHandler = ZoomHandler()
         self.canvas_offset = QPoint(0, 0)  # Offset for infinite scrolling
-        self.settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
+        self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
         self.load_canvas_offset()
 
