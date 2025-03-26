@@ -518,13 +518,13 @@ class MainWindow(
 
         # Create a simple tray menu with actions
         self.tray_menu = QMenu()
-        show_action = QAction("Show Window", self)
+        self.toggle_visibility_action = QAction("Hide Window", self)
         quit_action = QAction("Quit Application", self)
-        self.tray_menu.addAction(show_action)
+        self.tray_menu.addAction(self.toggle_visibility_action)
         self.tray_menu.addAction(quit_action)
 
-        # Connect actions directly
-        show_action.triggered.connect(self.showNormal)
+        # Connect actions
+        self.toggle_visibility_action.triggered.connect(self.toggle_window_visibility)
         quit_action.triggered.connect(self.quit)
 
         # Set the menu for the tray icon
@@ -597,19 +597,35 @@ class MainWindow(
         # Start a new instance of the application
         QProcess.startDetached(sys.executable, sys.argv)
 
+    def toggle_window_visibility(self):
+        """Toggle window visibility and update the menu text."""
+        if self.isVisible():
+            self.hide()
+            self.toggle_visibility_action.setText("Show Window")
+        else:
+            self.showNormal()
+            self.toggle_visibility_action.setText("Hide Window")
+            # Ensure window is brought to front
+            self.activateWindow()
+            self.raise_()
+
     def on_tray_icon_activated(self, reason):
         """Handle tray icon activation events."""
         print(f"Tray icon activated with reason: {reason}")
         
-        # For single left click or double click, show the window
+        # For single left click or double click, toggle visibility
         if reason == QSystemTrayIcon.ActivationReason.Trigger or reason == QSystemTrayIcon.ActivationReason.DoubleClick:
             print(f"Left click detected (reason: {reason})")
-            self.showNormal()
+            self.toggle_window_visibility()
         elif reason == QSystemTrayIcon.ActivationReason.MiddleClick:
             print("Middle click detected")
         elif reason == QSystemTrayIcon.ActivationReason.Context:
             print("Context menu requested")
-            # The context menu is shown automatically by Qt
+            # Update menu text before showing context menu
+            if self.isVisible():
+                self.toggle_visibility_action.setText("Hide Window")
+            else:
+                self.toggle_visibility_action.setText("Show Window")
 
     def handle_single_click(self):
         """Handle single-click on the tray icon."""
@@ -804,9 +820,11 @@ class MainWindow(
         """Override close to minimize to tray instead of exiting."""
         event.ignore()
         self.hide()
+        # Update menu text when window is hidden
+        self.toggle_visibility_action.setText("Show Window")
         self.tray_icon.showMessage(
             "AI Runner",
-            "Application minimized to tray. Double-click the icon to restore.",
+            "Application minimized to tray. Click the icon to restore.",
             QSystemTrayIcon.Information,
             2000
         )
@@ -1086,7 +1104,10 @@ class MainWindow(
         AppInstaller(close_on_cancel=False)
 
     def showEvent(self, event):
+        """Override to update the tray menu text when window is shown."""
         super().showEvent(event)
+        if hasattr(self, 'toggle_visibility_action'):
+            self.toggle_visibility_action.setText("Hide Window")
         self.logger.debug("showEvent called, initializing window")
         self._initialize_window()
         self._initialize_default_buttons()
