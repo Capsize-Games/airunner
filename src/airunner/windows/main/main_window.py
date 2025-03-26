@@ -5,6 +5,7 @@ import urllib
 import webbrowser
 from functools import partial
 from typing import Dict
+import time
 
 import requests
 from PIL import Image
@@ -207,6 +208,7 @@ class MainWindow(
         self._worker_manager = None
         self.initialize_ui()
         self._initialize_workers()
+        self.last_tray_click_time = 0
 
     @property
     def generator_tab_widget(self):
@@ -508,24 +510,30 @@ class MainWindow(
         return filename
 
     def initialize_system_tray(self):
+        """Initialize the system tray icon with a simple menu."""
         here = os.path.dirname(os.path.abspath(__file__))
         self.setWindowIcon(QIcon(os.path.join(here, "../../images/icon64x64.png")))
         self.tray_icon = QSystemTrayIcon(self)
         self.tray_icon.setIcon(QIcon(os.path.join(here, "../../images/icon64x64.png")))
 
-        # Context menu for tray
-        tray_menu = QMenu()
-        restore_action = QAction("Restore")
-        quit_action = QAction("Quit")
-        tray_menu.addAction(restore_action)
-        tray_menu.addAction(quit_action)
+        # Create a simple tray menu with actions
+        self.tray_menu = QMenu()
+        show_action = QAction("Show Window", self)
+        quit_action = QAction("Quit Application", self)
+        self.tray_menu.addAction(show_action)
+        self.tray_menu.addAction(quit_action)
 
-        restore_action.triggered.connect(self.showNormal)
+        # Connect actions directly
+        show_action.triggered.connect(self.showNormal)
         quit_action.triggered.connect(self.quit)
 
-        self.tray_icon.setContextMenu(tray_menu)
+        # Set the menu for the tray icon
+        self.tray_icon.setContextMenu(self.tray_menu)
+        
+        # Connect activated signal to our custom handler
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
-
+        
+        # Show the tray icon
         self.tray_icon.show()
 
     def on_navigate_to_url(self, _data: Dict = None):
@@ -591,17 +599,21 @@ class MainWindow(
 
     def on_tray_icon_activated(self, reason):
         """Handle tray icon activation events."""
-        if reason == QSystemTrayIcon.ActivationReason.Trigger:
-            # Start the timer for single-click detection
-            self.single_click_timer.start(200)  # 200ms delay for distinguishing single and double clicks
-        elif reason == QSystemTrayIcon.ActivationReason.DoubleClick:
-            # Stop the timer to prevent single-click action
-            self.single_click_timer.stop()
-            self.handle_double_click()
+        print(f"Tray icon activated with reason: {reason}")
+        
+        # For single left click or double click, show the window
+        if reason == QSystemTrayIcon.ActivationReason.Trigger or reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            print(f"Left click detected (reason: {reason})")
+            self.showNormal()
+        elif reason == QSystemTrayIcon.ActivationReason.MiddleClick:
+            print("Middle click detected")
+        elif reason == QSystemTrayIcon.ActivationReason.Context:
+            print("Context menu requested")
+            # The context menu is shown automatically by Qt
 
     def handle_single_click(self):
         """Handle single-click on the tray icon."""
-        print("Single click detected")
+        print("Single click handler executing")
         # Create a dropdown menu
         menu = QMenu()
         show_action = QAction("Show", self)
