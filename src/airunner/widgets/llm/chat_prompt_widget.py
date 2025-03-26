@@ -338,13 +338,14 @@ class ChatPromptWidget(BaseWidget):
 
         try:
             self.ui.conversation.hide()
-        except RuntimeError:
-            pass
+        except RuntimeError as e:
+            self.logger.warning(f"Error hiding conversation: {e}")
 
         try:
             self.ui.chat_container.show()
         except RuntimeError as e:
-            self.logger.warning(f"Error setting SD status text: {e}")
+            if AIRUNNER_ART_ENABLED:
+                self.logger.warning(f"Error setting SD status text: {e}")
 
     def llm_action_changed(self, val: str):
         if val == "Chat":

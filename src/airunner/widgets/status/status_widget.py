@@ -161,7 +161,8 @@ class StatusWidget(BaseWidget):
             try:
                 self.ui.sd_status.setText(version)
             except RuntimeError as e:
-                self.logger.warning(f"Error setting SD status text: {e}")
+                if AIRUNNER_ART_ENABLED:
+                    self.logger.warning(f"Error setting SD status text: {e}")
 
     def on_model_status_changed_signal(self, data):
         self.update_model_status(data)
