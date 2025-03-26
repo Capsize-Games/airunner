@@ -10,9 +10,9 @@ Do not change the order of the imports.
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
-from PySide6.QtCore import QSettings
 import os
 import argparse
+from airunner.utils.settings import get_qsettings
 base_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
 
 
@@ -45,10 +45,6 @@ from alembic.config import Config
 from alembic import command
 from pathlib import Path
 from airunner.data.models import ApplicationSettings
-from airunner.settings import (
-    AIRUNNER_ORGANIZATION,
-    AIRUNNER_APPLICATION_NAME
-)
 
 def setup_database():
     base = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -74,7 +70,7 @@ def main():
 
     if args.clear_window_settings:
         # Clear all window settings from QSettings
-        settings = QSettings(AIRUNNER_ORGANIZATION, AIRUNNER_APPLICATION_NAME)
+        settings = get_qsettings()
         settings.beginGroup("splitters")
         settings.remove("")  # Removes all keys under the "splitters" group
         settings.endGroup()
