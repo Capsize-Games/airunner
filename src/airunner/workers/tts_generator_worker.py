@@ -106,7 +106,7 @@ class TTSGeneratorWorker(Worker):
     def _initialize_tts_handler(self):
         self.logger.info("Initializing TTS handler...")
         model = AIRUNNER_TTS_MODEL_TYPE or self.tts_settings.model
-        model_type = TTSModel(model)
+        model_type = TTSModel(model.lower())
         if model_type is TTSModel.ESPEAK:
             tts_handler_class_ = EspeakHandler
         elif model_type is TTSModel.OPENVOICE:
