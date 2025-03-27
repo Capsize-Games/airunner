@@ -9,8 +9,9 @@ from airunner.settings import AIRUNNER_LLM_ON
 
 
 class LLMGenerateWorker(Worker):
-    def __init__(self):
+    def __init__(self, local_agent_class=None):
         self.llm = None
+        self.local_agent_class = local_agent_class
         self.signal_handlers = {
             SignalCode.LLM_UNLOAD_SIGNAL: self.on_llm_on_unload_signal,
             SignalCode.LLM_LOAD_SIGNAL: self.on_llm_load_model_signal,
@@ -101,7 +102,7 @@ class LLMGenerateWorker(Worker):
     def _load_llm(self, data=None):
         data = data or {}
         if self.llm is None:
-            self.llm = LLMHandler()
+            self.llm = LLMHandler(local_agent_class=self.local_agent_class)
 
         self.llm.load()
 
