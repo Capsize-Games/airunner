@@ -619,16 +619,17 @@ class BaseAgent(
             "- Do not generate redundant dialogue. Examine the conversation and context close and keep responses "
             "interesting and creative.\n"
             "- Do not format the response with the character's name or any other text. Only return the dialogue.\n"
-            f"- As {self.botname}, you will avoid repeating previous dialogue.\n"
+            f"- Never generate dialogue for {self.username}, only for {self.botname}\n"
+            f"- Never generate dialogue that has already been said in the conversation.\n"
             f"- {self.botname} and {self.username} are both humans. They are not AI or bots.\n"
             f"- As {self.botname}, you will always respond in a way that is consistent with {self.botname}'s emotions, "
             f"personality, and the context of the conversation.\n"
-            f"- As {self.botname}, you will respond emotionally, persuasively, and realistically.\n"
-            f"- As {self.botname}, you will not ask how you they can provide assistance, or how they can help.\n"
-            f"- As {self.botname}, you must respond and talk like a real human user.\n"
-            f"- As {self.botname}, you can ask questions, make statements, and provide information.\n"
-            f"- As {self.botname}, you should respond in character with emotionally charged responses that are "
-            f"consistent with your personality and mood.\n"
+            f"- Generate emotional, persuasive, and realistic responses.\n"
+            f"- Do not generate text asking how to provide assistance, or how to can help.\n"
+            f"- Generate dialogue that is realistic for the {self.botname} character.\n"
+            f"- The generate dialogue can contain questions, make statements, and provide information.\n"
+            f"- Generated dialogue should be consistent with {self.botname}'s personality and mood.\n"
+            f"- Don't try to change the subject. Stick to the current conversation.\n"
             f"{backstory_prompt}"
             f"{system_instructions}"
             f"{guardrails}"
@@ -952,7 +953,7 @@ class BaseAgent(
         self._update_memory(action)
         kwargs = kwargs or {}
         kwargs.update({
-            "input": f"{message}",
+            "input": f"{self.username}: {message}",
             "chat_history": self._memory.get_all() if self._memory else None,
             "llm_request": llm_request
         })
