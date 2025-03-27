@@ -33,7 +33,7 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models import ApplicationSettings
 from airunner.windows.main.main_window import MainWindow
-from airunner.settings import AIRUNNER_DISCORD_URL
+from airunner.settings import AIRUNNER_DISCORD_URL, AIRUNNER_DISABLE_SETUP_WIZARD
 
 
 class App(
@@ -136,6 +136,8 @@ class App(
 
     @staticmethod
     def run_setup_wizard():
+        if AIRUNNER_DISABLE_SETUP_WIZARD:
+            return
         application_settings = ApplicationSettings.objects.first()
         if application_settings.run_setup_wizard:
             AppInstaller()

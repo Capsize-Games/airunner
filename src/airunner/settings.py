@@ -239,3 +239,5 @@ AIRUNNER_TTS_ON = os.environ.get("AIRUNNER_TTS_ON", "0") == "1"
 AIRUNNER_STT_ON = os.environ.get("AIRUNNER_STT_ON", "0") == "1"
 AIRUNNER_SD_ON = os.environ.get("AIRUNNER_SD_ON", "0") == "1"
 AIRUNNER_CN_ON = os.environ.get("AIRUNNER_CN_ON", "0") == "1"
+AIRUNNER_LLM_CHAT_STORE = os.environ.get("AIRUNNER_LLM_CHAT_STORE", "db")
+AIRUNNER_DISABLE_SETUP_WIZARD = os.environ.get("AIRUNNER_DISABLE_SETUP_WIZARD", "0") == "1"
