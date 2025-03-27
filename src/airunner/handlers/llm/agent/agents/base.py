@@ -14,9 +14,10 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.memory import BaseMemory
 from llama_index.core.llms.llm import LLM
+from llama_index.core.storage.chat_store.base import BaseChatStore
+from llama_index.core.storage.chat_store import SimpleChatStore
 
 from airunner.enums import LLMActionType, SignalCode
-from airunner.utils import strip_names_from_message
 from airunner.data.models import Conversation, User, Tab
 from airunner.mediator_mixin import MediatorMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
@@ -37,6 +38,7 @@ from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
 from airunner.handlers.llm import HuggingFaceLLM
 from airunner.data.models import Conversation
+from airunner.settings import AIRUNNER_LLM_CHAT_STORE
 
 
 class BaseAgent(
@@ -80,7 +82,7 @@ class BaseAgent(
         self._summary_engine_tool: Optional[ChatEngineTool] = None
         self._information_scraper_tool: Optional[ChatEngineTool] = None
         self._information_scraper_engine: Optional[RefreshSimpleChatEngine] = None
-        self._chat_store: Optional[DatabaseChatStore] = None
+        self._chat_store: Optional[Type[BaseChatStore]] = None
         self._chat_memory: Optional[ChatMemoryBuffer] = None
         self._current_action: LLMActionType = LLMActionType.NONE
         self._memory: Optional[BaseMemory] = None
@@ -676,13 +678,16 @@ class BaseAgent(
         )
 
     @property
-    def chat_store(self) -> DatabaseChatStore:
+    def chat_store(self) -> Type[BaseChatStore]:
         if not self._chat_store:
-            self._chat_store = DatabaseChatStore()
+            if AIRUNNER_LLM_CHAT_STORE == "db":
+                self._chat_store = DatabaseChatStore()
+            else:
+                self._chat_store = SimpleChatStore()
         return self._chat_store
 
     @chat_store.setter
-    def chat_store(self, value: Optional[DatabaseChatStore]):
+    def chat_store(self, value: Optional[Type[BaseChatStore]]):
         self._chat_store = value
 
     @property
