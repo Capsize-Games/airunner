@@ -598,19 +598,6 @@ class BaseAgent(
                 "------\n"
             )
         section_prompt = ""
-        # if self.current_tab.name == "Canvas":
-        #     section_prompt = "The user is editing an image using the art tool."
-        # elif self.current_tab.name == "Browser" and self.webpage_html != "":
-        #     section_prompt = (
-        #         "The user is browsing the web. Here's the content of the webpage:\n"
-        #         f"{self.webpage_html}"
-        #     )
-        # elif self.current_tab.name == "Document":
-        #     section_prompt = "The user is working on a document."
-        # elif self.current_tab.name == "Game":
-        #     section_prompt = "The user is playing a game."
-        # else:
-        #     section_prompt = ""
         prompt = (
             f"Your name is {self.botname}.\n"
             f"- The user ({self.username}) is having a conversation with the assistant ({self.botname}).\n"

@@ -1,7 +1,7 @@
 import random
 import os
 import torch
-from typing import Optional, Dict, List, Union
+from typing import Optional, Dict, List, Union, Type
 from peft import PeftModel
 
 from transformers.utils.quantization_config import BitsAndBytesConfig, GPTQConfig
@@ -15,7 +15,7 @@ from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import AIRUNNER_MAX_SEED
 from airunner.utils.memory import clear_memory
 from airunner.handlers.llm.agent.agents import (
-    MistralAgentQObject, 
+    LocalAgent, 
     OpenRouterQObject
 )
 from airunner.data.models import Conversation, LLMGeneratorSettings
@@ -33,7 +33,7 @@ class LLMHandler(
     model_class: str = "llm"
     _model: Optional[AutoModelForCausalLM] = None
     _streamer: Optional[TextIteratorStreamer] = None
-    _chat_agent: Optional[Union[MistralAgentQObject, OpenRouterQObject]] = None
+    _chat_agent: Optional[Union[Type[LocalAgent], OpenRouterQObject]] = None
     _agent_executor: Optional[object] = None
     _service_context_model: Optional[object] = None
     _use_query_engine: bool = False
@@ -50,7 +50,13 @@ class LLMHandler(
     _current_model_path: Optional[str] = None
     llm_settings: LLMSettings
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self, 
+        local_agent_class: Optional[Type[LocalAgent]], 
+        *args, 
+        **kwargs
+    ):
+        self.local_agent_class_ = local_agent_class or LocalAgent
         super().__init__(*args, **kwargs)
         self.llm_settings = LLMSettings()
 
@@ -290,7 +296,7 @@ class LLMHandler(
         self.logger.debug("Loading agent")
         if self.llm_settings.use_local_llm:
             self.logger.info("Loading local chat agent")
-            self._chat_agent = MistralAgentQObject(
+            self._chat_agent = self.local_agent_class_(
                 model=self._model,
                 tokenizer=self._tokenizer,
                 default_tool_choice=None,
