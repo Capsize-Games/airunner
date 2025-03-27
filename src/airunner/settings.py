@@ -234,8 +234,8 @@ AIRUNNER_TTS_MODEL_TYPE = os.environ.get("AIRUNNER_TTS_MODEL_TYPE", None)
 AIRUNNER_TTS_SPEAKER_RECORDING_PATH = os.environ.get("AIRUNNER_TTS_SPEAKER_RECORDING_PATH", "")
 
 # Headless
-AIRUNNER_LLM_ON = os.environ.get("AIRUNNER_LLM_ON", "1") == "1"
-AIRUNNER_TTS_ON = os.environ.get("AIRUNNER_TTS_ON", "1") == "1"
-AIRUNNER_STT_ON = os.environ.get("AIRUNNER_STT_ON", "1") == "1"
-AIRUNNER_SD_ON = os.environ.get("AIRUNNER_SD_ON", "1") == "1"
-AIRUNNER_CN_ON = os.environ.get("AIRUNNER_CN_ON", "1") == "1"
+AIRUNNER_LLM_ON = os.environ.get("AIRUNNER_LLM_ON", "0") == "1"
+AIRUNNER_TTS_ON = os.environ.get("AIRUNNER_TTS_ON", "0") == "1"
+AIRUNNER_STT_ON = os.environ.get("AIRUNNER_STT_ON", "0") == "1"
+AIRUNNER_SD_ON = os.environ.get("AIRUNNER_SD_ON", "0") == "1"
+AIRUNNER_CN_ON = os.environ.get("AIRUNNER_CN_ON", "0") == "1"
