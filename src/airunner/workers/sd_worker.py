@@ -7,6 +7,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
 from airunner.workers.worker import Worker
 from airunner.handlers import StableDiffusionHandler
+from airunner.settings import AIRUNNER_SD_ON
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -157,7 +158,7 @@ class SDWorker(Worker):
 
     def start_worker_thread(self):
         self.sd = StableDiffusionHandler()
-        if self.application_settings.sd_enabled:
+        if self.application_settings.sd_enabled or AIRUNNER_SD_ON:
             self.sd.load()
 
     def handle_message(self, message):
