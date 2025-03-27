@@ -2,6 +2,7 @@
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
+from typing import Optional, Dict
 import os.path
 import sys
 import signal
@@ -46,13 +47,17 @@ class App(
     """
     def __init__(
         self,
-        main_window_class: QWindow = None
+        no_splash: bool = False,
+        main_window_class: QWindow = None,
+        window_class_params: Optional[Dict] = None
     ):
         """
         Initialize the application and run as a GUI application or a socket server.
         :param main_window_class: The main window class to use for the application.
         """
         self.main_window_class_ = main_window_class or MainWindow
+        self.window_class_params = window_class_params or {}
+        self.no_splash = no_splash
         self.app = None
         self.splash = None
 
@@ -157,15 +162,15 @@ class App(
         Override this method to run the application in a different mode.
         """
         # Continue with application execution
-        self.splash = self.display_splash_screen(self.app)
+        if not self.no_splash:
+            self.splash = self.display_splash_screen(self.app)
 
         # Show the main application window
         QTimer.singleShot(
             50,
             partial(
                 self.show_main_application,
-                self.app,
-                self.splash
+                self.app
             )
         )
         sys.exit(self.app.exec())
@@ -190,13 +195,15 @@ class App(
             print(e)
             sys.exit(0)
 
-    @staticmethod
-    def display_splash_screen(app):
+    def display_splash_screen(self, app):
         """
         Display a splash screen while the application is loading.
         :param app:
         :return:
         """
+        if self.no_splash:
+            return
+        
         screens = QGuiApplication.screens()
         try:
             screen = screens.at(0)
@@ -226,8 +233,7 @@ class App(
 
     def show_main_application(
         self,
-        app,
-        splash
+        app
     ):
         """
         Show the main application window.
@@ -236,15 +242,20 @@ class App(
         :return:
         """
         try:
-            window = self.main_window_class_()
+            window = self.main_window_class_(
+                app=self,
+                **self.window_class_params
+            )
         except Exception as e:
             traceback.print_exc()
             print(e)
-            splash.finish(None)
+            if self.splash:
+                self.splash.finish(None)
             sys.exit(f"""
                 An error occurred while initializing the application.
                 Please report this issue on GitHub or Discord {AIRUNNER_DISCORD_URL}."
             """)
         app.main_window = window
-        splash.finish(window)
+        if self.splash:
+            self.splash.finish(window)
         window.raise_()

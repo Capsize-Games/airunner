@@ -42,6 +42,7 @@ from airunner.enums import SignalCode
 from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
 from airunner.utils.settings import get_qsettings
+from airunner.utils.get_logger import get_logger
 
 
 class SettingsMixinSharedInstance:
@@ -57,21 +58,7 @@ class SettingsMixinSharedInstance:
         if self._initialized:
             return
 
-        # Configure the logger
-        self.logger = logging.getLogger("AI Runner")
-        self.logger.setLevel(logging.DEBUG)
-
-        # Remove all existing handlers
-        if self.logger.hasHandlers():
-            self.logger.handlers.clear()
-
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(filename)s - %(funcName)s - %(lineno)d - %(message)s'))
-        self.logger.addHandler(handler)
-
-        # Disable propagation to the root logger
-        self.logger.propagate = False
+        self.logger = get_logger("AI Runner", logging.DEBUG)
 
         self._initialized = True
         self.chatbot: Optional[Chatbot] = None
