@@ -194,7 +194,7 @@ class PygameWindow(
         width: int = 800,
         height: int = 600,
         *args, 
-        **kwags
+        **kwargs
     ):
         """
         Initialize the Pygame window.
@@ -203,13 +203,13 @@ class PygameWindow(
         :param width: The width of the Pygame window.
         :param height: The height of the Pygame window.
         :param args: Additional arguments.
-        :param kwags: Additional keyword arguments.
+        :param kwargs: Additional keyword arguments.
         """
         self.app = app
         self.pygame_manager = game_class(
             api=app,
             width=width,
-            height=height
+            height=height,
         )
         self._mask_generator_worker = create_worker(MaskGeneratorWorker)
         self._sd_worker = create_worker(SDWorker)
@@ -219,7 +219,7 @@ class PygameWindow(
         self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
         self._llm_generate_worker = create_worker(LLMGenerateWorker)
 
-        super().__init__(*args, **kwags)
+        super().__init__(*args, **kwargs)
         self.setWindowTitle("AI Runner - Pygame Window")
 
         # Create a central widget and layout
