@@ -9,7 +9,15 @@ from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QVBoxLayout
 
 from airunner.enums import SignalCode, LLMActionType
-from airunner.workers.llm_generate_worker import LLMGenerateWorker
+from airunner.workers import (
+    AudioCaptureWorker,
+    AudioProcessorWorker,
+    LLMGenerateWorker,
+    MaskGeneratorWorker,
+    SDWorker,
+    TTSGeneratorWorker,
+    TTSVocalizerWorker,
+)
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.utils import create_worker
 from airunner.windows.main.ai_model_mixin import AIModelMixin
@@ -203,7 +211,14 @@ class PygameWindow(
             width=width,
             height=height
         )
-        self.llm_generate_worker = create_worker(LLMGenerateWorker)
+        self._mask_generator_worker = create_worker(MaskGeneratorWorker)
+        self._sd_worker = create_worker(SDWorker)
+        self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
+        self._stt_audio_processor_worker = create_worker(AudioProcessorWorker)
+        self._tts_generator_worker = create_worker(TTSGeneratorWorker)
+        self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
+        self._llm_generate_worker = create_worker(LLMGenerateWorker)
+
         super().__init__(*args, **kwags)
         self.setWindowTitle("AI Runner - Pygame Window")
 
