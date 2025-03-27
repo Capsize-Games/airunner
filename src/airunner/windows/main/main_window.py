@@ -1216,7 +1216,8 @@ class MainWindow(
                 action = self.ui.menuFilters.addAction(image_filter.display_name)
                 action.triggered.connect(partial(self.display_filter_window, image_filter))
         except RuntimeError as e:
-            self.logger.warning(f"Error setting SD status text: {e}")
+            if AIRUNNER_ART_ENABLED:
+                self.logger.warning(f"Error setting SD status text: {e}")
 
     @staticmethod
     def display_filter_window(image_filter):

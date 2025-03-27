@@ -11,6 +11,7 @@ from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.exceptions import NaNException
 from airunner.utils.memory import clear_memory
+from airunner.settings import AIRUNNER_DEFAULT_STT_HF_PATH
 
 
 class WhisperHandler(BaseHandler):
@@ -46,21 +47,19 @@ class WhisperHandler(BaseHandler):
     @property
     def model_path(self) -> str:
         file_path = os.path.expanduser(os.path.join(
-            self.path_settings.base_path,
-            "text",
-            "models",
-            "stt",
-            "openai",
-            "whisper-tiny"
+            self.path_settings.stt_model_path,
+            AIRUNNER_DEFAULT_STT_HF_PATH
         ))
         return os.path.abspath(file_path)
 
     def process_audio(self, audio_data):
         with self._lock:
             item = audio_data["item"]
+            
             # Convert the byte string to a float32 array
             inputs = np.frombuffer(item, dtype=np.int16)
             inputs = inputs.astype(np.float32) / 32767.0
+            
             transcription = None
             try:
                 transcription = self._process_inputs(inputs)
