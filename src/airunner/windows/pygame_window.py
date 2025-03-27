@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Tuple, Type, Optional
+import threading
+
 import pygame
 
 from PySide6.QtWidgets import QMainWindow
@@ -26,10 +28,9 @@ from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.styles_mixin import StylesMixin
 from airunner.mediator_mixin import MediatorMixin
 from airunner.handlers.llm.llm_response import LLMResponse
-
 from airunner.api import API
+from airunner.handlers.llm.agent.agents import LocalAgent
 
-import threading # ADDED
 
 class PygameManager(ABC):
     """
@@ -193,6 +194,7 @@ class PygameWindow(
         game_class: Type[PygameManager],
         width: int = 800,
         height: int = 600,
+        local_agent_class: Optional[Type[LocalAgent]] = None,
         *args, 
         **kwargs
     ):
@@ -217,7 +219,7 @@ class PygameWindow(
         self._stt_audio_processor_worker = create_worker(AudioProcessorWorker)
         self._tts_generator_worker = create_worker(TTSGeneratorWorker)
         self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
-        self._llm_generate_worker = create_worker(LLMGenerateWorker)
+        self._llm_generate_worker = create_worker(LLMGenerateWorker, local_agent_class=local_agent_class)
 
         super().__init__(*args, **kwargs)
         self.setWindowTitle("AI Runner - Pygame Window")
