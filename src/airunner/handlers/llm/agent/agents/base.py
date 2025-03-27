@@ -953,7 +953,7 @@ class BaseAgent(
         self._update_memory(action)
         kwargs = kwargs or {}
         kwargs.update({
-            "input": f"{message}",
+            "input": f"{self.username}: {message}",
             "chat_history": self._memory.get_all() if self._memory else None,
             "llm_request": llm_request
         })
