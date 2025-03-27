@@ -83,7 +83,6 @@ def main():
     
     if args.chatbot_only:
         os.environ["AIRUNNER_ART_ENABLED"] = "0"
-
     setup_database()
 
     # Get the first ApplicationSettings record from the database and 
