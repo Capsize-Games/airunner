@@ -29,7 +29,7 @@
 
 AI Runner is an interface that allows you to run open-source large language models (LLM) and AI image generators (Stable Diffusion) on your own hardware.
 
-It is designed to be easy to use, with a simple and intuitive interface that allows you to run AI models without the need for a web server or cloud service.
+It is designed to be easy to use, with a simple and intuitive interface that allows you to use models without the need for a web server or cloud service.
 
 It has been optimized for speed and efficiency, allowing you to generate images and have conversations with chatbots in real-time.
 
