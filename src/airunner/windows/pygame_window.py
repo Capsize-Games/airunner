@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Type
+from typing import Tuple, Type, Optional
 import pygame
 
 from PySide6.QtWidgets import QMainWindow
@@ -17,6 +17,7 @@ from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.styles_mixin import StylesMixin
 from airunner.mediator_mixin import MediatorMixin
+from airunner.handlers.llm.llm_response import LLMResponse
 
 from airunner.api import API
 
@@ -47,6 +48,7 @@ class PygameManager(ABC):
         self.screen_color: Tuple = screen_color
         self._initialize()
         self._start()
+        self.api.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, self._handle_llm_response_signal)
         self.api.logger.info("PygameManager initialized")
 
     def _initialize(self):
@@ -54,6 +56,19 @@ class PygameManager(ABC):
         self._initialize_pygame()
         self._initialize_screen()
         self._initialize_display()
+    
+    def _handle_llm_response_signal(self, data: dict):
+        response = data.get("response")
+        self._handle_llm_response(response)
+    
+    @abstractmethod
+    def _handle_llm_response(self, response: LLMResponse):
+        """
+        Handle the LLM response.
+        This method should be overridden by subclasses to provide
+        specific functionality for handling LLM responses.
+        """
+        
     
     @abstractmethod
     def _start(self):
@@ -207,7 +222,7 @@ class PygameWindow(
         pygame_thread.daemon = True  # Allow the main program to exit even if the thread is still running
         pygame_thread.start()
 
-    def send_llm_request(self, prompt: str):
+    def send_llm_request(self, prompt: str, llm_request: Optional[LLMRequest] = None):
         self.app.emit_signal(
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
             {
@@ -215,7 +230,7 @@ class PygameWindow(
                 "request_data": {
                     "action": LLMActionType.CHAT,
                     "prompt": prompt,
-                    "llm_request": LLMRequest.from_default()
+                    "llm_request": llm_request or LLMRequest.from_default()
                 }
             }
         )
