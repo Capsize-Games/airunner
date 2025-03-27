@@ -236,16 +236,3 @@ class PygameWindow(
         pygame_thread = threading.Thread(target=self.pygame_manager.run)
         pygame_thread.daemon = True  # Allow the main program to exit even if the thread is still running
         pygame_thread.start()
-
-    def send_llm_request(self, prompt: str, llm_request: Optional[LLMRequest] = None):
-        self.app.emit_signal(
-            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
-            {
-                "llm_request": True,
-                "request_data": {
-                    "action": LLMActionType.CHAT,
-                    "prompt": prompt,
-                    "llm_request": llm_request or LLMRequest.from_default()
-                }
-            }
-        )
