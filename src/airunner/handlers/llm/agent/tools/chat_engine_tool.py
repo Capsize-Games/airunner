@@ -3,6 +3,7 @@ from typing import (
     Optional,
     Union,
 )
+import openai
 
 from llama_index.core.tools.types import (
     AsyncBaseTool, 
@@ -101,17 +102,20 @@ class ChatEngineTool(AsyncBaseTool):
             )
 
             is_first_message = True
-            for token in streaming_response.response_gen:
-                if self._do_interrupt:
-                    break
-                response += token
-                if response != "Empty Response":
-                    self.agent.handle_response(
-                        token, 
-                        is_first_message, 
-                        do_not_display=do_not_display
-                    )
-                is_first_message = False
+            try:
+                for token in streaming_response.response_gen:
+                    if self._do_interrupt:
+                        break
+                    response += token
+                    if response != "Empty Response":
+                        self.agent.handle_response(
+                            token, 
+                            is_first_message, 
+                            do_not_display=do_not_display
+                        )
+                    is_first_message = False
+            except openai.APIError as e:
+                response = ""
 
         self._do_interrupt = False
 
