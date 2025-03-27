@@ -7,7 +7,7 @@ from airunner.enums import SignalCode, LLMActionType
 
 class API(App):    
     def send_llm_request(self, prompt: str, llm_request: Optional[LLMRequest] = None):
-        self.app.emit_signal(
+        self.emit_signal(
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
             {
                 "llm_request": True,
@@ -18,6 +18,3 @@ class API(App):
                 }
             }
         )
-    
-    def quit(self):
-        self.app.quit()
