@@ -11,6 +11,8 @@ from airunner.enums import SignalCode
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_request import LLMRequest
 
+from airunner.pygame_example.pygame_agent import PygameAgent
+
 
 class ExampleGame(PygameManager):
     """
@@ -64,6 +66,7 @@ if __name__ == "__main__":
             "width": 800,
             "height": 600,
             "game_class": ExampleGame,
+            "local_agent_class": PygameAgent
         }
     )
 

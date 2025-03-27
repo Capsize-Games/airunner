@@ -12,6 +12,7 @@ from airunner.handlers import (
     EspeakHandler,
     OpenVoiceHandler,
 )
+from airunner.settings import AIRUNNER_TTS_ON
 
 
 class TTSGeneratorWorker(Worker):
@@ -36,9 +37,13 @@ class TTSGeneratorWorker(Worker):
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
         }
         super().__init__()
+    
+    @property
+    def tts_enabled(self) -> bool:
+        return self.application_settings.tts_enabled or AIRUNNER_TTS_ON
 
     def on_llm_text_streamed_signal(self, data):
-        if not self.application_settings.tts_enabled:
+        if not self.tts_enabled:
             return
 
         llm_response: LLMResponse = data.get("response", None)
@@ -69,7 +74,7 @@ class TTSGeneratorWorker(Worker):
         self.tts.interrupt_process_signal()
 
     def on_unblock_tts_generator_signal(self):
-        if self.application_settings.tts_enabled:
+        if self.tts_enabled:
             self.logger.debug("Unblocking TTS generation...")
             self.do_interrupt = False
             self.paused = False
@@ -87,7 +92,7 @@ class TTSGeneratorWorker(Worker):
 
     def start_worker_thread(self):
         self._initialize_tts_handler()
-        if self.application_settings.tts_enabled:
+        if self.tts_enabled:
             self._load_tts()
 
     def _reload_tts_handler(self, data: dict):
@@ -176,7 +181,7 @@ class TTSGeneratorWorker(Worker):
             self.on_interrupt_process_signal()
 
     def _load_tts(self):
-        if not self.application_settings.tts_enabled:
+        if not self.tts_enabled:
             self.logger.info("TTS is disabled. Skipping load.")
             return
         

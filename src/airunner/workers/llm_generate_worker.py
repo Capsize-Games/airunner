@@ -4,12 +4,14 @@ from typing import Dict, Optional
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 from airunner.handlers.llm.llm_handler import LLMHandler
+from airunner.settings import AIRUNNER_LLM_ON
 
 
 
 class LLMGenerateWorker(Worker):
-    def __init__(self):
+    def __init__(self, local_agent_class=None):
         self.llm = None
+        self.local_agent_class = local_agent_class
         self.signal_handlers = {
             SignalCode.LLM_UNLOAD_SIGNAL: self.on_llm_on_unload_signal,
             SignalCode.LLM_LOAD_SIGNAL: self.on_llm_load_model_signal,
@@ -83,11 +85,12 @@ class LLMGenerateWorker(Worker):
             self.logger.error(f"Error in on_load_conversation: {e}")
 
     def start_worker_thread(self):
-        if self.application_settings.llm_enabled:
+        if self.application_settings.llm_enabled or AIRUNNER_LLM_ON:
             self._load_llm_thread()
 
     def handle_message(self, message):
-        self.llm.handle_request(message)
+        if self.llm:
+            self.llm.handle_request(message)
 
     def _load_llm_thread(self, data=None):
         self._llm_thread = threading.Thread(target=self._load_llm, args=(data,))
@@ -99,7 +102,7 @@ class LLMGenerateWorker(Worker):
     def _load_llm(self, data=None):
         data = data or {}
         if self.llm is None:
-            self.llm = LLMHandler()
+            self.llm = LLMHandler(local_agent_class=self.local_agent_class)
 
         self.llm.load()
 
