@@ -13,6 +13,10 @@ from airunner.handlers.llm.llm_request import LLMRequest
 
 
 class ExampleGame(PygameManager):
+    """
+    This simple example class demonstrates how to create a Pygame window
+    using airunner, make an LLM request, and handle the response from the model
+    """
     def _handle_llm_response(self, response: LLMResponse):
         print(response.message)
 
