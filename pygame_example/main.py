@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict
 
 import pygame
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_SPACE
@@ -7,9 +7,15 @@ from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_SPACE
 from airunner.api import API
 from airunner.windows.pygame_window import PygameWindow
 from airunner.windows.pygame_window import PygameManager
+from airunner.enums import SignalCode
+from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.handlers.llm.llm_request import LLMRequest
 
 
 class ExampleGame(PygameManager):
+    def _handle_llm_response(self, response: LLMResponse):
+        print(response.message)
+
     def _start(self):
         self.set_screen_color()
     
