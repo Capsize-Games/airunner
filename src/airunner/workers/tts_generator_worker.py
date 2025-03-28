@@ -43,6 +43,9 @@ class TTSGeneratorWorker(Worker):
         return self.application_settings.tts_enabled or AIRUNNER_TTS_ON
 
     def on_llm_text_streamed_signal(self, data):
+        response = data.get("response", None)
+        if self.do_interrupt and response and response.is_first_message:
+            self.on_unblock_tts_generator_signal()
         if not self.tts_enabled:
             return
 
