@@ -518,7 +518,18 @@ class RAGMixin:
     def storage_context(self, value: StorageContext):
         self.__storage_context = value
     
+    def update_rag_system_prompt(
+        self, 
+        rag_system_prompt: Optional[str] = None
+    ):
+        rag_system_prompt = rag_system_prompt or self.rag_system_prompt
+        self.rag_engine_tool.update_system_prompt(
+            rag_system_prompt or self.rag_system_prompt
+        )
+    
     def unload_rag(self):
+        del self._rag_engine_tool
+        self._rag_engine_tool = None
         self._unload_settings()
         self.rag_engine = None
         self.document_reader = None
@@ -540,7 +551,10 @@ class RAGMixin:
         self.rag_engine = None
         self.document_reader = None
         self._conversations = None
-        self._load_document_reader()
+    
+    def reload_rag_engine(self):
+        self.reload_rag()
+        self._rag_engine_tool = None
     
     def _handle_rag_engine_tool_response(self, response: ToolOutput, **kwargs):
         if response.content == "Empty Response":
