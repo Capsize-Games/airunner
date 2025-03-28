@@ -25,7 +25,7 @@ class AudioProcessorWorker(Worker):
     def start_worker_thread(self):
         self._initialize_stt_handler()
         if self.application_settings.stt_enabled:
-            self._stt.load()
+            threading.Thread(target=self._stt_load).start()
 
     def _initialize_stt_handler(self):
         if self._stt is None:
