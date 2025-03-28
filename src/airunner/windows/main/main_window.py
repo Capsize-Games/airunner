@@ -458,7 +458,7 @@ class MainWindow(
         )
 
     @Slot(bool)
-    def v2t_button_toggled(self, val):
+    def stt_button_toggled(self, val):
         if self._model_status[ModelType.STT] is ModelStatus.LOADING:
             val = not val
         self._update_action_button(
@@ -951,7 +951,7 @@ class MainWindow(
 
     def on_toggle_tts(self, data: Dict = None, val=None):
         if val is None:
-            val = not self.application_settings.sd_enabled
+            val = not self.application_settings.tts_enabled
         self._update_action_button(
             ModelType.TTS,
             self.ui.actionToggle_Text_to_Speech,
