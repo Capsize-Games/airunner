@@ -2056,7 +2056,7 @@
    <sender>actionToggle_Speech_to_Text</sender>
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
-   <slot>v2t_button_toggled(bool)</slot>
+   <slot>stt_button_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -2415,7 +2415,7 @@
   <slot>action_center_clicked()</slot>
   <slot>action_ai_toggled(bool)</slot>
   <slot>tts_button_toggled(bool)</slot>
-  <slot>v2t_button_toggled(bool)</slot>
+  <slot>stt_button_toggled(bool)</slot>
   <slot>ocr_button_toggled(bool)</slot>
   <slot>action_reset_settings()</slot>
   <slot>action_toggle_select(bool)</slot>
