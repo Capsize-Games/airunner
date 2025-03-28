@@ -203,8 +203,8 @@ class ChatPromptWidget(BaseWidget):
 
     def on_hear_signal(self, data: Dict):
         transcription = data["transcription"]
-        self.ui.prompt.setPlainText(transcription)
-        self.ui.send_button.click()
+        self.prompt = transcription
+        self.do_generate()
 
     def on_add_to_conversation_signal(self, name, text, is_bot):
         self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
