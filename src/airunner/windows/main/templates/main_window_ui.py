@@ -704,7 +704,7 @@ class Ui_MainWindow(object):
         self.actionToggle_Controlnet.toggled.connect(MainWindow.action_controlnet_toggled)
         self.actionToggle_Stable_Diffusion.toggled.connect(MainWindow.action_image_generator_toggled)
         self.actionToggle_Text_to_Speech.toggled.connect(MainWindow.tts_button_toggled)
-        self.actionToggle_Speech_to_Text.toggled.connect(MainWindow.v2t_button_toggled)
+        self.actionToggle_Speech_to_Text.toggled.connect(MainWindow.stt_button_toggled)
         self.actionToggle_Grid.toggled.connect(MainWindow.action_toggle_grid)
         self.actionToggle_Active_Grid_Area.toggled.connect(MainWindow.action_toggle_active_grid_area)
         self.actionToggle_Selection.toggled.connect(MainWindow.action_toggle_select)
