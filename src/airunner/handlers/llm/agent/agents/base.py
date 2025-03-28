@@ -709,7 +709,7 @@ class BaseAgent(
         rag_system_prompt: Optional[str] = None
     ):
         self.chat_engine_tool.update_system_prompt(system_prompt or self.system_prompt)
-        self.rag_engine_tool.update_system_prompt(rag_system_prompt or self.rag_system_prompt)
+        self.update_rag_system_prompt(rag_system_prompt)
 
     def _perform_analysis(self):
         """
@@ -938,7 +938,6 @@ class BaseAgent(
         **kwargs
     ) -> AgentChatResponse:
         system_prompt = system_prompt or self.system_prompt
-        rag_system_prompt = rag_system_prompt or self.rag_system_prompt
         self._chat_prompt = message
         self._complete_response = ""
         self.do_interrupt = False
@@ -967,16 +966,10 @@ class BaseAgent(
         self.unload_rag()
         del self._chat_engine
         del self._chat_engine_tool
-        del self._rag_engine_tool
         del self._react_tool_agent
         self._chat_engine = None
         self._chat_engine_tool = None
-        self._rag_engine_tool = None
         self._react_tool_agent = None
-    
-    def reload_rag_engine(self):
-        self.reload_rag()
-        self._rag_engine_tool = None
 
     def on_conversation_deleted(self, data: Optional[Dict] = None):
         data = data or {}
