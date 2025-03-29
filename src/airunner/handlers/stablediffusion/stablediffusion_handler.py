@@ -101,7 +101,6 @@ class StableDiffusionHandler(BaseHandler):
         self._use_compel = use_compel
         self._scheduler: Type[SchedulerMixin]
         self._image_request: ImageRequest = None
-        self._additional_prompts: List[Dict[str, str]] = []
         self._controlnet_model = None
         self._controlnet: Optional[ControlNetModel] = None
         self._controlnet_processor: Any = None
@@ -503,9 +502,9 @@ class StableDiffusionHandler(BaseHandler):
 
         # Format the prompt
         formatted_prompt = None
-        if self.use_compel and len(self._additional_prompts) > 0:
+        if self.use_compel and len(self.image_request.additional_prompts) > 0:
             prompts = [f'"{prompt}"']
-            for additional_prompt_settings in self._additional_prompts:
+            for additional_prompt_settings in self.image_request.additional_prompts:
                 addtional_prompt = additional_prompt_settings['prompt']
                 prompts.append(f'"{addtional_prompt}"')
             formatted_prompt = f'({", ".join(prompts)}).and()'       
@@ -521,9 +520,9 @@ class StableDiffusionHandler(BaseHandler):
 
         # Format the prompt
         formatted_prompt = None
-        if self.use_compel and len(self._additional_prompts) > 0:
+        if self.use_compel and len(self.image_request.additional_prompts) > 0:
             prompts = [f'"{prompt}"']
-            for additional_prompt_settings in self._additional_prompts:
+            for additional_prompt_settings in self.image_request.additional_prompts:
                 addtional_prompt = additional_prompt_settings['prompt_secondary']
                 prompts.append(f'"{addtional_prompt}"')
             formatted_prompt = f'({", ".join(prompts)}).and()'
@@ -634,7 +633,6 @@ class StableDiffusionHandler(BaseHandler):
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
 
     def handle_generate_signal(self, message: Optional[Dict] = None):
-        self._additional_prompts = message.get("additional_prompts", [])
         self.image_request = message.get("sd_request", None)
         
         if not self.image_request:
@@ -663,9 +661,8 @@ class StableDiffusionHandler(BaseHandler):
                     code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
                 self.logger.error("Error generating image: %s", e)
             if message is not None:
-                callback = message.get("callback", None)
-                if callback:
-                    callback(message)
+                if self.image_request.callback:
+                    self.image_request.callback(message)
             self.emit_signal(
                 SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, 
                 {
@@ -1753,29 +1750,20 @@ class StableDiffusionHandler(BaseHandler):
                     "negative_pooled_prompt_embeds": self._negative_pooled_prompt_embeds,
                 })
 
-                if self.image_request.negative_target_size:
-                    args.update({
-                        "negative_target_size": (
-                            self.image_request.negative_target_size["width"],
-                            self.image_request.negative_target_size["height"]
-                        )
-                    })
-                
-                if self.image_request.negative_original_size:
-                    args.update({
-                        "negative_original_size": (
-                            self.image_request.negative_original_size["width"],
-                            self.image_request.negative_original_size["height"]
-                        )
-                    })
-                
-                if self.image_request.crops_coord_top_left:
-                    args.update({
-                        "crops_coords_top_left": (
-                            self.image_request.crops_coord_top_left["width"],
-                            self.image_request.crops_coord_top_left["height"]
-                        )
-                    })
+                for key in [
+                    "negative_target_size",
+                    "negative_original_size",
+                    "crops_coords_top_left",
+                ]:
+                    val = getattr(self.image_request, key, None)
+                    if val and val.get("width", None) and val.get("height", None):
+                        args.update({
+                            key: (
+                                val["width"],
+                                val["height"]
+                            )
+                        })
+                        
         else:
             args.update({
                 "prompt": self.prompt,

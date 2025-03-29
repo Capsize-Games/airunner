@@ -1,5 +1,6 @@
-from typing import Dict
+from typing import Dict, List, Optional
 from dataclasses import dataclass, asdict
+
 from airunner.settings import AIRUNNER_DEFAULT_SCHEDULER
 
 
@@ -31,7 +32,11 @@ class ImageRequest:
     lora_scale: float = 1.0
     width: int = 512
     height: int = 512
+    callback: Optional[callable] = None
+
+    additional_prompts: Optional[List[Dict[str, str]]] = None
 
     def to_dict(self) -> Dict:
         response = {}
+        response = asdict(self)
         return response
