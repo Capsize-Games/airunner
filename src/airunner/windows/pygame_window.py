@@ -30,6 +30,12 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.api import API
 from airunner.handlers.llm.agent.agents import LocalAgent
+from airunner.settings import (
+    AIRUNNER_STT_ON,
+    AIRUNNER_TTS_ON,
+    AIRUNNER_LLM_ON,
+    AIRUNNER_SD_ON,
+)
 
 
 class PygameManager(ABC):
@@ -213,13 +219,24 @@ class PygameWindow(
             width=width,
             height=height,
         )
-        self._mask_generator_worker = create_worker(MaskGeneratorWorker)
-        self._sd_worker = create_worker(SDWorker)
-        self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-        self._stt_audio_processor_worker = create_worker(AudioProcessorWorker)
-        self._tts_generator_worker = create_worker(TTSGeneratorWorker)
-        self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
-        self._llm_generate_worker = create_worker(LLMGenerateWorker, local_agent_class=local_agent_class)
+
+        if AIRUNNER_SD_ON:
+            self._mask_generator_worker = create_worker(MaskGeneratorWorker)
+            self._sd_worker = create_worker(SDWorker)
+        
+        if AIRUNNER_STT_ON:
+            self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
+            self._stt_audio_processor_worker = create_worker(AudioProcessorWorker)
+
+        if AIRUNNER_TTS_ON:
+            self._tts_generator_worker = create_worker(TTSGeneratorWorker)
+            self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
+        
+        if AIRUNNER_LLM_ON:
+            self._llm_generate_worker = create_worker(
+                LLMGenerateWorker, 
+                local_agent_class=local_agent_class
+            )
 
         super().__init__(*args, **kwargs)
         self.setWindowTitle("AI Runner - Pygame Window")
