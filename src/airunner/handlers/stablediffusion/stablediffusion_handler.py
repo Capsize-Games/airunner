@@ -66,6 +66,14 @@ from airunner.handlers.stablediffusion.prompt_weight_bridge import \
 from airunner.settings import (
     AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG,
     AIRUNNER_LOCAL_FILES_ONLY,
+    AIRUNNER_MEM_USE_LAST_CHANNELS,
+    AIRUNNER_MEM_USE_ATTENTION_SLICING,
+    AIRUNNER_MEM_USE_ENABLE_VAE_SLICING,
+    AIRUNNER_MEM_ENABLE_MODEL_CPU_OFFLOAD,
+    AIRUNNER_MEM_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD,
+    AIRUNNER_MEM_USE_TOME_SD,
+    AIRUNNER_MEM_TOME_SD_RATIO,
+    AIRUNNER_MEM_SD_DEVICE,
 )
 from airunner.utils.memory import (
     clear_memory
@@ -459,7 +467,10 @@ class StableDiffusionHandler(BaseHandler):
 
     @property
     def _device(self):
-        return get_torch_device(self.memory_settings.default_gpu_sd)
+        device = AIRUNNER_MEM_SD_DEVICE
+        if device is None:
+            device = self.memory_settings.default_gpu_sd
+        return get_torch_device(device)
 
     @property
     def _pipeline_class(self):
@@ -1409,12 +1420,18 @@ class StableDiffusionHandler(BaseHandler):
             self._memory_settings_flags[setting_name] = attr_val
 
     def _apply_last_channels(self, attr_val):
-        self.logger.debug(f"{'Enabling' if attr_val else 'Disabling'} torch.channels_last")
-        self._pipe.unet.to(memory_format=torch.channels_last if attr_val else torch.contiguous_format)
+        enabled = AIRUNNER_MEM_USE_LAST_CHANNELS
+        if enabled is None:
+            enabled = attr_val
+        self.logger.debug(f"{'Enabling' if enabled else 'Disabling'} torch.channels_last")
+        self._pipe.unet.to(memory_format=torch.channels_last if enabled else torch.contiguous_format)
 
     def _apply_vae_slicing(self, attr_val):
+        enabled = AIRUNNER_MEM_USE_ENABLE_VAE_SLICING
+        if enabled is None:
+            enabled = attr_val
         try:
-            if attr_val:
+            if enabled:
                 self.logger.debug("Enabling vae slicing")
                 self._pipe.enable_vae_slicing()
             else:
@@ -1425,6 +1442,9 @@ class StableDiffusionHandler(BaseHandler):
             self.logger.error(e)
 
     def _apply_attention_slicing(self, attr_val):
+        enabled = AIRUNNER_MEM_USE_ATTENTION_SLICING
+        if enabled is None:
+            enabled = attr_val
         try:
             if attr_val:
                 self.logger.debug("Enabling attention slicing")
@@ -1452,7 +1472,10 @@ class StableDiffusionHandler(BaseHandler):
         self._pipe.unet.set_attn_processor(AttnProcessor2_0() if attr_val else AttnProcessor())
 
     def _apply_cpu_offload(self, attr_val):
-        if attr_val and not self.memory_settings.enable_model_cpu_offload:
+        enabled = AIRUNNER_MEM_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD
+        if enabled is None:
+            enabled = attr_val
+        if enabled and not self.memory_settings.enable_model_cpu_offload:
             self._pipe.to("cpu")
             try:
                 self.logger.debug("Enabling sequential cpu offload")
@@ -1464,7 +1487,10 @@ class StableDiffusionHandler(BaseHandler):
             self.logger.debug("Sequential cpu offload disabled")
 
     def _apply_model_offload(self, attr_val):
-        if attr_val and not self.memory_settings.use_enable_sequential_cpu_offload:
+        enabled = AIRUNNER_MEM_ENABLE_MODEL_CPU_OFFLOAD
+        if enabled is None:
+            enabled = attr_val
+        if enabled and not self.memory_settings.use_enable_sequential_cpu_offload:
             self.logger.debug("Enabling model cpu offload")
             # self._move_stable_diffusion_to_cpu()
             self._pipe.enable_model_cpu_offload()
@@ -1472,12 +1498,19 @@ class StableDiffusionHandler(BaseHandler):
             self.logger.debug("Model cpu offload disabled")
 
     def _apply_tome(self, attr_val):
-        if attr_val:
-            tome_sd_ratio = self.memory_settings.tome_sd_ratio / 1000
-            self.logger.debug(f"Applying ToMe SD weight merging with ratio {tome_sd_ratio}")
+        enabled = AIRUNNER_MEM_USE_TOME_SD
+        if enabled is None:
+            enabled = attr_val
+        if enabled:
+            ratio = AIRUNNER_MEM_TOME_SD_RATIO
+            if ratio is None:
+                ratio = self.memory_settings.tome_sd_ratio / 1000
+            else:
+                ratio = float(ratio)
+            self.logger.debug(f"Applying ToMe SD weight merging with ratio {ratio}")
             self._remove_tome_sd()
             try:
-                tomesd.apply_patch(self._pipe, ratio=tome_sd_ratio)
+                tomesd.apply_patch(self._pipe, ratio=ratio)
             except Exception as e:
                 self.logger.error(f"Error applying ToMe SD weight merging: {e}")
         else:
