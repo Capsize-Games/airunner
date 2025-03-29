@@ -20,7 +20,7 @@ class ExampleGame(PygameManager):
     using airunner, make an LLM request, and handle the response from the model
     """
     def _handle_llm_response(self, response: LLMResponse):
-        self.api.send_tts_request(response)
+        print(response.message)
 
     def _start(self):
         self.set_screen_color()
@@ -32,7 +32,10 @@ class ExampleGame(PygameManager):
             elif event.type == KEYDOWN and event.key == K_ESCAPE:
                 self.running = False
             elif event.type == KEYDOWN and event.key == K_SPACE:
-                self.api.send_llm_request("Tell me a joke.")
+                self.api.send_llm_request(
+                    "Tell me a joke.", 
+                    do_tts_reply=True
+                )
     
     def run(self):
         self.api.logger.info("Running pygame")

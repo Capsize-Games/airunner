@@ -17,7 +17,20 @@ class API(App):
         prompt: str, 
         llm_request: Optional[LLMRequest] = None,
         action: LLMActionType = LLMActionType.CHAT,
+        do_tts_reply: bool = True,
     ):
+        """
+        Send a request to the LLM with the given prompt and action.
+        
+        :param prompt: The prompt to send to the LLM.
+        :param llm_request: Optional LLMRequest object.
+        :param action: The action type for the request.
+        :param do_tts_reply: Whether to do text-to-speech reply.
+        :return: None
+        """
+        llm_request = llm_request or LLMRequest.from_default()
+        llm_request.do_tts_reply = do_tts_reply
+
         self.emit_signal(
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
             {
@@ -25,7 +38,8 @@ class API(App):
                 "request_data": {
                     "action": action,
                     "prompt": prompt,
-                    "llm_request": llm_request or LLMRequest.from_default()
+                    "llm_request": llm_request,
+                    "do_tts_reply": do_tts_reply,
                 }
             }
         )
