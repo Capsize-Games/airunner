@@ -5,8 +5,8 @@ from airunner.handlers.llm import (
     LLMRequest, 
     LLMResponse
 )
-from airunner.handlers.stablediffusion import (
-    
+from airunner.handlers.stablediffusion.image_request import (
+    ImageRequest
 )
 from airunner.enums import (
     SignalCode, 
@@ -56,4 +56,18 @@ class API(App):
         """
         self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
             "response": response
+        })
+    
+    def send_image_request(
+        self, 
+        sd_request: Optional[ImageRequest] = None
+    ):
+        """"
+        Send a request to the image generator with the given request.
+        :param sd_request: Optional ImageRequest object.
+        :return: None
+        """
+        sd_request = sd_request or ImageRequest()
+        self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {
+            "sd_request": sd_request
         })

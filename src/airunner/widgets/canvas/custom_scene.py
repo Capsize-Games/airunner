@@ -22,6 +22,7 @@ from airunner.utils.image import (
 )
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.handlers.stablediffusion.image_response import ImageResponse
 
 
 class CustomScene(
@@ -226,8 +227,10 @@ class CustomScene(
         )
         self._load_image_from_object(image=filtered_image)
 
-    def on_image_generated_signal(self, response):
-        code = response["code"]
+    def on_image_generated_signal(self, data: Dict):
+        code = data["code"]
+        callback = data.get("callback", None)
+
         if code in (
             EngineResponseCode.INSUFFICIENT_GPU_MEMORY,
         ):
@@ -235,30 +238,29 @@ class CustomScene(
                 SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
                 "Insufficient GPU memory."
             )
-        elif code == EngineResponseCode.IMAGE_GENERATED:
-            message = response["message"]
-            if message is None:
+            self.display_gpu_memory_error()
+        elif code is EngineResponseCode.IMAGE_GENERATED:
+            image_response: Optional[ImageResponse] = data.get("message", None)
+            if image_response is None:
                 self.logger.error("No message received from engine")
                 return
-            images = message["images"]
+            images = image_response.images
             if len(images) == 0:
                 self.logger.debug("No images received from engine")
-            elif message:
-                outpaint_box_rect = message.get("active_rect", {})
+            elif image_response:
+                outpaint_box_rect = image_response.active_rect
                 self._create_image(
                     image=images[0].convert("RGBA"),
-                    is_outpaint=message.get("is_outpaint", False),
+                    is_outpaint=image_response.is_outpaint,
                     outpaint_box_rect=outpaint_box_rect
                 )
         else:
             self.logger.error(f"Unhandled response code: {code}")
-        self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
-        callback = response.get("callback", None)
-        if callback:
-            callback(response)
         
-        if code == EngineResponseCode.INSUFFICIENT_GPU_MEMORY:
-            self.display_gpu_memory_error()
+        self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
+        
+        if callback:
+            callback(data)
     
     def display_gpu_memory_error(self):
         msg_box = QMessageBox()

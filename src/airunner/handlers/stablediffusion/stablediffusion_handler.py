@@ -1,13 +1,12 @@
 import datetime
 import os
-from typing import Any, List, Dict, Optional
+from typing import Any, List, Dict, Optional, Type
 
 import PIL
 import diffusers
 import numpy as np
 import tomesd
 import torch
-from sqlalchemy.orm import joinedload
 from DeepCache import DeepCacheSDHelper
 from PIL import (
     ImageDraw,
@@ -49,8 +48,7 @@ from airunner.data.models import (
     Schedulers, 
     Lora, 
     Embedding, 
-    ControlnetModel, 
-    AIModels
+    ControlnetModel
 )
 from airunner.enums import (
     StableDiffusionVersion, 
@@ -65,7 +63,10 @@ from airunner.enums import (
 from airunner.exceptions import PipeNotLoadedException, InterruptedException
 from airunner.handlers.stablediffusion.prompt_weight_bridge import \
     PromptWeightBridge
-from airunner.settings import AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
+from airunner.settings import (
+    AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG,
+    AIRUNNER_LOCAL_FILES_ONLY,
+)
 from airunner.utils.memory import (
     clear_memory
 )
@@ -75,16 +76,32 @@ from airunner.utils.image import (
     export_images
 )
 from airunner.utils import get_torch_device
-from airunner.data.models import GeneratorSettings
+from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.handlers.stablediffusion.rect import Rect
+from diffusers import SchedulerMixin
 
 
 class StableDiffusionHandler(BaseHandler):
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self, 
+        model_path: str,
+        model_version: str,
+        pipeline: str,
+        scheduler_name: str,
+        use_compel: bool,
+        *args, 
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
+        self._model_path = model_path
+        self._model_version = model_version
+        self._pipeline = pipeline
+        self._scheduler_name = scheduler_name
+        self._use_compel = use_compel
+        self._scheduler: Type[SchedulerMixin]
+        self._image_request: ImageRequest = None
         self._additional_prompts: List[Dict[str, str]] = []
-        self._current_model_path = ""
         self._controlnet_model = None
         self._controlnet: Optional[ControlNetModel] = None
         self._controlnet_processor: Any = None
@@ -134,7 +151,6 @@ class StableDiffusionHandler(BaseHandler):
         self._img2img_image = None
         self._controlnet_settings = None
         self._controlnet_image_settings = None
-        self._generator_settings = None
         self._application_settings = None
         self._drawing_pad_settings = None
         self._outpaint_settings = None
@@ -163,11 +179,17 @@ class StableDiffusionHandler(BaseHandler):
         self._img2img_image = None
         self._controlnet_settings = None
         self._controlnet_image_settings = None
-        self._generator_settings = None
         self._application_settings = None
         self._drawing_pad_settings = None
         self._outpaint_settings = None
         self._path_settings = None
+
+    @property
+    def generator(self) -> torch.Generator:
+        if self._generator is None:
+            self.logger.debug("Loading generator")
+            self._generator = torch.Generator(device=self._device)
+        return self._generator
 
     @property
     def img2img_pipelines(self):
@@ -198,7 +220,10 @@ class StableDiffusionHandler(BaseHandler):
 
     @property
     def use_compel(self) -> bool:
-        return self.generator_settings_cached.use_compel
+        use_compel = self._use_compel
+        if self.image_request:
+            use_compel = self.image_request.use_compel
+        return use_compel
 
     @property
     def controlnet_path(self):
@@ -227,19 +252,12 @@ class StableDiffusionHandler(BaseHandler):
         return self._model_status
 
     @property
-    def version(self) -> str:
-        version = self.generator_settings_cached.version
-        if version == "SDXL Turbo":
-            version = "SDXL 1.0"
-        return version
-
-    @property
     def is_sd_xl(self) -> bool:
-        return self.generator_settings_cached.version == StableDiffusionVersion.SDXL1_0.value
+        return self.real_model_version == StableDiffusionVersion.SDXL1_0.value
 
     @property
     def is_sd_xl_turbo(self) -> bool:
-        return self.generator_settings_cached.version == StableDiffusionVersion.SDXL_TURBO.value
+        return self.real_model_version == StableDiffusionVersion.SDXL_TURBO.value
 
     @property
     def is_sd_xl_or_turbo(self) -> bool:
@@ -270,27 +288,12 @@ class StableDiffusionHandler(BaseHandler):
         return self._path_settings
 
     @property
-    def current_model_path(self) -> str:
-        return self._current_model_path
+    def image_request(self) -> ImageRequest:
+        return self._image_request
     
-    @current_model_path.setter
-    def current_model_path(self, value: str):
-        self._current_model_path = value
-
-    @property
-    def _current_model(self) -> AIModels:
-        generator_settings = GeneratorSettings.objects.options(
-            joinedload(GeneratorSettings.aimodel)
-        ).first()
-        return generator_settings.aimodel
-
-    @property
-    def generator_settings_cached(self):
-        return self.generator_settings
-
-    @property
-    def generator_settings_scale(self) -> int:
-        return self.generator_settings_cached.scale
+    @image_request.setter
+    def image_request(self, value: ImageRequest):
+        self._image_request = value
 
     @property
     def controlnet_settings_cached(self):
@@ -335,6 +338,50 @@ class StableDiffusionHandler(BaseHandler):
     @property
     def controlnet_is_loading(self) -> bool:
         return self.model_status[ModelType.CONTROLNET] is ModelStatus.LOADING
+    
+    @property
+    def pipeline(self) -> str:
+        action = self._pipeline
+        if self.image_request and self.image_request.pipeline_action != "":
+            action = self.image_request.pipeline_action
+        return action
+
+    @property
+    def scheduler_name(self) -> str:
+        return self._scheduler_name
+    
+    @scheduler_name.setter
+    def scheduler_name(self, value: str):
+        self._scheduler_name = value
+
+    @property
+    def scheduler(self) -> Type[SchedulerMixin]:
+        return self._scheduler
+    
+    @scheduler.setter
+    def scheduler(self, value: Type[SchedulerMixin]):
+        self._scheduler = value
+    
+    @property
+    def real_model_version(self) -> str:
+        """
+        The real model version. Only use this when we need to
+        check the real version of the model.
+        """
+        version = self._model_version
+        if self.image_request and self.image_request.version != "":
+            version = self.image_request.version
+        return version
+    
+    @property
+    def version(self) -> str:
+        """
+        Turbo paths are SDXL 1.0 paths so we normalize the version to SDXL 1.0
+        """
+        version = self.real_model_version
+        if version == "SDXL Turbo":
+            version = "SDXL 1.0"
+        return version
 
     @property
     def section(self) -> GeneratorSection:
@@ -347,7 +394,7 @@ class StableDiffusionHandler(BaseHandler):
         if (
             self.drawing_pad_settings.mask is not None and
             self.drawing_pad_settings.image is not None and
-            self.generator_settings_cached.pipeline_action == "inpaint" and
+            self.pipeline == "inpaint" and
             self.outpaint_settings_cached.enabled
         ):
             section = GeneratorSection.OUTPAINT
@@ -355,10 +402,9 @@ class StableDiffusionHandler(BaseHandler):
 
     @property
     def model_path(self) -> str:
-        if not self._current_model:
-            return ""
-        return os.path.expanduser(
-            self._current_model.path
+        return (
+            self.image_request.model_path if self.image_request else 
+            self._model_path
         )
 
     @property
@@ -374,7 +420,7 @@ class StableDiffusionHandler(BaseHandler):
 
     @property
     def lora_scale(self) -> float:
-        return self.generator_settings_cached.lora_scale / 100.0
+        return self.image_request.lora_scale / 100.0
 
     @property
     def data_type(self) -> torch.dtype:
@@ -453,7 +499,7 @@ class StableDiffusionHandler(BaseHandler):
 
     @property
     def prompt(self) -> str:
-        prompt = self.generator_settings_cached.prompt
+        prompt = self.image_request.prompt
 
         # Format the prompt
         formatted_prompt = None
@@ -471,7 +517,7 @@ class StableDiffusionHandler(BaseHandler):
     def second_prompt(self) -> str:
         if not self.is_sd_xl_or_turbo:
             return ""
-        prompt = self.generator_settings_cached.second_prompt
+        prompt = self.image_request.second_prompt
 
         # Format the prompt
         formatted_prompt = None
@@ -487,14 +533,14 @@ class StableDiffusionHandler(BaseHandler):
 
     @property
     def negative_prompt(self) -> str:
-        prompt = self.generator_settings_cached.negative_prompt
+        prompt = self.image_request.negative_prompt
         return PromptWeightBridge.convert(prompt)
 
     @property
     def second_negative_prompt(self) -> str:
         if not self.is_sd_xl_or_turbo:
             return ""
-        prompt = self.generator_settings_cached.second_negative_prompt
+        prompt = self.image_request.second_negative_prompt
         return PromptWeightBridge.convert(prompt)
 
     def load_safety_checker(self):
@@ -547,14 +593,13 @@ class StableDiffusionHandler(BaseHandler):
     def load(self):
         if self.sd_is_loading or self.sd_is_loaded:
             return
-        if self.generator_settings_cached.model is None:
+        if self._model_path is None:
             self.logger.error("No model selected")
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
         self.unload()
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         self._load_safety_checker()
-        self._load_generator()
         self._load_controlnet()
         self._load_pipe()
         self._load_scheduler()
@@ -590,6 +635,14 @@ class StableDiffusionHandler(BaseHandler):
 
     def handle_generate_signal(self, message: Optional[Dict] = None):
         self._additional_prompts = message.get("additional_prompts", [])
+        self.image_request = message.get("sd_request", None)
+        
+        if not self.image_request:
+            raise ValueError("ImageRequest is None")
+    
+        if self.image_request.scheduler != self.scheduler_name:
+            self._load_scheduler(self.image_request.scheduler)
+        
         self.load()
         self._clear_cached_properties()
         self._swap_pipeline()
@@ -613,10 +666,13 @@ class StableDiffusionHandler(BaseHandler):
                 callback = message.get("callback", None)
                 if callback:
                     callback(message)
-            self.emit_signal(SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, {
-                'code': code,
-                'message': response.to_dict()
-            })
+            self.emit_signal(
+                SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, 
+                {
+                    'code': code,
+                    'message': response
+                }
+            )
             self._current_state = HandlerState.READY
             clear_memory()
         self.handle_requested_action()
@@ -708,8 +764,8 @@ class StableDiffusionHandler(BaseHandler):
 
         if images is not None:
             self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
-                "step": self.generator_settings_cached.steps,
-                "total": self.generator_settings_cached.steps,
+                "step": self.image_request.steps,
+                "total": self.image_request.steps,
             })
 
             if images is None:
@@ -739,21 +795,21 @@ class StableDiffusionHandler(BaseHandler):
             if self.metadata_settings.image_export_metadata_scale:
                 metadata_dict["scale"] = data.get("guidance_scale", 0)
             if self.metadata_settings.image_export_metadata_seed:
-                metadata_dict["seed"] = self.generator_settings_cached.seed
+                metadata_dict["seed"] = self.image_request.seed
             if self.metadata_settings.image_export_metadata_steps:
-                metadata_dict["steps"] = self.generator_settings_cached.steps
+                metadata_dict["steps"] = self.image_request.steps
             if self.metadata_settings.image_export_metadata_ddim_eta:
-                metadata_dict["ddim_eta"] = self.generator_settings_cached.ddim_eta
+                metadata_dict["ddim_eta"] = self.image_request.ddim_eta
             if self.metadata_settings.image_export_metadata_iterations:
                 metadata_dict["num_inference_steps"] = data["num_inference_steps"]
             if self.metadata_settings.image_export_metadata_samples:
-                metadata_dict["n_samples"] = self.generator_settings_cached.n_samples
+                metadata_dict["n_samples"] = self.image_request.n_samples
             if self.metadata_settings.image_export_metadata_model:
-                metadata_dict["model"] = self._current_model
+                metadata_dict["model"] = self.model_path
             if self.metadata_settings.image_export_metadata_version:
-                metadata_dict["version"] = self.generator_settings_cached.version
+                metadata_dict["version"] = self.version
             if self.metadata_settings.image_export_metadata_scheduler:
-                metadata_dict["scheduler"] = self.generator_settings_cached.scheduler
+                metadata_dict["scheduler"] = self.scheduler_name
             if self.metadata_settings.image_export_metadata_strength:
                 metadata_dict["strength"] = data.get("strength", 0)
             if self.metadata_settings.image_export_metadata_lora:
@@ -864,7 +920,7 @@ class StableDiffusionHandler(BaseHandler):
                 safety_checker_path,
                 torch_dtype=self.data_type,
                 device_map="cpu",
-                local_files_only=True,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 use_safetensors=False
             )
             self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED)
@@ -889,20 +945,13 @@ class StableDiffusionHandler(BaseHandler):
             self._feature_extractor = CLIPFeatureExtractor.from_pretrained(
                 feature_extractor_path,
                 torch_dtype=self.data_type,
-                local_files_only=True,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 use_safetensors=True
             )
             self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED)
         except Exception as e:
             self.logger.error(f"Unable to load feature extractor {e}")
             self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED)
-
-    def _load_generator(self):
-        self.logger.debug("Loading generator")
-        if self._generator is None:
-            seed = int(self.generator_settings_cached.seed)
-            self._generator = torch.Generator(device=self._device)
-            self._generator.manual_seed(seed)
 
     def _load_controlnet(self):
         if not self.controlnet_enabled or self.controlnet_is_loading:
@@ -936,7 +985,7 @@ class StableDiffusionHandler(BaseHandler):
             self.controlnet_path,
             torch_dtype=self.data_type,
             device=self._device,
-            local_files_only=True,
+            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             use_safetensors=True,
             use_fp16=True
         )
@@ -951,14 +1000,14 @@ class StableDiffusionHandler(BaseHandler):
         if checkpoint:
             self._controlnet_processor = controlnet_class_.from_pretrained(
                 self.controlnet_processor_path,
-                local_files_only=True
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY
             )
         else:
             self._controlnet_processor = controlnet_class_()
 
-    def _load_scheduler(self, scheduler=None):
+    def _load_scheduler(self, scheduler_name: Optional[str] = None):
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
-        scheduler_name = scheduler or self.generator_settings_cached.scheduler
+        self.scheduler_name = scheduler_name or self.scheduler_name
         base_path: str = self.path_settings_cached.base_path
         scheduler_version: str = self.version
         scheduler_path = os.path.expanduser(
@@ -984,7 +1033,7 @@ class StableDiffusionHandler(BaseHandler):
             self.scheduler = scheduler_class.from_pretrained(
                 scheduler_path,
                 subfolder="scheduler",
-                local_files_only=True
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY
             )
             self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
             self.current_scheduler_name = scheduler_name
@@ -1105,7 +1154,7 @@ class StableDiffusionHandler(BaseHandler):
                 "art",
                 "models",
                 StableDiffusionVersion.SDXL1_0.value,
-                self.generator_settings_cached.pipeline_action
+                self.image_request.pipeline_action
             ))
         else:
             config_path = os.path.dirname(self.model_path)
@@ -1680,11 +1729,11 @@ class StableDiffusionHandler(BaseHandler):
         args = {
             "width": int(self.application_settings_cached.working_width),
             "height": int(self.application_settings_cached.working_height),
-            "clip_skip": int(self.generator_settings_cached.clip_skip),
-            "num_inference_steps": int(self.generator_settings_cached.steps),
+            "clip_skip": int(self.image_request.clip_skip),
+            "num_inference_steps": int(self.image_request.steps),
             "callback": self._callback,
             "callback_steps": 1,
-            "generator": self._generator,
+            "generator": self.generator,
             "callback_on_step_end": self.__interrupt_callback,
         }
 
@@ -1704,20 +1753,29 @@ class StableDiffusionHandler(BaseHandler):
                     "negative_pooled_prompt_embeds": self._negative_pooled_prompt_embeds,
                 })
 
-                args.update({
-                    "negative_target_size": (
-                        self.generator_settings_cached.negative_target_size["width"],
-                        self.generator_settings_cached.negative_target_size["height"]
-                    ),
-                    "negative_original_size": (
-                        self.generator_settings_cached.negative_original_size["width"],
-                        self.generator_settings_cached.negative_original_size["height"]
-                    ),
-                    "crops_coords_top_left": (
-                        self.generator_settings_cached.crops_coord_top_left["x"],
-                        self.generator_settings_cached.crops_coord_top_left["y"]
-                    )
-                })
+                if self.image_request.negative_target_size:
+                    args.update({
+                        "negative_target_size": (
+                            self.image_request.negative_target_size["width"],
+                            self.image_request.negative_target_size["height"]
+                        )
+                    })
+                
+                if self.image_request.negative_original_size:
+                    args.update({
+                        "negative_original_size": (
+                            self.image_request.negative_original_size["width"],
+                            self.image_request.negative_original_size["height"]
+                        )
+                    })
+                
+                if self.image_request.crops_coord_top_left:
+                    args.update({
+                        "crops_coords_top_left": (
+                            self.image_request.crops_coord_top_left["width"],
+                            self.image_request.crops_coord_top_left["height"]
+                        )
+                    })
         else:
             args.update({
                 "prompt": self.prompt,
@@ -1755,13 +1813,14 @@ class StableDiffusionHandler(BaseHandler):
             new_image.paste(cropped_image, (0, 0))
             image = new_image.convert("RGB")
 
-        args["guidance_scale"] = self.generator_settings_cached.scale / 100.0
+        args["guidance_scale"] = self.image_request.scale
 
         if not self.controlnet_enabled:
             if self.is_img2img:
-                args["strength"] = self.generator_settings_cached.strength / 100.0
+                args["strength"] = self.image_request.strength / 100.0
             elif self.is_outpaint:
                 args["strength"] = self.outpaint_settings_cached.strength / 100.0
+        
 
         # set the image to controlnet image if controlnet is enabled
         if self.controlnet_enabled:
@@ -1796,7 +1855,7 @@ class StableDiffusionHandler(BaseHandler):
                 "control_guidance_start": 0.0,
                 "control_guidance_end": 1.0,
                 "strength": self.controlnet_strength / 100.0,
-                "guidance_scale": self.generator_settings_scale / 100.0,
+                "guidance_scale": self.image_request.scale,
                 "controlnet_conditioning_scale": self.controlnet_conditioning_scale / 100.0
             })
         return args
@@ -1840,13 +1899,13 @@ class StableDiffusionHandler(BaseHandler):
         return resized_image
 
     def _set_seed(self):
-        seed = self.generator_settings_cached.seed
-        self._generator.manual_seed(seed)
+        seed = self.image_request.seed
+        self.generator.manual_seed(seed)
 
     def _callback(self, step: int, _time_step, latents):
         self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
             "step": step,
-            "total": self.generator_settings_cached.steps
+            "total": self.image_request.steps
         })
         if self._latents is None:
             self._latents = latents
