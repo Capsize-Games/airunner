@@ -346,7 +346,8 @@ class LLMHandler(
         action: LLMActionType,
         system_prompt: Optional[str] = None,
         rag_system_prompt: Optional[str] = None,
-        llm_request: Optional[LLMRequest] = None
+        llm_request: Optional[LLMRequest] = None,
+        do_tts_reply: bool = True
     ) -> AgentChatResponse:
         self.logger.debug("Generating response")
         if self._current_model_path != self.model_path:
