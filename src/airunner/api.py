@@ -5,6 +5,9 @@ from airunner.handlers.llm import (
     LLMRequest, 
     LLMResponse
 )
+from airunner.handlers.stablediffusion import (
+    
+)
 from airunner.enums import (
     SignalCode, 
     LLMActionType
@@ -45,6 +48,12 @@ class API(App):
         )
     
     def send_tts_request(self, response: LLMResponse):
+        """
+        Send a TTS request with the given response."
+        
+        :param response: The LLMResponse object.
+        :return: None
+        """
         self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
             "response": response
         })
