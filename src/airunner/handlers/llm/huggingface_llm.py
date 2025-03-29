@@ -174,7 +174,12 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
     @property
     def generate_kwargs(self) -> Dict:
         if self.llm_request:
-            return self.llm_request.to_dict()
+            data = self.llm_request.to_dict()
+            
+            # Remove unused keys
+            del data["do_tts_reply"]
+
+            return data
         return {}
 
     @property
