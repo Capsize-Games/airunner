@@ -12,9 +12,19 @@ from airunner.enums import (
     SignalCode, 
     LLMActionType
 )
-
+from airunner.workers import (
+    ModelScannerWorker,
+)
+from airunner.setup_database import setup_database
+from airunner.utils import create_worker
 
 class API(App):
+    def __init__(self, *args, **kwargs):
+        setup_database()
+        self.model_scanner_worker = create_worker(ModelScannerWorker)
+        self.model_scanner_worker.add_to_queue("scan_for_models")
+        super().__init__(*args, **kwargs)
+
     def send_llm_request(
         self, 
         prompt: str, 

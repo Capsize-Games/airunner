@@ -485,13 +485,16 @@ class BaseAgent(
     
     @property
     def conversation_id(self) -> int:
+        conversation_id = self._conversation_id
+        if not conversation_id and self._conversation:
+            self._conversation_id = self._conversation.id
         return self._conversation_id
     
     @conversation_id.setter
     def conversation_id(self, value: int):
         if value != self._conversation_id:
             self._conversation_id = value
-            if self.conversation.id != self._conversation_id:
+            if self.conversation and self.conversation.id != self._conversation_id:
                 self.conversation = None
 
     @property
@@ -684,7 +687,7 @@ class BaseAgent(
             self._chat_memory = ChatMemoryBuffer.from_defaults(
                 token_limit=3000,
                 chat_store=self.chat_store,
-                chat_store_key=str(self.conversation.id)
+                chat_store_key=str(self.conversation_id)
             )
         return self._chat_memory
 
@@ -769,7 +772,7 @@ class BaseAgent(
         conversation = self.conversation
         if conversation:
             Conversation.objects.update(
-                conversation.id,
+                self.conversation_id,
                 value=conversation.value[:-2]
             )
     
@@ -821,7 +824,7 @@ class BaseAgent(
         )
         self.logger.info(f"Saving conversation with mood: {response.content}")
         Conversation.objects.update(
-            conversation.id,
+            self.conversation_id,
             bot_mood=response.content,
             value=conversation.value[:-2],
             last_updated_message_id=latest_message_id
@@ -850,7 +853,7 @@ class BaseAgent(
         )
         self.logger.info(f"Updating user with new information")
         Conversation.objects.update(
-            conversation.id,
+            self.conversation_id,
             user_data=[response.content] + (conversation.user_data or []),
         )
     
@@ -882,7 +885,7 @@ class BaseAgent(
         )
         self.logger.info(f"Saving conversation with summary: {response.content}")
         Conversation.objects.update(
-            conversation.id,
+            self.conversation_id,
             summary=response.content,
             value=conversation.value[:-2]
         )
@@ -922,7 +925,7 @@ class BaseAgent(
     def _update_conversation(self, key: str, value: Any):
         if self.conversation:
             setattr(self.conversation, key, value)
-            Conversation.objects.update(self.conversation.id, **{key: value})
+            Conversation.objects.update(self.conversation_id, **{key: value})
 
     def _update_user(self, key: str, value: Any):
         setattr(self.user, key, value)
@@ -990,7 +993,7 @@ class BaseAgent(
     def reset_memory(self):
         self.chat_memory = None
         self.chat_store = None
-        messages = self.chat_store.get_messages(key=str(self.conversation.id))
+        messages = self.chat_store.get_messages(key=str(self.conversation_id))
         self.chat_memory.set(messages)
         self.chat_engine.memory = self.chat_memory
         self.react_tool_agent.memory = self.chat_memory

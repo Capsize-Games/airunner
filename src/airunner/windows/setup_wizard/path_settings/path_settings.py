@@ -5,6 +5,7 @@ from PySide6.QtCore import Slot
 from airunner.data.bootstrap.path_settings_data import PATH_SETTINGS_DATA
 from airunner.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.windows.setup_wizard.path_settings.templates.path_settings_ui import Ui_PathSettings
+from airunner.settings import AIRUNNER_BASE_PATH
 
 
 class PathSettings(BaseWizard):
