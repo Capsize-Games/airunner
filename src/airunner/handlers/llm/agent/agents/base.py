@@ -1009,7 +1009,14 @@ class BaseAgent(
             })
         return self.do_interrupt
     
-    def handle_response(self, response, is_first_message=False, is_last_message=False, do_not_display=False):
+    def handle_response(
+        self, 
+        response: str, 
+        is_first_message: bool = False, 
+        is_last_message: bool = False, 
+        do_not_display: bool = False,
+        do_tts_reply: bool = True
+    ):
         if response != self._complete_response and not do_not_display:
             self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
                 "response": LLMResponse(
@@ -1017,6 +1024,7 @@ class BaseAgent(
                     is_first_message=is_first_message,
                     is_end_of_message=is_last_message,
                     name=self.botname,
-                )
+                ),
+                "do_tts_reply": do_tts_reply,
             })
         self._complete_response += response

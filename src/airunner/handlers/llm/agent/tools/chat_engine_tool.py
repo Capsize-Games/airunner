@@ -20,6 +20,7 @@ from airunner.handlers.llm.agent.chat_engine import (
     RefreshContextChatEngine,
     RefreshSimpleChatEngine
 )
+from airunner.handlers.llm.llm_request import LLMRequest
 
 
 class ChatEngineTool(AsyncBaseTool):
@@ -82,10 +83,15 @@ class ChatEngineTool(AsyncBaseTool):
     def metadata(self) -> ToolMetadata:
         return self._metadata
     
-    def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
+    def call(
+        self, 
+        *args: Any, 
+        **kwargs: Any
+    ) -> ToolOutput:
         query_str = self._get_query_str(*args, **kwargs)
+        llm_request = kwargs.get("llm_request", LLMRequest.from_default())
         if hasattr(self.chat_engine.llm, "llm_request"):
-            self.chat_engine.llm.llm_request = kwargs.get("llm_request", None)
+            self.chat_engine.llm.llm_request = llm_request
         
         response = ""
 
@@ -111,7 +117,8 @@ class ChatEngineTool(AsyncBaseTool):
                         self.agent.handle_response(
                             token, 
                             is_first_message, 
-                            do_not_display=do_not_display
+                            do_not_display=do_not_display,
+                            do_tts_reply=llm_request.do_tts_reply
                         )
                     is_first_message = False
             except openai.APIError as e:
