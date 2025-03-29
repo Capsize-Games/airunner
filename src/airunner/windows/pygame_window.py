@@ -1,18 +1,16 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Type, Optional, Dict, Callable, Any
-import sys
-import os
+from typing import Tuple, Type, Optional, Dict, Callable
 
 import pygame
 from pygame.locals import *
 
 from PySide6.QtWidgets import QMainWindow, QSizePolicy
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import QTimer, Qt, QEvent, QSize
+from PySide6.QtCore import QTimer, Qt, QSize
 from PySide6.QtGui import QResizeEvent, QPainter, QImage, QKeyEvent, QMouseEvent
 from PySide6.QtWidgets import QVBoxLayout
 
-from airunner.enums import SignalCode, LLMActionType
+from airunner.enums import SignalCode
 from airunner.workers import (
     AudioCaptureWorker,
     AudioProcessorWorker,
@@ -22,7 +20,6 @@ from airunner.workers import (
     TTSGeneratorWorker,
     TTSVocalizerWorker,
 )
-from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.utils import create_worker
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
@@ -510,7 +507,6 @@ class PygameWindow(
             fps=fps,
             **kwargs.get('pygame_params', {})
         )
-
         if AIRUNNER_SD_ON:
             self._mask_generator_worker = create_worker(MaskGeneratorWorker)
             self._sd_worker = create_worker(SDWorker)
