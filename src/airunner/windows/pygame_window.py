@@ -678,3 +678,6 @@ class PygameAdapter(PygameManager):
     
     def quit(self):
         self.running = False
+    
+    def run(self):
+        pass
