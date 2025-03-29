@@ -81,6 +81,9 @@ class Conversation(BaseModel):
                 user = User.objects.get(previous_conversation.user_id)
             else:
                 user = User.objects.first()
+            if not user:
+                user = User.objects.create(username="User")
+                user = User.objects.first()
 
         conversation = cls(
             timestamp=datetime.datetime.now(datetime.timezone.utc),
