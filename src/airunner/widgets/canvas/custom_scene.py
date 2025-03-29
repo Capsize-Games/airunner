@@ -22,6 +22,7 @@ from airunner.utils.image import (
 )
 from airunner.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.handlers.stablediffusion.rect import Rect
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 
 
@@ -663,7 +664,7 @@ class CustomScene(
         self, 
         image: Image.Image, 
         is_outpaint: bool, 
-        outpaint_box_rect: Optional[Dict] = None
+        outpaint_box_rect: Optional[Rect] = None
     ):
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
@@ -690,13 +691,13 @@ class CustomScene(
         self,
         image: Image.Image,
         is_outpaint: bool = False,
-        outpaint_box_rect: Optional[Dict] = None
+        outpaint_box_rect: Optional[Rect] = None
     ):
         """
         Adds a given image to the scene
         :param image: Image object to add to the scene
         :param is_outpaint: bool indicating if the image is an outpaint
-        :param outpaint_box_rect: QPoint indicating the root point of the image
+        :param outpaint_box_rect: Rect indicating the root point of the image
         :return:
         """
         # image = ImageOps.expand(image, border=border_size, fill=border_color)
@@ -712,7 +713,7 @@ class CustomScene(
                     image
                 )
             else:
-                root_point = QPoint(outpaint_box_rect["x"], outpaint_box_rect["y"])
+                root_point = QPoint(outpaint_box_rect.x, outpaint_box_rect.y)
             self.item.setPos(root_point.x(), root_point.y())
             # Store original position when adding image
             self._original_item_positions[self.item] = QPointF(root_point.x(), root_point.y())
@@ -727,11 +728,11 @@ class CustomScene(
 
     def _handle_outpaint(
         self, 
-        outpaint_box_rect: Dict, 
+        outpaint_box_rect: Rect, 
         outpainted_image: Image
     ) -> Tuple[Image.Image, QPoint, QPoint]:
         if self.current_active_image is None:
-            point = QPoint(outpaint_box_rect["x"], outpaint_box_rect["y"])
+            point = QPoint(outpaint_box_rect.x, outpaint_box_rect.y)
             return outpainted_image, QPoint(0, 0), point
 
         # make a copy of the current canvas image
@@ -743,15 +744,15 @@ class CustomScene(
         root_point = QPoint(0, 0)
         current_image_position = QPoint(0, 0)
 
-        is_drawing_left = outpaint_box_rect["x"] < current_image_position.x()
-        is_drawing_right = outpaint_box_rect["x"] > current_image_position.x()
-        is_drawing_up = outpaint_box_rect["y"] < current_image_position.y()
-        is_drawing_down = outpaint_box_rect["y"] > current_image_position.y()
+        is_drawing_left = outpaint_box_rect.x < current_image_position.x()
+        is_drawing_right = outpaint_box_rect.x > current_image_position.x()
+        is_drawing_up = outpaint_box_rect.y < current_image_position.y()
+        is_drawing_down = outpaint_box_rect.y > current_image_position.y()
 
-        x_pos = outpaint_box_rect["x"]
-        y_pos = outpaint_box_rect["y"]
-        outpaint_width = outpaint_box_rect["width"]
-        outpaint_height = outpaint_box_rect["height"]
+        x_pos = outpaint_box_rect.x
+        y_pos = outpaint_box_rect.y
+        outpaint_width = outpaint_box_rect.width
+        outpaint_height = outpaint_box_rect.height
         
         if is_drawing_right:
             if x_pos + outpaint_width > width:
@@ -763,11 +764,11 @@ class CustomScene(
         
         if is_drawing_up:
             height += current_image_position.y()
-            root_point.setY(outpaint_box_rect["y"])
+            root_point.setY(outpaint_box_rect.y)
         
         if is_drawing_left:
             width += current_image_position.x()
-            root_point.setX(outpaint_box_rect["x"])
+            root_point.setX(outpaint_box_rect.x)
 
         new_dimensions = (width, height)
 
@@ -781,8 +782,8 @@ class CustomScene(
         new_image_a.paste(
             outpainted_image, 
             (
-                int(outpaint_box_rect["x"]), 
-                int(outpaint_box_rect["y"])
+                int(outpaint_box_rect.x), 
+                int(outpaint_box_rect.y)
             )
         )
         new_image_b.paste(
@@ -799,8 +800,8 @@ class CustomScene(
         inverted_mask = Image.eval(mask, lambda p: 255 - p)
         # create a new mask with new_dimensions which is all white and
         # paste the inverted mask into it.
-        pos_x = outpaint_box_rect["x"]
-        pos_y = outpaint_box_rect["y"]
+        pos_x = outpaint_box_rect.x
+        pos_y = outpaint_box_rect.y
         if pos_x < 0:
             pos_x = 0
         if pos_y < 0:
