@@ -74,6 +74,8 @@ from airunner.settings import (
     AIRUNNER_MEM_USE_TOME_SD,
     AIRUNNER_MEM_TOME_SD_RATIO,
     AIRUNNER_MEM_SD_DEVICE,
+    AIRUNNER_MEM_USE_ACCELERATED_TRANSFORMERS,
+    AIRUNNER_MEM_USE_TILED_VAE,
 )
 from airunner.utils.memory import (
     clear_memory
@@ -1456,8 +1458,11 @@ class StableDiffusionHandler(BaseHandler):
             self.logger.warning(f"Failed to apply attention slicing: {e}")
 
     def _apply_tiled_vae(self, attr_val):
+        enabled = AIRUNNER_MEM_USE_TILED_VAE
+        if enabled is None:
+            enabled = attr_val
         try:
-            if attr_val:
+            if enabled:
                 self.logger.debug("Enabling tiled vae")
                 self._pipe.vae.enable_tiling()
             else:
@@ -1467,9 +1472,12 @@ class StableDiffusionHandler(BaseHandler):
             self.logger.warning("Tiled vae not supported for this model")
 
     def _apply_accelerated_transformers(self, attr_val):
+        enabled = AIRUNNER_MEM_USE_ACCELERATED_TRANSFORMERS
+        if enabled is None:
+            enabled = attr_val
         from diffusers.models.attention_processor import AttnProcessor, AttnProcessor2_0
-        self.logger.debug(f"{'Enabling' if attr_val else 'Disabling'} accelerated transformers")
-        self._pipe.unet.set_attn_processor(AttnProcessor2_0() if attr_val else AttnProcessor())
+        self.logger.debug(f"{'Enabling' if enabled else 'Disabling'} accelerated transformers")
+        self._pipe.unet.set_attn_processor(AttnProcessor2_0() if enabled else AttnProcessor())
 
     def _apply_cpu_offload(self, attr_val):
         enabled = AIRUNNER_MEM_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD
