@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Tuple, Type, Optional, Dict, Callable
+import threading
 
 import pygame
 from pygame.locals import *
@@ -135,7 +136,11 @@ class PygameManager(ABC):
     
     def _handle_llm_response_signal(self, data: Dict):
         response = data.get("response")
-        self._handle_llm_response(response)
+        thread = threading.Thread(
+            target=self._handle_llm_response,
+            args=(response,)
+        )
+        thread.start()
     
     def _handle_image_response_signal(self, data: Dict):
         code = data["code"]
@@ -149,7 +154,11 @@ class PygameManager(ABC):
                 "Insufficient GPU memory."
             )
         elif code is EngineResponseCode.IMAGE_GENERATED:
-            self._handle_image_response(data.get("message", None))
+            thread = threading.Thread(
+                target=self._handle_image_response,
+                args=(data.get("message", None),)
+            )
+            thread.start()
         else:
             self.api.logger.error(f"Unhandled response code: {code}")
         

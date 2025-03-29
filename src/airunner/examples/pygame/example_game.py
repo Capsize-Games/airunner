@@ -116,7 +116,6 @@ class ExampleGame(PygameAdapter):
             elif event.key == K_SPACE:
                 # Reset the full message when requesting a new joke
                 self.full_message = ""
-                print("*"*100)  # This will only print once now
                 self.api.send_llm_request(
                     "Tell me a joke.", 
                     do_tts_reply=True
