@@ -26,6 +26,11 @@ class ExampleGame(PygameManager):
     This simple example class demonstrates how to create a Pygame window
     using airunner, make an LLM request, and handle the response from the model
     """
+    def __init__(self, *args, **kwargs):
+        self.generated_image = None
+        super().__init__(*args, **kwargs)
+        self.image_position = (0, 0)  # Default position for the image
+    
     def _handle_llm_response(self, response: LLMResponse):
         print(response.message)
     
@@ -33,12 +38,23 @@ class ExampleGame(PygameManager):
         if response is None:
             self.api.logger.error("No message received from engine")
             return
+        
         images = response.images
         if len(images) == 0:
             self.api.logger.debug("No images received from engine")
         elif response:
-            image = images[0].convert("RGBA")
-            image.save(os.path.expanduser("~/Desktop/output.png"))
+            # Store the image in memory instead of saving to disk
+            self.generated_image = images[0].convert("RGBA")
+            
+            # Calculate center position for the image
+            if self.screen and self.generated_image:
+                img_width, img_height = self.generated_image.size
+                screen_width, screen_height = self.screen.get_size()
+                x = (screen_width - img_width) // 2
+                y = (screen_height - img_height) // 2
+                self.image_position = (x, y)
+            
+            self.api.logger.info("Image received and ready for display")
 
     def _start(self):
         self.set_screen_color()
@@ -88,10 +104,30 @@ class ExampleGame(PygameManager):
     
     def set_screen_color(self, color: Optional[Tuple] = None):
         """
-        Set the screen color for the Pygame window.
+        Set the screen color for the Pygame window and display any generated image.
         """
+        if not self.screen:
+            return
+            
+        # Fill the screen with the background color
         color = color or self.screen_color
         self.screen.fill(color)
+        
+        # Draw the generated image if it exists
+        if self.generated_image:
+            try:
+                # Convert PIL Image to Pygame surface
+                img_data = self.generated_image.tobytes()
+                img_size = self.generated_image.size
+                img_mode = self.generated_image.mode
+                
+                pygame_img = pygame.image.fromstring(img_data, img_size, img_mode)
+                self.screen.blit(pygame_img, self.image_position)
+                
+                # Note: We don't call pygame.display.flip() here because
+                # the rendering is managed by the PygameWidget timer
+            except Exception as e:
+                self.api.logger.error(f"Error displaying image: {e}")
     
     def quit(self):
         self.api.logger.info("Quitting pygame")
