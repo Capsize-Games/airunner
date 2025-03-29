@@ -25,20 +25,20 @@ class Logger:
         logger.propagate = False
         self.logger = logger
     
-    def debug(self, message: str):
+    def debug(self, message: str, *args, **kwargs):
         self.logger.debug(message)
     
     def error(self, message: str, *args, **kwargs):
         traceback.print_stack()
         self.logger.error(message)
 
-    def info(self, message: str):
+    def info(self, message: str, *args, **kwargs):
         self.logger.info(message)
 
-    def warning(self, message: str):
+    def warning(self, message: str, *args, **kwargs):
         self.logger.warning(message)
 
-    def critical(self, message: str):
+    def critical(self, message: str, *args, **kwargs):
         self.logger.critical(message)
 
 
