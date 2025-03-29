@@ -20,7 +20,7 @@ class ExampleGame(PygameManager):
     using airunner, make an LLM request, and handle the response from the model
     """
     def _handle_llm_response(self, response: LLMResponse):
-        print(response.message)
+        self.api.send_tts_request(response)
 
     def _start(self):
         self.set_screen_color()
