@@ -20,6 +20,7 @@ from airunner.enums import HandlerType, SignalCode, ModelType, ModelStatus, Mode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.utils import get_torch_device
 from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.settings import AIRUNNER_MEM_LLM_DEVICE
 
 QObjectMeta = type(OptionalQObject)
 
@@ -82,6 +83,9 @@ class BaseHandler(
 
     @property
     def device(self):
+        device = AIRUNNER_MEM_LLM_DEVICE
+        if device is not None:
+            return get_torch_device(device)
         if not self.model_type:
             raise ValueError("model_type not set")
         model_type_str = ""
