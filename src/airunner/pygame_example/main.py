@@ -9,7 +9,7 @@ from pygame.locals import QUIT, KEYDOWN, KEYUP, K_ESCAPE, K_SPACE, K_RETURN, K_U
 
 from airunner.api import API
 from airunner.windows.pygame_window import PygameWindow
-from airunner.windows.pygame_window import PygameManager
+from airunner.windows.pygame_window import PygameAdapter
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.handlers.stablediffusion.image_response import ImageResponse
@@ -22,7 +22,7 @@ from airunner.settings import (
 )
 
 
-class ExampleGame(PygameManager):
+class ExampleGame(PygameAdapter):
     """
     This simple example class demonstrates how to create a Pygame window
     using airunner, make an LLM request, and handle the response from the model
