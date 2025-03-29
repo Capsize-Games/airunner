@@ -12,13 +12,18 @@ from airunner.enums import (
 
 
 class API(App):
-    def send_llm_request(self, prompt: str, llm_request: Optional[LLMRequest] = None):
+    def send_llm_request(
+        self, 
+        prompt: str, 
+        llm_request: Optional[LLMRequest] = None,
+        action: LLMActionType = LLMActionType.CHAT,
+    ):
         self.emit_signal(
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
             {
                 "llm_request": True,
                 "request_data": {
-                    "action": LLMActionType.CHAT,
+                    "action": action,
                     "prompt": prompt,
                     "llm_request": llm_request or LLMRequest.from_default()
                 }
@@ -27,10 +32,5 @@ class API(App):
     
     def send_tts_request(self, response: LLMResponse):
         self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
-            "response": LLMResponse(
-                message=response.message,
-                is_first_message=response.is_first_message,
-                is_end_of_message=response.is_last_message,
-                name=response.name,
-            )
+            "response": response
         })
