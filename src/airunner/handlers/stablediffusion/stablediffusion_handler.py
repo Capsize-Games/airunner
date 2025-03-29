@@ -495,6 +495,14 @@ class StableDiffusionHandler(BaseHandler):
     @property
     def mask_blur(self) -> int:
         return self.outpaint_settings_cached.mask_blur
+    
+    @property
+    def do_join_prompts(self) -> bool:
+        return (
+            self.use_compel and 
+            self.image_request.additional_prompts and
+            len(self.image_request.additional_prompts) > 0
+        )
 
     @property
     def prompt(self) -> str:
@@ -502,7 +510,7 @@ class StableDiffusionHandler(BaseHandler):
 
         # Format the prompt
         formatted_prompt = None
-        if self.use_compel and len(self.image_request.additional_prompts) > 0:
+        if self.do_join_prompts:
             prompts = [f'"{prompt}"']
             for additional_prompt_settings in self.image_request.additional_prompts:
                 addtional_prompt = additional_prompt_settings['prompt']
@@ -520,7 +528,7 @@ class StableDiffusionHandler(BaseHandler):
 
         # Format the prompt
         formatted_prompt = None
-        if self.use_compel and len(self.image_request.additional_prompts) > 0:
+        if self.do_join_prompts:
             prompts = [f'"{prompt}"']
             for additional_prompt_settings in self.image_request.additional_prompts:
                 addtional_prompt = additional_prompt_settings['prompt_secondary']
@@ -659,7 +667,11 @@ class StableDiffusionHandler(BaseHandler):
             except Exception as e:
                 if "CUDA out of memory" in str(e):
                     code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
-                self.logger.error("Error generating image: %s", e)
+                    response = "Insufficient GPU memory."
+                error_message = "Error generating image: %s", e
+                self.logger.error(error_message)
+                code = EngineResponseCode.ERROR
+                response = error_message
             if message is not None:
                 if self.image_request.callback:
                     self.image_request.callback(message)
