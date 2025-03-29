@@ -190,6 +190,7 @@ AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG = os.environ.get("AIRUNNER_MIN_NUM_INFE
 AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE = os.environ.get("AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE", "NSFW content detected")
 AIRUNNER_DISCORD_URL = os.environ.get("AIRUNNER_DISCORD_URL", None)
 AIRUNNER_SLEEP_TIME_IN_MS = os.environ.get("AIRUNNER_SLEEP_TIME_IN_MS", 10)
+AIRUNNER_DB_NAME = os.environ.get("AIRUNNER_DB_NAME", "airunner.db")
 
 # Set the database URL
 DB_PATH = os.path.expanduser(
@@ -199,7 +200,7 @@ DB_PATH = os.path.expanduser(
         "share",
         "airunner",
         "data",
-        "airunner.db"
+        AIRUNNER_DB_NAME
     )
 )
 default_url = "sqlite:///" + DB_PATH
