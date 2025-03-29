@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-import os
-from typing import Tuple, Optional
+from typing import Optional
 import random
 import time
 
@@ -47,10 +46,7 @@ class ExampleGame(PygameAdapter):
     def _handle_llm_response(self, response: LLMResponse):
         """
         Handle streamed LLM responses by appending to a cumulative message
-        instead of replacing the entire message each time.
         """
-        print(f"LLM response: {response.message}")
-        
         # Append to the full message instead of replacing
         if hasattr(self, 'full_message'):
             self.full_message += response.message
@@ -120,7 +116,6 @@ class ExampleGame(PygameAdapter):
             elif event.key == K_SPACE:
                 # Reset the full message when requesting a new joke
                 self.full_message = ""
-                print("*"*100)  # This will only print once now
                 self.api.send_llm_request(
                     "Tell me a joke.", 
                     do_tts_reply=True
