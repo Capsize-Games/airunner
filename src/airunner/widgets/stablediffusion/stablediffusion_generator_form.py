@@ -33,6 +33,9 @@ from airunner.widgets.stablediffusion.prompt_container_widget import (
 )
 from airunner.windows.main.settings_mixin import SettingsMixin
 from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.handlers.stablediffusion.image_request import (
+    ImageRequest
+)
 from airunner.utils.widgets import load_splitter_settings
 
 
@@ -367,14 +370,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.do_generate()
 
     def do_generate(self, data=None):
-        if data:
-            finalize = data.get("finalize", None)
-            if finalize:
-                data = dict(
-                    callback=finalize
-                )
-            else:
-                data = None
+        data = data or {}
+        
+        callback = data.get("finalize", None)
 
         # Update data with additional prompt data from self._prompt_containers
         additional_prompts = [{
@@ -382,12 +380,40 @@ class StableDiffusionGeneratorForm(BaseWidget):
             "prompt_secondary": container.get_prompt_secondary()
         } for _prompt_id, container in self._prompt_containers.items()]
 
-        data = {
-            **(data or {}),
-            "additional_prompts": additional_prompts
-        }
+        image_request = ImageRequest(
+            prompt=data.get("prompt", self.ui.prompt.toPlainText()),
+            negative_prompt=data.get("negative_prompt", self.ui.negative_prompt.toPlainText()),
+            second_prompt=data.get("second_prompt", self.ui.secondary_prompt.toPlainText()),
+            second_negative_prompt=data.get("second_negative_prompt", self.ui.secondary_negative_prompt.toPlainText()),
+            crops_coord_top_left=self.generator_settings.crops_coord_top_left,
+            pipeline_action=self.generator_settings.pipeline_action,
+            generator_name=self.generator_name,
+            random_seed=self.generator_settings.random_seed,
+            model_path=self.generator_settings.model_name,
+            scheduler=self.generator_settings.scheduler,
+            version=self.generator_settings.version,
+            use_compel=self.generator_settings.use_compel,
+            steps=self.generator_settings.steps,
+            ddim_eta=self.generator_settings.ddim_eta,
+            scale=self.generator_settings.scale / 100,
+            seed=self.seed,
+            strength=self.generator_settings.strength / 100,
+            n_samples=self.generator_settings.n_samples,
+            clip_skip=self.generator_settings.clip_skip,
+            width=self.generator_settings.original_size["width"],
+            height=self.generator_settings.original_size["height"],
+            target_size=self.generator_settings.target_size,
+            original_size=self.generator_settings.original_size,
+            negative_target_size=self.generator_settings.negative_target_size,
+            negative_original_size=self.generator_settings.negative_original_size,
+            lora_scale=self.generator_settings.lora_scale,
+            additional_prompts=additional_prompts,
+            callback=callback
+        )
 
-        self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, data)
+        self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {
+            "sd_request": image_request
+        })
 
     def action_clicked_button_save_prompts(self):
         self.emit_signal(SignalCode.SD_SAVE_PROMPT_SIGNAL, {

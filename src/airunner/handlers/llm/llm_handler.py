@@ -12,7 +12,7 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
-from airunner.settings import AIRUNNER_MAX_SEED
+from airunner.settings import AIRUNNER_MAX_SEED, AIRUNNER_LOCAL_FILES_ONLY
 from airunner.utils.memory import clear_memory
 from airunner.handlers.llm.agent.agents import (
     LocalAgent, 
@@ -245,7 +245,7 @@ class LLMHandler(
         try:
             self._tokenizer = AutoTokenizer.from_pretrained(
                 self.model_path,
-                local_files_only=True,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 device_map=self.device,
                 trust_remote_code=False,
                 torch_dtype=self.torch_dtype,
@@ -268,7 +268,7 @@ class LLMHandler(
             # Use the same path as tokenizer
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.model_path,
-                local_files_only=True,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 use_cache=self.use_cache,
                 trust_remote_code=False,
                 torch_dtype=self.torch_dtype,

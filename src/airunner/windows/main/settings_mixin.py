@@ -125,7 +125,12 @@ class SettingsMixin:
 
     @property
     def generator_settings(self) -> GeneratorSettings:
-        return self.load_settings_from_db(GeneratorSettings)
+        return self.load_settings_from_db(
+            GeneratorSettings,
+            eager_load=[
+                "aimodel"
+            ]
+        )
 
     @property
     def controlnet_settings(self) -> ControlnetSettings:
@@ -427,12 +432,15 @@ class SettingsMixin:
         return Schedulers.objects.all()
 
     @staticmethod
-    def load_settings_from_db(model_class_):
-        settings = model_class_.objects.first()
+    def load_settings_from_db(
+        model_class_, 
+        eager_load: Optional[List[str]] = None
+    ) -> Type:
+        settings = model_class_.objects.first(eager_load=eager_load)
         if settings is None:
             settings = model_class_()
             settings.save()
-        return model_class_.objects.first()
+        return model_class_.objects.first(eager_load=eager_load)
 
     def update_setting(self, model_class_, name, value):
         setting = model_class_.objects.order_by(model_class_.id.desc()).first()
