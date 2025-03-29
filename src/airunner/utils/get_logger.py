@@ -24,7 +24,7 @@ class Logger:
     def debug(self, message: str):
         self.logger.debug(message)
     
-    def error(self, message: str):
+    def error(self, message: str, *args, **kwargs):
         traceback.print_stack()
         self.logger.error(message)
 

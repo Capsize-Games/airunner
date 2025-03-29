@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
-from typing import Tuple, Optional, Dict
+import os
+from typing import Tuple, Optional
+import random
 
 import pygame
-from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_SPACE
+from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_SPACE, K_RETURN
 
 from airunner.api import API
 from airunner.windows.pygame_window import PygameWindow
 from airunner.windows.pygame_window import PygameManager
-from airunner.enums import SignalCode
 from airunner.handlers.llm.llm_response import LLMResponse
-from airunner.handlers.llm.llm_request import LLMRequest
-
+from airunner.handlers.stablediffusion.image_request import ImageRequest
+from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.pygame_example.pygame_agent import PygameAgent
+from airunner.settings import (
+    AIRUNNER_ART_MODEL_VERSION,
+    AIRUNNER_ART_MODEL_PATH,
+    AIRUNNER_ART_SCHEDULER,
+    AIRUNNER_MAX_SEED,
+)
 
 
 class ExampleGame(PygameManager):
@@ -21,6 +28,17 @@ class ExampleGame(PygameManager):
     """
     def _handle_llm_response(self, response: LLMResponse):
         print(response.message)
+    
+    def _handle_image_response(self, response: Optional[ImageResponse]):
+        if response is None:
+            self.api.logger.error("No message received from engine")
+            return
+        images = response.images
+        if len(images) == 0:
+            self.api.logger.debug("No images received from engine")
+        elif response:
+            image = images[0].convert("RGBA")
+            image.save(os.path.expanduser("~/Desktop/output.png"))
 
     def _start(self):
         self.set_screen_color()
@@ -35,6 +53,25 @@ class ExampleGame(PygameManager):
                 self.api.send_llm_request(
                     "Tell me a joke.", 
                     do_tts_reply=True
+                )
+            elif event.type == KEYDOWN and event.key == K_RETURN:
+                self.api.send_image_request(
+                    ImageRequest(
+                        generator_name="stablediffusion",
+                        prompt="A beautiful landscape",
+                        negative_prompt="ugly, blurry",
+                        model_path=AIRUNNER_ART_MODEL_PATH,
+                        scheduler=AIRUNNER_ART_SCHEDULER,
+                        version=AIRUNNER_ART_MODEL_VERSION,
+                        use_compel=True,
+                        width=512,
+                        height=512,
+                        steps=20,
+                        seed=random.randint(-AIRUNNER_MAX_SEED, AIRUNNER_MAX_SEED),
+                        strength=0.5,
+                        n_samples=1,
+                        scale=7.5,
+                    )
                 )
     
     def run(self):

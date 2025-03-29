@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Type, Optional
+from typing import Tuple, Type, Optional, Dict
 import threading
 
 import pygame
@@ -30,12 +30,14 @@ from airunner.mediator_mixin import MediatorMixin
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.api import API
 from airunner.handlers.llm.agent.agents import LocalAgent
+from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.settings import (
     AIRUNNER_STT_ON,
     AIRUNNER_TTS_ON,
     AIRUNNER_LLM_ON,
     AIRUNNER_SD_ON,
 )
+from airunner.enums import EngineResponseCode
 
 
 class PygameManager(ABC):
@@ -63,7 +65,13 @@ class PygameManager(ABC):
         self.screen_color: Tuple = screen_color
         self._initialize()
         self._start()
-        self.api.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, self._handle_llm_response_signal)
+        
+        for signal, handler in [
+            (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self._handle_llm_response_signal),
+            (SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, self._handle_image_response_signal),
+        ]:
+            self.api.register(signal, handler)
+
         self.api.logger.info("PygameManager initialized")
 
     def _initialize(self):
@@ -72,9 +80,30 @@ class PygameManager(ABC):
         self._initialize_screen()
         self._initialize_display()
     
-    def _handle_llm_response_signal(self, data: dict):
+    def _handle_llm_response_signal(self, data: Dict):
         response = data.get("response")
         self._handle_llm_response(response)
+    
+    def _handle_image_response_signal(self, data: Dict):
+        code = data["code"]
+        callback = data.get("callback", None)
+
+        if code in (
+            EngineResponseCode.INSUFFICIENT_GPU_MEMORY,
+        ):
+            self.api.emit_signal(
+                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                "Insufficient GPU memory."
+            )
+        elif code is EngineResponseCode.IMAGE_GENERATED:
+            self._handle_image_response(data.get("message", None))
+        else:
+            self.api.logger.error(f"Unhandled response code: {code}")
+        
+        self.api.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
+        
+        if callback:
+            callback(data)
     
     @abstractmethod
     def _handle_llm_response(self, response: LLMResponse):
@@ -83,8 +112,15 @@ class PygameManager(ABC):
         This method should be overridden by subclasses to provide
         specific functionality for handling LLM responses.
         """
-        
     
+    @abstractmethod
+    def _handle_image_response(self, response: Optional[ImageResponse]):
+        """
+        Handle the image response.
+        This method should be overridden by subclasses to provide
+        specific functionality for handling image responses.
+        """
+            
     @abstractmethod
     def _start(self):
         """
