@@ -1,3 +1,4 @@
+from typing import Dict
 import threading
 
 import torch
@@ -7,7 +8,16 @@ from PySide6.QtCore import QObject, Signal, Slot
 from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
 from airunner.workers.worker import Worker
 from airunner.handlers import StableDiffusionHandler
-from airunner.settings import AIRUNNER_SD_ON
+from airunner.handlers.stablediffusion.image_request import ImageRequest
+from airunner.data.models import GeneratorSettings
+from airunner.settings import (
+    AIRUNNER_SD_ON,
+    AIRUNNER_ART_MODEL_PATH,
+    AIRUNNER_ART_MODEL_VERSION,
+    AIRUNNER_ART_PIPELINE,
+    AIRUNNER_ART_SCHEDULER,
+    AIRUNNER_ART_USE_COMPEL,
+)
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -112,7 +122,7 @@ class SDWorker(Worker):
             thread = threading.Thread(target=self._unload_controlnet)
             thread.start()
 
-    def on_load_stablediffusion_signal(self, data: dict = None):
+    def on_load_stablediffusion_signal(self, data: Dict = None):
         if self.sd:
             thread = threading.Thread(target=self._load_sd, args=(data,))
             thread.start()
@@ -122,7 +132,7 @@ class SDWorker(Worker):
             thread = threading.Thread(target=self._unload_sd, args=(data,))
             thread.start()
 
-    def _load_sd(self, data: dict = None):
+    def _load_sd(self, data: Dict = None):
         do_reload = data.get("do_reload", False)
         if do_reload:
             self.sd.reload()
@@ -133,7 +143,7 @@ class SDWorker(Worker):
             if callback is not None:
                 callback(data)
 
-    def _unload_sd(self, data: dict = None):
+    def _unload_sd(self, data: Dict = None):
         self.sd.unload()
         if data:
             callback = data.get("callback", None)
@@ -152,12 +162,40 @@ class SDWorker(Worker):
     def _unload_safety_checker(self):
         self.sd.unload_safety_checker()
 
-    def on_tokenizer_load_signal(self, data: dict = None):
+    def on_tokenizer_load_signal(self, data: Dict = None):
         if self.sd:
             self.sd.sd_load_tokenizer(data)
 
     def start_worker_thread(self):
-        self.sd = StableDiffusionHandler()
+        generator_settings = self.generator_settings
+        model_path = generator_settings.aimodel.path if generator_settings.aimodel else ""
+        if AIRUNNER_ART_MODEL_PATH != "":
+            model_path = AIRUNNER_ART_MODEL_PATH
+        
+        model_version = generator_settings.version if generator_settings.version else ""
+        if AIRUNNER_ART_MODEL_VERSION != "":
+            model_version = AIRUNNER_ART_MODEL_VERSION
+        
+        pipeline = generator_settings.pipeline_action if generator_settings.pipeline_action else ""
+        if AIRUNNER_ART_PIPELINE != "":
+            pipeline = AIRUNNER_ART_PIPELINE
+        
+        scheduler_name = generator_settings.scheduler if generator_settings.scheduler else ""
+        if AIRUNNER_ART_SCHEDULER != "":
+            scheduler_name = AIRUNNER_ART_SCHEDULER
+        
+        use_compel = generator_settings.use_compel
+        if AIRUNNER_ART_USE_COMPEL != "":
+            use_compel = AIRUNNER_ART_USE_COMPEL
+
+        self.sd = StableDiffusionHandler(
+            model_path=model_path,
+            model_version=model_version,
+            pipeline=pipeline,
+            scheduler_name=scheduler_name,
+            use_compel=use_compel
+        )
+        
         if self.application_settings.sd_enabled or AIRUNNER_SD_ON:
             self.sd.load()
 
@@ -176,8 +214,36 @@ class SDWorker(Worker):
         # self.sd_mode = SDMode.STANDARD
         pass
 
-    def on_do_generate_signal(self, message: dict):
+    def on_do_generate_signal(self, message: Dict):
         if self.sd:
+            if not message.get("image_request", None):
+                settings = self.generator_settings
+                message["image_request"] = ImageRequest(
+                    pipeline_action=settings.pipeline_action,
+                    generator_name=settings.generator_name,
+                    prompt=settings.prompt,
+                    negative_prompt=settings.negative_prompt,
+                    second_prompt=settings.second_prompt,
+                    second_negative_prompt=settings.second_negative_prompt,
+                    random_seed=settings.random_seed,
+                    model_path=settings.aimodel.path if settings.aimodel else "",
+                    scheduler=settings.scheduler,
+                    version=settings.version,
+                    use_compel=settings.use_compel,
+                    steps=settings.steps,
+                    ddim_eta=settings.ddim_eta,
+                    scale=settings.scale / 100,
+                    seed=settings.seed,
+                    strength=settings.strength / 100,
+                    n_samples=settings.n_samples,
+                    clip_skip=settings.clip_skip,
+                    crops_coord_top_left=settings.crops_coord_top_left,
+                    original_size=settings.original_size,
+                    target_size=settings.target_size,
+                    negative_original_size=settings.negative_original_size,
+                    negative_target_size=settings.negative_target_size,
+                    lora_scale=settings.lora_scale,
+                )
             thread = QThread()
             worker = GenerateWorker(self.sd, message)
             worker.moveToThread(thread)
@@ -200,11 +266,11 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.interrupt_image_generation()
 
-    def on_change_scheduler_signal(self, data: dict):
+    def on_change_scheduler_signal(self, data: Dict):
         if self.sd:
             self.sd.load_scheduler(data["scheduler"])
 
-    def on_model_status_changed_signal(self, message: dict):
+    def on_model_status_changed_signal(self, message: Dict):
         if self.sd and message["model"] == ModelType.SD:
             if self.__requested_action is ModelAction.CLEAR:
                 self.on_unload_stablediffusion_signal()
