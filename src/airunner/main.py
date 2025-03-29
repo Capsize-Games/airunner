@@ -36,7 +36,7 @@ os.makedirs(base_dir, exist_ok=True)
 ################################################################
 # Import the main application class for AI Runner.
 ################################################################
-from airunner.app import App
+from airunner.api import API
 
 ###############################################################
 # Import Alembic modules to run migrations.
@@ -96,7 +96,7 @@ def main():
     if application_settings.run_setup_wizard:
         run_setup_wizard()
     else:
-        App()
+        API()
 
 
 if __name__ == "__main__":
