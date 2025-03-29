@@ -2,7 +2,7 @@ from typing import Optional, List, TypeVar, Any
 import logging
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.inspection import inspect
-from sqlalchemy.orm import Query
+from sqlalchemy.orm import Query, joinedload
 
 import traceback
 
@@ -29,11 +29,27 @@ class BaseManager:
                 logger.error(f"Error in get({pk}): {e}")
                 return None
 
-    def first(self) -> Optional[_T]:
+    def first(
+        self,
+        eager_load: Optional[List[str]] = None
+    ) -> Optional[_T]:
         with session_scope() as session:
             try:
-                result = session.query(self.cls).first()
-                logger.debug(f"Query result for first(): {result}")
+                query = session.query(self.cls)
+                if eager_load:
+                    for relationship in eager_load:
+                        try:
+                            query = query.options(joinedload(getattr(
+                                self.cls, 
+                                relationship
+                            )))
+                        except AttributeError:
+                            logger.warning((
+                                f"Class {self.cls.__name__} does "
+                                "not have relationship {relationship}"
+                            ))
+                            pass
+                result = query.first()
                 session.expunge_all()
                 return result
             except Exception as e:

@@ -20,6 +20,7 @@ from transformers import SpeechT5HifiGan
 from airunner.handlers.tts.tts_handler import TTSHandler
 from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
 from airunner.utils.memory import clear_memory
+from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 
 
 class SpeechT5Handler(TTSHandler):
@@ -196,7 +197,7 @@ class SpeechT5Handler(TTSHandler):
         try:
             self.model = self.model_class.from_pretrained(
                 self.model_path,
-                local_files_only=True,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.torch_dtype,
                 device_map=self.device
             )
@@ -211,7 +212,7 @@ class SpeechT5Handler(TTSHandler):
                 self.model_path,
                 device_map=self.device,
                 torch_dtype=self.torch_dtype,
-                local_files_only=True,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 trust_remote_code=False
             )
         except Exception as e:
@@ -223,7 +224,7 @@ class SpeechT5Handler(TTSHandler):
         try:
             self.vocoder = self.vocoder_class.from_pretrained(
                 self.vocoder_path,
-                local_files_only=True,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.torch_dtype,
                 device_map=self.device
             )
@@ -237,7 +238,7 @@ class SpeechT5Handler(TTSHandler):
             try:
                 self.processor = self.processor_class.from_pretrained(
                     self.processor_path,
-                    local_files_only=True,
+                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                     torch_dtype=self.torch_dtype,
                     device_map=self.device
                 )
