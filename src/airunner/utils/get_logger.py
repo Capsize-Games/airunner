@@ -1,5 +1,6 @@
 import logging
 import traceback
+import inspect
 
 
 class Logger:
@@ -13,8 +14,11 @@ class Logger:
             logger.handlers.clear()
 
         handler = logging.StreamHandler()
+        # Get the name of the calling module
+        frame = inspect.currentframe().f_back.f_back
+        module_name = frame.f_globals["__name__"]
         handler.setFormatter(logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(filename)s - %(funcName)s - %(lineno)d - %(message)s'))
+            '%(asctime)s - %(name)s - %(levelname)s - ' + module_name + ' - %(funcName)s - %(lineno)d - %(message)s'))
         logger.addHandler(handler)
 
         # Disable propagation to the root logger
