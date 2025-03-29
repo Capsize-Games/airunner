@@ -48,7 +48,6 @@ class LLMRequest:
             temperature = min_val
 
         data = asdict(self)
-        del data["do_tts_reply"]
 
         data.update({
             "length_penalty": length_penalty,

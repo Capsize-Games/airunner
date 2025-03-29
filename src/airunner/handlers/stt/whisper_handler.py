@@ -11,7 +11,10 @@ from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.exceptions import NaNException
 from airunner.utils.memory import clear_memory
-from airunner.settings import AIRUNNER_DEFAULT_STT_HF_PATH
+from airunner.settings import (
+    AIRUNNER_DEFAULT_STT_HF_PATH, 
+    AIRUNNER_LOCAL_FILES_ONLY
+)
 
 
 class WhisperHandler(BaseHandler):
@@ -109,7 +112,7 @@ class WhisperHandler(BaseHandler):
         try:
             self._model = WhisperForConditionalGeneration.from_pretrained(
                 self.model_path,
-                local_files_only=True,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.dtype,
                 use_safetensors=True,
                 force_download=False
@@ -125,7 +128,7 @@ class WhisperHandler(BaseHandler):
         try:
             self._processor = WhisperProcessor.from_pretrained(
                 model_path,
-                local_files_only=True,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.dtype,
                 device_map=self.device
             )
@@ -139,7 +142,7 @@ class WhisperHandler(BaseHandler):
         try:
             self._feature_extractor = WhisperFeatureExtractor.from_pretrained(
                 model_path,
-                local_files_only=True,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.dtype,
                 device_map=self.device
             )
