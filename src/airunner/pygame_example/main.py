@@ -32,7 +32,10 @@ class ExampleGame(PygameManager):
             elif event.type == KEYDOWN and event.key == K_ESCAPE:
                 self.running = False
             elif event.type == KEYDOWN and event.key == K_SPACE:
-                self.api.send_llm_request("Tell me a joke.")
+                self.api.send_llm_request(
+                    "Tell me a joke.", 
+                    do_tts_reply=True
+                )
     
     def run(self):
         self.api.logger.info("Running pygame")
