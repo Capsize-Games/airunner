@@ -25,6 +25,7 @@ class LLMRequest:
     top_k: int = 50
     top_p: float = 0.9
     use_cache: bool = True
+    do_tts_reply: bool = True
 
     def to_dict(self) -> Dict:
         min_val = 0.0001
@@ -47,6 +48,7 @@ class LLMRequest:
             temperature = min_val
 
         data = asdict(self)
+        del data["do_tts_reply"]
 
         data.update({
             "length_penalty": length_penalty,

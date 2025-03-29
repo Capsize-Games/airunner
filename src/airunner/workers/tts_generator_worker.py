@@ -40,10 +40,16 @@ class TTSGeneratorWorker(Worker):
     
     @property
     def tts_enabled(self) -> bool:
-        return self.application_settings.tts_enabled or AIRUNNER_TTS_ON
+        return (
+            self.application_settings and 
+            self.application_settings.tts_enabled
+        ) or AIRUNNER_TTS_ON
 
     def on_llm_text_streamed_signal(self, data):
         response = data.get("response", None)
+        do_tts_reply = data.get("do_tts_reply", True)
+        if not do_tts_reply:
+            return
         if self.do_interrupt and response and response.is_first_message:
             self.on_unblock_tts_generator_signal()
         if not self.tts_enabled:
