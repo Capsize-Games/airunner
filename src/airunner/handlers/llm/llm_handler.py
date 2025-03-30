@@ -136,9 +136,9 @@ class LLMHandler(
             self._load_model()
         self._load_agent()
         if (
-            self._model and 
-            self._tokenizer and 
-            self._chat_agent
+            self._model
+            and self._tokenizer
+            and self._chat_agent
         ) or (
             self._chat_agent and
             self.llm_settings.use_api
@@ -162,7 +162,7 @@ class LLMHandler(
         self._unload_model()
         self._unload_tokenizer()
         self._unload_agent()
-        clear_memory()
+        clear_memory(self.device)
         self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
 
     def handle_request(self, data: Dict) -> AgentChatResponse:
@@ -313,8 +313,11 @@ class LLMHandler(
 
     def _unload_model(self):
         self.logger.debug("Unloading model")
+        try:
+            del self._model
+        except AttributeError as e:
+            self.logger.warning(f"Error unloading model: {e}")
         self._model = None
-        return True
 
     def _unload_tokenizer(self):
         self.logger.debug("Unloading tokenizer")
@@ -323,22 +326,15 @@ class LLMHandler(
         except AttributeError as e:
             self.logger.warning(f"Error unloading tokenizer {e}")
         self._tokenizer = None
-        clear_memory(self.memory_settings.default_gpu_llm)
-        return True
 
     def _unload_agent(self):
-        self.logger.debug("Unloading agent")
-        do_clear_memory = False
         if self._chat_agent is not None:
-            self.logger.debug("Unloading chat agent")
             self._chat_agent.unload()
             try:
                 del self._chat_agent
             except AttributeError as e:
                 self.logger.warning(f"Error unloading chat agent: {e}")
             self._chat_agent = None
-            do_clear_memory = True
-        return do_clear_memory
         
     def _do_generate(
         self, 

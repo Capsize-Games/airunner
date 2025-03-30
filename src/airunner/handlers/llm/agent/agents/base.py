@@ -179,12 +179,25 @@ class BaseAgent(
         )
     
     def unload(self):
+        self.logger.debug("Unloading chat agent")
+        self._llm.unload()
+        self.unload_rag()
+        
+        del self._chat_engine
+        del self._chat_engine_tool
+        del self._react_tool_agent
+
         del self.model
         del self.tokenizer
+        del self._llm
+
         self.model = None
         self.tokenizer = None
         self._llm = None
-        super().unload()
+
+        self._chat_engine = None
+        self._chat_engine_tool = None
+        self._react_tool_agent = None
 
     @property
     def llm(self) -> Type[LLM]:
@@ -1031,15 +1044,6 @@ class BaseAgent(
         data = data or {}
         conversation_id = data.get("conversation_id", None)
         self.conversation = Conversation.objects.get(conversation_id)
-
-    def unload(self):
-        self.unload_rag()
-        del self._chat_engine
-        del self._chat_engine_tool
-        del self._react_tool_agent
-        self._chat_engine = None
-        self._chat_engine_tool = None
-        self._react_tool_agent = None
 
     def on_conversation_deleted(self, data: Optional[Dict] = None):
         data = data or {}
