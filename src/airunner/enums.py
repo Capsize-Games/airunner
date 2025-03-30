@@ -190,6 +190,7 @@ class SignalCode(Enum):
     RECENTER_GRID_SIGNAL = enum.auto()
     LLM_TEXT_STREAM_PROCESS_SIGNAL = enum.auto()
     SHOW_WINDOW_SIGNAL = enum.auto()
+    SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL = enum.auto()
 
 
 class EngineResponseCode(Enum):
