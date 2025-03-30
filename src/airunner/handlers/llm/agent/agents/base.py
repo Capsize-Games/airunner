@@ -34,13 +34,11 @@ from airunner.handlers.llm.agent import WeatherMixin
 from airunner.handlers.llm.agent.memory import ChatMemoryBuffer
 from airunner.handlers.llm.storage.chat_store import DatabaseChatStore
 from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
 from airunner.handlers.llm import HuggingFaceLLM
 from airunner.data.models import Conversation
 from airunner.settings import AIRUNNER_LLM_CHAT_STORE, AIRUNNER_ART_ENABLED
-from airunner.utils.ui_loader import load_ui_from_string
 
 
 class BaseAgent(
