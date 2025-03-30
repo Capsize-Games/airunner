@@ -17,12 +17,17 @@ from airunner.workers import (
 )
 from airunner.setup_database import setup_database
 from airunner.utils import create_worker
+from airunner.ui_dispatcher import render_ui_from_spec
+from PySide6.QtWidgets import QMainWindow
 
 class API(App):
     def __init__(self, *args, **kwargs):
         setup_database()
         self.model_scanner_worker = create_worker(ModelScannerWorker)
         self.model_scanner_worker.add_to_queue("scan_for_models")
+        self.signal_handlers = {
+            SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
+        }
         super().__init__(*args, **kwargs)
 
     def send_llm_request(
@@ -81,3 +86,19 @@ class API(App):
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {
             "sd_request": image_request
         })
+
+    def show_hello_world_window(self):
+        """
+        Display a 'Hello, world!' window using the UI dispatcher.
+        """
+        print("SHOW_HELLO_WORLD_WINDOW TRIGGERED")
+        spec = {
+            "type": "window",
+            "title": "Hello Window",
+            "layout": "vertical",
+            "widgets": [
+                {"type": "label", "text": "Hello, world!"}
+            ]
+        }
+        main_window = QMainWindow()
+        render_ui_from_spec(spec, main_window)
