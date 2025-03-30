@@ -189,6 +189,8 @@ class SignalCode(Enum):
     SD_ADDITIONAL_PROMPT_DELETE_SIGNAL = enum.auto()
     RECENTER_GRID_SIGNAL = enum.auto()
     LLM_TEXT_STREAM_PROCESS_SIGNAL = enum.auto()
+    SHOW_WINDOW_SIGNAL = enum.auto()
+    SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL = enum.auto()
 
 
 class EngineResponseCode(Enum):

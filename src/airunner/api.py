@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict
 
 from airunner.app import App
 from airunner.handlers.llm import (
@@ -17,12 +17,20 @@ from airunner.workers import (
 )
 from airunner.setup_database import setup_database
 from airunner.utils import create_worker
+from airunner.ui_dispatcher import render_ui_from_spec
+from airunner.utils.ui_loader import load_ui_file, load_ui_from_string
+from PySide6.QtWidgets import QMainWindow, QDialog, QVBoxLayout
+from PySide6.QtCore import QObject
 
 class API(App):
     def __init__(self, *args, **kwargs):
         setup_database()
         self.model_scanner_worker = create_worker(ModelScannerWorker)
         self.model_scanner_worker.add_to_queue("scan_for_models")
+        self.signal_handlers = {
+            SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
+            SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL: self.show_dynamic_ui_from_string,
+        }
         super().__init__(*args, **kwargs)
 
     def send_llm_request(
@@ -81,3 +89,59 @@ class API(App):
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {
             "sd_request": image_request
         })
+
+    def show_hello_world_window(self):
+        """
+        Display a 'Hello, world!' popup window using the UI dispatcher.
+        """
+        spec = {
+            "type": "window",
+            "title": "Hello Window",
+            "layout": "vertical",
+            "widgets": [
+                {"type": "label", "text": "Hello, world!"}
+            ]
+        }
+        dialog = QDialog(self.app.main_window)
+        dialog.setWindowTitle(spec.get("title", "Untitled"))
+        render_ui_from_spec(spec, dialog)
+        dialog.exec()
+
+    def show_dynamic_ui(self, ui_file_path: str):
+        """
+        Load and display a .ui file dynamically as a popup window.
+
+        :param ui_file_path: Path to the .ui file.
+        """
+        dialog = QDialog(self.app.main_window)
+        dialog.setWindowTitle("Dynamic UI")
+        widget = load_ui_file(ui_file_path, dialog)
+        layout = dialog.layout() or QVBoxLayout(dialog)
+        layout.addWidget(widget)
+        dialog.setLayout(layout)
+        dialog.exec()
+
+    def show_dynamic_ui_from_string(self, data: Dict):
+        """
+        Load and display a .ui file dynamically from a string as a popup window.
+
+        :param ui_content: The content of the .ui file as a string.
+        """
+        ui_content = data.get("ui_content", "")
+
+        class SignalHandler(QObject):
+            def __init__(self, api: API):
+                self.api = api
+                super().__init__()
+
+            def click_me_button(self):
+                self.api.emit_signal(SignalCode.SHOW_WINDOW_SIGNAL)
+
+        signal_handler = SignalHandler(api=self)
+        dialog = QDialog(self.app.main_window)
+        dialog.setWindowTitle("Dynamic UI with Signal")
+        widget = load_ui_from_string(ui_content, dialog, signal_handler)
+        layout = dialog.layout() or QVBoxLayout(dialog)
+        layout.addWidget(widget)
+        dialog.setLayout(layout)
+        dialog.exec()
