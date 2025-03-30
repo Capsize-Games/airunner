@@ -570,7 +570,7 @@ class BaseAgent(
 
         # Add art tools if enabled
         if AIRUNNER_ART_ENABLED:
-            tools.append([
+            tools.extend([
                 self.generate_image_tool,
             ])
 
