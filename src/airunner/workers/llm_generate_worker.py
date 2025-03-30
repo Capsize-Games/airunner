@@ -51,7 +51,6 @@ class LLMGenerateWorker(Worker):
         if not self.llm:
             return
         data = data or {}
-        self.logger.debug("Unloading LLM")
         self.llm.unload()
         callback = data.get("callback", None)
         if callback:

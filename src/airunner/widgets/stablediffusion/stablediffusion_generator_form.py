@@ -256,18 +256,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
         This slot is called after an LLM has generated the prompts for an image.
         It sets the prompts in the generator form UI and continues the image generation process.
         """
-
-        # Send a messagae to the user as chatbot letting them know that the image is generating
-        self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
-            "response": LLMResponse(
-                message="Your image is generating...",
-                is_first_message=True,
-                is_end_of_message=True,
-                name=self.chatbot.name,
-                action=LLMActionType.GENERATE_IMAGE
-            )
-        })
-
         # Unload non-Stable Diffusion models
         self.emit_signal(SignalCode.UNLOAD_NON_SD_MODELS, dict(
             callback=self.unload_llm_callback

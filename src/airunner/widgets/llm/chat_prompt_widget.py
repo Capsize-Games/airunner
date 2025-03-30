@@ -7,7 +7,12 @@ from PySide6.QtCore import Slot, QTimer, QPropertyAnimation
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt
 
-from airunner.enums import SignalCode, LLMActionType, ModelType, ModelStatus
+from airunner.enums import (
+    SignalCode, 
+    LLMActionType, 
+    ModelType, 
+    ModelStatus,
+)
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.widgets.llm.message_widget import MessageWidget
