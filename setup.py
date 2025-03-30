@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.4.5",
+    version="3.4.6",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -103,8 +103,10 @@ setup(
     },
     include_package_data=True,
     entry_points={
-        'console_scripts': [
-            'airunner=airunner.main:main',
+        "console_scripts": [
+            "airunner=airunner.main:main",
+            "airunner-build-ui=airunner.bin.build_ui:main",
+            "airunner-tests=airunner.bin.run_tests:main",
         ],
     },
 )
