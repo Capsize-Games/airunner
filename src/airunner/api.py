@@ -18,7 +18,7 @@ from airunner.workers import (
 from airunner.setup_database import setup_database
 from airunner.utils import create_worker
 from airunner.ui_dispatcher import render_ui_from_spec
-from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow, QDialog
 
 class API(App):
     def __init__(self, *args, **kwargs):
@@ -89,9 +89,8 @@ class API(App):
 
     def show_hello_world_window(self):
         """
-        Display a 'Hello, world!' window using the UI dispatcher.
+        Display a 'Hello, world!' popup window using the UI dispatcher.
         """
-        print("SHOW_HELLO_WORLD_WINDOW TRIGGERED")
         spec = {
             "type": "window",
             "title": "Hello Window",
@@ -100,5 +99,7 @@ class API(App):
                 {"type": "label", "text": "Hello, world!"}
             ]
         }
-        main_window = QMainWindow()
-        render_ui_from_spec(spec, main_window)
+        dialog = QDialog(self.app.main_window)
+        dialog.setWindowTitle(spec.get("title", "Untitled"))
+        render_ui_from_spec(spec, dialog)
+        dialog.exec()
