@@ -44,6 +44,10 @@ from airunner.settings import (
     AIRUNNER_BUG_REPORT_LINK,
     AIRUNNER_VULNERABILITY_REPORT_LINK,
     AIRUNNER_ART_ENABLED,
+    AIRUNNER_MEM_SD_DEVICE,
+    AIRUNNER_MEM_LLM_DEVICE,
+    AIRUNNER_MEM_TTS_DEVICE,
+    AIRUNNER_MEM_STT_DEVICE,
 )
 from airunner.utils.settings import get_qsettings
 from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
@@ -58,7 +62,8 @@ from airunner.enums import (
     GeneratorSection,
     LLMActionType, 
     ModelType, 
-    ModelStatus
+    ModelStatus,
+    StableDiffusionVersion,
 )
 from airunner.mediator_mixin import MediatorMixin
 from airunner.styles_mixin import StylesMixin
@@ -905,12 +910,23 @@ class MainWindow(
             self.showFullScreen()
 
     def on_unload_non_sd_models(self, data: Dict = None):
-        self._llm_generate_worker.on_llm_on_unload_signal()
-        self._tts_generator_worker.unload()
-        self._stt_audio_processor_worker.unload()
+        sd_device = AIRUNNER_MEM_SD_DEVICE or self.memory_settings.default_gpu_sd
+        llm_device = AIRUNNER_MEM_LLM_DEVICE or self.memory_settings.default_gpu_llm
+        tts_device = AIRUNNER_MEM_TTS_DEVICE or self.memory_settings.default_gpu_tts
+        stt_device = AIRUNNER_MEM_STT_DEVICE or self.memory_settings.default_gpu_stt
+
+        if sd_device == llm_device:
+            self._llm_generate_worker.on_llm_on_unload_signal()
+        
+        if sd_device == tts_device:
+            self._tts_generator_worker.unload()
+        
+        if sd_device == stt_device:
+            self._stt_audio_processor_worker.unload()
+
         callback = data.get("callback", None)
         if callback:
-            callback(data)
+            callback()
 
     def on_load_non_sd_models(self, data: Dict = None):
         if self.application_settings.llm_enabled:

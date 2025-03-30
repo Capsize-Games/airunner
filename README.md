@@ -117,9 +117,17 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 Install for Linux
 
+If you want to use flash attention
+
+```bash
+sudo apt install nvidia-cuda-toolkit
+nvcc --version  # Check installation
+```
+
 ```bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 pip install airunner[gui,linux,dev,art,llm,tts]
+pip install flash-attn --no-build-isolation  # Skip this if you want to disable flash attention
 pip install --upgrade timm==1.0.15
 ```
 
