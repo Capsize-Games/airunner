@@ -714,10 +714,15 @@ class BaseAgent(
         self.chat_engine_tool.update_system_prompt(system_prompt or self.system_prompt)
         self.update_rag_system_prompt(rag_system_prompt)
 
-    def _perform_analysis(self):
+    def _perform_analysis(self, action: LLMActionType):
         """
         Perform analysis on the conversation.
         """
+        if action not in (
+            LLMActionType.CHAT,
+        ):
+            return
+        
         if not self.llm_settings.llm_perform_analysis:
             return
         self.logger.info("Performing analysis")
@@ -747,6 +752,8 @@ class BaseAgent(
             tool_name = "store_user_tool"
         elif action is LLMActionType.APPLICATION_COMMAND:
             tool_name = "react_tool_agent"
+        else:
+            return
 
         self.logger.info(f"Performing call with tool {tool_name}")
 
@@ -777,6 +784,7 @@ class BaseAgent(
             )
     
     def _update_memory(self, action: LLMActionType):
+        memory = None
         if action is LLMActionType.CHAT:
             memory = self.chat_engine.memory
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
@@ -841,7 +849,7 @@ class BaseAgent(
                 ChatMessage(
                     role=message["role"],
                     blocks=message["blocks"],
-                ) for message in messages
+                ) for message in (messages or [])
             ]
         kwargs = {
             "input": f"Is there any information we can learn about {self.username} from this conversation?",
@@ -951,7 +959,7 @@ class BaseAgent(
             "chat_history": self._memory.get_all() if self._memory else None,
             "llm_request": llm_request
         })
-        self._perform_analysis()
+        self._perform_analysis(action)
         self._summarize_conversation()
         self._log_system_prompt(action, system_prompt, rag_system_prompt, llm_request)
         self._update_system_prompt(system_prompt, rag_system_prompt)
