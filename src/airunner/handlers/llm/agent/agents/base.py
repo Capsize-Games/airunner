@@ -1024,7 +1024,7 @@ class BaseAgent(
             return
             
         # Track last analysis timestamp in conversation
-        last_analysis_time = conversation.get('last_analysis_time')
+        last_analysis_time = conversation.last_analysis_time
         current_time = datetime.datetime.now()
         
         # Set a minimum time between analyses (e.g., 5 minutes)
@@ -1034,7 +1034,7 @@ class BaseAgent(
             return
             
         # Check message threshold since last analysis
-        last_analyzed_message_id = conversation.get('last_analyzed_message_id', 0)
+        last_analyzed_message_id = conversation.last_analyzed_message_id or 0
         if (total_messages - last_analyzed_message_id) < 10:  # Minimum 10 new messages
             self.logger.info("Skipping analysis: not enough new messages")
             return
