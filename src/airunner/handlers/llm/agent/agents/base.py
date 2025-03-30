@@ -575,7 +575,7 @@ class BaseAgent(
             ])
 
         # Add UI builder tools
-        tools.append([
+        tools.extend([
             self.hello_world_tool,
             self.dynamic_ui_tool,
         ])
