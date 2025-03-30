@@ -197,7 +197,8 @@ class BaseAgent(
     
     def unload(self):
         self.logger.debug("Unloading chat agent")
-        self._llm.unload()
+        if self._llm:
+            self._llm.unload()
         self.unload_rag()
         
         del self._chat_engine
