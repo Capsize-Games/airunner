@@ -582,7 +582,7 @@ class BaseAgent(
 
         # Add data scraping tools if chat mode is enabled
         if self.chat_mode_enabled:
-            tools.append([
+            tools.extend([
                 self.information_scraper_tool,
                 self.store_user_tool,
             ])
