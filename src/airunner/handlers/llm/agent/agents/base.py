@@ -39,6 +39,7 @@ from airunner.handlers.llm.llm_settings import LLMSettings
 from airunner.handlers.llm import HuggingFaceLLM
 from airunner.data.models import Conversation
 from airunner.settings import AIRUNNER_LLM_CHAT_STORE
+from airunner.utils.ui_loader import load_ui_from_string
 
 
 class BaseAgent(
@@ -320,6 +321,46 @@ class BaseAgent(
         return self._hello_world_tool
 
     @property
+    def dynamic_ui_tool(self) -> FunctionTool:
+        if not hasattr(self, '_dynamic_ui_tool'):
+            def display_dynamic_ui(ui_content: str) -> str:
+                """
+                Display a dynamic UI from a string.
+                """
+                ui_content = '''<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="windowTitle">
+   <string>Hello Window</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Hello, dynamic world!</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>'''
+                self.emit_signal(
+                    SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL, {
+                        "ui_content": ui_content
+                    }
+                )
+                return "Dynamic UI displayed."
+
+            self._dynamic_ui_tool = FunctionTool.from_defaults(
+                display_dynamic_ui,
+                return_direct=True
+            )
+        return self._dynamic_ui_tool
+
+    @property
     def tools(self) -> List[BaseTool]:
         return [
             self.information_scraper_tool,
@@ -327,6 +368,7 @@ class BaseAgent(
             self.chat_engine_tool,
             self.rag_engine_tool,
             self.hello_world_tool,
+            self.dynamic_ui_tool,
         ]
 
     @property
