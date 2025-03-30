@@ -20,6 +20,7 @@ from airunner.utils import create_worker
 from airunner.ui_dispatcher import render_ui_from_spec
 from airunner.utils.ui_loader import load_ui_file, load_ui_from_string
 from PySide6.QtWidgets import QMainWindow, QDialog, QVBoxLayout
+from PySide6.QtCore import QObject
 
 class API(App):
     def __init__(self, *args, **kwargs):
@@ -127,9 +128,19 @@ class API(App):
         :param ui_content: The content of the .ui file as a string.
         """
         ui_content = data.get("ui_content", "")
+
+        class SignalHandler(QObject):
+            def __init__(self, api: API):
+                self.api = api
+                super().__init__()
+
+            def click_me_button(self):
+                self.api.emit_signal(SignalCode.SHOW_WINDOW_SIGNAL)
+
+        signal_handler = SignalHandler(api=self)
         dialog = QDialog(self.app.main_window)
-        dialog.setWindowTitle("Dynamic UI from String")
-        widget = load_ui_from_string(ui_content, dialog)
+        dialog.setWindowTitle("Dynamic UI with Signal")
+        widget = load_ui_from_string(ui_content, dialog, signal_handler)
         layout = dialog.layout() or QVBoxLayout(dialog)
         layout.addWidget(widget)
         dialog.setLayout(layout)
