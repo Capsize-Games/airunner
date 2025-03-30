@@ -30,6 +30,8 @@ class Conversation(BaseModel):
     last_updated_message_id = Column(Integer, nullable=True)
     summary = Column(Text, nullable=True)
     user_data = Column(JSON, nullable=True)
+    last_analysis_time = Column(DateTime, nullable=True)
+    last_analyzed_message_id = Column(Integer, nullable=True)
 
     @property
     def formatted_messages(self) -> str:

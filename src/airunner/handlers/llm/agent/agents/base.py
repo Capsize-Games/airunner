@@ -1001,6 +1001,9 @@ class BaseAgent(
     def _perform_analysis(self, action: LLMActionType):
         """
         Perform analysis on the conversation.
+        
+        Analysis is now performed more sparingly based on message count thresholds
+        and time elapsed since last analysis to reduce performance impact.
         """
         if action not in (
             LLMActionType.CHAT,
@@ -1009,9 +1012,40 @@ class BaseAgent(
         
         if not self.llm_settings.llm_perform_analysis:
             return
+        
+        # Check if we have a conversation to analyze
+        conversation = self.conversation
+        if not conversation or not conversation.value or len(conversation.value) == 0:
+            return
+            
+        total_messages = len(conversation.value)
+        # Don't analyze if there are too few messages
+        if total_messages < 3:
+            return
+            
+        # Track last analysis timestamp in conversation
+        last_analysis_time = conversation.get('last_analysis_time')
+        current_time = datetime.datetime.now()
+        
+        # Set a minimum time between analyses (e.g., 5 minutes)
+        min_time_between_analysis = datetime.timedelta(minutes=5)
+        if last_analysis_time and (current_time - last_analysis_time) < min_time_between_analysis:
+            self.logger.info("Skipping analysis: too soon since last analysis")
+            return
+            
+        # Check message threshold since last analysis
+        last_analyzed_message_id = conversation.get('last_analyzed_message_id', 0)
+        if (total_messages - last_analyzed_message_id) < 10:  # Minimum 10 new messages
+            self.logger.info("Skipping analysis: not enough new messages")
+            return
+            
         self.logger.info("Performing analysis")
         
         self._update_system_prompt()
+
+        # Update conversation tracking fields
+        self._update_conversation("last_analysis_time", current_time)
+        self._update_conversation("last_analyzed_message_id", total_messages - 1)
 
         if self.llm_settings.use_chatbot_mood and self.chatbot.use_mood:
             self._update_mood()
@@ -1040,6 +1074,10 @@ class BaseAgent(
             kwargs["tool_choice"] = tool_name
         elif action is LLMActionType.APPLICATION_COMMAND:
             tool_name = "react_tool_agent"
+            tool_agent = self.react_tool_agent
+            kwargs["tool_choice"] = tool_name
+        elif action is LLMActionType.GENERATE_IMAGE:
+            tool_name = "generate_image_tool"
             tool_agent = self.react_tool_agent
             kwargs["tool_choice"] = tool_name
         else:
