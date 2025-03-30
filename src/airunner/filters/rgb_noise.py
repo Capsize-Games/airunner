@@ -5,7 +5,23 @@ from airunner.filters.base_filter import BaseFilter
 
 
 class RGBNoiseFilter(BaseFilter):
+    """Apply RGB noise to an image.
+    
+    This filter adds random noise to each color channel independently.
+    
+    Attributes:
+        red: Intensity of noise to add to the red channel.
+        green: Intensity of noise to add to the green channel.
+        blue: Intensity of noise to add to the blue channel.
+    """
+    
     def __init__(self, **kwargs):
+        """Initialize the RGB noise filter.
+        
+        Args:
+            **kwargs: Arbitrary keyword arguments that will be set as
+                     attributes on the filter instance.
+        """
         super().__init__(**kwargs)
         self.red_grain = None
         self.green_grain = None
