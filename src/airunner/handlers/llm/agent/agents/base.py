@@ -339,28 +339,170 @@ class BaseAgent(
         if not hasattr(self, '_dynamic_ui_tool'):
             def display_dynamic_ui(ui_content: str) -> str:
                 """
-                Display a dynamic UI from a string.
+                Display a dynamic Pyside6 UI QWidget from a string.
+
+                :param ui_content: The title of the button to be displayed.XML QT UI content.
+                
+                ---
+
+                ## ✅ Documentation for AI Agent: Building `.ui` Files for AI Runner (PySide6)
+
+                ---
+
+                ### Overview:
+
+                - `.ui` files are **XML-based layout files** created by **Qt Designer**.
+                - They describe widgets, layouts, properties, signals, and slots.
+                - AI Runner uses **PySide6** and loads `.ui` files at **runtime** using `QUiLoader` or equivalent.
+                - All widgets must be compatible with **PySide6**.
+                - These `.ui` files must be **well-formed XML** and **follow Qt 4.0 UI format**.
+
+                ---
+
+                ### Structure of a `.ui` File:
+
+                ```xml
+                <?xml version="1.0" encoding="UTF-8"?>
+                <ui version="4.0">
+                <class>my_widget</class>
+                <widget class="QWidget" name="my_widget">
+                    <property name="windowTitle">
+                    <string>My Window Title</string>
+                    </property>
+                    <layout class="QVBoxLayout" name="verticalLayout">
+                    <item>
+                        <widget class="QLabel" name="label">
+                        <property name="text">
+                            <string>Hello, world!</string>
+                        </property>
+                        </widget>
+                    </item>
+                    <!-- Add more widgets here -->
+                    </layout>
+                </widget>
+                <resources/>
+                <connections/>
+                </ui>
+                ```
+
+                ---
+
+                ### Widget Tags and Layouts:
+
+                | Widget        | XML Tag                          | Notes                           |
+                |---------------|----------------------------------|---------------------------------|
+                | Label         | `<widget class="QLabel"/>`       | Use `<property name="text">`   |
+                | Line Edit     | `<widget class="QLineEdit"/>`    | Use `<property name="placeholderText">` |
+                | Text Edit     | `<widget class="QTextEdit"/>`    | For multi-line input            |
+                | Button        | `<widget class="QPushButton"/>`  | Can use `<slot>` for actions    |
+                | Table         | `<widget class="QTableWidget"/>` | For data display                |
+                | Layout        | `<layout class="QVBoxLayout"/>` or `QHBoxLayout`, `QGridLayout` | Wrap multiple widgets           |
+
+                ---
+
+                ### Widget Naming Guidelines:
+
+                - Use lowercase with underscores: `name_input`, `submit_button`, `message_box`
+                - Each widget must have a unique `name` attribute.
+
+                ---
+
+                ### Required Elements in Every `.ui` File:
+
+                - A `<class>` tag with the name of the class (usually matches file name or purpose)
+                - A top-level `<widget>` of type `QWidget` or `QMainWindow`
+                - A layout within that widget (`QVBoxLayout`, `QGridLayout`, etc.)
+                - A `<resources/>` and `<connections/>` section, even if empty
+
+                ---
+
+                ### Optional Elements:
+
+                - `<slots>` – For custom methods like `submit()`, if they exist
+                - `<connections>` – For auto-wiring signals to slots
+
+                ---
+
+                ### Example Widget Recipe (Use These Internally):
+
+                To create a form with:
+                - Name label + QLineEdit
+                - Submit button
+                - Text area
+
+                The agent should nest these inside a layout with proper `<item>` tags and use `QLabel`, `QLineEdit`, `QPushButton`, and `QTextEdit` respectively.
+
+                ---
+
+                ### Rules to Follow:
+
+                1. **Output valid XML.** Use UTF-8 and close all tags.
+                2. **Use only PySide6-supported widget types.**
+                3. **Never reference Python code inside the `.ui` file.** Slots must be named only.
+                4. **Use layouts correctly.** Do not float widgets without layouts.
+                5. **Do not hardcode sizes unless necessary.**
+                6. **Name widgets logically.**
+
+                ---
+
+                ### Good Starting Widget Types:
+
+                - `QLabel`
+                - `QLineEdit`
+                - `QPushButton`
+                - `QTextEdit`
+                - `QComboBox`
+                - `QTableWidget`
+                - `QListWidget`
+                - `QSplitter`
+                - `QGroupBox`
+                - `QCheckBox`
+
+                ---
+
+                Table example
+
+                <?xml version="1.0" encoding="UTF-8"?>
+                <ui version="4.0">
+                    <class>table_widget</class>
+                    <widget class="QWidget" name="table_widget">
+                    <property name="windowTitle">
+                        <string>Example Table</string>
+                    </property>
+                    <layout class="QVBoxLayout" name="verticalLayout">
+                    <item>
+                        <widget class="QTableWidget" name="example_table">
+                            <property name="rowCount">
+                                <number>3</number>
+                            </property>
+                            <property name="columnCount">
+                             <number>2</number>
+                            </property>
+                            <column>
+                                <property name="text">
+                                    <string>Column 1</string>
+                                </property>
+                            </column>
+                            <column>
+                                <property name="text">
+                                    <string>Column 2</string>
+                                </property>
+                            </column>
+                            <item row="0" column="0">
+                                <widget class="QTableWidgetItem">
+                                    <property name="text">
+                                        <string>Row 1, Col 1</string>
+                                    </property>
+                                </widget>
+                            </item>
+                        </widget>
+                    </item>
+                    </layout>
+                    </widget>
+                    <resources/>
+                    <connections/>
+                </ui>
                 """
-                ui_content = '''<?xml version="1.0" encoding="UTF-8"?>
-<ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
-  <property name="windowTitle">
-   <string>Hello Window</string>
-  </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>Hello, dynamic world!</string>
-     </property>
-    </widget>
-   </item>
-  </layout>
- </widget>
- <resources/>
- <connections/>
-</ui>'''
                 self.emit_signal(
                     SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL, {
                         "ui_content": ui_content
