@@ -411,10 +411,10 @@ class StableDiffusionHandler(BaseHandler):
 
     @property
     def model_path(self) -> str:
-        return (
-            self.image_request.model_path if self.image_request else 
-            self._model_path
-        )
+        path = self.image_request.model_path if self.image_request else  None
+        if path is None or path == "":
+            path = self._model_path
+        return path
 
     @property
     def lora_base_path(self) -> str:
@@ -780,24 +780,25 @@ class StableDiffusionHandler(BaseHandler):
 
         with torch.no_grad():
             results = self._pipe(**args)
+        
+        clear_memory()
 
         images = results.get("images", [])
-        images, nsfw_content_detected = self._check_and_mark_nsfw_images(images)
+        images, nsfw_content_detected = self._check_and_mark_nsfw_images(
+            images
+        )
 
         if images is not None:
             self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
                 "step": self.image_request.steps,
                 "total": self.image_request.steps,
             })
-
-            if images is None:
-                return
-
-            if self.application_settings_cached.auto_export_images:
-                self._export_images(images, args)
+            self._export_images(images, args)
+        else:
+            images = images or []
 
         return ImageResponse(
-            images=images or [],
+            images=images,
             data=args,
             nsfw_content_detected=any(nsfw_content_detected),
             active_rect=active_rect,
@@ -865,6 +866,12 @@ class StableDiffusionHandler(BaseHandler):
         return metadata
 
     def _export_images(self, images: List[Any], data: Dict):
+        if (
+            not self.application_settings_cached.auto_export_images
+        ):
+            return
+        
+        self.logger.debug("Exporting images")
         extension = self.application_settings_cached.image_export_type
         filename = "image"
         file_path = os.path.expanduser(
