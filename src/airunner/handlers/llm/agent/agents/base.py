@@ -197,7 +197,8 @@ class BaseAgent(
     
     def unload(self):
         self.logger.debug("Unloading chat agent")
-        self._llm.unload()
+        if self._llm:
+            self._llm.unload()
         self.unload_rag()
         
         del self._chat_engine
@@ -589,7 +590,7 @@ class BaseAgent(
 
         # Add RAG tools if enabled
         if self.rag_mode_enabled:
-            tools.append([
+            tools.extend([
                 self.rag_engine_tool,
             ])
         
@@ -1251,7 +1252,6 @@ class BaseAgent(
         self._update_system_prompt(system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
         self._perform_tool_call(action, **kwargs)
-        self._update_memory(action)
         return AgentChatResponse(response=self._complete_response)
 
     def on_load_conversation(self, data: Optional[Dict] = None):
