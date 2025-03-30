@@ -73,30 +73,7 @@ class GeneratorForm(BaseWidget):
 
     def on_bot_mood_updated(self, data):
         pass
-
-    def finalize_image_generated_by_llm(self, _data):
-        """
-        Callback function to be called after the image has been generated.
-        """
-
-        # Create a message to be sent to the user as a chatbot message
-        image_generated_message = dict(
-            message="Your image has been generated",
-            is_first_message=True,
-            is_end_of_message=True,
-            name=self.chatbot.name,
-            action=LLMActionType.GENERATE_IMAGE
-        )
-
-        self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
-            callback=lambda d: self.emit_signal(SignalCode.LOAD_NON_SD_MODELS, dict(
-                callback=lambda _n: self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
-                    "response": LLMResponse(
-                        **image_generated_message
-                    )
-                })
-            ))
-        ))
+    
     ##########################################################################
     # End LLM Generated Image handlers
     ##########################################################################
