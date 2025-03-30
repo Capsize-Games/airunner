@@ -26,29 +26,43 @@ class RGBNoiseFilter(BaseFilter):
         self.red_grain = None
         self.green_grain = None
         self.blue_grain = None
-    
-    def apply_filter(self, image, do_reset=False):
-        """Apply RGB noise filter to the image.
+
+    def apply_filter(self, image, do_reset):
+        # Convert input values from 0-100 scale to 0-255 for pixel values
+        red_intensity = float(getattr(self, "red", 0.0))
+        green_intensity = float(getattr(self, "green", 0.0))
+        blue_intensity = float(getattr(self, "blue", 0.0))
         
-        Args:
-            image: The PIL Image to filter.
-            do_reset: Whether to reset internal state (unused in this filter).
+        # If all noise values are 0, just return the original image
+        if red_intensity == 0.0 and green_intensity == 0.0 and blue_intensity == 0.0:
+            return image
             
-        Returns:
-            The noise-filtered PIL Image.
-        """
-        # Convert image to numpy array
+        # Ensure image is in RGBA mode
+        image = image.convert("RGBA")
+        
+        # Convert image to numpy array (much faster for processing)
         image_array = np.array(image)
         
-        # Generate random noise for each channel
-        red_noise = np.random.rand(*image.size) * self.red
-        green_noise = np.random.rand(*image.size) * self.green
-        blue_noise = np.random.rand(*image.size) * self.blue
+        # Generate random noise for all pixels at once
+        height, width = image_array.shape[:2]
         
-        # Add noise to each channel, clipping to valid range [0, 255]
-        image_array[..., 0] = np.clip(image_array[..., 0] + red_noise, 0, 255)
-        image_array[..., 1] = np.clip(image_array[..., 1] + green_noise, 0, 255)
-        image_array[..., 2] = np.clip(image_array[..., 2] + blue_noise, 0, 255)
+        # Generate noise arrays for each channel all at once
+        red_noise = np.random.uniform(-red_intensity, red_intensity, (height, width)).astype(np.int16)
+        green_noise = np.random.uniform(-green_intensity, green_intensity, (height, width)).astype(np.int16)
+        blue_noise = np.random.uniform(-blue_intensity, blue_intensity, (height, width)).astype(np.int16)
+        
+        # Apply noise to all pixels simultaneously
+        # Convert to int16 first to prevent overflow
+        r_channel = image_array[:, :, 0].astype(np.int16) + red_noise
+        g_channel = image_array[:, :, 1].astype(np.int16) + green_noise
+        b_channel = image_array[:, :, 2].astype(np.int16) + blue_noise
+        
+        # Clip values to valid range [0, 255]
+        image_array[:, :, 0] = np.clip(r_channel, 0, 255).astype(np.uint8)
+        image_array[:, :, 1] = np.clip(g_channel, 0, 255).astype(np.uint8)
+        image_array[:, :, 2] = np.clip(b_channel, 0, 255).astype(np.uint8)
         
         # Convert back to PIL image
-        return Image.fromarray(image_array.astype('uint8'), 'RGBA')
+        result = Image.fromarray(image_array)
+        
+        return result
