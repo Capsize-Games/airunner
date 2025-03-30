@@ -9,7 +9,7 @@ from typing import (
 import datetime
 import platform
 
-from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
+from llama_index.core.tools import BaseTool, FunctionTool
 from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.memory import BaseMemory
@@ -304,12 +304,29 @@ class BaseAgent(
         return self._store_user_tool
     
     @property
+    def hello_world_tool(self) -> FunctionTool:
+        if not hasattr(self, '_hello_world_tool'):
+            def trigger_hello_world_ui() -> str:
+                """
+                Trigger the 'Hello, world!' UI via the API.
+                """
+                self.emit_signal(SignalCode.SHOW_WINDOW_SIGNAL)
+                return "Hello, world! UI triggered."
+
+            self._hello_world_tool = FunctionTool.from_defaults(
+                trigger_hello_world_ui,
+                return_direct=True
+            )
+        return self._hello_world_tool
+
+    @property
     def tools(self) -> List[BaseTool]:
         return [
             self.information_scraper_tool,
             self.store_user_tool,
             self.chat_engine_tool,
-            self.rag_engine_tool
+            self.rag_engine_tool,
+            self.hello_world_tool,
         ]
 
     @property

@@ -21,9 +21,15 @@ from airunner.handlers.llm.agent.chat_engine import (
     RefreshSimpleChatEngine
 )
 from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.mediator_mixin import MediatorMixin
 
 
-class ChatEngineTool(AsyncBaseTool):
+class ChatEngineTool(
+    AsyncBaseTool,
+    SettingsMixin,
+    MediatorMixin
+):
     """Chat tool.
     
     A tool for chatting with the LLM.
@@ -38,7 +44,9 @@ class ChatEngineTool(AsyncBaseTool):
         ],
         metadata: ToolMetadata,
         resolve_input_errors: bool = True,
-        agent=None
+        agent=None,
+        *args: Any,
+        **kwargs: Any
     ):
         self.chat_engine: Union[
             RefreshSimpleChatEngine, 
@@ -51,6 +59,7 @@ class ChatEngineTool(AsyncBaseTool):
         self._resolve_input_errors = resolve_input_errors
         self.agent = agent
         self._do_interrupt: bool = False
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def from_defaults(
