@@ -7,14 +7,90 @@
     <x>0</x>
     <y>0</y>
     <width>1007</width>
-    <height>981</height>
+    <height>1050</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="5" column="0" colspan="5">
+    <widget class="Line" name="line_7">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="28" column="0" colspan="5">
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="12" column="0" colspan="5">
+    <widget class="Line" name="line_8">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="25" column="0" colspan="5">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="29" column="0" colspan="3">
+    <widget class="QCheckBox" name="enable_model_cpu_offload">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with attention slicing for lower memory consumption.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Moves whole models to the GPU, instead of handling each model’s constituent &lt;/span&gt;&lt;span style=&quot; font-weight:400; font-style:italic;&quot;&gt;modules&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;. This results in a negligible impact on inference time (compared with moving the pipeline to &lt;/span&gt;&lt;span style=&quot; font-family:'monospace'; font-weight:400;&quot;&gt;cuda&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;), while still providing some memory savings.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Model CPU offload</string>
+     </property>
+    </widget>
+   </item>
    <item row="35" column="0" colspan="2">
+    <widget class="QCheckBox" name="use_enable_vae_slicing">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with Attention Slicing or Xformers&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Decode large batches of images with limited VRAM, or to enable batches with 32 images or more.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Vae Slicing</string>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="0" rowspan="2" colspan="2">
+    <widget class="QCheckBox" name="use_attention_slicing">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Perform computation in steps instead of all at once.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;About 10% slower inference times.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Uses as little as 3.2 GB of VRAM.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Attention Slicing</string>
+     </property>
+    </widget>
+   </item>
+   <item row="38" column="0" colspan="2">
     <widget class="QCheckBox" name="use_tiled_vae">
      <property name="font">
       <font>
@@ -30,22 +106,8 @@
      </property>
     </widget>
    </item>
-   <item row="37" column="0" colspan="5">
-    <widget class="Line" name="line_9">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="25" column="0" colspan="5">
-    <widget class="Line" name="line_2">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="20" column="0" colspan="5">
-    <widget class="QLabel" name="label_3">
+   <item row="36" column="0" colspan="2">
+    <widget class="QLabel" name="label_6">
      <property name="font">
       <font>
        <pointsize>10</pointsize>
@@ -53,23 +115,7 @@
       </font>
      </property>
      <property name="text">
-      <string>May slow inference on some models, speed up on others</string>
-     </property>
-     <property name="indent">
-      <number>-1</number>
-     </property>
-    </widget>
-   </item>
-   <item row="14" column="0" colspan="5">
-    <widget class="QLabel" name="label_4">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-       <italic>false</italic>
-      </font>
-     </property>
-     <property name="text">
-      <string>Less VRAM usage, slight inference impact</string>
+      <string>Work with large batches</string>
      </property>
      <property name="indent">
       <number>-1</number>
@@ -128,7 +174,64 @@
      </item>
     </layout>
    </item>
-   <item row="24" column="0" colspan="5">
+   <item row="1" column="0" colspan="5">
+    <widget class="QLabel" name="label_11">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Assign models to available cards</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0" colspan="5">
+    <widget class="QLabel" name="label_9">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Keep this checked to take advantage of torch 2.0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="20" column="0" rowspan="2" colspan="4">
+    <widget class="QCheckBox" name="use_lastchannels">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Alternative way of ordering NCHW tensors in memory preserving dimensions ordering. Channels last tensors ordered in such a way that channels become the densest dimension (aka storing images pixel-per-pixel). &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Since not all operators currently support channels last format it may result in a worst performance, so it’s better to try it and see if it works for your model.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Channels last memory</string>
+     </property>
+    </widget>
+   </item>
+   <item row="32" column="0" colspan="2">
+    <widget class="QCheckBox" name="use_tf32">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;On Ampere and later CUDA devices matrix multiplications and convolutions can use the TensorFloat32 (TF32) mode for faster but slightly less accurate computations.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>TF32</string>
+     </property>
+    </widget>
+   </item>
+   <item row="27" column="0" colspan="5">
     <widget class="QLabel" name="label">
      <property name="font">
       <font>
@@ -145,7 +248,7 @@
     </widget>
    </item>
    <item row="30" column="0" colspan="5">
-    <widget class="QLabel" name="label_5">
+    <widget class="QLabel" name="label_2">
      <property name="font">
       <font>
        <pointsize>10</pointsize>
@@ -153,15 +256,15 @@
       </font>
      </property>
      <property name="text">
-      <string>faster matrix multiplications on ampere achitecture</string>
+      <string>Less VRAM usage, slight inference impact</string>
      </property>
      <property name="indent">
       <number>-1</number>
      </property>
     </widget>
    </item>
-   <item row="26" column="0" colspan="3">
-    <widget class="QCheckBox" name="enable_model_cpu_offload">
+   <item row="6" column="0" colspan="5">
+    <widget class="QCheckBox" name="use_accelerated_transformers">
      <property name="font">
       <font>
        <pointsize>11</pointsize>
@@ -169,15 +272,57 @@
       </font>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with attention slicing for lower memory consumption.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Moves whole models to the GPU, instead of handling each model’s constituent &lt;/span&gt;&lt;span style=&quot; font-weight:400; font-style:italic;&quot;&gt;modules&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;. This results in a negligible impact on inference time (compared with moving the pipeline to &lt;/span&gt;&lt;span style=&quot; font-family:'monospace'; font-weight:400;&quot;&gt;cuda&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;), while still providing some memory savings.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Optimized and memory-efficient attention implementation.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
-      <string>Model CPU offload</string>
+      <string>Accelerated Transformers</string>
      </property>
     </widget>
    </item>
-   <item row="29" column="0" colspan="2">
-    <widget class="QCheckBox" name="use_tf32">
+   <item row="40" column="0" colspan="5">
+    <widget class="Line" name="line_9">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="39" column="0" colspan="2">
+    <widget class="QLabel" name="label_7">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <italic>false</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>Work with large images</string>
+     </property>
+     <property name="indent">
+      <number>-1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="19" column="0" colspan="5">
+    <widget class="Line" name="line_4">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QCheckBox" name="prevent_unload_on_llm_image_generation">
+     <property name="font">
+      <font>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Disable automatic model management</string>
+     </property>
+    </widget>
+   </item>
+   <item row="26" column="0" colspan="5">
+    <widget class="QCheckBox" name="use_enable_sequential_cpu_offload">
      <property name="font">
       <font>
        <pointsize>11</pointsize>
@@ -185,30 +330,14 @@
       </font>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;On Ampere and later CUDA devices matrix multiplications and convolutions can use the TensorFloat32 (TF32) mode for faster but slightly less accurate computations.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with &lt;/span&gt;attention slicing&lt;span style=&quot; font-weight:400;&quot;&gt; for lower memory consumption.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Offloads the weights to CPU and only load them to GPU when performing the forward pass for memory savings.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
-      <string>TF32</string>
+      <string>Sequential CPU offload</string>
      </property>
     </widget>
    </item>
-   <item row="32" column="0" colspan="2">
-    <widget class="QCheckBox" name="use_enable_vae_slicing">
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with Attention Slicing or Xformers&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Decode large batches of images with limited VRAM, or to enable batches with 32 images or more.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Vae Slicing</string>
-     </property>
-    </widget>
-   </item>
-   <item row="38" column="0" colspan="5">
+   <item row="41" column="0" colspan="5">
     <widget class="QGroupBox" name="use_tome">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
@@ -297,81 +426,7 @@
      </layout>
     </widget>
    </item>
-   <item row="31" column="0" colspan="5">
-    <widget class="Line" name="line_5">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0" colspan="5">
-    <widget class="QPushButton" name="optimize_memory_button">
-     <property name="text">
-      <string>Optimize Memory Settings</string>
-     </property>
-    </widget>
-   </item>
-   <item row="16" column="0" colspan="5">
-    <widget class="Line" name="line_4">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0" colspan="5">
-    <widget class="QCheckBox" name="use_accelerated_transformers">
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Optimized and memory-efficient attention implementation.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Accelerated Transformers</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="Line" name="line_7">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="0" colspan="5">
-    <widget class="Line" name="line_8">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="28" column="0" colspan="5">
-    <widget class="Line" name="line_3">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="11" column="0" rowspan="2" colspan="2">
-    <widget class="QCheckBox" name="use_attention_slicing">
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Perform computation in steps instead of all at once.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;About 10% slower inference times.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Uses as little as 3.2 GB of VRAM.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Attention Slicing</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0" colspan="5">
+   <item row="8" column="0" colspan="5">
     <widget class="QLabel" name="label_8">
      <property name="font">
       <font>
@@ -387,60 +442,8 @@
      </property>
     </widget>
    </item>
-   <item row="17" column="0" rowspan="2" colspan="4">
-    <widget class="QCheckBox" name="use_lastchannels">
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Alternative way of ordering NCHW tensors in memory preserving dimensions ordering. Channels last tensors ordered in such a way that channels become the densest dimension (aka storing images pixel-per-pixel). &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Since not all operators currently support channels last format it may result in a worst performance, so it’s better to try it and see if it works for your model.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Channels last memory</string>
-     </property>
-    </widget>
-   </item>
-   <item row="22" column="0" colspan="5">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0" colspan="5">
-    <widget class="QLabel" name="label_11">
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Assign models to available cards</string>
-     </property>
-    </widget>
-   </item>
-   <item row="23" column="0" colspan="5">
-    <widget class="QCheckBox" name="use_enable_sequential_cpu_offload">
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Use with &lt;/span&gt;attention slicing&lt;span style=&quot; font-weight:400;&quot;&gt; for lower memory consumption.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Offloads the weights to CPU and only load them to GPU when performing the forward pass for memory savings.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Sequential CPU offload</string>
-     </property>
-    </widget>
-   </item>
-   <item row="27" column="0" colspan="5">
-    <widget class="QLabel" name="label_2">
+   <item row="17" column="0" colspan="5">
+    <widget class="QLabel" name="label_4">
      <property name="font">
       <font>
        <pointsize>10</pointsize>
@@ -455,8 +458,8 @@
      </property>
     </widget>
    </item>
-   <item row="36" column="0" colspan="2">
-    <widget class="QLabel" name="label_7">
+   <item row="23" column="0" colspan="5">
+    <widget class="QLabel" name="label_3">
      <property name="font">
       <font>
        <pointsize>10</pointsize>
@@ -464,7 +467,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Work with large images</string>
+      <string>May slow inference on some models, speed up on others</string>
      </property>
      <property name="indent">
       <number>-1</number>
@@ -472,26 +475,14 @@
     </widget>
    </item>
    <item row="34" column="0" colspan="5">
-    <widget class="Line" name="line_6">
+    <widget class="Line" name="line_5">
      <property name="orientation">
       <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
-   <item row="8" column="0" colspan="5">
-    <widget class="QLabel" name="label_9">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Keep this checked to take advantage of torch 2.0</string>
-     </property>
-    </widget>
-   </item>
-   <item row="33" column="0" colspan="2">
-    <widget class="QLabel" name="label_6">
+   <item row="33" column="0" colspan="5">
+    <widget class="QLabel" name="label_5">
      <property name="font">
       <font>
        <pointsize>10</pointsize>
@@ -499,10 +490,43 @@
       </font>
      </property>
      <property name="text">
-      <string>Work with large batches</string>
+      <string>faster matrix multiplications on ampere achitecture</string>
      </property>
      <property name="indent">
       <number>-1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="31" column="0" colspan="5">
+    <widget class="Line" name="line_3">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="37" column="0" colspan="5">
+    <widget class="Line" name="line_6">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="5">
+    <widget class="QPushButton" name="optimize_memory_button">
+     <property name="text">
+      <string>Optimize Memory Settings</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0" colspan="5">
+    <widget class="QLabel" name="label_12">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Models will auto load / unload when generating images with the chatbot.</string>
      </property>
     </widget>
    </item>
@@ -525,8 +549,8 @@
    <slot>action_toggled_vae_slicing(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>121</x>
-     <y>772</y>
+     <x>130</x>
+     <y>836</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -541,8 +565,8 @@
    <slot>action_toggled_tile_vae(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>68</x>
-     <y>831</y>
+     <x>77</x>
+     <y>897</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -557,8 +581,8 @@
    <slot>action_toggled_tf32(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>65</x>
-     <y>713</y>
+     <x>74</x>
+     <y>775</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -573,8 +597,8 @@
    <slot>action_toggled_sequential_cpu_offload(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>152</x>
-     <y>595</y>
+     <x>161</x>
+     <y>653</y>
     </hint>
     <hint type="destinationlabel">
      <x>258</x>
@@ -589,8 +613,8 @@
    <slot>action_toggled_accelerated_transformers(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>163</x>
-     <y>397</y>
+     <x>172</x>
+     <y>448</y>
     </hint>
     <hint type="destinationlabel">
      <x>5</x>
@@ -621,8 +645,8 @@
    <slot>action_toggled_last_memory(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>191</x>
-     <y>536</y>
+     <x>200</x>
+     <y>592</y>
     </hint>
     <hint type="destinationlabel">
      <x>271</x>
@@ -637,8 +661,8 @@
    <slot>action_toggled_attention_slicing(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>114</x>
-     <y>477</y>
+     <x>123</x>
+     <y>531</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -653,8 +677,8 @@
    <slot>action_toggled_model_cpu_offload(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>112</x>
-     <y>654</y>
+     <x>121</x>
+     <y>714</y>
     </hint>
     <hint type="destinationlabel">
      <x>53</x>
@@ -674,7 +698,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>582</x>
-     <y>-10</y>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -685,8 +709,8 @@
    <slot>action_changed_llm_combobox(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>359</x>
-     <y>346</y>
+     <x>381</x>
+     <y>344</y>
     </hint>
     <hint type="destinationlabel">
      <x>686</x>
@@ -733,8 +757,8 @@
    <slot>action_toggled_tome(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>45</x>
-     <y>875</y>
+     <x>54</x>
+     <y>1040</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -759,5 +783,6 @@
   <slot>action_changed_stt_combobox(QString)</slot>
   <slot>action_changed_tts_combobox(QString)</slot>
   <slot>action_toggled_use_tome(bool)</slot>
+  <slot>action_toggled_prevent_unload_on_llm_image_generation(bool)</slot>
  </slots>
 </ui>

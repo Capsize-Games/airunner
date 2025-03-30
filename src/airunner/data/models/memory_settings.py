@@ -24,3 +24,4 @@ class MemorySettings(BaseModel):
     default_gpu_llm = Column(Integer, default=0)
     default_gpu_tts = Column(Integer, default=0)
     default_gpu_stt = Column(Integer, default=0)
+    prevent_unload_on_llm_image_generation = Column(Boolean, default=False)
