@@ -589,7 +589,7 @@ class BaseAgent(
 
         # Add RAG tools if enabled
         if self.rag_mode_enabled:
-            tools.append([
+            tools.extend([
                 self.rag_engine_tool,
             ])
         
