@@ -57,10 +57,7 @@ def build_ui(path):
         adjust_resource_imports(ui_file_py, ui_file_py)
 
 
-
-
-if __name__ == "__main__":
-    for dir in ["widgets", "windows"]:
-        path = os.path.join("src", "airunner", dir)
+def main():
+    for path in ["widgets", "windows"]:
         build_ui(path)
     generate_resources()
