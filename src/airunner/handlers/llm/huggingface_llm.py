@@ -328,6 +328,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         )
 
     def unload(self):
+        self.logger.debug("Unloading HuggingFace LLM")
         del self._model
         del self._tokenizer
         del self._stopping_criteria

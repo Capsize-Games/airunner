@@ -234,10 +234,12 @@ class CustomScene(
 
         if code in (
             EngineResponseCode.INSUFFICIENT_GPU_MEMORY,
+            EngineResponseCode.ERROR,
         ):
+            message = data.get("message")
             self.emit_signal(
                 SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-                "Insufficient GPU memory."
+                message
             )
             self.display_gpu_memory_error()
         elif code is EngineResponseCode.IMAGE_GENERATED:
