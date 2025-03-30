@@ -738,7 +738,7 @@ class StableDiffusionHandler(BaseHandler):
             return
        
         self.logger.debug("Swapping pipeline from %s to %s", 
-                          self._pipe.__class__, 
+                          self._pipe.__class__ if self.pipe else "", 
                           pipeline_class_)
         try:
             kwargs = {}
