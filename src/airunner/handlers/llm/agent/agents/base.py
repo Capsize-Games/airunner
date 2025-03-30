@@ -34,6 +34,7 @@ from airunner.handlers.llm.agent import WeatherMixin
 from airunner.handlers.llm.agent.memory import ChatMemoryBuffer
 from airunner.handlers.llm.storage.chat_store import DatabaseChatStore
 from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
 from airunner.handlers.llm import HuggingFaceLLM
@@ -374,6 +375,36 @@ class BaseAgent(
         return self._dynamic_ui_tool
 
     @property
+    def generate_image_tool(self) -> FunctionTool:
+        if not hasattr(self, '_generate_image_tool'):
+            def generate_image(
+                prompt: str,
+                second_prompt: str,
+                image_type: str
+            ) -> str:
+                """
+                Generate an image using the given request.
+
+                :param prompt: The prompt for the image generation.
+                :param second_prompt: The second prompt for the image generation.
+                :param image_type: The type of image to generate. Can be "photo" or "art"
+                """
+                self.emit_signal(SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL, {
+                    "message": {
+                        "prompt": prompt,
+                        "second_prompt": second_prompt,
+                        "type": image_type,
+                    }
+                })
+                return "Generating image..."
+
+            self._generate_image_tool = FunctionTool.from_defaults(
+                generate_image,
+                return_direct=True
+            )
+        return self._generate_image_tool
+
+    @property
     def tools(self) -> List[BaseTool]:
         return [
             self.information_scraper_tool,
@@ -382,6 +413,7 @@ class BaseAgent(
             self.rag_engine_tool,
             self.hello_world_tool,
             self.dynamic_ui_tool,
+            self.generate_image_tool,
         ]
 
     @property
@@ -818,27 +850,27 @@ class BaseAgent(
     ):
         if action is LLMActionType.CHAT:
             tool_name = "chat_engine_tool"
+            tool_agent = self.chat_engine_tool
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
             tool_name = "rag_engine_tool"
+            tool_agent = self.rag_engine_tool
         elif action is LLMActionType.STORE_DATA:
             tool_name = "store_user_tool"
+            tool_agent = self.react_tool_agent
+            kwargs["tool_choice"] = tool_name
         elif action is LLMActionType.APPLICATION_COMMAND:
             tool_name = "react_tool_agent"
+            tool_agent = self.react_tool_agent
+            kwargs["tool_choice"] = tool_name
         else:
             return
 
         self.logger.info(f"Performing call with tool {tool_name}")
 
-        if tool_name == "rag_engine_tool":
-            tool_agent = self.rag_engine_tool
-        elif tool_name == "chat_engine_tool":
-            tool_agent = self.chat_engine_tool
-        else:
-            tool_agent = self.react_tool_agent
-            kwargs["tool_choice"] = tool_name
         response = tool_agent.call(**kwargs)
         
         self.logger.info(f"Handling response from {tool_name}")
+        
         if tool_name == "rag_engine_tool":
             self._handle_rag_engine_tool_response(response, **kwargs)
         else:

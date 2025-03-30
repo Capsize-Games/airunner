@@ -6,12 +6,7 @@ from PySide6.QtCore import Signal, QRect, Slot
 from airunner.enums import (
     SignalCode, 
     GeneratorSection, 
-    ImageCategory, 
-    LLMActionType
-)
-from airunner.settings import (
-    AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT, 
-    AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT
+    LLMActionType,
 )
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
@@ -25,7 +20,6 @@ class GeneratorForm(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
-            SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL: self.on_llm_image_prompt_generated_signal,
             SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.handle_generate_image_from_image,
             SignalCode.DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.do_generate_image_from_image_signal_handler,
             SignalCode.SD_LOAD_PROMPT_SIGNAL: self.on_load_saved_stablediffuion_prompt_signal,
@@ -79,39 +73,6 @@ class GeneratorForm(BaseWidget):
 
     def on_bot_mood_updated(self, data):
         pass
-
-    ##########################################################################
-    # LLM Generated Image handlers
-    ##########################################################################
-    def on_llm_image_prompt_generated_signal(self, data):
-        """
-        This slot is called after an LLM has generated the prompts for an image.
-        It sets the prompts in the generator form UI and continues the image generation process.
-        """
-
-        # Send a messagae to the user as chatbot letting them know that the image is generating
-        self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
-            "response": LLMResponse(
-                message="Your image is generating...",
-                is_first_message=True,
-                is_end_of_message=True,
-                name=self.chatbot.name,
-                action=LLMActionType.GENERATE_IMAGE
-            )
-        })
-        # Set the prompts in the generator form UI
-        data = data["message"]
-        prompt = data.get("prompt", None)
-        secondary_prompt = data.get("secondary_prompt", None)
-        prompt_type = data.get("type", ImageCategory.PHOTO.value)
-        if prompt_type == "photo":
-            negative_prompt = AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT
-        else:
-            negative_prompt = AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT
-        self.ui.prompt.setPlainText(prompt)
-        self.ui.negative_prompt.setPlainText(negative_prompt)
-        self.ui.secondary_prompt.setPlainText(secondary_prompt)
-        self.ui.secondary_negative_prompt.setPlainText(negative_prompt)        
 
     def finalize_image_generated_by_llm(self, _data):
         """
