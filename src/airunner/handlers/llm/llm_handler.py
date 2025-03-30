@@ -122,6 +122,23 @@ class LLMHandler(
             self.model_version
         ))
     
+    @property
+    def is_flash_attention_available(self) -> bool:
+        """Check if Flash Attention 2 is available on the current system."""     
+        # Check GPU compute capability
+        if not torch.cuda.is_available():
+            return False
+            
+        # Get compute capability
+        device_props = torch.cuda.get_device_properties(0)  # First GPU
+        compute_capability = f"{device_props.major}.{device_props.minor}"
+        cc_version = float(compute_capability)
+        
+        if cc_version < 8.0:
+            return False
+            
+        return True
+
     def load(self):
         if self.model_status in (
             ModelStatus.LOADING,
@@ -243,13 +260,19 @@ class LLMHandler(
             return
         self.logger.debug(f"Loading tokenizer from {self.model_path}")
         try:
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path,
+            params = dict(
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 device_map=self.device,
                 trust_remote_code=False,
                 torch_dtype=self.torch_dtype,
-                attn_implementation="flash_attention_2",
+            )
+            if self.is_flash_attention_available:
+                params.update(dict(
+                    attn_implementation="flash_attention_2"
+                ))
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                self.model_path,
+                **params
             )
             self.logger.debug("Tokenizer loaded")
         except Exception as e:
