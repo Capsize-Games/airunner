@@ -1,5 +1,5 @@
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtCore import QFile, QBuffer, QIODevice
+from PySide6.QtCore import QFile, QBuffer, QIODevice, QObject
 from PySide6.QtWidgets import QWidget
 
 def load_ui_file(ui_file_path: str, parent: QWidget = None) -> QWidget:
@@ -23,12 +23,13 @@ def load_ui_file(ui_file_path: str, parent: QWidget = None) -> QWidget:
 
     return widget
 
-def load_ui_from_string(ui_content: str, parent: QWidget = None) -> QWidget:
+def load_ui_from_string(ui_content: str, parent: QWidget = None, signal_handler: QObject = None) -> QWidget:
     """
     Load a .ui file dynamically from a string and return the corresponding QWidget.
 
     :param ui_content: The content of the .ui file as a string.
     :param parent: Optional parent widget.
+    :param signal_handler: Optional object to handle signals.
     :return: QWidget instance loaded from the .ui content.
     """
     loader = QUiLoader()
@@ -42,5 +43,13 @@ def load_ui_from_string(ui_content: str, parent: QWidget = None) -> QWidget:
 
     if widget is None:
         raise RuntimeError("Failed to load UI content from string.")
+
+    # Automatically connect signals if a signal handler is provided
+    if signal_handler:
+        for child in widget.findChildren(QObject):
+            if hasattr(signal_handler, child.objectName()):
+                signal = getattr(signal_handler, child.objectName())
+                if callable(signal):
+                    child.clicked.connect(signal)
 
     return widget
