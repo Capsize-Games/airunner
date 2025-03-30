@@ -24,6 +24,8 @@
 - [AI Models](#ai-models)
 - [Unit Tests](#unit-tests)
 - [Database](#database)
+- [Advanced Features](#advanced-features)
+- [Missing Features](#missing-features)
 
 ## Introduction
 
@@ -113,25 +115,17 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 ## 🚀 Installation
 
-### Quickstart
-
-Install for Linux
-
-If you want to use flash attention
-
+### Quickstart for Linux
 ```bash
 sudo apt install nvidia-cuda-toolkit
-nvcc --version  # Check installation
-```
-
-```bash
+nvcc --version  # Verify CUDA installation
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 pip install airunner[gui,linux,dev,art,llm,tts]
-pip install flash-attn --no-build-isolation  # Skip this if you want to disable flash attention
+pip install flash-attn --no-build-isolation  # Optional for flash attention
 pip install --upgrade timm==1.0.15
 ```
 
-[Detailed packaging and installation instructions can be found in the wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
+For detailed instructions, refer to the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
 ### Running
 
@@ -194,6 +188,39 @@ Example
 python -m unittest src/airunner/tests/test_prompt_weight_convert.py
 ```
 
+---
+
 ## Database
 
 See the [database wiki page](https://github.com/Capsize-Games/airunner/wiki/Database) for details on how to switch engines, make changes to data models and run migrations.
+
+---
+
+## Advanced Features
+
+### Memory Optimization
+AI Runner includes advanced memory optimization settings:
+- **TF32 Mode**: Faster matrix multiplications on Ampere architecture with slightly reduced precision.
+- **VAE Slicing**: Enables decoding large batches of images with limited VRAM.
+- **Attention Slicing**: Reduces VRAM usage with a slight impact on inference speed.
+
+### Experimental Features
+- **Weather-based Chatbot Prompts**: Integrates weather data into chatbot conversations using the Open-Meteo API.
+- **Command-line Arguments**: Includes options like `--clear-window-settings` and `--perform-llm-analysis` for debugging and advanced usage.
+
+### Safety and Guardrails
+- **NSFW Content Detection**: Configurable safety checker for image generation.
+- **Customizable Guardrails**: Default prompts to ensure ethical and safe AI interactions.
+
+---
+
+## Missing Features
+
+### Supported Models
+- **Stable Diffusion**: SD 1.5, SDXL 1.0, SDXL Turbo.
+- **LLMs**: Includes Mistral-7b and other open-source models.
+- **Text-to-Speech and Speech-to-Text**: Fully integrated with customizable settings.
+
+### Command-line Arguments
+- `--clear-window-settings`: Resets UI settings.
+- `--perform-llm-analysis`: Enables experimental LLM analysis.
