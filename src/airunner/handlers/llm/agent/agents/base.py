@@ -1251,7 +1251,6 @@ class BaseAgent(
         self._update_system_prompt(system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
         self._perform_tool_call(action, **kwargs)
-        self._update_memory(action)
         return AgentChatResponse(response=self._complete_response)
 
     def on_load_conversation(self, data: Optional[Dict] = None):
