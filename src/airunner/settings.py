@@ -17,6 +17,7 @@ within this file.
 from dotenv import load_dotenv
 import os
 import sys
+import logging
 
 from airunner.enums import Scheduler
 
@@ -264,3 +265,4 @@ AIRUNNER_MEM_USE_TOME_SD = os.environ.get("AIRUNNER_USE_TOME_SD", None)
 AIRUNNER_MEM_TOME_SD_RATIO = os.environ.get("AIRUNNER_TOME_SD_RATIO", None)
 AIRUNNER_MEM_SD_DEVICE = os.environ.get("AIRUNNER_MEM_SD_DEVICE", None)
 AIRUNNER_MEM_LLM_DEVICE = os.environ.get("AIRUNNER_MEM_LLM_DEVICE", None)
+AIRUNNER_LOG_LEVEL = logging.DEBUG
