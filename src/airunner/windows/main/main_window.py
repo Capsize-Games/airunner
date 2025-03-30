@@ -48,6 +48,7 @@ from airunner.settings import (
     AIRUNNER_MEM_LLM_DEVICE,
     AIRUNNER_MEM_TTS_DEVICE,
     AIRUNNER_MEM_STT_DEVICE,
+    AIRUNNER_LLM_USE_LOCAL,
 )
 from airunner.utils.settings import get_qsettings
 from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
@@ -915,7 +916,7 @@ class MainWindow(
         tts_device = AIRUNNER_MEM_TTS_DEVICE or self.memory_settings.default_gpu_tts
         stt_device = AIRUNNER_MEM_STT_DEVICE or self.memory_settings.default_gpu_stt
 
-        if sd_device == llm_device:
+        if sd_device == llm_device and AIRUNNER_LLM_USE_LOCAL:
             self._llm_generate_worker.on_llm_on_unload_signal()
         
         if sd_device == tts_device:
