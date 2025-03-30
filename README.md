@@ -25,6 +25,7 @@
 - [Unit Tests](#unit-tests)
 - [Database](#database)
 - [Advanced Features](#advanced-features)
+- [Additional Features](#additional-features)
 - [Missing Features](#missing-features)
 
 ## Introduction
@@ -179,10 +180,6 @@ python -m unittest discover -s src/airunner/tests
 
 Run a single unit test
 
-```bash
-python -m unittest src/airunner/tests/<file_name>
-```
-
 Example
 ```bash
 python -m unittest src/airunner/tests/test_prompt_weight_convert.py
@@ -211,6 +208,21 @@ AI Runner includes advanced memory optimization settings:
 ### Safety and Guardrails
 - **NSFW Content Detection**: Configurable safety checker for image generation.
 - **Customizable Guardrails**: Default prompts to ensure ethical and safe AI interactions.
+
+---
+
+## Additional Features
+
+### Memory Optimization
+- **Sequential CPU Offload**: Offloads weights to CPU for memory savings during forward passes.
+- **ToMe Token Merging**: Merges redundant tokens for faster inference with slight image quality impact.
+
+### Experimental Features
+- **Torch 2.0 Optimization**: Leverages Torch 2.0 for improved performance.
+
+### Command-line Arguments
+- `--disable-setup-wizard`: Skips the setup wizard during startup.
+- `--enable-debug-logs`: Enables verbose logging for debugging purposes.
 
 ---
 
