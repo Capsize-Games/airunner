@@ -13,7 +13,10 @@ from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, 
 
 from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
 from airunner.mediator_mixin import MediatorMixin
-from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
+from airunner.settings import (
+    AIRUNNER_VALID_IMAGE_FILES, 
+    AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
+)
 from airunner.utils import snap_to_grid, is_windows
 from airunner.utils.image import (
     export_image,
@@ -241,7 +244,7 @@ class CustomScene(
                 SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
                 message
             )
-            self.display_gpu_memory_error()
+            self.display_gpu_memory_error(message)
         elif code is EngineResponseCode.IMAGE_GENERATED:
             image_response: Optional[ImageResponse] = data.get("message", None)
             if image_response is None:
@@ -265,17 +268,26 @@ class CustomScene(
         if callback:
             callback(data)
     
-    def display_gpu_memory_error(self):
+    def display_gpu_memory_error(self, message: str):
+        print("display_gpu_memory_error", message)
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Icon.Critical)
         msg_box.setWindowTitle("Error: Unable to Generate Image")
-        msg_box.setText("You are out of GPU memory (VRAM). Enable CPU offload and try again.")
-        
-        enable_cpu_offload_button = msg_box.addButton("Enable CPU offload", QMessageBox.ButtonRole.AcceptRole)
+        msg_box.setText(message)
+
+        enable_cpu_offload_button = None
+        if message == AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE:
+            enable_cpu_offload_button = msg_box.addButton(
+                "Enable CPU offload", 
+                QMessageBox.ButtonRole.AcceptRole
+            )
 
         msg_box.exec()
         
-        if msg_box.clickedButton() == enable_cpu_offload_button:
+        if (
+            enable_cpu_offload_button and 
+            msg_box.clickedButton() == enable_cpu_offload_button
+        ):
             self.enable_cpu_offload_callback()
         
     def enable_cpu_offload_callback(self):

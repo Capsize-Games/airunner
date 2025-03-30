@@ -76,9 +76,11 @@ from airunner.settings import (
     AIRUNNER_MEM_SD_DEVICE,
     AIRUNNER_MEM_USE_ACCELERATED_TRANSFORMERS,
     AIRUNNER_MEM_USE_TILED_VAE,
+    AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE,
 )
 from airunner.utils.memory import (
-    clear_memory
+    clear_memory,
+    is_ampere_or_newer
 )
 from airunner.utils.image import (
     convert_binary_to_image, 
@@ -468,11 +470,15 @@ class StableDiffusionHandler(BaseHandler):
         return self.model_status[ModelType.SD] is ModelStatus.UNLOADED
 
     @property
-    def _device(self):
+    def _device_index(self):
         device = AIRUNNER_MEM_SD_DEVICE
         if device is None:
             device = self.memory_settings.default_gpu_sd
-        return get_torch_device(device)
+        return device
+
+    @property
+    def _device(self):
+        return get_torch_device(self._device_index)
 
     @property
     def _pipeline_class(self):
@@ -680,8 +686,8 @@ class StableDiffusionHandler(BaseHandler):
             except Exception as e:
                 if "CUDA out of memory" in str(e):
                     code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
-                    response = "Insufficient GPU memory."
-                error_message = "Error generating image: %s", e
+                    response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
+                error_message = f"Error generating image: {e}"
                 self.logger.error(error_message)
                 code = EngineResponseCode.ERROR
                 response = error_message
@@ -1482,6 +1488,10 @@ class StableDiffusionHandler(BaseHandler):
         enabled = AIRUNNER_MEM_USE_ACCELERATED_TRANSFORMERS
         if enabled is None:
             enabled = attr_val
+        
+        if not is_ampere_or_newer(self._device_index):
+            enabled = False
+
         from diffusers.models.attention_processor import AttnProcessor, AttnProcessor2_0
         self.logger.debug(f"{'Enabling' if enabled else 'Disabling'} accelerated transformers")
         self._pipe.unet.set_attn_processor(AttnProcessor2_0() if enabled else AttnProcessor())
@@ -1494,7 +1504,7 @@ class StableDiffusionHandler(BaseHandler):
             self._pipe.to("cpu")
             try:
                 self.logger.debug("Enabling sequential cpu offload")
-                self._pipe.enable_sequential_cpu_offload()
+                self._pipe.enable_sequential_cpu_offload(self._device_index)
             except NotImplementedError as e:
                 self.logger.warning(f"Error applying sequential cpu offload: {e}")
                 self._pipe.to(self._device)
@@ -1508,7 +1518,7 @@ class StableDiffusionHandler(BaseHandler):
         if enabled and not self.memory_settings.use_enable_sequential_cpu_offload:
             self.logger.debug("Enabling model cpu offload")
             # self._move_stable_diffusion_to_cpu()
-            self._pipe.enable_model_cpu_offload()
+            self._pipe.enable_model_cpu_offload(self._device_index)
         else:
             self.logger.debug("Model cpu offload disabled")
 
