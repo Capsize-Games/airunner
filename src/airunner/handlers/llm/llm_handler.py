@@ -12,8 +12,11 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 
 from airunner.handlers.base_handler import BaseHandler
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
-from airunner.settings import AIRUNNER_MAX_SEED, AIRUNNER_LOCAL_FILES_ONLY
-from airunner.utils.memory import clear_memory
+from airunner.settings import (
+    AIRUNNER_MAX_SEED, 
+    AIRUNNER_LOCAL_FILES_ONLY,
+)
+from airunner.utils.memory import clear_memory, is_ampere_or_newer
 from airunner.handlers.llm.agent.agents import (
     LocalAgent, 
     OpenRouterQObject
@@ -121,7 +124,7 @@ class LLMHandler(
             "causallm",
             self.model_version
         ))
-    
+
     def load(self):
         if self.model_status in (
             ModelStatus.LOADING,
@@ -249,7 +252,6 @@ class LLMHandler(
                 device_map=self.device,
                 trust_remote_code=False,
                 torch_dtype=self.torch_dtype,
-                attn_implementation="flash_attention_2",
             )
             self.logger.debug("Tokenizer loaded")
         except Exception as e:
@@ -273,6 +275,7 @@ class LLMHandler(
                 trust_remote_code=False,
                 torch_dtype=self.torch_dtype,
                 device_map=self.device,
+                attn_implementation="flash_attention_2" if is_ampere_or_newer(self.device_index) else "sdpa",
             )
         except Exception as e:
             self.logger.error(f"Error loading model: {e}")

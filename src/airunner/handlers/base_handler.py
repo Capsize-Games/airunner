@@ -20,7 +20,12 @@ from airunner.enums import HandlerType, SignalCode, ModelType, ModelStatus, Mode
 from airunner.mediator_mixin import MediatorMixin
 from airunner.utils import get_torch_device
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.settings import AIRUNNER_MEM_LLM_DEVICE
+from airunner.settings import (
+    AIRUNNER_MEM_LLM_DEVICE, 
+    AIRUNNER_MEM_SD_DEVICE,
+    AIRUNNER_MEM_TTS_DEVICE,
+    AIRUNNER_MEM_STT_DEVICE,
+)
 
 QObjectMeta = type(OptionalQObject)
 
@@ -80,28 +85,36 @@ class BaseHandler(
         """
         Unload the model and free resources.
         """
-
+    
     @property
-    def device(self):
-        device = AIRUNNER_MEM_LLM_DEVICE
-        if device is not None:
-            return get_torch_device(device)
-        if not self.model_type:
-            raise ValueError("model_type not set")
+    def device_index(self):
+        device = None
         model_type_str = ""
         if self.model_type is ModelType.LLM:
+            device = AIRUNNER_MEM_LLM_DEVICE
             model_type_str = "llm"
         elif self.model_type is ModelType.TTS:
+            device = AIRUNNER_MEM_TTS_DEVICE
             model_type_str = "tts"
         elif self.model_type is ModelType.STT:
+            device = AIRUNNER_MEM_STT_DEVICE
             model_type_str = "stt"
         elif self.model_type is ModelType.SD:
+            device = AIRUNNER_MEM_SD_DEVICE
             model_type_str = "sd"
-        return get_torch_device(
-            getattr(
+        if device is None:
+            if not self.model_type:
+                raise ValueError("model_type not set")
+            device = getattr(
                 self.memory_settings,
                 f"default_gpu_{model_type_str}"
             )
+        return device
+
+    @property
+    def device(self):
+        return get_torch_device(
+            self.device_index
         )
 
     @property
