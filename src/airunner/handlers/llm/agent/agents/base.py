@@ -39,7 +39,7 @@ from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
 from airunner.handlers.llm import HuggingFaceLLM
 from airunner.data.models import Conversation
-from airunner.settings import AIRUNNER_LLM_CHAT_STORE
+from airunner.settings import AIRUNNER_LLM_CHAT_STORE, AIRUNNER_ART_ENABLED
 from airunner.utils.ui_loader import load_ui_from_string
 
 
@@ -66,6 +66,7 @@ class BaseAgent(
         self.default_tool_choice: Optional[Union[str, dict]] = default_tool_choice
         self.llm_settings: LLMSettings = llm_settings
         
+        self._action: LLMActionType = LLMActionType.NONE
         self._chat_prompt: str = ""
         self._current_tab: Optional[Tab] = None
         self._streaming_stopping_criteria: Optional[ExternalConditionStoppingCriteria] = None
@@ -86,7 +87,6 @@ class BaseAgent(
         self._information_scraper_engine: Optional[RefreshSimpleChatEngine] = None
         self._chat_store: Optional[Type[BaseChatStore]] = None
         self._chat_memory: Optional[ChatMemoryBuffer] = None
-        self._current_action: LLMActionType = LLMActionType.NONE
         self._memory: Optional[BaseMemory] = None
         self._react_tool_agent: Optional[ReActAgentTool] = None
         self._complete_response: str = ""
@@ -96,6 +96,22 @@ class BaseAgent(
             SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id
         })
         super().__init__(*args, **kwargs)
+
+    @property
+    def action(self) -> LLMActionType:
+        return self._action
+    
+    @action.setter
+    def action(self, value: LLMActionType):
+        self._action = value
+    
+    @property
+    def chat_mode_enabled(self) -> bool:
+        return self.action is LLMActionType.CHAT
+
+    @property
+    def rag_mode_enabled(self) -> bool:
+        return self.action is LLMActionType.PERFORM_RAG_SEARCH
 
     @property
     def conversation_summaries(self) -> str:
@@ -548,15 +564,36 @@ class BaseAgent(
 
     @property
     def tools(self) -> List[BaseTool]:
-        return [
-            self.information_scraper_tool,
-            self.store_user_tool,
+        tools = [
             self.chat_engine_tool,
-            self.rag_engine_tool,
+        ]
+
+        # Add art tools if enabled
+        if AIRUNNER_ART_ENABLED:
+            tools.extend([
+                self.generate_image_tool,
+            ])
+
+        # Add UI builder tools
+        tools.extend([
             self.hello_world_tool,
             self.dynamic_ui_tool,
-            self.generate_image_tool,
-        ]
+        ])
+
+        # Add data scraping tools if chat mode is enabled
+        if self.chat_mode_enabled:
+            tools.extend([
+                self.information_scraper_tool,
+                self.store_user_tool,
+            ])
+
+        # Add RAG tools if enabled
+        if self.rag_mode_enabled:
+            tools.append([
+                self.rag_engine_tool,
+            ])
+        
+        return tools
 
     @property
     def react_tool_agent(self) -> ReActAgentTool:
@@ -958,7 +995,9 @@ class BaseAgent(
         rag_system_prompt: Optional[str] = None
     ):
         self.chat_engine_tool.update_system_prompt(system_prompt or self.system_prompt)
-        self.update_rag_system_prompt(rag_system_prompt)
+
+        if self.rag_mode_enabled:
+            self.update_rag_system_prompt(rag_system_prompt)
 
     def _perform_analysis(self, action: LLMActionType):
         """
@@ -1194,6 +1233,7 @@ class BaseAgent(
         llm_request: Optional[LLMRequest] = None,
         **kwargs
     ) -> AgentChatResponse:
+        self.action = action
         system_prompt = system_prompt or self.system_prompt
         self._chat_prompt = message
         self._complete_response = ""
