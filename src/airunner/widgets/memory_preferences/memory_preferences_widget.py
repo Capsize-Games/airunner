@@ -19,7 +19,8 @@ class MemoryPreferencesWidget(BaseWidget):
             "use_tf32": "use_tf32",
             "use_tiled_vae": "use_tiled_vae",
             "use_enable_vae_slicing": "use_enable_vae_slicing",
-            "use_tome": "use_tome_sd"
+            "use_tome": "use_tome_sd",
+            "prevent_unload_on_llm_image_generation": "prevent_unload_on_llm_image_generation",
         }
 
         for ui_element, setting in ui_elements.items():
@@ -68,6 +69,10 @@ class MemoryPreferencesWidget(BaseWidget):
     @Slot(str)
     def action_changed_stt_combobox(self, val: str):
         self.update_memory_settings("default_gpu_stt", self.available_devices.index(val))
+    
+    @Slot(bool)
+    def action_toggled_prevent_unload_on_llm_image_generation(self, val: bool):
+        self.update_memory_settings("prevent_unload_on_llm_image_generation", val)
 
     def action_toggled_setting(self, setting_name, val):
         self.update_memory_settings(setting_name, val)

@@ -911,19 +911,20 @@ class MainWindow(
             self.showFullScreen()
 
     def on_unload_non_sd_models(self, data: Dict = None):
-        sd_device = AIRUNNER_MEM_SD_DEVICE or self.memory_settings.default_gpu_sd
-        llm_device = AIRUNNER_MEM_LLM_DEVICE or self.memory_settings.default_gpu_llm
-        tts_device = AIRUNNER_MEM_TTS_DEVICE or self.memory_settings.default_gpu_tts
-        stt_device = AIRUNNER_MEM_STT_DEVICE or self.memory_settings.default_gpu_stt
+        if not self.memory_settings.prevent_unload_on_llm_image_generation:
+            sd_device = AIRUNNER_MEM_SD_DEVICE or self.memory_settings.default_gpu_sd
+            llm_device = AIRUNNER_MEM_LLM_DEVICE or self.memory_settings.default_gpu_llm
+            tts_device = AIRUNNER_MEM_TTS_DEVICE or self.memory_settings.default_gpu_tts
+            stt_device = AIRUNNER_MEM_STT_DEVICE or self.memory_settings.default_gpu_stt
 
-        if sd_device == llm_device and AIRUNNER_LLM_USE_LOCAL:
-            self._llm_generate_worker.on_llm_on_unload_signal()
-        
-        if sd_device == tts_device:
-            self._tts_generator_worker.unload()
-        
-        if sd_device == stt_device:
-            self._stt_audio_processor_worker.unload()
+            if sd_device == llm_device and AIRUNNER_LLM_USE_LOCAL:
+                self._llm_generate_worker.on_llm_on_unload_signal()
+            
+            if sd_device == tts_device:
+                self._tts_generator_worker.unload()
+            
+            if sd_device == stt_device:
+                self._stt_audio_processor_worker.unload()
 
         callback = data.get("callback", None)
         if callback:
