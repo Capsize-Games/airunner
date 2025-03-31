@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -e .
           pip install pyinstaller
           # Install PyTorch with CUDA support
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
