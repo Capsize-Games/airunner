@@ -19,4 +19,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    drop_table("splitter_settings")
+    pass
