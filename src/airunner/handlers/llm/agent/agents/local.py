@@ -15,6 +15,6 @@ class LocalAgent(
         *args, 
         **kwargs
     ):
+        super().__init__(*args, **kwargs)
         self.model = model
         self.tokenizer = tokenizer
-        super().__init__(*args, **kwargs)
