@@ -90,8 +90,6 @@ class BaseAgent(
         self._complete_response: str = ""
         self._store_user_tool: Optional[FunctionTool] = None
         self._webpage_html: str = ""
-        self.model = None  # Initialize model attribute
-        self.tokenizer = None  # Initialize tokenizer attribute
 
         self.signal_handlers.update({
             SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id
