@@ -1,5 +1,5 @@
 import unittest
-from src.airunner.handlers.stablediffusion.rect import Rect
+from airunner.handlers.stablediffusion.rect import Rect
 
 class TestRect(unittest.TestCase):
     def test_left(self):

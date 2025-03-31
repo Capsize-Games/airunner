@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="3.4.12",
+    version="3.4.13",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -41,7 +41,8 @@ setup(
         ],
         "dev": [
             "pytest",
-            "python-dotenv==1.0.1"
+            "python-dotenv==1.0.1",
+            "coverage==7.8.0",
         ],
         "art": [
             "DeepCache==0.1.1",
@@ -107,6 +108,7 @@ setup(
             "airunner=airunner.main:main",
             "airunner-build-ui=airunner.bin.build_ui:main",
             "airunner-tests=airunner.bin.run_tests:main",
+            "airunner-test-coverage-report=airunner.bin.coverage_report:main",
         ],
     },
 )

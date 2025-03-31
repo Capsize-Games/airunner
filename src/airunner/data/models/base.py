@@ -230,7 +230,8 @@ class BaseManager:
             except Exception as e:
                 logger.error(f"Error in create({args}, {kwargs}): {e}")
             finally:
-                session.expunge(obj)
+                if obj is not None:
+                    session.expunge(obj)
         return obj
 
 

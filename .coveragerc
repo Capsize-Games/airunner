@@ -1,0 +1,23 @@
+[run]
+source = src/airunner
+omit =
+    venv/*
+    */alembic/*
+    */data/bootstrap/*
+    */resources/*
+    src/airunner/resources_*
+    */tests/*
+    */bin/*
+    /*templates/*
+    __init__.py
+   *_ui.py
+   */windows/*
+   */widgets/*
+   proces_qss.py
+
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+
