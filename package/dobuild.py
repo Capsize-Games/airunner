@@ -30,12 +30,18 @@ def main():
     run_command("python3 -m build", "Building Python package")
     
     # Find the wheel file
-    wheel_files = run_command("find dist -name 'airunner-*.whl'", "Finding wheel file")
-    if not wheel_files:
+    wheel_files_output = run_command("find dist -name 'airunner-*.whl'", "Finding wheel file")
+    wheel_files = wheel_files_output.splitlines()
+    if len(wheel_files) == 0:
         print("Error: No wheel file found in dist directory")
         sys.exit(1)
+    elif len(wheel_files) > 1:
+        print("Error: Multiple wheel files found in dist directory")
+        for wf in wheel_files:
+            print(f"Found wheel file: {wf}")
+        sys.exit(1)
     
-    wheel_file = wheel_files.splitlines()[0]
+    wheel_file = wheel_files[0]
     print(f"Found wheel file: {wheel_file}")
     
     # Install the package
