@@ -13,6 +13,7 @@ omit =
    *_ui.py
    */windows/*
    */widgets/*
+   proces_qss.py
 
 
 [report]
