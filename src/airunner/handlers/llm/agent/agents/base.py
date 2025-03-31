@@ -1189,7 +1189,7 @@ class BaseAgent(
             concise_summary = response.content.strip().split("\n")[:5]  # Limit to 5 concise summaries
             Conversation.objects.update(
                 self.conversation_id,
-                user_data=concise_summary + (conversation.user_data or []),
+                user_data=concise_summary + (self.conversation.user_data or []),
             )
         else:
             self.logger.info("No meaningful information to update.")
