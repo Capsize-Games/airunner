@@ -71,7 +71,7 @@ class EspeakHandler(TTSHandler, metaclass=ABCMeta):
         self._language = self.espeak_settings.language
         gender = self.espeak_settings.gender
 
-        if gender != self.espeak_settings.gender:
+        if gender != self._gender:
             self._gender = gender
             self._engine.setProperty('gender', Gender(self._gender))
 
