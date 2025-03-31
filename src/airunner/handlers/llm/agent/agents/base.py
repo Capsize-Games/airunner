@@ -17,6 +17,8 @@ from llama_index.core.llms.llm import LLM
 from llama_index.core.storage.chat_store.base import BaseChatStore
 from llama_index.core.storage.chat_store import SimpleChatStore
 
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from airunner.enums import LLMActionType, SignalCode
 from airunner.data.models import Conversation, User, Tab
 from airunner.mediator_mixin import MediatorMixin
@@ -90,8 +92,8 @@ class BaseAgent(
         self._complete_response: str = ""
         self._store_user_tool: Optional[FunctionTool] = None
         self._webpage_html: str = ""
-        self.model = None  # Initialize model attribute
-        self.tokenizer = None  # Initialize tokenizer attribute
+        self.model: Optional[AutoModelForCausalLM] = None
+        self.tokenizer: Optional[AutoTokenizer] = None
 
         self.signal_handlers.update({
             SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id

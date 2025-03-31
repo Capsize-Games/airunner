@@ -52,8 +52,9 @@ class RAGMixin:
         self.__preloaded = False
         self._load_settings()
         
-        # Start the preloading process in a background thread to avoid blocking
-        Thread(target=self._preload_resources, daemon=True).start()
+        if self.rag_mode_enabled:
+            # Start the preloading process in a background thread to avoid blocking
+            Thread(target=self._preload_resources, daemon=True).start()
 
     def _preload_resources(self):
         """Preload resources to improve first-search performance."""
