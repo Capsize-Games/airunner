@@ -126,11 +126,11 @@ class TestRGBNoiseFilter(unittest.TestCase):
         """Set up test fixtures."""
         self.test_image = Image.new('RGBA', (100, 100), color='white')
     
-    @patch('numpy.random.rand')
-    def test_apply_filter(self, mock_rand):
+    @patch('numpy.random.uniform')
+    def test_apply_filter(self, mock_uniform):
         """Test the RGB noise filter application."""
         # Mock the random function to return a predictable value
-        mock_rand.return_value = np.ones((100, 100))
+        mock_uniform.return_value = np.ones((100, 100))
         
         # Create filter with specific noise values
         filter_instance = RGBNoiseFilter(red=10, green=20, blue=30)
@@ -139,8 +139,8 @@ class TestRGBNoiseFilter(unittest.TestCase):
         # The result should be an image
         self.assertIsInstance(result, Image.Image)
         
-        # Check that numpy.random.rand was called correctly
-        mock_rand.assert_called()
+        # Check that numpy.random.uniform was called correctly
+        mock_uniform.assert_called()
 
 
 class TestDither(unittest.TestCase):
