@@ -25,7 +25,13 @@ class TestTabModel(unittest.TestCase):
     def test_tab_model_attributes(self):
         """Test Tab model attributes and default values."""
         # Create a new Tab instance
-        tab = Tab()
+        tab = Tab(
+            section="",
+            name="",
+            active=False,
+            displayed=True,
+            index=0
+        )
         
         # Verify attributes exist and have correct default values
         self.assertEqual(tab.section, "")
