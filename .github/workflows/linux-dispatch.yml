@@ -11,35 +11,64 @@ env:
   CR_PAT: ${{ secrets.CR_PAT }}
   CR_REPO: ${{ secrets.CR_REPO }}
   CR_USERNAME: ${{ secrets.CR_USERNAME }}
+  PYTHON_VERSION: '3.10'
 
 jobs:
   buildDocker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Build the Docker image
-        run: docker build . --file Dockerfile --tag ghcr.io/capsize-games/airunner/airunner:linux
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags and versioning
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
-      - name: Push Docker image to Container Registry
-        run: docker push ghcr.io/capsize-games/airunner/airunner:linux
+      
+      - name: Build and push the Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./package
+          file: ./package/Dockerfile
+          push: true
+          tags: ${{ env.DOCKER_IMAGE }}
+          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache,mode=max
+
   buildLinux:
     needs: buildDocker
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags and versioning
+      
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
+      
       - name: Pull docker image
+        run: docker pull ${{ env.DOCKER_IMAGE }}
+      
+      - name: Create dist directory
+        run: mkdir -p dist
+      
+      - name: Copy necessary files to package directory
         run: |
-          docker pull $DOCKER_IMAGE
+          cp setup.py package/
+          mkdir -p package/lib/tokenizers
+          cp -r lib/tokenizers/punkt package/lib/tokenizers/
+          cp package/airunner.spec package/
+      
       - name: Build Linux
         run: |
           docker run --rm \
@@ -54,4 +83,12 @@ jobs:
             -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -v $(pwd)/dist:/app/dist \
-            ghcr.io/capsize-games/airunner/airunner:linux bash /app/build.sh
+            -v $(pwd)/package:/app \
+            ${{ env.DOCKER_IMAGE }} bash /app/build.sh
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: airunner-linux
+          path: dist/airunner/
+          retention-days: 7
