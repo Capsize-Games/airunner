@@ -27,6 +27,7 @@
 - [Advanced Features](#advanced-features)
 - [Additional Features](#additional-features)
 - [Missing Features](#missing-features)
+- [User Data Updates](#user-data-updates)
 
 ## Introduction
 
@@ -236,3 +237,24 @@ AI Runner includes advanced memory optimization settings:
 ### Command-line Arguments
 - `--clear-window-settings`: Resets UI settings.
 - `--perform-llm-analysis`: Enables experimental LLM analysis.
+
+---
+
+## User Data Updates
+
+### Overview
+The `conversation.user_data` column has been updated to store concise, one-sentence summaries of user information. This ensures that the data remains relevant and easy to interpret. Additionally, the system avoids updating this column if no meaningful information is available.
+
+### Key Changes
+- **Concise Summaries**: The `conversation.user_data` column now stores brief summaries instead of verbose descriptions.
+- **Update Conditions**: Updates to the column are skipped if no meaningful information is extracted.
+
+### Testing
+To verify these changes, unit tests have been added to ensure:
+1. Concise summaries are correctly stored.
+2. No updates occur when no meaningful information is available.
+
+Run the tests using:
+```bash
+python -m unittest discover -s src/airunner/tests
+```

@@ -63,7 +63,7 @@ class BaseAgent(
     ) -> None:
         self.default_tool_choice: Optional[Union[str, dict]] = default_tool_choice
         self.llm_settings: LLMSettings = llm_settings
-        
+
         self._action: LLMActionType = LLMActionType.NONE
         self._chat_prompt: str = ""
         self._current_tab: Optional[Tab] = None
@@ -90,6 +90,9 @@ class BaseAgent(
         self._complete_response: str = ""
         self._store_user_tool: Optional[FunctionTool] = None
         self._webpage_html: str = ""
+        self.model = None  # Initialize model attribute
+        self.tokenizer = None  # Initialize tokenizer attribute
+
         self.signal_handlers.update({
             SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id
         })
@@ -1174,19 +1177,23 @@ class BaseAgent(
                 ) for message in (messages or [])
             ]
         kwargs = {
-            "input": f"Is there any information we can learn about {self.username} from this conversation?",
+            "input": f"Extract concise, one-sentence summaries of relevant information about {self.username} from this conversation.",
             "chat_history": chat_history
         }
         response = self.update_user_data_tool.call(
             do_not_display=True, 
             **kwargs
         )
-        self.logger.info(f"Updating user with new information")
-        Conversation.objects.update(
-            self.conversation_id,
-            user_data=[response.content] + (conversation.user_data or []),
-        )
-    
+        if response.content.strip():
+            self.logger.info("Updating user with new information")
+            concise_summary = response.content.strip().split("\n")[:5]  # Limit to 5 concise summaries
+            Conversation.objects.update(
+                self.conversation_id,
+                user_data=concise_summary + (self.conversation.user_data or []),
+            )
+        else:
+            self.logger.info("No meaningful information to update.")
+
     def _summarize_conversation(self):
         if (
             not self.llm_settings.perform_conversation_summary or
