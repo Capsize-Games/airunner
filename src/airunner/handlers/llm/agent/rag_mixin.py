@@ -2,6 +2,7 @@ import os
 import time
 from typing import List, Optional, Dict, Set, Tuple
 from functools import lru_cache
+from threading import Thread
 
 from llama_index.core import (
     Document,
@@ -48,8 +49,43 @@ class RAGMixin:
         self._conversations: List[Conversation] = []
         self.__keyword_cache = {}
         self.__last_index_refresh = 0
+        self.__preloaded = False
         self._load_settings()
-    
+        
+        # Start the preloading process in a background thread to avoid blocking
+        Thread(target=self._preload_resources, daemon=True).start()
+
+    def _preload_resources(self):
+        """Preload resources to improve first-search performance."""
+        try:
+            self.logger.info("Preloading resources for faster first search...")
+            start_time = time.time()
+            
+            # Preload embedding model
+            _ = self.embedding
+            
+            # Preload common resources needed for search
+            _ = self.text_splitter
+            
+            # Warm up keyword extraction with common search terms
+            common_terms = [
+                "what is", "how to", "explain", "help me understand",
+                "can you tell me about", "i need information on", 
+                "where can i find", "search for"
+            ]
+            for term in common_terms:
+                _ = self._extract_keywords_from_text(term)
+            
+            # Preload the index and retriever
+            _ = self.index
+            _ = self.retriever
+            
+            elapsed = time.time() - start_time
+            self.logger.info(f"Resources preloaded in {elapsed:.2f} seconds")
+            self.__preloaded = True
+        except Exception as e:
+            self.logger.error(f"Error preloading resources: {str(e)}")
+
     @property
     def rag_system_prompt(self) -> str:
         prompt = (
@@ -363,7 +399,7 @@ class RAGMixin:
 
     @property
     def retriever(self) -> Optional[KeywordTableSimpleRetriever]:
-        """Get retriever with performance logging."""
+        """Get retriever with performance optimizations."""
         if not self.__retriever:
             try:
                 self.logger.debug("Loading retriever...")
@@ -371,9 +407,26 @@ class RAGMixin:
                 index = self.index
                 if not index:
                     raise ValueError("No index found.")
+                
+                # Create a more performant retriever
                 self.retriever = KeywordTableSimpleRetriever(
                     index=index,
+                    # Use a similarity top-k of 2 to balance between speed and quality
+                    similarity_top_k=2
                 )
+                
+                # Pre-warm the retriever with common search patterns
+                if not hasattr(self, "_retriever_warmed_up") or not self._retriever_warmed_up:
+                    warm_up_queries = ["help", "information", "search", "find"]
+                    for query in warm_up_queries:
+                        try:
+                            # Perform a quick retrieval to warm up internal caches
+                            self.__retriever.retrieve(query)
+                        except Exception:
+                            # Ignore errors during warm-up
+                            pass
+                    self._retriever_warmed_up = True
+                
                 elapsed = time.time() - start_time
                 self.logger.debug(f"Retriever loaded successfully with index in {elapsed:.2f} seconds.")
             except Exception as e:
@@ -596,13 +649,20 @@ class RAGMixin:
 
     def _load_settings(self):
         """Load settings with optimized defaults for performance."""
+        # Warm up models and configure for better first-search performance
         Settings.llm = self.llm
-        Settings._embed_model = self.embedding
+        Settings._embed_model = self.embedding  
         Settings.node_parser = self.text_splitter
         Settings.num_output = 512
-        # Slightly smaller context window for better performance
         Settings.context_window = 3072
-    
+        
+        # Use smaller chunk size for better initial response times
+        if not self.__text_splitter:
+            self.text_splitter = SentenceSplitter(
+                chunk_size=192,  # Smaller chunks for faster processing
+                chunk_overlap=15  # Less overlap to reduce processing
+            )
+            
     @staticmethod
     def _unload_settings():
         Settings.llm = None
