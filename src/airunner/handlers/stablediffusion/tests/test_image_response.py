@@ -1,7 +1,6 @@
 import unittest
-from PIL import Image
-from src.airunner.handlers.stablediffusion.image_response import ImageResponse
-from src.airunner.handlers.stablediffusion.rect import Rect
+from airunner.handlers.stablediffusion.image_response import ImageResponse
+from airunner.handlers.stablediffusion.rect import Rect
 
 class TestImageResponse(unittest.TestCase):
     def test_to_dict(self):

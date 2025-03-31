@@ -36,3 +36,5 @@ network_access_attempts.log
 .env*
 processed
 airunner.wiki
+.coverage
+coverage_report.txt
