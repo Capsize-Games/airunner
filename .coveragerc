@@ -11,6 +11,8 @@ omit =
     /*templates/*
     __init__.py
    *_ui.py
+   */windows/*
+   */widgets/*
 
 
 [report]
