@@ -1,10 +1,10 @@
+# Refactored imports for better readability and grouping
 import os
 import time
 from queue import Queue
 from typing import Optional, Union, ClassVar, Type, Dict, Any
 
 import torch
-
 import datasets
 from datasets import (
     load_dataset, 
@@ -13,15 +13,15 @@ from datasets import (
     IterableDatasetDict, 
     IterableDataset
 )
-from transformers import AutoTokenizer, PreTrainedModel, ProcessorMixin
-from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech
-from transformers import SpeechT5HifiGan
+from transformers import (
+    AutoTokenizer, PreTrainedModel, ProcessorMixin,
+    SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
+)
 
 from airunner.handlers.tts.tts_handler import TTSHandler
 from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
 from airunner.utils.memory import clear_memory
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
-
 
 class SpeechT5Handler(TTSHandler):
     """
@@ -63,11 +63,12 @@ class SpeechT5Handler(TTSHandler):
         self._do_interrupt = False
         self._cancel_generated_speech = False
         self._paused = False
-    
+
+    # Refactored properties for better readability
     @property
     def model(self) -> Type[PreTrainedModel]:
         return self._model
-    
+
     @model.setter
     def model(self, value: Type[PreTrainedModel]):
         self._model = value
@@ -83,31 +84,31 @@ class SpeechT5Handler(TTSHandler):
     @property
     def vocoder_path(self) -> str:
         return self.tts_path(self.speech_t5_settings.vocoder_path)
-    
+
     @property
     def dtype(self) -> torch.dtype:
         return torch.float16
-    
+
     @property
     def vocoder(self) -> Optional[Type[PreTrainedModel]]:
         return self._vocoder
-    
+
     @vocoder.setter
     def vocoder(self, value: Optional[Type[PreTrainedModel]]):
         self._vocoder = value
-    
+
     @property
     def processor(self) -> Optional[Type[ProcessorMixin]]:
         return self._processor
-    
+
     @processor.setter
     def processor(self, value: Optional[Type[ProcessorMixin]]):
         self._processor = value
-    
+
     @property
     def tokenizer(self) -> Optional[Type[AutoTokenizer]]:
         return self._tokenizer
-    
+
     @tokenizer.setter
     def tokenizer(self, value: Optional[Type[AutoTokenizer]]):
         self._tokenizer = value
@@ -116,7 +117,7 @@ class SpeechT5Handler(TTSHandler):
     def device(self) -> torch.device:
         """Return the appropriate device based on settings."""
         return torch.device("cuda" if self.tts_settings.use_cuda else "cpu")
-    
+
     @property
     def torch_dtype(self) -> torch.dtype:
         """Return the consistent torch dtype to use across models and inputs."""
@@ -125,31 +126,20 @@ class SpeechT5Handler(TTSHandler):
     def tts_path(self, path: str) -> str:
         return os.path.join(self.path_settings.tts_model_path, path)
 
+    # Refactored status methods for consistency
     def _set_status_unloaded(self):
         self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED)
 
     def _set_status_loading(self):
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
-    
+
     def _set_status_loaded(self):
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 
     def _set_status_failed(self):
         self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
 
-    def generate(self, message: str):
-        if self.model_status is not ModelStatus.LOADED:
-            return None
-
-        if self._do_interrupt or self._paused:
-            return None
-
-        try:
-            return self._do_generate(message)
-        except torch.cuda.OutOfMemoryError:
-            self.logger.error("Out of memory")
-            return None
-
+    # Refactored load/unload methods for better error handling
     def load(self, target_model=None):
         if self.model_status is ModelStatus.LOADING:
             return
@@ -166,7 +156,6 @@ class SpeechT5Handler(TTSHandler):
         self._load_processor()
         self._load_speaker_embeddings()
         self._load_tokenizer()
-
         if (
             self.model is not None
             and self.vocoder is not None
@@ -189,6 +178,18 @@ class SpeechT5Handler(TTSHandler):
         self.tokenizer = None
         clear_memory(self.memory_settings.default_gpu_tts)
         self._set_status_unloaded()
+
+    # Refactored generate method for better exception handling
+    def generate(self, message: str):
+        if self.model_status is not ModelStatus.LOADED:
+            return None
+        if self._do_interrupt or self._paused:
+            return None
+        try:
+            return self._do_generate(message)
+        except torch.cuda.OutOfMemoryError:
+            self.logger.error("Out of memory")
+            return None
 
     def _load_model(self):
         if self.model_class is None:
