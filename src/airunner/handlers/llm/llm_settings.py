@@ -34,8 +34,12 @@ from airunner.settings import (
 
 @dataclass
 class LLMSettings:
+    """
+    Settings for Large Language Model functionality.
+    Contains configuration options for local and API-based LLM usage.
+    """
     use_local_llm: bool = AIRUNNER_LLM_USE_LOCAL
-    use_weather_prompt: bool = AIRUNNER_LLM_USE_WEATHER_PROMPT,
+    use_weather_prompt: bool = AIRUNNER_LLM_USE_WEATHER_PROMPT  # Fixed trailing comma
     update_mood_after_n_turns: int = AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS
     summarize_after_n_turns: int = AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS
     use_openrouter: bool = AIRUNNER_LLM_USE_OPENROUTER
@@ -53,6 +57,12 @@ class LLMSettings:
 
     @property
     def use_api(self) -> bool:
+        """
+        Determines if any API-based LLM services are enabled.
+        
+        Returns:
+            bool: True if either OpenRouter or OpenAI is enabled, False otherwise.
+        """
         return (
             self.use_openrouter or
             self.use_openai
