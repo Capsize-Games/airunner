@@ -409,7 +409,8 @@ class RAGMixin:
                     raise ValueError("No index found.")
                 
                 # Create a more performant retriever
-                self.retriever = KeywordTableSimpleRetriever(
+                # Directly assign to the private member to ensure consistent behavior
+                self.__retriever = KeywordTableSimpleRetriever(
                     index=index,
                     # Use a similarity top-k of 2 to balance between speed and quality
                     similarity_top_k=2
