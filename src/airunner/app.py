@@ -49,7 +49,8 @@ class App(
         self,
         no_splash: bool = False,
         main_window_class: QWindow = None,
-        window_class_params: Optional[Dict] = None
+        window_class_params: Optional[Dict] = None,
+        initialize_gui: bool = True  # New flag to control GUI initialization
     ):
         """
         Initialize the application and run as a GUI application or a socket server.
@@ -60,6 +61,7 @@ class App(
         self.no_splash = no_splash
         self.app = None
         self.splash = None
+        self.initialize_gui = initialize_gui  # Store the flag
 
         """
         Mediator and Settings mixins are initialized here, enabling the application
@@ -69,13 +71,14 @@ class App(
 
         self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
 
-        self.start()
-        self.run_setup_wizard()
+        if self.initialize_gui:
+            self.start()
+            self.run_setup_wizard()
 
-        current_version = version("airunner")
-        if self.do_upgrade(current_version):
-            self.handle_upgrade(current_version)
-        self.run()
+            current_version = version("airunner")
+            if self.do_upgrade(current_version):
+                self.handle_upgrade(current_version)
+            self.run()
     
     def do_upgrade(self, current_version) -> bool:
         current_version_tuple = tuple(map(int, current_version.split(".")))
@@ -151,6 +154,8 @@ class App(
         Conditionally initialize and display the setup wizard.
         :return:
         """
+        if not self.initialize_gui:
+            return  # Skip GUI initialization if the flag is False
         signal.signal(signal.SIGINT, self.signal_handler)
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
         self.app = QApplication([])
@@ -163,6 +168,8 @@ class App(
 
         Override this method to run the application in a different mode.
         """
+        if not self.initialize_gui:
+            return  # Skip running the GUI if the flag is False
         # Continue with application execution
         if not self.no_splash:
             self.splash = self.display_splash_screen(self.app)
