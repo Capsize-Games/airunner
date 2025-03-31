@@ -230,7 +230,8 @@ class BaseManager:
             except Exception as e:
                 logger.error(f"Error in create({args}, {kwargs}): {e}")
             finally:
-                session.expunge(obj)
+                if obj is not None:
+                    session.expunge(obj)
         return obj
 
 
@@ -240,6 +241,13 @@ class BaseModel(Base):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         cls.objects = BaseManager(cls)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        for column in inspect(self).mapper.column_attrs:
+            if column.key not in kwargs:
+                default_value = column.columns[0].default.arg if column.columns[0].default else None
+                setattr(self, column.key, default_value)
     
     def save(self):
         with session_scope() as session:
