@@ -1,3 +1,4 @@
+# Refactored imports for better readability
 from typing import Type, Optional
 from abc import ABCMeta
 import os
@@ -11,12 +12,13 @@ from openvoice.api import OpenVoiceBaseClass, ToneColorConverter
 from melo.api import TTS
 
 from airunner.settings import AIRUNNER_TTS_SPEAKER_RECORDING_PATH
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.handlers.tts.tts_handler import TTSHandler
-from airunner.enums import ModelType, ModelStatus
-
 
 class AvailableLanguage(enum.Enum):
+    """
+    Enum for available languages in OpenVoice.
+    """
     EN_NEWEST = "EN_NEWEST"
     EN = "EN"
     ES = "ES"
@@ -25,8 +27,10 @@ class AvailableLanguage(enum.Enum):
     JP = "JP"
     KR = "KR"
 
-
 class StreamingToneColorConverter(ToneColorConverter):
+    """
+    Streaming implementation of ToneColorConverter.
+    """
     def __init__(self, *args, **kwargs):
         OpenVoiceBaseClass.__init__(self, *args, **kwargs)
         self.version = getattr(self.hps, '_version_', "v1")
@@ -40,8 +44,10 @@ class StreamingToneColorConverter(ToneColorConverter):
         tau=0.3, 
         message="default"
     ):
+        """
+        Convert audio tone color using the specified parameters.
+        """
         hps = self.hps
-        # load audio
         try:
             audio, sample_rate = librosa.load(
                 audio_src_path, 
@@ -50,12 +56,11 @@ class StreamingToneColorConverter(ToneColorConverter):
         except ValueError as e:
             print(f"Error: {e}")
             return None
-        
+
         audio = torch.tensor(audio).float()
-        
+
         with torch.no_grad():
-            y = torch.FloatTensor(audio).to(self.device)
-            y = y.unsqueeze(0)
+            y = torch.FloatTensor(audio).to(self.device).unsqueeze(0)
             spec = spectrogram_torch(
                 y, 
                 hps.data.filter_length,
@@ -63,14 +68,8 @@ class StreamingToneColorConverter(ToneColorConverter):
                 hps.data.hop_length, 
                 hps.data.win_length,
                 center=False
-            ).to(
-                self.device
-            )
-            spec_lengths = torch.LongTensor(
-                [spec.size(-1)]
-            ).to(
-                self.device
-            )
+            ).to(self.device)
+            spec_lengths = torch.LongTensor([spec.size(-1)]).to(self.device)
             audio = self.model.voice_conversion(
                 spec, 
                 spec_lengths, 
@@ -80,13 +79,13 @@ class StreamingToneColorConverter(ToneColorConverter):
             )[0][0, 0].data.cpu().float().numpy()
             return audio
 
-
 class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
+    """
+    OpenVoice-based implementation of the TTSHandler.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        speaker_recording_path = os.path.expanduser(
-            AIRUNNER_TTS_SPEAKER_RECORDING_PATH
-        )
+        speaker_recording_path = os.path.expanduser(AIRUNNER_TTS_SPEAKER_RECORDING_PATH)
         self._checkpoint_converter_path: str = os.path.join(
             self.path_settings.tts_model_path,
             'openvoice/checkpoints_v2/converter'
@@ -109,12 +108,18 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
 
     @property
     def device(self):
+        """
+        Return the appropriate device based on CUDA availability.
+        """
         use_cuda = torch.cuda.is_available()
         card_index = 0
         return f"cuda:{card_index}" if use_cuda else "cpu"
-    
+
     @property
     def tone_color_converter(self) -> StreamingToneColorConverter:
+        """
+        Lazy-load the tone color converter.
+        """
         if not self._tone_color_converter:
             self._tone_color_converter = StreamingToneColorConverter(
                 f'{self._checkpoint_converter_path}/config.json',
@@ -126,12 +131,14 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
         return self._tone_color_converter
 
     def generate(self, message: str):
+        """
+        Generate speech using OpenVoice and apply tone color conversion.
+        """
         speaker_ids = self.model.hps.data.spk2id
-
         for speaker_key in speaker_ids.keys():
             speaker_id = speaker_ids[speaker_key]
             speaker_key = speaker_key.lower().replace('_', '-')
-            
+
             source_se = torch.load(
                 os.path.join(
                     self.path_settings.tts_model_path,
@@ -139,7 +146,7 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
                 ),
                 map_location=self.device
             )
-            
+
             self.model.tts_to_file(
                 message, 
                 speaker_id, 
@@ -147,31 +154,28 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
                 speed=self._speed
             )
 
-            # Run the tone color converter
             output_path = os.path.join(
                 self.path_settings.tts_model_path,
                 f'openvoice/{self._output_dir}/output_v2_{speaker_key}.wav'
             )
 
-            encode_message = "@MyShell"
-            
             response = self.tone_color_converter.convert(
                 audio_src_path=self.src_path, 
                 src_se=source_se, 
                 tgt_se=self._target_se, 
-                output_path=output_path,
-                message=encode_message
+                output_path=output_path
             )
 
             if response is not None:
                 self.emit_signal(
                     SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, 
-                    {
-                        "message": response
-                    }
+                    {"message": response}
                 )
 
     def load(self, _target_model=None):
+        """
+        Load and initialize the OpenVoice model.
+        """
         self.logger.debug("Initializing OpenVoice")
         self.unload()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
@@ -183,22 +187,28 @@ class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 
     def unload(self):
+        """
+        Unload the OpenVoice model and release resources.
+        """
         self.logger.debug("Unloading OpenVoice")
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self.model = None
         self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED)
 
     def unblock_tts_generator_signal(self):
+        """
+        Placeholder for unblocking TTS generator signal.
+        """
         pass
 
     def interrupt_process_signal(self):
+        """
+        Placeholder for interrupting the TTS process.
+        """
         pass
 
     def _initialize(self):
-        vad, vad_utils = torch.hub.load(
-            repo_or_dir='snakers4/silero-vad',
-            model='silero_vad',
-            force_reload=False,
-            onnx=False
-        )
+        """
+        Initialize OpenVoice-specific settings and resources.
+        """
         os.makedirs(self._output_dir, exist_ok=True)
