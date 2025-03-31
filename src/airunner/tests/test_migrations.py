@@ -34,13 +34,13 @@ def setup_database(connection, alembic_config):
     alembic_config.attributes['connection'] = connection
     command.upgrade(alembic_config, 'head')
     yield
-    command.downgrade(alembic_config, '72d9134823cb')
+    command.downgrade(alembic_config, '181e31f78151')
 
 
 def test_migrations_up_down(setup_database, alembic_config):
     # Run migrations up to the latest version
     command.upgrade(alembic_config, 'head')
     # Run migrations down to the specific version
-    command.downgrade(alembic_config, '72d9134823cb')
+    command.downgrade(alembic_config, '181e31f78151')
     # Run migrations up to the latest version again
     command.upgrade(alembic_config, 'head')
