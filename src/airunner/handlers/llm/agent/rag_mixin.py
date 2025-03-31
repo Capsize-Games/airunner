@@ -1,5 +1,8 @@
 import os
-from typing import List, Optional, Dict, Set
+import time
+from typing import List, Optional, Dict, Set, Tuple
+from functools import lru_cache
+from threading import Thread
 
 from llama_index.core import (
     Document,
@@ -44,8 +47,45 @@ class RAGMixin:
         self.__storage_context: Optional[StorageContext] = None
         self._rag_engine_tool: Optional[RAGEngineTool] = None
         self._conversations: List[Conversation] = []
+        self.__keyword_cache = {}
+        self.__last_index_refresh = 0
+        self.__preloaded = False
         self._load_settings()
-    
+        
+        # Start the preloading process in a background thread to avoid blocking
+        Thread(target=self._preload_resources, daemon=True).start()
+
+    def _preload_resources(self):
+        """Preload resources to improve first-search performance."""
+        try:
+            self.logger.info("Preloading resources for faster first search...")
+            start_time = time.time()
+            
+            # Preload embedding model
+            _ = self.embedding
+            
+            # Preload common resources needed for search
+            _ = self.text_splitter
+            
+            # Warm up keyword extraction with common search terms
+            common_terms = [
+                "what is", "how to", "explain", "help me understand",
+                "can you tell me about", "i need information on", 
+                "where can i find", "search for"
+            ]
+            for term in common_terms:
+                _ = self._extract_keywords_from_text(term)
+            
+            # Preload the index and retriever
+            _ = self.index
+            _ = self.retriever
+            
+            elapsed = time.time() - start_time
+            self.logger.info(f"Resources preloaded in {elapsed:.2f} seconds")
+            self.__preloaded = True
+        except Exception as e:
+            self.logger.error(f"Error preloading resources: {str(e)}")
+
     @property
     def rag_system_prompt(self) -> str:
         prompt = (
@@ -207,9 +247,13 @@ class RAGMixin:
 
     @property
     def index(self) -> Optional[RAKEKeywordTableIndex]:
-        loaded_from_documents = False
-        do_save_to_disc = False
+        """Get index with performance improvements for refreshing."""
+        # Only refresh index if it's not already loaded
         if not self.__index:
+            current_time = time.time()
+            loaded_from_documents = False
+            do_save_to_disc = False
+            
             self.logger.debug("Loading index...")
             if self.storage_context:
                 self.logger.debug("Loading from disc...")
@@ -228,7 +272,9 @@ class RAGMixin:
                 loaded_from_documents = True
                 do_save_to_disc = True
             
-            if not loaded_from_documents:
+            # Only refresh if it's been more than 5 minutes since last refresh
+            # This prevents excessive refreshing during multiple searches
+            if not loaded_from_documents and (current_time - self.__last_index_refresh > 300):
                 self.logger.info("Refreshing index...")
                 try:
                     # Get existing document IDs
@@ -244,40 +290,47 @@ class RAGMixin:
                     
                     if new_nodes:
                         self.logger.info(f"Adding {len(new_nodes)} new nodes to index...")
-                        # Store nodes directly in docstore
-                        for node in new_nodes:
-                            # Ensure node has the correct ID
-                            node.id_ = node.node_id
-                            # Add node to docstore
-                            self.__index.docstore.add_documents([node], allow_update=True)
+                        start_time = time.time()
+                        
+                        # Store nodes directly in docstore - batch for performance
+                        self.__index.docstore.add_documents(new_nodes, allow_update=True)
                         
                         # Build keyword table for new nodes
                         new_keywords = {}
                         for node in new_nodes:
-                            # Use RAKE algorithm to extract keywords
-                            extracted = self._extract_keywords_from_text(node.text)
+                            # Use cached version of keyword extraction
+                            node_text = node.text
+                            if node_text in self.__keyword_cache:
+                                extracted = self.__keyword_cache[node_text]
+                            else:
+                                extracted = self._extract_keywords_from_text(node_text)
+                                self.__keyword_cache[node_text] = extracted
+                                
                             for keyword in extracted:
                                 if keyword in new_keywords:
                                     new_keywords[keyword].append(node.node_id)
                                 else:
                                     new_keywords[keyword] = [node.node_id]
                         
-                        # Merge keyword tables
+                        # Merge keyword tables - optimize with bulk operations
                         self.logger.debug("Merging keyword tables...")
                         for keyword, node_ids in new_keywords.items():
                             if keyword in self.__index.index_struct.table:
-                                # Convert to set to deduplicate
+                                # Use set operations for efficiency
                                 existing_ids = set(self.__index.index_struct.table[keyword])
                                 new_ids = set(node_ids)
                                 # Merge and convert back to list
                                 self.__index.index_struct.table[keyword] = list(existing_ids | new_ids)
                             else:
                                 self.__index.index_struct.table[keyword] = node_ids
-
-                        self.logger.info(f"Added {len(new_nodes)} nodes and updated keyword tables")
+                                
+                        elapsed = time.time() - start_time
+                        self.logger.info(f"Added {len(new_nodes)} nodes and updated keyword tables in {elapsed:.2f} seconds")
                         self._save_index_to_disc()
+                        self.__last_index_refresh = current_time
                     else:
                         self.logger.info("No new nodes to add to index.")
+                        self.__last_index_refresh = current_time
                         
                 except Exception as e:
                     self.logger.error(f"Error refreshing index: {str(e)}")
@@ -285,6 +338,8 @@ class RAGMixin:
             
             if self.__index and do_save_to_disc:
                 self._save_index_to_disc()
+                self.__last_index_refresh = current_time
+                
         return self.__index
 
     @staticmethod
@@ -306,27 +361,36 @@ class RAGMixin:
         self.__index = value
 
     @staticmethod
+    @lru_cache(maxsize=1024)
     def _extract_keywords_from_text(text: str) -> Set[str]:
-        """Extract keywords from text using RAKE algorithm."""
-        # Use llama_index's built-in keyword extractor
+        """Extract keywords from text using RAKE algorithm with caching for performance."""
+        # Use llama_index's built-in keyword extractor with caching
         return set(simple_extract_keywords(text))
 
     def _load_index_from_documents(self):
+        """Load index from documents with performance optimizations."""
         self.logger.debug("Loading index from documents...")
+        start_time = time.time()
         try:
+            # Batch process documents for better performance
             self.__index = RAKEKeywordTableIndex.from_documents(
                 self.documents,
-                llm=self.llm
+                llm=self.llm,
+                show_progress=True  # Show progress for better visibility during lengthy operations
             )
-            self.logger.debug("Index loaded successfully.")
+            elapsed = time.time() - start_time
+            self.logger.debug(f"Index loaded successfully in {elapsed:.2f} seconds.")
         except TypeError as e:
             self.logger.error(f"Error loading index: {str(e)}")
     
     def _save_index_to_disc(self):
+        """Save index to disc with performance logging."""
         self.logger.info("Saving index to disc...")
+        start_time = time.time()
         try:
             self.__index.storage_context.persist(persist_dir=self.storage_persist_dir)
-            self.logger.info("Index saved successfully.")
+            elapsed = time.time() - start_time
+            self.logger.info(f"Index saved successfully in {elapsed:.2f} seconds.")
             if self.llm_settings.perform_conversation_rag:
                 self.logger.info("Setting conversations status to indexed...")
                 self._update_conversations_status("indexed")
@@ -335,16 +399,37 @@ class RAGMixin:
 
     @property
     def retriever(self) -> Optional[KeywordTableSimpleRetriever]:
+        """Get retriever with performance optimizations."""
         if not self.__retriever:
             try:
                 self.logger.debug("Loading retriever...")
+                start_time = time.time()
                 index = self.index
                 if not index:
                     raise ValueError("No index found.")
-                self.retriever = KeywordTableSimpleRetriever(
+                
+                # Create a more performant retriever
+                # Directly assign to the private member to ensure consistent behavior
+                self.__retriever = KeywordTableSimpleRetriever(
                     index=index,
+                    # Use a similarity top-k of 2 to balance between speed and quality
+                    similarity_top_k=2
                 )
-                self.logger.debug("Retriever loaded successfully with index.")
+                
+                # Pre-warm the retriever with common search patterns
+                if not hasattr(self, "_retriever_warmed_up") or not self._retriever_warmed_up:
+                    warm_up_queries = ["help", "information", "search", "find"]
+                    for query in warm_up_queries:
+                        try:
+                            # Perform a quick retrieval to warm up internal caches
+                            self.__retriever.retrieve(query)
+                        except Exception:
+                            # Ignore errors during warm-up
+                            pass
+                    self._retriever_warmed_up = True
+                
+                elapsed = time.time() - start_time
+                self.logger.debug(f"Retriever loaded successfully with index in {elapsed:.2f} seconds.")
             except Exception as e:
                 self.logger.error(f"Error setting up the RAG retriever: {str(e)}")
         return self.__retriever
@@ -564,12 +649,21 @@ class RAGMixin:
             self._perform_tool_call("chat_engine_tool", **kwargs)
 
     def _load_settings(self):
+        """Load settings with optimized defaults for performance."""
+        # Warm up models and configure for better first-search performance
         Settings.llm = self.llm
-        Settings._embed_model = self.embedding
+        Settings._embed_model = self.embedding  
         Settings.node_parser = self.text_splitter
         Settings.num_output = 512
-        Settings.context_window = 3900
-    
+        Settings.context_window = 3072
+        
+        # Use smaller chunk size for better initial response times
+        if not self.__text_splitter:
+            self.text_splitter = SentenceSplitter(
+                chunk_size=192,  # Smaller chunks for faster processing
+                chunk_overlap=15  # Less overlap to reduce processing
+            )
+            
     @staticmethod
     def _unload_settings():
         Settings.llm = None
