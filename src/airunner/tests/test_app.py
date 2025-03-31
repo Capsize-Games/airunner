@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock, PropertyMock, mock_open
 import sys
 import signal
 from src.airunner.app import App
+from PySide6 import QtCore
 
 class TestApp(unittest.TestCase):
     def setUp(self):
@@ -59,6 +60,62 @@ class TestApp(unittest.TestCase):
             # Call the signal handler with SIGINT signal
             app.signal_handler(signal.SIGINT, None)
             mock_exit.assert_called_once()
+
+    @patch("src.airunner.app.ApplicationSettings.objects.first", return_value=MagicMock(run_setup_wizard=True))
+    @patch("src.airunner.app.AppInstaller")
+    def test_run_setup_wizard(self, mock_app_installer, mock_app_settings):
+        """Test the run_setup_wizard method."""
+        App.run_setup_wizard()
+        mock_app_installer.assert_called_once()
+
+    @patch("src.airunner.app.QApplication")
+    def test_start_without_gui(self, mock_qapplication):
+        """Test the start method when GUI is disabled."""
+        app = App(initialize_gui=False)
+        app.start()
+        mock_qapplication.assert_not_called()
+
+    @patch("src.airunner.app.QSplashScreen")
+    @patch("src.airunner.app.QApplication")
+    @patch("sys.exit")
+    def test_run_with_splash(self, mock_exit, mock_qapplication, mock_splash_screen):
+        """Test the run method with splash screen enabled."""
+        mock_qapplication.return_value.exec.return_value = 0
+        mock_splash_instance = MagicMock()
+        mock_splash_screen.return_value = mock_splash_instance
+
+        app = App(no_splash=False, initialize_gui=True)
+        app.run()
+
+        mock_splash_screen.assert_called_once()  # Ensure only one splash screen is created
+        mock_splash_instance.show.assert_called_once()  # Ensure the splash screen is shown
+        mock_splash_instance.showMessage.assert_called_once_with(
+            "Loading AI Runner",
+            QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignCenter,
+            QtCore.Qt.GlobalColor.white
+        )
+
+    @patch("src.airunner.app.QSplashScreen.showMessage")
+    def test_update_splash_message(self, mock_show_message):
+        """Test the update_splash_message method."""
+        mock_splash = MagicMock()
+        App.update_splash_message(mock_splash, "Loading...")
+        mock_splash.showMessage.assert_called_once_with(
+            "Loading...",
+            QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignCenter,
+            QtCore.Qt.GlobalColor.white
+        )
+
+    @patch("sys.exit")
+    @patch("src.airunner.app.QApplication")
+    @patch("src.airunner.app.MainWindow")
+    def test_show_main_application(self, mock_main_window, mock_qapplication, mock_exit):
+        """Test the show_main_application method."""
+        app = App(initialize_gui=False)  # Prevent GUI from opening
+        app.splash = mock_qapplication
+        app.show_main_application(app)
+        mock_main_window.assert_not_called()  # Ensure main window is not created
+        mock_qapplication.finish.assert_not_called()  # Ensure splash screen is not finished
 
 if __name__ == "__main__":
     unittest.main()

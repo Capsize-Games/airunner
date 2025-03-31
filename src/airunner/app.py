@@ -165,13 +165,13 @@ class App(
         Run as a GUI application.
         A splash screen is displayed while the application is loading
         and a main window is displayed once the application is ready.
-
         Override this method to run the application in a different mode.
         """
         if not self.initialize_gui:
             return  # Skip running the GUI if the flag is False
-        # Continue with application execution
-        if not self.no_splash:
+
+        # Ensure only one splash screen is created
+        if not self.no_splash and not self.splash:
             self.splash = self.display_splash_screen(self.app)
 
         # Show the main application window
@@ -250,6 +250,9 @@ class App(
         :param splash:
         :return:
         """
+        if not self.initialize_gui:
+            return  # Skip showing the main application window if GUI is disabled
+
         try:
             window = self.main_window_class_(
                 app=self,
@@ -262,8 +265,7 @@ class App(
                 self.splash.finish(None)
             sys.exit(f"""
                 An error occurred while initializing the application.
-                Please report this issue on GitHub or Discord {AIRUNNER_DISCORD_URL}."
-            """)
+                Please report this issue on GitHub or Discord {AIRUNNER_DISCORD_URL}.""")
         app.main_window = window
         if self.splash:
             self.splash.finish(window)
