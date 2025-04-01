@@ -128,7 +128,8 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset theme="document-new"/>
+               <iconset resource="../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/file-plus.svg</normaloff>:/light/icons/feather/light/file-plus.svg</iconset>
               </property>
               <property name="flat">
                <bool>true</bool>
@@ -141,7 +142,8 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset theme="document-open"/>
+               <iconset resource="../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
               </property>
               <property name="flat">
                <bool>true</bool>
@@ -154,7 +156,8 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset theme="document-save"/>
+               <iconset resource="../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/save.svg</normaloff>:/light/icons/feather/light/save.svg</iconset>
               </property>
               <property name="flat">
                <bool>true</bool>
@@ -177,8 +180,8 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources_light.qrc">
-                <normaloff>:/icons/light/circle-center-icon.svg</normaloff>:/icons/light/circle-center-icon.svg</iconset>
+               <iconset resource="../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/target.svg</normaloff>:/light/icons/feather/light/target.svg</iconset>
               </property>
               <property name="flat">
                <bool>true</bool>
@@ -194,8 +197,8 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources_light.qrc">
-                <normaloff>:/icons/light/object-selected-icon.svg</normaloff>:/icons/light/object-selected-icon.svg</iconset>
+               <iconset resource="../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/object-selected-icon.svg</normaloff>:/light/icons/feather/light/object-selected-icon.svg</iconset>
               </property>
               <property name="checkable">
                <bool>true</bool>
@@ -214,8 +217,8 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources_light.qrc">
-                <normaloff>:/icons/light/pencil-icon.svg</normaloff>:/icons/light/pencil-icon.svg</iconset>
+               <iconset resource="../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/pencil-icon.svg</normaloff>:/light/icons/feather/light/pencil-icon.svg</iconset>
               </property>
               <property name="checkable">
                <bool>true</bool>
@@ -234,8 +237,8 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources_light.qrc">
-                <normaloff>:/icons/light/eraser-icon.svg</normaloff>:/icons/light/eraser-icon.svg</iconset>
+               <iconset resource="../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/eraser-icon.svg</normaloff>:/light/icons/feather/light/eraser-icon.svg</iconset>
               </property>
               <property name="checkable">
                <bool>true</bool>
@@ -254,28 +257,8 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources_light.qrc">
-                <normaloff>:/icons/light/frame-grid-icon.svg</normaloff>:/icons/light/frame-grid-icon.svg</iconset>
-              </property>
-              <property name="checkable">
-               <bool>true</bool>
-              </property>
-              <property name="flat">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="actionMask_toggle">
-              <property name="toolTip">
-               <string>Toggle mask</string>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-              <property name="icon">
-               <iconset resource="../../../resources_light.qrc">
-                <normaloff>:/icons/light/layer-icon.svg</normaloff>:/icons/light/layer-icon.svg</iconset>
+               <iconset resource="../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/grid.svg</normaloff>:/light/icons/feather/light/grid.svg</iconset>
               </property>
               <property name="checkable">
                <bool>true</bool>
@@ -298,7 +281,8 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset theme="undo"/>
+               <iconset resource="../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/corner-up-left.svg</normaloff>:/light/icons/feather/light/corner-up-left.svg</iconset>
               </property>
               <property name="flat">
                <bool>true</bool>
@@ -311,7 +295,8 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset theme="redo"/>
+               <iconset resource="../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/corner-up-right.svg</normaloff>:/light/icons/feather/light/corner-up-right.svg</iconset>
               </property>
               <property name="flat">
                <bool>true</bool>
@@ -389,8 +374,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources_dark.qrc"/>
-  <include location="../../../resources_light.qrc"/>
+  <include location="../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
   <connection>
@@ -421,22 +405,6 @@
     </hint>
     <hint type="destinationlabel">
      <x>473</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionMask_toggle</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>canvas</receiver>
-   <slot>action_toggle_mask(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>308</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>228</x>
      <y>0</y>
     </hint>
    </hints>

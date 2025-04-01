@@ -1,5 +1,9 @@
 <RCC>
   <qresource prefix="dark">
+    <file>icons/feather/dark/dice-game-icon.svg</file>
+    <file>icons/feather/dark/eraser-icon.svg</file>
+    <file>icons/feather/dark/object-selected-icon.svg</file>
+    <file>icons/feather/dark/pencil-icon.svg</file>
     <file>icons/feather/dark/activity.svg</file>
     <file>icons/feather/dark/airplay.svg</file>
     <file>icons/feather/dark/alert-circle.svg</file>
@@ -289,6 +293,10 @@
     <file>icons/feather/dark/zoom-out.svg</file>
   </qresource>
   <qresource prefix="light">
+    <file>icons/feather/light/dice-game-icon.svg</file>
+    <file>icons/feather/light/eraser-icon.svg</file>
+    <file>icons/feather/light/object-selected-icon.svg</file>
+    <file>icons/feather/light/pencil-icon.svg</file>
     <file>icons/feather/light/activity.svg</file>
     <file>icons/feather/light/airplay.svg</file>
     <file>icons/feather/light/alert-circle.svg</file>

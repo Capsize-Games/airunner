@@ -328,7 +328,6 @@
     <addaction name="separator"/>
     <addaction name="separator"/>
     <addaction name="actionToggle_Active_Grid_Area"/>
-    <addaction name="actionToggle_Selection"/>
     <addaction name="actionToggle_Brush"/>
     <addaction name="actionToggle_Eraser"/>
     <addaction name="actionToggle_Grid"/>
@@ -667,11 +666,19 @@
    </property>
   </action>
   <action name="actionBug_report">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/external-link.svg</normaloff>:/light/icons/feather/light/external-link.svg</iconset>
+   </property>
    <property name="text">
     <string>Bug report</string>
    </property>
   </action>
   <action name="actionReport_vulnerability">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/external-link.svg</normaloff>:/light/icons/feather/light/external-link.svg</iconset>
+   </property>
    <property name="text">
     <string>Report vulnerability</string>
    </property>
@@ -968,7 +975,7 @@
   <action name="actionBrowse_AI_Runner_Path">
    <property name="icon">
     <iconset resource="../../../gui/resources/feather.qrc">
-     <normaloff>:/light/icons/feather/light/arrow-up-right.svg</normaloff>:/light/icons/feather/light/arrow-up-right.svg</iconset>
+     <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
    </property>
    <property name="text">
     <string>Browse AI Runner Path</string>
@@ -982,7 +989,7 @@
   <action name="actionBrowse_Images_Path_2">
    <property name="icon">
     <iconset resource="../../../gui/resources/feather.qrc">
-     <normaloff>:/light/icons/feather/light/arrow-up-right.svg</normaloff>:/light/icons/feather/light/arrow-up-right.svg</iconset>
+     <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
    </property>
    <property name="text">
     <string>Browse Images</string>
@@ -1286,7 +1293,7 @@
    </property>
    <property name="icon">
     <iconset resource="../../../gui/resources/feather.qrc">
-     <normaloff>:/light/icons/feather/light/move.svg</normaloff>:/light/icons/feather/light/move.svg</iconset>
+     <normaloff>:/light/icons/feather/light/object-selected-icon.svg</normaloff>:/light/icons/feather/light/object-selected-icon.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Active Grid Area</string>
@@ -1297,7 +1304,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources_light.qrc">
+    <iconset>
      <normaloff>:/icons/light/select-svgrepo-com.svg</normaloff>:/icons/light/select-svgrepo-com.svg</iconset>
    </property>
    <property name="text">
@@ -1309,8 +1316,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources_light.qrc">
-     <normaloff>:/icons/light/pencil-icon.svg</normaloff>:/icons/light/pencil-icon.svg</iconset>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/pencil-icon.svg</normaloff>:/light/icons/feather/light/pencil-icon.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Brush</string>
@@ -1321,8 +1328,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources_light.qrc">
-     <normaloff>:/icons/light/frame-grid-icon.svg</normaloff>:/icons/light/frame-grid-icon.svg</iconset>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/grid.svg</normaloff>:/light/icons/feather/light/grid.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Grid</string>
@@ -1330,7 +1337,7 @@
   </action>
   <action name="actionRecenter">
    <property name="icon">
-    <iconset resource="../../../resources_light.qrc">
+    <iconset>
      <normaloff>:/icons/light/circle-center-icon.svg</normaloff>:/icons/light/circle-center-icon.svg</iconset>
    </property>
    <property name="text">
@@ -1342,8 +1349,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources_light.qrc">
-     <normaloff>:/icons/light/eraser-icon.svg</normaloff>:/icons/light/eraser-icon.svg</iconset>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/eraser-icon.svg</normaloff>:/light/icons/feather/light/eraser-icon.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Eraser</string>
@@ -1354,7 +1361,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources_light.qrc">
+    <iconset>
      <normaloff>:/icons/light/layer-icon.svg</normaloff>:/icons/light/layer-icon.svg</iconset>
    </property>
    <property name="text">
@@ -1436,8 +1443,8 @@
   </action>
   <action name="actionImport_image">
    <property name="icon">
-    <iconset resource="../../../resources_light.qrc">
-     <normaloff>:/icons/light/upload-icon.svg</normaloff>:/icons/light/upload-icon.svg</iconset>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/download.svg</normaloff>:/light/icons/feather/light/download.svg</iconset>
    </property>
    <property name="text">
     <string>Import image</string>
@@ -1448,8 +1455,8 @@
   </action>
   <action name="actionExport_image_button">
    <property name="icon">
-    <iconset resource="../../../resources_light.qrc">
-     <normaloff>:/icons/light/download-icon.svg</normaloff>:/icons/light/download-icon.svg</iconset>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/upload.svg</normaloff>:/light/icons/feather/light/upload.svg</iconset>
    </property>
    <property name="text">
     <string>Export image</string>
@@ -1570,6 +1577,10 @@
    </property>
   </action>
   <action name="actionDiscord">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/message-square.svg</normaloff>:/light/icons/feather/light/message-square.svg</iconset>
+   </property>
    <property name="text">
     <string>Discord</string>
    </property>
@@ -1582,6 +1593,10 @@
   <action name="actionCollapse_to_system_tray">
    <property name="checkable">
     <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/x-circle.svg</normaloff>:/light/icons/feather/light/x-circle.svg</iconset>
    </property>
    <property name="text">
     <string>Close to System Tray</string>
@@ -1609,8 +1624,6 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources_light.qrc"/>
-  <include location="../../../resources_dark.qrc"/>
   <include location="../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
