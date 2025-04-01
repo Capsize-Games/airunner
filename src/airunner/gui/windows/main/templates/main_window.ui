@@ -1299,18 +1299,6 @@
     <string>Toggle Active Grid Area</string>
    </property>
   </action>
-  <action name="actionToggle_Selection">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset>
-     <normaloff>:/icons/light/select-svgrepo-com.svg</normaloff>:/icons/light/select-svgrepo-com.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Toggle Selection</string>
-   </property>
-  </action>
   <action name="actionToggle_Brush">
    <property name="checkable">
     <bool>true</bool>
@@ -1335,15 +1323,6 @@
     <string>Toggle Grid</string>
    </property>
   </action>
-  <action name="actionRecenter">
-   <property name="icon">
-    <iconset>
-     <normaloff>:/icons/light/circle-center-icon.svg</normaloff>:/icons/light/circle-center-icon.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Recenter</string>
-   </property>
-  </action>
   <action name="actionToggle_Eraser">
    <property name="checkable">
     <bool>true</bool>
@@ -1354,24 +1333,6 @@
    </property>
    <property name="text">
     <string>Toggle Eraser</string>
-   </property>
-  </action>
-  <action name="actionMask_toggle">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset>
-     <normaloff>:/icons/light/layer-icon.svg</normaloff>:/icons/light/layer-icon.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Mask</string>
-   </property>
-   <property name="toolTip">
-    <string>Toggle Mask</string>
-   </property>
-   <property name="menuRole">
-    <enum>QAction::MenuRole::NoRole</enum>
    </property>
   </action>
   <action name="actionArt">
