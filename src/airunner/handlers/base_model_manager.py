@@ -34,7 +34,7 @@ class CombinedMeta(QObjectMeta, ABCMeta):
     pass
 
 
-class BaseHandler(
+class BaseModelManager(
     MediatorMixin,
     SettingsMixin,
     OptionalQObject,

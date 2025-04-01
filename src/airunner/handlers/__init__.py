@@ -1,20 +1,20 @@
-from airunner.handlers.base_handler import BaseHandler
-from airunner.handlers.llm.llm_handler import LLMHandler
-from airunner.handlers.tts.tts_handler import TTSHandler
-from airunner.handlers.tts.speecht5_handler import SpeechT5Handler
-from airunner.handlers.tts.openvoice_handler import OpenVoiceHandler
-from airunner.handlers.tts.espeak_handler import EspeakHandler
-from airunner.handlers.stt.whisper_handler import WhisperHandler
-from airunner.handlers.stablediffusion.stablediffusion_handler import StableDiffusionHandler
+from airunner.handlers.base_model_manager import BaseModelManager
+from airunner.handlers.llm.llm_model_manager import LLMModelManager
+from airunner.handlers.tts.tts_model_manager import TTSModelManager
+from airunner.handlers.tts.speecht5_model_manager import SpeechT5ModelManager
+from airunner.handlers.tts.openvoice_model_manager import OpenVoiceModelManager
+from airunner.handlers.tts.espeak_model_manager import EspeakModelManager
+from airunner.handlers.stt.whisper_model_manager import WhisperModelManager
+from airunner.handlers.stablediffusion.stable_diffusion_model_manager import StableDiffusionModelManager
 
 
 __all__ = [
-    "BaseHandler",
-    "LLMHandler",
-    "TTSHandler",
-    "SpeechT5Handler",
-    "OpenVoiceHandler",
-    "EspeakHandler",
-    "WhisperHandler",
-    "StableDiffusionHandler",
+    "BaseModelManager",
+    "LLMModelManager",
+    "TTSModelManager",
+    "SpeechT5ModelManager",
+    "OpenVoiceModelManager",
+    "EspeakModelManager",
+    "WhisperModelManager",
+    "StableDiffusionModelManager",
 ]
