@@ -4,7 +4,7 @@ import sys
 import urllib
 import webbrowser
 from functools import partial
-from typing import Dict
+from typing import Dict, Optional
 
 import requests
 from PIL import Image
@@ -95,6 +95,7 @@ from airunner.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.windows.settings.airunner_settings import SettingsWindow
 from airunner.windows.update.update_window import UpdateWindow
 from airunner.plugin_loader import PluginLoader
+from airunner.gui.managers.icon_manager import IconManager
 
 
 class MainWindow(
@@ -120,14 +121,31 @@ class MainWindow(
     ui_class_ = Ui_MainWindow
     _window_title = f"AI Runner"
     icons = [
-        ("pencil-icon", "actionToggle_Brush"),
-        ("eraser-icon", "actionToggle_Eraser"),
-        ("frame-grid-icon", "actionToggle_Grid"),
-        ("circle-center-icon", "actionRecenter"),
-        ("setting-line-icon", "actionSettings"),
-        ("object-selected-icon", "actionToggle_Active_Grid_Area"),
-        ("select-svgrepo-com", "actionToggle_Selection"),
-        ("layer-icon", "actionMask_toggle"),
+        ("settings", "actionSettings"),
+        ("crosshair", "actionToggle_Controlnet"),
+        ("cpu", "actionToggle_LLM"),
+        ("mic", "actionToggle_Speech_to_Text"),
+        ("image", "actionToggle_Stable_Diffusion"),
+        ("image", "menuArt"),
+        ("message-circle", "menuChat"),
+        ("refresh-cw", "actionReset_Settings_2"),
+        ("x-circle", "actionQuit"),
+        ("plus-circle", "artActionNew"),
+        ("upload-icon", "actionImport_image"),
+        ("download-icon", "actionExport_image_button"),
+        ("message-circle", "actionNew_Conversation"),
+        ("trash-2", "actionDelete_conversation"),
+        ("scisscors", "actionCut"),
+        ("copy", "actionCopy"),
+        ("clipboard", "actionPaste"),
+        ("corner-right-down", "actionRotate_90_clockwise"),
+        ("corner-left-down", "actionRotate_90_counter_clockwise"),
+        ("delete", "actionClear_all_prompts"),
+        ("settings", "actionSettings"),
+        ("book-open", "actionPrompt_Browser"),
+        ("arrow-up-right", "actionBrowse_AI_Runner_Path"),
+        ("arrow-up-right", "actionBrowse_Images_Path_2"),
+        ("speaker", "actionToggle_Text_to_Speech"),
     ]
 
     def __init__(
@@ -137,6 +155,7 @@ class MainWindow(
     ):
         self.ui = self.ui_class_()
         
+        self.icon_manager: Optional[IconManager] = None
         self.quitting = False
         self.update_popup = None
         self._document_path = None
@@ -710,12 +729,20 @@ class MainWindow(
         return bash_execute(args[0])
 
     def on_theme_changed_signal(self):
+        self.update_icons()
         self.set_stylesheet()
+    
+    def update_icons(self):
+        theme = "dark" \
+            if self.application_settings.dark_mode_enabled else "light"
+        self.icon_manager.update_icons(theme)
 
     def initialize_ui(self):
         self.logger.debug("Loading UI")
 
         self.ui.setupUi(self)
+
+        self.icon_manager = IconManager(self.icons, self.ui)
 
         if not AIRUNNER_ART_ENABLED:
             self._disable_aiart_gui_elements()
@@ -890,7 +917,7 @@ class MainWindow(
 
         icon = QtGui.QIcon()
         icon.addPixmap(
-            QtGui.QPixmap(f":/icons/{theme}/{icon_name}.svg"),
+            QtGui.QPixmap(f":/{theme}/icons/feather/{theme}/{icon_name}.svg"),
             QtGui.QIcon.Mode.Normal,
             QtGui.QIcon.State.Off)
         getattr(self.ui, widget_name).setIcon(icon)
@@ -1168,12 +1195,7 @@ class MainWindow(
         self._initialize_default_buttons()
         self._initialize_filter_actions()
         self.initialized = True
-        for icon_data in self.icons:
-            self.set_icons(
-                icon_data[0],
-                icon_data[1],
-                "dark" if self.application_settings.dark_mode_enabled else "light"
-            )
+        self.update_icons()
         self.logger.debug("Showing window")
         self._set_keyboard_shortcuts()
 
