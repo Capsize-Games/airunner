@@ -108,6 +108,8 @@ setup(
             "airunner=airunner.main:main",
             "airunner-build-ui=airunner.bin.build_ui:main",
             "airunner-tests=airunner.bin.run_tests:main",
+            "airunner-build=airunner.bin.build:main",
+            "airunner-dev=airunner.bin.run_dev:main",
             "airunner-test-coverage-report=airunner.bin.coverage_report:main",
         ],
     },

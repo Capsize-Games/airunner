@@ -1,0 +1,66 @@
+version: "3.8"
+
+services:
+  airunner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: airunner
+    environment:
+      - DISPLAY=${DISPLAY}
+      - AIRUNNER_ENVIRONMENT=dev
+      - DEV_ENV=1
+      - PYTHONPATH=/app
+      - QT_X11_NO_MITSHM=1
+      - NUMBA_CACHE_DIR=/tmp/numba_cache
+      - DISABLE_TELEMETRY=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${HOME}/.Xauthority:/root/.Xauthority
+      - ./:/app
+      - airunner_data:/root/.cache/airunner
+    # For NVIDIA GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    network_mode: host
+    restart: unless-stopped
+
+  # Add this service for development only - allows hot reloading
+  airunner-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: airunner-dev
+    command: python3 -m airunner.bin.run_dev --debug
+    environment:
+      - DISPLAY=${DISPLAY}
+      - AIRUNNER_ENVIRONMENT=dev
+      - DEV_ENV=1
+      - PYTHONPATH=/app
+      - QT_X11_NO_MITSHM=1
+      - AIRUNNER_DEBUG=1
+      - NUMBA_CACHE_DIR=/tmp/numba_cache
+      - DISABLE_TELEMETRY=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${HOME}/.Xauthority:/root/.Xauthority
+      - ./:/app
+      - airunner_data:/root/.cache/airunner
+    # For NVIDIA GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    network_mode: host
+    profiles: ["dev"]
+
+volumes:
+  airunner_data:
