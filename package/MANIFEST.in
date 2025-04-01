@@ -5,7 +5,7 @@ recursive-include src/airunner/filters **/*
 recursive-include src/airunner/icons **/*
 recursive-include src/airunner/images **/*
 recursive-include src/airunner/styles **/*
-recursive-include src/airunner/widgets **/*.ui
-recursive-include src/airunner/windows **/*.ui
+recursive-include src/airunner/gui/widgets **/*.ui
+recursive-include src/airunner/gui/windows **/*.ui
 recursive-include src/airunner *.qrc
 recursive-include src/airunner *.ini
