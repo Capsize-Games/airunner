@@ -1,12 +1,12 @@
 from abc import ABCMeta
 import pyttsx3
 
-from airunner.handlers.tts.tts_handler import TTSHandler
+from airunner.handlers.tts.tts_model_manager import TTSModelManager
 from airunner.enums import ModelType, ModelStatus, Gender
 
-class EspeakHandler(TTSHandler, metaclass=ABCMeta):
+class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
     """
-    Espeak-based implementation of the TTSHandler.
+    Espeak-based implementation of the TTSModelManager.
     Uses pyttsx3 for text-to-speech generation.
     """
     def __init__(self, *args, **kwargs):

@@ -43,7 +43,7 @@ from transformers import (
     CLIPTextModelWithProjection
 )
 from transformers import BitsAndBytesConfig as TransformersBitsAndBytesConfig
-from airunner.handlers.base_handler import BaseHandler
+from airunner.handlers.base_model_manager import BaseModelManager
 from airunner.data.models import (
     Schedulers, 
     Lora, 
@@ -94,7 +94,7 @@ from airunner.handlers.stablediffusion.rect import Rect
 from diffusers import SchedulerMixin
 
 
-class StableDiffusionHandler(BaseHandler):
+class StableDiffusionModelManager(BaseModelManager):
     def __init__(
         self, 
         model_path: str,

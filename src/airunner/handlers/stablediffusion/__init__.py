@@ -16,8 +16,8 @@ from airunner.handlers.stablediffusion.image_response import (
 from airunner.handlers.stablediffusion.prompt_weight_bridge import (
     PromptWeightBridge
 )
-from airunner.handlers.stablediffusion.stablediffusion_handler import (
-    StableDiffusionHandler
+from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
+    StableDiffusionModelManager
 )
 
 
@@ -28,5 +28,5 @@ __all__ = [
     "DownloadWorker",
     "ImageResponse",
     "PromptWeightBridge",
-    "StableDiffusionHandler",
+    "StableDiffusionModelManager",
 ]

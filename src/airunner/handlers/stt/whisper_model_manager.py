@@ -7,7 +7,7 @@ from transformers.models.whisper.modeling_whisper import WhisperForConditionalGe
 from transformers.models.whisper.processing_whisper import WhisperProcessor
 from transformers.models.whisper.feature_extraction_whisper import WhisperFeatureExtractor
 
-from airunner.handlers.base_handler import BaseHandler
+from airunner.handlers.base_model_manager import BaseModelManager
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.exceptions import NaNException
 from airunner.utils.memory import clear_memory
@@ -17,7 +17,7 @@ from airunner.settings import (
 )
 
 
-class WhisperHandler(BaseHandler):
+class WhisperModelManager(BaseModelManager):
     """
     Handler for the Whisper model from OpenAI.
     """

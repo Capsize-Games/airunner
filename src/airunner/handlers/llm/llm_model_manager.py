@@ -9,7 +9,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
 from llama_index.core.chat_engine.types import AgentChatResponse
 
-from airunner.handlers.base_handler import BaseHandler
+from airunner.handlers.base_model_manager import BaseModelManager
 from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner.settings import (
     AIRUNNER_MAX_SEED, 
@@ -27,7 +27,7 @@ from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
 
 
-class LLMHandler(BaseHandler, TrainingMixin):
+class LLMModelManager(BaseModelManager, TrainingMixin):
     """
     Handler for Large Language Model operations in AI Runner.
     
