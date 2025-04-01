@@ -92,8 +92,6 @@
   </layout>
  </widget>
  <resources>
-  <include location="../../../resources_light.qrc"/>
-  <include location="../../../resources_dark.qrc"/>
   <include location="../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
