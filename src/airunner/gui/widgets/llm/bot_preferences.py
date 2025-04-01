@@ -3,7 +3,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from airunner.data.models import TargetFiles, Chatbot
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, Gender
 from airunner.utils import open_file_path
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.llm.document_widget import DocumentWidget
@@ -45,6 +45,7 @@ class BotPreferencesWidget(BaseWidget):
         self.ui.guardrails_groupbox.setChecked(self.chatbot.use_guardrails)
         self.ui.use_weather_prompt.setChecked(self.chatbot.use_weather_prompt)
         self.ui.use_datetime.setChecked(self.chatbot.use_datetime)
+        self.ui.gender.setCurrentText(self.chatbot.gender)
         self.load_documents()
         self.toggle_signals(self.ui, elements, False)
 
@@ -144,6 +145,15 @@ class BotPreferencesWidget(BaseWidget):
     @Slot(bool)
     def toggle_use_datetime(self, val: bool):
         self.update_chatbot("use_datetime", val)
+    
+    @Slot(str)
+    def gender_changed(self, gender: str):
+        try:
+            gender_enum = Gender[gender.upper()]
+        except KeyError:
+            self.logger.error("Failed to set gender with " + gender)
+            return
+        self.update_chatbot("gender", gender_enum.value)
 
     @Slot()
     def browse_documents(self):
