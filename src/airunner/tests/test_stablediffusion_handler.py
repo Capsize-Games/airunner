@@ -7,7 +7,7 @@ from PIL import Image
 
 from PySide6.QtWidgets import QApplication
 
-from airunner.handlers.stablediffusion.stablediffusion_handler import StableDiffusionHandler
+from airunner.handlers.stablediffusion.stable_diffusion_model_manager import StableDiffusionModelManager
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.enums import ModelStatus, ModelType, HandlerState, SignalCode, EngineResponseCode, GeneratorSection
 
@@ -16,7 +16,7 @@ import airunner.setup_database as setup_database
 # Set test environment variables
 
 
-class TestStableDiffusionHandler(unittest.TestCase):
+class TestStableDiffusionModelManager(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Initialize the QApplication for PySide6
@@ -43,19 +43,19 @@ class TestStableDiffusionHandler(unittest.TestCase):
             ModelType.SCHEDULER: ModelStatus.UNLOADED
         }
         
-        # Create a StableDiffusionHandler instance with mocked dependencies
-        with patch('airunner.handlers.stablediffusion.stablediffusion_handler.torch.Generator') as mock_generator, \
-             patch('airunner.handlers.stablediffusion.stablediffusion_handler.StableDiffusionSafetyChecker') as mock_safety_checker, \
-             patch('airunner.handlers.stablediffusion.stablediffusion_handler.CLIPFeatureExtractor') as mock_feature_extractor, \
-             patch('airunner.handlers.stablediffusion.stablediffusion_handler.ControlNetModel') as mock_controlnet_model, \
-             patch('airunner.handlers.base_handler.BaseHandler.__init__') as mock_base_init, \
-             patch.object(StableDiffusionHandler, 'path_settings_cached', self.mock_path_settings, create=True), \
-             patch.object(StableDiffusionHandler, 'logger', self.mock_logger, create=True):
+        # Create a StableDiffusionModelManager instance with mocked dependencies
+        with patch('airunner.handlers.stablediffusion.stable_diffusion_model_manager.torch.Generator') as mock_generator, \
+             patch('airunner.handlers.stablediffusion.stable_diffusion_model_manager.StableDiffusionSafetyChecker') as mock_safety_checker, \
+             patch('airunner.handlers.stablediffusion.stable_diffusion_model_manager.CLIPFeatureExtractor') as mock_feature_extractor, \
+             patch('airunner.handlers.stablediffusion.stable_diffusion_model_manager.ControlNetModel') as mock_controlnet_model, \
+             patch('airunner.handlers.base_model_manager.BaseModelManager.__init__') as mock_base_init, \
+             patch.object(StableDiffusionModelManager, 'path_settings_cached', self.mock_path_settings, create=True), \
+             patch.object(StableDiffusionModelManager, 'logger', self.mock_logger, create=True):
             
             mock_base_init.return_value = None
             mock_generator.return_value = MagicMock()
             
-            self.handler = StableDiffusionHandler(
+            self.handler = StableDiffusionModelManager(
                 model_path="/test/model/path",
                 model_version="SD 1.5",
                 pipeline="txt2img",
@@ -73,7 +73,7 @@ class TestStableDiffusionHandler(unittest.TestCase):
         self.handler = None
     
     def test_initialization(self):
-        """Test the initialization of StableDiffusionHandler"""
+        """Test the initialization of StableDiffusionModelManager"""
         self.assertEqual(self.handler._model_path, "/test/model/path")
         self.assertEqual(self.handler._model_version, "SD 1.5")
         self.assertEqual(self.handler._pipeline, "txt2img")
@@ -83,7 +83,7 @@ class TestStableDiffusionHandler(unittest.TestCase):
         self.assertEqual(self.handler.model_type, ModelType.SD)
     
     def test_properties(self):
-        """Test the properties of StableDiffusionHandler"""
+        """Test the properties of StableDiffusionModelManager"""
         self.assertEqual(self.handler.model_path, "/test/model/path")
         
         # Test model_status property
@@ -99,7 +99,7 @@ class TestStableDiffusionHandler(unittest.TestCase):
         self.assertEqual(self.handler.version, "SD 1.5")
         
         # Test is_txt2img property
-        with patch.object(StableDiffusionHandler, 'section', new_callable=PropertyMock) as mock_section:
+        with patch.object(StableDiffusionModelManager, 'section', new_callable=PropertyMock) as mock_section:
             mock_section.return_value = GeneratorSection.TXT2IMG
             self.assertTrue(self.handler.is_txt2img)
     
@@ -112,7 +112,7 @@ class TestStableDiffusionHandler(unittest.TestCase):
     def test_load_safety_checker(self):
         """Test the load_safety_checker method"""
         with patch.object(self.handler, '_load_safety_checker') as mock_load, \
-             patch.object(StableDiffusionHandler, 'safety_checker_is_loading', new_callable=PropertyMock) as mock_loading:
+             patch.object(StableDiffusionModelManager, 'safety_checker_is_loading', new_callable=PropertyMock) as mock_loading:
             # Test that it doesn't call _load_safety_checker when safety_checker_is_loading is True
             mock_loading.return_value = True
             self.handler.load_safety_checker()
@@ -127,7 +127,7 @@ class TestStableDiffusionHandler(unittest.TestCase):
     def test_unload_safety_checker(self):
         """Test the unload_safety_checker method"""
         with patch.object(self.handler, '_unload_safety_checker') as mock_unload, \
-             patch.object(StableDiffusionHandler, 'safety_checker_is_loading', new_callable=PropertyMock) as mock_loading:
+             patch.object(StableDiffusionModelManager, 'safety_checker_is_loading', new_callable=PropertyMock) as mock_loading:
             # Test that it doesn't call _unload_safety_checker when safety_checker_is_loading is True
             mock_loading.return_value = True
             self.handler.unload_safety_checker()
@@ -142,8 +142,8 @@ class TestStableDiffusionHandler(unittest.TestCase):
     def test_load_controlnet(self):
         """Test the load_controlnet method"""
         with patch.object(self.handler, '_load_controlnet') as mock_load, \
-             patch.object(StableDiffusionHandler, 'controlnet_enabled', new_callable=PropertyMock) as mock_enabled, \
-             patch.object(StableDiffusionHandler, 'controlnet_is_loading', new_callable=PropertyMock) as mock_loading:
+             patch.object(StableDiffusionModelManager, 'controlnet_enabled', new_callable=PropertyMock) as mock_enabled, \
+             patch.object(StableDiffusionModelManager, 'controlnet_is_loading', new_callable=PropertyMock) as mock_loading:
             # Don't load when controlnet is not enabled
             mock_enabled.return_value = False
             mock_loading.return_value = False
@@ -169,7 +169,7 @@ class TestStableDiffusionHandler(unittest.TestCase):
     def test_unload_controlnet(self):
         """Test the unload_controlnet method"""
         with patch.object(self.handler, '_unload_controlnet') as mock_unload, \
-             patch.object(StableDiffusionHandler, 'controlnet_is_loading', new_callable=PropertyMock) as mock_loading:
+             patch.object(StableDiffusionModelManager, 'controlnet_is_loading', new_callable=PropertyMock) as mock_loading:
             # Test that it doesn't call _unload_controlnet when controlnet_is_loading is True
             mock_loading.return_value = True
             self.handler.unload_controlnet()
@@ -201,15 +201,15 @@ class TestStableDiffusionHandler(unittest.TestCase):
     def test_load(self):
         """Test the load method"""
         # Case 1: Already loading or loaded
-        with patch.object(StableDiffusionHandler, 'sd_is_loading', new_callable=PropertyMock) as mock_is_loading, \
+        with patch.object(StableDiffusionModelManager, 'sd_is_loading', new_callable=PropertyMock) as mock_is_loading, \
              patch.object(self.handler, '_load_safety_checker') as mock_load_safety:
             mock_is_loading.return_value = True
             self.handler.load()
             mock_load_safety.assert_not_called()
         
         # Case 2: Normal load case
-        with patch.object(StableDiffusionHandler, 'sd_is_loading', new_callable=PropertyMock) as mock_is_loading, \
-             patch.object(StableDiffusionHandler, 'sd_is_loaded', new_callable=PropertyMock) as mock_is_loaded, \
+        with patch.object(StableDiffusionModelManager, 'sd_is_loading', new_callable=PropertyMock) as mock_is_loading, \
+             patch.object(StableDiffusionModelManager, 'sd_is_loaded', new_callable=PropertyMock) as mock_is_loaded, \
              patch.object(self.handler, '_load_safety_checker') as mock_load_safety, \
              patch.object(self.handler, '_load_controlnet') as mock_load_controlnet, \
              patch.object(self.handler, '_load_pipe') as mock_load_pipe, \
@@ -241,15 +241,15 @@ class TestStableDiffusionHandler(unittest.TestCase):
     def test_unload(self):
         """Test the unload method"""
         # Case 1: Already unloading or unloaded
-        with patch.object(StableDiffusionHandler, 'sd_is_loading', new_callable=PropertyMock) as mock_is_loading, \
+        with patch.object(StableDiffusionModelManager, 'sd_is_loading', new_callable=PropertyMock) as mock_is_loading, \
              patch.object(self.handler, '_unload_safety_checker') as mock_unload_safety:
             mock_is_loading.return_value = True
             self.handler.unload()
             mock_unload_safety.assert_not_called()
         
         # Case 2: Normal unload case
-        with patch.object(StableDiffusionHandler, 'sd_is_loading', new_callable=PropertyMock) as mock_is_loading, \
-             patch.object(StableDiffusionHandler, 'sd_is_unloaded', new_callable=PropertyMock) as mock_is_unloaded, \
+        with patch.object(StableDiffusionModelManager, 'sd_is_loading', new_callable=PropertyMock) as mock_is_loading, \
+             patch.object(StableDiffusionModelManager, 'sd_is_unloaded', new_callable=PropertyMock) as mock_is_unloaded, \
              patch.object(self.handler, '_unload_safety_checker') as mock_unload_safety, \
              patch.object(self.handler, '_unload_scheduler') as mock_unload_scheduler, \
              patch.object(self.handler, '_unload_controlnet') as mock_unload_controlnet, \
@@ -260,7 +260,7 @@ class TestStableDiffusionHandler(unittest.TestCase):
              patch.object(self.handler, '_unload_deep_cache') as mock_unload_deep_cache, \
              patch.object(self.handler, '_unload_pipe') as mock_unload_pipe, \
              patch.object(self.handler, '_clear_memory_efficient_settings') as mock_clear_settings, \
-             patch('airunner.handlers.stablediffusion.stablediffusion_handler.clear_memory') as mock_clear_memory:
+             patch('airunner.handlers.stablediffusion.stable_diffusion_model_manager.clear_memory') as mock_clear_memory:
              
             mock_is_loading.return_value = False
             mock_is_unloaded.return_value = False
@@ -299,7 +299,7 @@ class TestStableDiffusionHandler(unittest.TestCase):
              patch.object(self.handler, '_generate') as mock_generate, \
              patch.object(self.handler, 'emit_signal') as mock_emit, \
              patch.object(self.handler, 'handle_requested_action') as mock_handle_action, \
-             patch('airunner.handlers.stablediffusion.stablediffusion_handler.clear_memory') as mock_clear_memory:
+             patch('airunner.handlers.stablediffusion.stable_diffusion_model_manager.clear_memory') as mock_clear_memory:
             
             # Setup the current state and mock behavior
             self.handler._current_state = HandlerState.READY
@@ -400,16 +400,16 @@ class TestStableDiffusionHandler(unittest.TestCase):
         test_image = Image.new('RGB', (200, 100), color='red')
         
         # Test case: Image already fits within max dimensions
-        result = StableDiffusionHandler._resize_image(test_image, 300, 200)
+        result = StableDiffusionModelManager._resize_image(test_image, 300, 200)
         self.assertEqual(result.size, (200, 100))
         
         # Test case: Image needs to be resized (landscape orientation)
-        result = StableDiffusionHandler._resize_image(test_image, 100, 200)
+        result = StableDiffusionModelManager._resize_image(test_image, 100, 200)
         self.assertEqual(result.size[0], 100)  # Width should be exactly max_width
         self.assertLess(result.size[1], 100)   # Height should be proportionally smaller
         
         # Test case: Image is None
-        result = StableDiffusionHandler._resize_image(None, 100, 100)
+        result = StableDiffusionModelManager._resize_image(None, 100, 100)
         self.assertIsNone(result)
 
 
