@@ -73,6 +73,7 @@ class Ui_canvas(object):
         self.horizontalLayout_2.setContentsMargins(10, 0, 0, 0)
         self.actionNew = QPushButton(self.widget1)
         self.actionNew.setObjectName(u"actionNew")
+        self.actionNew.setCursor(QCursor(Qt.PointingHandCursor))
         icon = QIcon()
         icon.addFile(u":/light/icons/feather/light/file-plus.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionNew.setIcon(icon)
@@ -82,6 +83,7 @@ class Ui_canvas(object):
 
         self.actionImport = QPushButton(self.widget1)
         self.actionImport.setObjectName(u"actionImport")
+        self.actionImport.setCursor(QCursor(Qt.PointingHandCursor))
         icon1 = QIcon()
         icon1.addFile(u":/light/icons/feather/light/folder.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionImport.setIcon(icon1)
@@ -91,6 +93,7 @@ class Ui_canvas(object):
 
         self.actionExport = QPushButton(self.widget1)
         self.actionExport.setObjectName(u"actionExport")
+        self.actionExport.setCursor(QCursor(Qt.PointingHandCursor))
         icon2 = QIcon()
         icon2.addFile(u":/light/icons/feather/light/save.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionExport.setIcon(icon2)
@@ -107,6 +110,7 @@ class Ui_canvas(object):
 
         self.recenter_Grid_Button = QPushButton(self.widget1)
         self.recenter_Grid_Button.setObjectName(u"recenter_Grid_Button")
+        self.recenter_Grid_Button.setCursor(QCursor(Qt.PointingHandCursor))
         icon3 = QIcon()
         icon3.addFile(u":/light/icons/feather/light/target.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.recenter_Grid_Button.setIcon(icon3)
@@ -116,6 +120,7 @@ class Ui_canvas(object):
 
         self.actionToggle_Active_Grid_Area = QPushButton(self.widget1)
         self.actionToggle_Active_Grid_Area.setObjectName(u"actionToggle_Active_Grid_Area")
+        self.actionToggle_Active_Grid_Area.setCursor(QCursor(Qt.PointingHandCursor))
         icon4 = QIcon()
         icon4.addFile(u":/light/icons/feather/light/object-selected-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionToggle_Active_Grid_Area.setIcon(icon4)
@@ -126,6 +131,7 @@ class Ui_canvas(object):
 
         self.actionToggle_Brush = QPushButton(self.widget1)
         self.actionToggle_Brush.setObjectName(u"actionToggle_Brush")
+        self.actionToggle_Brush.setCursor(QCursor(Qt.PointingHandCursor))
         icon5 = QIcon()
         icon5.addFile(u":/light/icons/feather/light/pencil-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionToggle_Brush.setIcon(icon5)
@@ -136,6 +142,7 @@ class Ui_canvas(object):
 
         self.actionToggle_Eraser = QPushButton(self.widget1)
         self.actionToggle_Eraser.setObjectName(u"actionToggle_Eraser")
+        self.actionToggle_Eraser.setCursor(QCursor(Qt.PointingHandCursor))
         icon6 = QIcon()
         icon6.addFile(u":/light/icons/feather/light/eraser-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionToggle_Eraser.setIcon(icon6)
@@ -146,6 +153,7 @@ class Ui_canvas(object):
 
         self.actionToggle_Grid = QPushButton(self.widget1)
         self.actionToggle_Grid.setObjectName(u"actionToggle_Grid")
+        self.actionToggle_Grid.setCursor(QCursor(Qt.PointingHandCursor))
         icon7 = QIcon()
         icon7.addFile(u":/light/icons/feather/light/grid.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionToggle_Grid.setIcon(icon7)
@@ -163,6 +171,7 @@ class Ui_canvas(object):
 
         self.actionUndo = QPushButton(self.widget1)
         self.actionUndo.setObjectName(u"actionUndo")
+        self.actionUndo.setCursor(QCursor(Qt.PointingHandCursor))
         icon8 = QIcon()
         icon8.addFile(u":/light/icons/feather/light/corner-up-left.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionUndo.setIcon(icon8)
@@ -172,6 +181,7 @@ class Ui_canvas(object):
 
         self.actionRedo = QPushButton(self.widget1)
         self.actionRedo.setObjectName(u"actionRedo")
+        self.actionRedo.setCursor(QCursor(Qt.PointingHandCursor))
         icon9 = QIcon()
         icon9.addFile(u":/light/icons/feather/light/corner-up-right.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionRedo.setIcon(icon9)
