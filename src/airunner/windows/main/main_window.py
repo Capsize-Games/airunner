@@ -67,7 +67,7 @@ from airunner.enums import (
     StableDiffusionVersion,
 )
 from airunner.mediator_mixin import MediatorMixin
-from airunner.styles_mixin import StylesMixin
+from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.workers import (
     AudioCaptureWorker,
     AudioProcessorWorker,
