@@ -129,10 +129,10 @@ class TestScanPathForItems(unittest.TestCase):
         mock_db.session.query.return_value.all.return_value = [existing_lora]
         mock_db.get_lora_by_name.return_value = existing_lora
         mock_settings_mixin.return_value = mock_db
-        
+
         # Run the scan
         result = scan_path_for_lora(self.base_path)
-        
+
         # Verify a new Lora was added (since path changed)
         self.assertTrue(result)
         mock_db.session.add.assert_called_once()
