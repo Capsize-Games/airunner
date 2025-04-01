@@ -3,7 +3,7 @@ from typing import Optional
 from PySide6.QtCore import Qt, QPoint, QTimer
 from PySide6.QtCore import Slot
 
-from airunner.cursors.circle_brush import circle_cursor
+from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas

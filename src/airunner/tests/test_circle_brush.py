@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPainter, QPixmap, QCursor, QPen, QBrush
 from PySide6.QtWidgets import QApplication
 
-from airunner.cursors.circle_brush import circle_cursor
+from airunner.gui.cursors.circle_brush import circle_cursor
 
 
 class TestCircleBrush(unittest.TestCase):
@@ -43,9 +43,9 @@ class TestCircleBrush(unittest.TestCase):
         self.assertEqual(pixmap.width(), 64)
         self.assertEqual(pixmap.height(), 64)
 
-    @patch('airunner.cursors.circle_brush.QPainter')
-    @patch('airunner.cursors.circle_brush.QPixmap')
-    @patch('airunner.cursors.circle_brush.QCursor')
+    @patch('airunner.gui.cursors.circle_brush.QPainter')
+    @patch('airunner.gui.cursors.circle_brush.QPixmap')
+    @patch('airunner.gui.cursors.circle_brush.QCursor')
     def test_circle_cursor_drawing_operations(self, mock_qcursor, mock_qpixmap, mock_qpainter):
         """Test that drawing operations are performed correctly."""
         # Set up mocks
