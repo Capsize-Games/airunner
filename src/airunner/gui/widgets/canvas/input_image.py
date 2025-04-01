@@ -18,7 +18,7 @@ from airunner.gui.widgets.canvas.templates.input_image_ui import Ui_input_image
 
 class InputImage(BaseWidget):
     widget_class_ = Ui_input_image
-    items = [
+    icons = [
         ("link", "link_to_grid_image_button"),
         ("lock", "lock_input_image_button"),
         ("refresh-ccw", "refresh_button"),
