@@ -918,6 +918,7 @@ class MainWindow(
         self.emit_signal(SignalCode.QUIT_APPLICATION)
     
     def handle_quit_application_signal(self):
+        self.hide()
         QApplication.quit()
         self.close()
 
