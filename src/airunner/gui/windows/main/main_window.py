@@ -1248,11 +1248,6 @@ class MainWindow(
             self.ui.actionToggle_Active_Grid_Area.setShortcut(key_sequence)
             self.ui.actionToggle_Active_Grid_Area.setToolTip(f"{move_tool_key.display_name} ({move_tool_key.text})")
 
-        if select_tool_key is not None:
-            key_sequence = QKeySequence(select_tool_key.key | select_tool_key.modifiers)
-            self.ui.actionToggle_Selection.setShortcut(key_sequence)
-            self.ui.actionToggle_Selection.setToolTip(f"{select_tool_key.display_name} ({select_tool_key.text})")
-
     def _initialize_workers(self):
         self.logger.debug("Initializing worker manager")
         self._mask_generator_worker = create_worker(MaskGeneratorWorker)
