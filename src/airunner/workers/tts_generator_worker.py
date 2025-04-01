@@ -8,9 +8,9 @@ from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
 from airunner.workers.worker import Worker
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers import (
-    SpeechT5Handler,
-    EspeakHandler,
-    OpenVoiceHandler,
+    SpeechT5ModelManager,
+    EspeakModelManager,
+    OpenVoiceModelManager,
 )
 from airunner.settings import AIRUNNER_TTS_ON
 
@@ -33,7 +33,7 @@ class TTSGeneratorWorker(Worker):
             SignalCode.TTS_ENABLE_SIGNAL: self.on_enable_tts_signal,
             SignalCode.TTS_DISABLE_SIGNAL: self.on_disable_tts_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_llm_text_streamed_signal,
-            SignalCode.TTS_MODEL_CHANGED: self._reload_tts_handler,
+            SignalCode.TTS_MODEL_CHANGED: self._reload_tts_model_manager,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
         }
         super().__init__()
@@ -100,34 +100,34 @@ class TTSGeneratorWorker(Worker):
             thread.start()
 
     def start_worker_thread(self):
-        self._initialize_tts_handler()
+        self._initialize_tts_model_manager()
         if self.tts_enabled:
             self._load_tts()
 
-    def _reload_tts_handler(self, data: dict):
+    def _reload_tts_model_manager(self, data: dict):
         self.logger.info("Reloading TTS handler...")
         self.logger.info(f"Current model: {self._current_model} | New model: {data['model']}")
         if self._current_model != data["model"]:
             self._current_model = data["model"]
             self.tts.unload()
-            self._initialize_tts_handler()
+            self._initialize_tts_model_manager()
             self._load_tts()
 
     def on_application_settings_changed_signal(self, data):
         if data and data.get("setting_name", "") == "speech_t5_settings" and data.get("column_name", "") == "voice":
             self.tts.reload_speaker_embeddings()
 
-    def _initialize_tts_handler(self):
+    def _initialize_tts_model_manager(self):
         self.logger.info("Initializing TTS handler...")
         model = AIRUNNER_TTS_MODEL_TYPE or self.tts_settings.model
         model_type = TTSModel(model.lower())
         if model_type is TTSModel.ESPEAK:
-            tts_handler_class_ = EspeakHandler
+            tts_model_manager_class_ = EspeakModelManager
         elif model_type is TTSModel.OPENVOICE:
-            tts_handler_class_ = OpenVoiceHandler
+            tts_model_manager_class_ = OpenVoiceModelManager
         else:
-            tts_handler_class_ = SpeechT5Handler
-        self.tts = tts_handler_class_()
+            tts_model_manager_class_ = SpeechT5ModelManager
+        self.tts = tts_model_manager_class_()
 
     def add_to_queue(self, message):
         if self.do_interrupt:
@@ -199,7 +199,7 @@ class TTSGeneratorWorker(Worker):
 
     def load(self):
         if not self.tts:
-            self._initialize_tts_handler()
+            self._initialize_tts_model_manager()
         self._load_tts()
 
     def unload(self):

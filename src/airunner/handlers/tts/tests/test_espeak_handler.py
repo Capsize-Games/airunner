@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import MagicMock
-from airunner.handlers.tts.espeak_handler import EspeakHandler
+from airunner.handlers.tts.espeak_model_manager import EspeakModelManager
 
-class TestEspeakHandler(unittest.TestCase):
+class TestEspeakModelManager(unittest.TestCase):
     def setUp(self):
         self.mock_settings = MagicMock()
         self.mock_settings.rate = 150
@@ -12,7 +12,7 @@ class TestEspeakHandler(unittest.TestCase):
         self.mock_settings.language = "en"
         self.mock_settings.gender = "male"
 
-        self.handler = EspeakHandler(
+        self.handler = EspeakModelManager(
             espeak_settings=self.mock_settings,
             path_settings=MagicMock()
         )
