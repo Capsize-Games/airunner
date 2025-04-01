@@ -17,8 +17,6 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QGridLayout, QLabel, QLineEdit,
     QPushButton, QSizePolicy, QWidget)
-import airunner.resources_light_rc
-import airunner.resources_dark_rc
 import airunner.feather_rc
 
 class Ui_seed_widget(object):
