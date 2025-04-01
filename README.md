@@ -95,7 +95,7 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 - OS: Linux or Windows
 - Processor: Intel i5 or equivalent
 - Memory: 16 GB RAM
-- Graphics: 2080s RTX or higher
+- Graphics: 3060 RTX
 - Network: Broadband Internet connection required for setup
 - Storage: 130 GB available space
 
