@@ -1,6 +1,6 @@
-from airunner.handlers.stt.whisper_handler import WhisperHandler
+from airunner.handlers.stt.whisper_model_manager import WhisperModelManager
 
 
 __all__ = [
-    "WhisperHandler",
+    "WhisperModelManager",
 ]

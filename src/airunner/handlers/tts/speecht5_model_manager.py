@@ -18,14 +18,14 @@ from transformers import (
     SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 )
 
-from airunner.handlers.tts.tts_handler import TTSHandler
+from airunner.handlers.tts.tts_model_manager import TTSModelManager
 from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
 from airunner.utils.memory import clear_memory
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 
-class SpeechT5Handler(TTSHandler):
+class SpeechT5ModelManager(TTSModelManager):
     """
-    SpeechT5 implementation of the TTSHandler.
+    SpeechT5 implementation of the TTSModelManager.
     Uses the SpeechT5ForTextToSpeech model and SpeechT5Processor.
     """
     target_model: ClassVar[str] = "microsoft/speecht5_tts"
