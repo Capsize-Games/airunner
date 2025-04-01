@@ -25,7 +25,7 @@ from airunner.utils import create_worker
 from airunner.windows.main.ai_model_mixin import AIModelMixin
 from airunner.windows.main.pipeline_mixin import PipelineMixin
 from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.styles_mixin import StylesMixin
+from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.mediator_mixin import MediatorMixin
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.api import API
