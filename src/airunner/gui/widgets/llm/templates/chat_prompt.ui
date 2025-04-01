@@ -120,7 +120,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="clear_conversatiion_button">
+      <widget class="QPushButton" name="clear_conversation_button">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
          <horstretch>0</horstretch>
@@ -387,7 +387,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>clear_conversatiion_button</sender>
+   <sender>clear_conversation_button</sender>
    <signal>clicked()</signal>
    <receiver>chat_prompt</receiver>
    <slot>action_button_clicked_clear_conversation()</slot>
