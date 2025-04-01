@@ -69,7 +69,7 @@ To call the function (from any class):
 ## Widgets, Templates, and Resources (Icons)
 
 ### Widgets
-Widgets are stored under `src/airunner/widgets`. Each widget has a `templates` 
+Widgets are stored under `src/airunner/gui/widgets`. Each widget has a `templates` 
 directory which contains template files for the widget (see below for more information).
 - Widgets all extend from `BaseWidget`.
 - Classes are named `ExampleWidget` where `Example` is the name of the widget and `Widget` is the suffix.

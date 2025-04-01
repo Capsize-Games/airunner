@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>llm_widget</class>
+ <widget class="QWidget" name="llm_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>622</width>
+    <height>974</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="chat">
+      <attribute name="icon">
+       <iconset theme="user-available">
+        <normaloff>../../../</normaloff>../../../</iconset>
+      </attribute>
+      <attribute name="title">
+       <string>Chat</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_8">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="ChatPromptWidget" name="chat_prompt_widget" native="true"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="preferences">
+      <attribute name="icon">
+       <iconset theme="preferences-desktop">
+        <normaloff>../../../</normaloff>../../../</iconset>
+      </attribute>
+      <attribute name="title">
+       <string>Preferences</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="LLMPreferencesWidget" name="llm_preferences_widget" native="true"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="settings">
+      <attribute name="icon">
+       <iconset theme="preferences-other">
+        <normaloff>../../../</normaloff>../../../</iconset>
+      </attribute>
+      <attribute name="title">
+       <string>Settings</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_5">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="LLMSettingsWidget" name="llm_settings_widget" native="true"/>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ChatPromptWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/llm/chat_prompt_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LLMSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/llm/llm_settings_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LLMPreferencesWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/llm/llm_preferences_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+ <slots>
+  <slot>prompt_text_changed(QString)</slot>
+  <slot>botname_text_changed(QString)</slot>
+  <slot>username_text_changed(QString)</slot>
+  <slot>model_version_changed(QString)</slot>
+  <slot>random_seed_toggled(bool)</slot>
+  <slot>response_text_changed(QString)</slot>
+  <slot>seed_changed(QString)</slot>
+  <slot>suffix_text_changed()</slot>
+  <slot>prefix_text_changed()</slot>
+  <slot>action_button_clicked_send()</slot>
+  <slot>action_button_clicked_generate_characters()</slot>
+  <slot>action_button_clicked_clear_conversation()</slot>
+  <slot>message_type_text_changed(QString)</slot>
+  <slot>personality_type_changed(QString)</slot>
+  <slot>toggled_4bit(bool)</slot>
+  <slot>toggled_8bit(bool)</slot>
+  <slot>toggled_16bit(bool)</slot>
+  <slot>toggled_32bit(bool)</slot>
+  <slot>do_sample_toggled(bool)</slot>
+  <slot>early_stopping_toggled(bool)</slot>
+  <slot>model_text_changed(QString)</slot>
+  <slot>reset_settings_to_default_clicked()</slot>
+  <slot>use_gpu_toggled(bool)</slot>
+  <slot>override_parameters_toggled(bool)</slot>
+  <slot>toggled_2bit(bool)</slot>
+  <slot>toggle_leave_model_in_vram(bool)</slot>
+  <slot>toggle_unload_model(bool)</slot>
+  <slot>toggle_move_model_to_cpu(bool)</slot>
+  <slot>prompt_template_text_changed(QString)</slot>
+ </slots>
+</ui>
