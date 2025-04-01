@@ -17,9 +17,9 @@ except ImportError:
         pass
 
 from airunner.enums import HandlerType, SignalCode, ModelType, ModelStatus, ModelAction
-from airunner.mediator_mixin import MediatorMixin
+from airunner.utils.mediator_mixin import MediatorMixin
 from airunner.utils import get_torch_device
-from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.settings import (
     AIRUNNER_MEM_LLM_DEVICE, 
     AIRUNNER_MEM_SD_DEVICE,

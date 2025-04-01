@@ -2,8 +2,8 @@ from typing import Callable
 from PySide6.QtCore import QObject, QThread, Signal
 from airunner.handlers.stablediffusion import DownloadWorker
 from airunner.enums import SignalCode
-from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
 
 
 class HuggingfaceDownloader(
