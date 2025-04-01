@@ -17,21 +17,25 @@ from airunner.workers import (
 )
 from airunner.setup_database import setup_database
 from airunner.utils import create_worker
-from airunner.ui_dispatcher import render_ui_from_spec
+from airunner.gui.utils.ui_dispatcher import render_ui_from_spec
 from airunner.utils.ui_loader import load_ui_file, load_ui_from_string
 from PySide6.QtWidgets import QMainWindow, QDialog, QVBoxLayout
 from PySide6.QtCore import QObject
 
 class API(App):
     def __init__(self, *args, **kwargs):
-        setup_database()
-        self.model_scanner_worker = create_worker(ModelScannerWorker)
-        self.model_scanner_worker.add_to_queue("scan_for_models")
+        # Extract the initialize_app flag and pass the rest to the parent App class
+        self._initialize_app = kwargs.pop('initialize_app', True)
+        initialize_gui = kwargs.pop('initialize_gui', True)
+        if self._initialize_app:
+            setup_database()
+            self.model_scanner_worker = create_worker(ModelScannerWorker)
+            self.model_scanner_worker.add_to_queue("scan_for_models")
         self.signal_handlers = {
             SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
             SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL: self.show_dynamic_ui_from_string,
         }
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
 
     def send_llm_request(
         self, 

@@ -49,7 +49,8 @@ class App(
         self,
         no_splash: bool = False,
         main_window_class: QWindow = None,
-        window_class_params: Optional[Dict] = None
+        window_class_params: Optional[Dict] = None,
+        initialize_gui: bool = True  # New flag to control GUI initialization
     ):
         """
         Initialize the application and run as a GUI application or a socket server.
@@ -60,6 +61,7 @@ class App(
         self.no_splash = no_splash
         self.app = None
         self.splash = None
+        self.initialize_gui = initialize_gui  # Store the flag
 
         """
         Mediator and Settings mixins are initialized here, enabling the application
@@ -69,13 +71,14 @@ class App(
 
         self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
 
-        self.start()
-        self.run_setup_wizard()
+        if self.initialize_gui:
+            self.start()
+            self.run_setup_wizard()
 
-        current_version = version("airunner")
-        if self.do_upgrade(current_version):
-            self.handle_upgrade(current_version)
-        self.run()
+            current_version = version("airunner")
+            if self.do_upgrade(current_version):
+                self.handle_upgrade(current_version)
+            self.run()
     
     def do_upgrade(self, current_version) -> bool:
         current_version_tuple = tuple(map(int, current_version.split(".")))
@@ -151,6 +154,8 @@ class App(
         Conditionally initialize and display the setup wizard.
         :return:
         """
+        if not self.initialize_gui:
+            return  # Skip GUI initialization if the flag is False
         signal.signal(signal.SIGINT, self.signal_handler)
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
         self.app = QApplication([])
@@ -160,11 +165,13 @@ class App(
         Run as a GUI application.
         A splash screen is displayed while the application is loading
         and a main window is displayed once the application is ready.
-
         Override this method to run the application in a different mode.
         """
-        # Continue with application execution
-        if not self.no_splash:
+        if not self.initialize_gui:
+            return  # Skip running the GUI if the flag is False
+
+        # Ensure only one splash screen is created
+        if not self.no_splash and not self.splash:
             self.splash = self.display_splash_screen(self.app)
 
         # Show the main application window
@@ -213,7 +220,7 @@ class App(
             screen = screens[0]
 
         base_dir = Path(os.path.dirname(os.path.realpath(__file__)))
-        stylesheet_path = base_dir / "images" / "splashscreen.png"
+        stylesheet_path = base_dir / "gui" / "images" / "splashscreen.png"
         pixmap = QPixmap(stylesheet_path)
         splash = QSplashScreen(
             screen,
@@ -243,6 +250,9 @@ class App(
         :param splash:
         :return:
         """
+        if not self.initialize_gui:
+            return  # Skip showing the main application window if GUI is disabled
+
         try:
             window = self.main_window_class_(
                 app=self,
@@ -255,8 +265,7 @@ class App(
                 self.splash.finish(None)
             sys.exit(f"""
                 An error occurred while initializing the application.
-                Please report this issue on GitHub or Discord {AIRUNNER_DISCORD_URL}."
-            """)
+                Please report this issue on GitHub or Discord {AIRUNNER_DISCORD_URL}.""")
         app.main_window = window
         if self.splash:
             self.splash.finish(window)
