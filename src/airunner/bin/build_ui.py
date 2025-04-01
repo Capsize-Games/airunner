@@ -14,7 +14,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from airunner.process_qss import generate_resources
+from airunner.bin.process_qss import generate_resources
 
 
 def adjust_resource_imports(input_file, output_file):

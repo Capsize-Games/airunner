@@ -3,7 +3,7 @@ from typing import Optional
 from PySide6.QtCore import Qt, QPoint, QTimer
 from PySide6.QtCore import Slot
 
-from airunner.cursors.circle_brush import circle_cursor
+from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.canvas.templates.canvas_ui import Ui_canvas
@@ -23,12 +23,16 @@ class CanvasWidget(
     """
     widget_class_ = Ui_canvas
     icons = [
-        ("circle-center-icon", "recenter_Grid_Button"),
+        ("file-plus", "actionNew"),
+        ("folder", "actionImport"),
+        ("save", "actionExport"),
+        ("target", "recenter_Grid_Button"),
         ("object-selected-icon", "actionToggle_Active_Grid_Area"),
         ("pencil-icon", "actionToggle_Brush"),
         ("eraser-icon", "actionToggle_Eraser"),
-        ("frame-grid-icon", "actionToggle_Grid"),
-        ("layer-icon", "actionMask_toggle"),
+        ("grid", "actionToggle_Grid"),
+        ("corner-up-left", "actionUndo"),
+        ("corner-up-right", "actionRedo"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -67,7 +71,6 @@ class CanvasWidget(
         set_widget_state(self.ui.actionToggle_Brush, current_tool is CanvasToolName.BRUSH)
         set_widget_state(self.ui.actionToggle_Eraser, current_tool is CanvasToolName.ERASER)
         set_widget_state(self.ui.actionToggle_Grid, show_grid is True)
-        set_widget_state(self.ui.actionMask_toggle, self.drawing_pad_settings.mask_layer_enabled is True)
 
     @property
     def current_tool(self):

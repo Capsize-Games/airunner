@@ -15,6 +15,7 @@ from airunner.utils.widgets import (
     load_splitter_settings
 )
 from airunner.enums import SignalCode
+from airunner.gui.managers.icon_manager import IconManager
 
 
 class BaseABCMeta(type(QWidget), ABCMeta):
@@ -51,6 +52,7 @@ class BaseWidget(AbstractBaseWidget):
     _splitters: List[str] = []
 
     def __init__(self, *args, **kwargs):
+        self.icon_manager: Optional[IconManager] = None
         self.signal_handlers = self.signal_handlers or {}
         self.signal_handlers.update({
             SignalCode.QUIT_APPLICATION: self.handle_close
@@ -60,6 +62,7 @@ class BaseWidget(AbstractBaseWidget):
             self.ui = self.widget_class_()
         if self.ui:
             self.ui.setupUi(self)
+            self.icon_manager = IconManager(self.icons, self.ui)
             self.set_icons()
 
         self.services: Dict = {}
@@ -153,15 +156,7 @@ class BaseWidget(AbstractBaseWidget):
         light and dark mode.
         """
         theme = "dark" if self.is_dark else "light"
-        for icon_data in self.icons:
-            icon_name = icon_data[0]
-            widget_name = icon_data[1]
-            icon = QtGui.QIcon()
-            icon.addPixmap(
-                QtGui.QPixmap(f":/icons/{theme}/{icon_name}.svg"),
-                QtGui.QIcon.Mode.Normal,
-                QtGui.QIcon.State.Off)
-            getattr(self.ui, widget_name).setIcon(icon)
+        self.icon_manager.update_icons(theme)
         self.update()
 
     def set_button_icon(self, is_dark, button_name, icon):

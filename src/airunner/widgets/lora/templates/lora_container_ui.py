@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGridLayout,
 
 from airunner.widgets.llm.loading_widget import LoadingWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
-import airunner.resources_light_rc
 
 class Ui_lora_container(object):
     def setupUi(self, lora_container):
@@ -49,7 +48,7 @@ class Ui_lora_container(object):
         self.lora_scroll_area.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 583, 665))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 583, 672))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setHorizontalSpacing(0)
