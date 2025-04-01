@@ -89,7 +89,7 @@ QCheckBox:indicator {
 QCheckBox:indicator:checked {
     background-color: rgba(0, 132, 185, 255);
     border-color: rgba(0, 132, 185, 255);
-    image: url(:/icons/light/check-mark-icon.svg);
+    image: url(:/light/icons/feather/light/check.svg);
     width: 12px;
     height: 12px;
 }
@@ -368,7 +368,7 @@ QRadioButton::indicator {
 QRadioButton::indicator:checked {
     background-color: rgba(0, 132, 185, 255);
     border-color: rgba(0, 132, 185, 255);
-    image: url(:/icons/light/check-mark-icon.svg);
+    image: url(:/light/icons/feather/light/check.svg);
     width: 12px;
     height: 12px;
 }
@@ -405,7 +405,7 @@ QGroupBox::indicator {
 QGroupBox::indicator:checked {
     background-color: rgba(0, 132, 185, 255);
     border-color: rgba(0, 132, 185, 255);
-    image: url(:/icons/light/check-mark-icon.svg);
+    image: url(:/light/icons/feather/light/check.svg);
 }
 
 QWidget:disabled {
@@ -457,7 +457,7 @@ QTreeView::indicator {
 QTreeView::indicator:checked {
     background-color: rgba(0, 132, 185, 255);
     border-color: rgba(0, 132, 185, 255);
-    image: url(:/icons/light/check-mark-icon.svg);
+    image: url(:/light/icons/feather/light/check.svg);
     width: 12px;
     height: 12px;
 }

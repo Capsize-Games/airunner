@@ -41,14 +41,6 @@ It has been optimized for speed and efficiency, allowing you to generate images 
 
 ![images/img.png](images/img.png)
 
-## Drawing tools
-
-![images/drawing_tools.png](images/drawing_tools.png)
-
-## Image filters
-
-![images/image_filter.png](images/image_filter.png)
-
 ## Customizable Chatbots with Moods and Personalities
 
 ![images/img_1.png](images/img_1.png)
@@ -201,6 +193,9 @@ AI Runner includes advanced memory optimization settings:
 - **TF32 Mode**: Faster matrix multiplications on Ampere architecture with slightly reduced precision.
 - **VAE Slicing**: Enables decoding large batches of images with limited VRAM.
 - **Attention Slicing**: Reduces VRAM usage with a slight impact on inference speed.
+- **Torch 2.0 Optimization**: Leverages Torch 2.0 for improved performance.
+- **Sequential CPU Offload**: Offloads weights to CPU for memory savings during forward passes.
+- **ToMe Token Merging**: Merges redundant tokens for faster inference with slight image quality impact.
 
 ### Experimental Features
 - **Weather-based Chatbot Prompts**: Integrates weather data into chatbot conversations using the Open-Meteo API.
@@ -210,51 +205,16 @@ AI Runner includes advanced memory optimization settings:
 - **NSFW Content Detection**: Configurable safety checker for image generation.
 - **Customizable Guardrails**: Default prompts to ensure ethical and safe AI interactions.
 
----
-
-## Additional Features
-
-### Memory Optimization
-- **Sequential CPU Offload**: Offloads weights to CPU for memory savings during forward passes.
-- **ToMe Token Merging**: Merges redundant tokens for faster inference with slight image quality impact.
-
-### Experimental Features
-- **Torch 2.0 Optimization**: Leverages Torch 2.0 for improved performance.
-
 ### Command-line Arguments
 - `--disable-setup-wizard`: Skips the setup wizard during startup.
 - `--enable-debug-logs`: Enables verbose logging for debugging purposes.
-
----
-
-## Missing Features
-
-### Supported Models
-- **Stable Diffusion**: SD 1.5, SDXL 1.0, SDXL Turbo.
-- **LLMs**: Includes Mistral-7b and other open-source models.
-- **Text-to-Speech and Speech-to-Text**: Fully integrated with customizable settings.
-
-### Command-line Arguments
 - `--clear-window-settings`: Resets UI settings.
 - `--perform-llm-analysis`: Enables experimental LLM analysis.
 
 ---
 
-## User Data Updates
-
-### Overview
-The `conversation.user_data` column has been updated to store concise, one-sentence summaries of user information. This ensures that the data remains relevant and easy to interpret. Additionally, the system avoids updating this column if no meaningful information is available.
-
-### Key Changes
-- **Concise Summaries**: The `conversation.user_data` column now stores brief summaries instead of verbose descriptions.
-- **Update Conditions**: Updates to the column are skipped if no meaningful information is extracted.
-
-### Testing
-To verify these changes, unit tests have been added to ensure:
-1. Concise summaries are correctly stored.
-2. No updates occur when no meaningful information is available.
-
-Run the tests using:
-```bash
-python -m unittest discover -s src/airunner/tests
-```
+## Supported Models
+- **Stable Diffusion**: SD 1.5, SDXL 1.0, SDXL Turbo.
+- **LLMs**: Ministral-8b local 4bit model, and OpenRouter API
+- **Text-to-Speech**: Espeak and SpeechT5
+- **Speech-to-Text**: Whisper

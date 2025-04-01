@@ -7,7 +7,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 
 from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
 from airunner.workers.worker import Worker
-from airunner.handlers import StableDiffusionHandler
+from airunner.handlers import StableDiffusionModelManager
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.data.models import GeneratorSettings
 from airunner.settings import (
@@ -188,7 +188,7 @@ class SDWorker(Worker):
         if AIRUNNER_ART_USE_COMPEL != "":
             use_compel = AIRUNNER_ART_USE_COMPEL
 
-        self.sd = StableDiffusionHandler(
+        self.sd = StableDiffusionModelManager(
             model_path=model_path,
             model_version=model_version,
             pipeline=pipeline,
