@@ -17,7 +17,7 @@ class StylesMixin:
         """
         theme_name = AIRUNNER_DARK_THEME_NAME if self.application_settings.dark_mode_enabled else AIRUNNER_LIGHT_THEME_NAME
         base_dir = Path(os.path.dirname(os.path.realpath(__file__)))
-        stylesheet_path = base_dir / "styles" / theme_name / "styles.qss"
+        stylesheet_path = base_dir / "gui" / "styles" / theme_name / "styles.qss"
 
         self.setStyleSheet(
             stylesheet_path.read_text()
