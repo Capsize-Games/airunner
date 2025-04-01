@@ -22,8 +22,7 @@ from PySide6.QtWidgets import (QApplication, QGraphicsView, QGridLayout, QHBoxLa
 from airunner.widgets.controlnet.controlnet_settings_widget import ControlnetSettingsWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
 from airunner.widgets.switch_widget.switch_widget import SwitchWidget
-import airunner.resources_dark_rc
-import airunner.resources_light_rc
+import airunner.feather_rc
 
 class Ui_input_image(object):
     def setupUi(self, input_image):
@@ -110,7 +109,8 @@ class Ui_input_image(object):
         self.horizontalLayout.setContentsMargins(10, -1, 10, 10)
         self.link_to_grid_image_button = QPushButton(input_image)
         self.link_to_grid_image_button.setObjectName(u"link_to_grid_image_button")
-        icon = QIcon(QIcon.fromTheme(u"insert-link"))
+        icon = QIcon()
+        icon.addFile(u":/light/icons/feather/light/link.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.link_to_grid_image_button.setIcon(icon)
         self.link_to_grid_image_button.setCheckable(True)
 
@@ -120,18 +120,20 @@ class Ui_input_image(object):
         self.lock_input_image_button.setObjectName(u"lock_input_image_button")
         self.lock_input_image_button.setMinimumSize(QSize(24, 24))
         self.lock_input_image_button.setMaximumSize(QSize(24, 24))
-        icon1 = QIcon(QIcon.fromTheme(u"emblem-readonly"))
+        icon1 = QIcon()
+        icon1.addFile(u":/light/icons/feather/light/lock.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.lock_input_image_button.setIcon(icon1)
         self.lock_input_image_button.setCheckable(True)
 
         self.horizontalLayout.addWidget(self.lock_input_image_button)
 
-        self.pushButton_3 = QPushButton(input_image)
-        self.pushButton_3.setObjectName(u"pushButton_3")
-        icon2 = QIcon(QIcon.fromTheme(u"view-refresh"))
-        self.pushButton_3.setIcon(icon2)
+        self.refresh_button = QPushButton(input_image)
+        self.refresh_button.setObjectName(u"refresh_button")
+        icon2 = QIcon()
+        icon2.addFile(u":/light/icons/feather/light/refresh-ccw.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.refresh_button.setIcon(icon2)
 
-        self.horizontalLayout.addWidget(self.pushButton_3)
+        self.horizontalLayout.addWidget(self.refresh_button)
 
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
@@ -146,14 +148,16 @@ class Ui_input_image(object):
 
         self.import_button = QPushButton(input_image)
         self.import_button.setObjectName(u"import_button")
-        icon3 = QIcon(QIcon.fromTheme(u"folder"))
+        icon3 = QIcon()
+        icon3.addFile(u":/light/icons/feather/light/folder.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.import_button.setIcon(icon3)
 
         self.horizontalLayout.addWidget(self.import_button)
 
         self.delete_button = QPushButton(input_image)
         self.delete_button.setObjectName(u"delete_button")
-        icon4 = QIcon(QIcon.fromTheme(u"user-trash"))
+        icon4 = QIcon()
+        icon4.addFile(u":/light/icons/feather/light/trash-2.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.delete_button.setIcon(icon4)
 
         self.horizontalLayout.addWidget(self.delete_button)
@@ -167,7 +171,7 @@ class Ui_input_image(object):
         self.delete_button.clicked.connect(input_image.delete_clicked)
         self.link_to_grid_image_button.toggled.connect(input_image.use_grid_image_as_input_toggled)
         self.lock_input_image_button.toggled.connect(input_image.lock_input_image)
-        self.pushButton_3.clicked.connect(input_image.refresh_input_image_from_grid)
+        self.refresh_button.clicked.connect(input_image.refresh_input_image_from_grid)
 
         QMetaObject.connectSlotsByName(input_image)
     # setupUi
@@ -187,9 +191,9 @@ class Ui_input_image(object):
 #endif // QT_CONFIG(tooltip)
         self.lock_input_image_button.setText("")
 #if QT_CONFIG(tooltip)
-        self.pushButton_3.setToolTip(QCoreApplication.translate("input_image", u"Refresh from grid image", None))
+        self.refresh_button.setToolTip(QCoreApplication.translate("input_image", u"Refresh from grid image", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton_3.setText("")
+        self.refresh_button.setText("")
 #if QT_CONFIG(tooltip)
         self.import_button.setToolTip(QCoreApplication.translate("input_image", u"Import", None))
 #endif // QT_CONFIG(tooltip)

@@ -113,7 +113,8 @@
            <string/>
           </property>
           <property name="icon">
-           <iconset theme="user-trash"/>
+           <iconset resource="../../../gui/resources/feather.qrc">
+            <normaloff>:/dark/icons/feather/dark/trash-2.svg</normaloff>:/dark/icons/feather/dark/trash-2.svg</iconset>
           </property>
          </widget>
         </item>
@@ -185,7 +186,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources_light.qrc"/>
+  <include location="../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
   <connection>
