@@ -109,6 +109,10 @@ class StableDiffusionGeneratorForm(BaseWidget):
     widget_class_ = Ui_stablediffusion_generator_form
     changed_signal = Signal(str, object)
     _prompt_containers: Dict[str, QWidget] = {}
+    icons = [
+        ("chevron-up", "generate_button"),
+        ("x-circle", "interrupt_button"),
+    ]
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {

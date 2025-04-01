@@ -65,8 +65,8 @@
       <string/>
      </property>
      <property name="icon">
-      <iconset resource="../../../resources_dark.qrc">
-       <normaloff>:/icons/dark/dice-game-icon.svg</normaloff>:/icons/dark/dice-game-icon.svg</iconset>
+      <iconset resource="../../../gui/resources/feather.qrc">
+       <normaloff>:/light/icons/feather/light/dice-game-icon.svg</normaloff>:/light/icons/feather/light/dice-game-icon.svg</iconset>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -92,8 +92,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="../../../resources_light.qrc"/>
-  <include location="../../../resources_dark.qrc"/>
+  <include location="../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
   <connection>

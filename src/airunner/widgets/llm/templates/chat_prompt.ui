@@ -114,7 +114,8 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset theme="mail-reply-sender"/>
+        <iconset resource="../../../gui/resources/feather.qrc">
+         <normaloff>:/light/icons/feather/light/corner-down-left.svg</normaloff>:/light/icons/feather/light/corner-down-left.svg</iconset>
        </property>
       </widget>
      </item>
@@ -145,7 +146,8 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset theme="document-new"/>
+        <iconset resource="../../../gui/resources/feather.qrc">
+         <normaloff>:/light/icons/feather/light/file-plus.svg</normaloff>:/light/icons/feather/light/file-plus.svg</iconset>
        </property>
       </widget>
      </item>
@@ -176,7 +178,8 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset theme="media-playback-stop"/>
+        <iconset resource="../../../gui/resources/feather.qrc">
+         <normaloff>:/light/icons/feather/light/stop-circle.svg</normaloff>:/light/icons/feather/light/stop-circle.svg</iconset>
        </property>
       </widget>
      </item>
@@ -331,7 +334,9 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../../gui/resources/feather.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>prompt</sender>
