@@ -142,6 +142,9 @@
             </property>
             <item>
              <widget class="QPushButton" name="actionNew">
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -156,6 +159,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionImport">
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -170,6 +176,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionExport">
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -191,6 +200,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="recenter_Grid_Button">
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="toolTip">
                <string>Recenter grid</string>
               </property>
@@ -208,6 +220,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionToggle_Active_Grid_Area">
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="toolTip">
                <string>Move active grid area</string>
               </property>
@@ -228,6 +243,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionToggle_Brush">
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="toolTip">
                <string>Toggle brush tool</string>
               </property>
@@ -248,6 +266,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionToggle_Eraser">
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="toolTip">
                <string>Toggle earser tool</string>
               </property>
@@ -268,6 +289,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionToggle_Grid">
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="toolTip">
                <string>Toggle grid</string>
               </property>
@@ -295,6 +319,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionUndo">
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -309,6 +336,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionRedo">
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
               <property name="text">
                <string/>
               </property>
