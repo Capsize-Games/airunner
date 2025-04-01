@@ -33,7 +33,7 @@ from transformers import (
     StoppingCriteriaList,
 )
 
-from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner.handlers.llm.llm_request import LLMRequest
 

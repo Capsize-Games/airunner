@@ -58,6 +58,6 @@ def build_ui(path):
 
 
 def main():
-    for path in ["widgets", "windows"]:
+    for path in ["gui/widgets", "gui/windows"]:
         build_ui(path)
     generate_resources()
