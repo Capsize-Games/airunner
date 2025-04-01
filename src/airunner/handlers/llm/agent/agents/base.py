@@ -1,3 +1,4 @@
+import os
 from typing import (
     Any,
     List,
@@ -5,6 +6,7 @@ from typing import (
     Union,
     Dict,
     Type,
+    Annotated,
 )
 import datetime
 import platform
@@ -320,8 +322,20 @@ class BaseAgent(
     def store_user_tool(self) -> FunctionTool:
         if not self._store_user_tool:
             def store_user_information(
-                category: str,
-                information: str
+                category: Annotated[
+                    str,
+                    (
+                        "The category of the information to store. "
+                        "Can be 'likes', 'dislikes', 'hobbies', 'interests', etc."
+                    )
+                ],
+                information: Annotated[
+                    str,
+                    (
+                        "The information to store. "
+                        "This can be a string or a list of strings."
+                    )
+                ],
             ) -> str:
                 """Store information about the user with this tool.
                 
@@ -337,225 +351,243 @@ class BaseAgent(
             )
 
         return self._store_user_tool
+
+    @property
+    def quit_application_tool(self) -> FunctionTool:
+        if not hasattr(self, '_quit_application_tool'):
+            def quit_application() -> str:
+                """Quit the application. 
+                
+                Call this tool if the user wants to quit the application, 
+                asks you to quit, shutdown or exit. Do not panic and 
+                close the application on your own."""
+                self.emit_signal(SignalCode.QUIT_APPLICATION, {})
+                return "Quitting application..."
+        
+            self._quit_application_tool = FunctionTool.from_defaults(
+                quit_application,
+                return_direct=True
+            )
+        return self._quit_application_tool
+
+    @property
+    def toggle_text_to_speech_tool(self) -> FunctionTool:
+        if not hasattr(self, "_toggle_text_to_speech"):
+            def toggle_text_to_speech(
+                enabled: Annotated[
+                    bool,
+                    (
+                        "Enable or disable text to speech. "
+                        "Must be 'True' or 'False'."
+                    )
+                ],
+            ) -> str:
+                """Enable or disable the text-to-speech.
+                
+                Call this tool if the user wants to enable or disable
+                text to speech."""
+                self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL, {
+                    "enabled": enabled
+                })
+                return "Text to speech toggled."
+        
+            self._toggle_text_to_speech = FunctionTool.from_defaults(
+                toggle_text_to_speech,
+                return_direct=True
+            )
+        return self._toggle_text_to_speech
+
+    @property
+    def list_files_in_directory_tool(self) -> FunctionTool:
+        if not hasattr(self, "_list_files_in_directory_tool"):
+            def list_files_in_directory(
+                directory: Annotated[
+                    str,
+                    (
+                        "The directory to search in. "
+                        "Must be a valid directory path."
+                    )
+                ],
+            ) -> str:
+                """List files in a directory.
+                
+                Call this tool if the user wants to list files in a directory."""
+                os_path = os.path.abspath(directory)
+                if not os.path.isdir(os_path):
+                    return "Invalid directory path."
+                if not os.path.exists(os_path):
+                    return "Directory does not exist."
+                return os.listdir(os_path)
+        
+            self._list_files_in_directory_tool = FunctionTool.from_defaults(
+                list_files_in_directory,
+                return_direct=False
+            )
+        return self._list_files_in_directory_tool
     
     @property
-    def hello_world_tool(self) -> FunctionTool:
-        if not hasattr(self, '_hello_world_tool'):
-            def trigger_hello_world_ui() -> str:
-                """
-                Trigger the 'Hello, world!' UI via the API.
-                """
-                self.emit_signal(SignalCode.SHOW_WINDOW_SIGNAL)
-                return "Hello, world! UI triggered."
-
-            self._hello_world_tool = FunctionTool.from_defaults(
-                trigger_hello_world_ui,
+    def open_image_from_path_tool(self) -> FunctionTool:
+        if not hasattr(self, "_open_image_from_path_tool"):
+            def open_image_from_path(
+                image_path: Annotated[
+                    str,
+                    (
+                        "The path to the image file. "
+                        "Must be a valid file path."
+                    )
+                ],
+            ) -> str:
+                """Open an image from a specific path.
+                
+                Call this tool if the user wants to open an image. First Find
+                the image file from a directory and then use this tool to open in."""
+                if not os.path.isfile(image_path):
+                    return f"Unable to open image: {image_path} does not exist."
+                self.emit_signal(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, {
+                    "image_path": image_path
+                })
+                return "Opening image..."
+        
+            self._open_image_from_path_tool = FunctionTool.from_defaults(
+                open_image_from_path,
                 return_direct=True
             )
-        return self._hello_world_tool
+        return self._open_image_from_path_tool
+    
+    @property
+    def clear_canvas_tool(self) -> FunctionTool:
+        if not hasattr(self, "_clear_canvas_tool"):
+            def clear_canvas() -> str:
+                """Clear the canvas.
+                
+                Call this tool if the user wants to clear the canvas, delete
+                images, etc."""
+                self.emit_signal(SignalCode.CANVAS_CLEAR, {})
+                return "Canvas cleared."
+        
+            self._clear_canvas_tool = FunctionTool.from_defaults(
+                clear_canvas,
+                return_direct=True
+            )
+        return self._clear_canvas_tool
+    
+    @property
+    def clear_conversation_tool(self) -> FunctionTool:
+        if not hasattr(self, "_clear_conversation_tool"):
+            def clear_conversation() -> str:
+                """Clear the conversation.
+                
+                Call this tool if the user wants to clear the conversation,
+                delete messages, etc."""
+                self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {})
+                return "Conversation cleared."
+            self._clear_conversation_tool = FunctionTool.from_defaults(
+                clear_conversation,
+                return_direct=True
+            )
+        return self._clear_conversation_tool
 
     @property
-    def dynamic_ui_tool(self) -> FunctionTool:
-        if not hasattr(self, '_dynamic_ui_tool'):
-            def display_dynamic_ui(ui_content: str) -> str:
-                """
-                Display a dynamic Pyside6 UI QWidget from a string.
-
-                :param ui_content: The title of the button to be displayed.XML QT UI content.
+    def set_working_width_and_height(self) -> FunctionTool:
+        if not hasattr(self, "_set_working_width_and_height"):
+            def set_working_width_and_height(
+                width: Annotated[
+                    Optional[int],
+                    (
+                        f"The width of the image. Currently: {self.application_settings.working_width}. "
+                        "Min: 64, max: 2048. Must be a multiple of 64."
+                    )
+                ],
+                height: Annotated[
+                    Optional[int],
+                    (
+                        f"The height of the image. Currently: {self.application_settings.working_height}. "
+                        "Min: 64, max: 2048. Must be a multiple of 64."
+                    )
+                ],
+            ) -> str:
+                """Set the working width and height of the image canvas.
                 
-                ---
+                Only call this if the one current sizes is different from
+                one of the requested sizes.
+                Images will be generated at this size. Call this tool if the
+                user requests that you change the size of the working width / height, 
+                or active canvas area, or working image size etc."""
+                if width is not None:
+                    self.update_application_settings("working_width", width)
+                
+                if height is not None:
+                    self.update_application_settings("working_height", height)
 
-                ## ✅ Documentation for AI Agent: Building `.ui` Files for AI Runner (PySide6)
-
-                ---
-
-                ### Overview:
-
-                - `.ui` files are **XML-based layout files** created by **Qt Designer**.
-                - They describe widgets, layouts, properties, signals, and slots.
-                - AI Runner uses **PySide6** and loads `.ui` files at **runtime** using `QUiLoader` or equivalent.
-                - All widgets must be compatible with **PySide6**.
-                - These `.ui` files must be **well-formed XML** and **follow Qt 4.0 UI format**.
-
-                ---
-
-                ### Structure of a `.ui` File:
-
-                ```xml
-                <?xml version="1.0" encoding="UTF-8"?>
-                <ui version="4.0">
-                <class>my_widget</class>
-                <widget class="QWidget" name="my_widget">
-                    <property name="windowTitle">
-                    <string>My Window Title</string>
-                    </property>
-                    <layout class="QVBoxLayout" name="verticalLayout">
-                    <item>
-                        <widget class="QLabel" name="label">
-                        <property name="text">
-                            <string>Hello, world!</string>
-                        </property>
-                        </widget>
-                    </item>
-                    <!-- Add more widgets here -->
-                    </layout>
-                </widget>
-                <resources/>
-                <connections/>
-                </ui>
-                ```
-
-                ---
-
-                ### Widget Tags and Layouts:
-
-                | Widget        | XML Tag                          | Notes                           |
-                |---------------|----------------------------------|---------------------------------|
-                | Label         | `<widget class="QLabel"/>`       | Use `<property name="text">`   |
-                | Line Edit     | `<widget class="QLineEdit"/>`    | Use `<property name="placeholderText">` |
-                | Text Edit     | `<widget class="QTextEdit"/>`    | For multi-line input            |
-                | Button        | `<widget class="QPushButton"/>`  | Can use `<slot>` for actions    |
-                | Table         | `<widget class="QTableWidget"/>` | For data display                |
-                | Layout        | `<layout class="QVBoxLayout"/>` or `QHBoxLayout`, `QGridLayout` | Wrap multiple widgets           |
-
-                ---
-
-                ### Widget Naming Guidelines:
-
-                - Use lowercase with underscores: `name_input`, `submit_button`, `message_box`
-                - Each widget must have a unique `name` attribute.
-
-                ---
-
-                ### Required Elements in Every `.ui` File:
-
-                - A `<class>` tag with the name of the class (usually matches file name or purpose)
-                - A top-level `<widget>` of type `QWidget` or `QMainWindow`
-                - A layout within that widget (`QVBoxLayout`, `QGridLayout`, etc.)
-                - A `<resources/>` and `<connections/>` section, even if empty
-
-                ---
-
-                ### Optional Elements:
-
-                - `<slots>` – For custom methods like `submit()`, if they exist
-                - `<connections>` – For auto-wiring signals to slots
-
-                ---
-
-                ### Example Widget Recipe (Use These Internally):
-
-                To create a form with:
-                - Name label + QLineEdit
-                - Submit button
-                - Text area
-
-                The agent should nest these inside a layout with proper `<item>` tags and use `QLabel`, `QLineEdit`, `QPushButton`, and `QTextEdit` respectively.
-
-                ---
-
-                ### Rules to Follow:
-
-                1. **Output valid XML.** Use UTF-8 and close all tags.
-                2. **Use only PySide6-supported widget types.**
-                3. **Never reference Python code inside the `.ui` file.** Slots must be named only.
-                4. **Use layouts correctly.** Do not float widgets without layouts.
-                5. **Do not hardcode sizes unless necessary.**
-                6. **Name widgets logically.**
-
-                ---
-
-                ### Good Starting Widget Types:
-
-                - `QLabel`
-                - `QLineEdit`
-                - `QPushButton`
-                - `QTextEdit`
-                - `QComboBox`
-                - `QTableWidget`
-                - `QListWidget`
-                - `QSplitter`
-                - `QGroupBox`
-                - `QCheckBox`
-
-                ---
-
-                Table example
-
-                <?xml version="1.0" encoding="UTF-8"?>
-                <ui version="4.0">
-                    <class>table_widget</class>
-                    <widget class="QWidget" name="table_widget">
-                    <property name="windowTitle">
-                        <string>Example Table</string>
-                    </property>
-                    <layout class="QVBoxLayout" name="verticalLayout">
-                    <item>
-                        <widget class="QTableWidget" name="example_table">
-                            <property name="rowCount">
-                                <number>3</number>
-                            </property>
-                            <property name="columnCount">
-                             <number>2</number>
-                            </property>
-                            <column>
-                                <property name="text">
-                                    <string>Column 1</string>
-                                </property>
-                            </column>
-                            <column>
-                                <property name="text">
-                                    <string>Column 2</string>
-                                </property>
-                            </column>
-                            <item row="0" column="0">
-                                <widget class="QTableWidgetItem">
-                                    <property name="text">
-                                        <string>Row 1, Col 1</string>
-                                    </property>
-                                </widget>
-                            </item>
-                        </widget>
-                    </item>
-                    </layout>
-                    </widget>
-                    <resources/>
-                    <connections/>
-                </ui>
-                """
-                self.emit_signal(
-                    SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL, {
-                        "ui_content": ui_content
-                    }
-                )
-                return "Dynamic UI displayed."
-
-            self._dynamic_ui_tool = FunctionTool.from_defaults(
-                display_dynamic_ui,
+                return f"Working width and height set to {width}x{height}."
+        
+            self._set_working_width_and_height = FunctionTool.from_defaults(
+                set_working_width_and_height,
                 return_direct=True
             )
-        return self._dynamic_ui_tool
+        return self._set_working_width_and_height
 
     @property
     def generate_image_tool(self) -> FunctionTool:
         if not hasattr(self, '_generate_image_tool'):
             def generate_image(
-                prompt: str,
-                second_prompt: str,
-                image_type: str
+                prompt: Annotated[
+                    str, 
+                    (
+                        "Describe the subject of the image along with the "
+                        "composition, lighting, lens type and other "
+                        "descriptors that will bring the image to life."
+                    )
+                ],
+                second_prompt: Annotated[
+                    str,
+                    (
+                        "Describe the scene, the background, the colors, "
+                        "the mood and other descriptors that will enhance "
+                        "the image."
+                    )
+                ],
+                image_type: Annotated[
+                    str,
+                    (
+                        "The type of image to generate. "
+                        "Can be 'photo' or 'art'."
+                    )
+                ],
+                width: Annotated[
+                    int,
+                    (
+                        "The width of the image. "
+                        "Min: 64, max: 2048. Must be a multiple of 64."
+                    )
+                ],
+                height: Annotated[
+                    int,
+                    (
+                        "The height of the image. "
+                        "Min: 64, max: 2048. Must be a multiple of 64."
+                    )
+                ],
             ) -> str:
-                """
-                Generate an image using the given request.
+                """Generate an image using the given request."""
+                # Enforce width and height constraints
+                if width % 64 != 0:
+                    # get as close to multiple of 64 as possible
+                    width = (width // 64) * 64
+                if height % 64 != 0:
+                    # get as close to multiple of 64 as possible
+                    height = (height // 64) * 64
 
-                :param prompt: The prompt for the image generation.
-                :param second_prompt: The second prompt for the image generation.
-                :param image_type: The type of image to generate. Can be "photo" or "art"
-                """
+                if image_type not in ["photo", "art"]:
+                    image_type = "photo"
                 self.emit_signal(SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL, {
                     "message": {
                         "prompt": prompt,
                         "second_prompt": second_prompt,
                         "type": image_type,
+                        "width": width,
+                        "height": height,
+
                     }
                 })
                 return "Generating image..."
@@ -570,19 +602,20 @@ class BaseAgent(
     def tools(self) -> List[BaseTool]:
         tools = [
             self.chat_engine_tool,
+            self.quit_application_tool,
+            self.clear_conversation_tool,
+            self.toggle_text_to_speech_tool,
+            self.list_files_in_directory_tool,
+            self.open_image_from_path_tool,
         ]
 
         # Add art tools if enabled
         if AIRUNNER_ART_ENABLED:
             tools.extend([
                 self.generate_image_tool,
+                self.clear_canvas_tool,
+                self.set_working_width_and_height,
             ])
-
-        # Add UI builder tools
-        tools.extend([
-            self.hello_world_tool,
-            self.dynamic_ui_tool,
-        ])
 
         # Add data scraping tools if chat mode is enabled
         if self.chat_mode_enabled:

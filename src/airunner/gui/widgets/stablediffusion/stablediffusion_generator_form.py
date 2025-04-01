@@ -266,6 +266,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
         ))
         # Set the prompts in the generator form UI
         data = data["message"]
+        self.update_application_settings("working_width", data["width"])
+        self.update_application_settings("working_height", data["height"])
         prompt = data.get("prompt", None)
         secondary_prompt = data.get("secondary_prompt", None)
         prompt_type = data.get("type", ImageCategory.PHOTO.value)
