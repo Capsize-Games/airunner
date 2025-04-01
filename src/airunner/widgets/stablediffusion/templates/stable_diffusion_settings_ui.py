@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
 
 from airunner.widgets.seed.seed_widget import SeedWidget
 from airunner.widgets.slider.slider_widget import SliderWidget
-import airunner.resources_light_rc
 
 class Ui_stable_diffusion_settings_widget(object):
     def setupUi(self, stable_diffusion_settings_widget):
@@ -39,7 +38,7 @@ class Ui_stable_diffusion_settings_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 409, 922))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 409, 921))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
