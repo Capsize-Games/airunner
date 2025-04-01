@@ -1,7 +1,7 @@
 import queue
 import re
 import threading
-from typing import Optional
+from typing import Optional, Type
 
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
@@ -13,6 +13,7 @@ from airunner.handlers import (
     OpenVoiceModelManager,
 )
 from airunner.settings import AIRUNNER_TTS_ON
+from airunner.handlers.tts.tts_request import TTSRequest, EspeakTTSRequest
 
 
 class TTSGeneratorWorker(Worker):
@@ -216,10 +217,27 @@ class TTSGeneratorWorker(Worker):
 
         if type(message) == dict:
             message = message.get("message", "")
+        
+        model = AIRUNNER_TTS_MODEL_TYPE or self.tts_settings.model
+        model_type = TTSModel(model.lower())
 
         response = None
         if self.tts:
-            response = self.tts.generate(message)
+            llm_request: Optional[Type[TTSRequest]] = None
+            
+            if model_type is TTSModel.ESPEAK:
+                llm_request = EspeakTTSRequest(
+                    message=message,
+                    gender=self.chatbot.gender,
+                    rate=self.espeak_settings.rate,
+                    pitch=self.espeak_settings.pitch,
+                    volume=self.espeak_settings.volume,
+                    voice=self.espeak_settings.voice,
+                    language=self.espeak_settings.language,
+                )
+            
+            if llm_request:
+                response = self.tts.generate(llm_request)
 
         if self.do_interrupt:
             return

@@ -7,6 +7,7 @@ from airunner.settings import (
     AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT, 
     AIRUNNER_DEFAULT_LLM_HF_PATH
 )
+from airunner.enums import Gender
 
 
 class Chatbot(BaseModel):
@@ -52,6 +53,7 @@ class Chatbot(BaseModel):
     backstory = Column(Text, default="")
     use_backstory = Column(Boolean, default=True)
     use_weather_prompt = Column(Boolean, default=False)
+    gender = Column(String, default=Gender.MALE.value)
 
     target_files = relationship("TargetFiles", back_populates="chatbot")
     target_directories = relationship("TargetDirectories", back_populates="chatbot")
