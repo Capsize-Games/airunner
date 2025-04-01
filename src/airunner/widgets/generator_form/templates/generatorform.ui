@@ -83,10 +83,6 @@
  <tabstops>
   <tabstop>generator_form_tabs</tabstop>
  </tabstops>
- <resources>
-  <include location="../../../resources_light.qrc"/>
-  <include location="../../../resources_dark.qrc"/>
- </resources>
  <connections/>
  <slots>
   <slot>handle_prompt_changed()</slot>
