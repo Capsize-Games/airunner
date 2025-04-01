@@ -38,15 +38,30 @@ It is designed to be easy to use, with a simple and intuitive interface that all
 It has been optimized for speed and efficiency, allowing you to generate images and have conversations with chatbots in real-time.
 
 It can also be installed as a library and used in your projects, such as pygame
-or PySide6 applications.
+or PySide6 applications. See ["Use with Pygame"](https://github.com/Capsize-Games/airunner/wiki/Use-with-Pygame) wikipage for more info.
 
-## Stable Diffusion
+## GUI
+
+Interact with chatbots, adjust settings, modify preferences, change the theme.
+
+- Built with Pyside6
+- Feather icons
+- Choose from Light / Dark / System themes
+- Completely disable Stable Diffusion using [environment variables](https://github.com/Capsize-Games/airunner/wiki/Settings)
+
+![interface/img.png](images/interface.png)
+
+### Stable Diffusion
 
 ![images/img.png](images/img.png)
 
-## Customizable Chatbots with Moods and Personalities
+### Customizable Chatbots with Moods and Personalities
 
 ![images/img_1.png](images/img_1.png)
+
+### Extensions
+
+You can build your own extensions for the AI Runner GUI. [See more info in the wiki](https://github.com/Capsize-Games/airunner/wiki/Extensions)
 
 ---
 
