@@ -1,8 +1,12 @@
+from typing import Optional, Type
 from abc import ABCMeta
 import pyttsx3
 
 from airunner.handlers.tts.tts_model_manager import TTSModelManager
 from airunner.enums import ModelType, ModelStatus, Gender
+from airunner.handlers.tts.tts_request import TTSRequest
+from airunner.data.models import EspeakSettings
+
 
 class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
     """
@@ -11,18 +15,54 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._rate = None
-        self._pitch = None
-        self._volume = None
-        self._voice = None
-        self._language = None
-        self._gender = None
+        self._tts_request:TTSRequest = None
+        self._rate:Optional[int] = None
+        self._pitch:Optional[int] = None
+        self._volume:Optional[int] = None
+        self._voice:Optional[str] = None
+        self._language:Optional[str] = None
+    
+    @property
+    def gender(self) -> str:
+        gender = super().gender
+        return gender if gender != "" else EspeakSettings.gender.default.arg
 
-    def generate(self, message: str):
+    @property
+    def language(self) -> str:
+        if self.tts_request:
+            return self.tts_request.language
+        return EspeakSettings.language.default.arg
+    
+    @property
+    def voice(self) -> str:
+        if self.tts_request:
+            return self.tts_request.voice
+        return EspeakSettings.voice.default.arg
+    
+    @property
+    def volume(self) -> int:
+        if self.tts_request:
+            return self.tts_request.volume
+        return EspeakSettings.volume.default.arg
+
+    @property
+    def pitch(self) -> int:
+        if self.tts_request:
+            return self.tts_request.pitch
+        return EspeakSettings.pitch.default.arg
+
+    @property
+    def rate(self) -> int:
+        if self.tts_request:
+            return self.tts_request.rate
+        return EspeakSettings.rate.default.arg
+        
+    def generate(self, tts_request: Type[TTSRequest]):
         """
         Generate speech from the given message.
         """
-        message = message.replace('"', "'")
+        self.tts_request = tts_request
+        message = tts_request.message.replace('"', "'")
         if message:
             self._engine.say(message)
             self._engine.runAndWait()
@@ -64,19 +104,15 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Initialize the Espeak engine with settings.
         """
-        self._rate = self.espeak_settings.rate
-        self._pitch = self.espeak_settings.pitch
-        self._volume = self.espeak_settings.volume
-        self._voice = self.espeak_settings.voice
-        self._language = self.espeak_settings.language
-        gender = self.espeak_settings.gender
-
-        if gender != self._gender:
-            self._gender = gender
-            self._engine.setProperty('gender', Gender(self._gender))
-
-        self._engine.setProperty('rate', float(self._rate))
-        self._engine.setProperty('volume', self._volume / 100.0)
-        self._engine.setProperty('pitch', float(self._pitch))
-        self._engine.setProperty('voice', f'{self._voice}')
-        self._engine.setProperty('language', self._language)
+        voice = self.voice
+        if self.gender != self.espeak_settings.gender:
+            if self.gender == "Male":
+                voice = "male1"
+            else:
+                self.gender == "Female"
+                voice = "female1"
+        self._engine.setProperty('rate', float(self.rate))
+        self._engine.setProperty('volume', self.volume / 100.0)
+        self._engine.setProperty('pitch', float(self.pitch))
+        self._engine.setProperty('voice', f'{voice}')
+        self._engine.setProperty('language', self.language)
