@@ -5,7 +5,7 @@ import torch
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QTableWidgetItem, QApplication
 from airunner.enums import SignalCode
-from airunner.styles_mixin import StylesMixin
+from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.widgets.base_widget import BaseWidget
 from airunner.widgets.stats.templates.stats_ui import Ui_stats_widget
 from airunner.windows.main.pipeline_mixin import PipelineMixin
