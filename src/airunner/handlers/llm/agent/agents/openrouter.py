@@ -10,10 +10,10 @@ from airunner.handlers.llm.agent.agents.local import LocalAgent
 
 
 import asyncio
+import logging
 from typing import AsyncGenerator, Sequence
 from llama_index.core.base.llms.types import ChatResponseGen, ChatResponseAsyncGen
-from llama_index.core.base.llms.types import ChatMessage, ChatResponse, CompletionResponse
-from llama_index.llms.openai.base import OpenAI
+from llama_index.core.base.llms.types import ChatMessage, CompletionResponse
 
 
 class OpenRouterEnhanced(OpenRouter):
@@ -51,7 +51,6 @@ class OpenRouterEnhanced(OpenRouter):
                     break
                 yield response
         except asyncio.CancelledError:
-            # Handle any cleanup if necessary
             raise
 
     def stream_chat(
@@ -84,9 +83,10 @@ class OpenRouterQObject(
     def llm(self) -> Type[LLM]:
         if not self._llm:
             llm_request = OpenrouterMistralRequest.from_default()
+            api_key = self.llm_settings.openrouter_api_key
             self._llm = OpenRouterEnhanced(
                 model=self.llm_settings.model,
-                api_key=self.llm_settings.openrouter_api_key,
+                api_key=api_key,
                 **llm_request.to_dict()
             )
         return self._llm
