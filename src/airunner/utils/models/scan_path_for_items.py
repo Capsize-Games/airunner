@@ -1,7 +1,7 @@
 import os
 
 from airunner.data.models import Lora, Embedding
-from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
 
 
 def scan_path_for_lora(base_path) -> bool:
