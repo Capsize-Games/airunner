@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
     QHBoxLayout, QPlainTextEdit, QProgressBar, QPushButton,
     QScrollArea, QSizePolicy, QSplitter, QTextEdit,
     QVBoxLayout, QWidget)
+import airunner.feather_rc
 
 class Ui_chat_prompt(object):
     def setupUi(self, chat_prompt):
@@ -67,7 +68,8 @@ class Ui_chat_prompt(object):
         self.send_button.setSizePolicy(sizePolicy2)
         self.send_button.setMinimumSize(QSize(30, 30))
         self.send_button.setMaximumSize(QSize(30, 30))
-        icon = QIcon(QIcon.fromTheme(u"mail-reply-sender"))
+        icon = QIcon()
+        icon.addFile(u":/light/icons/feather/light/corner-down-left.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.send_button.setIcon(icon)
 
         self.horizontalLayout.addWidget(self.send_button)
@@ -78,7 +80,8 @@ class Ui_chat_prompt(object):
         self.clear_conversatiion_button.setSizePolicy(sizePolicy2)
         self.clear_conversatiion_button.setMinimumSize(QSize(30, 30))
         self.clear_conversatiion_button.setMaximumSize(QSize(30, 30))
-        icon1 = QIcon(QIcon.fromTheme(u"document-new"))
+        icon1 = QIcon()
+        icon1.addFile(u":/light/icons/feather/light/file-plus.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.clear_conversatiion_button.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.clear_conversatiion_button)
@@ -89,7 +92,8 @@ class Ui_chat_prompt(object):
         self.pushButton.setSizePolicy(sizePolicy2)
         self.pushButton.setMinimumSize(QSize(30, 30))
         self.pushButton.setMaximumSize(QSize(30, 30))
-        icon2 = QIcon(QIcon.fromTheme(u"media-playback-stop"))
+        icon2 = QIcon()
+        icon2.addFile(u":/light/icons/feather/light/stop-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.pushButton.setIcon(icon2)
 
         self.horizontalLayout.addWidget(self.pushButton)

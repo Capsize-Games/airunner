@@ -22,8 +22,7 @@ from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
 from airunner.widgets.canvas.custom_view import CustomGraphicsView
 from airunner.widgets.stablediffusion.stablediffusion_generator_form import StableDiffusionGeneratorForm
 from airunner.widgets.stablediffusion.stablediffusion_tool_tab_widget import StablediffusionToolTabWidget
-import airunner.resources_dark_rc
-import airunner.resources_light_rc
+import airunner.feather_rc
 
 class Ui_canvas(object):
     def setupUi(self, canvas):
@@ -66,7 +65,8 @@ class Ui_canvas(object):
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.actionNew = QPushButton(self.widget1)
         self.actionNew.setObjectName(u"actionNew")
-        icon = QIcon(QIcon.fromTheme(u"document-new"))
+        icon = QIcon()
+        icon.addFile(u":/light/icons/feather/light/file-plus.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionNew.setIcon(icon)
         self.actionNew.setFlat(True)
 
@@ -74,7 +74,8 @@ class Ui_canvas(object):
 
         self.actionImport = QPushButton(self.widget1)
         self.actionImport.setObjectName(u"actionImport")
-        icon1 = QIcon(QIcon.fromTheme(u"document-open"))
+        icon1 = QIcon()
+        icon1.addFile(u":/light/icons/feather/light/folder.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionImport.setIcon(icon1)
         self.actionImport.setFlat(True)
 
@@ -82,7 +83,8 @@ class Ui_canvas(object):
 
         self.actionExport = QPushButton(self.widget1)
         self.actionExport.setObjectName(u"actionExport")
-        icon2 = QIcon(QIcon.fromTheme(u"document-save"))
+        icon2 = QIcon()
+        icon2.addFile(u":/light/icons/feather/light/save.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionExport.setIcon(icon2)
         self.actionExport.setFlat(True)
 
@@ -98,7 +100,7 @@ class Ui_canvas(object):
         self.recenter_Grid_Button = QPushButton(self.widget1)
         self.recenter_Grid_Button.setObjectName(u"recenter_Grid_Button")
         icon3 = QIcon()
-        icon3.addFile(u":/icons/light/circle-center-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(u":/light/icons/feather/light/target.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.recenter_Grid_Button.setIcon(icon3)
         self.recenter_Grid_Button.setFlat(True)
 
@@ -107,7 +109,7 @@ class Ui_canvas(object):
         self.actionToggle_Active_Grid_Area = QPushButton(self.widget1)
         self.actionToggle_Active_Grid_Area.setObjectName(u"actionToggle_Active_Grid_Area")
         icon4 = QIcon()
-        icon4.addFile(u":/icons/light/object-selected-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon4.addFile(u":/light/icons/feather/light/object-selected-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionToggle_Active_Grid_Area.setIcon(icon4)
         self.actionToggle_Active_Grid_Area.setCheckable(True)
         self.actionToggle_Active_Grid_Area.setFlat(True)
@@ -117,7 +119,7 @@ class Ui_canvas(object):
         self.actionToggle_Brush = QPushButton(self.widget1)
         self.actionToggle_Brush.setObjectName(u"actionToggle_Brush")
         icon5 = QIcon()
-        icon5.addFile(u":/icons/light/pencil-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon5.addFile(u":/light/icons/feather/light/pencil-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionToggle_Brush.setIcon(icon5)
         self.actionToggle_Brush.setCheckable(True)
         self.actionToggle_Brush.setFlat(True)
@@ -127,7 +129,7 @@ class Ui_canvas(object):
         self.actionToggle_Eraser = QPushButton(self.widget1)
         self.actionToggle_Eraser.setObjectName(u"actionToggle_Eraser")
         icon6 = QIcon()
-        icon6.addFile(u":/icons/light/eraser-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon6.addFile(u":/light/icons/feather/light/eraser-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionToggle_Eraser.setIcon(icon6)
         self.actionToggle_Eraser.setCheckable(True)
         self.actionToggle_Eraser.setFlat(True)
@@ -137,22 +139,12 @@ class Ui_canvas(object):
         self.actionToggle_Grid = QPushButton(self.widget1)
         self.actionToggle_Grid.setObjectName(u"actionToggle_Grid")
         icon7 = QIcon()
-        icon7.addFile(u":/icons/light/frame-grid-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon7.addFile(u":/light/icons/feather/light/grid.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionToggle_Grid.setIcon(icon7)
         self.actionToggle_Grid.setCheckable(True)
         self.actionToggle_Grid.setFlat(True)
 
         self.horizontalLayout_2.addWidget(self.actionToggle_Grid)
-
-        self.actionMask_toggle = QPushButton(self.widget1)
-        self.actionMask_toggle.setObjectName(u"actionMask_toggle")
-        icon8 = QIcon()
-        icon8.addFile(u":/icons/light/layer-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionMask_toggle.setIcon(icon8)
-        self.actionMask_toggle.setCheckable(True)
-        self.actionMask_toggle.setFlat(True)
-
-        self.horizontalLayout_2.addWidget(self.actionMask_toggle)
 
         self.line_2 = QFrame(self.widget1)
         self.line_2.setObjectName(u"line_2")
@@ -163,16 +155,18 @@ class Ui_canvas(object):
 
         self.actionUndo = QPushButton(self.widget1)
         self.actionUndo.setObjectName(u"actionUndo")
-        icon9 = QIcon(QIcon.fromTheme(u"undo"))
-        self.actionUndo.setIcon(icon9)
+        icon8 = QIcon()
+        icon8.addFile(u":/light/icons/feather/light/corner-up-left.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionUndo.setIcon(icon8)
         self.actionUndo.setFlat(True)
 
         self.horizontalLayout_2.addWidget(self.actionUndo)
 
         self.actionRedo = QPushButton(self.widget1)
         self.actionRedo.setObjectName(u"actionRedo")
-        icon10 = QIcon(QIcon.fromTheme(u"redo"))
-        self.actionRedo.setIcon(icon10)
+        icon9 = QIcon()
+        icon9.addFile(u":/light/icons/feather/light/corner-up-right.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionRedo.setIcon(icon9)
         self.actionRedo.setFlat(True)
 
         self.horizontalLayout_2.addWidget(self.actionRedo)
@@ -218,7 +212,6 @@ class Ui_canvas(object):
         self.retranslateUi(canvas)
         self.actionUndo.clicked.connect(canvas.action_undo)
         self.actionRedo.clicked.connect(canvas.action_redo)
-        self.actionMask_toggle.toggled.connect(canvas.action_toggle_mask)
         self.actionToggle_Eraser.toggled.connect(canvas.action_toggle_eraser)
         self.actionToggle_Brush.toggled.connect(canvas.action_toggle_brush)
         self.actionToggle_Active_Grid_Area.toggled.connect(canvas.action_toggle_active_grid_area)
@@ -256,10 +249,6 @@ class Ui_canvas(object):
         self.actionToggle_Grid.setToolTip(QCoreApplication.translate("canvas", u"Toggle grid", None))
 #endif // QT_CONFIG(tooltip)
         self.actionToggle_Grid.setText("")
-#if QT_CONFIG(tooltip)
-        self.actionMask_toggle.setToolTip(QCoreApplication.translate("canvas", u"Toggle mask", None))
-#endif // QT_CONFIG(tooltip)
-        self.actionMask_toggle.setText("")
         self.actionUndo.setText("")
         self.actionRedo.setText("")
         self.canvas_container.setProperty("canvas_type", QCoreApplication.translate("canvas", u"brush", None))

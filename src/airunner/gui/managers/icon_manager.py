@@ -9,7 +9,10 @@ class IconManager:
         """Initialize the IconManager with a list of icons and a UI object."""
         self.icon_cache = {}
         for icon in icons:
-            self.icon_cache[icon[0]] = getattr(ui, icon[1])
+            self.icon_cache[icon[1]] = {
+                "icon_name": icon[0],
+                "widget": getattr(ui, icon[1])
+            }
 
     def get_icon(self, icon_name, theme) -> QIcon:
         """Get the icon for the given name and theme."""
@@ -22,7 +25,9 @@ class IconManager:
 
     def update_icons(self, theme):
         """Update the icons for the given theme."""
-        for icon_name, widget in self.icon_cache.items():
+        for key, data in self.icon_cache.items():
+            icon_name = data["icon_name"]
+            widget = data["widget"]
             icon = QtGui.QIcon()
             icon.addPixmap(
                 QtGui.QPixmap(
