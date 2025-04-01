@@ -1,0 +1,371 @@
+QWidget {
+    background-color: @light-color;
+    color: @dark-color;
+    border-color: @dark-color;
+    margin: 0px;
+    padding: 0px;
+}
+
+GeneratorTabWidget QTabWidget QTabWidget QTabWidget QTabBar::tab {
+    /* hide the tab bar */
+    min-width: 0px;
+    max-width: 0px;
+    border: none;
+}
+
+#generator_container,
+#generator_form_tab_widget #scrollAreaWidgetContents,
+#basic_widget_contents {
+    border-left: 1px solid @primary-color;
+}
+
+QComboBox {
+    border-radius: None;
+    padding: 5px;
+    border: 1px solid @darkprimary-color;
+    color: @dark-color;
+}
+
+#mode_tab_widget QWidget {
+    font-size: 10pt;
+}
+
+QFrame {
+    border: none;
+    background-color: none;
+}
+
+QMainWindow {
+    background-color: @light-color;
+    color: @dark-color;
+}
+
+QLabel {
+    color: @dark-color;
+}
+
+QLineEdit {
+    border-radius: 0;
+    padding: 5px;
+    border: 1px solid @darkprimary-color;
+}
+
+QPushButton {
+    border-radius: none;
+    padding: 4px 4px 3px 4px;
+    border: 1px solid @dark-color;
+    color: @primary-color;
+}
+
+QPushButton:hover {
+    border: 1px solid @darkprimary-color;
+    background-color: @darkerprimary-color;
+}
+
+QPushButton:checked {
+    border: 1px solid @primary-color;
+}
+
+QProgressBar {
+    border: 1px solid @primary-color;
+    text-align: center;
+}
+
+QPushButton:checked {
+    background-color: @darkprimary-color;
+}
+
+QPushButton:pressed {
+    background-color: @darkprimary-color;
+}
+
+QPushButton:disabled {
+    background-color: @light-color;
+    color: @dim-color;
+}
+
+QWidget#qt_scrollarea_viewport {
+    background-color: @dark-color;
+    color: @dark-color;
+}
+
+QFrame[frameShape="4"] {
+    border: 0;
+    border-top: 1px solid @line-color-dark;
+    height: 1px;
+}
+
+QFrame[frameShape="5"] {
+    border: 0;
+    border-left: 1px solid @line-color-dark;
+    width: 1px;
+}
+
+QPushButton#image_thumbnail {
+    border: 1px solid @line-color-dark;
+}
+
+QSlider {
+    border: 1px solid @primary-color;
+}
+
+QGroupBox QTabWidget QWidget {
+    padding: 5px;
+    border: 1px solid @darkerprimary-color;
+}
+
+QSlider::handle:horizontal {
+    height: 20px;
+    width: 25px;
+    border: 1px solid @info-color;
+    border-radius: 0px;
+    background-color: rgba(100, 100, 100, 0.15)
+}
+QSlider::handle:horizontal:hover {
+    background-color: rgba(255, 255, 255, 0.25)
+}
+QSlider::groove:horizontal {
+    height: 25px;
+    background-color: @darkerprimary-color;
+    border: transparent;
+    border-right: 0px;
+    border-radius: 0px;
+}
+QLabel#slider_label {
+    font-size: 8pt;
+    color: @dark-color;
+    font-weight: bold;
+}
+QDoubleSpinBox {
+	background-color: @light-color;
+	border-radius: 0px;
+	font-size: 8pt;
+}
+
+GeneratorTabWidget#generator_widget QTabWidget::pane {
+    border: 0;
+}
+
+GeneratorTabWidget#generator_widget QTabWidget QWidget#tab_stablediffusion {
+}
+GeneratorTabWidget#generator_widget GeneratorForm QWidget#scrollAreaWidgetContents {
+}
+QFrame#button_menu {
+}
+GeneratorTabWidget#generator_widget QTabWidget QTabBar::tab {
+    border-radius: 0px; 
+    margin: 0px;
+    padding: 5px 10px;
+    border: 0px;
+    font-size: 8pt;
+    font-weight: bold;
+}
+GeneratorTabWidget#generator_widget QTabWidget QTabBar::tab::first {
+    margin-left: 24px;
+}
+
+GeneratorTabWidget#generator_widget QTabBar::tab:hover {
+    background-color: @primary-color;
+}
+
+GeneratorTabWidget#generator_widget QTabBar::tab:selected {
+    background-color: @primary-color;
+}
+
+GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget::pane { 
+    border: 0;
+    border-left: 0;
+    border-radius: 0px;
+    background: @dark-color;
+}
+
+GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabBar::tab {
+    padding: 10px 5px;
+}
+GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabBar::tab::first {
+    margin-left: 0;
+}
+
+QWidget#scrollAreaWidgetContents {
+    background-color: @dark-color;
+    color: @dark-color;
+}
+
+#centralwidget {
+    border: 1px solid @primary-color;
+    border-top: none;
+    border-bottom: none;
+}
+
+#header_widget {
+    border: 1px solid @primary-color;
+    border-left: 0;
+    border-right: 0;
+}
+
+#header_widget QFrame#line_2,
+#header_widget QFrame#line_3,
+#header_widget QFrame#line_5,
+#status_widget #line,
+#status_widget #nsfw_line,
+#status_widget #line_3,
+#status_widget #line_4,
+#status_widget #line_5
+{
+    border-left: 1px solid @primary-color;
+}
+
+#statusbar {
+    border-top: 1px solid @primary-color;
+}
+
+/* QFrame#line,
+QFrame#line_4 {
+    border-bottom: 1px solid @primary-color;
+} */
+
+#header_widget QPushButton {
+    border-radius: 0px;
+    border: 0px;
+    background-color: @light-color;
+}
+
+#header_widget QPushButton:hover,
+#header_widget QPushButton:checked {
+    background-color: @darkprimary-color;
+}
+
+#image_generator_header_tools QPushButton:hover,
+#image_generator_header_tools QPushButton:checked {
+    background-color: @darkerprimary-color;
+}
+
+#image_generator_header_tool_buttons QPushButton:hover {
+    background-color: @darkerprimary-color;
+    border-radius: 5px;
+}
+
+#center_tab QScrollArea,
+#center_tab QWidget#central_widget {
+    border: 1px solid @darkprimary-color;
+    border-bottom: none;
+    border-top: none;
+}
+
+#canvas_container {
+    border: 1px solid @darkerprimary-color;
+}
+
+#mode_tab_widget {
+    border: 1px solid @darkprimary-color;
+}
+
+#basic_prompt,
+#prompt,
+#negative_prompt,
+#prefix,
+#suffix,
+#conversation {
+    border: 1px solid @darkprimary-color;
+    background-color: @light-color;
+    color: @dark-color;
+}
+
+#button_menu {
+    border-left: 1px solid @darkprimary-color;
+}
+
+#button_menu QPushButton {
+    margin-left: 9px;
+}
+
+#bottom_panel_tab_widget QWidget {
+    border-top: 1px solid @primary-color;
+}
+
+QStatusBar {
+    border: 1px solid @primary-color;
+    border-top: none;
+}
+
+QMenuBar {
+    border: 1px solid @primary-color;
+    border-bottom: none;
+}
+
+QMenu::item:selected {
+    background-color: @primary-color;
+}
+
+QMenu::item:hover {
+    background-color: @primary-color;
+}
+
+QMenu QMenu::item:selected {
+    background-color: @primary-color;
+}
+
+QMenu QMenu::item:hover {
+    background-color: @primary-color;
+}
+
+#mode_tab_widget QWidget#art {
+    border-bottom: 1px solid @primary-color;
+}
+
+#generator_container QPushButton {
+    border: 1px solid @primary-color;
+}
+
+QScrollBar:vertical {
+    background: @light-color;
+}
+
+QScrollBar::handle:vertical {
+    background: @primary-color;
+}
+
+QScrollBar::add-line:vertical {
+    border: 1px solid @primary-color;
+}
+
+QScrollBar::sub-line:vertical {
+    border: 1px solid @primary-color;
+}
+
+QScrollBar:horizontal {
+    background: @light-color;
+}
+
+QScrollBar::handle:horizontal {
+    background: @primary-color;
+}
+
+QScrollBar::add-line:horizontal {
+    border: 1px solid @primary-color;
+}
+
+QScrollBar::sub-line:horizontal {
+    border: 1px solid @primary-color;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    border: 1px solid @primary-color;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    border: 1px solid @primary-color;
+}
+
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+    border: 1px solid @primary-color;
+    color: @primary-color;
+}
+
+QScrollBar::left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
+    border: 1px solid @primary-color;
+    color: @primary-color;
+}
+
+
+
