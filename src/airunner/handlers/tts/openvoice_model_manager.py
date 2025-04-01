@@ -13,7 +13,7 @@ from melo.api import TTS
 
 from airunner.settings import AIRUNNER_TTS_SPEAKER_RECORDING_PATH
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.handlers.tts.tts_handler import TTSHandler
+from airunner.handlers.tts.tts_model_manager import TTSModelManager
 
 class AvailableLanguage(enum.Enum):
     """
@@ -79,9 +79,9 @@ class StreamingToneColorConverter(ToneColorConverter):
             )[0][0, 0].data.cpu().float().numpy()
             return audio
 
-class OpenVoiceHandler(TTSHandler, metaclass=ABCMeta):
+class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
     """
-    OpenVoice-based implementation of the TTSHandler.
+    OpenVoice-based implementation of the TTSModelManager.
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

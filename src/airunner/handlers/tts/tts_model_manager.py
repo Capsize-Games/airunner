@@ -4,19 +4,19 @@ from typing import Optional, Type, ClassVar
 
 from transformers import PreTrainedModel, ProcessorMixin
 
-from airunner.handlers.base_handler import BaseHandler
+from airunner.handlers.base_model_manager import BaseModelManager
 from airunner.enums import ModelType
 from airunner.utils import prepare_text_for_tts
 
-BaseHandlerMeta = type(BaseHandler)
+BaseModelManagerMeta = type(BaseModelManager)
 
-class CombinedMeta(BaseHandlerMeta, ABCMeta):
+class CombinedMeta(BaseModelManagerMeta, ABCMeta):
     """
-    Combined metaclass for BaseHandler and ABCMeta.
+    Combined metaclass for BaseModelManager and ABCMeta.
     """
     pass
 
-class TTSHandler(BaseHandler, ABC, metaclass=CombinedMeta):
+class TTSModelManager(BaseModelManager, ABC, metaclass=CombinedMeta):
     """
     Abstract base class for text-to-speech handlers.
     Responsible for managing the model, processor, vocoder, and speaker embeddings.
