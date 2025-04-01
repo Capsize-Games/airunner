@@ -7,8 +7,8 @@ import pygame
 from pygame.locals import QUIT, KEYDOWN, KEYUP, K_ESCAPE, K_SPACE, K_RETURN, K_UP, K_DOWN, K_LEFT, K_RIGHT
 
 from airunner.api import API
-from airunner.windows.pygame_window import PygameWindow
-from airunner.windows.pygame_window import PygameAdapter
+from airunner.gui.windows.pygame_window import PygameWindow
+from airunner.gui.windows.pygame_window import PygameAdapter
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.handlers.stablediffusion.image_response import ImageResponse
