@@ -18,6 +18,13 @@ from airunner.widgets.canvas.templates.input_image_ui import Ui_input_image
 
 class InputImage(BaseWidget):
     widget_class_ = Ui_input_image
+    items = [
+        ("link", "link_to_grid_image_button"),
+        ("lock", "lock_input_image_button"),
+        ("refresh-ccw", "refresh_button"),
+        ("folder", "import_button"),
+        ("trash-2", "delete_button"),
+    ]
 
     def __init__(self, *args, **kwargs):
         self.settings_key = kwargs.pop("settings_key")

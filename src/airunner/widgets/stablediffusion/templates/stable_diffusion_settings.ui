@@ -49,7 +49,7 @@
         <x>0</x>
         <y>0</y>
         <width>409</width>
-        <height>922</height>
+        <height>921</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -506,9 +506,7 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="../../../resources_light.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>version</sender>

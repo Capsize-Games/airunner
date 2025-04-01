@@ -401,7 +401,8 @@
            <string/>
           </property>
           <property name="icon">
-           <iconset theme="go-up"/>
+           <iconset resource="../../../gui/resources/feather.qrc">
+            <normaloff>:/light/icons/feather/light/chevron-up.svg</normaloff>:/light/icons/feather/light/chevron-up.svg</iconset>
           </property>
          </widget>
         </item>
@@ -435,7 +436,8 @@
            <string/>
           </property>
           <property name="icon">
-           <iconset theme="application-exit"/>
+           <iconset resource="../../../gui/resources/feather.qrc">
+            <normaloff>:/light/icons/feather/light/x-circle.svg</normaloff>:/light/icons/feather/light/x-circle.svg</iconset>
           </property>
          </widget>
         </item>
@@ -456,8 +458,7 @@
   <tabstop>interrupt_button</tabstop>
  </tabstops>
  <resources>
-  <include location="../../../resources_light.qrc"/>
-  <include location="../../../resources_dark.qrc"/>
+  <include location="../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
   <connection>

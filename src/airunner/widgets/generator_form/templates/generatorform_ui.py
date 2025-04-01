@@ -19,9 +19,6 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QTabWidge
     QWidget)
 
 from airunner.widgets.llm.chat_prompt_widget import ChatPromptWidget
-import airunner.resources_light_rc
-import airunner.resources_dark_rc
-
 class Ui_generator_form(object):
     def setupUi(self, generator_form):
         if not generator_form.objectName():

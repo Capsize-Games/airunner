@@ -220,7 +220,7 @@ class App(
             screen = screens[0]
 
         base_dir = Path(os.path.dirname(os.path.realpath(__file__)))
-        stylesheet_path = base_dir / "images" / "splashscreen.png"
+        stylesheet_path = base_dir / "gui" / "images" / "splashscreen.png"
         pixmap = QPixmap(stylesheet_path)
         splash = QSplashScreen(
             screen,

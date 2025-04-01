@@ -1,0 +1,1 @@
+from airunner.gui.resources.feather_rc import *
