@@ -31,14 +31,13 @@
 
 ## Introduction
 
-AI Runner is a tool that allows you to run open-source large language models (LLM) and AI image generators (Stable Diffusion) on your own hardware.
-
-It is designed to be easy to use, with a simple and intuitive interface that allows you to use models without the need for a web server or cloud service.
+AI Runner is a local-first tool that allows you to run open-source large language models (LLM) and AI image generators (Stable Diffusion) on your own hardware, without the need for a web server or cloud service.
 
 It has been optimized for speed and efficiency, allowing you to generate images and have conversations with chatbots in real-time.
 
-It can also be installed as a library and used in your projects, such as pygame
+AI Runner can also be installed as a library and used in your projects, such as pygame
 or PySide6 applications. See ["Use with Pygame"](https://github.com/Capsize-Games/airunner/wiki/Use-with-Pygame) wikipage for more info.
+
 
 ## GUI
 
@@ -100,6 +99,11 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 | Fully customizable                   | Easily adjust all parameters                             |
 | Fast load time, responsive interface | Enjoy a smooth and responsive user experience            |
 | Pure python                          | No reliance on a webserver, pure python implementation   |
+| Extensions                           | Create your own extensions that the GUI can use.         |
+| 🔧 **Library**                       |
+| Install from PyPi                    | Use AI Runner in your own Python projects such as Pygame games or standalone desktop apps. |
+| 🔧 **API support**                   |
+| OpenRouter                           | Use with an OpenRouter account and any model they offer. |
 
 ---
 
