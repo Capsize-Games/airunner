@@ -20,6 +20,10 @@ class AutoResizingTextEdit(QTextEdit):
 class MessageWidget(BaseWidget):
     widget_class_ = Ui_message
     textChanged = Signal()
+    icons = [
+        ("copy", "copy_button"),
+        ("x-circle", "delete_button"),
+    ]
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {

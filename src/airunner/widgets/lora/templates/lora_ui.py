@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QGridLayout, QLineEdit,
     QPushButton, QSizePolicy, QWidget)
 
 from airunner.widgets.slider.slider_widget import SliderWidget
-import airunner.resources_light_rc
+import airunner.feather_rc
 
 class Ui_lora(object):
     def setupUi(self, lora):
@@ -64,7 +64,8 @@ class Ui_lora(object):
         self.delete_button.setMinimumSize(QSize(24, 24))
         self.delete_button.setMaximumSize(QSize(24, 24))
         self.delete_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon = QIcon(QIcon.fromTheme(u"user-trash"))
+        icon = QIcon()
+        icon.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.delete_button.setIcon(icon)
 
         self.gridLayout_3.addWidget(self.delete_button, 2, 2, 1, 1)

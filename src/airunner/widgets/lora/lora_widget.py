@@ -18,7 +18,7 @@ class LoraWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         self.icons = [
-            ("recycle-bin-line-icon", "delete_button"),
+            ("trash-2", "delete_button"),
         ]
         self.current_lora: Lora = kwargs.pop("lora")
         super().__init__(*args, **kwargs)

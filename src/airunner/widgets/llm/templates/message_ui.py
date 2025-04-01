@@ -18,7 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QLabel,
     QPushButton, QSizePolicy, QSpacerItem, QTextEdit,
     QWidget)
-import airunner.resources_dark_rc
+import airunner.feather_rc
 
 class Ui_message(object):
     def setupUi(self, message):
@@ -57,14 +57,16 @@ class Ui_message(object):
 
         self.copy_button = QPushButton(self.message_container)
         self.copy_button.setObjectName(u"copy_button")
-        icon = QIcon(QIcon.fromTheme(u"edit-copy"))
+        icon = QIcon()
+        icon.addFile(u":/light/icons/feather/light/copy.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.copy_button.setIcon(icon)
 
         self.horizontalLayout.addWidget(self.copy_button)
 
         self.delete_button = QPushButton(self.message_container)
         self.delete_button.setObjectName(u"delete_button")
-        icon1 = QIcon(QIcon.fromTheme(u"edit-delete"))
+        icon1 = QIcon()
+        icon1.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.delete_button.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.delete_button)

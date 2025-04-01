@@ -20,8 +20,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
     QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
     QSizePolicy, QSpacerItem, QSplitter, QVBoxLayout,
     QWidget)
-import airunner.resources_light_rc
-import airunner.resources_dark_rc
+import airunner.feather_rc
 
 class Ui_stablediffusion_generator_form(object):
     def setupUi(self, stablediffusion_generator_form):
@@ -243,7 +242,8 @@ class Ui_stablediffusion_generator_form(object):
         self.generate_button.setSizePolicy(sizePolicy1)
         self.generate_button.setMinimumSize(QSize(30, 30))
         self.generate_button.setMaximumSize(QSize(30, 30))
-        icon = QIcon(QIcon.fromTheme(u"go-up"))
+        icon = QIcon()
+        icon.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.generate_button.setIcon(icon)
 
         self.horizontalLayout_7.addWidget(self.generate_button)
@@ -255,7 +255,8 @@ class Ui_stablediffusion_generator_form(object):
         self.interrupt_button.setMinimumSize(QSize(30, 30))
         self.interrupt_button.setMaximumSize(QSize(30, 30))
         self.interrupt_button.setCursor(QCursor(Qt.PointingHandCursor))
-        icon1 = QIcon(QIcon.fromTheme(u"application-exit"))
+        icon1 = QIcon()
+        icon1.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.interrupt_button.setIcon(icon1)
 
         self.horizontalLayout_7.addWidget(self.interrupt_button)
