@@ -29,7 +29,7 @@ class ChatPromptWidget(BaseWidget):
     widget_class_ = Ui_chat_prompt
     icons = [
         ("corner-down-left", "send_button"),
-        ("file-plus", "clear_conversatiion_button"),
+        ("file-plus", "clear_conversation_button"),
         ("stop-circle", "pushButton"),
     ]
     

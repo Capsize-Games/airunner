@@ -1010,7 +1010,10 @@ class MainWindow(
 
     def on_toggle_tts(self, data: Dict = None, val=None):
         if val is None:
-            val = not self.application_settings.tts_enabled
+            val = data.get(
+                "enabled", 
+                not self.application_settings.tts_enabled
+            )
         self._update_action_button(
             ModelType.TTS,
             self.ui.actionToggle_Text_to_Speech,
