@@ -259,6 +259,10 @@
      <property name="title">
       <string>Art</string>
      </property>
+     <property name="icon">
+      <iconset resource="../../../gui/resources/feather.qrc">
+       <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
+     </property>
      <addaction name="artActionNew"/>
      <addaction name="actionImport_image"/>
      <addaction name="actionExport_image_button"/>
@@ -266,6 +270,10 @@
     <widget class="QMenu" name="menuChat">
      <property name="title">
       <string>Chat</string>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../gui/resources/feather.qrc">
+       <normaloff>:/light/icons/feather/light/message-circle.svg</normaloff>:/light/icons/feather/light/message-circle.svg</iconset>
      </property>
      <addaction name="actionNew_Conversation"/>
      <addaction name="actionDelete_conversation"/>
@@ -335,11 +343,6 @@
     <addaction name="separator"/>
     <addaction name="actionBrowse_Images_Path_2"/>
     <addaction name="separator"/>
-    <addaction name="actionArt"/>
-    <addaction name="actionEditor"/>
-    <addaction name="actionChat"/>
-    <addaction name="actionLLM"/>
-    <addaction name="actionChat_History"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -348,6 +351,10 @@
     <widget class="QMenu" name="menuStable_Diffusion">
      <property name="title">
       <string>Stable Diffusion</string>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../gui/resources/feather.qrc">
+       <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
      </property>
      <addaction name="actionSafety_Checker"/>
      <addaction name="actionToggle_Stable_Diffusion"/>
@@ -443,6 +450,10 @@
    </property>
   </action>
   <action name="actionCopy">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/copy.svg</normaloff>:/light/icons/feather/light/copy.svg</iconset>
+   </property>
    <property name="text">
     <string>Copy</string>
    </property>
@@ -451,6 +462,10 @@
    </property>
   </action>
   <action name="actionPaste">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/clipboard.svg</normaloff>:/light/icons/feather/light/clipboard.svg</iconset>
+   </property>
    <property name="text">
     <string>Paste</string>
    </property>
@@ -635,6 +650,10 @@
    </property>
   </action>
   <action name="actionQuit">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/x-circle.svg</normaloff>:/light/icons/feather/light/x-circle.svg</iconset>
+   </property>
    <property name="text">
     <string>Quit</string>
    </property>
@@ -739,6 +758,10 @@
    </property>
   </action>
   <action name="actionRotate_90_clockwise">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/corner-right-down.svg</normaloff>:/light/icons/feather/light/corner-right-down.svg</iconset>
+   </property>
    <property name="text">
     <string>Rotate 90° clockwise</string>
    </property>
@@ -747,6 +770,10 @@
    </property>
   </action>
   <action name="actionRotate_90_counter_clockwise">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/corner-left-down.svg</normaloff>:/light/icons/feather/light/corner-left-down.svg</iconset>
+   </property>
    <property name="text">
     <string>Rotate 90° counter clockwise</string>
    </property>
@@ -804,11 +831,19 @@
    </property>
   </action>
   <action name="actionPrompt_Browser">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/book-open.svg</normaloff>:/light/icons/feather/light/book-open.svg</iconset>
+   </property>
    <property name="text">
     <string>Prompt browser</string>
    </property>
   </action>
   <action name="actionClear_all_prompts">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/delete.svg</normaloff>:/light/icons/feather/light/delete.svg</iconset>
+   </property>
    <property name="text">
     <string>Clear all prompts</string>
    </property>
@@ -841,6 +876,10 @@
    </property>
   </action>
   <action name="actionCut">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/scissors.svg</normaloff>:/light/icons/feather/light/scissors.svg</iconset>
+   </property>
    <property name="text">
     <string>Cut</string>
    </property>
@@ -927,6 +966,10 @@
    </property>
   </action>
   <action name="actionBrowse_AI_Runner_Path">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/arrow-up-right.svg</normaloff>:/light/icons/feather/light/arrow-up-right.svg</iconset>
+   </property>
    <property name="text">
     <string>Browse AI Runner Path</string>
    </property>
@@ -937,6 +980,10 @@
    </property>
   </action>
   <action name="actionBrowse_Images_Path_2">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/arrow-up-right.svg</normaloff>:/light/icons/feather/light/arrow-up-right.svg</iconset>
+   </property>
    <property name="text">
     <string>Browse Images</string>
    </property>
@@ -977,6 +1024,10 @@
    </property>
   </action>
   <action name="actionReset_Settings_2">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/refresh-cw.svg</normaloff>:/light/icons/feather/light/refresh-cw.svg</iconset>
+   </property>
    <property name="text">
     <string>Reset Settings</string>
    </property>
@@ -1097,6 +1148,10 @@
    <property name="checked">
     <bool>false</bool>
    </property>
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/slash.svg</normaloff>:/light/icons/feather/light/slash.svg</iconset>
+   </property>
    <property name="text">
     <string>Safety Checker</string>
    </property>
@@ -1125,18 +1180,27 @@
    </property>
   </action>
   <action name="actionRun_setup_wizard_2">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/zap.svg</normaloff>:/light/icons/feather/light/zap.svg</iconset>
+   </property>
    <property name="text">
     <string>Run Setup Wizard</string>
    </property>
   </action>
   <action name="actionStats">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/activity.svg</normaloff>:/light/icons/feather/light/activity.svg</iconset>
+   </property>
    <property name="text">
     <string>Stats</string>
    </property>
   </action>
   <action name="actionSettings">
    <property name="icon">
-    <iconset theme="preferences-system"/>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/settings.svg</normaloff>:/light/icons/feather/light/settings.svg</iconset>
    </property>
    <property name="text">
     <string>Preferences</string>
@@ -1150,9 +1214,8 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset theme="applications-internet">
-     <normalon>../../../../../../../../../../../../../../../../../.designer/backup/applications-internet</normalon>
-    </iconset>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/cpu.svg</normaloff>:/light/icons/feather/light/cpu.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle LLM</string>
@@ -1163,7 +1226,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="audio-volume-high"/>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/speaker.svg</normaloff>:/light/icons/feather/light/speaker.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Text to Speech</string>
@@ -1174,9 +1238,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="audio-input-microphone">
-     <normalon>../../../../../../../../../../../../../../../../../.designer/backup/audio-input-microphone</normalon>
-    </iconset>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/mic.svg</normaloff>:/light/icons/feather/light/mic.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Speech to Text</string>
@@ -1187,7 +1250,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="applications-graphics"/>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Stable Diffusion</string>
@@ -1201,7 +1265,8 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset theme="insert-image"/>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/crosshair.svg</normaloff>:/light/icons/feather/light/crosshair.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Controlnet</string>
@@ -1220,8 +1285,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources_light.qrc">
-     <normaloff>:/icons/light/object-selected-icon.svg</normaloff>:/icons/light/object-selected-icon.svg</iconset>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/move.svg</normaloff>:/light/icons/feather/light/move.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Active Grid Area</string>
@@ -1359,8 +1424,8 @@
   </action>
   <action name="artActionNew">
    <property name="icon">
-    <iconset resource="../../../resources_light.qrc">
-     <normaloff>:/icons/light/add-plus-icon.svg</normaloff>:/icons/light/add-plus-icon.svg</iconset>
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/plus-circle.svg</normaloff>:/light/icons/feather/light/plus-circle.svg</iconset>
    </property>
    <property name="text">
     <string>New</string>
@@ -1394,11 +1459,19 @@
    </property>
   </action>
   <action name="actionNew_Conversation">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/message-circle.svg</normaloff>:/light/icons/feather/light/message-circle.svg</iconset>
+   </property>
    <property name="text">
     <string>New Conversation</string>
    </property>
   </action>
   <action name="actionDelete_conversation">
+   <property name="icon">
+    <iconset resource="../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/trash-2.svg</normaloff>:/light/icons/feather/light/trash-2.svg</iconset>
+   </property>
    <property name="text">
     <string>Delete conversation</string>
    </property>
@@ -1538,6 +1611,7 @@
  <resources>
   <include location="../../../resources_light.qrc"/>
   <include location="../../../resources_dark.qrc"/>
+  <include location="../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
   <connection>

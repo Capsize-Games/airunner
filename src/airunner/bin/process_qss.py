@@ -36,8 +36,8 @@ def generate_resources():
         [
             "pyside6-rcc",
             "-o",
-            os.path.join(here, "resources_rc.py"),
-            os.path.join(here, "resources_dark.qrc"),
+            os.path.join(here, "..", "gui", "resources", "feather_rc.py"),
+            os.path.join(here, "..", "gui", "resources", "feather.qrc"),
         ],
         cwd=str(Path(__file__).parent.parent),
     )
