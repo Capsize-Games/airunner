@@ -67,7 +67,7 @@ from airunner.enums import (
     StableDiffusionVersion,
 )
 from airunner.mediator_mixin import MediatorMixin
-from airunner.styles_mixin import StylesMixin
+from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.workers import (
     AudioCaptureWorker,
     AudioProcessorWorker,
@@ -570,9 +570,9 @@ class MainWindow(
     def initialize_system_tray(self):
         """Initialize the system tray icon with a simple menu."""
         here = os.path.dirname(os.path.abspath(__file__))
-        self.setWindowIcon(QIcon(os.path.join(here, "../../images/icon64x64.png")))
+        self.setWindowIcon(QIcon(os.path.join(here, "../../gui/images/icon64x64.png")))
         self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setIcon(QIcon(os.path.join(here, "../../images/icon64x64.png")))
+        self.tray_icon.setIcon(QIcon(os.path.join(here, "../../gui/images/icon64x64.png")))
 
         # Create a simple tray menu with actions
         self.tray_menu = QMenu()

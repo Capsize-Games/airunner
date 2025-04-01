@@ -17,7 +17,7 @@ from airunner.workers import (
 )
 from airunner.setup_database import setup_database
 from airunner.utils import create_worker
-from airunner.ui_dispatcher import render_ui_from_spec
+from airunner.gui.utils.ui_dispatcher import render_ui_from_spec
 from airunner.utils.ui_loader import load_ui_file, load_ui_from_string
 from PySide6.QtWidgets import QMainWindow, QDialog, QVBoxLayout
 from PySide6.QtCore import QObject
