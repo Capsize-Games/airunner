@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>generator_form</class>
+ <widget class="QWidget" name="generator_form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>620</width>
+    <height>942</height>
+   </rect>
+  </property>
+  <property name="font">
+   <font>
+    <pointsize>8</pointsize>
+   </font>
+  </property>
+  <property name="cursor">
+   <cursorShape>PointingHandCursor</cursorShape>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_4">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="generator_form_tabs">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <property name="tabsClosable">
+      <bool>false</bool>
+     </property>
+     <property name="movable">
+      <bool>false</bool>
+     </property>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="title">
+       <string>Chat</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_5">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout_7">
+         <property name="horizontalSpacing">
+          <number>0</number>
+         </property>
+         <property name="verticalSpacing">
+          <number>10</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="ChatPromptWidget" name="chat_prompt_widget" native="true"/>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ChatPromptWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/llm/chat_prompt_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>generator_form_tabs</tabstop>
+ </tabstops>
+ <connections/>
+ <slots>
+  <slot>handle_prompt_changed()</slot>
+  <slot>handle_negative_prompt_changed()</slot>
+  <slot>handle_model_changed(QString)</slot>
+  <slot>handle_scheduler_changed(QString)</slot>
+  <slot>toggle_variation(bool)</slot>
+  <slot>handle_generate_button_clicked()</slot>
+  <slot>handle_interrupt_button_clicked()</slot>
+  <slot>action_clicked_button_save_prompts()</slot>
+  <slot>save_settings()</slot>
+  <slot>handle_pipeline_changed(QString)</slot>
+  <slot>handle_version_changed(QString)</slot>
+  <slot>handle_image_presets_changed(QString)</slot>
+  <slot>handle_second_prompt_changed()</slot>
+  <slot>handle_second_negative_prompt_changed()</slot>
+  <slot>handle_quality_effects_changed(QString)</slot>
+  <slot>past_conversations_clicked()</slot>
+ </slots>
+</ui>

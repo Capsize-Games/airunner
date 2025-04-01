@@ -15,10 +15,10 @@ from PySide6.QtWidgets import (
     QApplication
 )
 
-from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.download_wizard.download_wizard_window import DownloadWizardWindow
-from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.windows.setup_wizard.setup_wizard_window import SetupWizardWindow
+from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.gui.windows.download_wizard.download_wizard_window import DownloadWizardWindow
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.gui.windows.setup_wizard.setup_wizard_window import SetupWizardWindow
 
 
 class AppInstaller(

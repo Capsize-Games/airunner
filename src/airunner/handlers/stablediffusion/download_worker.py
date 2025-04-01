@@ -4,8 +4,8 @@ import time
 import requests
 from PySide6.QtCore import QObject, Signal
 from airunner.enums import SignalCode
-from airunner.mediator_mixin import MediatorMixin
-from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
 DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 
 
