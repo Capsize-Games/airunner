@@ -1,6 +1,6 @@
 from PIL import ImageFilter
 
-from airunner.windows.main.settings_mixin import SettingsMixin
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
 
 
 class BaseFilter(ImageFilter.Filter, SettingsMixin):

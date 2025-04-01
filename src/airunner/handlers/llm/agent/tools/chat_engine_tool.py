@@ -21,8 +21,8 @@ from airunner.handlers.llm.agent.chat_engine import (
     RefreshSimpleChatEngine
 )
 from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.windows.main.settings_mixin import SettingsMixin
-from airunner.mediator_mixin import MediatorMixin
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.utils.mediator_mixin import MediatorMixin
 
 
 class ChatEngineTool(
