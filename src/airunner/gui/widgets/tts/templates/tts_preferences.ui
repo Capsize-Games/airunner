@@ -89,6 +89,40 @@
          </property>
         </widget>
        </item>
+       <item row="5" column="0">
+        <widget class="QGroupBox" name="voice_settings_groupbox">
+         <property name="title">
+          <string>Voice Settings</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_voice">
+          <item>
+           <widget class="QScrollArea" name="voice_scroll_area">
+            <property name="widgetResizable">
+             <bool>true</bool>
+            </property>
+            <widget class="QWidget" name="voice_scroll_area_contents">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>480</width>
+               <height>200</height>
+              </rect>
+             </property>
+             <layout class="QVBoxLayout" name="voice_list_layout"/>
+            </widget>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="create_voice_button">
+            <property name="text">
+             <string>Create Voice</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </widget>
     </widget>

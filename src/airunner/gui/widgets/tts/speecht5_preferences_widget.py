@@ -1,6 +1,9 @@
-
+from PySide6.QtWidgets import QWidget
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.tts.templates.speecht5_preferences_ui import Ui_speecht5_preferences
+from airunner.gui.widgets.tts.templates.speecht5_preferences_ui import (
+    Ui_speecht5_preferences,
+)
+from airunner.data.models.speech_t5_settings import SpeechT5Settings
 
 
 class SpeechT5PreferencesWidget(BaseWidget):
@@ -16,3 +19,8 @@ class SpeechT5PreferencesWidget(BaseWidget):
 
     def voice_changed(self, text):
         self.update_speech_t5_settings("voice", text)
+
+    def load_settings(self, settings: SpeechT5Settings):
+        """Load the SpeechT5 settings into the widget."""
+        # Populate the widget with settings (e.g., pitch, voice)
+        pass

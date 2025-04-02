@@ -7,15 +7,19 @@ from typing import Optional, Union, ClassVar, Type, Dict, Any
 import torch
 import datasets
 from datasets import (
-    load_dataset, 
-    DatasetDict, 
-    Dataset, 
-    IterableDatasetDict, 
-    IterableDataset
+    load_dataset,
+    DatasetDict,
+    Dataset,
+    IterableDatasetDict,
+    IterableDataset,
 )
 from transformers import (
-    AutoTokenizer, PreTrainedModel, ProcessorMixin,
-    SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
+    AutoTokenizer,
+    PreTrainedModel,
+    ProcessorMixin,
+    SpeechT5Processor,
+    SpeechT5ForTextToSpeech,
+    SpeechT5HifiGan,
 )
 
 from airunner.handlers.tts.tts_model_manager import TTSModelManager
@@ -23,11 +27,13 @@ from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
 from airunner.utils.memory import clear_memory
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 
+
 class SpeechT5ModelManager(TTSModelManager):
     """
     SpeechT5 implementation of the TTSModelManager.
     Uses the SpeechT5ForTextToSpeech model and SpeechT5Processor.
     """
+
     target_model: ClassVar[str] = "microsoft/speecht5_tts"
     model_class: ClassVar[Type[PreTrainedModel]] = SpeechT5ForTextToSpeech
     processor_class: ClassVar[Type[ProcessorMixin]] = SpeechT5Processor
@@ -47,11 +53,7 @@ class SpeechT5ModelManager(TTSModelManager):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.vocoder = None
-        self._character_replacement_map = {
-            "\n": " ",
-            "’": "'",
-            "-": " "
-        }
+        self._character_replacement_map = {"\n": " ", "’": "'", "-": " "}
         self._model: Optional[Type[PreTrainedModel]] = None
         self._vocoder: Optional[Type[PreTrainedModel]] = None
         self._processor: Optional[Type[ProcessorMixin]] = None
@@ -116,12 +118,12 @@ class SpeechT5ModelManager(TTSModelManager):
     @property
     def device(self) -> torch.device:
         """Return the appropriate device based on settings."""
-        return torch.device("cuda" if self.tts_settings.use_cuda else "cpu")
+        return torch.device("cuda" if self.use_cuda else "cpu")
 
     @property
     def torch_dtype(self) -> torch.dtype:
         """Return the consistent torch dtype to use across models and inputs."""
-        return torch.float16 if self.tts_settings.use_cuda else torch.float32
+        return torch.float16 if self.use_cuda else torch.float32
 
     def tts_path(self, path: str) -> str:
         return os.path.join(self.path_settings.tts_model_path, path)
@@ -146,7 +148,7 @@ class SpeechT5ModelManager(TTSModelManager):
         if self.model_status in (
             ModelStatus.LOADED,
             ModelStatus.READY,
-            ModelStatus.FAILED
+            ModelStatus.FAILED,
         ):
             self.unload()
         self.logger.debug(f"Loading text-to-speech")
@@ -200,7 +202,7 @@ class SpeechT5ModelManager(TTSModelManager):
                 self.model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.torch_dtype,
-                device_map=self.device
+                device_map=self.device,
             )
         except EnvironmentError as _e:
             self.logger.error(f"Failed to load model {_e}")
@@ -214,7 +216,7 @@ class SpeechT5ModelManager(TTSModelManager):
                 device_map=self.device,
                 torch_dtype=self.torch_dtype,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                trust_remote_code=False
+                trust_remote_code=False,
             )
         except Exception as e:
             self.logger.error("Failed to load tokenizer")
@@ -227,7 +229,7 @@ class SpeechT5ModelManager(TTSModelManager):
                 self.vocoder_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.torch_dtype,
-                device_map=self.device
+                device_map=self.device,
             )
         except Exception as e:
             self.logger.error("Failed to load vocoder")
@@ -241,7 +243,7 @@ class SpeechT5ModelManager(TTSModelManager):
                     self.processor_path,
                     local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                     torch_dtype=self.torch_dtype,
-                    device_map=self.device
+                    device_map=self.device,
                 )
             except Exception as e:
                 self.logger.error("Failed to load processor")
@@ -250,21 +252,18 @@ class SpeechT5ModelManager(TTSModelManager):
     def _load_speaker_embeddings(self):
         self.logger.debug("Loading speaker embeddings...")
         embeddings_dataset = load_dataset(
-            self.dataset_path, 
-            split=datasets.Split.VALIDATION
+            self.dataset_path, split=datasets.Split.VALIDATION
         )
         speaker_key = self.speakers[self.speech_t5_settings.voice]
         embeddings = self._load_dataset_by_speaker_key(
-            speaker_key,
-            embeddings_dataset
+            speaker_key, embeddings_dataset
         )
         if embeddings is None:
             self.logger.error(
                 "Failed to load speaker embeddings. Using fallback"
             )
             embeddings = self._load_dataset_by_speaker_key(
-                "slt",
-                embeddings_dataset
+                "slt", embeddings_dataset
             )
 
         self._speaker_embeddings = embeddings
@@ -276,20 +275,17 @@ class SpeechT5ModelManager(TTSModelManager):
                 ).cuda()
         else:
             self.logger.error("Failed to load speaker embeddings")
-        
+
     @staticmethod
     def _extract_speaker_key(filename):
         return filename.split("_")[2]
 
     def _load_dataset_by_speaker_key(
-        self, 
+        self,
         speaker_key: str,
         embeddings_dataset: Union[
-            DatasetDict, 
-            Dataset, 
-            IterableDatasetDict, 
-            IterableDataset
-        ] = None
+            DatasetDict, Dataset, IterableDatasetDict, IterableDataset
+        ] = None,
     ) -> Optional[torch.Tensor]:
         embeddings = None
         for entry in embeddings_dataset:
@@ -324,17 +320,19 @@ class SpeechT5ModelManager(TTSModelManager):
 
         self.logger.debug("Generating speech...")
         start = time.time()
-        
+
         # Use consistent device and dtype handling
         try:
-            speaker_embeddings = self._speaker_embeddings.to(self.torch_dtype).to(self.device)
+            speaker_embeddings = self._speaker_embeddings.to(
+                self.torch_dtype
+            ).to(self.device)
             vocoder = self.vocoder.to(self.torch_dtype).to(self.device)
-            
+
             speech = self.model.generate(
                 **inputs,
                 speaker_embeddings=speaker_embeddings,
                 vocoder=vocoder,
-                max_length=100
+                max_length=100,
             )
         except Exception as e:
             self.logger.error(f"Failed to generate speech: {str(e)}")
@@ -342,7 +340,9 @@ class SpeechT5ModelManager(TTSModelManager):
             return None
 
         if not self._cancel_generated_speech:
-            self.logger.debug(f"Generated speech in {time.time() - start:.2f} seconds")
+            self.logger.debug(
+                f"Generated speech in {time.time() - start:.2f} seconds"
+            )
             response = speech.cpu().float().numpy()
             return response
         if not self._do_interrupt:
@@ -360,11 +360,13 @@ class SpeechT5ModelManager(TTSModelManager):
                 elif isinstance(inputs[key], dict):
                     for subkey in inputs[key]:
                         if isinstance(inputs[key][subkey], torch.Tensor):
-                            inputs[key][subkey] = inputs[key][subkey].to(device)
-                            
+                            inputs[key][subkey] = inputs[key][subkey].to(
+                                device
+                            )
+
         except Exception as e:
             self.logger.error(f"Failed to move inputs to device: {str(e)}")
-            
+
         return inputs
 
     def unblock_tts_generator_signal(self):

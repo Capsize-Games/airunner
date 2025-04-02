@@ -34,7 +34,7 @@ class Ui_bot_preferences(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, -161, 812, 1251))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, -242, 812, 1332))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setVerticalSpacing(10)
@@ -239,6 +239,18 @@ class Ui_bot_preferences(object):
 
         self.gridLayout.addWidget(self.groupBox_4, 13, 0, 1, 1)
 
+        self.voice_groupbox = QGroupBox(self.scrollAreaWidgetContents_2)
+        self.voice_groupbox.setObjectName(u"voice_groupbox")
+        self.gridLayout_voice = QGridLayout(self.voice_groupbox)
+        self.gridLayout_voice.setObjectName(u"gridLayout_voice")
+        self.voice_combobox = QComboBox(self.voice_groupbox)
+        self.voice_combobox.setObjectName(u"voice_combobox")
+
+        self.gridLayout_voice.addWidget(self.voice_combobox, 0, 0, 1, 1)
+
+
+        self.gridLayout.addWidget(self.voice_groupbox, 14, 0, 1, 1)
+
         self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
 
         self.gridLayout_4.addWidget(self.scrollArea, 0, 0, 1, 1)
@@ -261,6 +273,7 @@ class Ui_bot_preferences(object):
         self.use_weather_prompt.toggled.connect(bot_preferences.use_weather_prompt_toggled)
         self.use_datetime.toggled.connect(bot_preferences.toggle_use_datetime)
         self.gender.currentTextChanged.connect(bot_preferences.gender_changed)
+        self.voice_combobox.currentIndexChanged.connect(bot_preferences.voice_changed)
 
         QMetaObject.connectSlotsByName(bot_preferences)
     # setupUi
@@ -300,5 +313,6 @@ class Ui_bot_preferences(object):
         self.gender.setItemText(0, QCoreApplication.translate("bot_preferences", u"Male", None))
         self.gender.setItemText(1, QCoreApplication.translate("bot_preferences", u"Female", None))
 
+        self.voice_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Voice", None))
     # retranslateUi
 

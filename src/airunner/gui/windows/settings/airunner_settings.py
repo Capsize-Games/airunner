@@ -1,18 +1,41 @@
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor, QPainter
-from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QLabel, QWidget, QVBoxLayout, QPlainTextEdit
+from PySide6.QtGui import (
+    QStandardItemModel,
+    QStandardItem,
+    QBrush,
+    QColor,
+    QPainter,
+)
+from PySide6.QtWidgets import (
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QLabel,
+    QWidget,
+    QVBoxLayout,
+    QPlainTextEdit,
+)
 
 from airunner.enums import SignalCode
 from airunner.gui.widgets.api_token.api_token_widget import APITokenWidget
-from airunner.gui.widgets.export_preferences.export_preferences_widget import ExportPreferencesWidget
-from airunner.gui.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import KeyboardShortcutsWidget
+from airunner.gui.widgets.export_preferences.export_preferences_widget import (
+    ExportPreferencesWidget,
+)
+from airunner.gui.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import (
+    KeyboardShortcutsWidget,
+)
 from airunner.gui.widgets.llm.bot_preferences import BotPreferencesWidget
-from airunner.gui.widgets.llm.prompt_templates_widget import PromptTemplatesWidget
-from airunner.gui.widgets.memory_preferences.memory_preferences_widget import MemoryPreferencesWidget
+from airunner.gui.widgets.llm.prompt_templates_widget import (
+    PromptTemplatesWidget,
+)
+from airunner.gui.widgets.memory_preferences.memory_preferences_widget import (
+    MemoryPreferencesWidget,
+)
 from airunner.gui.widgets.paths.paths_widget import PathsWidget
-from airunner.gui.widgets.tts.tts_preferences_widget import TTSPreferencesWidget
+from airunner.gui.widgets.tts.voice_settings_widget import VoiceSettingsWidget
 from airunner.gui.widgets.user.user_settings_widget import UserSettingsWidget
-from airunner.gui.windows.settings.templates.airunner_settings_ui import Ui_airunner_settings
+from airunner.gui.windows.settings.templates.airunner_settings_ui import (
+    Ui_airunner_settings,
+)
 from airunner.gui.windows.base_window import BaseWindow
 
 
@@ -24,7 +47,9 @@ class HighlightDelegate(QStyledItemDelegate):
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index):
         if index in self.selected_indexes:
             painter.save()
-            painter.fillRect(option.rect, QBrush(QColor(0, 0, 255, 50)))  # Blue background color
+            painter.fillRect(
+                option.rect, QBrush(QColor(0, 0, 255, 50))
+            )  # Blue background color
             painter.restore()
 
         super().paint(painter, option, index)
@@ -63,8 +88,8 @@ class SettingsWindow(BaseWindow):
             return MemoryPreferencesWidget
         elif name == "hf_api_key":
             return APITokenWidget
-        elif name == "tts_preferences":
-            return TTSPreferencesWidget
+        elif name == "voice_settings":
+            return VoiceSettingsWidget
         elif name == "prompt_templates":
             return PromptTemplatesWidget
         elif name == "bot_preferences":
@@ -92,9 +117,9 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "export_preferences",
                         "display_name": "Export Preferences",
-                        "checkable": False
+                        "checkable": False,
                     }
-                ]
+                ],
             },
             {
                 "section": "Memory Preferences",
@@ -102,9 +127,9 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "memory",
                         "display_name": "Memory",
-                        "checkable": False
+                        "checkable": False,
                     }
-                ]
+                ],
             },
             {
                 "section": "Keyboard Shortcuts",
@@ -112,9 +137,9 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "keyboard_shortcuts",
                         "display_name": "Keyboard Shortcuts",
-                        "checkable": False
+                        "checkable": False,
                     }
-                ]
+                ],
             },
             {
                 "section": "Chatbot, prompt templates, text-to-speech",
@@ -122,29 +147,29 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "bot_preferences",
                         "display_name": "Agent Preferences",
-                        "checkable": False
+                        "checkable": False,
                     },
                     {
                         "name": "user_settings",
                         "display_name": "User Settings",
-                        "checkable": False
+                        "checkable": False,
                     },
                     {
-                        "name": "tts_preferences",
+                        "name": "voice_settings",
                         "display_name": "Text-to-Speech",
-                        "checkable": False
+                        "checkable": False,
                     },
                     {
                         "name": "prompt_templates",
                         "display_name": "Prompt Templates",
-                        "checkable": False
+                        "checkable": False,
                     },
                     # {
                     #     "name": "stt_preferences",
                     #     "display_name": "Speech-to-Text",
                     #     "checkable": False
                     # },
-                ]
+                ],
             },
             {
                 "section": "Miscellaneous Preferences",
@@ -153,22 +178,22 @@ class SettingsWindow(BaseWindow):
                         "name": "dark_mode",
                         "display_name": "Dark Mode",
                         "checkable": True,
-                        "description": "If enabled, AI Runner will use a dark theme."
+                        "description": "If enabled, AI Runner will use a dark theme.",
                     },
                     {
                         "name": "override_system_theme",
                         "display_name": "Override System Theme",
                         "checkable": True,
-                        "description": "If enabled, override the system theme with the selected theme."
+                        "description": "If enabled, override the system theme with the selected theme.",
                     },
                     {
                         "name": "check_for_updates",
                         "display_name": "Check for updates",
                         "checkable": True,
-                        "description": "If enabled, AI Runner will check for updates on startup."
-                    }
-                ]
-            }
+                        "description": "If enabled, AI Runner will check for updates on startup.",
+                    },
+                ],
+            },
         ]
         for index, section in enumerate(directory):
             self.add_directory(section["section"])
@@ -178,7 +203,7 @@ class SettingsWindow(BaseWindow):
                     file["name"],
                     file["display_name"],
                     file["checkable"],
-                    file["description"] if "description" in file else None
+                    file["description"] if "description" in file else None,
                 )
 
         self.scroll_widget = QWidget()
@@ -195,18 +220,36 @@ class SettingsWindow(BaseWindow):
             index = self.model.index(i, 0)
             self.ui.directory.setExpanded(index, True)
 
+        self.connect_signals()
+
+    def connect_signals(self):
+        self.register(SignalCode.VOICE_SAVED, self.refresh_bot_preferences)
+
+    def refresh_bot_preferences(self):
+        if "bot_preferences" in self.widgets:
+            self.widgets["bot_preferences"].load_voices()
+
     def add_directory(self, name, checkable=False):
         item = QStandardItem(name)
         item.setCheckable(checkable)
         if checkable:
             checked = False
-            item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
+            item.setCheckState(
+                Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
+            )
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         item.setData(name, Qt.ItemDataRole.DisplayRole)
         item.setSizeHint(QSize(0, 24))
         self.model.appendRow(item)
 
-    def add_file(self, parent_item, name, display_name, checkable=False, description=None):
+    def add_file(
+        self,
+        parent_item,
+        name,
+        display_name,
+        checkable=False,
+        description=None,
+    ):
         file_item = QStandardItem(display_name)
         file_item.setCheckable(checkable)
         if checkable:
@@ -224,7 +267,9 @@ class SettingsWindow(BaseWindow):
             elif name == "allow_online_mode":
                 checked = self.application_settings.allow_online_mode
 
-            file_item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
+            file_item.setCheckState(
+                Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
+            )
         # prevent file_item from being edited
         file_item.setFlags(file_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         file_item.setData(name, Qt.ItemDataRole.UserRole)
@@ -291,7 +336,9 @@ class SettingsWindow(BaseWindow):
             description_text_edit.setReadOnly(True)
             description_text_edit.setPlainText(description)
             description_text_edit.setFrameStyle(0)
-            description_text_edit.setStyleSheet("QPlainTextEdit { background-color: transparent; border: none; }")
+            description_text_edit.setStyleSheet(
+                "QPlainTextEdit { background-color: transparent; border: none; }"
+            )
             self.scroll_layout.addWidget(description_text_edit)
 
     def clear_scroll_area(self):
