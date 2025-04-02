@@ -134,7 +134,7 @@ class TTSGeneratorWorker(Worker):
         if model is None:
             self.logger.error("No TTS model found. Skipping initialization.")
             return
-        model_type = TTSModel(model.lower())
+        model_type = TTSModel(model)
         if model_type is TTSModel.ESPEAK:
             tts_model_manager_class_ = EspeakModelManager
         elif model_type is TTSModel.OPENVOICE:
@@ -241,7 +241,7 @@ class TTSGeneratorWorker(Worker):
         if model is None:
             self.logger.error("No TTS model found. Skipping generation.")
             return
-        model_type = TTSModel(model.lower())
+        model_type = TTSModel(model)
 
         response = None
         if self.tts:
@@ -258,6 +258,10 @@ class TTSGeneratorWorker(Worker):
                     language=self.espeak_settings.language,
                 )
             elif model_type is TTSModel.SPEECHT5:
+                llm_request = TTSRequest(
+                    message=message, gender=self.chatbot.gender
+                )
+            elif model_type is TTSModel.OPENVOICE:
                 llm_request = TTSRequest(
                     message=message, gender=self.chatbot.gender
                 )
