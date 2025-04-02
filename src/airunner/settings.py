@@ -14,6 +14,7 @@ audit the application by using this repository as a reference.
 All current and future security documentation will be contained
 within this file.
 """
+
 from dotenv import load_dotenv
 import os
 import sys
@@ -26,18 +27,17 @@ python_venv_dir = os.path.dirname(sys.executable)
 NLTK_DOWNLOAD_DIR = os.path.join(
     python_venv_dir,
     "..",
-    "lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/"
+    "lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/",
 )
 AIRUNNER_DEFAULT_LLM_HF_PATH = os.environ.get(
     "AIRUNNER_AIRUNNER_DEFAULT_LLM_HF_PATH",
-    "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
+    "w4ffl35/Ministral-8B-Instruct-2410-doublequant",
 )
 AIRUNNER_DEFAULT_STT_HF_PATH = os.environ.get(
-    "AIRUNNER_DEFAULT_STT_HF_PATH",
-    "openai/whisper-tiny"
+    "AIRUNNER_DEFAULT_STT_HF_PATH", "openai/whisper-tiny"
 )
 AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT = os.environ.get(
-    "AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT", 
+    "AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT",
     (
         "You are an image generator. "
         "You will be provided with a JSON string and it is your goal to replace the PLACEHOLDER "
@@ -62,13 +62,14 @@ AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT = os.environ.get(
         "Here is a description of the attributes: \n"
         "`description`: This should describe the overall subject and look and feel of the image\n"
         "`composition`: This should describe the attributes of the image such as color, composition and other details\n"
-    )
+    ),
 )
 AIRUNNER_DEFAULT_IMAGE_LLM_GUARDRAILS = os.environ.get(
-    "AIRUNNER_DEFAULT_IMAGE_LLM_GUARDRAILS", (
+    "AIRUNNER_DEFAULT_IMAGE_LLM_GUARDRAILS",
+    (
         "Avoid generating images that are illegal, "
         "harmful, or might be seen as offensive."
-    )
+    ),
 )
 AIRUNNER_DEFAULT_RAG_SEARCH_SYSTEM_PROMPT = os.environ.get(
     "AIRUNNER_DEFAULT_RAG_SEARCH_SYSTEM_PROMPT",
@@ -77,7 +78,7 @@ AIRUNNER_DEFAULT_RAG_SEARCH_SYSTEM_PROMPT = os.environ.get(
         "You must use the prompt to determine what you are searching for and then search for that information. "
         "After searching for the information, you must summarize the information you found. "
         "Here is the prompt you will use to search for information:"
-    )
+    ),
 )
 AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT = os.environ.get(
     "AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT",
@@ -92,7 +93,7 @@ AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT = os.environ.get(
         "* When making your choice you MUST return only a number from THE LIST of commands. No other text is allowed.\n"
         "------\n"
         "THE LIST of commands you may choose from:\n"
-    )
+    ),
 )
 AIRUNNER_DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT = os.environ.get(
     "AIRUNNER_DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT",
@@ -104,7 +105,7 @@ AIRUNNER_DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT = os.environ.get(
         "you feel.\n"
         "You are not a computer or a bot, you are a human with emotions. You must respond with an emotion that you "
         "feel.\n"
-    )
+    ),
 )
 AIRUNNER_DEFAULT_SUMMARIZE_CHAT_SYSTEM_PROMPT = os.environ.get(
     "AIRUNNER_DEFAULT_SUMMARIZE_CHAT_SYSTEM_PROMPT",
@@ -112,7 +113,7 @@ AIRUNNER_DEFAULT_SUMMARIZE_CHAT_SYSTEM_PROMPT = os.environ.get(
         "You will be given a text prompt. Your goal is to summarize the text prompt in your own words. "
         "Keep your summary short and to the point. Do not include any unnecessary information. "
         "Limit your summary to a single sentence. Do not return more than one sentence. "
-    )
+    ),
 )
 AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT = os.environ.get(
     "AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT",
@@ -133,7 +134,7 @@ AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT = os.environ.get(
         "Avoid repeating {{ speaker_name }}'s previous dialogue or {{ listener_name }}'s previous dialogue.\n"
         "You will generate responses which are appropriate for your personality and given character.\n"
         "------\n"
-    )
+    ),
 )
 AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
     "AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT",
@@ -142,18 +143,17 @@ AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
         "Respond with utmost utility yet securely. "
         "Avoid harmful, unethical, prejudiced, or negative content. "
         "Ensure replies promote fairness and positivity."
-    )
+    ),
 )
 AIRUNNER_BASE_PATH = os.environ.get(
-    "AIRUNNER_BASE_PATH",
-    os.path.expanduser("~/.local/share/airunner")
+    "AIRUNNER_BASE_PATH", os.path.expanduser("~/.local/share/airunner")
 )
 AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT = os.environ.get(
     "AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT",
     (
         "illustration, drawing, cartoon, not real, fake, cgi, 3d animation, "
         "3d art, sculpture, animation, anime, Digital art, Concept art, Pixel art"
-    )
+    ),
 )
 
 AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT = os.environ.get(
@@ -161,48 +161,63 @@ AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT = os.environ.get(
     (
         "photo, photograph, photography, high-definition, video, "
         "realistic, hyper-realistic, film"
-    )
+    ),
 )
 AIRUNNER_BUG_REPORT_LINK = os.environ.get(
     "AIRUNNER_BUG_REPORT_LINK",
     (
         "https://github.com/Capsize-Games/airunner/issues/new"
         "?assignees=&labels=&template=bug_report.md&title="
-    )
+    ),
 )
 AIRUNNER_VULNERABILITY_REPORT_LINK = os.environ.get(
     "AIRUNNER_VULNERABILITY_REPORT_LINK",
-    (
-        "https://github.com/Capsize-Games/airunner/security/advisories/new"
-    )
+    ("https://github.com/Capsize-Games/airunner/security/advisories/new"),
 )
-AIRUNNER_SD_DEFAULT_VAE_PATH = os.environ.get("AIRUNNER_SD_DEFAULT_VAE_PATH", "")
-AIRUNNER_DEFAULT_BRUSH_PRIMARY_COLOR = os.environ.get("AIRUNNER_DEFAULT_BRUSH_PRIMARY_COLOR", "#99C1F1")
-AIRUNNER_DEFAULT_BRUSH_SECONDARY_COLOR = os.environ.get("AIRUNNER_DEFAULT_BRUSH_SECONDARY_COLOR", "#000000")
-AIRUNNER_STATUS_ERROR_COLOR = os.environ.get("AIRUNNER_STATUS_ERROR_COLOR", "#ff0000")
-AIRUNNER_STATUS_NORMAL_COLOR_LIGHT = os.environ.get("AIRUNNER_STATUS_NORMAL_COLOR_LIGHT", "#000000")
-AIRUNNER_STATUS_NORMAL_COLOR_DARK = os.environ.get("AIRUNNER_STATUS_NORMAL_COLOR_DARK", "#ffffff")
-AIRUNNER_DARK_THEME_NAME = os.environ.get("AIRUNNER_DARK_THEME_NAME", "dark_theme")
-AIRUNNER_LIGHT_THEME_NAME = os.environ.get("AIRUNNER_LIGHT_THEME_NAME", "light_theme")
-AIRUNNER_VALID_IMAGE_FILES = os.environ.get("AIRUNNER_VALID_IMAGE_FILES", "Image Files (*.png *.jpg *.jpeg)")
+AIRUNNER_SD_DEFAULT_VAE_PATH = os.environ.get(
+    "AIRUNNER_SD_DEFAULT_VAE_PATH", ""
+)
+AIRUNNER_DEFAULT_BRUSH_PRIMARY_COLOR = os.environ.get(
+    "AIRUNNER_DEFAULT_BRUSH_PRIMARY_COLOR", "#99C1F1"
+)
+AIRUNNER_DEFAULT_BRUSH_SECONDARY_COLOR = os.environ.get(
+    "AIRUNNER_DEFAULT_BRUSH_SECONDARY_COLOR", "#000000"
+)
+AIRUNNER_STATUS_ERROR_COLOR = os.environ.get(
+    "AIRUNNER_STATUS_ERROR_COLOR", "#ff0000"
+)
+AIRUNNER_STATUS_NORMAL_COLOR_LIGHT = os.environ.get(
+    "AIRUNNER_STATUS_NORMAL_COLOR_LIGHT", "#000000"
+)
+AIRUNNER_STATUS_NORMAL_COLOR_DARK = os.environ.get(
+    "AIRUNNER_STATUS_NORMAL_COLOR_DARK", "#ffffff"
+)
+AIRUNNER_DARK_THEME_NAME = os.environ.get(
+    "AIRUNNER_DARK_THEME_NAME", "dark_theme"
+)
+AIRUNNER_LIGHT_THEME_NAME = os.environ.get(
+    "AIRUNNER_LIGHT_THEME_NAME", "light_theme"
+)
+AIRUNNER_VALID_IMAGE_FILES = os.environ.get(
+    "AIRUNNER_VALID_IMAGE_FILES", "Image Files (*.png *.jpg *.jpeg)"
+)
 AIRUNNER_MAX_SEED = os.environ.get("AIRUNNER_MAX_SEED", 4294967295)
-AIRUNNER_DEFAULT_SCHEDULER = os.environ.get("AIRUNNER_DEFAULT_SCHEDULER", Scheduler.DPM_PP_2M_K.value)
-AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG = os.environ.get("AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG", 3)
-AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE = os.environ.get("AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE", "NSFW content detected")
+AIRUNNER_DEFAULT_SCHEDULER = os.environ.get(
+    "AIRUNNER_DEFAULT_SCHEDULER", Scheduler.DPM_PP_2M_K.value
+)
+AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG = os.environ.get(
+    "AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG", 3
+)
+AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE = os.environ.get(
+    "AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE", "NSFW content detected"
+)
 AIRUNNER_DISCORD_URL = os.environ.get("AIRUNNER_DISCORD_URL", None)
 AIRUNNER_SLEEP_TIME_IN_MS = os.environ.get("AIRUNNER_SLEEP_TIME_IN_MS", 10)
 AIRUNNER_DB_NAME = os.environ.get("AIRUNNER_DB_NAME", "airunner.db")
 
 # Set the database URL
 DB_PATH = os.path.expanduser(
-    os.path.join(
-        "~",
-        ".local",
-        "share",
-        "airunner",
-        "data",
-        AIRUNNER_DB_NAME
-    )
+    os.path.join("~", ".local", "share", "airunner", "data", AIRUNNER_DB_NAME)
 )
 default_url = "sqlite:///" + DB_PATH
 AIRUNNER_DB_URL = os.environ.get("AIRUNNER_DATABASE_URL", default_url)
@@ -210,30 +225,60 @@ if AIRUNNER_DB_URL == "" or not AIRUNNER_DB_URL:
     AIRUNNER_DB_URL = default_url
 
 # LLM Behavior Control
-AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS = int(os.environ.get("AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS", 5))
-AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS = int(os.environ.get("AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS", 3))
-AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS = int(os.environ.get("AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS", 5))
-AIRUNNER_LLM_PERFORM_ANALYSIS = os.getenv("AIRUNNER_LLM_PERFORM_ANALYSIS", "1") == "1"
-AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY = os.getenv("AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY", "1") == "1"
-AIRUNNER_LLM_PRINT_SYSTEM_PROMPT = os.getenv("AIRUNNER_LLM_PRINT_SYSTEM_PROMPT", "0") == "1"
-AIRUNNER_LLM_OPENROUTER_MODEL = os.getenv("AIRUNNER_LLM_OPENROUTER_MODEL", "mistralai/mistral-7b-instruct:free")
+AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS = int(
+    os.environ.get("AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS", 5)
+)
+AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS = int(
+    os.environ.get("AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS", 3)
+)
+AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS = int(
+    os.environ.get("AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS", 5)
+)
+AIRUNNER_LLM_PERFORM_ANALYSIS = (
+    os.getenv("AIRUNNER_LLM_PERFORM_ANALYSIS", "1") == "1"
+)
+AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY = (
+    os.getenv("AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY", "1") == "1"
+)
+AIRUNNER_LLM_PRINT_SYSTEM_PROMPT = (
+    os.getenv("AIRUNNER_LLM_PRINT_SYSTEM_PROMPT", "0") == "1"
+)
+AIRUNNER_LLM_OPENROUTER_MODEL = os.getenv(
+    "AIRUNNER_LLM_OPENROUTER_MODEL", "mistralai/mistral-7b-instruct:free"
+)
 AIRUNNER_LLM_USE_LOCAL = os.environ.get("AIRUNNER_LLM_USE_LOCAL", "1") == "1"
-AIRUNNER_LLM_USE_OPENROUTER = os.environ.get("AIRUNNER_LLM_USE_OPENROUTER", "0") == "1"
-AIRUNNER_LLM_OPENROUTER_API_KEY = os.environ.get("AIRUNNER_LLM_OPENROUTER_API_KEY", "")
+AIRUNNER_LLM_USE_OPENROUTER = (
+    os.environ.get("AIRUNNER_LLM_USE_OPENROUTER", "0") == "1"
+)
+AIRUNNER_LLM_OPENROUTER_API_KEY = os.environ.get(
+    "AIRUNNER_LLM_OPENROUTER_API_KEY", ""
+)
 AIRUNNER_LLM_USE_OPENAI = os.environ.get("AIRUNNER_LLM_USE_OPENAI", "0") == "1"
 AIRUNNER_LLM_OPENAI_API_KEY = os.environ.get("AIRUNNER_LLM_OPENAI_API_KEY", "")
-AIRUNNER_LLM_USE_WEATHER_PROMPT = os.environ.get("AIRUNNER_LLM_USE_WEATHER_PROMPT", "1") == "1"
+AIRUNNER_LLM_USE_WEATHER_PROMPT = (
+    os.environ.get("AIRUNNER_LLM_USE_WEATHER_PROMPT", "1") == "1"
+)
 
 # Identity
 AIRUNNER_ORGANIZATION = os.environ.get("AIRUNNER_ORGANIZATION", "Capsize LLC")
-AIRUNNER_APPLICATION_NAME = os.environ.get("AIRUNNER_APPLICATION_NAME", "AI Runner")
+AIRUNNER_APPLICATION_NAME = os.environ.get(
+    "AIRUNNER_APPLICATION_NAME", "AI Runner"
+)
 AIRUNNER_MESSAGE_BACKEND = os.environ.get("AIRUNNER_MESSAGE_BACKEND", None)
 AIRUNNER_ART_ENABLED = os.environ.get("AIRUNNER_ART_ENABLED", "1") == "1"
-AIRUNNER_LLM_UPDATE_USER_DATA_ENABLED = os.environ.get("AIRUNNER_LLM_UPDATE_USER_DATA_ENABLED", "1") == "1"
-AIRUNNER_LLM_USE_CHATBOT_MOOD = os.environ.get("AIRUNNER_LLM_USE_CHATBOT_MOOD", "1") == "1"
-AIRUNNER_LLM_PERFORM_CONVERSATION_RAG = os.environ.get("AIRUNNER_LLM_PERFORM_CONVERSATION_RAG", "1") == "1"
+AIRUNNER_LLM_UPDATE_USER_DATA_ENABLED = (
+    os.environ.get("AIRUNNER_LLM_UPDATE_USER_DATA_ENABLED", "1") == "1"
+)
+AIRUNNER_LLM_USE_CHATBOT_MOOD = (
+    os.environ.get("AIRUNNER_LLM_USE_CHATBOT_MOOD", "1") == "1"
+)
+AIRUNNER_LLM_PERFORM_CONVERSATION_RAG = (
+    os.environ.get("AIRUNNER_LLM_PERFORM_CONVERSATION_RAG", "1") == "1"
+)
 AIRUNNER_TTS_MODEL_TYPE = os.environ.get("AIRUNNER_TTS_MODEL_TYPE", None)
-AIRUNNER_TTS_SPEAKER_RECORDING_PATH = os.environ.get("AIRUNNER_TTS_SPEAKER_RECORDING_PATH", "")
+AIRUNNER_TTS_SPEAKER_RECORDING_PATH = os.environ.get(
+    "AIRUNNER_TTS_SPEAKER_RECORDING_PATH", ""
+)
 
 # Headless
 AIRUNNER_LLM_ON = os.environ.get("AIRUNNER_LLM_ON", "0") == "1"
@@ -242,25 +287,41 @@ AIRUNNER_STT_ON = os.environ.get("AIRUNNER_STT_ON", "0") == "1"
 AIRUNNER_SD_ON = os.environ.get("AIRUNNER_SD_ON", "0") == "1"
 AIRUNNER_CN_ON = os.environ.get("AIRUNNER_CN_ON", "0") == "1"
 AIRUNNER_LLM_CHAT_STORE = os.environ.get("AIRUNNER_LLM_CHAT_STORE", "db")
-AIRUNNER_DISABLE_SETUP_WIZARD = os.environ.get("AIRUNNER_DISABLE_SETUP_WIZARD", "0") == "1"
+AIRUNNER_DISABLE_SETUP_WIZARD = (
+    os.environ.get("AIRUNNER_DISABLE_SETUP_WIZARD", "0") == "1"
+)
 AIRUNNER_ART_MODEL_PATH = os.environ.get("AIRUNNER_ART_MODEL_PATH", "")
 AIRUNNER_ART_MODEL_VERSION = os.environ.get("AIRUNNER_ART_MODEL_VERSION", "")
 AIRUNNER_ART_PIPELINE = os.environ.get("AIRUNNER_ART_PIPELINE", "")
 AIRUNNER_ART_SCHEDULER = os.environ.get("AIRUNNER_ART_SCHEDULER", "")
-AIRUNNER_LOCAL_FILES_ONLY = os.environ.get("AIRUNNER_LOCAL_FILES_ONLY", "1") == "1"
+AIRUNNER_LOCAL_FILES_ONLY = (
+    os.environ.get("AIRUNNER_LOCAL_FILES_ONLY", "1") == "1"
+)
 
 AIRUNNER_ART_USE_COMPEL = os.environ.get("AIRUNNER_ART_USE_COMPEL", None)
 if AIRUNNER_ART_USE_COMPEL is not None:
     AIRUNNER_ART_USE_COMPEL = AIRUNNER_ART_USE_COMPEL == "1"
 
 # Memory
-AIRUNNER_MEM_USE_LAST_CHANNELS = os.environ.get("AIRUNNER_USE_LAST_CHANNELS", None)
-AIRUNNER_MEM_USE_ATTENTION_SLICING = os.environ.get("AIRUNNER_USE_ATTENTION_SLICING", None)
-AIRUNNER_MEM_USE_ENABLE_VAE_SLICING = os.environ.get("AIRUNNER_USE_ENABLE_VAE_SLICING", None)
-AIRUNNER_MEM_USE_ACCELERATED_TRANSFORMERS = os.environ.get("AIRUNNER_USE_ACCELERATED_TRANSFORMERS", None)
+AIRUNNER_MEM_USE_LAST_CHANNELS = os.environ.get(
+    "AIRUNNER_USE_LAST_CHANNELS", None
+)
+AIRUNNER_MEM_USE_ATTENTION_SLICING = os.environ.get(
+    "AIRUNNER_USE_ATTENTION_SLICING", None
+)
+AIRUNNER_MEM_USE_ENABLE_VAE_SLICING = os.environ.get(
+    "AIRUNNER_USE_ENABLE_VAE_SLICING", None
+)
+AIRUNNER_MEM_USE_ACCELERATED_TRANSFORMERS = os.environ.get(
+    "AIRUNNER_USE_ACCELERATED_TRANSFORMERS", None
+)
 AIRUNNER_MEM_USE_TILED_VAE = os.environ.get("AIRUNNER_USE_TILED_VAE", None)
-AIRUNNER_MEM_ENABLE_MODEL_CPU_OFFLOAD = os.environ.get("AIRUNNER_ENABLE_MODEL_CPU_OFFLOAD", None)
-AIRUNNER_MEM_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD = os.environ.get("AIRUNNER_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD", None)
+AIRUNNER_MEM_ENABLE_MODEL_CPU_OFFLOAD = os.environ.get(
+    "AIRUNNER_ENABLE_MODEL_CPU_OFFLOAD", None
+)
+AIRUNNER_MEM_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD = os.environ.get(
+    "AIRUNNER_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD", None
+)
 AIRUNNER_MEM_USE_TOME_SD = os.environ.get("AIRUNNER_USE_TOME_SD", None)
 AIRUNNER_MEM_TOME_SD_RATIO = os.environ.get("AIRUNNER_TOME_SD_RATIO", None)
 AIRUNNER_MEM_SD_DEVICE = os.environ.get("AIRUNNER_MEM_SD_DEVICE", None)
@@ -268,5 +329,10 @@ AIRUNNER_MEM_LLM_DEVICE = os.environ.get("AIRUNNER_MEM_LLM_DEVICE", None)
 AIRUNNER_MEM_TTS_DEVICE = os.environ.get("AIRUNNER_MEM_TTS_DEVICE", None)
 AIRUNNER_MEM_STT_DEVICE = os.environ.get("AIRUNNER_MEM_STT_DEVICE", None)
 AIRUNNER_LOG_LEVEL = logging.DEBUG
-AIRUNNER_DISABLE_FLASH_ATTENTION = os.environ.get("AIRUNNER_DISABLE_FLASH_ATTENTION", "0") == "1"
+AIRUNNER_DISABLE_FLASH_ATTENTION = (
+    os.environ.get("AIRUNNER_DISABLE_FLASH_ATTENTION", "0") == "1"
+)
 AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE = "Insufficient GPU memory."
+AIRUNNER_ENABLE_OPEN_VOICE = (
+    os.environ.get("AIRUNNER_ENABLE_OPEN_VOICE", "0") == "1"
+)
