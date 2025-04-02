@@ -1,17 +1,25 @@
-from sqlalchemy import Column, Integer, String, Boolean, Text, BigInteger
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    Text,
+    BigInteger,
+    ForeignKey,
+)
 from sqlalchemy.orm import relationship
 
 from airunner.data.models.base import BaseModel
 from airunner.settings import (
-    AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT, 
-    AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT, 
-    AIRUNNER_DEFAULT_LLM_HF_PATH
+    AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
+    AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,
+    AIRUNNER_DEFAULT_LLM_HF_PATH,
 )
 from airunner.enums import Gender
 
 
 class Chatbot(BaseModel):
-    __tablename__ = 'chatbots'
+    __tablename__ = "chatbots"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, default="Chatbot", unique=True)
     botname = Column(String, default="Computer")
@@ -22,7 +30,9 @@ class Chatbot(BaseModel):
     use_datetime = Column(Boolean, default=True)
     assign_names = Column(Boolean, default=True)
     bot_personality = Column(Text, default="happy. He loves {{ username }}")
-    prompt_template = Column(Text, default="Mistral 7B Instruct: Default Chatbot")
+    prompt_template = Column(
+        Text, default="Mistral 7B Instruct: Default Chatbot"
+    )
     use_tool_filter = Column(Boolean, default=False)
     use_gpu = Column(Boolean, default=True)
     skip_special_tokens = Column(Boolean, default=True)
@@ -33,8 +43,12 @@ class Chatbot(BaseModel):
     model_type = Column(String, default="llm")
     dtype = Column(String, default="4bit")
     return_result = Column(Boolean, default=True)
-    guardrails_prompt = Column(Text, default=AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT)
-    system_instructions = Column(Text, default=AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT)
+    guardrails_prompt = Column(
+        Text, default=AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT
+    )
+    system_instructions = Column(
+        Text, default=AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT
+    )
     top_p = Column(Integer, default=900)
     min_length = Column(Integer, default=1)
     max_new_tokens = Column(Integer, default=1000)
@@ -56,4 +70,6 @@ class Chatbot(BaseModel):
     gender = Column(String, default=Gender.MALE.value)
 
     target_files = relationship("TargetFiles", back_populates="chatbot")
-    target_directories = relationship("TargetDirectories", back_populates="chatbot")
+    target_directories = relationship(
+        "TargetDirectories", back_populates="chatbot"
+    )
