@@ -1,4 +1,3 @@
-# Refactored imports for better readability and grouping
 import os
 import time
 from queue import Queue
@@ -24,6 +23,7 @@ from transformers import (
 
 from airunner.handlers.tts.tts_model_manager import TTSModelManager
 from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
+from airunner.handlers.tts.tts_request import TTSRequest
 from airunner.utils.memory import clear_memory
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 
@@ -181,14 +181,13 @@ class SpeechT5ModelManager(TTSModelManager):
         clear_memory(self.memory_settings.default_gpu_tts)
         self._set_status_unloaded()
 
-    # Refactored generate method for better exception handling
-    def generate(self, message: str):
+    def generate(self, tts_request: Type[TTSRequest]):
         if self.model_status is not ModelStatus.LOADED:
             return None
         if self._do_interrupt or self._paused:
             return None
         try:
-            return self._do_generate(message)
+            return self._do_generate(tts_request)
         except torch.cuda.OutOfMemoryError:
             self.logger.error("Out of memory")
             return None
@@ -303,9 +302,9 @@ class SpeechT5ModelManager(TTSModelManager):
         self._speaker_embeddings = None
         clear_memory(self.memory_settings.default_gpu_tts)
 
-    def _do_generate(self, message: str):
+    def _do_generate(self, tts_request: Type[TTSRequest]):
         self.logger.debug("Generating text-to-speech with T5")
-        text = self._prepare_text(message)
+        text = self._prepare_text(tts_request.message)
 
         if text == "":
             return None
