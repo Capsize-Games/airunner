@@ -1,13 +1,16 @@
-
 import pyttsx3
+from PySide6.QtWidgets import QWidget
 
 from airunner.data.bootstrap.espeak_settings_data import ESPEAK_SETTINGS_DATA
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.tts.templates.espeak_preferences_ui import Ui_espeak_preferences
+from airunner.gui.widgets.tts.templates.espeak_preferences_ui import (
+    Ui_espeak_preferences,
+)
 import pycountry
+from airunner.data.models.espeak_settings import EspeakSettings
 
 
-class ESpeakPreferencesWidget(BaseWidget):
+class EspeakPreferencesWidget(BaseWidget):
     widget_class_ = Ui_espeak_preferences
 
     def __init__(self, *args, **kwargs):
@@ -45,21 +48,38 @@ class ESpeakPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(False)
 
-        self.ui.rate.init(slider_callback=self.callback, current_value=self.espeak_settings.rate)
-        self.ui.volume.init(slider_callback=self.callback, current_value=self.espeak_settings.volume)
-        self.ui.pitch.init(slider_callback=self.callback, current_value=self.espeak_settings.pitch)
+        self.ui.rate.init(
+            slider_callback=self.callback,
+            current_value=self.espeak_settings.rate,
+        )
+        self.ui.volume.init(
+            slider_callback=self.callback,
+            current_value=self.espeak_settings.volume,
+        )
+        self.ui.pitch.init(
+            slider_callback=self.callback,
+            current_value=self.espeak_settings.pitch,
+        )
 
     def callback(self, attr_name, value, _widget=None):
         self.update_espeak_settings(attr_name, value)
 
     def language_changed(self, text):
         self.update_espeak_settings("language", text)
-        self.update_espeak_settings("gender", self.ui.gender_combobox.currentText())
-        self.update_espeak_settings("voice", self.ui.voice_combobox.currentText())
+        self.update_espeak_settings(
+            "gender", self.ui.gender_combobox.currentText()
+        )
+        self.update_espeak_settings(
+            "voice", self.ui.voice_combobox.currentText()
+        )
 
         self.update_espeak_settings("language", text)
-        self.update_espeak_settings("gender", self.ui.gender_combobox.currentText())
-        self.update_espeak_settings("voice", self.ui.voice_combobox.currentText())
+        self.update_espeak_settings(
+            "gender", self.ui.gender_combobox.currentText()
+        )
+        self.update_espeak_settings(
+            "voice", self.ui.voice_combobox.currentText()
+        )
 
     def voice_changed(self, text):
         self.update_espeak_settings("voice", text)
@@ -67,5 +87,12 @@ class ESpeakPreferencesWidget(BaseWidget):
     def gender_changed(self, text):
         self.update_espeak_settings("gender", text)
         self.ui.voice_combobox.clear()
-        self.ui.voice_combobox.addItems(ESPEAK_SETTINGS_DATA["voices"][text.lower()])
-        self.update_espeak_settings("voice", self.ui.voice_combobox.currentText())
+        self.ui.voice_combobox.addItems(ESPEAK_SETTINGS_DATA["voices"][text])
+        self.update_espeak_settings(
+            "voice", self.ui.voice_combobox.currentText()
+        )
+
+    def load_settings(self, settings: EspeakSettings):
+        """Load the Espeak settings into the widget."""
+        # Populate the widget with settings (e.g., rate, pitch, volume)
+        pass

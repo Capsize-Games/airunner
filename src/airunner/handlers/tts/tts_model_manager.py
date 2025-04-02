@@ -16,6 +16,7 @@ class CombinedMeta(BaseModelManagerMeta, ABCMeta):
     """
     Combined metaclass for BaseModelManager and ABCMeta.
     """
+
     pass
 
 
@@ -25,6 +26,7 @@ class TTSModelManager(BaseModelManager, ABC, metaclass=CombinedMeta):
     Responsible for managing the model, processor, vocoder, and speaker embeddings.
     Use from a worker to avoid blocking the main thread.
     """
+
     # Class-wide properties defining model/processor classes
     target_model: ClassVar[Optional[str]] = None
     model_class: ClassVar[Optional[Type[PreTrainedModel]]] = None
@@ -32,21 +34,21 @@ class TTSModelManager(BaseModelManager, ABC, metaclass=CombinedMeta):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._tts_request:Optional[Type[TTSRequest]] = None
+        self._tts_request: Optional[Type[TTSRequest]] = None
         self.model_type = ModelType.TTS
         self._engine = None
 
         # Runtime instances of the models
         self._model = None
         self._processor = None
-    
+
     @property
     def tts_request(self) -> Optional[Type[TTSRequest]]:
         """
         The current TTS request.
         """
         return self._tts_request
-        
+
     @tts_request.setter
     def tts_request(self, value: Optional[Type[TTSRequest]]):
         """
@@ -54,7 +56,7 @@ class TTSModelManager(BaseModelManager, ABC, metaclass=CombinedMeta):
         """
         self._tts_request = value
         self._initialize()
-    
+
     @property
     def message(self) -> str:
         if self.tts_request:
