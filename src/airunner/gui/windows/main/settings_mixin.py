@@ -36,7 +36,7 @@ from airunner.data.models import (
     WhisperSettings,
     User,
 )
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, TTSModel
 from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
 from airunner.utils.settings import get_qsettings
@@ -190,7 +190,7 @@ class SettingsMixin:
     @property
     def speech_t5_settings(self) -> SpeechT5Settings:
         model_type = self.chatbot.voice_settings.model_type
-        if model_type == "SpeechT5":
+        if model_type == TTSModel.SPEECHT5.value:
             settings_id = self.chatbot.voice_settings.settings_id
             settings = SpeechT5Settings.objects.filter_by_first(id=settings_id)
             if settings is None:
@@ -205,7 +205,7 @@ class SettingsMixin:
     @property
     def espeak_settings(self) -> EspeakSettings:
         model_type = self.chatbot.voice_settings.model_type
-        if model_type == "Espeak":
+        if model_type == TTSModel.ESPEAK.value:
             settings_id = self.chatbot.voice_settings.settings_id
             settings = EspeakSettings.objects.filter_by_first(id=settings_id)
             if settings is None:

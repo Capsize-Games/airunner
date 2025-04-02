@@ -1,4 +1,5 @@
 from airunner.data.models.voice_settings import VoiceSettings
+from airunner.data.models.openvoice_settings import OpenVoiceSettings
 from airunner.data.models.active_grid_settings import ActiveGridSettings
 from airunner.data.models.application_settings import ApplicationSettings
 from airunner.data.models.controlnet_settings import ControlnetSettings
@@ -83,5 +84,6 @@ __all__ = [
     "Article",
     "Tab",
     "VoiceSettings",
+    "OpenVoiceSettings",
     "Base",
 ]
