@@ -11,11 +11,17 @@ class SpeechT5PreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        voice = self.speech_t5_settings.voice
-        self.ui.voice.setCurrentText(voice)
+        voice = None
+        if self.speech_t5_settings is not None:
+            voice = self.speech_t5_settings.voice
+        if not voice:
+            self.ui.voice.setCurrentText(voice)
 
     def initialize_form(self):
-        self.ui.pitch.init(current_value=self.speech_t5_settings.pitch / 100)
+        if self.speech_t5_settings is not None:
+            self.ui.pitch.init(
+                current_value=self.speech_t5_settings.pitch / 100
+            )
 
     def voice_changed(self, text):
         self.update_speech_t5_settings("voice", text)
