@@ -20,6 +20,7 @@ class TTSGeneratorWorker(Worker):
     """
     Takes input text from any source and generates speech from it using the TTS class.
     """
+
     tokens = []
 
     def __init__(self, *args, **kwargs):
@@ -38,12 +39,11 @@ class TTSGeneratorWorker(Worker):
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
         }
         super().__init__()
-    
+
     @property
     def tts_enabled(self) -> bool:
         return (
-            self.application_settings and 
-            self.application_settings.tts_enabled
+            self.application_settings and self.application_settings.tts_enabled
         ) or AIRUNNER_TTS_ON
 
     def on_llm_text_streamed_signal(self, data):
@@ -66,13 +66,13 @@ class TTSGeneratorWorker(Worker):
         if self.tts.model_status is not ModelStatus.LOADED:
             self._load_tts()
 
-        self.add_to_queue({
-            'message': llm_response.message.replace("</s>", "") + (
-                "." if llm_response.is_end_of_message else ""
-            ),
-            'tts_settings': self.tts_settings,
-            'is_end_of_message': llm_response.is_end_of_message,
-        })
+        self.add_to_queue(
+            {
+                "message": llm_response.message.replace("</s>", "")
+                + ("." if llm_response.is_end_of_message else ""),
+                "is_end_of_message": llm_response.is_end_of_message,
+            }
+        )
 
     def on_interrupt_process_signal(self):
         self.play_queue = []
@@ -107,7 +107,9 @@ class TTSGeneratorWorker(Worker):
 
     def _reload_tts_model_manager(self, data: dict):
         self.logger.info("Reloading TTS handler...")
-        self.logger.info(f"Current model: {self._current_model} | New model: {data['model']}")
+        self.logger.info(
+            f"Current model: {self._current_model} | New model: {data['model']}"
+        )
         if self._current_model != data["model"]:
             self._current_model = data["model"]
             self.tts.unload()
@@ -115,12 +117,23 @@ class TTSGeneratorWorker(Worker):
             self._load_tts()
 
     def on_application_settings_changed_signal(self, data):
-        if data and data.get("setting_name", "") == "speech_t5_settings" and data.get("column_name", "") == "voice":
+        if (
+            data
+            and data.get("setting_name", "") == "speech_t5_settings"
+            and data.get("column_name", "") == "voice"
+        ):
             self.tts.reload_speaker_embeddings()
 
     def _initialize_tts_model_manager(self):
         self.logger.info("Initializing TTS handler...")
-        model = AIRUNNER_TTS_MODEL_TYPE or self.tts_settings.model
+        model = (
+            AIRUNNER_TTS_MODEL_TYPE or self.chatbot.voice_settings.model_type
+            if self.chatbot.voice_settings
+            else None
+        )
+        if model is None:
+            self.logger.error("No TTS model found. Skipping initialization.")
+            return
         model_type = TTSModel(model.lower())
         if model_type is TTSModel.ESPEAK:
             tts_model_manager_class_ = EspeakModelManager
@@ -152,10 +165,10 @@ class TTSGeneratorWorker(Worker):
         text = "".join(self.tokens)
 
         # Regular expression to match timestamps in the format HH:MM
-        timestamp_pattern = re.compile(r'\b(\d{1,2}):(\d{2})\b')
+        timestamp_pattern = re.compile(r"\b(\d{1,2}):(\d{2})\b")
 
         # Replace the colon in the matched timestamps with a space
-        text = timestamp_pattern.sub(r'\1 \2', text)
+        text = timestamp_pattern.sub(r"\1 \2", text)
 
         def word_count(s):
             return len(s.split())
@@ -172,7 +185,9 @@ class TTSGeneratorWorker(Worker):
                     return
                 text = text.strip()
                 if p in text:
-                    split_text = text.split(p, 1)  # Split at the first occurrence of punctuation
+                    split_text = text.split(
+                        p, 1
+                    )  # Split at the first occurrence of punctuation
                     if len(split_text) > 1:
                         before, after = split_text[0], split_text[1]
                         if p == ",":
@@ -194,7 +209,7 @@ class TTSGeneratorWorker(Worker):
         if not self.tts_enabled:
             self.logger.info("TTS is disabled. Skipping load.")
             return
-        
+
         if self.tts:
             self.tts.load()
 
@@ -217,14 +232,21 @@ class TTSGeneratorWorker(Worker):
 
         if type(message) == dict:
             message = message.get("message", "")
-        
-        model = AIRUNNER_TTS_MODEL_TYPE or self.tts_settings.model
+
+        model = (
+            AIRUNNER_TTS_MODEL_TYPE or self.chatbot.voice_settings.model_type
+            if self.chatbot.voice_settings
+            else None
+        )
+        if model is None:
+            self.logger.error("No TTS model found. Skipping generation.")
+            return
         model_type = TTSModel(model.lower())
 
         response = None
         if self.tts:
             llm_request: Optional[Type[TTSRequest]] = None
-            
+
             if model_type is TTSModel.ESPEAK:
                 llm_request = EspeakTTSRequest(
                     message=message,
@@ -235,7 +257,7 @@ class TTSGeneratorWorker(Worker):
                     voice=self.espeak_settings.voice,
                     language=self.espeak_settings.language,
                 )
-            
+
             if llm_request:
                 response = self.tts.generate(llm_request)
 
@@ -244,8 +266,6 @@ class TTSGeneratorWorker(Worker):
 
         if response is not None:
             self.emit_signal(
-                SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL, {
-                    "message": response
-                }
+                SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
+                {"message": response},
             )
-

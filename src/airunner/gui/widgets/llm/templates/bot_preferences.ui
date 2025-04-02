@@ -38,9 +38,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-161</y>
+        <y>-242</y>
         <width>812</width>
-        <height>1251</height>
+        <height>1332</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -381,6 +381,18 @@
          </layout>
         </widget>
        </item>
+       <item row="14" column="0">
+        <widget class="QGroupBox" name="voice_groupbox">
+         <property name="title">
+          <string>Voice</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_voice">
+          <item row="0" column="0">
+           <widget class="QComboBox" name="voice_combobox"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </widget>
     </widget>
@@ -396,8 +408,8 @@
    <slot>botname_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>286</x>
-     <y>422</y>
+     <x>299</x>
+     <y>316</y>
     </hint>
     <hint type="destinationlabel">
      <x>127</x>
@@ -412,8 +424,8 @@
    <slot>bot_personality_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>416</x>
-     <y>987</y>
+     <x>428</x>
+     <y>832</y>
     </hint>
     <hint type="destinationlabel">
      <x>292</x>
@@ -445,7 +457,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>108</x>
-     <y>920</y>
+     <y>775</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -476,8 +488,8 @@
    <slot>system_instructions_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>372</x>
-     <y>581</y>
+     <x>384</x>
+     <y>398</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -493,7 +505,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>83</x>
-     <y>837</y>
+     <y>595</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -509,7 +521,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>100</x>
-     <y>607</y>
+     <y>365</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -524,8 +536,8 @@
    <slot>saved_chatbots_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>268</x>
-     <y>-11</y>
+     <x>280</x>
+     <y>-117</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -541,7 +553,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>744</x>
-     <y>-12</y>
+     <y>-116</y>
     </hint>
     <hint type="destinationlabel">
      <x>479</x>
@@ -557,7 +569,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>790</x>
-     <y>-12</y>
+     <y>-116</y>
     </hint>
     <hint type="destinationlabel">
      <x>480</x>
@@ -572,8 +584,8 @@
    <slot>agent_type_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>687</x>
-     <y>-92</y>
+     <x>699</x>
+     <y>-198</y>
     </hint>
     <hint type="destinationlabel">
      <x>813</x>
@@ -588,8 +600,8 @@
    <slot>browse_documents()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>467</x>
-     <y>226</y>
+     <x>479</x>
+     <y>145</y>
     </hint>
     <hint type="destinationlabel">
      <x>690</x>
@@ -604,8 +616,8 @@
    <slot>use_weather_prompt_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>117</x>
-     <y>269</y>
+     <x>118</x>
+     <y>182</y>
     </hint>
     <hint type="destinationlabel">
      <x>-3</x>
@@ -621,7 +633,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>801</x>
-     <y>275</y>
+     <y>182</y>
     </hint>
     <hint type="destinationlabel">
      <x>-4</x>
@@ -636,12 +648,28 @@
    <slot>gender_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>153</x>
-     <y>1064</y>
+     <x>165</x>
+     <y>962</y>
     </hint>
     <hint type="destinationlabel">
      <x>-3</x>
      <y>987</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>voice_combobox</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>voice_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>121</x>
+     <y>1064</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-5</x>
+     <y>1025</y>
     </hint>
    </hints>
   </connection>
@@ -666,5 +694,6 @@
   <slot>use_weather_prompt_toggled(bool)</slot>
   <slot>toggle_use_datetime(bool)</slot>
   <slot>gender_changed(QString)</slot>
+  <slot>voice_changed(int)</slot>
  </slots>
 </ui>
