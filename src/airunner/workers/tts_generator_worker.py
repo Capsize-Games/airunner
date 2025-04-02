@@ -257,6 +257,10 @@ class TTSGeneratorWorker(Worker):
                     voice=self.espeak_settings.voice,
                     language=self.espeak_settings.language,
                 )
+            elif model_type is TTSModel.SPEECHT5:
+                llm_request = TTSRequest(
+                    message=message, gender=self.chatbot.gender
+                )
 
             if llm_request:
                 response = self.tts.generate(llm_request)
