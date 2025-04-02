@@ -1,13 +1,15 @@
-
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from airunner.data.models import TargetFiles, Chatbot
+from airunner.data.models.voice_settings import VoiceSettings
 from airunner.enums import SignalCode, Gender
 from airunner.utils import open_file_path
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.llm.document_widget import DocumentWidget
-from airunner.gui.widgets.llm.templates.bot_preferences_ui import Ui_bot_preferences
+from airunner.gui.widgets.llm.templates.bot_preferences_ui import (
+    Ui_bot_preferences,
+)
 
 
 class BotPreferencesWidget(BaseWidget):
@@ -39,14 +41,19 @@ class BotPreferencesWidget(BaseWidget):
         self.ui.bot_personality.setPlainText(self.chatbot.bot_personality)
         self.ui.names_groupbox.setChecked(self.chatbot.assign_names)
         self.ui.personality_groupbox.setChecked(self.chatbot.use_personality)
-        self.ui.system_instructions.setPlainText(self.chatbot.system_instructions)
-        self.ui.system_instructions_groupbox.setChecked(self.chatbot.use_system_instructions)
+        self.ui.system_instructions.setPlainText(
+            self.chatbot.system_instructions
+        )
+        self.ui.system_instructions_groupbox.setChecked(
+            self.chatbot.use_system_instructions
+        )
         self.ui.guardrails_prompt.setPlainText(self.chatbot.guardrails_prompt)
         self.ui.guardrails_groupbox.setChecked(self.chatbot.use_guardrails)
         self.ui.use_weather_prompt.setChecked(self.chatbot.use_weather_prompt)
         self.ui.use_datetime.setChecked(self.chatbot.use_datetime)
         self.ui.gender.setCurrentText(self.chatbot.gender)
         self.load_documents()
+        self.load_voices()
         self.toggle_signals(self.ui, elements, False)
 
     @staticmethod
@@ -58,13 +65,19 @@ class BotPreferencesWidget(BaseWidget):
         self.update_chatbot("botname", val)
 
     def bot_personality_changed(self):
-        self.update_chatbot("bot_personality", self.ui.bot_personality.toPlainText())
+        self.update_chatbot(
+            "bot_personality", self.ui.bot_personality.toPlainText()
+        )
 
     def guardrails_prompt_changed(self):
-        self.update_chatbot("guardrails_prompt", self.ui.guardrails_prompt.toPlainText())
+        self.update_chatbot(
+            "guardrails_prompt", self.ui.guardrails_prompt.toPlainText()
+        )
 
     def system_instructions_changed(self):
-        self.update_chatbot("system_instructions", self.ui.system_instructions.toPlainText())
+        self.update_chatbot(
+            "system_instructions", self.ui.system_instructions.toPlainText()
+        )
 
     def toggle_use_names(self, val):
         self.update_chatbot("assign_names", val)
@@ -80,7 +93,9 @@ class BotPreferencesWidget(BaseWidget):
 
     def create_new_chatbot_clicked(self):
         # Display a dialog asking for the name of the new chatbot
-        chatbot_name, ok = QInputDialog.getText(self, "New Chatbot", "Enter the name of the new chatbot:")
+        chatbot_name, ok = QInputDialog.getText(
+            self, "New Chatbot", "Enter the name of the new chatbot:"
+        )
 
         # If the user clicked "OK" and entered a name
         if ok and chatbot_name:
@@ -101,7 +116,9 @@ class BotPreferencesWidget(BaseWidget):
         self.ui.saved_chatbots.blockSignals(True)
         self.ui.saved_chatbots.clear()
         self.ui.saved_chatbots.addItems(names)
-        self.ui.saved_chatbots.setCurrentIndex(self.ui.saved_chatbots.findText(self.chatbot.name))
+        self.ui.saved_chatbots.setCurrentIndex(
+            self.ui.saved_chatbots.findText(self.chatbot.name)
+        )
         self.load_form_elements()
         self.ui.saved_chatbots.blockSignals(False)
 
@@ -145,7 +162,7 @@ class BotPreferencesWidget(BaseWidget):
     @Slot(bool)
     def toggle_use_datetime(self, val: bool):
         self.update_chatbot("use_datetime", val)
-    
+
     @Slot(str)
     def gender_changed(self, gender: str):
         try:
@@ -157,17 +174,26 @@ class BotPreferencesWidget(BaseWidget):
 
     @Slot()
     def browse_documents(self):
-        file_path = open_file_path(self, file_type="Text Files (*.md *.html *.htm *.epub *.pdf *.txt)")
+        file_path = open_file_path(
+            self, file_type="Text Files (*.md *.html *.htm *.epub *.pdf *.txt)"
+        )
 
         # validate file path
-        if not file_path or not file_path[0] or not file_path[0].strip() or not file_path[0].endswith((
-            ".md",
-            ".html",
-            ".htm",
-            ".epub",
-            ".pdf",
-            ".txt",
-        )):
+        if (
+            not file_path
+            or not file_path[0]
+            or not file_path[0].strip()
+            or not file_path[0].endswith(
+                (
+                    ".md",
+                    ".html",
+                    ".htm",
+                    ".epub",
+                    ".pdf",
+                    ".txt",
+                )
+            )
+        ):
             self.logger.error(f"Invalid file path: {file_path}")
             return
 
@@ -189,7 +215,7 @@ class BotPreferencesWidget(BaseWidget):
 
     def delete_document(self, target_file: TargetFiles):
         TargetFiles.objects.delete(target_file.id)
-        
+
         self.load_documents()
         self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
 
@@ -200,4 +226,27 @@ class BotPreferencesWidget(BaseWidget):
         except TypeError:
             self.logger.error(f"Attribute {key} does not exist in Chatbot")
             return
-        chatbot.save()
+        Chatbot.objects.update(
+            chatbot.id,
+            **{key: val},
+        )
+
+    def load_voices(self):
+        voices = VoiceSettings.objects.all()
+        self.ui.voice_combobox.blockSignals(True)
+        self.ui.voice_combobox.clear()
+        for voice in voices:
+            self.ui.voice_combobox.addItem(voice.name, voice.id)
+        self.ui.voice_combobox.setCurrentIndex(
+            self.ui.voice_combobox.findData(
+                self.chatbot.voice_id or voices[0].id
+            )
+        )
+        self.ui.voice_combobox.blockSignals(False)
+
+    @Slot(int)
+    def voice_changed(self, index):
+        voice_id = self.ui.voice_combobox.itemData(index)
+        if voice_id is None:
+            return
+        self.update_chatbot("voice_id", voice_id)

@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy import (
     Column,
     Integer,
@@ -10,6 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from airunner.data.models.base import BaseModel
+from airunner.data.models.voice_settings import VoiceSettings
 from airunner.settings import (
     AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
     AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,
@@ -68,8 +70,16 @@ class Chatbot(BaseModel):
     use_backstory = Column(Boolean, default=True)
     use_weather_prompt = Column(Boolean, default=False)
     gender = Column(String, default=Gender.MALE.value)
+    voice_id = Column(Integer, ForeignKey("voice_settings.id"), nullable=True)
 
     target_files = relationship("TargetFiles", back_populates="chatbot")
     target_directories = relationship(
         "TargetDirectories", back_populates="chatbot"
     )
+
+    @property
+    def voice_settings(self) -> Optional[VoiceSettings]:
+        """Return the voice settings associated with the chatbot."""
+        if self.voice_id is not None:
+            return VoiceSettings.objects.get(self.voice_id)
+        return None

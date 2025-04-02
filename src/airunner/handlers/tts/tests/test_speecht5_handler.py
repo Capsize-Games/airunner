@@ -13,7 +13,6 @@ class TestSpeechT5ModelManager(unittest.TestCase):
         self.mock_settings.voice = "US_MALE"
 
         self.handler = SpeechT5ModelManager(
-            tts_settings=self.mock_settings,
             path_settings=MagicMock()
         )
 
