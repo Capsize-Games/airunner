@@ -1,6 +1,6 @@
 from typing import Callable
 from PySide6.QtCore import QObject, QThread, Signal
-from airunner.handlers.stablediffusion import DownloadWorker
+from airunner.workers.download_worker import DownloadWorker
 from airunner.enums import SignalCode
 from airunner.utils.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
@@ -24,8 +24,12 @@ class HuggingfaceDownloader(
         self.worker.moveToThread(self.thread)
 
         # Connect signals
-        self.worker.finished.connect(lambda: self.emit_signal(SignalCode.DOWNLOAD_COMPLETE))
-        self.worker.progress.connect(lambda current, total: callback(current, total))
+        self.worker.finished.connect(
+            lambda: self.emit_signal(SignalCode.DOWNLOAD_COMPLETE)
+        )
+        self.worker.progress.connect(
+            lambda current, total: callback(current, total)
+        )
 
         self.logger.debug(f"Starting model download thread")
         self.thread.finished.connect(self.handle_completed)
@@ -37,14 +41,16 @@ class HuggingfaceDownloader(
         requested_path: str,
         requested_file_name: str,
         requested_file_path: str,
-        requested_callback: Callable[[int, int], None]
+        requested_callback: Callable[[int, int], None],
     ):
-        self.worker.add_to_queue((
-            requested_path,
-            requested_file_name,
-            requested_file_path,
-            requested_callback
-        ))
+        self.worker.add_to_queue(
+            (
+                requested_path,
+                requested_file_name,
+                requested_file_path,
+                requested_callback,
+            )
+        )
 
     def handle_completed(self):
         self.completed.emit()
