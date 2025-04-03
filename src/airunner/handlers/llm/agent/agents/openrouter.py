@@ -7,16 +7,25 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 from airunner.enums import LLMActionType
 from airunner.handlers.llm.llm_request import OpenrouterMistralRequest
 from airunner.handlers.llm.agent.agents.local import LocalAgent
-
+from airunner.utils.get_logger import get_logger
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from logging import Logger
 
 import asyncio
-import logging
 from typing import AsyncGenerator, Sequence
-from llama_index.core.base.llms.types import ChatResponseGen, ChatResponseAsyncGen
+from llama_index.core.base.llms.types import (
+    ChatResponseGen,
+    ChatResponseAsyncGen,
+)
 from llama_index.core.base.llms.types import ChatMessage, CompletionResponse
+from llama_index.core.bridge.pydantic import Field
 
 
 class OpenRouterEnhanced(OpenRouter):
+    logger: Type[Logger] = Field(
+        default_factory=lambda: get_logger(__name__, AIRUNNER_LOG_LEVEL)
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._cancel_event = asyncio.Event()
@@ -74,11 +83,11 @@ class OpenRouterEnhanced(OpenRouter):
         # Set the cancel event to stop streaming
         self._cancel_event.set()
 
+    def unload(self):
+        self.logger.info("Unloading OpenRouterEnhanced: TODO")
 
 
-class OpenRouterQObject(
-    LocalAgent
-):
+class OpenRouterQObject(LocalAgent):
     @property
     def llm(self) -> Type[LLM]:
         if not self._llm:
@@ -90,7 +99,7 @@ class OpenRouterQObject(
                 **llm_request.to_dict()
             )
         return self._llm
-    
+
     def interrupt_process(self):
         if self._llm:
             self._llm.interrupt_process()
@@ -101,7 +110,7 @@ class OpenRouterQObject(
         action: LLMActionType = LLMActionType.CHAT,
         system_prompt: Optional[str] = None,
         rag_system_prompt: Optional[str] = None,
-        llm_request: Optional[OpenrouterMistralRequest] = None
+        llm_request: Optional[OpenrouterMistralRequest] = None,
     ) -> AgentChatResponse:
         llm_request = llm_request or OpenrouterMistralRequest.from_default()
         return super().chat(
@@ -112,4 +121,3 @@ class OpenRouterQObject(
             llm_request=llm_request,
             **llm_request.to_dict()
         )
-

@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
-    QGridLayout, QGroupBox, QScrollArea, QSizePolicy,
-    QSpacerItem, QWidget)
+    QGridLayout, QGroupBox, QPushButton, QScrollArea,
+    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
 
 from airunner.gui.widgets.tts.espeak_preferences_widget import ESpeakPreferencesWidget
 from airunner.gui.widgets.tts.speecht5_preferences_widget import SpeechT5PreferencesWidget
@@ -77,6 +77,30 @@ class Ui_tts_preferences(object):
 
         self.gridLayout.addWidget(self.line, 1, 0, 1, 1)
 
+        self.voice_settings_groupbox = QGroupBox(self.scrollAreaWidgetContents)
+        self.voice_settings_groupbox.setObjectName(u"voice_settings_groupbox")
+        self.verticalLayout_voice = QVBoxLayout(self.voice_settings_groupbox)
+        self.verticalLayout_voice.setObjectName(u"verticalLayout_voice")
+        self.voice_scroll_area = QScrollArea(self.voice_settings_groupbox)
+        self.voice_scroll_area.setObjectName(u"voice_scroll_area")
+        self.voice_scroll_area.setWidgetResizable(True)
+        self.voice_scroll_area_contents = QWidget()
+        self.voice_scroll_area_contents.setObjectName(u"voice_scroll_area_contents")
+        self.voice_scroll_area_contents.setGeometry(QRect(0, 0, 480, 200))
+        self.voice_list_layout = QVBoxLayout(self.voice_scroll_area_contents)
+        self.voice_list_layout.setObjectName(u"voice_list_layout")
+        self.voice_scroll_area.setWidget(self.voice_scroll_area_contents)
+
+        self.verticalLayout_voice.addWidget(self.voice_scroll_area)
+
+        self.create_voice_button = QPushButton(self.voice_settings_groupbox)
+        self.create_voice_button.setObjectName(u"create_voice_button")
+
+        self.verticalLayout_voice.addWidget(self.create_voice_button)
+
+
+        self.gridLayout.addWidget(self.voice_settings_groupbox, 5, 0, 1, 1)
+
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.gridLayout_2.addWidget(self.scrollArea, 0, 0, 1, 1)
@@ -93,5 +117,7 @@ class Ui_tts_preferences(object):
         tts_preferences.setWindowTitle(QCoreApplication.translate("tts_preferences", u"Form", None))
         self.enable_tts.setText(QCoreApplication.translate("tts_preferences", u"Enable Text to Speech", None))
         self.groupBox_7.setTitle(QCoreApplication.translate("tts_preferences", u"Model", None))
+        self.voice_settings_groupbox.setTitle(QCoreApplication.translate("tts_preferences", u"Voice Settings", None))
+        self.create_voice_button.setText(QCoreApplication.translate("tts_preferences", u"Create Voice", None))
     # retranslateUi
 
