@@ -1,6 +1,6 @@
 
 from airunner.enums import SignalCode
-from airunner.utils import random_seed
+from airunner.utils.application import random_seed
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.seed.templates.seed_ui import Ui_seed_widget
 

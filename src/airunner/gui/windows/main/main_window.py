@@ -62,9 +62,9 @@ from airunner.enums import (
     ModelType,
     ModelStatus,
 )
-from airunner.utils.mediator_mixin import MediatorMixin
-from airunner.utils.get_version import get_version
-from airunner.utils.create_worker import create_worker
+from airunner.utils.application.mediator_mixin import MediatorMixin
+from airunner.utils.application.get_version import get_version
+from airunner.utils.application.create_worker import create_worker
 from airunner.utils.widgets import (
     save_splitter_settings,
     load_splitter_settings,
