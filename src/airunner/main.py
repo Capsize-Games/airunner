@@ -12,7 +12,7 @@ Do not change the order of the imports.
 ################################################################
 import os
 import argparse
-from airunner.utils.settings import get_qsettings
+from airunner.utils.settings.get_qsettings import get_qsettings
 
 base_path = os.path.join(
     os.path.expanduser("~"), ".local", "share", "airunner"
@@ -48,7 +48,7 @@ from airunner.api import API
 ###############################################################
 # Import Alembic modules to run migrations.
 ################################################################
-from airunner.data.models import ApplicationSettings
+from airunner.data.models.application_settings import ApplicationSettings
 from airunner.setup_database import setup_database
 
 

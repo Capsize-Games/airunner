@@ -1,18 +1,20 @@
 from typing import Optional, Dict
 
+from PySide6.QtWidgets import QDialog, QVBoxLayout
+from PySide6.QtCore import QObject
+
 from airunner.app import App
-from airunner.handlers.llm import LLMRequest, LLMResponse
+from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.enums import SignalCode, LLMActionType
-from airunner.workers import (
+from airunner.workers.model_scanner_worker import (
     ModelScannerWorker,
 )
 from airunner.setup_database import setup_database
-from airunner.utils import create_worker
+from airunner.utils.create_worker import create_worker
 from airunner.gui.utils.ui_dispatcher import render_ui_from_spec
 from airunner.utils.ui_loader import load_ui_file, load_ui_from_string
-from PySide6.QtWidgets import QMainWindow, QDialog, QVBoxLayout
-from PySide6.QtCore import QObject
 
 
 class API(App):
