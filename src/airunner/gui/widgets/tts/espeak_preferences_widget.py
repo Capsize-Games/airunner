@@ -106,7 +106,7 @@ class EspeakPreferencesWidget(BaseWidget):
         self.update_espeak_settings(
             "voice", self.ui.voice_combobox.currentText()
         )
-
+      
     def voice_changed(self, text):
         self.update_espeak_settings("voice", text)
 
