@@ -6,6 +6,8 @@ from PySide6.QtCore import QObject, Signal
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
+
+
 DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 
 
@@ -52,11 +54,14 @@ class DownloadWorker(
             if path == "" and file_name == "" and file_path == "":
                 callback()
                 return
-            url = f"{DEFAULT_HF_ENDPOINT}/{path}/resolve/main/{file_name}?download=true".replace(" ", "")
+            url = f"{DEFAULT_HF_ENDPOINT}/{path}/resolve/main/{file_name}?download=true".replace(
+                " ", ""
+            )
             self.emit_signal(SignalCode.CLEAR_DOWNLOAD_STATUS_BAR)
-            self.emit_signal(SignalCode.SET_DOWNLOAD_STATUS_LABEL, {
-                "message": f"Downloading {file_name}"
-            })
+            self.emit_signal(
+                SignalCode.SET_DOWNLOAD_STATUS_LABEL,
+                {"message": f"Downloading {file_name}"},
+            )
 
             file_name = os.path.join(file_path, file_name)
             file_name = os.path.expanduser(file_name)
@@ -67,14 +72,11 @@ class DownloadWorker(
             if os.path.exists(file_name):
                 self.emit_signal(
                     SignalCode.UPDATE_DOWNLOAD_LOG,
-                    {
-                        "message":  f"File already exists, skipping download"
-                    }
+                    {"message": f"File already exists, skipping download"},
                 )
-                self.emit_signal(SignalCode.DOWNLOAD_PROGRESS, {
-                    "current": 0,
-                    "total": 0
-                })
+                self.emit_signal(
+                    SignalCode.DOWNLOAD_PROGRESS, {"current": 0, "total": 0}
+                )
                 self.finished.emit()
                 continue
 
@@ -83,12 +85,14 @@ class DownloadWorker(
                 SignalCode.UPDATE_DOWNLOAD_LOG,
                 {
                     "message": f"Downloading {url} of size {size_kb} KB to {file_name}"
-                }
+                },
             )
 
             try:
                 headers = {}
-                with requests.get(url, headers=headers, stream=True, allow_redirects=True) as r:
+                with requests.get(
+                    url, headers=headers, stream=True, allow_redirects=True
+                ) as r:
                     r.raise_for_status()
                     dir_name = os.path.dirname(file_name)
 
@@ -102,17 +106,19 @@ class DownloadWorker(
                             try:
                                 f.write(chunk)
                             except OverflowError:
-                                print(f"OverflowError when writing to {file_name}")
+                                print(
+                                    f"OverflowError when writing to {file_name}"
+                                )
                                 raise
-                            self.emit_signal(SignalCode.DOWNLOAD_PROGRESS, {
-                                "current": f.tell(),
-                                "total": size_kb
-                            })
+                            self.emit_signal(
+                                SignalCode.DOWNLOAD_PROGRESS,
+                                {"current": f.tell(), "total": size_kb},
+                            )
                         self.emit_signal(
                             SignalCode.UPDATE_DOWNLOAD_LOG,
                             {
                                 "message": f"finished with download of {file_name}"
-                            }
+                            },
                         )
                         self.finished.emit()
             except Exception as e:

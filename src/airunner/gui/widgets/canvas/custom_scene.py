@@ -12,12 +12,13 @@ from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QGraphicsSceneMouseEvent, QMessageBox
 
 from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.settings import (
     AIRUNNER_VALID_IMAGE_FILES, 
     AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
 )
-from airunner.utils import snap_to_grid, is_windows
+from airunner.utils import is_windows
+from airunner.utils.application import snap_to_grid
 from airunner.utils.image import (
     export_image,
     convert_binary_to_image, 
