@@ -136,7 +136,7 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 sudo apt install nvidia-cuda-toolkit
 nvcc --version  # Verify CUDA installation
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
-pip install airunner[gui,linux,dev,art,llm,tts]
+pip install airunner[gui,linux,dev,art,llm,llm_weather,tts]
 pip install flash-attn --no-build-isolation  # Optional for flash attention
 pip install --upgrade timm==1.0.15
 ```
