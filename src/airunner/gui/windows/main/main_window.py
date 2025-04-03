@@ -561,7 +561,7 @@ class MainWindow(
         )
         self.tray_icon = QSystemTrayIcon(self)
         self.tray_icon.setIcon(
-            QIcon(os.path.join(here, "../../gui/images/icon64x64.png"))
+            QIcon(os.path.join(here, "../../images/icon64x64.png"))
         )
 
         # Create a simple tray menu with actions
