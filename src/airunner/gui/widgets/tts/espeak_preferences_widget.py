@@ -13,10 +13,27 @@ from airunner.data.models.espeak_settings import EspeakSettings
 class EspeakPreferencesWidget(BaseWidget):
     widget_class_ = Ui_espeak_preferences
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, id: int, *args, **kwargs):
+        self._id: int = id
         super().__init__(*args, **kwargs)
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.load_settings()
+
     def initialize_form(self):
+        settings = EspeakSettings.objects.get(self._id)
+        if settings is None:
+            print(f"Settings not found for ID: {self._id}")
+            return
+
+        # Ensure required attributes exist in settings
+        if not all(
+            hasattr(settings, attr) for attr in ["rate", "volume", "pitch"]
+        ):
+            print(f"Missing attributes in settings for ID: {self._id}")
+            return
+
         elements = [
             self.ui.language_combobox,
             self.ui.gender_combobox,
@@ -26,9 +43,9 @@ class EspeakPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(True)
 
-        language = self.espeak_settings.language
-        gender = self.espeak_settings.gender
-        voice = self.espeak_settings.voice
+        language = settings.language
+        gender = settings.gender
+        voice = settings.voice
         iso_codes = [country.alpha_2 for country in pycountry.countries]
 
         engine = pyttsx3.init()
@@ -48,17 +65,18 @@ class EspeakPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(False)
 
+        print(self.ui, settings)
         self.ui.rate.init(
             slider_callback=self.callback,
-            current_value=self.espeak_settings.rate,
+            current_value=settings.rate,
         )
         self.ui.volume.init(
             slider_callback=self.callback,
-            current_value=self.espeak_settings.volume,
+            current_value=settings.volume,
         )
         self.ui.pitch.init(
             slider_callback=self.callback,
-            current_value=self.espeak_settings.pitch,
+            current_value=settings.pitch,
         )
 
     def callback(self, attr_name, value, _widget=None):
@@ -92,7 +110,7 @@ class EspeakPreferencesWidget(BaseWidget):
             "voice", self.ui.voice_combobox.currentText()
         )
 
-    def load_settings(self, settings: EspeakSettings):
+    def load_settings(self):
         """Load the Espeak settings into the widget."""
         # Populate the widget with settings (e.g., rate, pitch, volume)
         pass

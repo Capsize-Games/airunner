@@ -428,3 +428,17 @@ class SpeechT5Voices(Enum):
     CANADIAN_MALE = "Canadian Male"
     SCOTTISH_MALE = "Scottish Male"
     INDIAN_MALE = "Indian Male"
+
+
+class AvailableLanguage(enum.Enum):
+    """
+    Enum for available languages in OpenVoice.
+    """
+
+    EN_NEWEST = "EN_NEWEST"
+    EN = "EN"
+    ES = "ES"
+    FR = "FR"
+    ZH = "ZH"
+    JP = "JP"
+    KR = "KR"

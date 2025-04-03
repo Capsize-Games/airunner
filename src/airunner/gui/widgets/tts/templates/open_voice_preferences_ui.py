@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QSizePolicy, QSlider,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QGroupBox,
+    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
 
 class Ui_open_voice_preferences(object):
     def setupUi(self, open_voice_preferences):
@@ -25,58 +25,32 @@ class Ui_open_voice_preferences(object):
         open_voice_preferences.resize(400, 300)
         self.verticalLayout = QVBoxLayout(open_voice_preferences)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.language_combobox = QComboBox(open_voice_preferences)
+        self.groupBox = QGroupBox(open_voice_preferences)
+        self.groupBox.setObjectName(u"groupBox")
+        self.gridLayout = QGridLayout(self.groupBox)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.language_combobox = QComboBox(self.groupBox)
         self.language_combobox.setObjectName(u"language_combobox")
 
-        self.verticalLayout.addWidget(self.language_combobox)
+        self.gridLayout.addWidget(self.language_combobox, 0, 0, 1, 1)
 
-        self.speed_slider = QSlider(open_voice_preferences)
-        self.speed_slider.setObjectName(u"speed_slider")
-        self.speed_slider.setOrientation(Qt.Horizontal)
-        self.speed_slider.setMinimum(50)
-        self.speed_slider.setMaximum(200)
-        self.speed_slider.setValue(100)
 
-        self.verticalLayout.addWidget(self.speed_slider)
+        self.verticalLayout.addWidget(self.groupBox)
 
-        self.tone_color_combobox = QComboBox(open_voice_preferences)
-        self.tone_color_combobox.setObjectName(u"tone_color_combobox")
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
-        self.verticalLayout.addWidget(self.tone_color_combobox)
-
-        self.pitch_slider = QSlider(open_voice_preferences)
-        self.pitch_slider.setObjectName(u"pitch_slider")
-        self.pitch_slider.setOrientation(Qt.Horizontal)
-        self.pitch_slider.setMinimum(50)
-        self.pitch_slider.setMaximum(200)
-        self.pitch_slider.setValue(100)
-
-        self.verticalLayout.addWidget(self.pitch_slider)
-
-        self.volume_slider = QSlider(open_voice_preferences)
-        self.volume_slider.setObjectName(u"volume_slider")
-        self.volume_slider.setOrientation(Qt.Horizontal)
-        self.volume_slider.setMinimum(0)
-        self.volume_slider.setMaximum(100)
-        self.volume_slider.setValue(100)
-
-        self.verticalLayout.addWidget(self.volume_slider)
-
-        self.voice_combobox = QComboBox(open_voice_preferences)
-        self.voice_combobox.setObjectName(u"voice_combobox")
-
-        self.verticalLayout.addWidget(self.voice_combobox)
+        self.verticalLayout.addItem(self.verticalSpacer)
 
 
         self.retranslateUi(open_voice_preferences)
+        self.language_combobox.currentTextChanged.connect(open_voice_preferences.language_changed)
 
         QMetaObject.connectSlotsByName(open_voice_preferences)
     # setupUi
 
     def retranslateUi(self, open_voice_preferences):
-        self.language_combobox.setCurrentText(QCoreApplication.translate("open_voice_preferences", u"EN_NEWEST", None))
-        self.tone_color_combobox.setCurrentText(QCoreApplication.translate("open_voice_preferences", u"default", None))
-        self.voice_combobox.setCurrentText(QCoreApplication.translate("open_voice_preferences", u"default", None))
+        self.groupBox.setTitle(QCoreApplication.translate("open_voice_preferences", u"Language", None))
+        self.language_combobox.setCurrentText("")
         pass
     # retranslateUi
 
