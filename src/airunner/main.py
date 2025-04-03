@@ -13,7 +13,15 @@ Do not change the order of the imports.
 print("Starting AI Runner...")
 import logging
 
+logging.getLogger("torio._extension.utils").setLevel(logging.WARNING)
+logging.getLogger("google.cloud.storage._opentelemetry_tracing").setLevel(
+    logging.WARNING
+)
 logging.getLogger("numba").setLevel(logging.WARNING)
+logging.getLogger("tensorflow").setLevel(logging.WARNING)
+logging.getLogger("h5py._conv").setLevel(logging.WARNING)
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+logging.getLogger("datasets").setLevel(logging.WARNING)
 
 import sys
 from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE
