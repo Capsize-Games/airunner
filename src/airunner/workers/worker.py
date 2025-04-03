@@ -5,7 +5,7 @@ from abc import abstractmethod, ABC, ABCMeta
 from PySide6.QtCore import Signal, QThread, QObject
 
 from airunner.enums import QueueType, SignalCode, WorkerState
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 

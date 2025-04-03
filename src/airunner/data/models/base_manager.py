@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Query, joinedload
 
 from airunner.data.session_manager import session_scope
-from airunner.utils.get_logger import get_logger
+from airunner.utils.application.get_logger import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
 
 _T = TypeVar("_T", bound=Any)

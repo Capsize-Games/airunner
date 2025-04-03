@@ -22,7 +22,7 @@ from airunner.handlers.llm.agent.chat_engine import (
 )
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 
 
 class ChatEngineTool(

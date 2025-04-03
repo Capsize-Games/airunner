@@ -15,17 +15,12 @@ from PySide6.QtCore import (
     QProcess,
     QTimer,
 )
-from PySide6.QtGui import (
-    QGuiApplication, 
-    QKeySequence, 
-    QAction, 
-    QCursor
-)
+from PySide6.QtGui import QGuiApplication, QKeySequence, QAction, QCursor
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QMessageBox,
-    QCheckBox, 
+    QCheckBox,
     QInputDialog,
     QSystemTrayIcon,
     QMenu,
@@ -54,35 +49,28 @@ from airunner.utils.settings import get_qsettings
 from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
 from airunner.handlers.llm.agent.actions.show_path import show_path
 from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.data.models import ShortcutKeys, ImageFilter, DrawingPadSettings
-from airunner.data.models import Tab
+from airunner.data.models.shortcut_keys import ShortcutKeys
+from airunner.data.models.image_filter import ImageFilter
+from airunner.data.models.drawingpad_settings import DrawingPadSettings
+from airunner.data.models.tab import Tab
 from airunner.app_installer import AppInstaller
 from airunner.enums import (
     SignalCode,
     CanvasToolName,
     GeneratorSection,
-    LLMActionType, 
-    ModelType, 
+    LLMActionType,
+    ModelType,
     ModelStatus,
-    StableDiffusionVersion,
 )
-from airunner.utils.mediator_mixin import MediatorMixin
-from airunner.gui.styles.styles_mixin import StylesMixin
-from airunner.workers import (
-    AudioCaptureWorker,
-    AudioProcessorWorker,
-    LLMGenerateWorker,
-    MaskGeneratorWorker,
-    SDWorker,
-    TTSGeneratorWorker,
-    TTSVocalizerWorker,
-)
-from airunner.utils import get_version, create_worker
+from airunner.utils.application.mediator_mixin import MediatorMixin
+from airunner.utils.application.get_version import get_version
+from airunner.utils.application.create_worker import create_worker
 from airunner.utils.widgets import (
     save_splitter_settings,
     load_splitter_settings,
 )
 from airunner.utils.image import convert_image_to_binary
+from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.gui.widgets.stats.stats_widget import StatsWidget
 from airunner.gui.widgets.status.status_widget import StatusWidget
 from airunner.gui.windows.about.about import AboutWindow
@@ -94,8 +82,8 @@ from airunner.gui.windows.main.templates.main_window_ui import Ui_MainWindow
 from airunner.gui.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.gui.windows.settings.airunner_settings import SettingsWindow
 from airunner.gui.windows.update.update_window import UpdateWindow
-from airunner.plugin_loader import PluginLoader
 from airunner.gui.managers.icon_manager import IconManager
+from airunner.plugin_loader import PluginLoader
 
 
 class MainWindow(
@@ -162,13 +150,9 @@ class MainWindow(
         ("upload", "actionExport_image_button"),
     ]
 
-    def __init__(
-        self,
-        *args,
-        **kwargs
-    ):
+    def __init__(self, *args, **kwargs):
         self.ui = self.ui_class_()
-        
+
         self.icon_manager: Optional[IconManager] = None
         self.quitting = False
         self.update_popup = None
@@ -201,7 +185,9 @@ class MainWindow(
         self._generator_settings = None
         self.listening = False
         self.initialized = False
-        self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
+        self._model_status = {
+            model_type: ModelStatus.UNLOADED for model_type in ModelType
+        }
         self.signal_handlers = {
             SignalCode.SD_SAVE_PROMPT_SIGNAL: self.on_save_stablediffusion_prompt_signal,
             SignalCode.QUIT_APPLICATION: self.handle_quit_application_signal,
@@ -231,9 +217,9 @@ class MainWindow(
         self.single_click_timer = QTimer(self)
         self.single_click_timer.setSingleShot(True)
         self.single_click_timer.timeout.connect(self.handle_single_click)
-        
+
         self.initialize_system_tray()
-        
+
         # Add plugins directory to Python path
         plugins_path = os.path.join(self.path_settings.base_path, "plugins")
         if plugins_path not in sys.path:
@@ -280,6 +266,7 @@ class MainWindow(
     The following functions are defined in and connected to the appropriate
     signals in the corresponding ui file.
     """
+
     @Slot()
     def action_quit_triggered(self):
         self.handle_close()
@@ -323,10 +310,10 @@ class MainWindow(
     def action_reset_settings(self):
         reply = QMessageBox.question(
             self,
-            'Reset Settings',
-            'Are you sure you want to reset all settings to their default values?',
+            "Reset Settings",
+            "Are you sure you want to reset all settings to their default values?",
             QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+            QMessageBox.No,
         )
 
         if reply == QMessageBox.Yes:
@@ -493,7 +480,7 @@ class MainWindow(
             val,
             SignalCode.CONTROLNET_LOAD_SIGNAL,
             SignalCode.CONTROLNET_UNLOAD_SIGNAL,
-            "controlnet_enabled"
+            "controlnet_enabled",
         )
 
     @Slot(bool)
@@ -506,7 +493,7 @@ class MainWindow(
             val,
             SignalCode.STT_LOAD_SIGNAL,
             SignalCode.STT_UNLOAD_SIGNAL,
-            "stt_enabled"
+            "stt_enabled",
         )
         QApplication.processEvents()
         self.update_application_settings("stt_enabled", val)
@@ -529,50 +516,53 @@ class MainWindow(
     def action_conversation_triggered_delete(self):
         current_conversation = self.llm_generator_settings.current_conversation
         self.emit_signal(
-            SignalCode.CONVERSATION_DELETED, {
-                "conversation_id": current_conversation.id
-            }
+            SignalCode.CONVERSATION_DELETED,
+            {"conversation_id": current_conversation.id},
         )
-    
+
     @Slot(bool)
     def action_toggle_grid(self, val):
         self.update_grid_settings("show_grid", val)
-        self.emit_signal(SignalCode.TOGGLE_GRID, {
-            "show_grid": val
-        })
+        self.emit_signal(SignalCode.TOGGLE_GRID, {"show_grid": val})
+
     """
     End slot functions
     """
+
     @staticmethod
     def download_url(url, save_path):
         response = requests.get(url)
-        soup = BeautifulSoup(response.content, 'html.parser')
+        soup = BeautifulSoup(response.content, "html.parser")
         title = soup.title.string if soup.title else url
         # Truncate title to 10 words
         title_words = title.split()[:10]
-        filename = "_".join(title_words) + '.html'
+        filename = "_".join(title_words) + ".html"
         # Replace any characters in filename that are not alphanumerics, underscores, or hyphens
-        filename = re.sub(r'[^\w\-_]', '_', filename)
+        filename = re.sub(r"[^\w\-_]", "_", filename)
         save_path = os.path.join(save_path, filename)
-        with open(save_path, 'wb') as file:
+        with open(save_path, "wb") as file:
             file.write(response.content)
         return filename
 
     @staticmethod
     def download_pdf(url, save_path):
         response = requests.get(url)
-        filename = url.split('/')[-1]  # Get the filename from the URL
+        filename = url.split("/")[-1]  # Get the filename from the URL
         save_path = os.path.join(save_path, filename)
-        with open(save_path, 'wb') as file:
+        with open(save_path, "wb") as file:
             file.write(response.content)
         return filename
 
     def initialize_system_tray(self):
         """Initialize the system tray icon with a simple menu."""
         here = os.path.dirname(os.path.abspath(__file__))
-        self.setWindowIcon(QIcon(os.path.join(here, "../../gui/images/icon64x64.png")))
+        self.setWindowIcon(
+            QIcon(os.path.join(here, "../../gui/images/icon64x64.png"))
+        )
         self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setIcon(QIcon(os.path.join(here, "../../gui/images/icon64x64.png")))
+        self.tray_icon.setIcon(
+            QIcon(os.path.join(here, "../../gui/images/icon64x64.png"))
+        )
 
         # Create a simple tray menu with actions
         self.tray_menu = QMenu()
@@ -582,20 +572,22 @@ class MainWindow(
         self.tray_menu.addAction(quit_action)
 
         # Connect actions
-        self.toggle_visibility_action.triggered.connect(self.toggle_window_visibility)
+        self.toggle_visibility_action.triggered.connect(
+            self.toggle_window_visibility
+        )
         quit_action.triggered.connect(self.quit)
 
         # Set the menu for the tray icon
         self.tray_icon.setContextMenu(self.tray_menu)
-        
+
         # Connect activated signal to our custom handler
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
-        
+
         # Show the tray icon
         self.tray_icon.show()
 
     def on_navigate_to_url(self, _data: Dict = None):
-        url, ok = QInputDialog.getText(self, 'Browse Web', 'Enter your URL:')
+        url, ok = QInputDialog.getText(self, "Browse Web", "Enter your URL:")
         if ok:
             try:
                 result = urllib.parse.urlparse(url)
@@ -605,13 +597,15 @@ class MainWindow(
 
             # If the input is a URL, download it
             if is_url:
-                if url.lower().endswith('.pdf'):
+                if url.lower().endswith(".pdf"):
                     # Handle PDF file
                     filepath = os.path.expanduser(self.path_settings.pdf_path)
                     filename = self.download_pdf(url, filepath)
                 else:
                     # Handle URL
-                    filepath = os.path.expanduser(self.path_settings.webpages_path)
+                    filepath = os.path.expanduser(
+                        self.path_settings.webpages_path
+                    )
                     filename = self.download_url(url, filepath)
             elif os.path.isfile(url):
                 filepath = os.path.dirname(url)
@@ -622,10 +616,13 @@ class MainWindow(
 
             # Update target files to use only the file that was downloaded or navigated to
             # and update the index.
-            self.update_chatbot("target_files", [os.path.join(filepath, filename)])
-            self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL, {
-                "target_files": self.chatbot.target_files
-            })
+            self.update_chatbot(
+                "target_files", [os.path.join(filepath, filename)]
+            )
+            self.emit_signal(
+                SignalCode.RAG_RELOAD_INDEX_SIGNAL,
+                {"target_files": self.chatbot.target_files},
+            )
             self.emit_signal(
                 SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
                 {
@@ -633,10 +630,10 @@ class MainWindow(
                     "request_data": {
                         "action": LLMActionType.RAG,
                         "prompt": "Summarize the text and provide a synopsis of the content. "
-                                  "Be concise and informative.",
-                        "llm_request": LLMRequest.from_default()
-                    }
-                }
+                        "Be concise and informative.",
+                        "llm_request": LLMRequest.from_default(),
+                    },
+                },
             )
 
     def show_layers(self):
@@ -664,18 +661,18 @@ class MainWindow(
             self.showNormal()
             self.activateWindow()  # Ensure window gets focus when showing
             self.toggle_visibility_action.setText("Hide Window")
-        
+
         # Update the tray menu so it reflects the current state immediately
         self.tray_icon.setContextMenu(self.tray_menu)
 
     def on_tray_icon_activated(self, reason):
         """Handle tray icon activation events."""
         print(f"Tray icon activated with reason: {reason}")
-        
+
         # For single left click or double click, toggle visibility
         if (
-            reason is QSystemTrayIcon.ActivationReason.Trigger or
-            reason is QSystemTrayIcon.ActivationReason.DoubleClick
+            reason is QSystemTrayIcon.ActivationReason.Trigger
+            or reason is QSystemTrayIcon.ActivationReason.DoubleClick
         ):
             print(f"Left click detected (reason: {reason})")
             self.toggle_window_visibility()
@@ -694,7 +691,7 @@ class MainWindow(
         print("Single click handler executing")
         # Create a dropdown menu
         menu = QMenu()
-        
+
         # Dynamically set the text based on current window visibility
         show_hide_text = "Hide Window" if self.isVisible() else "Show Window"
         show_action = QAction(show_hide_text, self)
@@ -745,10 +742,11 @@ class MainWindow(
     def on_theme_changed_signal(self):
         self.update_icons()
         self.set_stylesheet()
-    
+
     def update_icons(self):
-        theme = "dark" \
-            if self.application_settings.dark_mode_enabled else "light"
+        theme = (
+            "dark" if self.application_settings.dark_mode_enabled else "light"
+        )
         self.icon_manager.update_icons(theme)
 
     def initialize_ui(self):
@@ -765,7 +763,7 @@ class MainWindow(
 
         tabs = Tab.objects.filter_by(section="center")
         for tab in tabs:
-            if (tab.active):
+            if tab.active:
                 active_index = tab.index
                 break
 
@@ -773,13 +771,10 @@ class MainWindow(
 
         self.set_stylesheet()
 
-        load_splitter_settings(
-            self.ui, 
-            ["main_window_splitter"]
-        )
+        load_splitter_settings(self.ui, ["main_window_splitter"])
 
         self.restore_state()
-        
+
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
@@ -789,17 +784,17 @@ class MainWindow(
         self.ui.actionRedo.setEnabled(False)
         self._load_plugins()
         self.emit_signal(
-            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL, 
-            {"main_window": self}
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL,
+            {"main_window": self},
         )
 
         if not AIRUNNER_DISCORD_URL:
             self.ui.actionDiscord.deleteLater()
-        
+
         self.ui.actionCollapse_to_system_tray.setChecked(
             self.close_to_system_tray
         )
-    
+
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
         self.ui.menuImage.hide()
@@ -823,7 +818,6 @@ class MainWindow(
         self.ui.actionRotate_90_clockwise.deleteLater()
         self.ui.actionRotate_90_counter_clockwise.deleteLater()
         self.ui.actionPrompt_Browser.deleteLater()
-            
 
     def _load_plugins(self):
         base_path = self.path_settings.base_path
@@ -843,10 +837,22 @@ class MainWindow(
     def initialize_widget_elements(self):
         for item in (
             (self.ui.actionToggle_LLM, self.application_settings.llm_enabled),
-            (self.ui.actionToggle_Text_to_Speech, self.application_settings.tts_enabled),
-            (self.ui.actionToggle_Speech_to_Text, self.application_settings.stt_enabled),
-            (self.ui.actionToggle_Stable_Diffusion, self.application_settings.sd_enabled),
-            (self.ui.actionToggle_Controlnet, self.application_settings.controlnet_enabled),
+            (
+                self.ui.actionToggle_Text_to_Speech,
+                self.application_settings.tts_enabled,
+            ),
+            (
+                self.ui.actionToggle_Speech_to_Text,
+                self.application_settings.stt_enabled,
+            ),
+            (
+                self.ui.actionToggle_Stable_Diffusion,
+                self.application_settings.sd_enabled,
+            ),
+            (
+                self.ui.actionToggle_Controlnet,
+                self.application_settings.controlnet_enabled,
+            ),
         ):
             item[0].blockSignals(True)
             item[0].setChecked(item[1] or False)
@@ -872,12 +878,14 @@ class MainWindow(
         return ""
 
     def on_save_stablediffusion_prompt_signal(self, data: Dict):
-        self.create_saved_prompt({
-            'prompt': data["prompt"],
-            'negative_prompt': data["negative_prompt"],
-            'secondary_prompt': data["secondary_prompt"],
-            'secondary_negative_prompt': data["secondary_negative_prompt"],
-        })
+        self.create_saved_prompt(
+            {
+                "prompt": data["prompt"],
+                "negative_prompt": data["negative_prompt"],
+                "secondary_prompt": data["secondary_prompt"],
+                "secondary_negative_prompt": data["secondary_negative_prompt"],
+            }
+        )
 
     def set_path_settings(self, key, val):
         self.update_path_settings(key, val)
@@ -886,13 +894,13 @@ class MainWindow(
         # display message in status
         self.emit_signal(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-            AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE
+            AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE,
         )
 
     def closeEvent(self, event):
         event.ignore()
         self.handle_close()
-    
+
     def handle_close(self):
         """Override close to minimize to tray instead of exiting."""
         if self.close_to_system_tray:
@@ -902,21 +910,21 @@ class MainWindow(
 
             # Update the tray menu so it reflects the current state immediately
             self.tray_icon.setContextMenu(self.tray_menu)
-            
+
             self.tray_icon.showMessage(
                 "AI Runner",
                 "Application minimized to tray. Click the icon to restore.",
                 QSystemTrayIcon.Information,
-                2000
+                2000,
             )
         else:
             self.quit()
-    
+
     def quit(self):
         self.logger.debug("Quitting")
         self.save_state()
         self.emit_signal(SignalCode.QUIT_APPLICATION)
-    
+
     def handle_quit_application_signal(self):
         self.hide()
         QApplication.quit()
@@ -934,7 +942,8 @@ class MainWindow(
         icon.addPixmap(
             QtGui.QPixmap(f":/{theme}/icons/feather/{theme}/{icon_name}.svg"),
             QtGui.QIcon.Mode.Normal,
-            QtGui.QIcon.State.Off)
+            QtGui.QIcon.State.Off,
+        )
         getattr(self.ui, widget_name).setIcon(icon)
         self.update()
 
@@ -954,17 +963,25 @@ class MainWindow(
 
     def on_unload_non_sd_models(self, data: Dict = None):
         if not self.memory_settings.prevent_unload_on_llm_image_generation:
-            sd_device = AIRUNNER_MEM_SD_DEVICE or self.memory_settings.default_gpu_sd
-            llm_device = AIRUNNER_MEM_LLM_DEVICE or self.memory_settings.default_gpu_llm
-            tts_device = AIRUNNER_MEM_TTS_DEVICE or self.memory_settings.default_gpu_tts
-            stt_device = AIRUNNER_MEM_STT_DEVICE or self.memory_settings.default_gpu_stt
+            sd_device = (
+                AIRUNNER_MEM_SD_DEVICE or self.memory_settings.default_gpu_sd
+            )
+            llm_device = (
+                AIRUNNER_MEM_LLM_DEVICE or self.memory_settings.default_gpu_llm
+            )
+            tts_device = (
+                AIRUNNER_MEM_TTS_DEVICE or self.memory_settings.default_gpu_tts
+            )
+            stt_device = (
+                AIRUNNER_MEM_STT_DEVICE or self.memory_settings.default_gpu_stt
+            )
 
             if sd_device == llm_device and AIRUNNER_LLM_USE_LOCAL:
                 self._llm_generate_worker.on_llm_on_unload_signal()
-            
+
             if sd_device == tts_device:
                 self._tts_generator_worker.unload()
-            
+
             if sd_device == stt_device:
                 self._stt_audio_processor_worker.unload()
 
@@ -993,7 +1010,7 @@ class MainWindow(
             SignalCode.LLM_LOAD_SIGNAL,
             SignalCode.LLM_UNLOAD_SIGNAL,
             "llm_enabled",
-            data
+            data,
         )
 
     def on_toggle_sd(self, data: Dict = None, val=None):
@@ -1006,14 +1023,13 @@ class MainWindow(
             SignalCode.SD_LOAD_SIGNAL,
             SignalCode.SD_UNLOAD_SIGNAL,
             "sd_enabled",
-            data
+            data,
         )
 
     def on_toggle_tts(self, data: Dict = None, val=None):
         if val is None:
             val = data.get(
-                "enabled", 
-                not self.application_settings.tts_enabled
+                "enabled", not self.application_settings.tts_enabled
             )
         self._update_action_button(
             ModelType.TTS,
@@ -1022,7 +1038,7 @@ class MainWindow(
             SignalCode.TTS_ENABLE_SIGNAL,
             SignalCode.TTS_DISABLE_SIGNAL,
             "tts_enabled",
-            data
+            data,
         )
 
     def _update_action_button(
@@ -1033,7 +1049,7 @@ class MainWindow(
         load_signal: SignalCode,
         unload_signal: SignalCode,
         application_setting: str = None,
-        data: Dict = None
+        data: Dict = None,
     ):
         if self._model_status[model_type] is ModelStatus.LOADING:
             val = not val
@@ -1065,7 +1081,7 @@ class MainWindow(
         settings.setValue("y_pos", self.pos().y())
         settings.setValue(
             "mode_tab_widget_index",
-            self.ui.generator_widget.ui.generator_form_tabs.currentIndex()
+            self.ui.generator_widget.ui.generator_form_tabs.currentIndex(),
         )
         settings.endGroup()
         save_splitter_settings(self.ui, ["main_window_splitter"])
@@ -1078,7 +1094,7 @@ class MainWindow(
 
         # Get the window settings
         settings = self.window_settings
-        
+
         # Resize the window
         self.setMinimumSize(100, 100)
         width = int(settings["width"])
@@ -1125,7 +1141,7 @@ class MainWindow(
 
     def action_ai_toggled(self, val):
         self.update_application_settings("ai_mode", val)
-    
+
     def on_toggle_tool_signal(self, data: Dict):
         self.toggle_tool(data["tool"], data["active"])
 
@@ -1151,7 +1167,9 @@ class MainWindow(
                     "Are you sure you want to disable the filter?"
                 )
             )
-            msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            msg_box.setStandardButtons(
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
             msg_box.setDefaultButton(QMessageBox.StandardButton.No)
 
             # Create a QCheckBox
@@ -1165,7 +1183,9 @@ class MainWindow(
                 self._disable_nsfw_filter(not checkbox.isChecked())
 
             self.ui.actionSafety_Checker.blockSignals(True)
-            self.ui.actionSafety_Checker.setChecked(self.application_settings.nsfw_filter)
+            self.ui.actionSafety_Checker.setChecked(
+                self.application_settings.nsfw_filter
+            )
             self.ui.actionSafety_Checker.blockSignals(False)
         else:
             self._disable_nsfw_filter()
@@ -1180,7 +1200,9 @@ class MainWindow(
         self.update_application_settings("nsfw_filter", False)
         # Update the show_nsfw_warning setting based on the checkbox state
         if show_nsfw_warning is not None:
-            self.update_application_settings("show_nsfw_warning", show_nsfw_warning)
+            self.update_application_settings(
+                "show_nsfw_warning", show_nsfw_warning
+            )
         self.toggle_nsfw_filter()
         self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL)
 
@@ -1189,7 +1211,7 @@ class MainWindow(
     def show_update_message(self):
         self.emit_signal(
             SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
-            f"New version available: {self.latest_version}"
+            f"New version available: {self.latest_version}",
         )
 
     def show_update_popup(self):
@@ -1203,11 +1225,11 @@ class MainWindow(
         """Override to update the tray menu text when window is shown."""
         super().showEvent(event)
         # Make sure we update the menu text whenever the window is shown
-        if hasattr(self, 'toggle_visibility_action'):
+        if hasattr(self, "toggle_visibility_action"):
             self.toggle_visibility_action.setText("Hide Window")
             # Update the tray menu so it reflects the current state immediately
             self.tray_icon.setContextMenu(self.tray_menu)
-            
+
         self.logger.debug("showEvent called, initializing window")
         self._initialize_window()
         self._initialize_default_buttons()
@@ -1225,35 +1247,57 @@ class MainWindow(
         self.ui.actionRedo.setEnabled(data["redo"] != 0)
 
     def _set_keyboard_shortcuts(self):
-        
         quit_key = ShortcutKeys.objects.filter_by_first(display_name="Quit")
         brush_key = ShortcutKeys.objects.filter_by_first(display_name="Brush")
-        eraser_key = ShortcutKeys.objects.filter_by_first(display_name="Eraser")
-        move_tool_key = ShortcutKeys.objects.filter_by_first(display_name="Move Tool")
-        select_tool_key = ShortcutKeys.objects.filter_by_first(display_name="Select Tool")
+        eraser_key = ShortcutKeys.objects.filter_by_first(
+            display_name="Eraser"
+        )
+        move_tool_key = ShortcutKeys.objects.filter_by_first(
+            display_name="Move Tool"
+        )
 
         if quit_key is not None:
             key_sequence = QKeySequence(quit_key.key | quit_key.modifiers)
             self.ui.actionQuit.setShortcut(key_sequence)
-            self.ui.actionQuit.setToolTip(f"{quit_key.display_name} ({quit_key.text})")
+            self.ui.actionQuit.setToolTip(
+                f"{quit_key.display_name} ({quit_key.text})"
+            )
 
         if brush_key is not None:
             key_sequence = QKeySequence(brush_key.key | brush_key.modifiers)
             self.ui.actionToggle_Brush.setShortcut(key_sequence)
-            self.ui.actionToggle_Brush.setToolTip(f"{brush_key.display_name} ({brush_key.text})")
+            self.ui.actionToggle_Brush.setToolTip(
+                f"{brush_key.display_name} ({brush_key.text})"
+            )
 
         if eraser_key is not None:
             key_sequence = QKeySequence(eraser_key.key | eraser_key.modifiers)
             self.ui.actionToggle_Eraser.setShortcut(key_sequence)
-            self.ui.actionToggle_Eraser.setToolTip(f"{eraser_key.display_name} ({eraser_key.text})")
+            self.ui.actionToggle_Eraser.setToolTip(
+                f"{eraser_key.display_name} ({eraser_key.text})"
+            )
 
         if move_tool_key is not None:
-            key_sequence = QKeySequence(move_tool_key.key | move_tool_key.modifiers)
+            key_sequence = QKeySequence(
+                move_tool_key.key | move_tool_key.modifiers
+            )
             self.ui.actionToggle_Active_Grid_Area.setShortcut(key_sequence)
-            self.ui.actionToggle_Active_Grid_Area.setToolTip(f"{move_tool_key.display_name} ({move_tool_key.text})")
+            self.ui.actionToggle_Active_Grid_Area.setToolTip(
+                f"{move_tool_key.display_name} ({move_tool_key.text})"
+            )
 
     def _initialize_workers(self):
         self.logger.debug("Initializing worker manager")
+        from airunner.workers import (
+            AudioCaptureWorker,
+            AudioProcessorWorker,
+            LLMGenerateWorker,
+            MaskGeneratorWorker,
+            SDWorker,
+            TTSGeneratorWorker,
+            TTSVocalizerWorker,
+        )
+
         self._mask_generator_worker = create_worker(MaskGeneratorWorker)
         self._sd_worker = create_worker(SDWorker)
         self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
@@ -1266,8 +1310,12 @@ class MainWindow(
         image_filters = ImageFilter.objects.all()
         try:
             for image_filter in image_filters:
-                action = self.ui.menuFilters.addAction(image_filter.display_name)
-                action.triggered.connect(partial(self.display_filter_window, image_filter))
+                action = self.ui.menuFilters.addAction(
+                    image_filter.display_name
+                )
+                action.triggered.connect(
+                    partial(self.display_filter_window, image_filter)
+                )
         except RuntimeError as e:
             if AIRUNNER_ART_ENABLED:
                 self.logger.warning(f"Error setting SD status text: {e}")
@@ -1278,22 +1326,26 @@ class MainWindow(
 
     def _initialize_default_buttons(self):
         self.ui.actionSafety_Checker.blockSignals(True)
-        self.ui.actionSafety_Checker.setChecked(self.application_settings.nsfw_filter)
+        self.ui.actionSafety_Checker.setChecked(
+            self.application_settings.nsfw_filter
+        )
         self.ui.actionSafety_Checker.blockSignals(False)
 
     def toggle_tool(self, tool: CanvasToolName, active: bool):
         self.update_application_settings("current_tool", tool.value)
-        self.emit_signal(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, {
-            "tool": tool,
-            "active": active
-        })
+        self.emit_signal(
+            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL,
+            {"tool": tool, "active": active},
+        )
 
     def _initialize_window(self):
         self.center()
         self.set_window_title()
 
     def center(self):
-        available_geometry = QGuiApplication.primaryScreen().availableGeometry()
+        available_geometry = (
+            QGuiApplication.primaryScreen().availableGeometry()
+        )
         frame_geometry = self.frameGeometry()
         frame_geometry.moveCenter(available_geometry.center())
         self.move(frame_geometry.topLeft())
@@ -1323,11 +1375,15 @@ class MainWindow(
             return
         self._model_status[model] = status
         if model is ModelType.SD:
-            self.ui.actionToggle_Stable_Diffusion.setDisabled(status is ModelStatus.LOADING)
+            self.ui.actionToggle_Stable_Diffusion.setDisabled(
+                status is ModelStatus.LOADING
+            )
             if status is ModelStatus.FAILED:
                 self.ui.actionToggle_Stable_Diffusion.setChecked(False)
         elif model is ModelType.CONTROLNET:
-            self.ui.actionToggle_Controlnet.setDisabled(status is ModelStatus.LOADING)
+            self.ui.actionToggle_Controlnet.setDisabled(
+                status is ModelStatus.LOADING
+            )
             if status is ModelStatus.FAILED:
                 self.ui.actionToggle_Controlnet.setChecked(False)
         elif model is ModelType.LLM:
@@ -1336,11 +1392,15 @@ class MainWindow(
                 self.logger.warning("LLM failed to load")
                 self.ui.actionToggle_LLM.setChecked(False)
         elif model is ModelType.TTS:
-            self.ui.actionToggle_Text_to_Speech.setDisabled(status is ModelStatus.LOADING)
+            self.ui.actionToggle_Text_to_Speech.setDisabled(
+                status is ModelStatus.LOADING
+            )
             if status is ModelStatus.FAILED:
                 self.ui.actionToggle_Text_to_Speech.setChecked(False)
         elif model is ModelType.STT:
-            self.ui.actionToggle_Speech_to_Text.setDisabled(status is ModelStatus.LOADING)
+            self.ui.actionToggle_Speech_to_Text.setDisabled(
+                status is ModelStatus.LOADING
+            )
             if status is ModelStatus.FAILED:
                 self.ui.actionToggle_Speech_to_Text.setChecked(False)
         self.initialize_widget_elements()
@@ -1351,20 +1411,22 @@ class MainWindow(
         height = self.active_grid_settings.height
         img = Image.new("RGB", (width, height), (0, 0, 0))
         base64_image = convert_image_to_binary(img)
-        
+
         drawing_pad_settings = DrawingPadSettings.objects.first()
         drawing_pad_settings.mask = base64_image
         drawing_pad_settings.save()
-        
+
     def display_missing_models_error(self):
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Critical)
         msg_box.setWindowTitle("Error: Missing models")
         msg_box.setText("You are missing some required models.")
-        
-        download_missing_models = msg_box.addButton("Download missing models", QMessageBox.AcceptRole)
-        
+
+        download_missing_models = msg_box.addButton(
+            "Download missing models", QMessageBox.AcceptRole
+        )
+
         msg_box.exec()
-        
+
         if msg_box.clickedButton() == download_missing_models:
             self.show_setup_wizard()

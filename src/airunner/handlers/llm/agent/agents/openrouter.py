@@ -7,7 +7,7 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 from airunner.enums import LLMActionType
 from airunner.handlers.llm.llm_request import OpenrouterMistralRequest
 from airunner.handlers.llm.agent.agents.local import LocalAgent
-from airunner.utils.get_logger import get_logger
+from airunner.utils.application.get_logger import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from logging import Logger
 
