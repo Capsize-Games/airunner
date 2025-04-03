@@ -96,20 +96,14 @@ class VoiceSettingsWidget(QWidget):
 
         # Add the appropriate settings widget
         if voice.model_type == TTSModel.SPEECHT5.value:
-            settings = SpeechT5Settings.objects.get(voice.settings_id)
-            widget = SpeechT5PreferencesWidget()
-            widget.load_settings(settings)
+            widget = SpeechT5PreferencesWidget(id=voice.settings_id)
         elif voice.model_type == TTSModel.ESPEAK.value:
-            settings = EspeakSettings.objects.get(voice.settings_id)
-            widget = EspeakPreferencesWidget()
-            widget.load_settings(settings)
+            widget = EspeakPreferencesWidget(id=voice.settings_id)
         elif (
             AIRUNNER_ENABLE_OPEN_VOICE
             and voice.model_type == TTSModel.OPENVOICE.value
         ):
-            settings = OpenVoiceSettings.objects.get(voice.settings_id)
-            widget = OpenVoicePreferencesWidget()
-            widget.load_settings(settings)
+            widget = OpenVoicePreferencesWidget(id=voice.settings_id)
         else:
             return
 

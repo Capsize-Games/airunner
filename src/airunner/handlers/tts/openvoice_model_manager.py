@@ -1,9 +1,7 @@
-# Refactored imports for better readability
 from typing import Type, Optional
 from abc import ABCMeta
 import os
 import torch
-import enum
 import librosa
 
 from openvoice.mel_processing import spectrogram_torch
@@ -12,23 +10,14 @@ from openvoice.api import OpenVoiceBaseClass, ToneColorConverter
 from melo.api import TTS
 
 from airunner.settings import AIRUNNER_TTS_SPEAKER_RECORDING_PATH
-from airunner.enums import SignalCode, ModelType, ModelStatus
+from airunner.enums import (
+    SignalCode,
+    ModelType,
+    ModelStatus,
+    AvailableLanguage,
+)
 from airunner.handlers.tts.tts_model_manager import TTSModelManager
 from airunner.handlers.tts.tts_request import TTSRequest
-
-
-class AvailableLanguage(enum.Enum):
-    """
-    Enum for available languages in OpenVoice.
-    """
-
-    EN_NEWEST = "EN_NEWEST"
-    EN = "EN"
-    ES = "ES"
-    FR = "FR"
-    ZH = "ZH"
-    JP = "JP"
-    KR = "KR"
 
 
 class StreamingToneColorConverter(ToneColorConverter):
@@ -142,6 +131,8 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         message = tts_request.message
         speaker_ids = self.model.hps.data.spk2id
+        print("*" * 100)
+        print(speaker_ids.keys())
         for speaker_key in speaker_ids.keys():
             speaker_id = speaker_ids[speaker_key]
             speaker_key = speaker_key.lower().replace("_", "-")

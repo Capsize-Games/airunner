@@ -27,6 +27,7 @@ from airunner.data.models import (
     TTSSettings,
     SpeechT5Settings,
     EspeakSettings,
+    OpenVoiceSettings,
     STTSettings,
     BrushSettings,
     GridSettings,
@@ -210,6 +211,21 @@ class SettingsMixin:
             settings = EspeakSettings.objects.filter_by_first(id=settings_id)
             if settings is None:
                 settings = EspeakSettings.objects.create()
+                Chatbot.objects.update(
+                    self.chatbot.id,
+                    voice_settings_id=settings.id,
+                )
+                self.chatbot.voice_settings.settings_id = settings.id
+            return settings
+    
+    @property
+    def openvoice_settings(self) -> OpenVoiceSettings:
+        model_type = self.chatbot.voice_settings.model_type
+        if model_type == TTSModel.OPENVOICE.value:
+            settings_id = self.chatbot.voice_settings.settings_id
+            settings = OpenVoiceSettings.objects.filter_by_first(id=settings_id)
+            if settings is None:
+                settings = OpenVoiceSettings.objects.create()
                 Chatbot.objects.update(
                     self.chatbot.id,
                     voice_settings_id=settings.id,
