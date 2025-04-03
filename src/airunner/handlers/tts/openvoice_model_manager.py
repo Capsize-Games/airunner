@@ -81,6 +81,8 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._target_se = None
+        self._audio_name = None
         speaker_recording_path = os.path.expanduser(
             AIRUNNER_TTS_SPEAKER_RECORDING_PATH
         )
@@ -97,9 +99,6 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self._speed: float = 1.0
         self._language: AvailableLanguage = AvailableLanguage.EN_NEWEST
         self._reference_speaker = os.path.expanduser(speaker_recording_path)
-        self._target_se, self._audio_name = se_extractor.get_se(
-            self._reference_speaker, self.tone_color_converter, vad=True
-        )
 
     @property
     def device(self):
@@ -131,8 +130,6 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         message = tts_request.message
         speaker_ids = self.model.hps.data.spk2id
-        print("*" * 100)
-        print(speaker_ids.keys())
         for speaker_key in speaker_ids.keys():
             speaker_id = speaker_ids[speaker_key]
             speaker_key = speaker_key.lower().replace("_", "-")
@@ -204,3 +201,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         Initialize OpenVoice-specific settings and resources.
         """
         os.makedirs(self._output_dir, exist_ok=True)
+
+        self._target_se, self._audio_name = se_extractor.get_se(
+            self._reference_speaker, self.tone_color_converter, vad=True
+        )
