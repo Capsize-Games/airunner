@@ -57,10 +57,6 @@ class ESpeakPreferencesWidget(BaseWidget):
         self.update_espeak_settings("gender", self.ui.gender_combobox.currentText())
         self.update_espeak_settings("voice", self.ui.voice_combobox.currentText())
 
-        self.update_espeak_settings("language", text)
-        self.update_espeak_settings("gender", self.ui.gender_combobox.currentText())
-        self.update_espeak_settings("voice", self.ui.voice_combobox.currentText())
-
     def voice_changed(self, text):
         self.update_espeak_settings("voice", text)
 
