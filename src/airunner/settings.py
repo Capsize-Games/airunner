@@ -339,3 +339,9 @@ AIRUNNER_ENABLE_OPEN_VOICE = (
 AIRUNNER_MOOD_PROMPT_OVERRIDE = os.environ.get(
     "AIRUNNER_MOOD_PROMPT_OVERRIDE", None
 )
+AIRUNNER_LOG_FILE = os.environ.get(
+    "AIRUNNER_LOG_FILE", os.path.join(AIRUNNER_BASE_PATH, "airunner.log")
+)
+AIRUNNER_SAVE_LOG_TO_FILE = (
+    os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "1") == "1"
+)

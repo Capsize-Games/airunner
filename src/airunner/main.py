@@ -11,6 +11,17 @@ Do not change the order of the imports.
 # variables for the application.
 ################################################################
 print("Starting AI Runner...")
+import logging
+
+logging.getLogger("numba").setLevel(logging.WARNING)
+
+import sys
+from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE
+
+if AIRUNNER_SAVE_LOG_TO_FILE:
+    sys.stdout = open(AIRUNNER_LOG_FILE, "a")
+    sys.stderr = open(AIRUNNER_LOG_FILE, "a")
+
 import os
 import argparse
 from airunner.utils.settings.get_qsettings import get_qsettings

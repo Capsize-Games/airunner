@@ -113,6 +113,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
         :return: None
         """
         print("\nExiting...")
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
         try:
             app = QApplication.instance()
             app.quit()
