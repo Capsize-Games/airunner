@@ -15,7 +15,15 @@ class EspeakPreferencesWidget(BaseWidget):
 
     def __init__(self, id: int, *args, **kwargs):
         self._id: int = id
+        self._item: EspeakSettings = EspeakSettings.objects.get(self._id)
+        if not self._item:
+            self._item = EspeakSettings.objects.create()
         super().__init__(*args, **kwargs)
+
+    def initialize_ui(self):
+        self.ui.pitch.setProperty("table_item", self._item)
+        self.ui.rate.setProperty("table_item", self._item)
+        self.ui.volume.setProperty("table_item", self._item)
 
     def showEvent(self, event):
         super().showEvent(event)
