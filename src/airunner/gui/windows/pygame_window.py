@@ -21,12 +21,12 @@ from airunner.workers import (
     TTSGeneratorWorker,
     TTSVocalizerWorker,
 )
-from airunner.utils import create_worker
+from airunner.utils.application import create_worker
 from airunner.gui.windows.main.ai_model_mixin import AIModelMixin
 from airunner.gui.windows.main.pipeline_mixin import PipelineMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.styles.styles_mixin import StylesMixin
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.api import API
 from airunner.handlers.llm.agent.agents import LocalAgent

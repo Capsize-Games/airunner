@@ -15,7 +15,7 @@ from PySide6.QtGui import QGuiApplication, QPixmap, Qt, QWindow
 from PySide6.QtWidgets import QApplication, QSplashScreen
 
 from airunner.enums import SignalCode
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models.application_settings import ApplicationSettings
 from airunner.settings import (

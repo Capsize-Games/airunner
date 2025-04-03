@@ -4,7 +4,7 @@ from queue import Queue
 import requests
 from PySide6.QtCore import QObject, Signal
 from airunner.enums import SignalCode
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 
 class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):

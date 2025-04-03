@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QApplication
 )
 
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.download_wizard.download_wizard_window import DownloadWizardWindow
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.windows.setup_wizard.setup_wizard_window import SetupWizardWindow
