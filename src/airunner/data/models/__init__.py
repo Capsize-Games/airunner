@@ -1,3 +1,5 @@
+from airunner.data.models.voice_settings import VoiceSettings
+from airunner.data.models.openvoice_settings import OpenVoiceSettings
 from airunner.data.models.active_grid_settings import ActiveGridSettings
 from airunner.data.models.application_settings import ApplicationSettings
 from airunner.data.models.controlnet_settings import ControlnetSettings
@@ -39,47 +41,59 @@ from airunner.data.models.news import RSSFeed, Category, Article
 from airunner.data.models.tab import Tab
 from airunner.data.models.base import Base
 
-__all__ = [
-    'ActiveGridSettings',
-    'ApplicationSettings',
-    'ControlnetSettings',
-    'ImageToImageSettings',
-    'OutpaintSettings',
-    'Chatstore',
-    'DrawingPadSettings',
-    'MetadataSettings',
-    'GeneratorSettings',
-    'LLMGeneratorSettings',
-    'TTSSettings',
-    'SpeechT5Settings',
-    'EspeakSettings',
-    'STTSettings',
-    'Schedulers',
-    'BrushSettings',
-    'GridSettings',
-    'PathSettings',
-    'MemorySettings',
-    'Chatbot',
-    'User',
-    'TargetFiles',
-    'TargetDirectories',
-    'AIModels',
-    'ShortcutKeys',
-    'Lora',
-    'SavedPrompt',
-    'Embedding',
-    'PromptTemplate',
-    'ControlnetModel',
-    'FontSetting',
-    'PipelineModel',
-    'Conversation',
-    'Summary',
-    'ImageFilter',
-    'ImageFilterValue',
-    'WhisperSettings',
-    'RSSFeed',
-    'Category',
-    'Article',
-    'Tab',
-    'Base',
+
+classes = [
+    ActiveGridSettings,
+    ApplicationSettings,
+    ControlnetSettings,
+    ImageToImageSettings,
+    OutpaintSettings,
+    Chatstore,
+    DrawingPadSettings,
+    MetadataSettings,
+    GeneratorSettings,
+    LLMGeneratorSettings,
+    TTSSettings,
+    SpeechT5Settings,
+    EspeakSettings,
+    STTSettings,
+    Schedulers,
+    BrushSettings,
+    GridSettings,
+    PathSettings,
+    MemorySettings,
+    Chatbot,
+    User,
+    TargetFiles,
+    TargetDirectories,
+    AIModels,
+    ShortcutKeys,
+    Lora,
+    SavedPrompt,
+    Embedding,
+    PromptTemplate,
+    ControlnetModel,
+    FontSetting,
+    PipelineModel,
+    Conversation,
+    Summary,
+    ImageFilter,
+    ImageFilterValue,
+    WhisperSettings,
+    RSSFeed,
+    Category,
+    Article,
+    Tab,
+    VoiceSettings,
+    OpenVoiceSettings,
+    Base,
 ]
+
+class_names = []
+table_to_class = {}
+for cls in classes:
+    if cls is not Base:
+        table_to_class[cls.__tablename__] = cls
+    class_names.append(cls.__name__)
+
+__all__ = class_names

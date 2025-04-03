@@ -43,6 +43,7 @@ setup(
             "pytest",
             "python-dotenv==1.0.1",
             "coverage==7.8.0",
+            "black==25.1.0",
         ],
         "art": [
             "DeepCache==0.1.1",
@@ -86,7 +87,7 @@ setup(
         "tts": [
             "inflect==7.5.0",
             "pycountry==24.6.1",
-        ]
+        ],
     },
     package_data={
         "airunner": [
