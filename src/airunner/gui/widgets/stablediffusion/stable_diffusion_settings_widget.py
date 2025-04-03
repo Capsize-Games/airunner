@@ -4,7 +4,7 @@ from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
 from airunner.gui.windows.main.pipeline_mixin import PipelineMixin
-from airunner.utils.create_worker import create_worker
+from airunner.utils.application.create_worker import create_worker
 from airunner.workers import ModelScannerWorker
 from airunner.settings import AIRUNNER_ART_ENABLED
 

@@ -10,6 +10,7 @@ Do not change the order of the imports.
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
+print("Starting AI Runner...")
 import os
 import argparse
 from airunner.utils.settings.get_qsettings import get_qsettings
