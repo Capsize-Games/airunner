@@ -84,6 +84,13 @@ from airunner.gui.windows.settings.airunner_settings import SettingsWindow
 from airunner.gui.windows.update.update_window import UpdateWindow
 from airunner.gui.managers.icon_manager import IconManager
 from airunner.plugin_loader import PluginLoader
+from airunner.workers.audio_capture_worker import AudioCaptureWorker
+from airunner.workers.audio_processor_worker import AudioProcessorWorker
+from airunner.workers.llm_generate_worker import LLMGenerateWorker
+from airunner.workers.mask_generator_worker import MaskGeneratorWorker
+from airunner.workers.sd_worker import SDWorker
+from airunner.workers.tts_generator_worker import TTSGeneratorWorker
+from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
 
 
 class MainWindow(
@@ -1288,16 +1295,7 @@ class MainWindow(
 
     def _initialize_workers(self):
         self.logger.debug("Initializing worker manager")
-        from airunner.workers import (
-            AudioCaptureWorker,
-            AudioProcessorWorker,
-            LLMGenerateWorker,
-            MaskGeneratorWorker,
-            SDWorker,
-            TTSGeneratorWorker,
-            TTSVocalizerWorker,
-        )
-
+        self.logger.info("imported workers, initializing")
         self._mask_generator_worker = create_worker(MaskGeneratorWorker)
         self._sd_worker = create_worker(SDWorker)
         self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
@@ -1305,6 +1303,8 @@ class MainWindow(
         self._tts_generator_worker = create_worker(TTSGeneratorWorker)
         self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
         self._llm_generate_worker = create_worker(LLMGenerateWorker)
+
+        self.logger.info("INITIALIZE WORKERS COMPLETE")
 
     def _initialize_filter_actions(self):
         image_filters = ImageFilter.objects.all()

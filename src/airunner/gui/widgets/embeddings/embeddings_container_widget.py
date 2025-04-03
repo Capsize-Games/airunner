@@ -8,7 +8,7 @@ from airunner.utils.models import scan_path_for_embeddings
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.embeddings.embedding_widget import EmbeddingWidget
 from airunner.gui.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
-from airunner.workers import DirectoryWatcher
+from airunner.workers.directory_watcher import DirectoryWatcher
 
 
 class EmbeddingsContainerWidget(BaseWidget):
