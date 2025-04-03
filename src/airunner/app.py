@@ -9,19 +9,15 @@ import signal
 import traceback
 from functools import partial
 from pathlib import Path
-from importlib.metadata import version
-
 from PySide6 import QtCore
 from PySide6.QtCore import QObject, QTimer
 from PySide6.QtGui import QGuiApplication, QPixmap, Qt, QWindow
 from PySide6.QtWidgets import QApplication, QSplashScreen
 
-from airunner.app_installer import AppInstaller
 from airunner.enums import SignalCode
 from airunner.utils.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models.application_settings import ApplicationSettings
-from airunner.gui.windows.main.main_window import MainWindow
 from airunner.settings import (
     AIRUNNER_DISCORD_URL,
     AIRUNNER_DISABLE_SETUP_WIZARD,
@@ -45,7 +41,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         Initialize the application and run as a GUI application or a socket server.
         :param main_window_class: The main window class to use for the application.
         """
-        self.main_window_class_ = main_window_class or MainWindow
+        self.main_window_class_ = main_window_class
         self.window_class_params = window_class_params or {}
         self.no_splash = no_splash
         self.app = None
@@ -63,93 +59,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         if self.initialize_gui:
             self.start()
             self.run_setup_wizard()
-
-            current_version = version("airunner")
-            if self.do_upgrade(current_version):
-                self.handle_upgrade(current_version)
             self.run()
-
-    def do_upgrade(self, current_version) -> bool:
-        current_version_tuple = tuple(map(int, current_version.split(".")))
-        try:
-            app_version_tuple = tuple(
-                map(int, self.application_settings.app_version.split("."))
-            )
-        except ValueError:
-            return True
-        except AttributeError:
-            return True
-        return app_version_tuple < current_version_tuple
-
-    def handle_upgrade(self, current_version):
-        from airunner.data.bootstrap.pipeline_bootstrap_data import (
-            pipeline_bootstrap_data,
-        )
-        from airunner.data.models import PipelineModel
-
-        for model in pipeline_bootstrap_data:
-            pipelinemodel = PipelineModel.objects.filter_by_first(
-                pipeline_action=model["pipeline_action"],
-                version=model["version"],
-                category=model["category"],
-                classname=model["classname"],
-                default=model["default"],
-            )
-            if pipelinemodel:
-                continue
-            pipelinemodel = PipelineModel()
-            pipelinemodel.pipeline_action = model["pipeline_action"]
-            pipelinemodel.version = model["version"]
-            pipelinemodel.category = model["category"]
-            pipelinemodel.classname = model["classname"]
-            pipelinemodel.default = model["default"]
-            pipelinemodel.save()
-        try:
-            app_version_tuple = tuple(
-                map(int, self.application_settings.app_version.split("."))
-            )
-        except ValueError:
-            app_version_tuple = None
-        except AttributeError:
-            app_version_tuple = None
-        if app_version_tuple is None or app_version_tuple < (3, 1, 10):
-            turbo_paths = (
-                os.path.expanduser(
-                    os.path.join(
-                        self.path_settings.base_path,
-                        "art/models",
-                        "SDXL 1.0",
-                        "txt2img",
-                        "turbo_models",
-                    )
-                ),
-                os.path.expanduser(
-                    os.path.join(
-                        self.path_settings.base_path,
-                        "art/models",
-                        "SDXL 1.0",
-                        "inpaint",
-                        "turbo_models",
-                    )
-                ),
-            )
-            for turbo_path in turbo_paths:
-                if not os.path.exists(turbo_path):
-                    os.makedirs(turbo_path)
-                    with open(
-                        os.path.join(turbo_path, "README.txt"), "w"
-                    ) as f:
-                        f.write(
-                            "Place Stable Diffusion XL Turbo, Lightning and Hyper models here"
-                        )
-            self.application_settings.run_setup_wizard = True
-            self.run_setup_wizard()
-            self.application_settings.app_version = current_version
-            self.llm_generator_settings.model_version = (
-                "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
-            )
-            self.application_settings.save()
-            self.llm_generator_settings.save()
 
     @staticmethod
     def run_setup_wizard():
@@ -157,6 +67,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
             return
         application_settings = ApplicationSettings.objects.first()
         if application_settings.run_setup_wizard:
+            from airunner.app_installer import AppInstaller
+
             AppInstaller()
 
     def on_log_logged_signal(self, data: dict):
@@ -254,21 +166,24 @@ class App(MediatorMixin, SettingsMixin, QObject):
         if not self.initialize_gui:
             return  # Skip showing the main application window if GUI is disabled
 
+        window_class = self.main_window_class_
+        if not window_class:
+            from airunner.gui.windows.main.main_window import MainWindow
+
+            window_class = MainWindow
+
+        if self.splash:
+            self.splash.finish(None)
+
         try:
-            window = self.main_window_class_(
-                app=self, **self.window_class_params
-            )
+            window = window_class(app=self, **self.window_class_params)
+            app.main_window = window
+            window.raise_()
         except Exception as e:
             traceback.print_exc()
             print(e)
-            if self.splash:
-                self.splash.finish(None)
             sys.exit(
                 f"""
                 An error occurred while initializing the application.
                 Please report this issue on GitHub or Discord {AIRUNNER_DISCORD_URL}."""
             )
-        app.main_window = window
-        if self.splash:
-            self.splash.finish(window)
-        window.raise_()
