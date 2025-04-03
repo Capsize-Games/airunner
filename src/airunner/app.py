@@ -31,7 +31,7 @@ from airunner.app_installer import AppInstaller
 from airunner.enums import SignalCode
 from airunner.utils.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.data.models import ApplicationSettings
+from airunner.data.models.application_settings import ApplicationSettings
 from airunner.gui.windows.main.main_window import MainWindow
 from airunner.settings import AIRUNNER_DISCORD_URL, AIRUNNER_DISABLE_SETUP_WIZARD
 
