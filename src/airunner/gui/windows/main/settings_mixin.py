@@ -37,6 +37,7 @@ from airunner.data.models import (
     WhisperSettings,
     User,
 )
+from airunner.data.models import table_to_class
 from airunner.enums import SignalCode, TTSModel
 from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
@@ -477,6 +478,18 @@ class SettingsMixin:
             settings = model_class_()
             settings.save()
         return model_class_.objects.first(eager_load=eager_load)
+
+    def update_setting_by_table_name(self, table_name, column_name, val):
+        model_class_ = table_to_class.get(table_name)
+        if model_class_ is None:
+            self.logger.error(f"Model class for {table_name} not found")
+            return
+        setting = model_class_.objects.order_by(model_class_.id.desc()).first()
+        if setting:
+            model_class_.objects.update(setting.id, **{column_name: val})
+            self.__settings_updated(table_name, column_name, val)
+        else:
+            self.logger.error("Failed to update settings: No setting found")        
 
     def update_setting(self, model_class_, name, value):
         setting = model_class_.objects.order_by(model_class_.id.desc()).first()

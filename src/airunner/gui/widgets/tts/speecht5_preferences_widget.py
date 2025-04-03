@@ -11,7 +11,13 @@ class SpeechT5PreferencesWidget(BaseWidget):
 
     def __init__(self, id: int, *args, **kwargs):
         self._id: int = id
+        self._item: SpeechT5Settings = SpeechT5Settings.objects.get(self._id)
+        if not self._item:
+            self._item = SpeechT5Settings.objects.create()
         super().__init__(*args, **kwargs)
+
+    def initialize_ui(self):
+        self.ui.pitch.setProperty("table_item", self._item)
         voice = None
 
         settings = SpeechT5Settings.objects.get(self._id)

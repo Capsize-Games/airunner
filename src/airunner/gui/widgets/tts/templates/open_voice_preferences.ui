@@ -28,6 +28,43 @@
     </widget>
    </item>
    <item>
+    <widget class="SliderWidget" name="speed_slider" native="true">
+     <property name="slider_minimum" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="slider_maximum" stdset="0">
+      <number>100</number>
+     </property>
+     <property name="spinbox_minimum" stdset="0">
+      <double>0.000000000000000</double>
+     </property>
+     <property name="spinbox_maximum" stdset="0">
+      <double>1.000000000000000</double>
+     </property>
+     <property name="display_as_float" stdset="0">
+      <bool>true</bool>
+     </property>
+     <property name="settings_property" stdset="0">
+      <string>openvoice_settings.speed</string>
+     </property>
+     <property name="slider_single_step" stdset="0">
+      <number>0</number>
+     </property>
+     <property name="slider_page_step" stdset="0">
+      <number>0</number>
+     </property>
+     <property name="spinbox_single_step" stdset="0">
+      <double>0.010000000000000</double>
+     </property>
+     <property name="spinbox_double_step" stdset="0">
+      <double>0.100000000000000</double>
+     </property>
+     <property name="label_text" stdset="0">
+      <string>Speed</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Orientation::Vertical</enum>
@@ -42,6 +79,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>
