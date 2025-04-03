@@ -21,7 +21,7 @@ from airunner.utils.llm.strip_names_from_message import strip_names_from_message
 from airunner.utils import create_worker
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
-from airunner.workers import LLMResponseWorker
+from airunner.workers.llm_response_worker import LLMResponseWorker
 from airunner.settings import AIRUNNER_ART_ENABLED
 
 
