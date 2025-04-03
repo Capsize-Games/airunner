@@ -7,7 +7,7 @@ from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.canvas.templates.canvas_ui import Ui_canvas
-from airunner.utils import set_widget_state
+from airunner.utils.application import set_widget_state
 
 
 class CanvasWidget(

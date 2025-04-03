@@ -9,9 +9,9 @@ from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.enums import SignalCode, LLMActionType
 from airunner.setup_database import setup_database
-from airunner.utils.create_worker import create_worker
+from airunner.utils.application.create_worker import create_worker
 from airunner.gui.utils.ui_dispatcher import render_ui_from_spec
-from airunner.utils.ui_loader import load_ui_file, load_ui_from_string
+from airunner.utils.application.ui_loader import load_ui_file, load_ui_from_string
 
 
 class API(App):

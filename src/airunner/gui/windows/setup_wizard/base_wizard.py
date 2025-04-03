@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWizardPage, QVBoxLayout, QWizard
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 
 
