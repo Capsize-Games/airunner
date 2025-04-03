@@ -9,7 +9,6 @@ from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
 from airunner.workers.worker import Worker
 from airunner.handlers import StableDiffusionModelManager
 from airunner.handlers.stablediffusion.image_request import ImageRequest
-from airunner.data.models import GeneratorSettings
 from airunner.settings import (
     AIRUNNER_SD_ON,
     AIRUNNER_ART_MODEL_PATH,
