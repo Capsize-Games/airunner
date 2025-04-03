@@ -3,7 +3,7 @@ import json
 from typing import Callable, Dict, Optional
 
 from airunner.enums import SignalCode
-from airunner.utils.signal_mediator import SignalMediator
+from airunner.utils.application.signal_mediator import SignalMediator
 from airunner.messaging.backends import RabbitMQBackend
 from airunner.settings import AIRUNNER_MESSAGE_BACKEND
 

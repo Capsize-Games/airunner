@@ -1,12 +1,3 @@
-from airunner.handlers.llm.huggingface_llm import HuggingFaceLLM
-from airunner.handlers.llm.llm_model_manager import LLMModelManager
-from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.handlers.llm.llm_response import LLMResponse
-from airunner.handlers.llm.llm_settings import LLMSettings
-from airunner.handlers.llm.training_mixin import TrainingMixin
-from airunner.handlers.llm.llm_request import OpenrouterMistralRequest
-
-
 __all__ = [
     "HuggingFaceLLM",
     "LLMModelManager",
@@ -16,3 +7,35 @@ __all__ = [
     "TrainingMixin",
     "OpenrouterMistralRequest",
 ]
+
+
+def __getattr__(name):
+    if name == "HuggingFaceLLM":
+        from .huggingface_llm import HuggingFaceLLM
+
+        return HuggingFaceLLM
+    elif name == "LLMModelManager":
+        from .llm_model_manager import LLMModelManager
+
+        return LLMModelManager
+    elif name == "LLMRequest":
+        from .llm_request import LLMRequest
+
+        return LLMRequest
+    elif name == "LLMResponse":
+        from .llm_response import LLMResponse
+
+        return LLMResponse
+    elif name == "LLMSettings":
+        from .llm_settings import LLMSettings
+
+        return LLMSettings
+    elif name == "TrainingMixin":
+        from .training_mixin import TrainingMixin
+
+        return TrainingMixin
+    elif name == "OpenrouterMistralRequest":
+        from .llm_request import OpenrouterMistralRequest
+
+        return OpenrouterMistralRequest
+    raise AttributeError(f"module {__name__} has no attribute {name}")

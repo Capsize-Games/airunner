@@ -23,7 +23,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from airunner.enums import LLMActionType, SignalCode
 from airunner.data.models import Conversation, User, Tab
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.handlers.llm.agent import (
     RAGMixin,

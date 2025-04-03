@@ -8,8 +8,8 @@ from PySide6.QtWidgets import QWidget
 
 from airunner.enums import CanvasToolName
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.utils.mediator_mixin import MediatorMixin
-from airunner.utils import create_worker
+from airunner.utils.application.mediator_mixin import MediatorMixin
+from airunner.utils.application import create_worker
 from airunner.utils.widgets import (
     save_splitter_settings,
     load_splitter_settings,

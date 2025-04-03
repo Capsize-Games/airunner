@@ -42,7 +42,7 @@ from airunner.enums import SignalCode, TTSModel
 from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
 from airunner.utils.settings import get_qsettings
-from airunner.utils.get_logger import get_logger
+from airunner.utils.application.get_logger import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
 
 
