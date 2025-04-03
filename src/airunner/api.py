@@ -1,17 +1,9 @@
 from typing import Optional, Dict
 
 from airunner.app import App
-from airunner.handlers.llm import (
-    LLMRequest, 
-    LLMResponse
-)
-from airunner.handlers.stablediffusion.image_request import (
-    ImageRequest
-)
-from airunner.enums import (
-    SignalCode, 
-    LLMActionType
-)
+from airunner.handlers.llm import LLMRequest, LLMResponse
+from airunner.handlers.stablediffusion.image_request import ImageRequest
+from airunner.enums import SignalCode, LLMActionType
 from airunner.workers import (
     ModelScannerWorker,
 )
@@ -22,11 +14,12 @@ from airunner.utils.ui_loader import load_ui_file, load_ui_from_string
 from PySide6.QtWidgets import QMainWindow, QDialog, QVBoxLayout
 from PySide6.QtCore import QObject
 
+
 class API(App):
     def __init__(self, *args, **kwargs):
         # Extract the initialize_app flag and pass the rest to the parent App class
-        self._initialize_app = kwargs.pop('initialize_app', True)
-        initialize_gui = kwargs.pop('initialize_gui', True)
+        self._initialize_app = kwargs.pop("initialize_app", True)
+        initialize_gui = kwargs.pop("initialize_gui", True)
         if self._initialize_app:
             setup_database()
             self.model_scanner_worker = create_worker(ModelScannerWorker)
@@ -38,15 +31,15 @@ class API(App):
         super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
 
     def send_llm_request(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         llm_request: Optional[LLMRequest] = None,
         action: LLMActionType = LLMActionType.CHAT,
         do_tts_reply: bool = True,
     ):
         """
         Send a request to the LLM with the given prompt and action.
-        
+
         :param prompt: The prompt to send to the LLM.
         :param llm_request: Optional LLMRequest object.
         :param action: The action type for the request.
@@ -65,34 +58,31 @@ class API(App):
                     "prompt": prompt,
                     "llm_request": llm_request,
                     "do_tts_reply": do_tts_reply,
-                }
-            }
+                },
+            },
         )
-    
+
     def send_tts_request(self, response: LLMResponse):
         """
         Send a TTS request with the given response."
-        
+
         :param response: The LLMResponse object.
         :return: None
         """
-        self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
-            "response": response
-        })
-    
-    def send_image_request(
-        self, 
-        image_request: Optional[ImageRequest] = None
-    ):
-        """"
+        self.emit_signal(
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response}
+        )
+
+    def send_image_request(self, image_request: Optional[ImageRequest] = None):
+        """ "
         Send a request to the image generator with the given request.
         :param sd_request: Optional ImageRequest object.
         :return: None
         """
         image_request = image_request or ImageRequest()
-        self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {
-            "sd_request": image_request
-        })
+        self.emit_signal(
+            SignalCode.DO_GENERATE_SIGNAL, {"sd_request": image_request}
+        )
 
     def show_hello_world_window(self):
         """
@@ -102,9 +92,7 @@ class API(App):
             "type": "window",
             "title": "Hello Window",
             "layout": "vertical",
-            "widgets": [
-                {"type": "label", "text": "Hello, world!"}
-            ]
+            "widgets": [{"type": "label", "text": "Hello, world!"}],
         }
         dialog = QDialog(self.app.main_window)
         dialog.setWindowTitle(spec.get("title", "Untitled"))
