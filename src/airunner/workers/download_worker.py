@@ -1,28 +1,12 @@
-print("LOADING DOWNLOAD WORKER 0")
 import os
-
-print("LOADING DOWNLOAD WORKER 0.1")
 from queue import Queue
-
-print("LOADING DOWNLOAD WORKER 0.2")
 import time
-
-print("LOADING DOWNLOAD WORKER 0.3")
 import requests
-
-print("LOADING DOWNLOAD WORKER 0.4")
 from PySide6.QtCore import QObject, Signal
-
-print("LOADING DOWNLOAD WORKER 1")
 from airunner.enums import SignalCode
-
-print("LOADING DOWNLOAD WORKER 2")
 from airunner.utils.mediator_mixin import MediatorMixin
-
-print("LOADING DOWNLOAD WORKER 3")
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 
-print("LOADING DOWNLOAD WORKER 4")
 
 DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 
