@@ -1,3 +1,5 @@
+import traceback
+traceback.print_stack()
 import random
 import os
 import torch
