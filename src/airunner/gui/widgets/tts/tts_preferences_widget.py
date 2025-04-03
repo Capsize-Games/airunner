@@ -34,7 +34,10 @@ class TTSPreferencesWidget(BaseWidget):
                     models.append(TTSModel.OPENVOICE.value)
                 self.ui.model_combobox.addItems(models)
                 self.ui.model_combobox.setCurrentText(tts_model)
-                self._set_model_settings(tts_model)
+
+                # Ensure settings are valid before calling _set_model_settings
+                if self.chatbot.voice_settings:
+                    self._set_model_settings(tts_model)
 
         for element in elements:
             element.blockSignals(False)
@@ -54,6 +57,10 @@ class TTSPreferencesWidget(BaseWidget):
         self.ui.espeak_preferences.setVisible(
             tts_model == TTSModel.ESPEAK.value
         )
+        if AIRUNNER_ENABLE_OPEN_VOICE:
+            self.ui.open_voice_preferences.setVisible(
+                tts_model == TTSModel.OPENVOICE.value
+            )
 
     @staticmethod
     def handle_value_change(prop, val):

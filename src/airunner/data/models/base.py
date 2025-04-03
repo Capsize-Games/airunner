@@ -1,5 +1,4 @@
 from functools import lru_cache
-from typing import TypeVar, Any
 import logging
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.inspection import inspect
