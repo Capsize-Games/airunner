@@ -8,9 +8,6 @@ from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.enums import SignalCode, LLMActionType
-from airunner.workers.model_scanner_worker import (
-    ModelScannerWorker,
-)
 from airunner.setup_database import setup_database
 from airunner.utils.create_worker import create_worker
 from airunner.gui.utils.ui_dispatcher import render_ui_from_spec
@@ -22,15 +19,22 @@ class API(App):
         # Extract the initialize_app flag and pass the rest to the parent App class
         self._initialize_app = kwargs.pop("initialize_app", True)
         initialize_gui = kwargs.pop("initialize_gui", True)
-        if self._initialize_app:
-            setup_database()
-            self.model_scanner_worker = create_worker(ModelScannerWorker)
-            self.model_scanner_worker.add_to_queue("scan_for_models")
         self.signal_handlers = {
             SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
             SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL: self.show_dynamic_ui_from_string,
         }
         super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
+        self.initialize_model_scanner()
+
+    def initialize_model_scanner(self):
+        from airunner.workers.model_scanner_worker import (
+            ModelScannerWorker,
+        )
+
+        if self._initialize_app:
+            setup_database()
+            self.model_scanner_worker = create_worker(ModelScannerWorker)
+            self.model_scanner_worker.add_to_queue("scan_for_models")
 
     def send_llm_request(
         self,
