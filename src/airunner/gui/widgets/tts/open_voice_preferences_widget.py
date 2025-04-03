@@ -12,12 +12,19 @@ class OpenVoicePreferencesWidget(BaseWidget):
 
     def __init__(self, id: int, *args, **kwargs):
         self._id: int = id
+        self._item: OpenVoiceSettings = OpenVoiceSettings.objects.get(self._id)
+        if not self._item:
+            self._item = OpenVoiceSettings.objects.create()
         super().__init__(*args, **kwargs)
 
+    def initialize_ui(self):
         # initialize comboboxes
         self.ui.language_combobox.addItems(
             [lang.value for lang in AvailableLanguage]
         )
+
+        # Set the default language to the first item in the combobox
+        self.ui.speed_slider.setProperty("table_item", self._item)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -29,7 +36,6 @@ class OpenVoicePreferencesWidget(BaseWidget):
         if not settings:
             return
         self.ui.language_combobox.setCurrentText(settings.language)
-        self.ui.speed_slider.setValue(settings.speed)
 
     @Slot(str)
     def language_changed(self, text):
