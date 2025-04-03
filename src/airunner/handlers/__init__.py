@@ -1,13 +1,3 @@
-from airunner.handlers.base_model_manager import BaseModelManager
-from airunner.handlers.llm.llm_model_manager import LLMModelManager
-from airunner.handlers.tts.tts_model_manager import TTSModelManager
-from airunner.handlers.tts.speecht5_model_manager import SpeechT5ModelManager
-from airunner.handlers.tts.openvoice_model_manager import OpenVoiceModelManager
-from airunner.handlers.tts.espeak_model_manager import EspeakModelManager
-from airunner.handlers.stt.whisper_model_manager import WhisperModelManager
-from airunner.handlers.stablediffusion.stable_diffusion_model_manager import StableDiffusionModelManager
-
-
 __all__ = [
     "BaseModelManager",
     "LLMModelManager",
@@ -18,3 +8,41 @@ __all__ = [
     "WhisperModelManager",
     "StableDiffusionModelManager",
 ]
+
+
+def __getattr__(name):
+    if name == "BaseModelManager":
+        from .base_model_manager import BaseModelManager
+
+        return BaseModelManager
+    elif name == "LLMModelManager":
+        from .llm.llm_model_manager import LLMModelManager
+
+        return LLMModelManager
+    elif name == "TTSModelManager":
+        from .tts.tts_model_manager import TTSModelManager
+
+        return TTSModelManager
+    elif name == "SpeechT5ModelManager":
+        from .tts.speecht5_model_manager import SpeechT5ModelManager
+
+        return SpeechT5ModelManager
+    elif name == "OpenVoiceModelManager":
+        from .tts.openvoice_model_manager import OpenVoiceModelManager
+
+        return OpenVoiceModelManager
+    elif name == "EspeakModelManager":
+        from .tts.espeak_model_manager import EspeakModelManager
+
+        return EspeakModelManager
+    elif name == "WhisperModelManager":
+        from .stt.whisper_model_manager import WhisperModelManager
+
+        return WhisperModelManager
+    elif name == "StableDiffusionModelManager":
+        from .stablediffusion.stable_diffusion_model_manager import (
+            StableDiffusionModelManager,
+        )
+
+        return StableDiffusionModelManager
+    raise AttributeError(f"module {__name__} has no attribute {name}")
