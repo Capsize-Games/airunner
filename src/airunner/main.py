@@ -10,22 +10,30 @@ Do not change the order of the imports.
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
+print("Starting AI Runner...")
 import os
 import argparse
-from airunner.utils.settings import get_qsettings
-base_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
+from airunner.utils.settings.get_qsettings import get_qsettings
 
+base_path = os.path.join(
+    os.path.expanduser("~"), ".local", "share", "airunner"
+)
 
 
 ################################################################
 # Set the environment variable for PyTorch to use expandable
 ################################################################
-os.environ['TORCH_HOME'] = '/home/joe/Projects/airunner/venv/lib/python3.10/site-packages/torch/hub/'
+os.environ["TORCH_HOME"] = (
+    "/home/joe/Projects/airunner/venv/lib/python3.10/site-packages/torch/hub/"
+)
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 import torch
-torch.hub.set_dir('/home/joe/Projects/airunner/venv/lib/python3.10/site-packages/torch/hub/')
+
+torch.hub.set_dir(
+    "/home/joe/Projects/airunner/venv/lib/python3.10/site-packages/torch/hub/"
+)
 
 ################################################################
 # Ensure that the base directory exists.
@@ -41,21 +49,36 @@ from airunner.api import API
 ###############################################################
 # Import Alembic modules to run migrations.
 ################################################################
-from airunner.data.models import ApplicationSettings
+from airunner.data.models.application_settings import ApplicationSettings
 from airunner.setup_database import setup_database
 
 
 def run_setup_wizard():
     from airunner.app_installer import AppInstaller
+
     AppInstaller()
 
 
 def main():
     parser = argparse.ArgumentParser(description="AI Runner")
-    parser.add_argument("--clear-window-settings", action="store_true", help="Clear window settings")
-    parser.add_argument("--print-llm-system-prompt", action="store_true", help="Print LLM System prompt to console")
-    parser.add_argument("--perform-llm-analysis", action="store_true", help="Perform LLM analysis")
-    parser.add_argument("--chatbot-only", action="store_true", help="Run LLM only")
+    parser.add_argument(
+        "--clear-window-settings",
+        action="store_true",
+        help="Clear window settings",
+    )
+    parser.add_argument(
+        "--print-llm-system-prompt",
+        action="store_true",
+        help="Print LLM System prompt to console",
+    )
+    parser.add_argument(
+        "--perform-llm-analysis",
+        action="store_true",
+        help="Perform LLM analysis",
+    )
+    parser.add_argument(
+        "--chatbot-only", action="store_true", help="Run LLM only"
+    )
     args = parser.parse_args()
 
     if args.clear_window_settings:
@@ -64,18 +87,18 @@ def main():
         settings.beginGroup("splitters")
         settings.remove("")  # Removes all keys under the "splitters" group
         settings.endGroup()
-    
+
     if args.print_llm_system_prompt:
         os.environ["AIRUNNER_LLM_PRINT_SYSTEM_PROMPT"] = "1"
-    
+
     if args.perform_llm_analysis:
         os.environ["AIRUNNER_LLM_PERFORM_ANALYSIS"] = "1"
-    
+
     if args.chatbot_only:
         os.environ["AIRUNNER_ART_ENABLED"] = "0"
     setup_database()
 
-    # Get the first ApplicationSettings record from the database and 
+    # Get the first ApplicationSettings record from the database and
     # check for run_setup_wizard boolean
     application_settings = ApplicationSettings.objects.first()
     if not application_settings:
