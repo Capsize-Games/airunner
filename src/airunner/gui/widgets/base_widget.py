@@ -11,8 +11,8 @@ from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.utils.mediator_mixin import MediatorMixin
 from airunner.utils import create_worker
 from airunner.utils.widgets import (
-    save_splitter_settings, 
-    load_splitter_settings
+    save_splitter_settings,
+    load_splitter_settings,
 )
 from airunner.enums import SignalCode
 from airunner.gui.managers.icon_manager import IconManager
@@ -23,11 +23,7 @@ class BaseABCMeta(type(QWidget), ABCMeta):
 
 
 class AbstractBaseWidget(
-    MediatorMixin,
-    SettingsMixin,
-    QWidget,
-    ABC,
-    metaclass=BaseABCMeta
+    MediatorMixin, SettingsMixin, QWidget, ABC, metaclass=BaseABCMeta
 ):
     @abstractmethod
     def save_state(self):
@@ -46,6 +42,7 @@ class BaseWidget(AbstractBaseWidget):
     """
     Base class for all widgets.
     """
+
     widget_class_: Optional[object] = None
     icons: List[Optional[Tuple[str, str]]] = []
     ui: Optional[object] = Optional[None]
@@ -54,9 +51,9 @@ class BaseWidget(AbstractBaseWidget):
     def __init__(self, *args, **kwargs):
         self.icon_manager: Optional[IconManager] = None
         self.signal_handlers = self.signal_handlers or {}
-        self.signal_handlers.update({
-            SignalCode.QUIT_APPLICATION: self.handle_close
-        })
+        self.signal_handlers.update(
+            {SignalCode.QUIT_APPLICATION: self.handle_close}
+        )
         super().__init__(*args, **kwargs)
         if self.widget_class_:
             self.ui = self.widget_class_()
@@ -67,14 +64,15 @@ class BaseWidget(AbstractBaseWidget):
 
         self.services: Dict = {}
         self.worker_class_map: Dict = {}
-    
+        self.initialize_ui()
+
     @property
     def splitters(self) -> List[str]:
         """
         Return a list of splitter names as they appear in the UI.
         """
         return self._splitters
-    
+
     @splitters.setter
     def splitters(self, value: List[str]):
         """
@@ -89,7 +87,14 @@ class BaseWidget(AbstractBaseWidget):
     @property
     def is_dark(self) -> bool:
         return self.application_settings.dark_mode_enabled
-    
+
+    def initialize_ui(self):
+        """
+        Initialize the UI for the widget.
+        This function is called in the constructor and can be overriden
+        to set things like the slider widget.
+        """
+
     def initialize(self):
         """
         Call this function to initialize the widget.
@@ -115,7 +120,7 @@ class BaseWidget(AbstractBaseWidget):
 
     def initialize_form(self):
         pass
-    
+
     def showEvent(self, event):
         super().showEvent(event)
         """
@@ -125,25 +130,19 @@ class BaseWidget(AbstractBaseWidget):
         """
         self.initialize()
         self.restore_state()
-    
+
     def save_state(self):
         """
         Called on close and saves the state of all splitter widgets
         """
-        save_splitter_settings(
-            self.ui,
-            self.splitters
-        )
-    
+        save_splitter_settings(self.ui, self.splitters)
+
     def restore_state(self):
         """
         Restore the state of the widget.
         """
-        load_splitter_settings(
-            self.ui,
-            self.splitters
-        )
-    
+        load_splitter_settings(self.ui, self.splitters)
+
     def handle_close(self):
         """
         Callback for the QUIT_APPLICATION signal.
@@ -152,7 +151,7 @@ class BaseWidget(AbstractBaseWidget):
 
     def set_icons(self):
         """
-        Set the icons for the widget which alternate between 
+        Set the icons for the widget which alternate between
         light and dark mode.
         """
         theme = "dark" if self.is_dark else "light"

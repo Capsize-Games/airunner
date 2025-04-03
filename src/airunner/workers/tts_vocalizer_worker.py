@@ -14,6 +14,7 @@ class TTSVocalizerWorker(Worker):
     Speech (in the form of numpy arrays generated with the TTS class) is added to the
     vocalizer's queue. The vocalizer plays the speech using sounddevice.
     """
+
     reader_mode_active = False
 
     def __init__(self):
@@ -45,9 +46,9 @@ class TTSVocalizerWorker(Worker):
 
     def on_application_settings_changed_signal(self, data):
         if (
-            data and
-            data.get("setting_name", "") == "speech_t5_settings" and
-            data.get("column_name", "") == "pitch"
+            data
+            and data.get("setting_name", "") == "speech_t5_settings"
+            and data.get("column_name", "") == "pitch"
         ):
             pitch = data.get("value", 0)
             if self.stream is not None:
@@ -55,9 +56,11 @@ class TTSVocalizerWorker(Worker):
                 self.start_stream(pitch)
 
     def start_stream(self, pitch: Optional[int] = None):
-        if sd.query_devices(kind='output'):
-            if pitch is None:
+        if sd.query_devices(kind="output"):
+            if pitch is None and self.speech_t5_settings is not None:
                 pitch = self.speech_t5_settings.pitch
+            else:
+                pitch = 100.0
             # set samplerate between 14000 and 24000
             # pitch == 0 -> samplerate == 14000
             # pitch == 50 -> samplerate == 19000

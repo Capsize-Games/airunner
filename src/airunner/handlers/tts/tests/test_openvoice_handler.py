@@ -10,7 +10,6 @@ class TestOpenVoiceModelManager(unittest.TestCase):
 
         with patch("airunner.handlers.tts.openvoice_model_manager.se_extractor.get_se", return_value=(MagicMock(), "mock_audio_name")):
             self.handler = OpenVoiceModelManager(
-                tts_settings=self.mock_settings,
                 path_settings=MagicMock()
             )
 
