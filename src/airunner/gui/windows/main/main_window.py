@@ -62,6 +62,15 @@ from airunner.enums import (
     ModelType,
     ModelStatus,
 )
+from airunner.workers import (
+    AudioCaptureWorker,
+    AudioProcessorWorker,
+    LLMGenerateWorker,
+    MaskGeneratorWorker,
+    SDWorker,
+    TTSGeneratorWorker,
+    TTSVocalizerWorker,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application.get_version import get_version
 from airunner.utils.application.create_worker import create_worker
@@ -1288,16 +1297,6 @@ class MainWindow(
 
     def _initialize_workers(self):
         self.logger.debug("Initializing worker manager")
-        from airunner.workers import (
-            AudioCaptureWorker,
-            AudioProcessorWorker,
-            LLMGenerateWorker,
-            MaskGeneratorWorker,
-            SDWorker,
-            TTSGeneratorWorker,
-            TTSVocalizerWorker,
-        )
-
         self._mask_generator_worker = create_worker(MaskGeneratorWorker)
         self._sd_worker = create_worker(SDWorker)
         self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
