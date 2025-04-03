@@ -60,7 +60,7 @@ class TTSVocalizerWorker(Worker):
             if pitch is None and self.speech_t5_settings is not None:
                 pitch = self.speech_t5_settings.pitch
             else:
-                pitch = 0
+                pitch = 100.0
             # set samplerate between 14000 and 24000
             # pitch == 0 -> samplerate == 14000
             # pitch == 50 -> samplerate == 19000
