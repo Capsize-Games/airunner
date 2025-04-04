@@ -1,0 +1,44 @@
+FROM ubuntu:22.04 AS base_image
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=America/Denver
+ENV HOME=/home/appuser
+ENV PATH=/home/appuser/.local/bin:$PATH
+ENV PYTHONUSERBASE=/home/appuser/.local
+ENV PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages
+WORKDIR /app
+RUN apt-get update && apt-get install -y \
+  python3.10 \
+  python3.10-venv \
+  python3-pip \
+  build-essential \
+  git \
+  wget \
+  libffi-dev \
+  libssl-dev \
+  libgl1-mesa-dev \
+  libjpeg-dev \
+  zlib1g-dev \
+  libpng-dev \
+  cmake \
+  ninja-build \
+  nvidia-cuda-toolkit \
+  xclip \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -ms /bin/bash appuser
+RUN mkdir -p /home/appuser/.local && chown -R appuser:appuser /home/appuser
+
+FROM base_image AS dev_image
+USER appuser
+WORKDIR /app
+
+# Install PyTorch dependencies
+RUN pip install --user --no-cache-dir pip setuptools wheel --upgrade \
+    && pip install --user torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+
+# No more install commands here - will be done at container start
+FROM dev_image AS final_image
+
+# Set startup command
+CMD ["/bin/bash"]
+
