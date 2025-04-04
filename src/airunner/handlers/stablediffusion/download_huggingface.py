@@ -1,5 +1,5 @@
 from urllib.parse import urlparse
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from huggingface_hub import hf_hub_download
 
 class DownloadHuggingface(MediatorMixin):

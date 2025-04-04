@@ -1,6 +1,6 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWizard
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.windows.setup_wizard.age_restriction.age_restriction_warning import AgeRestrictionWarning
 from airunner.gui.windows.setup_wizard.model_setup.llm.mistral_license import MistralLicense

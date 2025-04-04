@@ -7,14 +7,18 @@ from transformers import PreTrainedModel, ProcessorMixin
 from airunner.handlers.base_model_manager import BaseModelManager
 from airunner.enums import ModelType
 from airunner.utils import prepare_text_for_tts
+from airunner.handlers.tts.tts_request import TTSRequest
 
 BaseModelManagerMeta = type(BaseModelManager)
+
 
 class CombinedMeta(BaseModelManagerMeta, ABCMeta):
     """
     Combined metaclass for BaseModelManager and ABCMeta.
     """
+
     pass
+
 
 class TTSModelManager(BaseModelManager, ABC, metaclass=CombinedMeta):
     """
@@ -22,6 +26,7 @@ class TTSModelManager(BaseModelManager, ABC, metaclass=CombinedMeta):
     Responsible for managing the model, processor, vocoder, and speaker embeddings.
     Use from a worker to avoid blocking the main thread.
     """
+
     # Class-wide properties defining model/processor classes
     target_model: ClassVar[Optional[str]] = None
     model_class: ClassVar[Optional[Type[PreTrainedModel]]] = None
@@ -29,6 +34,7 @@ class TTSModelManager(BaseModelManager, ABC, metaclass=CombinedMeta):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._tts_request: Optional[Type[TTSRequest]] = None
         self.model_type = ModelType.TTS
         self._engine = None
 
@@ -36,40 +42,68 @@ class TTSModelManager(BaseModelManager, ABC, metaclass=CombinedMeta):
         self._model = None
         self._processor = None
 
+    @property
+    def tts_request(self) -> Optional[Type[TTSRequest]]:
+        """
+        The current TTS request.
+        """
+        return self._tts_request
+
+    @tts_request.setter
+    def tts_request(self, value: Optional[Type[TTSRequest]]):
+        """
+        Set the TTS request.
+        """
+        self._tts_request = value
+        self._initialize()
+
+    @property
+    def message(self) -> str:
+        if self.tts_request:
+            return self.tts_request.message
+        return ""
+
+    @property
+    def gender(self) -> str:
+        if self.tts_request:
+            return self.tts_request.gender
+        return ""
+
+    @abstractmethod
+    def _initialize(self):
+        """
+        Initialize the TTS model and processor.
+        """
+
     @abstractmethod
     def reload_speaker_embeddings(self):
         """
         Reload speaker embeddings.
         """
-        pass
 
     @abstractmethod
     def interrupt_process_signal(self):
         """
         Signal to interrupt the current TTS process.
         """
-        pass
 
     @abstractmethod
     def offload_to_cpu(self):
         """
         Move model to CPU to free up GPU memory.
         """
-        pass
 
     @abstractmethod
     def move_to_device(self, device=None):
         """
         Move model to the specified device.
         """
-        pass
 
     @abstractmethod
     def generate(self, message):
         """
         Generate speech from text.
         """
-        pass
 
     @staticmethod
     def _prepare_text(text: str) -> str:

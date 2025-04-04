@@ -1,26 +1,3 @@
-from airunner.handlers.stablediffusion.civit_ai_download_worker import (
-    CivitAIDownloadWorker
-)
-from airunner.handlers.stablediffusion.download_civitai import (
-    DownloadCivitAI
-)
-from airunner.handlers.stablediffusion.download_huggingface import (
-    DownloadHuggingface
-)
-from airunner.handlers.stablediffusion.download_worker import (
-    DownloadWorker
-)
-from airunner.handlers.stablediffusion.image_response import (
-    ImageResponse
-)
-from airunner.handlers.stablediffusion.prompt_weight_bridge import (
-    PromptWeightBridge
-)
-from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
-    StableDiffusionModelManager
-)
-
-
 __all__ = [
     "CivitAIDownloadWorker",
     "DownloadCivitAI",
@@ -30,3 +7,27 @@ __all__ = [
     "PromptWeightBridge",
     "StableDiffusionModelManager",
 ]
+
+
+def __getattr__(name):
+    if name == "DownloadCivitAI":
+        from .download_civitai import DownloadCivitAI
+
+        return DownloadCivitAI
+    elif name == "DownloadHuggingface":
+        from .download_huggingface import DownloadHuggingface
+
+        return DownloadHuggingface
+    elif name == "ImageResponse":
+        from .image_response import ImageResponse
+
+        return ImageResponse
+    elif name == "PromptWeightBridge":
+        from .prompt_weight_bridge import PromptWeightBridge
+
+        return PromptWeightBridge
+    elif name == "StableDiffusionModelManager":
+        from .stable_diffusion_model_manager import StableDiffusionModelManager
+
+        return StableDiffusionModelManager
+    raise AttributeError(f"module {__name__} has no attribute {name}")

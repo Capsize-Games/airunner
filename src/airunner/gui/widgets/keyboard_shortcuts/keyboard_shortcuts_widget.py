@@ -1,4 +1,3 @@
-
 from PySide6.QtCore import Qt
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QWidget
@@ -6,8 +5,12 @@ from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QWidget
 from airunner.data.models import ShortcutKeys
 from airunner.enums import SignalCode
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.keyboard_shortcuts.templates.keyboard_shortcut_widget_ui import Ui_keyboard_shortcut_widget
-from airunner.gui.widgets.keyboard_shortcuts.templates.keyboard_shortcuts_ui import Ui_keyboard_shortcuts
+from airunner.gui.widgets.keyboard_shortcuts.templates.keyboard_shortcut_widget_ui import (
+    Ui_keyboard_shortcut_widget,
+)
+from airunner.gui.widgets.keyboard_shortcuts.templates.keyboard_shortcuts_ui import (
+    Ui_keyboard_shortcuts,
+)
 
 
 class KeyboardShortcutsWidget(BaseWidget):
@@ -15,13 +18,13 @@ class KeyboardShortcutsWidget(BaseWidget):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-        self.shortcut_key_widgets = [None for _i in range(len(self.shortcut_keys))]
+        self.spacer = QSpacerItem(
+            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
+        )
+        self.shortcut_key_widgets = [
+            None for _i in range(len(self.shortcut_keys))
+        ]
         self.pressed_keys = set()
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        self.initialize_ui()
 
     def initialize_ui(self):
         for index, shortcut_key in enumerate(self.shortcut_keys):
@@ -34,8 +37,12 @@ class KeyboardShortcutsWidget(BaseWidget):
         ui.setupUi(widget)
         ui.label.setText(shortcut_key.display_name)
         ui.line_edit.setText(shortcut_key.text)
-        ui.line_edit.mousePressEvent = lambda event: self.set_shortcut(index, ui.line_edit)
-        ui.line_edit.keyReleaseEvent = lambda event: self.get_shortcut(shortcut_key, ui.line_edit, event, index)
+        ui.line_edit.mousePressEvent = lambda event: self.set_shortcut(
+            index, ui.line_edit
+        )
+        ui.line_edit.keyReleaseEvent = lambda event: self.get_shortcut(
+            shortcut_key, ui.line_edit, event, index
+        )
         self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
         self.shortcut_key_widgets[index] = ui
         return widget
@@ -44,7 +51,9 @@ class KeyboardShortcutsWidget(BaseWidget):
         self.clear_shortcut_setting(key)
         line_edit.setText("Press any key to set shortcut (esc to cancel)")
 
-    def get_shortcut(self, shortcut_key: ShortcutKeys, line_edit, event, index):
+    def get_shortcut(
+        self, shortcut_key: ShortcutKeys, line_edit, event, index
+    ):
         if event.isAutoRepeat():
             return
 
@@ -59,7 +68,7 @@ class KeyboardShortcutsWidget(BaseWidget):
                 QtCore.Qt.Key.Key_Control,
                 QtCore.Qt.Key.Key_Shift,
                 QtCore.Qt.Key.Key_Alt,
-                QtCore.Qt.Key.Key_Meta
+                QtCore.Qt.Key.Key_Meta,
             ]:
                 return
             if event.key() == Qt.Key.Key_Escape:
@@ -75,7 +84,7 @@ class KeyboardShortcutsWidget(BaseWidget):
             # clear existing key if it exists
             existing_keys = ShortcutKeys.objects.filter(
                 ShortcutKeys.text == shortcut_key.text,
-                ShortcutKeys.id != shortcut_key.id
+                ShortcutKeys.id != shortcut_key.id,
             )
             for existing_key in existing_keys:
                 existing_key.text = ""
@@ -96,20 +105,29 @@ class KeyboardShortcutsWidget(BaseWidget):
 
     @staticmethod
     def get_key_text(event):
-        key_sequence = QtGui.QKeySequence(event.key() | event.modifiers().value)
-        return key_sequence.toString(QtGui.QKeySequence.SequenceFormat.NativeText)
+        key_sequence = QtGui.QKeySequence(
+            event.key() | event.modifiers().value
+        )
+        return key_sequence.toString(
+            QtGui.QKeySequence.SequenceFormat.NativeText
+        )
 
     def save_shortcuts(self):
-        
+
         for k, v in enumerate(self.shortcut_keys):
             # Ensure v.modifiers is a list
             if not isinstance(v.modifiers, list):
                 v.modifiers = []
-            ShortcutKeys.objects.update(v.id, {
-                "text": v.text,
-                "key": v.key,
-                "modifiers": ",".join(v.modifiers)  # Convert list to comma-separated string
-            })
+            ShortcutKeys.objects.update(
+                v.id,
+                {
+                    "text": v.text,
+                    "key": v.key,
+                    "modifiers": ",".join(
+                        v.modifiers
+                    ),  # Convert list to comma-separated string
+                },
+            )
 
     def clear_shortcut_setting(self, key=""):
         for index, v in enumerate(self.shortcut_keys):

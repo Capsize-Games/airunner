@@ -44,11 +44,15 @@ class SignalCode(Enum):
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"  # No listeners
     AI_MODELS_CREATE_SIGNAL = "ai_models_create_signal"
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
-    APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"  # No listeners
+    APPLICATION_SETTINGS_LOADED_SIGNAL = (
+        "settings_loaded_signal"  # No listeners
+    )
     APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL = "clear_status_message_signal"
     APPLICATION_RESET_SETTINGS_SIGNAL = "reset_settings_signal"
     APPLICATION_RESET_PATHS_SIGNAL = "reset_paths_signal"
-    APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL = "stop_image_generator_progress_bar_signal"
+    APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL = (
+        "stop_image_generator_progress_bar_signal"
+    )
     APPLICATION_SETTINGS_CHANGED_SIGNAL = "application_settings_changed_signal"
     APPLICATION_STATUS_INFO_SIGNAL = "status_info_signal"
     APPLICATION_STATUS_ERROR_SIGNAL = "status_error_signal"
@@ -56,11 +60,17 @@ class SignalCode(Enum):
     APPLICATION_ACTIVE_GRID_AREA_UPDATED = "active_grid_area_updated"
     ACTIVE_GRID_AREA_MOVED_SIGNAL = "active_grid_area_moved_signal"
     GENERATE_MASK = "generate_mask"
-    MASK_GENERATOR_WORKER_RESPONSE_SIGNAL = "mask_generator_worker_response_signal"
+    MASK_GENERATOR_WORKER_RESPONSE_SIGNAL = (
+        "mask_generator_worker_response_signal"
+    )
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_RESPONSE_SIGNAL = "audio_processor_response_signal"
-    PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL = "preset_image_generator_display_menu_signal"  # No listeners
-    PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL = "activate_brush"  # No listeners
+    PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL = (
+        "preset_image_generator_display_menu_signal"  # No listeners
+    )
+    PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL = (
+        "activate_brush"  # No listeners
+    )
     CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL = "load_image_from_path_signal"
     SCENE_DO_DRAW_SIGNAL = "scene_do_draw_signal"
     CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"  # No listeners
@@ -71,17 +81,23 @@ class SignalCode(Enum):
     CANVAS_COPY_IMAGE_SIGNAL = "canvas_copy_image_signal"
     CANVAS_CUT_IMAGE_SIGNAL = "canvas_cut_image_signal"
     CANVAS_ROTATE_90_CLOCKWISE_SIGNAL = "canvas_rotate_90_clockwise_signal"
-    CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL = "canvas_rotate_90_counter_clockwise_signal"
+    CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL = (
+        "canvas_rotate_90_counter_clockwise_signal"
+    )
     CANVAS_PREVIEW_FILTER_SIGNAL = "canvas_preview_filter_signal"
     CANVAS_CANCEL_FILTER_SIGNAL = "canvas_cancel_filter_signal"
     CANVAS_APPLY_FILTER_SIGNAL = "canvas_apply_filter_signal"
-    CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL = "canvas_do_draw_selection_area_signal"
+    CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL = (
+        "canvas_do_draw_selection_area_signal"
+    )
     CANVAS_EXPORT_IMAGE_SIGNAL = "canvas_export_image_signal"
     CANVAS_IMPORT_IMAGE_SIGNAL = "canvas_import_image_signal"
     EMBEDDING_UPDATE_SIGNAL = "update_embedding_signal"
     EMBEDDING_DELETE_MISSING_SIGNAL = "delete_missing_embeddings_signal"
     EMBEDDING_GET_ALL_RESULTS_SIGNAL = "get_all_embeddings_results"
-    ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL = "EngineResponseWorker_response_signal"
+    ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL = (
+        "EngineResponseWorker_response_signal"
+    )
     GENERATOR_FORM_UPDATE_VALUES_SIGNAL = "generator_form_update_values"
     GENERATE_IMAGE_FROM_IMAGE_SIGNAL = "generate_image_from_image"
     DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL = "do_generate_image_from_image"
@@ -114,7 +130,9 @@ class SignalCode(Enum):
     STT_START_CAPTURE_SIGNAL = "stt_start_capture"
     STT_STOP_CAPTURE_SIGNAL = "stt_stop_capture"
     UNBLOCK_TTS_GENERATOR_SIGNAL = "unblock_tts_generator_signal"
-    TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = "TTSGeneratorWorker_add_to_stream_signal"
+    TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = (
+        "TTSGeneratorWorker_add_to_stream_signal"
+    )
     TTS_ENABLE_SIGNAL = "tts_enable_signal"
     TTS_DISABLE_SIGNAL = "tts_disable_signal"
     QUIT_APPLICATION = "quit"
@@ -191,6 +209,7 @@ class SignalCode(Enum):
     LLM_TEXT_STREAM_PROCESS_SIGNAL = enum.auto()
     SHOW_WINDOW_SIGNAL = enum.auto()
     SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL = enum.auto()
+    VOICE_SAVED = enum.auto()
 
 
 class EngineResponseCode(Enum):
@@ -259,20 +278,27 @@ class LLMActionType(Enum):
     use_tool_flter flag, the LLM will attempt to determine which action to take
     based on the user's words.
     """
+
     # DO_NOT_RESPOND = "DO NOTHING: Choose this action if none of the other actions apply to the user's request."
     NONE = "None"
     CHAT = "RESPOND: Choose this action if you want to respond to the user."
-    GENERATE_IMAGE = "GENERATE IMAGE: Choose this action if you want to generate an image."
+    GENERATE_IMAGE = (
+        "GENERATE IMAGE: Choose this action if you want to generate an image."
+    )
     APPLICATION_COMMAND = "APPLICATION_COMMAND"
     UPDATE_MOOD = "UPDATE_MOOD"
     QUIT_APPLICATION = "QUIT APPLICATION: If the users requests that you quit the application, choose this action."
     TOGGLE_FULLSCREEN = "TOGGLE FULLSCREEN: If the user requests to toggle fullscreen mode, choose this action."
-    TOGGLE_TTS = "TOGGLE TEXT-TO-SPEECH: If the user requests that you turn on or off or toggle text-to-speech, " \
-                 "choose this action."
+    TOGGLE_TTS = (
+        "TOGGLE TEXT-TO-SPEECH: If the user requests that you turn on or off or toggle text-to-speech, "
+        "choose this action."
+    )
     PERFORM_RAG_SEARCH = "SEARCH: If the user requests that you search for information, choose this action."
     SUMMARIZE = "SUMMARIZE"
-    DO_NOTHING = "DO NOTHING: If the user's request is unclear or you are unable to determine the user's intent, " \
-                 "choose this action."
+    DO_NOTHING = (
+        "DO NOTHING: If the user's request is unclear or you are unable to determine the user's intent, "
+        "choose this action."
+    )
     GET_WEATHER = "get_weather"
     STORE_DATA = "store_data"
 
@@ -383,9 +409,9 @@ class HandlerState(Enum):
 
 
 class TTSModel(Enum):
-    ESPEAK = "espeak"
-    SPEECHT5 = "speecht5"
-    OPENVOICE = "openvoice"
+    ESPEAK = "Espeak"
+    SPEECHT5 = "SpeechT5"
+    OPENVOICE = "OpenVoice"
 
 
 class ImagePreset(Enum):
@@ -402,3 +428,17 @@ class SpeechT5Voices(Enum):
     CANADIAN_MALE = "Canadian Male"
     SCOTTISH_MALE = "Scottish Male"
     INDIAN_MALE = "Indian Male"
+
+
+class AvailableLanguage(enum.Enum):
+    """
+    Enum for available languages in OpenVoice.
+    """
+
+    EN_NEWEST = "EN_NEWEST"
+    EN = "EN"
+    ES = "ES"
+    FR = "FR"
+    ZH = "ZH"
+    JP = "JP"
+    KR = "KR"

@@ -38,9 +38,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-80</y>
+        <y>-242</y>
         <width>812</width>
-        <height>1170</height>
+        <height>1332</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -59,13 +59,6 @@
        <property name="verticalSpacing">
         <number>10</number>
        </property>
-       <item row="7" column="0">
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>Check this and set zipcode in User Settings to give agents access to local weather.</string>
-         </property>
-        </widget>
-       </item>
        <item row="10" column="0">
         <widget class="QGroupBox" name="system_instructions_groupbox">
          <property name="title">
@@ -91,128 +84,6 @@
             </property>
             <property name="placeholderText">
              <string>Instructions for the LLM</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_3">
-         <property name="title">
-          <string>Documents</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_9">
-          <item row="1" column="0">
-           <widget class="QPushButton" name="browse_documents_button">
-            <property name="text">
-             <string>Browse</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QScrollArea" name="target_files">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>150</height>
-             </size>
-            </property>
-            <property name="widgetResizable">
-             <bool>true</bool>
-            </property>
-            <widget class="QWidget" name="scrollAreaWidgetContents">
-             <property name="geometry">
-              <rect>
-               <x>0</x>
-               <y>0</y>
-               <width>766</width>
-               <height>148</height>
-              </rect>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_10"/>
-            </widget>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="8" column="0">
-        <widget class="Line" name="line">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="11" column="0">
-        <widget class="QGroupBox" name="guardrails_groupbox">
-         <property name="title">
-          <string>Guardrails</string>
-         </property>
-         <property name="checkable">
-          <bool>true</bool>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
-          <item>
-           <widget class="QPlainTextEdit" name="guardrails_prompt">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>150</height>
-             </size>
-            </property>
-            <property name="placeholderText">
-             <string>The guardrails prompt is used to moderate results.</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="12" column="0">
-        <widget class="QGroupBox" name="personality_groupbox">
-         <property name="title">
-          <string>Bot Personality</string>
-         </property>
-         <property name="checkable">
-          <bool>true</bool>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_5">
-          <item row="1" column="0">
-           <widget class="QPlainTextEdit" name="bot_personality">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>75</height>
-             </size>
-            </property>
-            <property name="placeholderText">
-             <string>EXAMPLE: {{ botname }} is very helpful and {{ gender }} loves {{ username }}.</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>A brief description of the bot's personality</string>
             </property>
            </widget>
           </item>
@@ -258,31 +129,6 @@
            </layout>
           </item>
          </layout>
-        </widget>
-       </item>
-       <item row="6" column="0">
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
-         <item>
-          <widget class="QCheckBox" name="use_weather_prompt">
-           <property name="text">
-            <string>Use Weather Prompt</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="use_datetime">
-           <property name="text">
-            <string>Use Datetime</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="3" column="0">
-        <widget class="Line" name="line_2">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
         </widget>
        </item>
        <item row="0" column="0">
@@ -358,6 +204,195 @@
          </layout>
         </widget>
        </item>
+       <item row="12" column="0">
+        <widget class="QGroupBox" name="personality_groupbox">
+         <property name="title">
+          <string>Bot Personality</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_5">
+          <item row="1" column="0">
+           <widget class="QPlainTextEdit" name="bot_personality">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>75</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>EXAMPLE: {{ botname }} is very helpful and {{ gender }} loves {{ username }}.</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>A brief description of the bot's personality</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QGroupBox" name="groupBox_3">
+         <property name="title">
+          <string>Documents</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_9">
+          <item row="1" column="0">
+           <widget class="QPushButton" name="browse_documents_button">
+            <property name="text">
+             <string>Browse</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QScrollArea" name="target_files">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>150</height>
+             </size>
+            </property>
+            <property name="widgetResizable">
+             <bool>true</bool>
+            </property>
+            <widget class="QWidget" name="scrollAreaWidgetContents">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>766</width>
+               <height>148</height>
+              </rect>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_10"/>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QCheckBox" name="use_weather_prompt">
+           <property name="text">
+            <string>Use Weather Prompt</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="use_datetime">
+           <property name="text">
+            <string>Use Datetime</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Check this and set zipcode in User Settings to give agents access to local weather.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="Line" name="line_2">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="Line" name="line">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="0">
+        <widget class="QGroupBox" name="guardrails_groupbox">
+         <property name="title">
+          <string>Guardrails</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QPlainTextEdit" name="guardrails_prompt">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>150</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>The guardrails prompt is used to moderate results.</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="13" column="0">
+        <widget class="QGroupBox" name="groupBox_4">
+         <property name="title">
+          <string>Gender</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <item row="0" column="0">
+           <widget class="QComboBox" name="gender">
+            <item>
+             <property name="text">
+              <string>Male</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Female</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="14" column="0">
+        <widget class="QGroupBox" name="voice_groupbox">
+         <property name="title">
+          <string>Voice</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_voice">
+          <item row="0" column="0">
+           <widget class="QComboBox" name="voice_combobox"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </widget>
     </widget>
@@ -373,8 +408,8 @@
    <slot>botname_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>273</x>
-     <y>570</y>
+     <x>299</x>
+     <y>316</y>
     </hint>
     <hint type="destinationlabel">
      <x>127</x>
@@ -389,8 +424,8 @@
    <slot>bot_personality_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>404</x>
-     <y>1105</y>
+     <x>428</x>
+     <y>832</y>
     </hint>
     <hint type="destinationlabel">
      <x>292</x>
@@ -406,7 +441,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>51</x>
-     <y>500</y>
+     <y>339</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -422,7 +457,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>108</x>
-     <y>1081</y>
+     <y>775</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -437,8 +472,8 @@
    <slot>guardrails_prompt_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>226</x>
-     <y>871</y>
+     <x>238</x>
+     <y>743</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -453,8 +488,8 @@
    <slot>system_instructions_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>360</x>
-     <y>709</y>
+     <x>384</x>
+     <y>398</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -470,7 +505,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>83</x>
-     <y>837</y>
+     <y>595</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -486,7 +521,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>100</x>
-     <y>607</y>
+     <y>365</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -501,8 +536,8 @@
    <slot>saved_chatbots_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>256</x>
-     <y>140</y>
+     <x>280</x>
+     <y>-117</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -518,7 +553,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>744</x>
-     <y>145</y>
+     <y>-116</y>
     </hint>
     <hint type="destinationlabel">
      <x>479</x>
@@ -534,7 +569,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>790</x>
-     <y>145</y>
+     <y>-116</y>
     </hint>
     <hint type="destinationlabel">
      <x>480</x>
@@ -549,8 +584,8 @@
    <slot>agent_type_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>675</x>
-     <y>67</y>
+     <x>699</x>
+     <y>-198</y>
     </hint>
     <hint type="destinationlabel">
      <x>813</x>
@@ -565,8 +600,8 @@
    <slot>browse_documents()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>455</x>
-     <y>381</y>
+     <x>479</x>
+     <y>145</y>
     </hint>
     <hint type="destinationlabel">
      <x>690</x>
@@ -581,8 +616,8 @@
    <slot>use_weather_prompt_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>116</x>
-     <y>429</y>
+     <x>118</x>
+     <y>182</y>
     </hint>
     <hint type="destinationlabel">
      <x>-3</x>
@@ -597,12 +632,44 @@
    <slot>toggle_use_datetime(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>466</x>
-     <y>435</y>
+     <x>801</x>
+     <y>182</y>
     </hint>
     <hint type="destinationlabel">
      <x>-4</x>
      <y>306</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>gender</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>gender_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>165</x>
+     <y>962</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>987</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>voice_combobox</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>bot_preferences</receiver>
+   <slot>voice_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>121</x>
+     <y>1064</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-5</x>
+     <y>1025</y>
     </hint>
    </hints>
   </connection>
@@ -626,5 +693,7 @@
   <slot>browse_documents()</slot>
   <slot>use_weather_prompt_toggled(bool)</slot>
   <slot>toggle_use_datetime(bool)</slot>
+  <slot>gender_changed(QString)</slot>
+  <slot>voice_changed(int)</slot>
  </slots>
 </ui>

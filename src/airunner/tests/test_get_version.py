@@ -1,7 +1,7 @@
 import unittest
 import os
 from unittest.mock import patch, mock_open
-from airunner.utils.get_version import get_version
+from airunner.utils.application.get_version import get_version
 
 
 class TestGetVersion(unittest.TestCase):

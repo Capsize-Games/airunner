@@ -22,7 +22,6 @@ class TestTTSModelManager(unittest.TestCase):
     def setUp(self):
         self.mock_settings = MagicMock()
         self.handler = MockTTSModelManager(
-            tts_settings=self.mock_settings,
             path_settings=MagicMock()
         )
 

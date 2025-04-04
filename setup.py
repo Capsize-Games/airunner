@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="4.0.3",
+    version="4.1.0",
     author="Capsize LLC",
     description="A Stable Diffusion GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -43,6 +43,7 @@ setup(
             "pytest",
             "python-dotenv==1.0.1",
             "coverage==7.8.0",
+            "black==25.1.0",
         ],
         "art": [
             "DeepCache==0.1.1",
@@ -86,7 +87,7 @@ setup(
         "tts": [
             "inflect==7.5.0",
             "pycountry==24.6.1",
-        ]
+        ],
     },
     package_data={
         "airunner": [

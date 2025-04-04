@@ -45,10 +45,9 @@ class Ui_airunner_settings(object):
         self.preferences.setSizePolicy(sizePolicy1)
         self.preferences.setMinimumSize(QSize(350, 0))
         self.preferences.setWidgetResizable(True)
-        self.scrollAreaWidgetContents_2 = QWidget()
-        self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 688, 706))
-        self.preferences.setWidget(self.scrollAreaWidgetContents_2)
+        self.voice_settings = QWidget()
+        self.voice_settings.setObjectName(u"voice_settings")
+        self.preferences.setWidget(self.voice_settings)
 
         self.gridLayout.addWidget(self.preferences, 0, 1, 1, 1)
 
