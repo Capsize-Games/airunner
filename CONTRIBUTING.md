@@ -19,8 +19,7 @@ git checkout -b bug/321-some-broken-feature-fix
 ```
 
 4. Make your changes and commit them to your new branch
-5. Push your branch to github and open a pull request with `develop` as the base branch
-
+5. Push your branch to GitHub and open a pull request with `develop` as the base branch
 ## Pull request requirements
 - Submit a pull request (PR) with a clear title and description.
 - Address any feedback provided during the review process.
