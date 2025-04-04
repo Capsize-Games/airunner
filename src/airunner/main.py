@@ -2,15 +2,21 @@
 """
 ----------------------------------------------------------------
 Import order is crucial for AI Runner to work as expected.
-Do not remove the no_internet_socket import.
 Do not change the order of the imports.
 ----------------------------------------------------------------
 """
+
 ################################################################
 # Importing this module sets the Hugging Face environment
 # variables for the application.
 ################################################################
-print("Starting AI Runner...")
+from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
+
+if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
+    from facehuggershield.huggingface import activate
+
+    activate(activate_nullscream=False)
+
 import logging
 
 logging.getLogger("torio._extension.utils").setLevel(logging.WARNING)
