@@ -2,11 +2,11 @@
 set -e
 
 # Install the package in development mode
-if [ ! -d "/home/appuser/.local/lib/python3.10/site-packages/airunner.egg-link" ]; then
-  echo "Installing airunner package in development mode..."
-  pip install --user -e .[gui,linux,dev,art,llm,llm_weather,tts]
-  pip install --user -U timm
-fi
+# if [ ! -d "/home/appuser/.local/lib/python3.10/site-packages/airunner.egg-link" ]; then
+#   echo "Installing airunner package in development mode..."
+#   pip install --user -e .[gui,linux,dev,art,llm,llm_weather,tts]
+#   pip install --user -U timm
+# fi
 
 # Start Xvfb ONCE explicitly!
 Xvfb :1 -screen 0 1280x720x24 -ac +extension GLX +render -noreset &
