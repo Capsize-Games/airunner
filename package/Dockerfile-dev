@@ -1,10 +1,6 @@
 FROM ubuntu:22.04 AS base_image
 ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=America/Denver
-ENV HOME=/home/appuser
-ENV PATH=/home/appuser/.local/bin:/app/venv/bin:$PATH
-ENV PYTHONUSERBASE=/home/appuser/.local
-ENV PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages:/app
+ENV DEBCONF_NOWARNINGS="yes"
 WORKDIR /app
 
 # Install system dependencies
@@ -67,9 +63,6 @@ RUN chown -R appuser:appuser /app
 # Create X11 directory with correct permissions
 RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
 
-# Set the display environment variable
-ENV DISPLAY=:1
-
 FROM base_image AS dev_image
 USER appuser
 WORKDIR /app
@@ -82,47 +75,13 @@ RUN pip install --user --no-cache-dir pip setuptools wheel --upgrade \
 RUN pip install --user PySide6==6.7.0
 
 FROM dev_image AS final_image
-
-# Copy application code
 USER root
-COPY --chown=appuser:appuser . /app/
 
-# Create an improved entrypoint script
-RUN echo '#!/bin/bash\n\
-# Start Xvfb with better parameters\n\
-Xvfb :1 -screen 0 1280x720x24 -ac +extension GLX +render -noreset &\n\
-XVFB_PID=$!\n\
-sleep 2\n\
-\n\
-# Set correct permissions\n\
-touch ~/.Xauthority\n\
-xauth generate :1 . trusted\n\
-\n\
-# Test X server connection\n\
-echo "Testing X server connection:"\n\
-xdpyinfo -display :1 > /dev/null 2>&1\n\
-if [ $? -eq 0 ]; then\n\
- echo "X server is working correctly"\n\
-else\n\
- echo "ERROR: Cannot connect to X server"\n\
-fi\n\
-\n\
-# Output available X11 displays\n\
-echo "Available X11 displays:"\n\
-ls -la /tmp/.X11-unix/\n\
-\n\
-# Check if we have X11 forwarding working\n\
-echo "Checking XCB libraries:"\n\
-ldd /home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/plugins/platforms/libqxcb.so\n\
-\n\
-# Make sure the application is installed/available\n\
-cd /app\n\
-if [ -f "setup.py" ]; then\n\
- pip install --user -e .\n\
-fi\n\
-\n\
-# Execute the command\n\
-exec "$@"\n' > entrypoint-dev.sh && chmod +x entrypoint-dev.sh
+COPY --chown=appuser:appuser . /app/
+RUN ls -la /app
+USER appuser
+
+RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && pip install --no-cache-dir -U timm
 
 USER appuser
 
