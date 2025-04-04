@@ -55,6 +55,7 @@ setup(
             "safetensors==0.5.2",
             "compel==2.0.3",
             "tomesd==0.1.3",
+            "timm<=0.6.7",
         ],
         "llm": [  # LLM dependencies (also text-to-speech and speech-to-text)
             "transformers==4.48.1",
