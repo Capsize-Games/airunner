@@ -23,10 +23,22 @@ RUN apt-get update && apt-get install -y \
   ninja-build \
   nvidia-cuda-toolkit \
   xclip \
+  xserver-xorg \
+  xvfb \
   && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -ms /bin/bash appuser
 RUN mkdir -p /home/appuser/.local && chown -R appuser:appuser /home/appuser
+ENV PATH="/usr/bin:${PATH}"
+
+# Give appuser access to X11 socket
+RUN mkdir -p /tmp/.X11-unix && chown appuser:appuser /tmp/.X11-unix
+
+RUN apt-get update && apt-get install -y xauth
+
+# Set up Xvfb
+RUN Xvfb :99 -screen 0 1280x720x24 &
+ENV DISPLAY=:99
 
 FROM base_image AS dev_image
 USER appuser
