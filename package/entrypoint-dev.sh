@@ -8,13 +8,18 @@ if [ ! -d "/home/appuser/.local/lib/python3.10/site-packages/airunner.egg-link" 
   pip install --user -U timm
 fi
 
-# Check if DISPLAY is set, if not, start xvfb
-if [ -z "$DISPLAY" ]; then
-  echo "No X display found, starting a virtual one with Xvfb..."
-  Xvfb :99 -screen 0 1024x768x24 &
-  export DISPLAY=:99
-  sleep 2 # Give Xvfb time to start
+# Start Xvfb ONCE explicitly!
+Xvfb :1 -screen 0 1280x720x24 -ac +extension GLX +render -noreset &
+sleep 3
+
+# Verify if DISPLAY is available for debugging
+if ! xdpyinfo -display :1 &> /dev/null; then
+  echo "ERROR: Xvfb failed to start!"
+  exit 1
+else
+  echo "Xvfb has started successfully at :1"
 fi
+
 
 # Execute the command passed to docker
 echo "Executing command: $@"
