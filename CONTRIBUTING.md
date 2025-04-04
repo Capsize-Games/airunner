@@ -1,6 +1,29 @@
 # AI Runner Contribution Guide
 
-Thank you for your interest in contributing to AI Runner. This guide provides an overview of our project's conventions and practices. Please ensure all commits are signed.
+Thank you for your interest in contributing to AI Runner. This guide provides an overview of our project's conventions and practices.
+
+---
+
+## How to make changes and submit them
+
+1. Fork or clone the `https://github.com/Capsize-Games/airunner` repo and checkout the `develop` branch.
+2. Find an [issue from the project board](https://github.com/orgs/Capsize-Games/projects/23)
+3. Create your own branch in the style of `[feature/bug/patch]/issue_number-description`.
+
+Example
+
+```bash
+git checkout develop
+git pull
+git checkout -b bug/321-some-broken-feature-fix
+```
+
+4. Make your changes and commit them to your new branch
+5. Push your branch to GitHub and open a pull request with `develop` as the base branch
+## Pull request requirements
+- Submit a pull request (PR) with a clear title and description.
+- Address any feedback provided during the review process.
+- PRs must pass all tests and meet coding standards before being merged.
 
 ---
 
@@ -20,6 +43,8 @@ We follow the PEP 8 style guide for Python code. You can find the complete guide
 - **Comments and Docstrings:**
   - Use Google-style docstrings for all modules, classes, and functions.
   - Keep inline comments minimal and relevant.
+- **Formatting**
+  - Use [black](https://pypi.org/project/black/) for code formatting
 
 ---
 
@@ -127,27 +152,3 @@ and built with a custom script (see the following list).
 
   Added support for SDXL Turbo model in the image generation pipeline.
   ```
-
----
-
-## Environment Setup
-- Install dependencies using:
-  ```bash
-  pip install -r requirements.txt
-  ```
-- Initialize the database:
-  ```bash
-  python src/airunner/setup_database.py
-  ```
-- Run the application:
-  ```bash
-  python src/airunner/main.py
-  ```
-
----
-
-## Code Review Process
-- Submit a pull request (PR) with a clear title and description.
-- Ensure your branch is up-to-date with the `main` branch.
-- Address any feedback provided during the review process.
-- PRs must pass all tests and meet coding standards before being merged.
