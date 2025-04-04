@@ -2,14 +2,15 @@ import threading
 
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
-from airunner.handlers import WhisperModelManager
+from airunner.handlers.stt.whisper_model_manager import WhisperModelManager
 
 
 class AudioProcessorWorker(Worker):
     """
     This class is responsible for processing audio.
     It will process audio from the audio_queue and send it to the model.
-    """ 
+    """
+
     fs = 0
 
     def __init__(self):
@@ -61,6 +62,6 @@ class AudioProcessorWorker(Worker):
 
     def handle_message(self, audio_data):
         self._stt.process_audio(audio_data)
-    
+
     def update_properties(self):
         self.fs = self.stt_settings.fs
