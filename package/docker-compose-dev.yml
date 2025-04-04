@@ -1,0 +1,28 @@
+version: "3.6"
+services:
+  airunner_dev:
+    container_name: airunner_dev
+    build:
+      context: ..
+      dockerfile: package/Dockerfile-dev
+    user: appuser
+    environment:
+      - DEV_ENV=1
+      - AIRUNNER_ENVIRONMENT=dev
+      - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512
+      - NUMBA_CACHE_DIR=/tmp/numba_cache
+      - LD_LIBRARY_PATH=/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
+      - DISABLE_TELEMETRY=1
+      - PYTHONUSERBASE=/home/appuser/.local
+      - PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages
+      - PIP_USER=1
+    entrypoint: ["/app/package/entrypoint-dev.sh"]
+    command: ["/bin/bash"]
+    volumes:
+      - ../:/app:rw  # Mount the local repo as /app for live development
+      - /home/joe/Documents/airunner:/home/appuser/.airunner:rw # Mount .airunner folder correctly
+      - /home/joe/.local/share/airunner/data:/airunner_data:rw # Mount arbitrary folder for other local files as needed
+    working_dir: /app
+    runtime: nvidia  # Enable CUDA if needed
+    ports:
+      - "8000:8000"  # Map this port for debugging or API access
