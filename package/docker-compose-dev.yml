@@ -3,8 +3,8 @@ services:
   airunner_dev:
     container_name: airunner_dev
     build:
-      context: .
-      dockerfile: Dockerfile-dev
+      context: ..
+      dockerfile: package/Dockerfile-dev
     user: appuser
     environment:
       - DEV_ENV=1
@@ -19,8 +19,12 @@ services:
       - DISPLAY=:1
       - QT_DEBUG_PLUGINS=1
       - QT_QPA_PLATFORM=xcb
+      - DEBIAN_FRONTEND=noninteractive
+      - TZ=America/Denver
+      - HOME=/home/appuser
+      - PATH=/home/appuser/.local/bin:$PATH
     entrypoint: ["/app/package/entrypoint-dev.sh"]
-    #command: ["airunner"]
+    command: ["airunner"]
     volumes:
       - ../:/app:rw
       - /home/joe/Documents/airunner:/home/appuser/.airunner:rw
