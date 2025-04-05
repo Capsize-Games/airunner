@@ -1,10 +1,13 @@
-version: "3.6"
+version: '3'
+
 services:
   airunner_dev:
     container_name: airunner_dev
     build:
       context: ..
       dockerfile: package/Dockerfile-dev
+      args:
+        - INSTALL_XCB_CURSOR=1
     user: appuser
     environment:
       - DEV_ENV=1
@@ -16,22 +19,31 @@ services:
       - PYTHONUSERBASE=/home/appuser/.local
       - PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages:/app
       - PIP_USER=1
-      - DISPLAY=:1
-      - QT_DEBUG_PLUGINS=1
+      - DISPLAY
+      - XAUTHORITY=/home/appuser/.Xauthority
       - QT_QPA_PLATFORM=xcb
       - DEBIAN_FRONTEND=noninteractive
       - TZ=America/Denver
       - HOME=/home/appuser
       - PATH=/home/appuser/.local/bin:$PATH
-    entrypoint: ["/app/package/entrypoint-dev.sh"]
-    command: ["airunner"]
+      - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
+      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
+      - NO_AT_BRIDGE=1
+      - QT_LOGGING_RULES=*.debug=false;driver.usb.debug=true
+      - QT_DEBUG_PLUGINS=0
+      - AIRUNNER_LOG_LEVEL="WARNING"
+      - PYTHONLOGLEVEL=WARNING
+    command: ["bash", "/app/package/entrypoint-dev.sh", "airunner"]
     volumes:
       - ../:/app:rw
       - /home/joe/Documents/airunner:/home/appuser/.airunner:rw
       - /home/joe/.local/share/airunner/data:/airunner_data:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /run/user/1000/pulse:/run/user/1000/pulse:ro
+      - ${XAUTHORITY:-~/.Xauthority}:/home/appuser/.Xauthority:rw
     working_dir: /app
     runtime: nvidia
     ports:
       - "8000:8000"
     ipc: host
+    network_mode: "host"
