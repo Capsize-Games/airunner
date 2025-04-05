@@ -30,6 +30,10 @@ services:
       - QT_DEBUG_PLUGINS=0
       - AIRUNNER_LOG_LEVEL="WARNING"
       - PYTHONLOGLEVEL=WARNING
+      - QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/plugins/platforms
+      - QT_QPA_PLATFORM=xcb
+      - PYTHONUNBUFFERED=1
+      - NO_AT_BRIDGE=1
     env_file:
       - ../.env
     stdin_open: true
@@ -38,13 +42,13 @@ services:
     command: []
     volumes:
       - ../:/app:rw
-      - "${AIRUNNER_HOME_DIR:-/home/joe/airunner}:${AIRUNNER_HOME_DIR:-/home/joe/airunner}:rw"
-      - "${HOST_HOME:-/home/joe}/Documents/airunner:${HOST_HOME:-/home/joe}/Documents/airunner:rw"
-      - "${HOST_HOME:-/home/joe}/.local/share/airunner:/home/appuser/.local/share/airunner:rw"
-      - "${HOST_HOME:-/home/joe}/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw"
+      - "${AIRUNNER_HOME_DIR}:${AIRUNNER_HOME_DIR}:rw"
+      - "${HOST_HOME}/Documents/airunner:${HOST_HOME}/Documents/airunner:rw"
+      - "${HOST_HOME}/.local/share/airunner:/home/appuser/.local/share/airunner:rw"
+      - "${HOST_HOME}/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw"
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /run/user/1000/pulse:/run/user/1000/pulse:ro
-      - "${XAUTHORITY:-${HOST_HOME:-/home/joe}/.Xauthority}:/home/appuser/.Xauthority:rw"
+      - "${XAUTHORITY:-${HOST_HOME}/.Xauthority}:/home/appuser/.Xauthority:rw"
     working_dir: /app
     runtime: nvidia
     ports:
