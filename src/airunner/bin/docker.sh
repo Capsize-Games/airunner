@@ -24,6 +24,13 @@ else
   echo ".env file not found. Skipping replacement."
 fi
 
+# Add support for `docker.sh down`
+if [ "$1" == "down" ]; then
+  echo "Bringing down the Docker Compose services..."
+  docker-compose --env-file .env -f ./package/docker-compose-dev.yml down
+  exit 0
+fi
+
 # Get user command
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
