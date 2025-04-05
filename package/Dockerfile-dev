@@ -116,6 +116,4 @@ ENV QT_QPA_PLATFORM=xcb
 ENV PYTHONUNBUFFERED=1
 ENV NO_AT_BRIDGE=1
 
-# Set the entrypoint to handle X11 permissions
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/bin/bash"]
