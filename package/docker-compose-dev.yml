@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   airunner_dev:
     container_name: airunner_dev
@@ -24,7 +22,6 @@ services:
       - QT_QPA_PLATFORM=xcb
       - DEBIAN_FRONTEND=noninteractive
       - TZ=America/Denver
-      - HOME=/home/appuser
       - PATH=/home/appuser/.local/bin:$PATH
       - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
       - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
@@ -39,11 +36,11 @@ services:
     command: []
     volumes:
       - ../:/app:rw
-      - /home/joe/Documents/airunner:/home/appuser/.airunner:rw
-      - /home/joe/.local/share/airunner/data:/airunner_data:rw
+      - "${HOST_HOME}/Documents/airunner:/home/appuser/.airunner:rw"
+      - "${HOST_HOME}/.local/share/airunner:/home/appuser/.local/share/airunner:rw"
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /run/user/1000/pulse:/run/user/1000/pulse:ro
-      - ${XAUTHORITY:-~/.Xauthority}:/home/appuser/.Xauthority:rw
+      - ${XAUTHORITY:-${HOST_HOME}/.Xauthority}:/home/appuser/.Xauthority:rw
     working_dir: /app
     runtime: nvidia
     ports:
