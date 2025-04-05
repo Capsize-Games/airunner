@@ -12,7 +12,7 @@ services:
       - AIRUNNER_ENVIRONMENT=dev
       - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512
       - NUMBA_CACHE_DIR=/tmp/numba_cache
-      - LD_LIBRARY_PATH=/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
+      - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
       - DISABLE_TELEMETRY=1
       - PYTHONUSERBASE=/home/appuser/.local
       - PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages:/app
@@ -22,7 +22,7 @@ services:
       - QT_QPA_PLATFORM=xcb
       - DEBIAN_FRONTEND=noninteractive
       - TZ=America/Denver
-      - PATH=/home/appuser/.local/bin:$PATH
+      - PATH=/usr/local/cuda/bin:/home/appuser/.local/bin:$PATH
       - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
       - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
       - NO_AT_BRIDGE=1
