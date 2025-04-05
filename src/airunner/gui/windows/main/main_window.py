@@ -829,6 +829,7 @@ class MainWindow(
     def _load_plugins(self):
         base_path = self.path_settings.base_path
         path = os.path.join(base_path, "plugins")
+        self.logger.info(f"Loading pluggins from {path}")
         plugin_loader = PluginLoader(plugin_dir=path)
         plugins = plugin_loader.load_plugins()
 

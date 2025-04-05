@@ -1,4 +1,4 @@
-from transformers import StoppingCriteria
+from transformers.generation.stopping_criteria import StoppingCriteria
 
 
 class ExternalConditionStoppingCriteria(StoppingCriteria):

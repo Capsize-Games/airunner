@@ -3,17 +3,21 @@ import threading
 
 import numpy as np
 import torch
-from transformers.models.whisper.modeling_whisper import WhisperForConditionalGeneration
+from transformers.models.whisper.modeling_whisper import (
+    WhisperForConditionalGeneration,
+)
 from transformers.models.whisper.processing_whisper import WhisperProcessor
-from transformers.models.whisper.feature_extraction_whisper import WhisperFeatureExtractor
+from transformers.models.whisper.feature_extraction_whisper import (
+    WhisperFeatureExtractor,
+)
 
 from airunner.handlers.base_model_manager import BaseModelManager
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.exceptions import NaNException
 from airunner.utils.memory import clear_memory
 from airunner.settings import (
-    AIRUNNER_DEFAULT_STT_HF_PATH, 
-    AIRUNNER_LOCAL_FILES_ONLY
+    AIRUNNER_DEFAULT_STT_HF_PATH,
+    AIRUNNER_LOCAL_FILES_ONLY,
 )
 
 
@@ -21,6 +25,7 @@ class WhisperModelManager(BaseModelManager):
     """
     Handler for the Whisper model from OpenAI.
     """
+
     def __init__(self, *args, **kwargs):
         self.model_type = ModelType.STT
         self.model_class = "stt"
@@ -49,20 +54,21 @@ class WhisperModelManager(BaseModelManager):
 
     @property
     def model_path(self) -> str:
-        file_path = os.path.expanduser(os.path.join(
-            self.path_settings.stt_model_path,
-            AIRUNNER_DEFAULT_STT_HF_PATH
-        ))
+        file_path = os.path.expanduser(
+            os.path.join(
+                self.path_settings.stt_model_path, AIRUNNER_DEFAULT_STT_HF_PATH
+            )
+        )
         return os.path.abspath(file_path)
 
     def process_audio(self, audio_data):
         with self._lock:
             item = audio_data["item"]
-            
+
             # Convert the byte string to a float32 array
             inputs = np.frombuffer(item, dtype=np.int16)
             inputs = inputs.astype(np.float32) / 32767.0
-            
+
             transcription = None
             try:
                 transcription = self._process_inputs(inputs)
@@ -86,9 +92,9 @@ class WhisperModelManager(BaseModelManager):
         self._load_processor()
         self._load_feature_extractor()
         if (
-            self._model is not None and
-            self._processor is not None and
-            self._feature_extractor is not None
+            self._model is not None
+            and self._processor is not None
+            and self._feature_extractor is not None
         ):
             self.change_model_status(ModelType.STT, ModelStatus.LOADED)
             return True
@@ -107,7 +113,9 @@ class WhisperModelManager(BaseModelManager):
         self.change_model_status(ModelType.STT, ModelStatus.UNLOADED)
 
     def _load_model(self):
-        self.logger.debug(f"Loading model from {self.model_path} to device {self.device}")
+        self.logger.debug(
+            f"Loading model from {self.model_path} to device {self.device}"
+        )
         device = self.device
         try:
             self._model = WhisperForConditionalGeneration.from_pretrained(
@@ -115,7 +123,7 @@ class WhisperModelManager(BaseModelManager):
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.dtype,
                 use_safetensors=True,
-                force_download=False
+                force_download=False,
             )
             self._model.to(device)
         except Exception as e:
@@ -130,7 +138,7 @@ class WhisperModelManager(BaseModelManager):
                 model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.dtype,
-                device_map=self.device
+                device_map=self.device,
             )
         except Exception as e:
             self.logger.error(f"Failed to load processor: {e}")
@@ -144,7 +152,7 @@ class WhisperModelManager(BaseModelManager):
                 model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.dtype,
-                device_map=self.device
+                device_map=self.device,
             )
         except Exception as e:
             self.logger.error(f"Failed to load feature extractor")
@@ -174,36 +182,29 @@ class WhisperModelManager(BaseModelManager):
         if torch.isnan(inputs).any():
             raise NaNException
 
-        # Move inputs to CPU and ensure they are in float32 before 
+        # Move inputs to CPU and ensure they are in float32 before
         # passing to _feature_extractor
         inputs = inputs.cpu().to(torch.float32)
         inputs = self._feature_extractor(
-            inputs, 
-            sampling_rate=self._sampling_rate, 
-            return_tensors="pt"
+            inputs, sampling_rate=self._sampling_rate, return_tensors="pt"
         )
 
         if torch.isnan(inputs.input_features).any():
             raise NaNException
 
-        inputs["input_features"] = inputs["input_features"].to(
-            self.dtype
-        ).to(
-            self.device
+        inputs["input_features"] = (
+            inputs["input_features"].to(self.dtype).to(self.device)
         )
         if torch.isnan(inputs.input_features).any():
             raise NaNException
 
         transcription = self._run(inputs)
-        if transcription is None or 'nan' in transcription:
+        if transcription is None or "nan" in transcription:
             raise NaNException
 
         return transcription
 
-    def _run(
-        self,
-        inputs
-    ) -> str:
+    def _run(self, inputs) -> str:
         """
         Run the model on the given inputs.
         :param inputs: str - The transcription of the audio data.
@@ -278,16 +279,16 @@ class WhisperModelManager(BaseModelManager):
         """
         Emit the transcription so that other handlers can use it
         """
-        self.emit_signal(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, {
-            "transcription": transcription
-        })
+        self.emit_signal(
+            SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
+            {"transcription": transcription},
+        )
 
     def process_transcription(self, generated_ids) -> str:
         # Decode the generated ids
         generated_ids = generated_ids.to("cpu").to(torch.float32)
         transcription = self._processor.batch_decode(
-            generated_ids,
-            skip_special_tokens=True
+            generated_ids, skip_special_tokens=True
         )[0]
 
         # Remove leading and trailing whitespace

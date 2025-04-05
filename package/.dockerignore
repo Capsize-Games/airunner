@@ -1,0 +1,17 @@
+# Ignore virtual environments
+venv
+
+# Ignore git files
+.git
+.github
+
+# Ignore Python cache files
+src/airunner.egg-info
+__pycache__
+*.pyc
+
+# Ignore other unnecessary files
+!package/entrypoint-dev.sh
+processed
+*.log
+*.tmp

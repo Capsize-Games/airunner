@@ -20,40 +20,44 @@ setup(
         "torchaudio==2.6.0",
         "accelerate==1.3.0",
         "huggingface-hub==0.28.1",
-        "tokenizers==0.21.0",
+        "tokenizers==0.21.1",
         "optimum==1.24.0",
         "numpy==1.26.4",
-        "pillow==11.1.0",
+        "pillow==10.4.0",
         "alembic==1.14.1",
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
-        "setuptools==75.8.0",
+        "setuptools==78.1.0",
+        "facehuggershield==0.1.11",
     ],
     extras_require={
-        "gui": [
+        # These are optional dependencies that will change the
+        # behavior of the application or add new features if installed.
+        "gui": [  # GUI dependencies
             "PySide6==6.7.0",
             "PySide6_Addons==6.7.0",
             "PySide6_Essentials==6.7.0",
         ],
-        "linux": [
+        "linux": [  # Linux-specific dependencies
             "faiss-gpu==1.7.2",
             "tensorrt==10.9.0.34",
         ],
-        "dev": [
+        "dev": [  # Development dependencies
             "pytest",
             "python-dotenv==1.0.1",
             "coverage==7.8.0",
             "black==25.1.0",
         ],
-        "art": [
+        "art": [  # Art generation dependencies
             "DeepCache==0.1.1",
             "diffusers==0.32.2",
             "controlnet_aux==0.0.9",
             "safetensors==0.5.2",
             "compel==2.0.3",
             "tomesd==0.1.3",
+            "timm<=0.6.7",
         ],
-        "llm": [
+        "llm": [  # LLM dependencies (also text-to-speech and speech-to-text)
             "transformers==4.48.1",
             "auto-gptq==0.7.1",
             "bitsandbytes==0.45.2",
@@ -78,16 +82,20 @@ setup(
             "tf-keras==2.18.0",
             "peft==0.14.0",
             "lxml_html_clean==0.4.1",
+            # Summarizations (basic)
+            "sumy==0.11.0",
         ],
-        "llm_weather": [
+        "llm_weather": [  # LLM dependencies for weather (requires llm dependencies)
             "requests-cache==1.2.1",
             "retry-requests==2.0.0",
-            "openmeteo_requests==1.3.0",
+            "openmeteo_requests==1.4.0",
         ],
-        "tts": [
+        "tts": [  # Text-to-speech dependencies (requires llm dependencies)
             "inflect==7.5.0",
             "pycountry==24.6.1",
+            "librosa==0.11.0",
         ],
+        "rabbitmq": ["pika"],
     },
     package_data={
         "airunner": [
@@ -110,6 +118,7 @@ setup(
             "airunner-build-ui=airunner.bin.build_ui:main",
             "airunner-tests=airunner.bin.run_tests:main",
             "airunner-test-coverage-report=airunner.bin.coverage_report:main",
+            "airunner-docker=airunner.bin.docker_wrapper:main",
         ],
     },
 )
