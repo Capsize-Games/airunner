@@ -73,7 +73,7 @@ RUN apt-get update && apt-get install -y software-properties-common && \
     apt-get update && apt-get install -y libstdc++6 && \
     rm -rf /var/lib/apt/lists/*
 
-# Add NVIDIA CUDA repository and install CUDA Toolkit
+# Install CUDA Toolkit 12.2 (safe with your driver 535.230)
 RUN apt-get update && apt-get install -y wget gnupg && \
     wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin && \
     mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600 && \
@@ -81,9 +81,9 @@ RUN apt-get update && apt-get install -y wget gnupg && \
     dpkg -i cuda-keyring_1.1-1_all.deb && \
     rm -f cuda-keyring_1.1-1_all.deb && \
     apt-get update && \
-    apt-get install -y cuda-toolkit-12-6 && \
-    apt-get install -y nvidia-driver-525-server nvidia-cuda-dev && \
+    apt-get install -y cuda-toolkit-12-2 nvidia-cuda-dev && \
     rm -rf /var/lib/apt/lists/*
+
 
 # Install cuDNN backend packages
 RUN apt-get update && apt-get install -y wget && \
@@ -132,7 +132,7 @@ WORKDIR /app
 # Install Python dependencies and PyTorch with CUDA support
 RUN pip install --no-cache-dir pip setuptools wheel --upgrade && \
     pip install nvidia-pyindex && \
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 FROM dev_image AS final_image
 USER root
