@@ -65,6 +65,7 @@ RUN apt-get update && apt-get install -y \
  # Add these new X11-related packages
  dbus-x11 \
  x11-xserver-utils \
+ portaudio19-dev \
  && rm -rf /var/lib/apt/lists/*
 
 ARG INSTALL_XCB_CURSOR=0
