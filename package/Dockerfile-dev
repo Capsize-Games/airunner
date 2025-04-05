@@ -54,14 +54,37 @@ RUN apt-get update && apt-get install -y \
  # Fontconfig and fonts
  fontconfig \
  fonts-liberation \
+ mesa-utils \
+ libglvnd0 \
+ libgl1 \
+ libglx0 \
+ libegl1 \
+ libxext6 \
+ libx11-6 \
+ x11-apps \
+ # Add these new X11-related packages
+ dbus-x11 \
+ x11-xserver-utils \
  && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -ms /bin/bash appuser
+ARG INSTALL_XCB_CURSOR=0
+RUN if [ "$INSTALL_XCB_CURSOR" = "1" ]; then \
+      apt-get update && apt-get install -y libxcb-cursor0; \
+    fi
+
+RUN useradd -ms /bin/bash -u 1000 appuser
 RUN mkdir -p /home/appuser/.local && chown -R appuser:appuser /home/appuser
 RUN chown -R appuser:appuser /app
 
+# Install xhost
+RUN apt-get update && apt-get install -y x11-xserver-utils
+
 # Create X11 directory with correct permissions
 RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
+
+# Fix for Ubuntu 24.04 host X11 issues
+RUN echo "#!/bin/bash\nxhost +local:docker || true\nexec \"\$@\"" > /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh
 
 FROM base_image AS dev_image
 USER appuser
@@ -85,11 +108,14 @@ RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && pi
 
 USER appuser
 
-# Set environment variables for QT
+# Set environment variables for QT and X11
 ENV QT_DEBUG_PLUGINS=1
 ENV QT_LOGGING_RULES="qt.qpa.*=true"
 ENV QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/plugins/platforms
 ENV QT_QPA_PLATFORM=xcb
+ENV PYTHONUNBUFFERED=1
+ENV NO_AT_BRIDGE=1
 
-ENTRYPOINT ["entrypoint-dev.sh"]
+# Set the entrypoint to handle X11 permissions
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/bin/bash"]
