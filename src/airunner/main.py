@@ -28,6 +28,7 @@ logging.getLogger("tensorflow").setLevel(logging.WARNING)
 logging.getLogger("h5py._conv").setLevel(logging.WARNING)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 logging.getLogger("datasets").setLevel(logging.WARNING)
+logging.getLogger("bitsandbytes").setLevel(logging.WARNING)
 
 import sys
 from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE

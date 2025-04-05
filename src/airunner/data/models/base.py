@@ -50,7 +50,7 @@ class BaseModel(Base):
             session.expunge(self)
         return success
 
-    def to_dataclass(self):
+    def to_dataclass(self) -> object:
         """Convert the model instance to its corresponding dataclass."""
         dataclass_cls = self.get_dataclass()
         return dataclass_cls(**self.to_dict())

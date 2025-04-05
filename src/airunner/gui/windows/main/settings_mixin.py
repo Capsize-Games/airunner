@@ -205,7 +205,7 @@ class SettingsMixin:
             return settings
 
     @property
-    def espeak_settings(self) -> EspeakSettings:
+    def espeak_settings(self) -> Optional[object]:
         model_type = self.chatbot.voice_settings.model_type
         if model_type == TTSModel.ESPEAK.value:
             settings_id = self.chatbot.voice_settings.settings_id
