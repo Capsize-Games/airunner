@@ -24,18 +24,26 @@ else
   echo ".env file not found. Skipping replacement."
 fi
 
-# Add support for `docker.sh down`
+DOCKER_COMPOSE="docker-compose --env-file .env -f ./package/docker-compose-dev.yml"
+DOCKER_EXEC="docker exec -it airunner_dev"
+
 if [ "$1" == "down" ]; then
   echo "Bringing down the Docker Compose services..."
-  docker-compose --env-file .env -f ./package/docker-compose-dev.yml down
+  $DOCKER_COMPOSE down
+  exit 0
+fi
+
+if [ "$1" == "build" ]; then
+  echo "Building the Docker Compose services..."
+  $DOCKER_COMPOSE build
   exit 0
 fi
 
 # Get user command
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
-  docker-compose --env-file .env -f ./package/docker-compose-dev.yml up -d && docker exec -it airunner_dev bash
+  $DOCKER_COMPOSE up -d && $DOCKER_EXEC bash
 else
-  echo "Executing command: $@"
-  docker-compose --env-file .env -f ./package/docker-compose-dev.yml up -d && docker exec -it airunner_dev "$@"
+  $DOCKER_COMPOSE up -d && echo "Executing command: $@"
+  $DOCKER_EXEC "$@"
 fi
