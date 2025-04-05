@@ -68,6 +68,24 @@ RUN apt-get update && apt-get install -y \
  portaudio19-dev \
  && rm -rf /var/lib/apt/lists/*
 
+# Add NVIDIA Container Toolkit setup for GPU access
+RUN apt-get update && apt-get install -y software-properties-common && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test && \
+    apt-get update && apt-get install -y libstdc++6 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install NVIDIA Container Toolkit dependencies
+RUN apt-get update && apt-get install -y nvidia-container-toolkit && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set up NVIDIA runtime
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+# Ensure CUDA is accessible
+RUN apt-get update && apt-get install -y cuda && \
+    rm -rf /var/lib/apt/lists/*
+
 ARG INSTALL_XCB_CURSOR=0
 RUN if [ "$INSTALL_XCB_CURSOR" = "1" ]; then \
       apt-get update && apt-get install -y libxcb-cursor0; \
