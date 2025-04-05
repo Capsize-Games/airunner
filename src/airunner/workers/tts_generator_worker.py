@@ -10,10 +10,14 @@ from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers import (
     SpeechT5ModelManager,
     EspeakModelManager,
-    OpenVoiceModelManager,
 )
-from airunner.settings import AIRUNNER_TTS_ON
+from airunner.settings import AIRUNNER_TTS_ON, AIRUNNER_ENABLE_OPEN_VOICE
 from airunner.handlers.tts.tts_request import TTSRequest, EspeakTTSRequest
+
+if AIRUNNER_ENABLE_OPEN_VOICE:
+    from airunner.handlers.tts.openvoice_model_manager import (
+        OpenVoiceModelManager,
+    )
 
 
 class TTSGeneratorWorker(Worker):
@@ -135,12 +139,12 @@ class TTSGeneratorWorker(Worker):
             self.logger.error("No TTS model found. Skipping initialization.")
             return
         model_type = TTSModel(model)
-        if model_type is TTSModel.ESPEAK:
-            tts_model_manager_class_ = EspeakModelManager
-        elif model_type is TTSModel.OPENVOICE:
+        if model_type is TTSModel.SPEECHT5:
+            tts_model_manager_class_ = SpeechT5ModelManager
+        elif AIRUNNER_ENABLE_OPEN_VOICE and model_type is TTSModel.OPENVOICE:
             tts_model_manager_class_ = OpenVoiceModelManager
         else:
-            tts_model_manager_class_ = SpeechT5ModelManager
+            tts_model_manager_class_ = EspeakModelManager
         self.tts = tts_model_manager_class_()
 
     def add_to_queue(self, message):
