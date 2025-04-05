@@ -24,12 +24,18 @@ else
   echo ".env file not found. Skipping replacement."
 fi
 
-DOCKER_COMPOSE="docker-compose --env-file .env -f ./package/docker-compose-dev.yml"
+DOCKER_COMPOSE="docker compose --env-file .env -f ./package/docker-compose-dev.yml"
 DOCKER_EXEC="docker exec -it airunner_dev"
 
 if [ "$1" == "down" ]; then
   echo "Bringing down the Docker Compose services..."
   $DOCKER_COMPOSE down
+  exit 0
+fi
+
+if [ "$1" == "up" ]; then
+  echo "Bringing down the Docker Compose services..."
+  $DOCKER_COMPOSE up
   exit 0
 fi
 
