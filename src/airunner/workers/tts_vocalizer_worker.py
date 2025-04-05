@@ -67,10 +67,16 @@ class TTSVocalizerWorker(Worker):
                 # pitch == 50 -> samplerate == 19000
                 # pitch == 100 -> samplerate == 24000
                 samplerate = 14000 + int(10000.0 * (pitch / 100.0))
-                self.stream = sd.OutputStream(
-                    samplerate=samplerate, channels=1
-                )
-                self.stream.start()
+                self._initialize_stream(samplerate)
+        except sd.PortAudioError as e:
+            self.logger.error(f"Failed to start audio stream: {e}")
+            self.stream = None
+
+    def _initialize_stream(self, samplerate: int):
+        self.logger.info(f"Initializing stream with samplerate: {samplerate}")
+        try:
+            self.stream = sd.OutputStream(samplerate=samplerate, channels=1)
+            self.stream.start()
         except sd.PortAudioError as e:
             self.logger.error(f"Failed to start audio stream: {e}")
             self.stream = None
