@@ -42,6 +42,7 @@ services:
     command: []
     volumes:
       - ../:/app:rw
+      - ../package/asound.conf:/etc/asound.conf:rw
       - "${AIRUNNER_HOME_DIR}:${AIRUNNER_HOME_DIR}:rw"
       - "${HOST_HOME}/Documents/airunner:${HOST_HOME}/Documents/airunner:rw"
       - "${HOST_HOME}/.local/share/airunner:/home/appuser/.local/share/airunner:rw"
