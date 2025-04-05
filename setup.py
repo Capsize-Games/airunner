@@ -93,6 +93,7 @@ setup(
         "tts": [  # Text-to-speech dependencies (requires llm dependencies)
             "inflect==7.5.0",
             "pycountry==24.6.1",
+            "librosa==0.11.0",
         ],
         "rabbitmq": ["pika"],
     },
