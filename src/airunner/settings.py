@@ -328,6 +328,8 @@ AIRUNNER_MEM_SD_DEVICE = os.environ.get("AIRUNNER_MEM_SD_DEVICE", None)
 AIRUNNER_MEM_LLM_DEVICE = os.environ.get("AIRUNNER_MEM_LLM_DEVICE", None)
 AIRUNNER_MEM_TTS_DEVICE = os.environ.get("AIRUNNER_MEM_TTS_DEVICE", None)
 AIRUNNER_MEM_STT_DEVICE = os.environ.get("AIRUNNER_MEM_STT_DEVICE", None)
+
+
 def get_log_level_from_env():
     log_level_str = os.environ.get("AIRUNNER_LOG_LEVEL", "DEBUG").upper()
     log_levels = {
@@ -339,6 +341,7 @@ def get_log_level_from_env():
         "NOTSET": logging.NOTSET,
     }
     return log_levels.get(log_level_str, logging.DEBUG)
+
 
 AIRUNNER_LOG_LEVEL = get_log_level_from_env()
 AIRUNNER_DISABLE_FLASH_ATTENTION = (
@@ -356,4 +359,7 @@ AIRUNNER_LOG_FILE = os.environ.get(
 )
 AIRUNNER_SAVE_LOG_TO_FILE = (
     os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "1") == "1"
+)
+AIRUNNER_DISABLE_FACEHUGGERSHIELD = (
+    os.environ.get("AIRUNNER_DISABLE_FACEHUGGERSHIELD", "0") == "1"
 )

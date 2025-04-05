@@ -172,7 +172,13 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.unload()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self._initialize()
-        self.model = TTS(language=self._language.value, device=self.device)
+        self.model = TTS(
+            language=self._language.value,
+            device=self.device,
+            model_base_path=os.path.join(
+                self.path_settings.base_path, "text/models/bert"
+            ),
+        )
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 
     def unload(self):
@@ -202,6 +208,10 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         os.makedirs(self._output_dir, exist_ok=True)
 
-        self._target_se, self._audio_name = se_extractor.get_se(
-            self._reference_speaker, self.tone_color_converter, vad=True
-        )
+        try:
+            self._target_se, self._audio_name = se_extractor.get_se(
+                self._reference_speaker, self.tone_color_converter, vad=True
+            )
+        except AssertionError as e:
+            self.logger.error(f"Failed to load from se_extractor {e}")
+            self.emit_signal(SignalCode.TTS_DISABLE_SIGNAL)

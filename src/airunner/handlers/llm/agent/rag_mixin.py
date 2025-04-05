@@ -1,28 +1,27 @@
 import os
 import time
-from typing import List, Optional, Dict, Set, Tuple
+from typing import List, Optional, Dict, Set
 from functools import lru_cache
 from threading import Thread
 
 from llama_index.core import (
     Document,
-    Settings, 
+    Settings,
     RAKEKeywordTableIndex,
     SimpleDirectoryReader,
-    PromptHelper
+    PromptHelper,
 )
-from llama_index.core.indices.keyword_table.utils import simple_extract_keywords
+from llama_index.core.indices.keyword_table.utils import (
+    simple_extract_keywords,
+)
 from llama_index.readers.file import EpubReader, PDFReader, MarkdownReader
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core import StorageContext, load_index_from_storage
 from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
-from llama_index.core.tools import BaseTool, FunctionTool, ToolOutput
+from llama_index.core.tools import ToolOutput
 
-from airunner.data.models import (
-    Article, 
-    Conversation
-)
+from airunner.data.models import Article, Conversation
 from airunner.handlers.llm.agent import HtmlFileReader
 from airunner.handlers.llm.agent.chat_engine import RefreshContextChatEngine
 from airunner.handlers.llm.agent.tools import RAGEngineTool
@@ -51,7 +50,7 @@ class RAGMixin:
         self.__last_index_refresh = 0
         self.__preloaded = False
         self._load_settings()
-        
+
         if self.rag_mode_enabled:
             # Start the preloading process in a background thread to avoid blocking
             Thread(target=self._preload_resources, daemon=True).start()
@@ -61,26 +60,31 @@ class RAGMixin:
         try:
             self.logger.info("Preloading resources for faster first search...")
             start_time = time.time()
-            
+
             # Preload embedding model
             _ = self.embedding
-            
+
             # Preload common resources needed for search
             _ = self.text_splitter
-            
+
             # Warm up keyword extraction with common search terms
             common_terms = [
-                "what is", "how to", "explain", "help me understand",
-                "can you tell me about", "i need information on", 
-                "where can i find", "search for"
+                "what is",
+                "how to",
+                "explain",
+                "help me understand",
+                "can you tell me about",
+                "i need information on",
+                "where can i find",
+                "search for",
             ]
             for term in common_terms:
                 _ = self._extract_keywords_from_text(term)
-            
+
             # Preload the index and retriever
             _ = self.index
             _ = self.retriever
-            
+
             elapsed = time.time() - start_time
             self.logger.info(f"Resources preloaded in {elapsed:.2f} seconds")
             self.__preloaded = True
@@ -131,16 +135,17 @@ class RAGMixin:
         prompt = prompt.replace("{{ username }}", self.username)
         prompt = prompt.replace("{{ botname }}", self.botname)
         return prompt
-    
+
     @property
     def rag_engine_tool(self) -> RAGEngineTool:
         if not self._rag_engine_tool:
             self.logger.info("Loading RAGEngineTool")
             if not self.rag_engine:
-                raise ValueError("Unable to load RAGEngineTool: RAG engine must be provided.")
+                raise ValueError(
+                    "Unable to load RAGEngineTool: RAG engine must be provided."
+                )
             self._rag_engine_tool = RAGEngineTool.from_defaults(
-                chat_engine=self.rag_engine,
-                agent=self
+                chat_engine=self.rag_engine, agent=self
             )
         return self._rag_engine_tool
 
@@ -164,7 +169,7 @@ class RAGMixin:
             except Exception as e:
                 self.logger.error(f"Error loading chat engine: {str(e)}")
         return self.__rag_engine
-    
+
     @rag_engine.setter
     def rag_engine(self, value: Optional[RefreshContextChatEngine]):
         self.__rag_engine = value
@@ -185,13 +190,13 @@ class RAGMixin:
                         ".htm": self.html_reader,
                         ".md": self.markdown_reader,
                     },
-                    exclude_hidden=False
+                    exclude_hidden=False,
                 )
                 self.logger.debug("Document reader loaded successfully.")
             except ValueError as e:
                 self.logger.error(f"Error loading document reader: {str(e)}")
         return self.__document_reader
-    
+
     @document_reader.setter
     def document_reader(self, value: SimpleDirectoryReader):
         self.__document_reader = value
@@ -206,7 +211,7 @@ class RAGMixin:
                 chunk_size_limit=None,
             )
         return self.__prompt_helper
-    
+
     @prompt_helper.setter
     def prompt_helper(self, value: PromptHelper):
         self.__prompt_helper = value
@@ -214,9 +219,7 @@ class RAGMixin:
     @property
     def news_articles(self) -> List[Article]:
         if self.__news_articles is None:
-            articles = Article.objects.filter(
-                Article.status == "scraped"
-            )[:50]
+            articles = Article.objects.filter(Article.status == "scraped")[:50]
             self.__news_articles = [
                 Document(
                     text=article.description,
@@ -224,11 +227,12 @@ class RAGMixin:
                         "id": article.id,
                         "title": article.title,
                         # "description": article.description,
-                    }
-                ) for article in articles[:50]
+                    },
+                )
+                for article in articles[:50]
             ]
         return self.__news_articles or []
-    
+
     @news_articles.setter
     def news_articles(self, value: List[Article]):
         self.__news_articles = value
@@ -237,11 +241,10 @@ class RAGMixin:
     def text_splitter(self) -> SentenceSplitter:
         if not self.__text_splitter:
             self.text_splitter = SentenceSplitter(
-                chunk_size=256,
-                chunk_overlap=20
+                chunk_size=256, chunk_overlap=20
             )
         return self.__text_splitter
-    
+
     @text_splitter.setter
     def text_splitter(self, value: SentenceSplitter):
         self.__text_splitter = value
@@ -254,7 +257,7 @@ class RAGMixin:
             current_time = time.time()
             loaded_from_documents = False
             do_save_to_disc = False
-            
+
             self.logger.debug("Loading index...")
             if self.storage_context:
                 self.logger.debug("Loading from disc...")
@@ -267,35 +270,45 @@ class RAGMixin:
                     self.logger.info("Index loaded successfully.")
                 except ValueError:
                     self.logger.error("Error loading index from disc.")
-            
+
             if not self.__index:
                 self._load_index_from_documents()
                 loaded_from_documents = True
                 do_save_to_disc = True
-            
+
             # Only refresh if it's been more than 5 minutes since last refresh
             # This prevents excessive refreshing during multiple searches
-            if not loaded_from_documents and (current_time - self.__last_index_refresh > 300):
+            if not loaded_from_documents and (
+                current_time - self.__last_index_refresh > 300
+            ):
                 self.logger.info("Refreshing index...")
                 try:
                     # Get existing document IDs
                     existing_doc_ids = set(self.__index.docstore.docs.keys())
-                    
+
                     # Get new documents that aren't in the index
                     new_nodes = []
                     for doc in self.documents:
                         doc_id = doc.doc_id
                         if doc_id not in existing_doc_ids:
-                            nodes = self.text_splitter.get_nodes_from_documents([doc])
+                            nodes = (
+                                self.text_splitter.get_nodes_from_documents(
+                                    [doc]
+                                )
+                            )
                             new_nodes.extend(nodes)
-                    
+
                     if new_nodes:
-                        self.logger.info(f"Adding {len(new_nodes)} new nodes to index...")
+                        self.logger.info(
+                            f"Adding {len(new_nodes)} new nodes to index..."
+                        )
                         start_time = time.time()
-                        
+
                         # Store nodes directly in docstore - batch for performance
-                        self.__index.docstore.add_documents(new_nodes, allow_update=True)
-                        
+                        self.__index.docstore.add_documents(
+                            new_nodes, allow_update=True
+                        )
+
                         # Build keyword table for new nodes
                         new_keywords = {}
                         for node in new_nodes:
@@ -304,43 +317,53 @@ class RAGMixin:
                             if node_text in self.__keyword_cache:
                                 extracted = self.__keyword_cache[node_text]
                             else:
-                                extracted = self._extract_keywords_from_text(node_text)
+                                extracted = self._extract_keywords_from_text(
+                                    node_text
+                                )
                                 self.__keyword_cache[node_text] = extracted
-                                
+
                             for keyword in extracted:
                                 if keyword in new_keywords:
                                     new_keywords[keyword].append(node.node_id)
                                 else:
                                     new_keywords[keyword] = [node.node_id]
-                        
+
                         # Merge keyword tables - optimize with bulk operations
                         self.logger.debug("Merging keyword tables...")
                         for keyword, node_ids in new_keywords.items():
                             if keyword in self.__index.index_struct.table:
                                 # Use set operations for efficiency
-                                existing_ids = set(self.__index.index_struct.table[keyword])
+                                existing_ids = set(
+                                    self.__index.index_struct.table[keyword]
+                                )
                                 new_ids = set(node_ids)
                                 # Merge and convert back to list
-                                self.__index.index_struct.table[keyword] = list(existing_ids | new_ids)
+                                self.__index.index_struct.table[keyword] = (
+                                    list(existing_ids | new_ids)
+                                )
                             else:
-                                self.__index.index_struct.table[keyword] = node_ids
-                                
+                                self.__index.index_struct.table[keyword] = (
+                                    node_ids
+                                )
+
                         elapsed = time.time() - start_time
-                        self.logger.info(f"Added {len(new_nodes)} nodes and updated keyword tables in {elapsed:.2f} seconds")
+                        self.logger.info(
+                            f"Added {len(new_nodes)} nodes and updated keyword tables in {elapsed:.2f} seconds"
+                        )
                         self._save_index_to_disc()
                         self.__last_index_refresh = current_time
                     else:
                         self.logger.info("No new nodes to add to index.")
                         self.__last_index_refresh = current_time
-                        
+
                 except Exception as e:
                     self.logger.error(f"Error refreshing index: {str(e)}")
                     self._load_index_from_documents()
-            
+
             if self.__index and do_save_to_disc:
                 self._save_index_to_disc()
                 self.__last_index_refresh = current_time
-                
+
         return self.__index
 
     @staticmethod
@@ -356,7 +379,7 @@ class RAGMixin:
         for conversation in conversations:
             conversation.status = status
             conversation.save()
-    
+
     @index.setter
     def index(self, value: Optional[RAKEKeywordTableIndex]):
         self.__index = value
@@ -377,21 +400,27 @@ class RAGMixin:
             self.__index = RAKEKeywordTableIndex.from_documents(
                 self.documents,
                 llm=self.llm,
-                show_progress=True  # Show progress for better visibility during lengthy operations
+                show_progress=True,  # Show progress for better visibility during lengthy operations
             )
             elapsed = time.time() - start_time
-            self.logger.debug(f"Index loaded successfully in {elapsed:.2f} seconds.")
+            self.logger.debug(
+                f"Index loaded successfully in {elapsed:.2f} seconds."
+            )
         except TypeError as e:
             self.logger.error(f"Error loading index: {str(e)}")
-    
+
     def _save_index_to_disc(self):
         """Save index to disc with performance logging."""
         self.logger.info("Saving index to disc...")
         start_time = time.time()
         try:
-            self.__index.storage_context.persist(persist_dir=self.storage_persist_dir)
+            self.__index.storage_context.persist(
+                persist_dir=self.storage_persist_dir
+            )
             elapsed = time.time() - start_time
-            self.logger.info(f"Index saved successfully in {elapsed:.2f} seconds.")
+            self.logger.info(
+                f"Index saved successfully in {elapsed:.2f} seconds."
+            )
             if self.llm_settings.perform_conversation_rag:
                 self.logger.info("Setting conversations status to indexed...")
                 self._update_conversations_status("indexed")
@@ -408,17 +437,20 @@ class RAGMixin:
                 index = self.index
                 if not index:
                     raise ValueError("No index found.")
-                
+
                 # Create a more performant retriever
                 # Directly assign to the private member to ensure consistent behavior
                 self.__retriever = KeywordTableSimpleRetriever(
                     index=index,
                     # Use a similarity top-k of 2 to balance between speed and quality
-                    similarity_top_k=2
+                    similarity_top_k=2,
                 )
-                
+
                 # Pre-warm the retriever with common search patterns
-                if not hasattr(self, "_retriever_warmed_up") or not self._retriever_warmed_up:
+                if (
+                    not hasattr(self, "_retriever_warmed_up")
+                    or not self._retriever_warmed_up
+                ):
                     warm_up_queries = ["help", "information", "search", "find"]
                     for query in warm_up_queries:
                         try:
@@ -428,13 +460,17 @@ class RAGMixin:
                             # Ignore errors during warm-up
                             pass
                     self._retriever_warmed_up = True
-                
+
                 elapsed = time.time() - start_time
-                self.logger.debug(f"Retriever loaded successfully with index in {elapsed:.2f} seconds.")
+                self.logger.debug(
+                    f"Retriever loaded successfully with index in {elapsed:.2f} seconds."
+                )
             except Exception as e:
-                self.logger.error(f"Error setting up the RAG retriever: {str(e)}")
+                self.logger.error(
+                    f"Error setting up the RAG retriever: {str(e)}"
+                )
         return self.__retriever
-    
+
     @retriever.setter
     def retriever(self, value: Optional[KeywordTableSimpleRetriever]):
         self.__retriever = value
@@ -443,21 +479,23 @@ class RAGMixin:
     def embedding(self) -> HuggingFaceEmbedding:
         if not self.__embedding:
             self.logger.debug("Loading embeddings...")
-            path = os.path.expanduser(os.path.join(
-                self.path_settings.base_path,
-                "text",
-                "models",
-                "llm",
-                "embedding",
-                "intfloat/e5-large"
-            ))
+            path = os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text",
+                    "models",
+                    "llm",
+                    "embedding",
+                    "intfloat/e5-large",
+                )
+            )
 
             try:
-                self.__embedding = HuggingFaceEmbedding(path)
+                self.__embedding = HuggingFaceEmbedding(model_name=path)
             except NotImplementedError as e:
                 self.logger.error("Error loading embeddings " + str(e))
         return self.__embedding
-    
+
     @embedding.setter
     def embedding(self, value: HuggingFaceEmbedding):
         self.__embedding = value
@@ -467,7 +505,7 @@ class RAGMixin:
         if not self.__pdf_reader:
             self.pdf_reader = PDFReader()
         return self.__pdf_reader
-    
+
     @pdf_reader.setter
     def pdf_reader(self, value: Optional[PDFReader]):
         self.__pdf_reader = value
@@ -477,17 +515,17 @@ class RAGMixin:
         if not self.__epub_reader:
             self.epub_reader = EpubReader()
         return self.__epub_reader
-    
+
     @epub_reader.setter
     def epub_reader(self, value: Optional[EpubReader]):
         self.__epub_reader = value
-    
+
     @property
     def html_reader(self) -> HtmlFileReader:
         if not self.__html_reader:
             self.html_reader = HtmlFileReader()
         return self.__html_reader
-    
+
     @html_reader.setter
     def html_reader(self, value: HtmlFileReader):
         self.__html_reader = value
@@ -497,7 +535,7 @@ class RAGMixin:
         if not self.__markdown_reader:
             self.markdown_reader = MarkdownReader()
         return self.__markdown_reader
-    
+
     @markdown_reader.setter
     def markdown_reader(self, value: MarkdownReader):
         self.__markdown_reader = value
@@ -505,7 +543,7 @@ class RAGMixin:
     @property
     def file_extractor(self) -> Dict[str, object]:
         return self.__file_extractor
-    
+
     @file_extractor.setter
     def file_extractor(self, value: Dict[str, object]):
         self.__file_extractor = value
@@ -549,19 +587,21 @@ class RAGMixin:
                 )
                 conversation_documents.append(
                     Document(
-                        text=f'{message["role"]}: \"{message["blocks"][0]["text"]}\"',
+                        text=f'{message["role"]}: "{message["blocks"][0]["text"]}"',
                         metadata={
                             "id": str(conversation.id) + "_" + str(message_id),
                             "speaker": username,
                             "role": message["role"],
-                        }
+                        },
                     )
                 )
         return conversation_documents
 
     @property
     def documents(self) -> List[Document]:
-        documents = self.document_reader.load_data() if self.document_reader else []
+        documents = (
+            self.document_reader.load_data() if self.document_reader else []
+        )
         if self.llm_settings.perform_conversation_rag:
             documents += self.conversation_documents
         documents += self.news_articles
@@ -569,12 +609,11 @@ class RAGMixin:
 
     @property
     def storage_persist_dir(self) -> str:
-        return os.path.expanduser(os.path.join(
-            self.path_settings.base_path,
-            "text",
-            "other",
-            "cache"
-        ))
+        return os.path.expanduser(
+            os.path.join(
+                self.path_settings.base_path, "text", "other", "cache"
+            )
+        )
 
     @property
     def storage_context(self) -> StorageContext:
@@ -585,10 +624,7 @@ class RAGMixin:
                 "docstore.json",
                 "index_store.json",
             ]:
-                file_path = os.path.join(
-                    self.storage_persist_dir,
-                    file
-                )
+                file_path = os.path.join(self.storage_persist_dir, file)
                 if not os.path.exists(file_path):
                     with open(file_path, "w") as f:
                         f.write("{}")
@@ -599,20 +635,19 @@ class RAGMixin:
             except FileNotFoundError as e:
                 self.logger.error(f"Error loading storage context: {str(e)}")
         return self.__storage_context
-    
+
     @storage_context.setter
     def storage_context(self, value: StorageContext):
         self.__storage_context = value
-    
+
     def update_rag_system_prompt(
-        self, 
-        rag_system_prompt: Optional[str] = None
+        self, rag_system_prompt: Optional[str] = None
     ):
         rag_system_prompt = rag_system_prompt or self.rag_system_prompt
         self.rag_engine_tool.update_system_prompt(
             rag_system_prompt or self.rag_system_prompt
         )
-    
+
     def unload_rag(self):
         del self._rag_engine_tool
         self._rag_engine_tool = None
@@ -629,7 +664,7 @@ class RAGMixin:
         self.epub_reader = None
         self.html_reader = None
         self.markdown_reader = None
-    
+
     def reload_rag(self):
         self.logger.debug("Reloading RAG...")
         self.retriever = None
@@ -637,11 +672,11 @@ class RAGMixin:
         self.rag_engine = None
         self.document_reader = None
         self._conversations = None
-    
+
     def reload_rag_engine(self):
         self.reload_rag()
         self._rag_engine_tool = None
-    
+
     def _handle_rag_engine_tool_response(self, response: ToolOutput, **kwargs):
         if response.content == "Empty Response":
             self.logger.info("RAG Engine returned empty response")
@@ -653,23 +688,23 @@ class RAGMixin:
         """Load settings with optimized defaults for performance."""
         # Warm up models and configure for better first-search performance
         Settings.llm = self.llm
-        Settings._embed_model = self.embedding  
+        Settings._embed_model = self.embedding
         Settings.node_parser = self.text_splitter
         Settings.num_output = 512
         Settings.context_window = 3072
-        
+
         # Use smaller chunk size for better initial response times
         if not self.__text_splitter:
             self.text_splitter = SentenceSplitter(
                 chunk_size=192,  # Smaller chunks for faster processing
-                chunk_overlap=15  # Less overlap to reduce processing
+                chunk_overlap=15,  # Less overlap to reduce processing
             )
-            
+
     @staticmethod
     def _unload_settings():
         Settings.llm = None
         Settings._embed_model = None
         Settings.node_parser = None
-    
+
     def _save_index(self):
         pass
