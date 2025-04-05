@@ -65,6 +65,8 @@ RUN apt-get update && apt-get install -y \
  dbus-x11 \
  x11-xserver-utils \
  portaudio19-dev \
+ alsa-utils \
+ libasound2-plugins \
  espeak \
  && rm -rf /var/lib/apt/lists/*
 
@@ -139,13 +141,19 @@ FROM dev_image AS final_image
 USER root
 
 COPY --chown=appuser:appuser . /app/
+
+COPY ./package/asound.conf /etc/asound.conf
+
 RUN ls -la /app
 USER appuser
 
 RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && \
+    pip install -U langchain-community && \
+    pip install -U mediapipe && \
     pip install --no-cache-dir -U timm && \
     python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 
 USER appuser
+
 
 CMD ["/bin/bash"]
