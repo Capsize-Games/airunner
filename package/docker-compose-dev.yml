@@ -33,7 +33,10 @@ services:
       - QT_DEBUG_PLUGINS=0
       - AIRUNNER_LOG_LEVEL="WARNING"
       - PYTHONLOGLEVEL=WARNING
-    command: ["bash", "/app/package/entrypoint-dev.sh", "airunner"]
+    stdin_open: true
+    tty: true
+    entrypoint: ["./package/entrypoint-dev.sh"]
+    command: []
     volumes:
       - ../:/app:rw
       - /home/joe/Documents/airunner:/home/appuser/.airunner:rw
