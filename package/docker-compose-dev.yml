@@ -30,14 +30,18 @@ services:
       - QT_DEBUG_PLUGINS=0
       - AIRUNNER_LOG_LEVEL="WARNING"
       - PYTHONLOGLEVEL=WARNING
+    env_file:
+      - ../.env
     stdin_open: true
     tty: true
     entrypoint: ["./package/entrypoint-dev.sh"]
     command: []
     volumes:
       - ../:/app:rw
-      - "${HOST_HOME}/Documents/airunner:/home/appuser/.airunner:rw"
+      - "${AIRUNNER_HOME_DIR}:${AIRUNNER_HOME_DIR}:rw"
+      - "${HOST_HOME}/Documents/airunner:${HOST_HOME}/Documents/airunner:rw"
       - "${HOST_HOME}/.local/share/airunner:/home/appuser/.local/share/airunner:rw"
+      - "${HOST_HOME}/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw"
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /run/user/1000/pulse:/run/user/1000/pulse:ro
       - ${XAUTHORITY:-${HOST_HOME}/.Xauthority}:/home/appuser/.Xauthority:rw
