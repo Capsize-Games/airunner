@@ -70,7 +70,9 @@ class BaseManager:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).filter_by(**kwargs).all()
-                self.logger.debug(f"Query result for filter_by({kwargs}): {result}")
+                self.logger.debug(
+                    f"Query result for filter_by({kwargs}): {result}"
+                )
                 session.expunge_all()
                 return result
             except Exception as e:
@@ -103,7 +105,9 @@ class BaseManager:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).filter_by(**kwargs).first()
-                self.logger.debug(f"Query result for filter_by({kwargs}): {result}")
+                self.logger.debug(
+                    f"Query result for filter_by({kwargs}): {result}"
+                )
                 session.expunge_all()
                 return result
             except Exception as e:
@@ -114,7 +118,9 @@ class BaseManager:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).order_by(*args)
-                self.logger.debug(f"Query result for order_by({args}): {result}")
+                self.logger.debug(
+                    f"Query result for order_by({args}): {result}"
+                )
                 session.expunge_all()
                 return result
             except Exception as e:
@@ -125,7 +131,9 @@ class BaseManager:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).options(*args)
-                self.logger.debug(f"Query result for options({args}): {result}")
+                self.logger.debug(
+                    f"Query result for options({args}): {result}"
+                )
                 session.expunge_all()
                 return result
             except Exception as e:
@@ -137,7 +145,9 @@ class BaseManager:
             try:
                 result = session.query(self.cls).delete()
                 session.commit()
-                self.logger.debug(f"Deleted {result} {self.cls.__name__} objects")
+                self.logger.debug(
+                    f"Deleted {result} {self.cls.__name__} objects"
+                )
                 return result
             except Exception as e:
                 self.logger.error(f"Error in delete(): {e}")
@@ -148,7 +158,9 @@ class BaseManager:
             try:
                 result = session.query(self.cls).filter_by(**kwargs).delete()
                 session.commit()
-                self.logger.debug(f"Deleted {result} {self.cls.__name__} objects")
+                self.logger.debug(
+                    f"Deleted {result} {self.cls.__name__} objects"
+                )
                 return result
             except Exception as e:
                 self.logger.error(f"Error in delete_by({kwargs}): {e}")
@@ -199,10 +211,14 @@ class BaseManager:
                     for key, value in kwargs.items():
                         setattr(obj, key, value)
                     session.commit()
-                    self.logger.debug(f"Updated {self.cls.__name__} with id {pk}")
+                    self.logger.debug(
+                        f"Updated {self.cls.__name__} with id {pk}"
+                    )
                     return True
                 else:
-                    self.logger.debug(f"No {self.cls.__name__} found with id {pk}")
+                    self.logger.debug(
+                        f"No {self.cls.__name__} found with id {pk}"
+                    )
                     return False
             except Exception as e:
                 self.logger.error(f"Error in update({pk}, {kwargs}): {e}")
@@ -223,7 +239,9 @@ class BaseManager:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).distinct(*args)
-                self.logger.debug(f"Query result for distinct({args}): {result}")
+                self.logger.debug(
+                    f"Query result for distinct({args}): {result}"
+                )
                 session.expunge_all()
                 return result
             except Exception as e:
