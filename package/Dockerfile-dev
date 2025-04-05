@@ -65,6 +65,7 @@ RUN apt-get update && apt-get install -y \
  dbus-x11 \
  x11-xserver-utils \
  portaudio19-dev \
+ espeak \
  && rm -rf /var/lib/apt/lists/*
 
 # Add NVIDIA Container Toolkit setup for GPU access
@@ -73,7 +74,7 @@ RUN apt-get update && apt-get install -y software-properties-common && \
     apt-get update && apt-get install -y libstdc++6 && \
     rm -rf /var/lib/apt/lists/*
 
-# Install CUDA Toolkit 12.2 (safe with your driver 535.230)
+# Install CUDA Toolkit 12.2
 RUN apt-get update && apt-get install -y wget gnupg && \
     wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin && \
     mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600 && \

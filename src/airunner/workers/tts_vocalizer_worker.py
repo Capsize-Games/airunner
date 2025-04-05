@@ -56,18 +56,24 @@ class TTSVocalizerWorker(Worker):
                 self.start_stream(pitch)
 
     def start_stream(self, pitch: Optional[int] = None):
-        if sd.query_devices(kind="output"):
-            if pitch is None and self.speech_t5_settings is not None:
-                pitch = self.speech_t5_settings.pitch
-            else:
-                pitch = 100.0
-            # set samplerate between 14000 and 24000
-            # pitch == 0 -> samplerate == 14000
-            # pitch == 50 -> samplerate == 19000
-            # pitch == 100 -> samplerate == 24000
-            samplerate = 14000 + int(10000.0 * (pitch / 100.0))
-            self.stream = sd.OutputStream(samplerate=samplerate, channels=1)
-            self.stream.start()
+        try:
+            if sd.query_devices(kind="output"):
+                if pitch is None and self.speech_t5_settings is not None:
+                    pitch = self.speech_t5_settings.pitch
+                else:
+                    pitch = 100.0
+                # set samplerate between 14000 and 24000
+                # pitch == 0 -> samplerate == 14000
+                # pitch == 50 -> samplerate == 19000
+                # pitch == 100 -> samplerate == 24000
+                samplerate = 14000 + int(10000.0 * (pitch / 100.0))
+                self.stream = sd.OutputStream(
+                    samplerate=samplerate, channels=1
+                )
+                self.stream.start()
+        except sd.PortAudioError as e:
+            self.logger.error(f"Failed to start audio stream: {e}")
+            self.stream = None
 
     def on_tts_generator_worker_add_to_stream_signal(self, response: dict):
         if self.accept_message:

@@ -49,9 +49,12 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /run/user/1000/pulse:/run/user/1000/pulse:ro
       - "${XAUTHORITY:-${HOST_HOME}/.Xauthority}:/home/appuser/.Xauthority:rw"
+      - "/dev/snd:/dev/snd:rw"
     working_dir: /app
     runtime: nvidia
     ports:
       - "8000:8000"
     ipc: host
     network_mode: "host"
+    devices:
+      - "/dev/snd:/dev/snd"
