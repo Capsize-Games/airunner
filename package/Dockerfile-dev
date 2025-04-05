@@ -82,6 +82,7 @@ RUN apt-get update && apt-get install -y wget gnupg && \
     rm -f cuda-keyring_1.1-1_all.deb && \
     apt-get update && \
     apt-get install -y cuda-toolkit-12-6 && \
+    apt-get install -y nvidia-driver-525-server nvidia-cuda-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Install cuDNN backend packages
