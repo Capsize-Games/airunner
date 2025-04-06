@@ -24,7 +24,7 @@ else
   echo ".env file not found. Skipping replacement."
 fi
 
-DOCKER_COMPOSE="docker compose --env-file .env -f ./package/docker-compose-dev.yml"
+DOCKER_COMPOSE="docker compose --env-file .env -f ./package/docker-compose.yml"
 DOCKER_EXEC="docker exec -it airunner_dev"
 
 if [ "$1" == "down" ]; then
