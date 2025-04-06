@@ -51,6 +51,7 @@ services:
       - /run/user/1000/pulse:/run/user/1000/pulse:ro
       - "${XAUTHORITY:-${HOST_HOME}/.Xauthority}:/home/appuser/.Xauthority:rw"
       - "/dev/snd:/dev/snd:rw"
+      - ${HOST_HOME}/.cache/huggingface:/home/appuser/.cache/huggingface:rw
     working_dir: /app
     runtime: nvidia
     ports:

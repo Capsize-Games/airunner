@@ -68,6 +68,8 @@ RUN apt-get update && apt-get install -y \
  alsa-utils \
  libasound2-plugins \
  espeak \
+ vim \
+ tmux \
  && rm -rf /var/lib/apt/lists/*
 
 # Add NVIDIA Container Toolkit setup for GPU access
