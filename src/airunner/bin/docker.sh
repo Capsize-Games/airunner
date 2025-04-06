@@ -1,30 +1,46 @@
 #!/bin/bash
 
+# Dynamically generate asound.conf with all available devices
+cat <<EOL > package/asound.conf
+pcm.!default {
+    type plug
+    slave.pcm "dmix:1,0"
+    slave.channels 2
+}
+
+ctl.!default {
+    type hw
+    card 1
+}
+
+# Add all available recording devices dynamically
+$(arecord -l | awk '/card/ {print "pcm.card" NR " {\n    type plug\n    slave.pcm \"hw:" $2 "\"\n}"}')
+
+# Add all available playback devices dynamically
+$(aplay -l | awk '/card/ {print "pcm.playback_card" NR " {\n    type plug\n    slave.pcm \"hw:" $2 "\"\n}"}')
+EOL
+
 # Check if .env file exists
 if [ ! -f .env ]; then
   echo "Creating .env file and setting HOST_HOME..."
   echo HOST_HOME=$HOME > .env
   echo AIRUNNER_HOME_DIR=$HOME/.local/share/airunner >> .env
 else
-  echo ".env file exists. Checking for HOST_HOME..."
   if ! grep -q "^HOST_HOME=" .env; then
     echo "HOST_HOME not set. Adding HOST_HOME to .env..."
     echo HOST_HOME=$HOME >> .env
     echo AIRUNNER_HOME_DIR=$HOME/.local/share/airunner >> .env
-  else
-    echo "HOST_HOME is already set in .env."
   fi
 fi
 
 # Replace any $HOST_HOME variables in .env with the actual value
 if [ -f .env ]; then
-  echo "Replacing \$HOST_HOME in .env with actual value..."
   sed -i "s|\$HOST_HOME|$HOME|g" .env
 else
   echo ".env file not found. Skipping replacement."
 fi
 
-DOCKER_COMPOSE="docker compose --env-file .env -f ./package/docker-compose-dev.yml"
+DOCKER_COMPOSE="docker compose --env-file .env -f ./package/docker-compose.yml"
 DOCKER_EXEC="docker exec -it airunner_dev"
 
 if [ "$1" == "down" ]; then

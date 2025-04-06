@@ -1,159 +1,162 @@
 FROM ubuntu:22.04 AS base_image
-USER root
-ENV TZ=America/Denver
-ENV HOME=/app
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
-    && apt-get update \
-    && apt-get upgrade -y \
-    && apt install software-properties-common -y \
-    && add-apt-repository ppa:ubuntu-toolchain-r/test \
-    && apt-get update \
-    && apt install libtinfo6 -y \
-    && apt-get install -y git \
-    && apt-get install -y wget \
-    && apt-get install -y software-properties-common \
-    && apt-get install -y gcc-9 \
-    && apt-get install -y g++-9 \
-    && apt-get install -y bash \
-    && apt-get install -y build-essential \
-    && apt-get install -y libssl-dev \
-    && apt-get install -y libffi-dev \
-    && apt-get install -y libgl1-mesa-dev \
-    && apt-get install -y fonts-noto-color-emoji \
-    && apt-get install -y libportaudio2 \
-    && apt-get install -y libxcb-cursor0 \
-    && apt-get install -y espeak \
-    && apt-get install -y xclip \
-    && apt-get install -y libjpeg-dev \
-    && apt-get install -y zlib1g-dev \
-    && apt-get install -y libpng-dev \
-    && apt-get install -y patchelf \
-    && apt-get install -y ccache \
-    && apt-get install -y libxcb-xinerama0 \
-    && apt-get install -y gstreamer1.0-gl \
-    && apt-get install -y cmake \
-    && apt-get install -y ninja-build \
-    && apt-get install -y python3 \
-    && apt-get install -y python3-pip \
-    && apt-get install -y python3.10 \
-    && apt-get install -y python3.10-distutils \
-    && apt-get install -y python3.10-tk \
-    && apt-get install -y upx \
-    && apt-get install -y libgl1-mesa-glx \
-    && apt-get install -y libglib2.0-0 \
-    && apt-get install -y libsm6 \
-    && apt-get install -y libxext6 \
-    && apt-get install -y libxrender-dev \
-    && ln -s /usr/share/tcltk/tcl8.6 /usr/share/tcltk/tcl8 \
-    && rm -rf /var/lib/apt/lists/ \
-    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9 \
-    && rm -rf /var/lib/apt/lists/*
-
-FROM base_image AS download_qt
-USER root
-ENV TZ=America/Denver
-ENV HOME=/app
-RUN wget https://download.qt.io/archive/qt/6.7/6.7.0/single/qt-everywhere-src-6.7.0.tar.xz
-
-FROM download_qt AS build_qt
-USER root
-ENV TZ=America/Denver
-ENV HOME=/app
-RUN tar -xf qt-everywhere-src-6.7.0.tar.xz \
-    && cd qt-everywhere-src-6.7.0 \
-    && cmake -G Ninja -B build -DCMAKE_INSTALL_PREFIX=/usr/local/qt6 \
-    && cmake --build build --parallel
-
-FROM build_qt AS install_qt
-USER root
-ENV TZ=America/Denver
-ENV HOME=/app
-RUN cd qt-everywhere-src-6.7.0/build \
-    && if [ -f cmake_install.cmake ]; then cmake --install .; else echo "cmake_install.cmake not found"; exit 1; fi \
-    && cd ../.. \
-    && rm -rf qt-everywhere-src-6.7.0 qt-everywhere-src-6.7.0.tar.xz
-
-FROM install_qt AS create_user
 ENV DEBIAN_FRONTEND=noninteractive
-RUN useradd -ms /bin/bash appuser \
-    && chown -R appuser:appuser /app \
-    && apt-get update \
-    && apt-get install -y libxkbcommon-x11-0 \
-    && apt-get install -y nvidia-cudnn \
-    && rm -rf /var/lib/apt/lists/*
+ENV DEBCONF_NOWARNINGS="yes"
+WORKDIR /app
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+ python3.10 \
+ python3.10-venv \
+ python3-pip \
+ python3.10-distutils \
+ build-essential \
+ git \
+ wget \
+ libffi-dev \
+ libssl-dev \
+ libgl1-mesa-dev \
+ libjpeg-dev \
+ zlib1g-dev \
+ libpng-dev \
+ cmake \
+ ninja-build \
+ xclip \
+ xserver-xorg \
+ xvfb \
+ # Qt6 dependencies for XCB
+ libxcb-cursor0 \
+ libxcb-xinput0 \
+ libxcb-xfixes0 \
+ libxcomposite1 \
+ libxcb-icccm4 \
+ libxcb-image0 \
+ libxcb-keysyms1 \
+ libxcb-randr0 \
+ libxcb-render-util0 \
+ libxcb-xinerama0 \
+ libxcb-xkb1 \
+ libxcb-glx0 \
+ libxcb-shape0 \
+ libxcb-shm0 \
+ libxcb-sync1 \
+ libxcb-dri2-0 \
+ libxcb-dri3-0 \
+ libxcb-present0 \
+ libxkbcommon-x11-0 \
+ libx11-xcb1 \
+ libxcb1 \
+ gstreamer1.0-gl \
+ x11-utils \
+ patchelf \
+ mesa-utils \
+ xauth \
+ # Fontconfig and fonts
+ fontconfig \
+ fonts-liberation \
+ mesa-utils \
+ libglvnd0 \
+ libgl1 \
+ libglx0 \
+ libegl1 \
+ libxext6 \
+ libx11-6 \
+ x11-apps \
+ # Add these new X11-related packages
+ dbus-x11 \
+ x11-xserver-utils \
+ portaudio19-dev \
+ alsa-utils \
+ libasound2-plugins \
+ espeak \
+ vim \
+ tmux \
+ && rm -rf /var/lib/apt/lists/*
+
+# Add NVIDIA Container Toolkit setup for GPU access
+RUN apt-get update && apt-get install -y software-properties-common && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test && \
+    apt-get update && apt-get install -y libstdc++6 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install CUDA Toolkit 12.2
+RUN apt-get update && apt-get install -y wget gnupg && \
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin && \
+    mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600 && \
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
+    dpkg -i cuda-keyring_1.1-1_all.deb && \
+    rm -f cuda-keyring_1.1-1_all.deb && \
+    apt-get update && \
+    apt-get install -y cuda-toolkit-12-2 nvidia-cuda-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# Install cuDNN backend packages
+RUN apt-get update && apt-get install -y wget && \
+    wget https://developer.download.nvidia.com/compute/cudnn/9.8.0/local_installers/cudnn-local-repo-ubuntu2204-9.8.0_1.0-1_amd64.deb && \
+    dpkg -i cudnn-local-repo-ubuntu2204-9.8.0_1.0-1_amd64.deb && \
+    cp /var/cudnn-local-*/cudnn-*-keyring.gpg /usr/share/keyrings/ && \
+    apt-get update && apt-get install -y cudnn9-cuda-12 libcudnn9-cuda-12 && \
+    rm -rf /var/lib/apt/lists/* cudnn-local-repo-ubuntu2204-9.8.0_1.0-1_amd64.deb
+
+# Add CUDA binaries to PATH
+ENV PATH=/usr/local/cuda/bin:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+
+# Set environment variables for CUDA and cuDNN
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=$CUDA_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/lib/python3.10/site-packages/PySide6/Qt/lib:/usr/lib/x86_64-linux-gnu:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
+
+# Set up NVIDIA runtime
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+ARG INSTALL_XCB_CURSOR=0
+RUN if [ "$INSTALL_XCB_CURSOR" = "1" ]; then \
+      apt-get update && apt-get install -y libxcb-cursor0; \
+    fi
+
+RUN useradd -ms /bin/bash -u 1000 appuser
+RUN mkdir -p /home/appuser/.local && chown -R appuser:appuser /home/appuser
+RUN chown -R appuser:appuser /app
+
+# Install xhost
+RUN apt-get update && apt-get install -y x11-xserver-utils
+
+# Create X11 directory with correct permissions
+RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
+
+# Fix for Ubuntu 24.04 host X11 issues
+RUN echo "#!/bin/bash\nxhost +local:docker || true\nexec \"\$@\"" > /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh
+
+FROM base_image AS dev_image
 USER appuser
 WORKDIR /app
-ENV HOME=/app
-ENV PATH="/home/appuser/.local/bin:${PATH}"
-ENV PYTHONUSERBASE=/home/appuser/.local
 
-ENV PATH="/usr/local/qt6/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/usr/local/qt6/lib:${LD_LIBRARY_PATH}"
+# Install Python dependencies and PyTorch with CUDA support
+RUN pip install --no-cache-dir pip setuptools wheel --upgrade && \
+    pip install nvidia-pyindex && \
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-FROM create_user AS install_requirements
+FROM dev_image AS final_image
+USER root
+
+COPY --chown=appuser:appuser . /app/
+
+COPY ./package/asound.conf /etc/asound.conf
+
+RUN ls -la /app
 USER appuser
-WORKDIR /app
-ENV HOME=/app
-ENV PATH="/home/appuser/.local/bin:${PATH}"
-ENV PYTHONUSERBASE=/home/appuser/.local
-RUN pip install nvidia-pyindex
-WORKDIR /app
-RUN pip install --upgrade pip
-RUN pip install --upgrade setuptools
-RUN pip install --upgrade wheel
-RUN pip install requests accelerate cmake
-RUN pip uninstall torch torchvision -y
-RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --upgrade
 
-FROM install_requirements AS install_apps
-USER appuser
-WORKDIR /app
-ENV HOME=/app
-ENV PATH="/home/appuser/.local/bin:${PATH}"
-ENV PYTHONUSERBASE=/home/appuser/.local
-RUN python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
+RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && \
+    pip install -U langchain-community && \
+    pip install -U mediapipe && \
+    pip install --no-cache-dir -U timm && \
+    python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')" && \
+    python3 -c "import nltk; nltk.download('punkt')"
 
-FROM install_apps AS more_env
 USER appuser
-WORKDIR /app
-ENV HOME=/app
-ENV PATH="/home/appuser/.local/bin:${PATH}"
-ENV PYTHONUSERBASE=/home/appuser/.local
-RUN pip install pyinstaller
 
-FROM more_env AS build_files
-USER appuser
-WORKDIR /app
-ENV HOME=/app
-ENV PATH="/home/appuser/.local/bin:${PATH}"
-ENV PYTHONUSERBASE=/home/appuser/.local
-COPY dobuild.py dobuild.py
-COPY build.sh build.sh
-COPY setup.py setup.py
 
-FROM build_files AS build_airunner
-USER appuser
-WORKDIR /app
-ENV HOME=/app
-ENV PATH="/home/appuser/.local/bin:${PATH}"
-ENV PYTHONUSERBASE=/home/appuser/.local
-RUN git clone https://github.com/Capsize-Games/airunner.git /app/airunner \
-    && cd /app/airunner \
-    && git checkout master \
-    && git pull \
-    && python3 -m pip install build \
-    && python3 -m build \
-    && cd /app/airunner/dist \
-    && WHL_FILE=$(ls airunner-*.whl) \
-    && python3 -m pip install build $WHL_FILE
-
-FROM build_airunner AS build_airunner_executable
-USER appuser
-WORKDIR /app
-ENV HOME=/app
-ENV PATH="/home/appuser/.local/bin:${PATH}"
-ENV PYTHONUSERBASE=/home/appuser/.local
-ENV DOCKER_ENV=true
-COPY airunner.spec airunner.spec
-COPY ./lib/tokenizers/punkt /app/lib/tokenizers/punkt
+CMD ["/bin/bash"]

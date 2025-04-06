@@ -11,7 +11,7 @@ __pycache__
 *.pyc
 
 # Ignore other unnecessary files
-!package/entrypoint-dev.sh
+!package/entrypoint.sh
 processed
 *.log
 *.tmp

@@ -38,3 +38,4 @@ processed
 airunner.wiki
 .coverage
 coverage_report.txt
+package/asound.conf
