@@ -1,5 +1,25 @@
 #!/bin/bash
 
+# Dynamically generate asound.conf with all available devices
+cat <<EOL > package/asound.conf
+pcm.!default {
+    type plug
+    slave.pcm "dmix:1,0"
+    slave.channels 2
+}
+
+ctl.!default {
+    type hw
+    card 1
+}
+
+# Add all available recording devices dynamically
+$(arecord -l | awk '/card/ {print "pcm.card" NR " {\n    type plug\n    slave.pcm \"hw:" $2 "\"\n}"}')
+
+# Add all available playback devices dynamically
+$(aplay -l | awk '/card/ {print "pcm.playback_card" NR " {\n    type plug\n    slave.pcm \"hw:" $2 "\"\n}"}')
+EOL
+
 # Check if .env file exists
 if [ ! -f .env ]; then
   echo "Creating .env file and setting HOST_HOME..."

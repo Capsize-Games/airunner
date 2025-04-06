@@ -1,5 +1,7 @@
 import os
 import threading
+import sounddevice as sd
+import librosa
 
 import numpy as np
 import torch
@@ -35,6 +37,7 @@ class WhisperModelManager(BaseModelManager):
         self._processor = None
         self._feature_extractor = None
         self._sampling_rate = 16000
+        self.audio_stream = None
 
     @property
     def dtype(self):
@@ -62,6 +65,9 @@ class WhisperModelManager(BaseModelManager):
         return os.path.abspath(file_path)
 
     def process_audio(self, audio_data):
+        """
+        Process incoming audio data.
+        """
         with self._lock:
             item = audio_data["item"]
 
@@ -208,25 +214,23 @@ class WhisperModelManager(BaseModelManager):
         """
         Run the model on the given inputs.
         :param inputs: str - The transcription of the audio data.
-        :param role: LLMChatRole - The role of the speaker.
         :return:
         """
-        # Extract the tensor from the BatchFeature object
         self.logger.debug("Running model")
         try:
-            input_tensor = inputs.input_values
-        except AttributeError:
             input_tensor = inputs.input_features
+        except AttributeError:
+            self.logger.error("Input features not found in inputs")
+            return ""
 
         if torch.isnan(input_tensor).any():
             raise NaNException
 
-        input_features = inputs.input_features
-        if torch.isnan(input_features).any():
-            raise NaNException
+        # Ensure input tensor is in the correct dtype
+        input_tensor = input_tensor.to(self.dtype).to(self.device)
 
         data = dict(
-            input_features=input_features,
+            input_features=input_tensor,
             is_multilingual=self.whisper_settings.is_multilingual,
             temperature=self.whisper_settings.temperature,
             compression_ratio_threshold=self.whisper_settings.compression_ratio_threshold,
@@ -236,37 +240,15 @@ class WhisperModelManager(BaseModelManager):
         )
 
         if self.whisper_settings.is_multilingual:
-            data["language"] = self.whisper_settings.language
             data["task"] = self.whisper_settings.task
 
         try:
-            generated_ids = self._model.generate(
-                **data
-                # generation_config=None,
-                # logits_processor=None,
-                # stopping_criteria=None,
-                # prefix_allowed_tokens_fn=None,
-                # synced_gpus=True,
-                # return_timestamps=None,
-                # task="transcribe",
-                # language="en",
-                # prompt_ids=None,
-                # prompt_condition_type=None,
-                # condition_on_prev_tokens=None,
-                # num_segment_frames=None,
-                # attention_mask=None,
-                # return_token_timestamps=None,
-                # return_segments=False,
-                # return_dict_in_generate=None,
-            )
+            generated_ids = self._model.generate(**data)
         except RuntimeError as e:
-            generated_ids = None
             self.logger.error(f"Error in model generation: {e}")
-
-        if generated_ids is None:
             return ""
 
-        if torch.isnan(generated_ids).any():
+        if generated_ids is None or torch.isnan(generated_ids).any():
             raise NaNException
 
         transcription = self.process_transcription(generated_ids)
