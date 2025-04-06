@@ -26,4 +26,4 @@ def dev_image():
     """
     Main function to build the docker image.
     """
-    _build_docker_image("./package/docker-compose-dev.yml")
+    _build_docker_image("./package/docker-compose.yml")
