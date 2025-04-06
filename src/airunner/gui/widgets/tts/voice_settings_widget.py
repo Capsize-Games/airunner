@@ -142,7 +142,6 @@ class VoiceSettingsWidget(QWidget):
         VoiceSettings.objects.update(voice.id, name=name)
 
     def update_voice_model(self, voice, model_type, layout):
-        print(voice.model_type, model_type, layout)
         if voice.model_type != model_type:
             # Delete the old settings
             if voice.model_type == TTSModel.SPEECHT5:

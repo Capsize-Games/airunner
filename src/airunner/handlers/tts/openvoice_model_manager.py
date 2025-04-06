@@ -206,7 +206,10 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Initialize OpenVoice-specific settings and resources.
         """
-        os.makedirs(self._output_dir, exist_ok=True)
+        try:
+            os.mkdir(self._output_dir)
+        except FileExistsError:
+            pass
 
         try:
             self._target_se, self._audio_name = se_extractor.get_se(
