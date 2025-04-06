@@ -33,6 +33,8 @@ class AudioCaptureWorker(Worker):
         )  # duration of chunks in milliseconds
         self.fs = self.stt_settings.fs
         self.stream = None
+        self._use_playback_stream: bool = False
+        self.playback_stream = None
         self.running = False
         self._audio_process_queue = queue.Queue()
 
@@ -108,6 +110,13 @@ class AudioCaptureWorker(Worker):
                     QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
                     continue
 
+                # Playback the audio chunk
+                if self.playback_stream:
+                    try:
+                        self.playback_stream.write(chunk)
+                    except Exception as e:
+                        self.logger.error(f"Playback error: {e}")
+
                 if (
                     np.max(np.abs(chunk)) > volume_input_threshold
                 ):  # check if chunk is not silence
@@ -137,6 +146,14 @@ class AudioCaptureWorker(Worker):
 
             while not self.listening and self.running:
                 QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
+
+        # Stop playback stream
+        if self.playback_stream:
+            try:
+                self.playback_stream.stop()
+                self.playback_stream.close()
+            except Exception as e:
+                self.logger.error(f"Error stopping playback stream: {e}")
 
     def _start_listening(self):
         self.logger.debug("Start listening")
@@ -205,6 +222,19 @@ class AudioCaptureWorker(Worker):
                 f"Recording device '{self.recording_device}' not found."
             )
             self.stream = None
+
+        # Initialize playback stream
+        self.playback_stream = None
+        if self._use_playback_stream:
+            try:
+                self.playback_stream = sd.OutputStream(
+                    samplerate=self.stream.samplerate,
+                    channels=self.stt_settings.channels,
+                )
+                self.playback_stream.start()
+            except Exception as e:
+                self.logger.error(f"Failed to initialize playback stream: {e}")
+                self.playback_stream = None
 
     def _get_compatible_sample_rate(self, desired_rate):
         """
