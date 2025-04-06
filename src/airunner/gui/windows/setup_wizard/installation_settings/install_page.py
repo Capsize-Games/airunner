@@ -333,13 +333,19 @@ class InstallWorker(
             NLTK_DOWNLOAD_DIR,
             "corpora"
         ))
-        os.makedirs(path, exist_ok=True)
+        try:
+            os.mkdir(path)
+        except FileExistsError:
+            pass
         path = os.path.expanduser(os.path.join(
             NLTK_DOWNLOAD_DIR,
             "tokenizers",
             "punkt"
         ))
-        os.makedirs(path, exist_ok=True)
+        try:
+            os.mkdir(path)
+        except FileExistsError:
+            pass
         nltk.download(
             "stopwords",
             download_dir=NLTK_DOWNLOAD_DIR,
