@@ -24,7 +24,6 @@ from airunner.data.models import (
     DrawingPadSettings,
     MetadataSettings,
     LLMGeneratorSettings,
-    TTSSettings,
     SpeechT5Settings,
     EspeakSettings,
     OpenVoiceSettings,
@@ -35,6 +34,7 @@ from airunner.data.models import (
     ImageFilterValue,
     TargetFiles,
     WhisperSettings,
+    SoundSettings,
     User,
 )
 from airunner.data.models import table_to_class
@@ -92,6 +92,10 @@ class SettingsMixin:
     @property
     def application_settings(self) -> ApplicationSettings:
         return self.load_settings_from_db(ApplicationSettings)
+
+    @property
+    def sound_settings(self) -> SoundSettings:
+        return self.load_settings_from_db(SoundSettings)
 
     @property
     def whisper_settings(self) -> WhisperSettings:
@@ -218,13 +222,15 @@ class SettingsMixin:
                 )
                 self.chatbot.voice_settings.settings_id = settings.id
             return settings
-    
+
     @property
     def openvoice_settings(self) -> OpenVoiceSettings:
         model_type = self.chatbot.voice_settings.model_type
         if model_type == TTSModel.OPENVOICE.value:
             settings_id = self.chatbot.voice_settings.settings_id
-            settings = OpenVoiceSettings.objects.filter_by_first(id=settings_id)
+            settings = OpenVoiceSettings.objects.filter_by_first(
+                id=settings_id
+            )
             if settings is None:
                 settings = OpenVoiceSettings.objects.create()
                 Chatbot.objects.update(
@@ -382,9 +388,6 @@ class SettingsMixin:
     def update_espeak_settings(self, column_name, val):
         self.update_setting(EspeakSettings, column_name, val)
 
-    def update_tts_settings(self, column_name, val):
-        self.update_setting(TTSSettings, column_name, val)
-
     def update_speech_t5_settings(self, column_name, val):
         self.update_setting(SpeechT5Settings, column_name, val)
 
@@ -489,7 +492,7 @@ class SettingsMixin:
             model_class_.objects.update(setting.id, **{column_name: val})
             self.__settings_updated(table_name, column_name, val)
         else:
-            self.logger.error("Failed to update settings: No setting found")        
+            self.logger.error("Failed to update settings: No setting found")
 
     def update_setting(self, model_class_, name, value):
         setting = model_class_.objects.order_by(model_class_.id.desc()).first()
