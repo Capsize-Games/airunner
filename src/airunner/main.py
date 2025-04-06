@@ -65,7 +65,10 @@ torch.hub.set_dir(torch_home)
 # Ensure that the base directory exists.
 ################################################################
 base_dir = os.path.join(base_path, "data")
-os.makedirs(base_dir, exist_ok=True)
+try:
+    os.mkdir(base_dir)
+except FileExistsError:
+    pass
 
 ################################################################
 # Import the main application class for AI Runner.

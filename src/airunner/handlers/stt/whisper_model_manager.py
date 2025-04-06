@@ -82,6 +82,7 @@ class WhisperModelManager(BaseModelManager):
                 self.logger.error(f"Failed to process inputs {e}")
                 self.logger.error(e)
 
+            print("TRANSCRIPTION", transcription)
             if transcription:
                 self._send_transcription(transcription)
 

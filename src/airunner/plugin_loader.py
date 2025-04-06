@@ -10,7 +10,10 @@ class PluginLoader:
     def load_plugins(self):
         plugins = []
         if not os.path.exists(self.plugin_dir):
-            os.makedirs(self.plugin_dir)
+            try:
+                os.mkdir(self.plugin_dir)
+            except FileExistsError:
+                pass
 
         for foldername in os.listdir(self.plugin_dir):
             plugin_path = os.path.join(

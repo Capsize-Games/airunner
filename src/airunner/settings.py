@@ -22,7 +22,9 @@ import logging
 
 from airunner.enums import Scheduler
 
-load_dotenv()
+if os.environ.get("DEV_ENV", "1") == "1":
+    load_dotenv(override=True)
+
 python_venv_dir = os.path.dirname(sys.executable)
 NLTK_DOWNLOAD_DIR = os.path.join(
     python_venv_dir,
