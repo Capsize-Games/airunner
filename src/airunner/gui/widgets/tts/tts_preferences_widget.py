@@ -64,4 +64,4 @@ class TTSPreferencesWidget(BaseWidget):
 
     @staticmethod
     def handle_value_change(prop, val):
-        print(prop, val)
+        pass
