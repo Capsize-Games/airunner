@@ -33,7 +33,7 @@ class AudioCaptureWorker(Worker):
         )  # duration of chunks in milliseconds
         self.fs = self.stt_settings.fs
         self.stream = None
-        self._use_playback_stream: bool = False
+        self._use_playback_stream: bool = True
         self.playback_stream = None
         self.running = False
         self._audio_process_queue = queue.Queue()
@@ -110,7 +110,6 @@ class AudioCaptureWorker(Worker):
                     QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
                     continue
 
-                # Playback the audio chunk
                 if self.playback_stream:
                     try:
                         self.playback_stream.write(chunk)
@@ -121,6 +120,7 @@ class AudioCaptureWorker(Worker):
                     np.max(np.abs(chunk)) > volume_input_threshold
                 ):  # check if chunk is not silence
                     self.logger.debug("Heard voice")
+
                     is_receiving_input = True
                     self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
                     voice_input_start_time = time.time()
@@ -193,25 +193,19 @@ class AudioCaptureWorker(Worker):
 
     def _initialize_stream(self):
         self.logger.debug("Initializing audio capture stream")
-        desired_fs = self.stt_settings.fs
+        samplerate = 16000  # self.stt_settings.fs
         channels = self.stt_settings.channels
-
-        compatible_fs = self._get_compatible_sample_rate(desired_fs)
-        if compatible_fs != desired_fs:
-            self.logger.info(
-                f"Using compatible sample rate: {compatible_fs} instead of {desired_fs}"
-            )
 
         if self.selected_device:
             try:
                 self.stream = sd.InputStream(
-                    samplerate=compatible_fs,
+                    samplerate=samplerate,
                     channels=channels,
                     device=self.selected_device["index"],
                 )
                 device_name = self.selected_device["name"]
                 self.logger.info(
-                    f"Audio stream initialized with sample rate: {compatible_fs}, channels: {channels}, device: {device_name}"
+                    f"Audio stream initialized with sample rate: {samplerate}, channels: {channels}, device: {device_name}"
                 )
                 self.stream.start()
             except Exception as e:
@@ -235,11 +229,3 @@ class AudioCaptureWorker(Worker):
             except Exception as e:
                 self.logger.error(f"Failed to initialize playback stream: {e}")
                 self.playback_stream = None
-
-    def _get_compatible_sample_rate(self, desired_rate):
-        """
-        Find the closest compatible sample rate to the desired rate.
-        """
-        if desired_rate != self.selected_device["default_samplerate"]:
-            return self.selected_device["default_samplerate"]
-        return desired_rate
