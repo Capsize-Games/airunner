@@ -634,7 +634,7 @@ class BaseAgent(
     @property
     def tools(self) -> List[BaseTool]:
         tools = [
-            self.chat_engine_tool,
+            self.chat_engine_react_tool,
             self.quit_application_tool,
             self.clear_conversation_tool,
             self.toggle_text_to_speech_tool,
@@ -808,6 +808,22 @@ class BaseAgent(
                 )
             self._chat_engine_tool = ChatEngineTool.from_defaults(
                 chat_engine=self.chat_engine, agent=self, return_direct=True
+            )
+        return self._chat_engine_tool
+
+    @property
+    def chat_engine_react_tool(self) -> ChatEngineTool:
+        if not self._chat_engine_tool:
+            self.logger.info("Loading ChatEngineTool")
+            if not self.chat_engine:
+                raise ValueError(
+                    "Unable to load ChatEngineTool: Chat engine must be provided."
+                )
+            self._chat_engine_tool = ChatEngineTool.from_defaults(
+                chat_engine=self.chat_engine,
+                agent=self,
+                return_direct=True,
+                do_handle_response=False,
             )
         return self._chat_engine_tool
 
