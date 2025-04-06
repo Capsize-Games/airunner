@@ -67,7 +67,10 @@ class DownloadWorker(
             file_name = os.path.expanduser(file_name)
 
             if not os.path.exists(os.path.dirname(file_name)):
-                os.makedirs(os.path.dirname(file_name), exist_ok=True)
+                try:
+                    os.mkdir(os.path.dirname(file_name))
+                except FileExistsError:
+                    pass
 
             if os.path.exists(file_name):
                 self.emit_signal(
@@ -97,7 +100,10 @@ class DownloadWorker(
                     dir_name = os.path.dirname(file_name)
 
                     if dir_name != "" and not os.path.exists(dir_name):
-                        os.makedirs(dir_name, exist_ok=True)
+                        try:
+                            os.mkdir(dir_name)
+                        except FileExistsError:
+                            pass
 
                     with open(file_name, "wb") as f:
                         for chunk in r.iter_content(chunk_size=8192):

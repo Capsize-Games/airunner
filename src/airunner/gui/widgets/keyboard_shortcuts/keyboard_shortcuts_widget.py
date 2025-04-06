@@ -17,14 +17,14 @@ class KeyboardShortcutsWidget(BaseWidget):
     widget_class_ = Ui_keyboard_shortcuts
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.spacer = QSpacerItem(
-            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
-        )
         self.shortcut_key_widgets = [
             None for _i in range(len(self.shortcut_keys))
         ]
+        self.spacer = QSpacerItem(
+            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
+        )
         self.pressed_keys = set()
+        super().__init__(**kwargs)
 
     def initialize_ui(self):
         for index, shortcut_key in enumerate(self.shortcut_keys):

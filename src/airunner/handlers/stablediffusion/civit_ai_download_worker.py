@@ -55,7 +55,10 @@ class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):
             })
 
             file_name = os.path.expanduser(file_name)
-            os.makedirs(os.path.dirname(file_name), exist_ok=True)
+            try:
+                os.mkdir(file_name)
+            except FileExistsError:
+                pass
 
             self.emit_signal(SignalCode.UPDATE_DOWNLOAD_LOG, {
                 "message": f"Downloading {url} of size {size_kb} bytes to {file_name}"
