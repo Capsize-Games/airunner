@@ -119,7 +119,7 @@ class TTSVocalizerWorker(Worker):
     def _initialize_stream(self, samplerate: int):
         self.logger.info(f"Initializing stream with samplerate: {samplerate}")
         try:
-            if self.selected_device:
+            if self.selected_device is not None:
                 self.stream = sd.OutputStream(
                     samplerate=samplerate,
                     channels=1,
