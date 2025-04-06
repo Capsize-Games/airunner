@@ -1,18 +1,20 @@
 import os
-import subprocess
+from PySide6.QtWidgets import QFileDialog
 
 
 def show_path(path):
     path = os.path.expanduser(path)
     if not os.path.isdir(path):
-        print("not a path", path)
+        print(f"Error: {path} is not a valid directory")  # Debug statement
         return
 
-    from sys import platform
-    platform = platform.lower()
-    if platform in ["windows", "win32", "cygwin"]:
-        subprocess.Popen(["explorer", os.path.realpath(path)])
-    elif platform in ["linux", "linux2"]:
-        subprocess.Popen(["xdg-open", os.path.realpath(path)])
+    # Use QFileDialog to open a file browser dialog
+    file_dialog = QFileDialog()
+    file_dialog.setFileMode(QFileDialog.Directory)
+    file_dialog.setDirectory(path)
+    # file_dialog.setOption(QFileDialog.ShowDirsOnly, True)
+
+    if file_dialog.exec():
+        selected_directory = file_dialog.selectedFiles()[0]
     else:
-        print("unsupported platform", platform)
+        print("User canceled the file dialog")  # Debug statement
