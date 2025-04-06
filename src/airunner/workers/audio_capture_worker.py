@@ -33,7 +33,7 @@ class AudioCaptureWorker(Worker):
         )  # duration of chunks in milliseconds
         self.fs = self.stt_settings.fs
         self.stream = None
-        self._use_playback_stream: bool = True
+        self._use_playback_stream: bool = False
         self.playback_stream = None
         self.running = False
         self._audio_process_queue = queue.Queue()
@@ -101,6 +101,8 @@ class AudioCaptureWorker(Worker):
                     chunk, overflowed = self.stream.read(
                         int(chunk_duration * actual_fs)
                     )
+                    if chunk.ndim > 1:
+                        chunk = np.mean(chunk, axis=1)
                 except sd.PortAudioError as e:
                     self.logger.error(f"PortAudioError: {e}")
                     QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
