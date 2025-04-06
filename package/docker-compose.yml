@@ -72,7 +72,7 @@ services:
       - ../:/app:rw
       - ../package/asound.conf:/etc/asound.conf:rw
       - "${AIRUNNER_HOME_DIR}:${AIRUNNER_HOME_DIR}:rw"
-      - "${HOST_HOME}/.local/share/airunner/:${HOST_HOME}/.local/share/airunner/:rw"
+      - "${HOST_HOME}/.local/share/airunner:${HOST_HOME}/.local/share/airunner:rw"
       - "${HOST_HOME}/.local/share/airunner:/home/appuser/.local/share/airunner:rw"
       - "${HOST_HOME}/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw"
       - "${HOST_HOME}/.cache/huggingface:/home/appuser/.cache/huggingface:rw"
