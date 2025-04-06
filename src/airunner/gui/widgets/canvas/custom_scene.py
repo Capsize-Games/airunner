@@ -617,7 +617,7 @@ class CustomScene(
             image = Image.open(io.BytesIO(data))
             return image
         except Exception as e:
-            print(e)
+            self.logger.error(f"Failed to get image from clipboard: {e}")
             return None
 
     def _image_from_system_clipboard_linux(self):
@@ -631,7 +631,7 @@ class CustomScene(
             image = image.convert("RGBA")
             return image
         except Exception as e:
-            print(e)
+            self.logger.error(f"Failed to get image from clipboard: {e}")
             return None
 
     def _copy_image(
