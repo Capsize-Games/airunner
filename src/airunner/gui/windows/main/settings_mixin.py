@@ -519,7 +519,6 @@ class SettingsMixin:
             MetadataSettings,
             GeneratorSettings,
             LLMGeneratorSettings,
-            TTSSettings,
             SpeechT5Settings,
             EspeakSettings,
             STTSettings,
