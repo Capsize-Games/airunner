@@ -131,25 +131,32 @@ large language models (LLM) and AI image generators (Stable Diffusion) on your o
 
 ## 🚀 Installation
 
-### Quickstart for Linux
+### 🐋 Docker
+
+This is the fastest and recommended way to run AI Runner locally.
+
+1. [First install the NVIDIA Container Toolkit for Docker](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) and make sure you [don't forget the Configuring Docker section](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#configuring-docker). This step is crucial as it allows Docker to utilize the GPU on your host machine.
+2. Clone this repo then run setup.sh - this will allow you to run AI Runner scripts locally.
+
 ```bash
-sudo apt install nvidia-cuda-toolkit
-nvcc --version  # Verify CUDA installation
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
-pip install airunner[gui,linux,dev,art,llm,llm_weather,tts]
-pip install flash-attn --no-build-isolation  # Optional for flash attention
-pip install --upgrade timm==1.0.15
+git clone https://github.com/Capsize-Games/airunner.git
+cd airunner
+sh src/airunner/bin/setup.sh 
 ```
+
+You will be presented with several options
+
+```bash
+1) Setup xhost for Docker                       3) Install AI Runner locally (not recommended)
+2) Install AI Runner scripts                    4) Quit
+```
+
+3. Choose option 1
+4. Choose option 2
+5. Choose the "Quit" option.
+6. Start AI Runner with the command `airunner-docker airunner`
 
 For detailed instructions, refer to the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
-
-### Running
-
-Run the application with the following command
-
-```bash
-airunner
-```
 
 ---
 
