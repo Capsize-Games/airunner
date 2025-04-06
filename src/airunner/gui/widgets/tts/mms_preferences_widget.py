@@ -1,6 +1,8 @@
-
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.tts.templates.speecht5_preferences_ui import Ui_speecht5_preferences
+from airunner.gui.widgets.tts.templates.speecht5_preferences_ui import (
+    Ui_speecht5_preferences,
+)
+from airunner.data.models import SpeechT5Settings
 
 
 class SpeechT5PreferencesWidget(BaseWidget):
@@ -25,13 +27,22 @@ class SpeechT5PreferencesWidget(BaseWidget):
             element.blockSignals(False)
 
     def language_changed(self, text):
-        self.update_tts_settings("language", text)
-        self.update_tts_settings("gender", self.ui.gender_combobox.currentText())
-        self.update_tts_settings("voice", self.ui.voice_combobox.currentText())
+        # SpeechT5Settings.objects.update(
+        #     language=text,
+        #     gender=self.ui.gender_combobox.currentText(),
+        #     voice=self.ui.voice_combobox.currentText(),
+        # )
+        pass
 
     def voice_changed(self, text):
-        self.update_tts_settings("voice", text)
+        # SpeechT5Settings.objects.update(
+        #     voice=text,
+        # )
+        pass
 
     def gender_changed(self, text):
-        self.update_tts_settings("gender", text)
-        self.update_tts_settings("voice", self.ui.voice_combobox.currentText())
+        # SpeechT5Settings.objects.update(
+        #     gender=text,
+        #     voice=self.ui.voice_combobox.currentText(),
+        # )
+        pass

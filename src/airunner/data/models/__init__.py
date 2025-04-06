@@ -1,4 +1,5 @@
 from airunner.data.models.voice_settings import VoiceSettings
+from airunner.data.models.sound_settings import SoundSettings
 from airunner.data.models.openvoice_settings import OpenVoiceSettings
 from airunner.data.models.active_grid_settings import ActiveGridSettings
 from airunner.data.models.application_settings import ApplicationSettings
@@ -10,7 +11,6 @@ from airunner.data.models.drawingpad_settings import DrawingPadSettings
 from airunner.data.models.metadata_settings import MetadataSettings
 from airunner.data.models.generator_settings import GeneratorSettings
 from airunner.data.models.llm_generator_settings import LLMGeneratorSettings
-from airunner.data.models.tts_settings import TTSSettings
 from airunner.data.models.speech_t5_settings import SpeechT5Settings
 from airunner.data.models.espeak_settings import EspeakSettings
 from airunner.data.models.stt_settings import STTSettings
@@ -53,7 +53,6 @@ classes = [
     MetadataSettings,
     GeneratorSettings,
     LLMGeneratorSettings,
-    TTSSettings,
     SpeechT5Settings,
     EspeakSettings,
     STTSettings,
