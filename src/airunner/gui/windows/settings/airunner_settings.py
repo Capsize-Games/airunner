@@ -33,6 +33,9 @@ from airunner.gui.widgets.memory_preferences.memory_preferences_widget import (
 from airunner.gui.widgets.paths.paths_widget import PathsWidget
 from airunner.gui.widgets.tts.voice_settings_widget import VoiceSettingsWidget
 from airunner.gui.widgets.user.user_settings_widget import UserSettingsWidget
+from airunner.gui.widgets.sound_settings.sound_settings_widget import (
+    SoundSettingsWidget,
+)
 from airunner.gui.windows.settings.templates.airunner_settings_ui import (
     Ui_airunner_settings,
 )
@@ -98,6 +101,8 @@ class SettingsWindow(BaseWindow):
             return UserSettingsWidget
         elif name == "export_preferences":
             return ExportPreferencesWidget
+        elif name == "sound_settings":
+            return SoundSettingsWidget
         # elif name == "stt_preferences":
         #     return STTSettingsWidget
 
@@ -191,6 +196,11 @@ class SettingsWindow(BaseWindow):
                         "display_name": "Check for updates",
                         "checkable": True,
                         "description": "If enabled, AI Runner will check for updates on startup.",
+                    },
+                    {
+                        "name": "sound_settings",
+                        "display_name": "Sound Settings",
+                        "checkable": False,
                     },
                 ],
             },

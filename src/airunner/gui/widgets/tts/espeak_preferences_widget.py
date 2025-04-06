@@ -73,7 +73,6 @@ class EspeakPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(False)
 
-        print(self.ui, settings)
         self.ui.rate.init(
             slider_callback=self.callback,
             current_value=settings.rate,

@@ -210,6 +210,8 @@ class SignalCode(Enum):
     SHOW_WINDOW_SIGNAL = enum.auto()
     SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL = enum.auto()
     VOICE_SAVED = enum.auto()
+    PLAYBACK_DEVICE_CHANGED = enum.auto()
+    RECORDING_DEVICE_CHANGED = enum.auto()
 
 
 class EngineResponseCode(Enum):

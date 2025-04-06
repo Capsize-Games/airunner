@@ -28,6 +28,7 @@ logging.getLogger("tensorflow").setLevel(logging.WARNING)
 logging.getLogger("h5py._conv").setLevel(logging.WARNING)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 logging.getLogger("datasets").setLevel(logging.WARNING)
+logging.getLogger("bitsandbytes").setLevel(logging.WARNING)
 
 import sys
 from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE
@@ -64,7 +65,10 @@ torch.hub.set_dir(torch_home)
 # Ensure that the base directory exists.
 ################################################################
 base_dir = os.path.join(base_path, "data")
-os.makedirs(base_dir, exist_ok=True)
+try:
+    os.mkdir(base_dir)
+except FileExistsError:
+    pass
 
 ################################################################
 # Import the main application class for AI Runner.
