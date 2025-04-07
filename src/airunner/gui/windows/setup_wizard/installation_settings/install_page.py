@@ -334,7 +334,7 @@ class InstallWorker(
             "corpora"
         ))
         try:
-            os.mkdir(path)
+            os.makedirs(path, exist_ok=True)
         except FileExistsError:
             pass
         path = os.path.expanduser(os.path.join(
@@ -343,7 +343,7 @@ class InstallWorker(
             "punkt"
         ))
         try:
-            os.mkdir(path)
+            os.makedirs(path, exist_ok=True)
         except FileExistsError:
             pass
         nltk.download(

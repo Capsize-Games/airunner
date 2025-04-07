@@ -620,7 +620,7 @@ class RAGMixin:
         if self.__storage_context is None:
             if not os.path.exists(self.storage_persist_dir):
                 try:
-                    os.mkdir(self.storage_persist_dir)
+                    os.makedirs(self.storage_persist_dir, exist_ok=True)
                 except FileExistsError:
                     pass
             for file in [
@@ -685,7 +685,10 @@ class RAGMixin:
             self.logger.info("RAG Engine returned empty response")
             self._strip_previous_messages_from_conversation()
             self.llm.llm_request = kwargs.get("llm_request", None)
-            self._perform_tool_call("chat_engine_tool", **kwargs)
+            self._perform_tool_call("chat_engine_react_tool", **kwargs)
+
+    def _llm_updated(self):
+        Settings.llm = self.llm
 
     def _load_settings(self):
         """Load settings with optimized defaults for performance."""

@@ -66,7 +66,7 @@ torch.hub.set_dir(torch_home)
 ################################################################
 base_dir = os.path.join(base_path, "data")
 try:
-    os.mkdir(base_dir)
+    os.makedirs(base_dir, exist_ok=True)
 except FileExistsError:
     pass
 

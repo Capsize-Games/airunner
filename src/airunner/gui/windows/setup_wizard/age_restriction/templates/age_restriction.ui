@@ -102,7 +102,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
           </font>
          </property>
          <property name="text">
-          <string>This application may generate content that is not suitable for all audiences, including nude images. Please confirm that you are at least 18 years oldbefore proceeding.</string>
+          <string>This application may generate content that is not suitable for all audiences, including nude images. Please confirm that you are at least 18 years old before proceeding.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
