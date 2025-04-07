@@ -17,12 +17,12 @@ from airunner.enums import (
     ModelType, 
     LLMActionType
 )
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.settings import (
     AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT, 
     AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT
 )
-from airunner.utils import random_seed
+from airunner.utils.application import random_seed
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.stablediffusion.\
 templates.stablediffusion_generator_form_ui import (

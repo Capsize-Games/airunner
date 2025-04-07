@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>open_voice_preferences</class>
+ <widget class="QWidget" name="open_voice_preferences">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Language</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="0">
+       <widget class="QComboBox" name="language_combobox">
+        <property name="currentText">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="SliderWidget" name="speed_slider" native="true">
+     <property name="slider_minimum" stdset="0">
+      <number>1</number>
+     </property>
+     <property name="slider_maximum" stdset="0">
+      <number>100</number>
+     </property>
+     <property name="spinbox_minimum" stdset="0">
+      <double>0.000000000000000</double>
+     </property>
+     <property name="spinbox_maximum" stdset="0">
+      <double>1.000000000000000</double>
+     </property>
+     <property name="display_as_float" stdset="0">
+      <bool>true</bool>
+     </property>
+     <property name="settings_property" stdset="0">
+      <string>openvoice_settings.speed</string>
+     </property>
+     <property name="slider_single_step" stdset="0">
+      <number>0</number>
+     </property>
+     <property name="slider_page_step" stdset="0">
+      <number>0</number>
+     </property>
+     <property name="spinbox_single_step" stdset="0">
+      <double>0.010000000000000</double>
+     </property>
+     <property name="spinbox_double_step" stdset="0">
+      <double>0.100000000000000</double>
+     </property>
+     <property name="label_text" stdset="0">
+      <string>Speed</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>language_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>open_voice_preferences</receiver>
+   <slot>language_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>148</x>
+     <y>59</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>158</x>
+     <y>-14</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>language_changed(QString)</slot>
+ </slots>
+</ui>

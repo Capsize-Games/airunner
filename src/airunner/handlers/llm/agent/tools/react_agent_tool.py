@@ -8,9 +8,10 @@ from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 
 class ReActAgentTool(ChatEngineTool):
     """ReActAgentTool.
-    
+
     A tool for determining which actions to take.
     """
+
     @classmethod
     def from_tools(cls, *args, **kwargs) -> "ReActAgentTool":
         agent = kwargs.pop("agent", None)
@@ -19,27 +20,27 @@ class ReActAgentTool(ChatEngineTool):
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
         return cls.from_defaults(
-            chat_engine=chat_engine, 
+            chat_engine=chat_engine,
             name=name,
             description=description,
             return_direct=return_direct,
-            agent=agent
+            agent=agent,
         )
-    
+
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
+        print("x" * 100)
+        print("ReActAgentTool.call")
+        print(args, kwargs)
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
         tool_choice = kwargs.get("tool_choice", None)
         streaming_response = self.chat_engine.stream_chat(
-            query_str, 
+            query_str,
             chat_history=chat_history if chat_history else [],
-            tool_choice=tool_choice
+            tool_choice=tool_choice,
         )
         self.chat_engine.chat_history.append(
-            ChatMessage(
-                content=query_str,
-                role=MessageRole.USER
-            )
+            ChatMessage(content=query_str, role=MessageRole.USER)
         )
 
         response = ""
@@ -48,12 +49,9 @@ class ReActAgentTool(ChatEngineTool):
             response += token
             self.agent.handle_response(token, is_first_message)
             is_first_message = False
-        
+
         self.chat_engine.chat_history.append(
-            ChatMessage(
-                content=response,
-                role=MessageRole.ASSISTANT
-            )
+            ChatMessage(content=response, role=MessageRole.ASSISTANT)
         )
 
         return ToolOutput(
