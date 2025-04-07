@@ -620,7 +620,7 @@ class RAGMixin:
         if self.__storage_context is None:
             if not os.path.exists(self.storage_persist_dir):
                 try:
-                    os.mkdir(self.storage_persist_dir)
+                    os.makedirs(self.storage_persist_dir, exist_ok=True)
                 except FileExistsError:
                     pass
             for file in [

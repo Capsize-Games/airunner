@@ -38,7 +38,7 @@ def create_airunner_paths(path_settings: PathSettings):
             path = os.path.expanduser(path)
             if not os.path.exists(path):
                 try:
-                    os.mkdir(path)
+                    os.makedirs(path, exist_ok=True)
                 except FileExistsError:
                     pass
         except PermissionError:
