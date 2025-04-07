@@ -148,19 +148,12 @@ RUN pip install --no-cache-dir pip setuptools wheel --upgrade && \
     pip install nvidia-pyindex && \
     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-FROM dev_image AS final_image
+FROM dev_image AS prepped_image
 USER root
 COPY --chown=docker:appuser . /app/
 COPY ./package/asound.conf /etc/asound.conf
-USER appuser
-RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && \
-    pip install -U langchain-community && \
-    pip install -U mediapipe && \
-    pip install --no-cache-dir -U timm && \
-    python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')" && \
-    python3 -c "import nltk; nltk.download('punkt')"
 
-FROM final_image AS optional_image
+FROM prepped_image AS openvoice
 USER appuser
 WORKDIR /app
 RUN git clone https://github.com/myshell-ai/OpenVoice.git && \
@@ -172,3 +165,12 @@ RUN git clone https://github.com/myshell-ai/MeloTTS.git && \
     git checkout -b v0.1.2 && \
     pip install -e .
 CMD ["/bin/bash"]
+
+FROM openvoice as final_image
+USER appuser
+RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && \
+    pip install -U langchain-community && \
+    pip install -U mediapipe && \
+    pip install --no-cache-dir -U timm && \
+    python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')" && \
+    python3 -c "import nltk; nltk.download('punkt')"
