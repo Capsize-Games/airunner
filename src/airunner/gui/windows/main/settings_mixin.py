@@ -35,6 +35,7 @@ from airunner.data.models import (
     TargetFiles,
     WhisperSettings,
     SoundSettings,
+    VoiceSettings,
     User,
 )
 from airunner.data.models import table_to_class
@@ -43,7 +44,7 @@ from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
 from airunner.utils.settings import get_qsettings
 from airunner.utils.application.get_logger import get_logger
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.settings import AIRUNNER_LOG_LEVEL, AIRUNNER_ENABLE_OPEN_VOICE
 
 
 class SettingsMixinSharedInstance:
@@ -361,7 +362,41 @@ class SettingsMixin:
                 joinedload(Chatbot.target_files),
             ).first()
 
+        if chatbot.voice_settings is None:
+            voice_settings = VoiceSettings.objects.first()
+            if voice_settings is None:
+                settings = self._get_settings_for_voice_settings(
+                    TTSModel.ESPEAK.value
+                )
+                voice_settings = VoiceSettings.objects.create(
+                    name="Default Voice",
+                    model_type=TTSModel.ESPEAK.value,
+                    settings_id=settings.id,
+                )
+
+            Chatbot.objects.update(chatbot.id, voice_id=voice_settings.id)
+            chatbot.voice_id = voice_settings.id
+
         return chatbot
+
+    def _get_settings_for_voice_settings(self, model_type: str):
+        if model_type == TTSModel.SPEECHT5.value:
+            settings = SpeechT5Settings.objects.first()
+            if settings is None:
+                settings = SpeechT5Settings.objects.create()
+        elif (
+            model_type == TTSModel.OPENVOICE.value
+            and AIRUNNER_ENABLE_OPEN_VOICE
+        ):
+            settings = OpenVoiceSettings.objects.first()
+            if settings is None:
+                settings = OpenVoiceSettings.objects.create()
+        else:
+            # Fall back to espeak
+            settings = EspeakSettings.objects.first()
+            if settings is None:
+                settings = EspeakSettings.objects.create()
+        return settings
 
     @property
     def user(self) -> Type[User]:
