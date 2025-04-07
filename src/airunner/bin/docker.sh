@@ -1,5 +1,43 @@
 #!/bin/bash
 
+echo "Starting docker"
+
+# Export HOST_UID and HOST_GID for the current user
+export HOST_UID=$(id -u)
+export HOST_GID=$(id -g)
+
+# Ensure the log file exists and has the correct permissions
+LOG_FILE="${HOME}/.local/share/airunner/airunner.log"
+if [ ! -f "$LOG_FILE" ]; then
+  mkdir -p "$(dirname "$LOG_FILE")"
+  touch "$LOG_FILE"
+fi
+chmod 664 "$LOG_FILE"  # Allow read/write for owner and group
+chown $HOST_UID:$HOST_GID "$LOG_FILE"  # Set ownership to the current user and group
+
+# Ensure the parent directory has the correct permissions
+chmod -R 775 "${HOME}/.local/share/airunner"
+
+DB_FILE="${HOME}/.local/share/airunner/data/airunner.db"
+if [ ! -f "$DB_FILE" ]; then
+  mkdir -p "$(dirname "$DB_FILE")"
+  touch "$DB_FILE"
+fi
+
+if [ -d "$AIRUNNER_DIR" ]; then
+  echo "Adjusting permissions for $AIRUNNER_DIR to allow access for all users..."
+  # Check if permissions need to be updated
+  if [ $(stat -c "%a" "$AIRUNNER_DIR") -ne 775 ]; then
+    echo "Updating permissions for $AIRUNNER_DIR..."
+    sudo chmod -R 775 "$AIRUNNER_DIR"  # Allow read/write/execute for owner and group
+  fi
+  # Check if the group ID bit is already set
+  if [ $(stat -c "%A" "$AIRUNNER_DIR" | cut -c 6) != "s" ]; then
+    echo "Setting group ID bit on $AIRUNNER_DIR..."
+    sudo chmod g+s "$AIRUNNER_DIR"  # Set the group ID on new files and directories
+  fi
+fi
+
 # Dynamically generate asound.conf with all available devices
 cat <<EOL > package/asound.conf
 pcm.!default {
@@ -24,12 +62,12 @@ EOL
 if [ ! -f .env ]; then
   echo "Creating .env file and setting HOST_HOME..."
   echo HOST_HOME=$HOME > .env
-  echo AIRUNNER_HOME_DIR=$HOME/.local/share/airunner >> .env
+  echo AIRUNNER_HOME_DIR=/home/appuser/.local/share/airunner >> .env
 else
   if ! grep -q "^HOST_HOME=" .env; then
     echo "HOST_HOME not set. Adding HOST_HOME to .env..."
     echo HOST_HOME=$HOME >> .env
-    echo AIRUNNER_HOME_DIR=$HOME/.local/share/airunner >> .env
+    echo AIRUNNER_HOME_DIR=/home/appuser/.local/share/airunner >> .env
   fi
 fi
 
