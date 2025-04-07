@@ -23,8 +23,8 @@ services:
       - PIP_USER=1
       - DISPLAY
       - HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface
+      - HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface
       - HF_HUB_DISABLE_TELEMETRY=1
-      - TRANSFORMERS_CACHE=/home/appuser/.local/share/airunner/.cache/huggingface
       - XAUTHORITY=/home/appuser/.Xauthority
       - QT_QPA_PLATFORM=xcb
       - DEBIAN_FRONTEND=noninteractive
