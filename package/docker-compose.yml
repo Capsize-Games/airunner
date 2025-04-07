@@ -14,7 +14,7 @@ services:
       - HOST_GID=${HOST_GID}
       - UID=${UID}
       - GID=${GID}
-      - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512
+      - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512,expandable_segments:True
       - NUMBA_CACHE_DIR=/tmp/numba_cache
       - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
       - DISABLE_TELEMETRY=1
@@ -26,7 +26,6 @@ services:
       - HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface
       - HF_HUB_DISABLE_TELEMETRY=1
       - XAUTHORITY=/home/appuser/.Xauthority
-      - QT_QPA_PLATFORM=xcb
       - DEBIAN_FRONTEND=noninteractive
       - TZ=America/Denver
       - PATH=/usr/local/cuda/bin:/home/appuser/.local/bin:$PATH
@@ -43,7 +42,6 @@ services:
       - CUDA_LAUNCH_BLOCKING=1
       - TORCH_HOME=/home/appuser/.local/share/airunner/torch/hub
       - XDG_CACHE_HOME=/home/appuser/.local/share/airunner/.cache
-      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
       - TF_ENABLE_ONEDNN_OPTS=0
       - AIRUNNER_LOG_LEVEL=WARNING
       - AIRUNNER_DISABLE_FACEHUGGERSHIELD=1
