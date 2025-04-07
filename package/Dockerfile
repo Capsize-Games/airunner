@@ -152,7 +152,6 @@ RUN pip install --no-cache-dir pip setuptools wheel --upgrade && \
 FROM dev_image AS prepped_image
 USER root
 COPY --chown=docker:appuser . /app/
-COPY ./package/asound.conf /etc/asound.conf
 
 FROM prepped_image AS openvoice
 USER appuser
