@@ -67,7 +67,7 @@ class DownloadWorker(
 
             if not os.path.exists(os.path.dirname(file_name)):
                 try:
-                    os.mkdir(file_name)
+                    os.makedirs(file_name, exist_ok=True)
                 except FileExistsError:
                     pass
 
@@ -100,7 +100,7 @@ class DownloadWorker(
 
                     if dir_name != "" and not os.path.exists(dir_name):
                         try:
-                            os.mkdir(dir_name)
+                            os.makedirs(dir_name, exist_ok=True)
                         except FileExistsError:
                             pass
 

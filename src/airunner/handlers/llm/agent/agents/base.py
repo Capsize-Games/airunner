@@ -243,7 +243,7 @@ class BaseAgent(
 
     @property
     def llm(self) -> Type[LLM]:
-        if not self._llm:
+        if not self._llm and self.model and self.tokenizer:
             self.logger.info("Loading HuggingFaceLLM")
             if self.model and self.tokenizer:
                 self._llm = HuggingFaceLLM(
@@ -251,6 +251,7 @@ class BaseAgent(
                     tokenizer=self.tokenizer,
                     streaming_stopping_criteria=self.streaming_stopping_criteria,
                 )
+                self._llm_updated()
             else:
                 self.logger.error(
                     "Unable to load HuggingFaceLLM: "
@@ -1084,6 +1085,9 @@ class BaseAgent(
     @chat_memory.setter
     def chat_memory(self, value: Optional[ChatMemoryBuffer]):
         self._chat_memory = value
+    
+    def _llm_updated(self):
+        pass
 
     def on_web_browser_page_html(self, content: str):
         self.webpage_html = content
