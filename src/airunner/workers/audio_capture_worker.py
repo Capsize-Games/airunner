@@ -43,7 +43,8 @@ class AudioCaptureWorker(Worker):
         """
         Get the recording device name from the sound settings.
         """
-        return self.sound_settings.recording_device
+        recording_deivce = self.sound_settings.recording_device
+        return recording_deivce if recording_deivce != "" else "pulse"
 
     @property
     def selected_device(self):

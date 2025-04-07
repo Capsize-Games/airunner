@@ -141,7 +141,9 @@ This is the fastest and recommended way to run AI Runner locally.
 ```bash
 git clone https://github.com/Capsize-Games/airunner.git
 cd airunner
-sh src/airunner/bin/setup.sh 
+python3 -m venv venv
+source venv/bin/activate
+./src/airunner/bin/setup.sh
 ```
 
 You will be presented with several options
@@ -157,6 +159,12 @@ You will be presented with several options
 6. Start AI Runner with the command `airunner-docker airunner`
 
 For detailed instructions, refer to the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
+
+Now you can run AI Runner 
+
+```bash
+airunner-docker airunner
+```
 
 ---
 

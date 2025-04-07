@@ -82,6 +82,7 @@ setup(
             "tf-keras==2.18.0",
             "peft==0.14.0",
             "lxml_html_clean==0.4.1",
+            "flash_attn==2.7.4.post1",
             # Summarizations (basic)
             "sumy==0.11.0",
         ],
@@ -115,6 +116,7 @@ setup(
     entry_points={
         "console_scripts": [
             "airunner=airunner.main:main",
+            "airunner-setup=airunner.installer:main",
             "airunner-build-ui=airunner.bin.build_ui:main",
             "airunner-tests=airunner.bin.run_tests:main",
             "airunner-test-coverage-report=airunner.bin.coverage_report:main",
