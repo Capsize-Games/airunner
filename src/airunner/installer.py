@@ -3,5 +3,9 @@
 from airunner.app_installer import AppInstaller
 
 
-if __name__ == "__main__":
+def main():
     AppInstaller()
+
+
+if __name__ == "__main__":
+    main()

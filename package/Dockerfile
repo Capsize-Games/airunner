@@ -105,7 +105,7 @@ ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 # Set environment variables for CUDA and cuDNN
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=$CUDA_HOME/bin:$PATH
-ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/lib/python3.10/site-packages/PySide6/Qt/lib:/usr/lib/x86_64-linux-gnu:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
+ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/lib/python3.10/site-packages/PySide6/Qt/lib:/ususe_grr/lib/x86_64-linux-gnu:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
 
 # Set up NVIDIA runtime
 ENV NVIDIA_VISIBLE_DEVICES=all
@@ -116,9 +116,18 @@ RUN if [ "$INSTALL_XCB_CURSOR" = "1" ]; then \
       apt-get update && apt-get install -y libxcb-cursor0; \
     fi
 
-RUN useradd -ms /bin/bash -u 1000 appuser
-RUN mkdir -p /home/appuser/.local && chown -R appuser:appuser /home/appuser
+# Ensure the appuser group and user are created before modifying their UID and GID
+RUN groupadd -g 1000 appuser && useradd -m -u 1000 -g 1000 appuser
+
+# Dynamically set the UID and GID for appuser
+ARG HOST_UID=1000
+ARG HOST_GID=1000
+RUN groupmod -g ${HOST_GID} appuser && usermod -u ${HOST_UID} -g ${HOST_GID} appuser
+
 RUN chown -R appuser:appuser /app
+
+# Create the airunner_group and add appuser to it
+RUN groupadd -g 1001 airunner_group && usermod -aG airunner_group appuser
 
 # Install xhost
 RUN apt-get update && apt-get install -y x11-xserver-utils
@@ -139,24 +148,29 @@ RUN pip install --no-cache-dir pip setuptools wheel --upgrade && \
     pip install nvidia-pyindex && \
     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-FROM dev_image AS final_image
+FROM dev_image AS prepped_image
 USER root
-
-COPY --chown=appuser:appuser . /app/
-
+COPY --chown=docker:appuser . /app/
 COPY ./package/asound.conf /etc/asound.conf
 
-RUN ls -la /app
+FROM prepped_image AS openvoice
 USER appuser
+WORKDIR /app
+RUN git clone https://github.com/myshell-ai/OpenVoice.git && \
+    cd OpenVoice && \
+    pip install -e . && \
+    cd ..
+RUN git clone https://github.com/myshell-ai/MeloTTS.git && \
+    cd MeloTTS && \
+    git checkout -b v0.1.2 && \
+    pip install -e .
+CMD ["/bin/bash"]
 
+FROM openvoice as final_image
+USER appuser
 RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && \
     pip install -U langchain-community && \
     pip install -U mediapipe && \
     pip install --no-cache-dir -U timm && \
     python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')" && \
     python3 -c "import nltk; nltk.download('punkt')"
-
-USER appuser
-
-
-CMD ["/bin/bash"]

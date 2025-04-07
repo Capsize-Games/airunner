@@ -28,11 +28,11 @@ class TestScanPathForItems(unittest.TestCase):
 
         # Create directory structure
         try:
-            os.mkdir(self.lora_path)
+            os.makedirs(self.lora_path, exist_ok=True)
         except FileExistsError:
             pass
         try:
-            os.mkdir(self.embeddings_path)
+            os.makedirs(self.embeddings_path, exist_ok=True)
         except FileExistsError:
             pass
 
