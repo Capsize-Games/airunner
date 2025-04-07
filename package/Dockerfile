@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y \
  xclip \
  xserver-xorg \
  xvfb \
+ ffmpeg \
  # Qt6 dependencies for XCB
  libxcb-cursor0 \
  libxcb-xinput0 \
@@ -155,7 +156,7 @@ COPY ./package/asound.conf /etc/asound.conf
 
 FROM prepped_image AS openvoice
 USER appuser
-WORKDIR /app
+WORKDIR /home/appuser
 RUN git clone https://github.com/myshell-ai/OpenVoice.git && \
     cd OpenVoice && \
     pip install -e . && \
@@ -164,10 +165,12 @@ RUN git clone https://github.com/myshell-ai/MeloTTS.git && \
     cd MeloTTS && \
     git checkout -b v0.1.2 && \
     pip install -e .
+RUN python3 -m unidic download
 CMD ["/bin/bash"]
 
 FROM openvoice as final_image
 USER appuser
+WORKDIR /app
 RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && \
     pip install -U langchain-community && \
     pip install -U mediapipe && \
