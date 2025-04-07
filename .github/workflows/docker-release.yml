@@ -15,6 +15,7 @@ jobs:
       GID: 1000
       AIRUNNER_HOME_DIR: /home/runner/.local/share/airunner
       HOST_HOME: /home/runner
+      XAUTHORITY: /home/runner/.Xauthority
 
     steps:
     - name: Checkout repository
