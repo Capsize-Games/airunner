@@ -27,6 +27,16 @@ jobs:
     - name: Log in to GitHub Container Registry
       run: echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+    - name: Create .env file
+      run: |
+        echo "HOST_UID=1000" >> .env
+        echo "HOST_GID=1000" >> .env
+        echo "UID=1000" >> .env
+        echo "GID=1000" >> .env
+        echo "AIRUNNER_HOME_DIR=/home/runner/.local/share/airunner" >> .env
+        echo "HOST_HOME=/home/runner" >> .env
+        echo "XAUTHORITY=/home/runner/.Xauthority" >> .env
+
     - name: Build and push Docker image via Compose
       run: |
         docker compose -f package/docker-compose.yml build airunner_dev
