@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      AIRUNNER_HOME_DIR: /home/runner/.local/share/airunner
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
