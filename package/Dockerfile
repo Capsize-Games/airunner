@@ -150,14 +150,9 @@ RUN pip install --no-cache-dir pip setuptools wheel --upgrade && \
 
 FROM dev_image AS final_image
 USER root
-
 COPY --chown=docker:appuser . /app/
-
 COPY ./package/asound.conf /etc/asound.conf
-
-RUN ls -la /app
 USER appuser
-
 RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && \
     pip install -U langchain-community && \
     pip install -U mediapipe && \
@@ -165,7 +160,15 @@ RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && \
     python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')" && \
     python3 -c "import nltk; nltk.download('punkt')"
 
+FROM final_image AS optional_image
 USER appuser
-
-
+WORKDIR /app
+RUN git clone https://github.com/myshell-ai/OpenVoice.git && \
+    cd OpenVoice && \
+    pip install -e . && \
+    cd ..
+RUN git clone https://github.com/myshell-ai/MeloTTS.git && \
+    cd MeloTTS && \
+    git checkout -b v0.1.2 && \
+    pip install -e .
 CMD ["/bin/bash"]
