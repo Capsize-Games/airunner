@@ -687,6 +687,9 @@ class RAGMixin:
             self.llm.llm_request = kwargs.get("llm_request", None)
             self._perform_tool_call("chat_engine_react_tool", **kwargs)
 
+    def _llm_updated(self):
+        Settings.llm = self.llm
+
     def _load_settings(self):
         """Load settings with optimized defaults for performance."""
         # Warm up models and configure for better first-search performance
