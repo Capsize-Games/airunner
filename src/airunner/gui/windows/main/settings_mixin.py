@@ -3,45 +3,48 @@ from typing import List, Type, Optional, Dict, Any
 from sqlalchemy.orm import joinedload
 
 from airunner.data.models import (
-    Chatbot, 
-    AIModels, 
-    Schedulers, 
-    Lora, 
-    PathSettings, 
+    Chatbot,
+    AIModels,
+    Schedulers,
+    Lora,
+    PathSettings,
     SavedPrompt,
-    Embedding, 
-    PromptTemplate, 
-    ControlnetModel, 
-    FontSetting, 
-    PipelineModel, 
+    Embedding,
+    PromptTemplate,
+    ControlnetModel,
+    FontSetting,
+    PipelineModel,
     ShortcutKeys,
-    GeneratorSettings, 
-    ApplicationSettings, 
-    ActiveGridSettings, 
+    GeneratorSettings,
+    ApplicationSettings,
+    ActiveGridSettings,
     ControlnetSettings,
-    ImageToImageSettings, 
-    OutpaintSettings, 
-    DrawingPadSettings, 
+    ImageToImageSettings,
+    OutpaintSettings,
+    DrawingPadSettings,
     MetadataSettings,
     LLMGeneratorSettings,
-    TTSSettings, 
-    SpeechT5Settings, 
-    EspeakSettings, 
-    STTSettings, 
-    BrushSettings, 
+    SpeechT5Settings,
+    EspeakSettings,
+    OpenVoiceSettings,
+    STTSettings,
+    BrushSettings,
     GridSettings,
-    MemorySettings, 
-    ImageFilterValue, 
-    TargetFiles, 
-    WhisperSettings, 
-    User
+    MemorySettings,
+    ImageFilterValue,
+    TargetFiles,
+    WhisperSettings,
+    SoundSettings,
+    VoiceSettings,
+    User,
 )
-from airunner.enums import SignalCode
+from airunner.data.models import table_to_class
+from airunner.enums import SignalCode, TTSModel
 from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
 from airunner.utils.settings import get_qsettings
-from airunner.utils.get_logger import get_logger
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application.get_logger import get_logger
+from airunner.settings import AIRUNNER_LOG_LEVEL, AIRUNNER_ENABLE_OPEN_VOICE
 
 
 class SettingsMixinSharedInstance:
@@ -49,7 +52,9 @@ class SettingsMixinSharedInstance:
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(SettingsMixinSharedInstance, cls).__new__(cls, *args, **kwargs)
+            cls._instance = super(SettingsMixinSharedInstance, cls).__new__(
+                cls, *args, **kwargs
+            )
             cls._instance._initialized = False
         return cls._instance
 
@@ -68,6 +73,7 @@ class SettingsMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
     @property
     def session_manager(self):
         return self.settings_mixin_shared_instance.session_manager
@@ -89,9 +95,13 @@ class SettingsMixin:
         return self.load_settings_from_db(ApplicationSettings)
 
     @property
+    def sound_settings(self) -> SoundSettings:
+        return self.load_settings_from_db(SoundSettings)
+
+    @property
     def whisper_settings(self) -> WhisperSettings:
         return self.load_settings_from_db(WhisperSettings)
-    
+
     @property
     def window_settings(self) -> Dict[str, Any]:
         settings = get_qsettings()
@@ -103,11 +113,12 @@ class SettingsMixin:
             "height": settings.value("height", 600, type=int),
             "x_pos": settings.value("x_pos", 0, type=int),
             "y_pos": settings.value("y_pos", 0, type=int),
-            "mode_tab_widget_index": settings.value("mode_tab_widget_index", 0, type=int),
+            "mode_tab_widget_index": settings.value(
+                "mode_tab_widget_index", 0, type=int
+            ),
         }
         settings.endGroup()
         return window_settings
-        
 
     @property
     def llm_generator_settings(self) -> LLMGeneratorSettings:
@@ -117,18 +128,14 @@ class SettingsMixin:
             if len(chatbots) > 0:
                 settings.current_chatbot = self.chatbots[0].id
                 self.update_llm_generator_settings(
-                    "current_chatbot", 
-                    settings.current_chatbot
+                    "current_chatbot", settings.current_chatbot
                 )
         return settings
 
     @property
     def generator_settings(self) -> GeneratorSettings:
         return self.load_settings_from_db(
-            GeneratorSettings,
-            eager_load=[
-                "aimodel"
-            ]
+            GeneratorSettings, eager_load=["aimodel"]
         )
 
     @property
@@ -189,15 +196,50 @@ class SettingsMixin:
 
     @property
     def speech_t5_settings(self) -> SpeechT5Settings:
-        return self.load_settings_from_db(SpeechT5Settings)
+        model_type = self.chatbot.voice_settings.model_type
+        if model_type == TTSModel.SPEECHT5.value:
+            settings_id = self.chatbot.voice_settings.settings_id
+            settings = SpeechT5Settings.objects.filter_by_first(id=settings_id)
+            if settings is None:
+                settings = SpeechT5Settings.objects.create()
+                Chatbot.objects.update(
+                    self.chatbot.id,
+                    voice_settings_id=settings.id,
+                )
+                self.chatbot.voice_settings.settings_id = settings.id
+            return settings
 
     @property
-    def tts_settings(self) -> TTSSettings:
-        return self.load_settings_from_db(TTSSettings)
+    def espeak_settings(self) -> Optional[object]:
+        model_type = self.chatbot.voice_settings.model_type
+        if model_type == TTSModel.ESPEAK.value:
+            settings_id = self.chatbot.voice_settings.settings_id
+            settings = EspeakSettings.objects.filter_by_first(id=settings_id)
+            if settings is None:
+                settings = EspeakSettings.objects.create()
+                Chatbot.objects.update(
+                    self.chatbot.id,
+                    voice_settings_id=settings.id,
+                )
+                self.chatbot.voice_settings.settings_id = settings.id
+            return settings
 
     @property
-    def espeak_settings(self) -> EspeakSettings:
-        return self.load_settings_from_db(EspeakSettings)
+    def openvoice_settings(self) -> OpenVoiceSettings:
+        model_type = self.chatbot.voice_settings.model_type
+        if model_type == TTSModel.OPENVOICE.value:
+            settings_id = self.chatbot.voice_settings.settings_id
+            settings = OpenVoiceSettings.objects.filter_by_first(
+                id=settings_id
+            )
+            if settings is None:
+                settings = OpenVoiceSettings.objects.create()
+                Chatbot.objects.update(
+                    self.chatbot.id,
+                    voice_settings_id=settings.id,
+                )
+                self.chatbot.voice_settings.settings_id = settings.id
+            return settings
 
     @property
     def metadata_settings(self) -> MetadataSettings:
@@ -274,7 +316,7 @@ class SettingsMixin:
         if image is not None:
             image = image.convert("RGB")
         return image
-    
+
     @property
     def outpaint_image(self):
         base_64_image = self.outpaint_settings.image
@@ -291,24 +333,28 @@ class SettingsMixin:
     def get_lora_by_version(version) -> Optional[List[Lora]]:
         return Lora.objects.filter_by(version=version)
 
-    def get_embeddings_by_version(self, version) -> Optional[List[Type[Embedding]]]:
+    def get_embeddings_by_version(
+        self, version
+    ) -> Optional[List[Type[Embedding]]]:
         return [
-            embedding for embedding in self.embeddings if embedding.version == version
+            embedding
+            for embedding in self.embeddings
+            if embedding.version == version
         ]
 
     @property
     def chatbot(self) -> Optional[Chatbot]:
         current_chatbot_id = self.llm_generator_settings.current_chatbot
-        
+
         chatbot = Chatbot.objects.options(
             joinedload(Chatbot.target_files),
         ).get(current_chatbot_id)
-        
+
         if chatbot is None:
             chatbot = Chatbot.objects.options(
                 joinedload(Chatbot.target_files),
             ).first()
-        
+
         if chatbot is None:
             chatbot = Chatbot()
             chatbot.save()
@@ -316,7 +362,41 @@ class SettingsMixin:
                 joinedload(Chatbot.target_files),
             ).first()
 
+        if chatbot.voice_settings is None:
+            voice_settings = VoiceSettings.objects.first()
+            if voice_settings is None:
+                settings = self._get_settings_for_voice_settings(
+                    TTSModel.ESPEAK.value
+                )
+                voice_settings = VoiceSettings.objects.create(
+                    name="Default Voice",
+                    model_type=TTSModel.ESPEAK.value,
+                    settings_id=settings.id,
+                )
+
+            Chatbot.objects.update(chatbot.id, voice_id=voice_settings.id)
+            chatbot.voice_id = voice_settings.id
+
         return chatbot
+
+    def _get_settings_for_voice_settings(self, model_type: str):
+        if model_type == TTSModel.SPEECHT5.value:
+            settings = SpeechT5Settings.objects.first()
+            if settings is None:
+                settings = SpeechT5Settings.objects.create()
+        elif (
+            model_type == TTSModel.OPENVOICE.value
+            and AIRUNNER_ENABLE_OPEN_VOICE
+        ):
+            settings = OpenVoiceSettings.objects.first()
+            if settings is None:
+                settings = OpenVoiceSettings.objects.create()
+        else:
+            # Fall back to espeak
+            settings = EspeakSettings.objects.first()
+            if settings is None:
+                settings = EspeakSettings.objects.create()
+        return settings
 
     @property
     def user(self) -> Type[User]:
@@ -342,9 +422,6 @@ class SettingsMixin:
 
     def update_espeak_settings(self, column_name, val):
         self.update_setting(EspeakSettings, column_name, val)
-
-    def update_tts_settings(self, column_name, val):
-        self.update_setting(TTSSettings, column_name, val)
 
     def update_speech_t5_settings(self, column_name, val):
         self.update_setting(SpeechT5Settings, column_name, val)
@@ -400,7 +477,7 @@ class SettingsMixin:
             pipeline_action=model.pipeline_action,
             enabled=model.enabled,
             model_type=model.model_type,
-            is_default=model.is_default
+            is_default=model.is_default,
         )
         if ai_model:
             for key in model.__dict__.keys():
@@ -418,7 +495,7 @@ class SettingsMixin:
         self.__settings_updated(
             setting_name=GeneratorSettings.__tablename__,
             column_name=column_name,
-            val=val
+            val=val,
         )
 
     def update_controlnet_image_settings(self, column_name, val):
@@ -432,8 +509,7 @@ class SettingsMixin:
 
     @staticmethod
     def load_settings_from_db(
-        model_class_, 
-        eager_load: Optional[List[str]] = None
+        model_class_, eager_load: Optional[List[str]] = None
     ) -> Type:
         settings = model_class_.objects.first(eager_load=eager_load)
         if settings is None:
@@ -441,14 +517,22 @@ class SettingsMixin:
             settings.save()
         return model_class_.objects.first(eager_load=eager_load)
 
+    def update_setting_by_table_name(self, table_name, column_name, val):
+        model_class_ = table_to_class.get(table_name)
+        if model_class_ is None:
+            self.logger.error(f"Model class for {table_name} not found")
+            return
+        setting = model_class_.objects.order_by(model_class_.id.desc()).first()
+        if setting:
+            model_class_.objects.update(setting.id, **{column_name: val})
+            self.__settings_updated(table_name, column_name, val)
+        else:
+            self.logger.error("Failed to update settings: No setting found")
+
     def update_setting(self, model_class_, name, value):
         setting = model_class_.objects.order_by(model_class_.id.desc()).first()
         if setting:
-            model_class_.objects.update(
-                setting.id, **{
-                    name: value
-                }
-            )
+            model_class_.objects.update(setting.id, **{name: value})
             self.__settings_updated(model_class_.__tablename__, name, value)
         else:
             self.logger.error("Failed to update settings: No setting found")
@@ -456,7 +540,7 @@ class SettingsMixin:
     @staticmethod
     def reset_settings():
         """
-        Reset all settings to their default values by deleting all 
+        Reset all settings to their default values by deleting all
         settings from the database. When applications are
         accessed again, they will be recreated.
         """
@@ -470,7 +554,6 @@ class SettingsMixin:
             MetadataSettings,
             GeneratorSettings,
             LLMGeneratorSettings,
-            TTSSettings,
             SpeechT5Settings,
             EspeakSettings,
             STTSettings,
@@ -514,9 +597,7 @@ class SettingsMixin:
 
     @staticmethod
     def get_font_setting_by_name(name) -> Type[FontSetting]:
-        return FontSetting.objects.filter_by_first(
-            name=name
-        )
+        return FontSetting.objects.filter_by_first(name=name)
 
     def update_font_setting(self, font_setting: FontSetting):
         new_font_setting = FontSetting.objects.filter_by_first(
@@ -560,10 +641,7 @@ class SettingsMixin:
             for column in model_name_.__table__.columns:
                 if column.default is not None:
                     default_values[column.name] = column.default.arg
-            session.execute(
-                model_name_.__table__.insert(),
-                [default_values]
-            )
+            session.execute(model_name_.__table__.insert(), [default_values])
             session.commit()
 
     @staticmethod
@@ -628,7 +706,7 @@ class SettingsMixin:
             pipeline_action=embedding.pipeline_action,
             enabled=embedding.enabled,
             model_type=embedding.model_type,
-            is_default=embedding.is_default
+            is_default=embedding.is_default,
         )
 
     def update_embeddings(self, embeddings: List[Embedding]):
@@ -642,7 +720,7 @@ class SettingsMixin:
                 pipeline_action=embedding.pipeline_action,
                 enabled=embedding.enabled,
                 model_type=embedding.model_type,
-                is_default=embedding.is_default
+                is_default=embedding.is_default,
             )
             if new_embedding:
                 for key in embedding.__dict__.keys():
@@ -689,16 +767,21 @@ class SettingsMixin:
         if not self.settings_mixin_shared_instance.chatbot:
             chatbot = Chatbot.objects.options(
                 joinedload(Chatbot.target_files),
-                joinedload(Chatbot.target_directories)
+                joinedload(Chatbot.target_directories),
             ).get(chatbot_id)
             if chatbot is None:
                 chatbot = self.create_chatbot("Default")
             self.settings_mixin_shared_instance.chatbot = chatbot
         return self.settings_mixin_shared_instance.chatbot
 
-    def __settings_updated(self, setting_name=None, column_name=None, val=None):
-        self.emit_signal(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, {
-            "setting_name": setting_name,
-            "column_name": column_name,
-            "value": val
-        })
+    def __settings_updated(
+        self, setting_name=None, column_name=None, val=None
+    ):
+        self.emit_signal(
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
+            {
+                "setting_name": setting_name,
+                "column_name": column_name,
+                "value": val,
+            },
+        )

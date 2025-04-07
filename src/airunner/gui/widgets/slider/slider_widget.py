@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QDoubleSpinBox
 from airunner.data.models import Lora
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.slider.templates.slider_ui import Ui_slider_widget
+from airunner.data.models import table_to_class
 
 
 class SliderWidget(BaseWidget):
@@ -20,8 +21,12 @@ class SliderWidget(BaseWidget):
         self.table_name = None
         self.table_column = None
         self.table_item = None
-        self.ui.slider.sliderReleased.connect(self.handle_slider_release)  # Connect valueChanged signal
-        self.ui.slider_spinbox.valueChanged.connect(self.handle_spinbox_change)  # Connect valueChanged signal
+        self.ui.slider.sliderReleased.connect(
+            self.handle_slider_release
+        )  # Connect valueChanged signal
+        self.ui.slider_spinbox.valueChanged.connect(
+            self.handle_spinbox_change
+        )  # Connect valueChanged signal
         self._callback = None
 
     @property
@@ -114,17 +119,31 @@ class SliderWidget(BaseWidget):
         self._callback = kwargs.get("slider_callback", None)
         if self._callback is None:
             self._callback = self.property("slider_callback") or None
-        slider_minimum = kwargs.get("slider_minimum", self.property("slider_minimum") or 0)
-        slider_maximum = kwargs.get("slider_maximum", self.property("slider_maximum") or 100)
-        spinbox_minimum = kwargs.get("spinbox_minimum", self.property("spinbox_minimum") or 0.0)
-        spinbox_maximum = kwargs.get("spinbox_maximum", self.property("spinbox_maximum") or 100.0)
+        slider_minimum = kwargs.get(
+            "slider_minimum", self.property("slider_minimum") or 0
+        )
+        slider_maximum = kwargs.get(
+            "slider_maximum", self.property("slider_maximum") or 100
+        )
+        spinbox_minimum = kwargs.get(
+            "spinbox_minimum", self.property("spinbox_minimum") or 0.0
+        )
+        spinbox_maximum = kwargs.get(
+            "spinbox_maximum", self.property("spinbox_maximum") or 100.0
+        )
         current_value = None
-        settings_property = kwargs.get("settings_property", self.property("settings_property") or None)
+        settings_property = kwargs.get(
+            "settings_property", self.property("settings_property") or None
+        )
         self.table_id = self.property("table_id") or None
         if self.table_id is not None:
             self.table_name, self.table_column = settings_property.split(".")
-        label_text = kwargs.get("label_text", self.property("label_text") or "")
-        display_as_float = kwargs.get("display_as_float", self.property("display_as_float") or False)
+        label_text = kwargs.get(
+            "label_text", self.property("label_text") or ""
+        )
+        display_as_float = kwargs.get(
+            "display_as_float", self.property("display_as_float") or False
+        )
 
         slider_tick_interval = self.property("slider_tick_interval") or 8
         slider_single_step = self.property("slider_single_step") or 1
@@ -138,12 +157,18 @@ class SliderWidget(BaseWidget):
 
         divide_by = self.property("divide_by") or 1.0
 
-        if self.table_id is not None and self.table_name is not None and self.table_column is not None:
-            
+        if (
+            self.table_id is not None
+            and self.table_name is not None
+            and self.table_column is not None
+        ):
+
             if self.table_name == "lora":
-                self.table_item = Lora.objects.filter_by_first(id=self.table_id)
+                self.table_item = Lora.objects.filter_by_first(
+                    id=self.table_id
+                )
                 current_value = getattr(self.table_item, self.table_column)
-            
+
         elif current_value is None:
             if settings_property is not None:
                 current_value = self.get_settings_value(settings_property)
@@ -201,64 +226,54 @@ class SliderWidget(BaseWidget):
 
     def get_settings_value(self, settings_property):
         if self.table_item is not None:
-            return getattr(self.table_item, self.table_column)
-        keys = settings_property.split(".")
+            # If we already have an item from the table, we can get the value
+            # directly from it
+            return getattr(self.table_item, self.table_column, None)
 
+        # If a single name is passed, we assume it's a column name
+        # in the application_settings table
+        keys = settings_property.split(".")
         if len(keys) == 1:
             keys = ["application_settings", keys[0]]
 
-        obj = getattr(self, keys[0])
+        table_name = keys[0]
+        column_name = keys[1]
 
-        return getattr(obj, keys[1])
+        # Get the class name from the table name
+        class_name_ = table_to_class.get(table_name)
+
+        if self.table_id:
+            # get the object by id
+            obj = class_name_.objects.get(self.table_id)
+        else:
+            # get the first object
+            obj = class_name_.objects.first()
+
+        # Check if we have an object
+        if obj is None:
+            self.logger.error(
+                f"Object {table_name} is None for settings_property: {settings_property}"
+            )
+            return
+        
+        # Return the value of the column
+        return getattr(obj, column_name, None)
 
     def set_settings_value(self, settings_property: str, val: Any):
         if self.table_item is not None:
-            
+
             setattr(self.table_item, self.table_column, val)
             self.table_item.save()
-            
+
         elif settings_property is not None:
             keys = settings_property.split(".")
-            setting_name = keys[0]
-            column_name = keys[1]
-
-            if setting_name == "application_settings":
-                self.update_application_settings(column_name, val)
-            elif setting_name == "generator_settings":
-                self.update_generator_settings(column_name, val)
-            elif setting_name == "controlnet_image_settings":
-                self.update_controlnet_image_settings(column_name, val)
-            elif setting_name == "brush_settings":
-                self.update_brush_settings(column_name, val)
-            elif setting_name == "controlnet_settings":
-                self.update_controlnet_settings(column_name, val)
-            elif setting_name == "image_to_image_settings":
-                self.update_image_to_image_settings(column_name, val)
-            elif setting_name == "outpaint_settings":
-                self.update_outpaint_settings(column_name, val)
-            elif setting_name == "drawing_pad_settings":
-                self.update_drawing_pad_settings(column_name, val)
-            elif setting_name == "grid_settings":
-                self.update_grid_settings(column_name, val)
-            elif setting_name == "active_grid_settings":
-                self.update_active_grid_settings(column_name, val)
-            elif setting_name == "path_settings":
-                self.update_path_settings(column_name, val)
-            elif setting_name == "memory_settings":
-                self.update_memory_settings(column_name, val)
-            elif setting_name == "llm_generator_settings":
-                self.update_llm_generator_settings(column_name, val)
-            elif setting_name == "whisper_settings":
-                self.update_whisper_settings(column_name, val)
-            elif setting_name == "speech_t5_settings":
-                self.update_speech_t5_settings(column_name, val)
-            else:
-                self.logger.error(f"Invalid setting name: {setting_name}")
+            self.update_setting_by_table_name(
+                table_name=keys[0], column_name=keys[1], val=val
+            )
 
     def set_slider_and_spinbox_values(self, val):
         if val is None:
             val = 0
-
         normalized = val / self.slider_maximum
         spinbox_val = normalized * self.spinbox_maximum
         spinbox_val = round(spinbox_val, 2)
@@ -330,5 +345,7 @@ class SliderWidget(BaseWidget):
     def closeEvent(self, event):
         self.ui.slider.sliderReleased.disconnect(self.handle_slider_release)
         self.ui.slider.valueChanged.disconnect(self.handle_slider_change)
-        self.ui.slider_spinbox.valueChanged.disconnect(self.handle_spinbox_change)
+        self.ui.slider_spinbox.valueChanged.disconnect(
+            self.handle_spinbox_change
+        )
         super().closeEvent(event)

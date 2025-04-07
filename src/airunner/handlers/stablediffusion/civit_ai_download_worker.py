@@ -4,7 +4,7 @@ from queue import Queue
 import requests
 from PySide6.QtCore import QObject, Signal
 from airunner.enums import SignalCode
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 
 class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):
@@ -55,7 +55,10 @@ class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):
             })
 
             file_name = os.path.expanduser(file_name)
-            os.makedirs(os.path.dirname(file_name), exist_ok=True)
+            try:
+                os.makedirs(file_name, exist_ok=True)
+            except FileExistsError:
+                pass
 
             self.emit_signal(SignalCode.UPDATE_DOWNLOAD_LOG, {
                 "message": f"Downloading {url} of size {size_kb} bytes to {file_name}"

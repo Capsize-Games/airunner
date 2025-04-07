@@ -85,6 +85,6 @@ class Ui_about_window(object):
         about_window.setWindowTitle(QCoreApplication.translate("about_window", u"About", None))
         self.title.setText(QCoreApplication.translate("about_window", u"AI Runner v", None))
         self.label_3.setText(QCoreApplication.translate("about_window", u"Powered by open source software", None))
-        self.label_2.setText(QCoreApplication.translate("about_window", u"Copyright \u00a9 2022-2023 Capsize LLC", None))
+        self.label_2.setText(QCoreApplication.translate("about_window", u"Copyright \u00a9 2022-2025 Capsize LLC", None))
     # retranslateUi
 

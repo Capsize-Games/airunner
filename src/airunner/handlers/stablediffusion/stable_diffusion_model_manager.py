@@ -87,7 +87,7 @@ from airunner.utils.image import (
     convert_image_to_binary, 
     export_images
 )
-from airunner.utils import get_torch_device
+from airunner.utils.application import get_torch_device
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.handlers.stablediffusion.rect import Rect
