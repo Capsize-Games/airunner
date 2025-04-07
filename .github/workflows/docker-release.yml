@@ -19,14 +19,10 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
-      - name: Build Docker image
-        run: |
-          docker build . --file package/Dockerfile --tag ghcr.io/capsize-games/airunner/airunner-dev:linux
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
-      - name: Tag Docker image
+      - name: Build and push using Docker Compose
         run: |
-          docker tag ghcr.io/capsize-games/airunner/airunner-dev:linux ghcr.io/capsize-games/airunner/airunner-dev:linux
-
-      - name: Push Docker image to GitHub Container Registry
-        run: |
-          docker push ghcr.io/capsize-games/airunner/airunner-dev:linux
+          docker-compose -f package/docker-compose.yml build
+          docker-compose -f package/docker-compose.yml push
