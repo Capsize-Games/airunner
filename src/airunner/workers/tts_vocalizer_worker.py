@@ -104,7 +104,8 @@ class TTSVocalizerWorker(Worker):
 
     @property
     def playback_device(self):
-        return self.sound_settings.playback_device
+        playback_device = self.sound_settings.playback_device
+        return playback_device if playback_device != "" else "pulse"
 
     @property
     def selected_device(self):
