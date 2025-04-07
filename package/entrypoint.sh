@@ -19,6 +19,13 @@ else
   echo "X connection failed"
 fi
 
+# Verify that the log file is writable
+LOG_FILE="/home/appuser/.local/share/airunner/airunner.log"
+if [ ! -w "$LOG_FILE" ]; then
+  echo "Error: Log file $LOG_FILE is not writable. Please check permissions."
+  exit 1
+fi
+
 # Modify the script to handle interactive sessions properly
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
