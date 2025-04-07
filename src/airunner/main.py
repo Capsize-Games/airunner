@@ -49,17 +49,13 @@ base_path = os.path.join(
 ################################################################
 # Set the environment variable for PyTorch to use expandable
 ################################################################
-torch_home = os.getenv(
-    "TORCH_HOME",
-    os.path.join(base_path, "torch", "hub"),  # Default to a relative path
-)
-os.environ["TORCH_HOME"] = torch_home
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
-
 import torch
 
-torch.hub.set_dir(torch_home)
+torch.hub.set_dir(
+    os.environ.get(
+        "TORCH_HOME", "/home/appuser/.local/share/airunner/torch/hub"
+    )
+)
 
 ################################################################
 # Ensure that the base directory exists.
