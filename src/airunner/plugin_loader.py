@@ -11,7 +11,7 @@ class PluginLoader:
         plugins = []
         if not os.path.exists(self.plugin_dir):
             try:
-                os.mkdir(self.plugin_dir)
+                os.makedirs(self.plugin_dir, exist_ok=True)
             except FileExistsError:
                 pass
 

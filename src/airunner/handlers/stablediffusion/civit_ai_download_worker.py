@@ -56,7 +56,7 @@ class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):
 
             file_name = os.path.expanduser(file_name)
             try:
-                os.mkdir(file_name)
+                os.makedirs(file_name, exist_ok=True)
             except FileExistsError:
                 pass
 
