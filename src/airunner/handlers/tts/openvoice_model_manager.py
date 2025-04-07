@@ -2,6 +2,12 @@ from typing import Type, Optional
 from abc import ABCMeta
 import os
 import torch
+
+torch.hub.set_dir(
+    os.environ.get(
+        "TORCH_HOME", "/home/appuser/.local/share/airunner/torch/hub"
+    )
+)
 import librosa
 
 from openvoice.mel_processing import spectrogram_torch
@@ -9,7 +15,11 @@ from openvoice import se_extractor
 from openvoice.api import OpenVoiceBaseClass, ToneColorConverter
 from melo.api import TTS
 
-from airunner.settings import AIRUNNER_TTS_SPEAKER_RECORDING_PATH
+from airunner.settings import (
+    AIRUNNER_BASE_PATH,
+    AIRUNNER_TTS_SPEAKER_RECORDING_PATH,
+    AIRUNNER_LOG_LEVEL,
+)
 from airunner.enums import (
     SignalCode,
     ModelType,
@@ -18,6 +28,7 @@ from airunner.enums import (
 )
 from airunner.handlers.tts.tts_model_manager import TTSModelManager
 from airunner.handlers.tts.tts_request import TTSRequest
+from airunner.utils.application.get_logger import get_logger
 
 
 class StreamingToneColorConverter(ToneColorConverter):
@@ -28,6 +39,7 @@ class StreamingToneColorConverter(ToneColorConverter):
     def __init__(self, *args, **kwargs):
         OpenVoiceBaseClass.__init__(self, *args, **kwargs)
         self.version = getattr(self.hps, "_version_", "v1")
+        self.logger = get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
 
     def convert(
         self,
@@ -54,14 +66,20 @@ class StreamingToneColorConverter(ToneColorConverter):
 
         with torch.no_grad():
             y = torch.FloatTensor(audio).to(self.device).unsqueeze(0)
-            spec = spectrogram_torch(
-                y,
-                hps.data.filter_length,
-                hps.data.sampling_rate,
-                hps.data.hop_length,
-                hps.data.win_length,
-                center=False,
-            ).to(self.device)
+            try:
+                spec = spectrogram_torch(
+                    y,
+                    hps.data.filter_length,
+                    hps.data.sampling_rate,
+                    hps.data.hop_length,
+                    hps.data.win_length,
+                    center=False,
+                ).to(self.device)
+            except RuntimeError as e:
+                self.logger.error(
+                    f"Runtime error during spectrogram computation: {e}"
+                )
+                return None
             spec_lengths = torch.LongTensor([spec.size(-1)]).to(self.device)
             audio = (
                 self.model.voice_conversion(
@@ -172,13 +190,20 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.unload()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self._initialize()
-        self.model = TTS(
-            language=self._language.value,
-            device=self.device,
-            model_base_path=os.path.join(
-                self.path_settings.base_path, "text/models/bert"
-            ),
-        )
+        do_download = False
+
+        import nltk
+
+        nltk.download("averaged_perceptron_tagger_eng")
+
+        # if do_download:
+        #     vad, vad_utils = torch.hub.load(
+        #         repo_or_dir="snakers4/silero-vad",
+        #         model="silero_vad",
+        #         force_reload=False,
+        #         onnx=False,
+        #     )
+        self.model = TTS(language=self._language.value, device=self.device)
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 
     def unload(self):
@@ -211,10 +236,26 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         except FileExistsError:
             pass
 
+        if self._reference_speaker is None:
+            self.logger.error(
+                "Reference speaker is None, unable to initialize"
+            )
+            return
+
         try:
+            self.logger.info(f"Loading {self._reference_speaker}")
             self._target_se, self._audio_name = se_extractor.get_se(
-                self._reference_speaker, self.tone_color_converter, vad=True
+                audio_path=self._reference_speaker,
+                vc_model=self.tone_color_converter,
+                vad=True,
+                target_dir=os.path.join(AIRUNNER_BASE_PATH, "processed"),
             )
         except AssertionError as e:
-            self.logger.error(f"Failed to load from se_extractor {e}")
+            torch_hub_cache_home = torch.hub.get_dir()
+            self.logger.error(
+                f"Failed to load from se_extractor {e} - torch_hub_cache_home={torch_hub_cache_home}"
+            )
             self.emit_signal(SignalCode.TTS_DISABLE_SIGNAL)
+
+        if self._target_se is None:
+            self.logger.error("Target speaker extraction returned None.")
