@@ -5,6 +5,7 @@ echo "Starting docker"
 # Export HOST_UID and HOST_GID for the current user
 export HOST_UID=$(id -u)
 export HOST_GID=$(id -g)
+TORCH_HUB_DIR=${HOME}/.local/share/airunner/torch/hub
 
 # Ensure the log file exists and has the correct permissions
 LOG_FILE="${HOME}/.local/share/airunner/airunner.log"
@@ -35,6 +36,20 @@ if [ -d "$AIRUNNER_DIR" ]; then
   if [ $(stat -c "%A" "$AIRUNNER_DIR" | cut -c 6) != "s" ]; then
     echo "Setting group ID bit on $AIRUNNER_DIR..."
     sudo chmod g+s "$AIRUNNER_DIR"  # Set the group ID on new files and directories
+  fi
+fi
+
+if [ -d "$TORCH_HUB_DIR" ]; then
+  echo "Adjusting permissions for $TORCH_HUB_DIR to allow access for all users..."
+  # Check if permissions need to be updated
+  if [ $(stat -c "%a" "$TORCH_HUB_DIR") -ne 775 ]; then
+    echo "Updating permissions for $TORCH_HUB_DIR..."
+    sudo chmod -R 775 "$TORCH_HUB_DIR"  # Allow read/write/execute for owner and group
+  fi
+  # Check if the group ID bit is already set
+  if [ $(stat -c "%A" "$TORCH_HUB_DIR" | cut -c 6) != "s" ]; then
+    echo "Setting group ID bit on $TORCH_HUB_DIR..."
+    sudo chmod g+s "$TORCH_HUB_DIR"  # Set the group ID on new files and directories
   fi
 fi
 
