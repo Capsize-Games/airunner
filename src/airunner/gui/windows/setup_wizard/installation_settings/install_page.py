@@ -13,7 +13,7 @@ from airunner.data.bootstrap.llm_file_bootstrap_data import LLM_FILE_BOOTSTRAP_D
 from airunner.data.bootstrap.whisper import WHISPER_FILES
 from airunner.data.bootstrap.speech_t5 import SPEECH_T5_FILES
 from airunner.enums import SignalCode
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.settings import NLTK_DOWNLOAD_DIR
 from airunner.utils.network import HuggingfaceDownloader
 from airunner.utils.os import create_airunner_paths
@@ -333,13 +333,19 @@ class InstallWorker(
             NLTK_DOWNLOAD_DIR,
             "corpora"
         ))
-        os.makedirs(path, exist_ok=True)
+        try:
+            os.makedirs(path, exist_ok=True)
+        except FileExistsError:
+            pass
         path = os.path.expanduser(os.path.join(
             NLTK_DOWNLOAD_DIR,
             "tokenizers",
             "punkt"
         ))
-        os.makedirs(path, exist_ok=True)
+        try:
+            os.makedirs(path, exist_ok=True)
+        except FileExistsError:
+            pass
         nltk.download(
             "stopwords",
             download_dir=NLTK_DOWNLOAD_DIR,

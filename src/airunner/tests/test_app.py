@@ -24,7 +24,7 @@ class TestApp(unittest.TestCase):
         """Test the upgrade handling logic."""
         # Use context managers instead of decorators to avoid parameter ordering issues
         with patch("airunner.data.models.PipelineModel", new=MagicMock()) as mock_pipeline_model:
-            with patch("airunner.app.os.makedirs") as mock_makedirs:
+            with patch("airunner.app.os.makedir") as mock_makedirs:
                 with patch("airunner.data.bootstrap.pipeline_bootstrap_data.pipeline_bootstrap_data", 
                           new=MagicMock(return_value=[])) as mock_bootstrap:
                     # Mock open to prevent file operations

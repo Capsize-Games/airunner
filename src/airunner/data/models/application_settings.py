@@ -2,15 +2,15 @@ from sqlalchemy import Column, Integer, String, Boolean
 
 from airunner.data.models.base import BaseModel
 from airunner.enums import (
-    ImageGenerator, 
-    GeneratorSection, 
-    CanvasToolName, 
-    Mode
+    ImageGenerator,
+    GeneratorSection,
+    CanvasToolName,
+    Mode,
 )
 
 
 class ApplicationSettings(BaseModel):
-    __tablename__ = 'application_settings'
+    __tablename__ = "application_settings"
     id = Column(Integer, primary_key=True, autoincrement=True)
     use_cuda = Column(Boolean, default=True)
     sd_enabled = Column(Boolean, default=False)
@@ -23,7 +23,9 @@ class ApplicationSettings(BaseModel):
     installation_path = Column(String, default="~/.local/share/airunner")
     current_layer_index = Column(Integer, default=0)
     paths_initialized = Column(Boolean, default=False)
-    trust_remote_code = Column(Boolean, default=False)  # Leave this hardcoded. We will never trust remote code.
+    trust_remote_code = Column(
+        Boolean, default=False
+    )  # Leave this hardcoded. We will never trust remote code.
     nsfw_filter = Column(Boolean, default=True)
     resize_on_paste = Column(Boolean, default=True)
     image_to_new_layer = Column(Boolean, default=True)
@@ -39,7 +41,9 @@ class ApplicationSettings(BaseModel):
     working_width = Column(Integer, default=512)
     working_height = Column(Integer, default=512)
     current_llm_generator = Column(String, default="causallm")
-    current_image_generator = Column(String, default=ImageGenerator.STABLEDIFFUSION.value)
+    current_image_generator = Column(
+        String, default=ImageGenerator.STABLEDIFFUSION.value
+    )
     generator_section = Column(String, default=GeneratorSection.TXT2IMG.value)
     hf_api_key_read_key = Column(String, default="")
     hf_api_key_write_key = Column(String, default="")

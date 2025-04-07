@@ -31,13 +31,16 @@ def create_airunner_paths(path_settings: PathSettings):
     ):
         path = getattr(path_settings, attr)
         # Path sanitization
-        path = path.replace('..', '')
+        path = path.replace("..", "")
 
         # Permission check and directory creation
         try:
             path = os.path.expanduser(path)
             if not os.path.exists(path):
-                os.makedirs(path)
+                try:
+                    os.makedirs(path, exist_ok=True)
+                except FileExistsError:
+                    pass
         except PermissionError:
             print(f"No permission to create directory at {path}")
         except Exception as e:

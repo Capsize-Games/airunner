@@ -9,54 +9,39 @@ import signal
 import traceback
 from functools import partial
 from pathlib import Path
-from importlib.metadata import version
-
 from PySide6 import QtCore
-from PySide6.QtCore import (
-    QObject,
-    QTimer
-)
-from PySide6.QtGui import (
-    QGuiApplication,
-    QPixmap,
-    Qt,
-    QWindow
-)
-from PySide6.QtWidgets import (
-    QApplication,
-    QSplashScreen
-)
+from PySide6.QtCore import QObject, QTimer
+from PySide6.QtGui import QGuiApplication, QPixmap, Qt, QWindow
+from PySide6.QtWidgets import QApplication, QSplashScreen
 
-from airunner.app_installer import AppInstaller
 from airunner.enums import SignalCode
-from airunner.utils.mediator_mixin import MediatorMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.data.models import ApplicationSettings
-from airunner.gui.windows.main.main_window import MainWindow
-from airunner.settings import AIRUNNER_DISCORD_URL, AIRUNNER_DISABLE_SETUP_WIZARD
+from airunner.data.models.application_settings import ApplicationSettings
+from airunner.settings import (
+    AIRUNNER_DISCORD_URL,
+    AIRUNNER_DISABLE_SETUP_WIZARD,
+)
 
 
-class App(
-    MediatorMixin,
-    SettingsMixin,
-    QObject
-):
+class App(MediatorMixin, SettingsMixin, QObject):
     """
     The main application class for AI Runner.
     This class can be run as a GUI application or as a socket server.
     """
+
     def __init__(
         self,
         no_splash: bool = False,
         main_window_class: QWindow = None,
         window_class_params: Optional[Dict] = None,
-        initialize_gui: bool = True  # New flag to control GUI initialization
+        initialize_gui: bool = True,  # New flag to control GUI initialization
     ):
         """
         Initialize the application and run as a GUI application or a socket server.
         :param main_window_class: The main window class to use for the application.
         """
-        self.main_window_class_ = main_window_class or MainWindow
+        self.main_window_class_ = main_window_class
         self.window_class_params = window_class_params or {}
         self.no_splash = no_splash
         self.app = None
@@ -74,68 +59,7 @@ class App(
         if self.initialize_gui:
             self.start()
             self.run_setup_wizard()
-
-            current_version = version("airunner")
-            if self.do_upgrade(current_version):
-                self.handle_upgrade(current_version)
             self.run()
-    
-    def do_upgrade(self, current_version) -> bool:
-        current_version_tuple = tuple(map(int, current_version.split(".")))
-        try:
-            app_version_tuple = tuple(map(int, self.application_settings.app_version.split(".")))
-        except ValueError:
-            return True
-        except AttributeError:
-            return True
-        return app_version_tuple < current_version_tuple
-
-    def handle_upgrade(self, current_version):
-        from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
-        from airunner.data.models import PipelineModel
-        for model in pipeline_bootstrap_data:
-            pipelinemodel = PipelineModel.objects.filter_by_first(
-                pipeline_action=model["pipeline_action"],
-                version=model["version"],
-                category=model["category"],
-                classname=model["classname"],
-                default=model["default"]
-            )
-            if pipelinemodel:
-                continue
-            pipelinemodel = PipelineModel()
-            pipelinemodel.pipeline_action = model["pipeline_action"]
-            pipelinemodel.version = model["version"]
-            pipelinemodel.category = model["category"]
-            pipelinemodel.classname = model["classname"]
-            pipelinemodel.default = model["default"]
-            pipelinemodel.save()
-        try:
-            app_version_tuple = tuple(map(int, self.application_settings.app_version.split(".")))
-        except ValueError:
-            app_version_tuple = None
-        except AttributeError:
-            app_version_tuple = None
-        if app_version_tuple is None or app_version_tuple < (3, 1, 10):
-            turbo_paths = (
-                os.path.expanduser(os.path.join(
-                    self.path_settings.base_path, "art/models", "SDXL 1.0", "txt2img", "turbo_models"
-                )),
-                os.path.expanduser(os.path.join(
-                    self.path_settings.base_path, "art/models", "SDXL 1.0", "inpaint", "turbo_models"
-                ))
-            )
-            for turbo_path in turbo_paths:
-                if not os.path.exists(turbo_path):
-                    os.makedirs(turbo_path)
-                    with open(os.path.join(turbo_path, "README.txt"), "w") as f:
-                        f.write("Place Stable Diffusion XL Turbo, Lightning and Hyper models here")
-            self.application_settings.run_setup_wizard = True
-            self.run_setup_wizard()
-            self.application_settings.app_version = current_version
-            self.llm_generator_settings.model_version = "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
-            self.application_settings.save()
-            self.llm_generator_settings.save()
 
     @staticmethod
     def run_setup_wizard():
@@ -143,6 +67,8 @@ class App(
             return
         application_settings = ApplicationSettings.objects.first()
         if application_settings.run_setup_wizard:
+            from airunner.app_installer import AppInstaller
+
             AppInstaller()
 
     def on_log_logged_signal(self, data: dict):
@@ -175,20 +101,11 @@ class App(
             self.splash = self.display_splash_screen(self.app)
 
         # Show the main application window
-        QTimer.singleShot(
-            50,
-            partial(
-                self.show_main_application,
-                self.app
-            )
-        )
+        QTimer.singleShot(50, partial(self.show_main_application, self.app))
         sys.exit(self.app.exec())
 
     @staticmethod
-    def signal_handler(
-        _signal,
-        _frame
-    ):
+    def signal_handler(_signal, _frame):
         """
         Handle the SIGINT signal in a clean way.
         :param _signal:
@@ -196,6 +113,8 @@ class App(
         :return: None
         """
         print("\nExiting...")
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
         try:
             app = QApplication.instance()
             app.quit()
@@ -212,7 +131,7 @@ class App(
         """
         if self.no_splash:
             return
-        
+
         screens = QGuiApplication.screens()
         try:
             screen = screens.at(0)
@@ -223,9 +142,7 @@ class App(
         stylesheet_path = base_dir / "gui" / "images" / "splashscreen.png"
         pixmap = QPixmap(stylesheet_path)
         splash = QSplashScreen(
-            screen,
-            pixmap,
-            QtCore.Qt.WindowType.WindowStaysOnTopHint
+            screen, pixmap, QtCore.Qt.WindowType.WindowStaysOnTopHint
         )
         splash.show()
         App.update_splash_message(splash, f"Loading AI Runner")
@@ -236,14 +153,12 @@ class App(
     def update_splash_message(splash, message: str):
         splash.showMessage(
             message,
-            QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignCenter,
-            QtCore.Qt.GlobalColor.white
+            QtCore.Qt.AlignmentFlag.AlignBottom
+            | QtCore.Qt.AlignmentFlag.AlignCenter,
+            QtCore.Qt.GlobalColor.white,
         )
 
-    def show_main_application(
-        self,
-        app
-    ):
+    def show_main_application(self, app):
         """
         Show the main application window.
         :param app:
@@ -253,20 +168,24 @@ class App(
         if not self.initialize_gui:
             return  # Skip showing the main application window if GUI is disabled
 
+        window_class = self.main_window_class_
+        if not window_class:
+            from airunner.gui.windows.main.main_window import MainWindow
+
+            window_class = MainWindow
+
+        if self.splash:
+            self.splash.finish(None)
+
         try:
-            window = self.main_window_class_(
-                app=self,
-                **self.window_class_params
-            )
+            window = window_class(app=self, **self.window_class_params)
+            app.main_window = window
+            window.raise_()
         except Exception as e:
             traceback.print_exc()
             print(e)
-            if self.splash:
-                self.splash.finish(None)
-            sys.exit(f"""
+            sys.exit(
+                f"""
                 An error occurred while initializing the application.
-                Please report this issue on GitHub or Discord {AIRUNNER_DISCORD_URL}.""")
-        app.main_window = window
-        if self.splash:
-            self.splash.finish(window)
-        window.raise_()
+                Please report this issue on GitHub or Discord {AIRUNNER_DISCORD_URL}."""
+            )

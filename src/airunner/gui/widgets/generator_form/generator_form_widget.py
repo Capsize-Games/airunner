@@ -4,13 +4,13 @@ import re
 from PySide6.QtCore import Signal, QRect, Slot
 
 from airunner.enums import (
-    SignalCode, 
-    GeneratorSection, 
-    LLMActionType,
+    SignalCode,
+    GeneratorSection,
 )
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.generator_form.templates.generatorform_ui import Ui_generator_form
-from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.gui.widgets.generator_form.templates.generatorform_ui import (
+    Ui_generator_form,
+)
 from airunner.data.models import Tab
 
 
@@ -29,8 +29,10 @@ class GeneratorForm(BaseWidget):
         self.seed_override = None
         self.parent = None
         self.initialized = False
-        self.ui.generator_form_tabs.currentChanged.connect(self.on_tab_section_changed)
-    
+        self.ui.generator_form_tabs.currentChanged.connect(
+            self.on_tab_section_changed
+        )
+
     @Slot(int)
     def on_tab_section_changed(self, index: int):
         Tab.update_tabs("left", self.ui.generator_form_tabs, index)
@@ -65,15 +67,17 @@ class GeneratorForm(BaseWidget):
             self.active_grid_settings.pos_x,
             self.active_grid_settings.pos_y,
             self.application_settings.working_width,
-            self.application_settings.working_height
+            self.application_settings.working_height,
         )
-        rect.translate(-self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos)
+        rect.translate(
+            -self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos
+        )
 
         return rect
 
     def on_bot_mood_updated(self, data):
         pass
-    
+
     ##########################################################################
     # End LLM Generated Image handlers
     ##########################################################################
@@ -90,7 +94,9 @@ class GeneratorForm(BaseWidget):
         self.ui.prompt.setPlainText(saved_prompt.prompt)
         self.ui.negative_prompt.setPlainText(saved_prompt.negative_prompt)
         self.ui.secondary_prompt.setPlainText(saved_prompt.secondary_prompt)
-        self.ui.secondary_negative_prompt.setPlainText(saved_prompt.secondary_negative_prompt)
+        self.ui.secondary_negative_prompt.setPlainText(
+            saved_prompt.secondary_negative_prompt
+        )
         self.ui.prompt.blockSignals(False)
         self.ui.negative_prompt.blockSignals(False)
         self.ui.secondary_prompt.blockSignals(False)
@@ -106,20 +112,21 @@ class GeneratorForm(BaseWidget):
         if data:
             finalize = data.get("finalize", None)
             if finalize:
-                data = dict(
-                    callback=finalize
-                )
+                data = dict(callback=finalize)
             else:
                 data = None
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, data)
 
     def action_clicked_button_save_prompts(self):
-        self.emit_signal(SignalCode.SD_SAVE_PROMPT_SIGNAL, {
-            "prompt": self.ui.prompt.toPlainText(),
-            "negative_prompt": self.ui.negative_prompt.toPlainText(),
-            "secondary_prompt": self.ui.secondary_prompt.toPlainText(),
-            "secondary_negative_prompt": self.ui.secondary_negative_prompt.toPlainText(),
-        })
+        self.emit_signal(
+            SignalCode.SD_SAVE_PROMPT_SIGNAL,
+            {
+                "prompt": self.ui.prompt.toPlainText(),
+                "negative_prompt": self.ui.negative_prompt.toPlainText(),
+                "secondary_prompt": self.ui.secondary_prompt.toPlainText(),
+                "secondary_negative_prompt": self.ui.secondary_negative_prompt.toPlainText(),
+            },
+        )
 
     def handle_prompt_changed(self):
         pass
@@ -139,7 +146,7 @@ class GeneratorForm(BaseWidget):
 
     def extract_json_from_message(self, message):
         # Regular expression to find the JSON block
-        json_pattern = re.compile(r'.*`json\s*({.*?})\s*`.*', re.DOTALL)
+        json_pattern = re.compile(r".*`json\s*({.*?})\s*`.*", re.DOTALL)
         match = json_pattern.search(message)
 
         if match:
