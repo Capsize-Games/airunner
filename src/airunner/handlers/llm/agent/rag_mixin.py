@@ -685,7 +685,7 @@ class RAGMixin:
             self.logger.info("RAG Engine returned empty response")
             self._strip_previous_messages_from_conversation()
             self.llm.llm_request = kwargs.get("llm_request", None)
-            self._perform_tool_call("chat_engine_tool", **kwargs)
+            self._perform_tool_call("chat_engine_react_tool", **kwargs)
 
     def _load_settings(self):
         """Load settings with optimized defaults for performance."""
