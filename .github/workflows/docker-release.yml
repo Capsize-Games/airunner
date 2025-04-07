@@ -10,6 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AIRUNNER_HOME_DIR: /home/runner/.local/share/airunner
+      HOST_HOME: /home/runner
+      XAUTHORITY: /home/runner/.Xauthority
+      HOST_UID: 1000
+      HOST_GID: 1000
+      UID: 1000
+      GID: 1000
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
