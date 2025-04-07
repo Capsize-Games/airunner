@@ -41,6 +41,10 @@ services:
       - NO_AT_BRIDGE=1
       - TORCH_USE_CUDA_DSA=1
       - CUDA_LAUNCH_BLOCKING=1
+      - TORCH_HOME=/home/appuser/.local/share/airunner/torch/hub
+      - XDG_CACHE_HOME=/home/appuser/.local/share/airunner/.cache
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+      - TF_ENABLE_ONEDNN_OPTS=0
       - AIRUNNER_LOG_LEVEL=WARNING
       - AIRUNNER_DISABLE_FACEHUGGERSHIELD=1
       - AIRUNNER_SAVE_LOG_TO_FILE=1
@@ -83,6 +87,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /run/user/1000/pulse:/run/user/1000/pulse:ro
       - ${XAUTHORITY}:${XAUTHORITY}:rw,z
+      - ${AIRUNNER_HOME_DIR}/torch/hub:/home/appuser/.cache/torch/hub:rw,z
     working_dir: /app
     runtime: nvidia
     ports:
