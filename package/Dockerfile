@@ -151,7 +151,7 @@ RUN pip install --no-cache-dir pip setuptools wheel --upgrade && \
 
 FROM dev_image AS prepped_image
 USER root
-COPY --chown=docker:appuser . /app/
+COPY --chown=appuser:appuser . /app/
 
 FROM prepped_image AS openvoice
 USER appuser
@@ -170,7 +170,7 @@ CMD ["/bin/bash"]
 FROM openvoice as final_image
 USER appuser
 WORKDIR /app
-RUN pip install --no-cache-dir .[gui,linux,dev,art,llm,llm_weather,tts] && \
+RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && \
     pip install -U langchain-community && \
     pip install -U mediapipe && \
     pip install --no-cache-dir -U timm && \
