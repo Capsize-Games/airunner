@@ -8,7 +8,7 @@ from airunner.utils.models import scan_path_for_lora
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.lora.lora_widget import LoraWidget
 from airunner.gui.widgets.lora.templates.lora_container_ui import Ui_lora_container
-from airunner.workers import DirectoryWatcher
+from airunner.workers.directory_watcher import DirectoryWatcher
 
 from airunner.data.models import Lora
 

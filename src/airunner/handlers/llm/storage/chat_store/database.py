@@ -7,7 +7,7 @@ from llama_index.core.llms import ChatMessage
 from llama_index.core.storage.chat_store.base import BaseChatStore
 
 from airunner.data.models import Conversation
-from airunner.utils import strip_names_from_message
+from airunner.utils.llm import strip_names_from_message
 
 
 class DatabaseChatStore(BaseChatStore):

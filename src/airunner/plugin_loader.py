@@ -10,10 +10,15 @@ class PluginLoader:
     def load_plugins(self):
         plugins = []
         if not os.path.exists(self.plugin_dir):
-            os.makedirs(self.plugin_dir)
+            try:
+                os.makedirs(self.plugin_dir, exist_ok=True)
+            except FileExistsError:
+                pass
 
         for foldername in os.listdir(self.plugin_dir):
-            plugin_path = os.path.join(self.plugin_dir, foldername, "plugin.py")
+            plugin_path = os.path.join(
+                self.plugin_dir, foldername, "plugin.py"
+            )
             path = os.path.join(self.plugin_dir, foldername)
 
             # Append the plugin directory to sys.path temporarily
@@ -22,8 +27,12 @@ class PluginLoader:
                 sys.path.append(path)
 
                 try:
-                    module_name = f"plugin_{foldername}"  # Use a unique module name
-                    spec = importlib.util.spec_from_file_location(module_name, plugin_path)
+                    module_name = (
+                        f"plugin_{foldername}"  # Use a unique module name
+                    )
+                    spec = importlib.util.spec_from_file_location(
+                        module_name, plugin_path
+                    )
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
 
