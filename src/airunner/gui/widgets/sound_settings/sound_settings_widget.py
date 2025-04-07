@@ -17,7 +17,7 @@ class SoundSettingsWidget(BaseWidget):
         self.load_devices()  # Ensure devices are loaded on initialization
         self.connect_signals()
         self.monitoring = True
-        self.start_microphone_monitor()
+        # self.start_microphone_monitor()
 
     def load_devices(self):
         # Populate comboboxes with available audio devices
