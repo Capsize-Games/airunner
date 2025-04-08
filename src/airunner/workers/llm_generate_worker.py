@@ -7,7 +7,6 @@ from airunner.handlers.llm.llm_model_manager import LLMModelManager
 from airunner.settings import AIRUNNER_LLM_ON
 
 
-
 class LLMGenerateWorker(Worker):
     def __init__(self, local_agent_class=None):
         self.llm = None
