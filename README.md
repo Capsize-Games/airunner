@@ -16,7 +16,7 @@
 **Run local AI models for text, images, text-to-speech, and speech-to-text—all in one open-source tool.**  
 No cloud dependency. No complicated setup. Just install, run, and create.
 
-<br>
+![image](https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -45,6 +45,8 @@ AI Runner is a local-first, **open-source** application that enables you to run:
 
 Originally created as a GUI-centric AI art and chatbot tool for end users, AI Runner has evolved into a **developer-friendly** platform. With Docker support, an extension API, and a pure Python codebase, you can integrate AI Runner into your own apps or use it as an all-in-one offline inference engine.
 
+![interface/img.png](images/interface.png)
+
 **Typical Uses:**
 - AI prototyping: Quickly test local LLMs and image generation.  
 - Offline scenarios: Work behind firewalls or without internet.  
@@ -54,6 +56,8 @@ Originally created as a GUI-centric AI art and chatbot tool for end users, AI Ru
 ---
 
 ## Why Developers Use AI Runner
+
+![images/img.png](images/img.png)
 
 1. **Fast Setup with Docker**  
    No need to configure Python environments manually—just pull and run. AI Runner includes all major dependencies, plus GPU support (with [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)).
