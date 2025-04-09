@@ -5,6 +5,8 @@ echo "Starting docker"
 # Export HOST_UID and HOST_GID for the current user
 export HOST_UID=$(id -u)
 export HOST_GID=$(id -g)
+export HOST_HOME=$HOME
+export AIRUNNER_HOME_DIR=${HOST_HOME}/.local/share/airunner
 TORCH_HUB_DIR=${HOME}/.local/share/airunner/torch/hub
 
 # Ensure the log file exists and has the correct permissions
@@ -17,7 +19,24 @@ chmod 664 "$LOG_FILE"  # Allow read/write for owner and group
 chown $HOST_UID:$HOST_GID "$LOG_FILE"  # Set ownership to the current user and group
 
 # Ensure the parent directory has the correct permissions
-chmod -R 775 "${HOME}/.local/share/airunner"
+# recursively set permissions, but skip site-packages
+PYTHON_DIR=$AIRUNNER_HOME_DIR/python
+if [ -d "$PYTHON_DIR" ]; then
+  if [ $(stat -c "%a" "$PYTHON_DIR") -ne 775 ]; then
+    echo "Setting permissions for $PYTHON_DIR"
+    sudo chmod -R 775 "$PYTHON_DIR"
+    sudo chown $HOST_UID:$HOST_GID "$PYTHON_DIR"
+  fi
+else
+  mkdir -p "$PYTHON_DIR"
+  mkdir -p "$PYTHON_DIR/site-packages"
+  mkdir -p "$PYTHON_DIR/bin"
+  mkdir -p "$PYTHON_DIR/lib"
+  mkdir -p "$PYTHON_DIR/include"
+  mkdir -p "$PYTHON_DIR/share"
+  chmod -R 775 "$PYTHON_DIR"
+  chown -R $HOST_UID:$HOST_GID "$PYTHON_DIR"
+fi
 
 DB_FILE="${HOME}/.local/share/airunner/data/airunner.db"
 if [ ! -f "$DB_FILE" ]; then
@@ -25,17 +44,21 @@ if [ ! -f "$DB_FILE" ]; then
   touch "$DB_FILE"
 fi
 
-if [ -d "$AIRUNNER_DIR" ]; then
-  echo "Adjusting permissions for $AIRUNNER_DIR to allow access for all users..."
+if [ -d "$AIRUNNER_HOME_DIR" ]; then
+  echo "Adjusting permissions for $AIRUNNER_HOME_DIR to allow access for all users..."
   # Check if permissions need to be updated
-  if [ $(stat -c "%a" "$AIRUNNER_DIR") -ne 775 ]; then
-    echo "Updating permissions for $AIRUNNER_DIR..."
-    sudo chmod -R 775 "$AIRUNNER_DIR"  # Allow read/write/execute for owner and group
+  if [ $(stat -c "%a" "$AIRUNNER_HOME_DIR") -ne 775 ]; then
+    echo "Updating permissions for $AIRUNNER_HOME_DIR..."
+    sudo chmod -R 775 "$AIRUNNER_HOME_DIR"  # Allow read/write/execute for owner and group
   fi
   # Check if the group ID bit is already set
-  if [ $(stat -c "%A" "$AIRUNNER_DIR" | cut -c 6) != "s" ]; then
-    echo "Setting group ID bit on $AIRUNNER_DIR..."
-    sudo chmod g+s "$AIRUNNER_DIR"  # Set the group ID on new files and directories
+  if [ $(stat -c "%A" "$AIRUNNER_HOME_DIR" | cut -c 6) != "s" ]; then
+    echo "Setting group ID bit on $AIRUNNER_HOME_DIR..."
+    sudo chmod g+s "$AIRUNNER_HOME_DIR"  # Set the group ID on new files and directories
+  fi
+  if [ $(stat -c "%a" "$AIRUNNER_HOME_DIR") -ne 775 ]; then
+    echo "Updating permissions for $AIRUNNER_HOME_DIR..."
+    sudo chmod -R 775 "$AIRUNNER_HOME_DIR"  # Allow read/write/execute for owner and group
   fi
 fi
 
@@ -73,19 +96,6 @@ $(arecord -l | awk '/card/ {print "pcm.card" NR " {\n    type plug\n    slave.pc
 $(aplay -l | awk '/card/ {print "pcm.playback_card" NR " {\n    type plug\n    slave.pcm \"hw:" $2 "\"\n}"}')
 EOL
 
-# Check if .env file exists
-if [ ! -f .env ]; then
-  echo "Creating .env file and setting HOST_HOME..."
-  echo HOST_HOME=$HOME > .env
-  echo AIRUNNER_HOME_DIR=/home/appuser/.local/share/airunner >> .env
-else
-  if ! grep -q "^HOST_HOME=" .env; then
-    echo "HOST_HOME not set. Adding HOST_HOME to .env..."
-    echo HOST_HOME=$HOME >> .env
-    echo AIRUNNER_HOME_DIR=/home/appuser/.local/share/airunner >> .env
-  fi
-fi
-
 # Replace any $HOST_HOME variables in .env with the actual value
 if [ -f .env ]; then
   sed -i "s|\$HOST_HOME|$HOME|g" .env
@@ -110,13 +120,14 @@ fi
 
 if [ "$1" == "build" ]; then
   echo "Building the Docker Compose services..."
-  $DOCKER_COMPOSE build
+  COMPOSE_BAKE=1 $DOCKER_COMPOSE build
   exit 0
 fi
 
 # Get user command
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
+  echo "$DOCKER_COMPOSE up -d && $DOCKER_EXEC bash"
   $DOCKER_COMPOSE up -d && $DOCKER_EXEC bash
 else
   $DOCKER_COMPOSE up -d && echo "Executing command: $@"
