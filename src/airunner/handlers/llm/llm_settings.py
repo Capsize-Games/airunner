@@ -17,7 +17,6 @@ if os.environ.get("DEV_ENV", "1") == "1":
 from airunner.settings import (
     AIRUNNER_LLM_USE_LOCAL,
     AIRUNNER_LLM_USE_OPENROUTER,
-    AIRUNNER_LLM_OPENROUTER_API_KEY,
     AIRUNNER_LLM_USE_OPENAI,
     AIRUNNER_LLM_OPENAI_API_KEY,
     AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY,
@@ -50,7 +49,6 @@ class LLMSettings:
     )
     summarize_after_n_turns: int = AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS
     use_openrouter: bool = AIRUNNER_LLM_USE_OPENROUTER
-    openrouter_api_key: str = AIRUNNER_LLM_OPENROUTER_API_KEY
     use_openai: bool = AIRUNNER_LLM_USE_OPENAI
     openai_api_key: str = AIRUNNER_LLM_OPENAI_API_KEY
     perform_conversation_summary: bool = (

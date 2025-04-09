@@ -18,7 +18,6 @@ services:
       - NUMBA_CACHE_DIR=/tmp/numba_cache
       - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
       - DISABLE_TELEMETRY=1
-      - PYTHONUSERBASE=/home/appuser/.local
       - PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages:/app
       - PIP_USER=1
       - DISPLAY
@@ -45,7 +44,7 @@ services:
       - TF_ENABLE_ONEDNN_OPTS=0
       - AIRUNNER_LOG_LEVEL=WARNING
       - AIRUNNER_DISABLE_FACEHUGGERSHIELD=1
-      - AIRUNNER_SAVE_LOG_TO_FILE=1
+      - AIRUNNER_SAVE_LOG_TO_FILE=0
       - AIRUNNER_ENABLE_OPEN_VOICE=0
       - AIRUNNER_ART_ENABLED=1
       - AIRUNNER_LLM_USE_WEATHER_PROMPT=1
@@ -59,7 +58,6 @@ services:
       - AIRUNNER_LLM_OPENROUTER_MODEL=mistral/ministral-8b
       - AIRUNNER_LLM_USE_LOCAL=1
       - AIRUNNER_LLM_USE_OPENROUTER=0
-      - AIRUNNER_LLM_OPENROUTER_API_KEY=
       - AIRUNNER_DEFAULT_BRUSH_PRIMARY_COLOR="#99C1F1"
       - AIRUNNER_DEFAULT_BRUSH_SECONDARY_COLOR="#000000"
       - AIRUNNER_STATUS_ERROR_COLOR="#ff0000"
@@ -69,15 +67,16 @@ services:
       - AIRUNNER_DEFAULT_STT_HF_PATH=openai/whisper-tiny
       - AIRUNNER_DEFAULT_LLM_HF_PATH=w4ffl35/Ministral-8B-Instruct-2410-doublequant
       - AIRUNNER_TTS_SPEAKER_RECORDING_PATH=
+      - HOST_HOME=${HOST_HOME}
       - AIRUNNER_HOME_DIR=${HOST_HOME}/.local/share/airunner
     env_file:
       - ../.env
     stdin_open: true
     tty: true
-    entrypoint: ["./package/entrypoint.sh"]
-    command: []
+    entrypoint: ["/app/package/entrypoint.sh"]
     volumes:
       - ../:/app:rw
+      - ../package/entrypoint.sh:/app/package/entrypoint.sh:ro
       - ../package/asound.conf:/etc/asound.conf:rw
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}:/home/appuser/.local/share/airunner:rw,z"
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/data:/home/appuser/.local/share/airunner/data:rw,z"
@@ -86,6 +85,7 @@ services:
       - /run/user/1000/pulse:/run/user/1000/pulse:ro
       - ${XAUTHORITY}:${XAUTHORITY}:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/torch/hub:/home/appuser/.cache/torch/hub:rw,z
+      - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python:/home/appuser/.local:rw,z
     working_dir: /app
     runtime: nvidia
     ports:
