@@ -3,6 +3,7 @@ import re
 import threading
 from typing import Optional, Type
 
+from airunner.data.models.espeak_settings import EspeakSettings
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
 from airunner.workers.worker import Worker
@@ -242,17 +243,29 @@ class TTSGeneratorWorker(Worker):
             if self.chatbot.voice_settings
             else None
         )
+
         if model is None:
             self.logger.error("No TTS model found. Skipping generation.")
             return
+
         model_type = TTSModel(model)
 
         response = None
         if self.tts:
-            llm_request: Optional[Type[TTSRequest]] = None
+            tts_req: Optional[Type[TTSRequest]] = None
 
-            if model_type is TTSModel.ESPEAK:
-                llm_request = EspeakTTSRequest(
+            if model_type is TTSModel.SPEECHT5:
+                tts_req = TTSRequest(
+                    message=message, gender=self.chatbot.gender
+                )
+            elif (
+                AIRUNNER_ENABLE_OPEN_VOICE and model_type is TTSModel.OPENVOICE
+            ):
+                tts_req = TTSRequest(
+                    message=message, gender=self.chatbot.gender
+                )
+            else:
+                tts_req = EspeakTTSRequest(
                     message=message,
                     gender=self.chatbot.gender,
                     rate=self.espeak_settings.rate,
@@ -261,17 +274,9 @@ class TTSGeneratorWorker(Worker):
                     voice=self.espeak_settings.voice,
                     language=self.espeak_settings.language,
                 )
-            elif model_type is TTSModel.SPEECHT5:
-                llm_request = TTSRequest(
-                    message=message, gender=self.chatbot.gender
-                )
-            elif model_type is TTSModel.OPENVOICE:
-                llm_request = TTSRequest(
-                    message=message, gender=self.chatbot.gender
-                )
 
-            if llm_request:
-                response = self.tts.generate(llm_request)
+            if tts_req:
+                response = self.tts.generate(tts_req)
 
         if self.do_interrupt:
             return
