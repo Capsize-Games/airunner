@@ -4,7 +4,9 @@ ENV DEBCONF_NOWARNINGS="yes"
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y software-properties-common && \
+ add-apt-repository ppa:ubuntu-toolchain-r/test && \
+ apt-get update && apt-get install -y \
  python3.10 \
  python3.10-venv \
  python3-pip \
@@ -71,108 +73,35 @@ RUN apt-get update && apt-get install -y \
  espeak \
  vim \
  tmux \
- && rm -rf /var/lib/apt/lists/*
+ libstdc++6 \
+ wget \
+ gnupg && \
+ rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Add NVIDIA Container Toolkit setup for GPU access
-RUN apt-get update && apt-get install -y software-properties-common && \
-    add-apt-repository ppa:ubuntu-toolchain-r/test && \
-    apt-get update && apt-get install -y libstdc++6 && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install CUDA Toolkit 12.2
-RUN apt-get update && apt-get install -y wget gnupg && \
-    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin && \
-    mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600 && \
-    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
-    dpkg -i cuda-keyring_1.1-1_all.deb && \
-    rm -f cuda-keyring_1.1-1_all.deb && \
-    apt-get update && \
-    apt-get install -y cuda-toolkit-12-2 nvidia-cuda-dev && \
-    rm -rf /var/lib/apt/lists/*
-
-
-# Install cuDNN backend packages
-RUN apt-get update && apt-get install -y wget && \
-    wget https://developer.download.nvidia.com/compute/cudnn/9.8.0/local_installers/cudnn-local-repo-ubuntu2204-9.8.0_1.0-1_amd64.deb && \
-    dpkg -i cudnn-local-repo-ubuntu2204-9.8.0_1.0-1_amd64.deb && \
-    cp /var/cudnn-local-*/cudnn-*-keyring.gpg /usr/share/keyrings/ && \
-    apt-get update && apt-get install -y cudnn9-cuda-12 libcudnn9-cuda-12 && \
-    rm -rf /var/lib/apt/lists/* cudnn-local-repo-ubuntu2204-9.8.0_1.0-1_amd64.deb
-
-# Add CUDA binaries to PATH
+# Set environment variables for CUDA and cuDNN, nvidia runtime and path
 ENV PATH=/usr/local/cuda/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-
-# Set environment variables for CUDA and cuDNN
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=$CUDA_HOME/bin:$PATH
 ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/lib/python3.10/site-packages/PySide6/Qt/lib:/ususe_grr/lib/x86_64-linux-gnu:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
-
-# Set up NVIDIA runtime
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
-ARG INSTALL_XCB_CURSOR=0
-RUN if [ "$INSTALL_XCB_CURSOR" = "1" ]; then \
-      apt-get update && apt-get install -y libxcb-cursor0; \
-    fi
-
-# Ensure the appuser group and user are created before modifying their UID and GID
-RUN groupadd -g 1000 appuser && useradd -m -u 1000 -g 1000 appuser
-
 # Dynamically set the UID and GID for appuser
+ARG INSTALL_XCB_CURSOR=0
 ARG HOST_UID=1000
 ARG HOST_GID=1000
-RUN groupmod -g ${HOST_GID} appuser && usermod -u ${HOST_UID} -g ${HOST_GID} appuser
+RUN if [ "$INSTALL_XCB_CURSOR" = "1" ]; then \
+        apt-get update && apt-get install -y libxcb-cursor0; \
+    fi && \
+ groupadd -g 1000 appuser && useradd -m -u 1000 -g 1000 appuser && \
+ groupmod -g ${HOST_GID} appuser && usermod -u ${HOST_UID} -g ${HOST_GID} appuser && \
+ chown -R appuser:appuser /app && \
+ groupadd -g 1001 airunner_group && usermod -aG airunner_group appuser && \
+ apt-get update && apt-get install -y x11-xserver-utils && \
+ mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
+COPY --chown=appuser:appuser . /app/
+COPY ./package/entrypoint.sh /app/package/entrypoint.sh
+RUN chmod +x /app/package/entrypoint.sh
 
-RUN chown -R appuser:appuser /app
-
-# Create the airunner_group and add appuser to it
-RUN groupadd -g 1001 airunner_group && usermod -aG airunner_group appuser
-
-# Install xhost
-RUN apt-get update && apt-get install -y x11-xserver-utils
-
-# Create X11 directory with correct permissions
-RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
-
-# Fix for Ubuntu 24.04 host X11 issues
-RUN echo "#!/bin/bash\nxhost +local:docker || true\nexec \"\$@\"" > /usr/local/bin/entrypoint.sh && \
-    chmod +x /usr/local/bin/entrypoint.sh
-
-FROM base_image AS dev_image
-USER appuser
-WORKDIR /app
-
-# Install Python dependencies and PyTorch with CUDA support
-RUN pip install --no-cache-dir pip setuptools wheel --upgrade && \
-    pip install nvidia-pyindex && \
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-
-FROM dev_image AS prepped_image
-USER root
-COPY --chown=docker:appuser . /app/
-
-FROM prepped_image AS openvoice
-USER appuser
-WORKDIR /home/appuser
-RUN git clone https://github.com/myshell-ai/OpenVoice.git && \
-    cd OpenVoice && \
-    pip install -e . && \
-    cd ..
-RUN git clone https://github.com/myshell-ai/MeloTTS.git && \
-    cd MeloTTS && \
-    git checkout -b v0.1.2 && \
-    pip install -e .
-RUN python3 -m unidic download
 CMD ["/bin/bash"]
-
-FROM openvoice as final_image
-USER appuser
-WORKDIR /app
-RUN pip install --no-cache-dir -e .[gui,linux,dev,art,llm,llm_weather,tts] && \
-    pip install -U langchain-community && \
-    pip install -U mediapipe && \
-    pip install --no-cache-dir -U timm && \
-    python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')" && \
-    python3 -c "import nltk; nltk.download('punkt')"
