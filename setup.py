@@ -33,6 +33,10 @@ setup(
     extras_require={
         # These are optional dependencies that will change the
         # behavior of the application or add new features if installed.
+        "nvidia": [  # NVIDIA dependencies: skip if installing NVIDIA manually
+            "nvidia-pyindex==1.0.9",
+            "nvidia-cuda-runtime-cu12",
+        ],
         "gui": [  # GUI dependencies
             "PySide6==6.7.0",
             "PySide6_Addons==6.7.0",
@@ -82,7 +86,7 @@ setup(
             "tf-keras==2.18.0",
             "peft==0.14.0",
             "lxml_html_clean==0.4.1",
-            "flash_attn==2.7.4.post1",
+            # "flash_attn==2.7.4.post1",
             # Summarizations (basic)
             "sumy==0.11.0",
         ],
