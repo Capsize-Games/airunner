@@ -19,6 +19,8 @@ from llama_index.core.base.llms.types import (
 )
 from llama_index.core.base.llms.types import ChatMessage, CompletionResponse
 from llama_index.core.bridge.pydantic import Field
+import openai
+from airunner.utils.settings.get_qsettings import get_qsettings
 
 
 class OpenRouterEnhanced(OpenRouter):
@@ -92,12 +94,19 @@ class OpenRouterQObject(LocalAgent):
     def llm(self) -> Type[LLM]:
         if not self._llm:
             llm_request = OpenrouterMistralRequest.from_default()
-            api_key = self.llm_settings.openrouter_api_key
-            self._llm = OpenRouterEnhanced(
-                model=self.llm_settings.model,
-                api_key=api_key,
-                **llm_request.to_dict()
-            )
+            qsettings = get_qsettings()
+            api_key = qsettings.value("api_key", None)
+            try:
+                self._llm = OpenRouterEnhanced(
+                    model=self.llm_settings.model,
+                    api_key=api_key,
+                    **llm_request.to_dict(),
+                )
+            except openai.APIError as e:
+                self.logger.error(
+                    f"Failed to initialize OpenRouterEnhanced: {e}"
+                )
+
         return self._llm
 
     def interrupt_process(self):
@@ -119,5 +128,5 @@ class OpenRouterQObject(LocalAgent):
             system_prompt=system_prompt,
             rag_system_prompt=rag_system_prompt,
             llm_request=llm_request,
-            **llm_request.to_dict()
+            **llm_request.to_dict(),
         )
