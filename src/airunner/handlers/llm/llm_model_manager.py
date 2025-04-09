@@ -438,7 +438,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 trust_remote_code=False,
                 torch_dtype=self.torch_dtype,
                 device_map=self.device,
-                attn_implementation="flash_attention_2" if is_ampere_or_newer(self.device_index) else "sdpa",
+                attn_implementation="sdpa"#"flash_attention_2" if is_ampere_or_newer(self.device_index) else "sdpa",
             )
             
             # Attempt to load adapter if available

@@ -4,14 +4,26 @@ venv
 # Ignore git files
 .git
 .github
+.gitignore
+.vscode
 
 # Ignore Python cache files
 src/airunner.egg-info
 __pycache__
 *.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info
+*.whl
+*.egg
+node_modules/
+dist/
+build/
 
 # Ignore other unnecessary files
 !package/entrypoint.sh
 processed
 *.log
 *.tmp
+setup.cfg
