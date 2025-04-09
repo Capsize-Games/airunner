@@ -39,10 +39,9 @@ jobs:
 
     - name: Build and push Docker image via Compose
       run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker compose -f package/docker-compose.yml build airunner_dev
-          docker tag airunner_dev ghcr.io/$REPO_NAME:latest
-          docker push ghcr.io/$REPO_NAME:latest
+          docker tag airunner_dev ghcr.io/capsize-games/airunner/airunner:dev_latest
+          docker push ghcr.io/capsize-games/airunner/airunner:dev_latest
 
     - name: Clean up Docker
       if: always()
