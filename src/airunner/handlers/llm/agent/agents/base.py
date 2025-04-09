@@ -79,7 +79,7 @@ class BaseAgent(
             ExternalConditionStoppingCriteria
         ] = None
         self._do_interrupt: bool = False
-        self._llm: Optional[Type[LLM]] = None
+        self._llm: Optional[LLM] = None
         self._conversation: Optional[Conversation] = None
         self._conversation_id: Optional[int] = None
         self._user: Optional[User] = None
