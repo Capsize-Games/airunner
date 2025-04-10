@@ -1,7 +1,7 @@
 services:
   airunner_dev:
     container_name: airunner_dev
-    image: ghcr.io/capsize-games/airunner/airunner:dev_latest
+    image: ghcr.io/capsize-games/airunner/airunner:linux
     build:
       context: ..
       dockerfile: package/Dockerfile
