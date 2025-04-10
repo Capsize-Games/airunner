@@ -29,12 +29,19 @@ jobs:
             -e BUTLER_API_KEY=${{ secrets.BUTLER_API_KEY }} \
             -e ITCHIO_USERNAME=${{ secrets.ITCHIO_USERNAME }} \
             -e DEV_ENV=0 \
+            -e AIRUNNER_ENABLE_OPEN_VOICE=0 \
             -e PYTHONOPTIMIZE=0 \
             -e AIRUNNER_ENVIRONMENT=prod \
             -e AIRUNNER_OS=linux \
             -e PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512 \
             -e NUMBA_CACHE_DIR=/tmp/numba_cache \
             -e DISABLE_TELEMETRY=1 \
+            -e AIRUNNER_LLM_USE_LOCAL=1 \
+            -e AIRUNNER_SAVE_LOG_TO_FILE=0 \
+            -e AIRUNNER_LOG_LEVEL=WARNING \
+            -e AIRUNNER_DISABLE_FACEHUGGERSHIELD=1 \
+            -e AIRUNNER_LLM_USE_OPENROUTER=0 \
+            -e OPENROUTER_API_KEY="" \
             -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -v $(pwd)/dist:/app/dist \
