@@ -18,7 +18,7 @@ setup(
         "torch==2.6.0",
         "torchvision==0.21.0",
         "torchaudio==2.6.0",
-        "accelerate==1.3.0",
+        "accelerate==1.6.0",
         "huggingface-hub>=0.24.0,<1.0",
         "tokenizers==0.21.1",
         "optimum==1.24.0",
