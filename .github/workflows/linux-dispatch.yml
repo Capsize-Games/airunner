@@ -85,4 +85,4 @@ jobs:
             -e LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages \
             -w /app \
             $DOCKER_IMAGE \
-            bash /app/package/pyinstaller/build.sh
+            bash -c "bash /app/package/entrypoint.sh && bash /app/package/pyinstaller/build.sh"
