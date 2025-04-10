@@ -26,6 +26,9 @@ if os.environ.get("DEV_ENV", "1") == "1":
     load_dotenv(override=True)
 
 python_venv_dir = os.path.dirname(sys.executable)
+
+DEV_ENV = os.environ.get("DEV_ENV", "0") == "1"
+
 NLTK_DOWNLOAD_DIR = os.path.join(
     python_venv_dir,
     "..",
@@ -215,7 +218,11 @@ AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE = os.environ.get(
 )
 AIRUNNER_DISCORD_URL = os.environ.get("AIRUNNER_DISCORD_URL", None)
 AIRUNNER_SLEEP_TIME_IN_MS = os.environ.get("AIRUNNER_SLEEP_TIME_IN_MS", 10)
-AIRUNNER_DB_NAME = os.environ.get("AIRUNNER_DB_NAME", "airunner.db")
+
+default_name = "airunner.db"
+if DEV_ENV:
+    default_name = "airunner.dev.db"
+AIRUNNER_DB_NAME = os.environ.get("AIRUNNER_DB_NAME", default_name)
 
 # Set the database URL
 DB_PATH = os.path.expanduser(
