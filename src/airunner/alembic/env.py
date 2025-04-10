@@ -24,7 +24,9 @@ from airunner.data.models.base import Base
 config = context.config
 
 # Get the path to the alembic.ini file
-config_file_path = Path(__file__).parent / "../../alembic.ini"
+config_file_path = Path(__file__).parent / "../alembic.ini"
+print("*" * 100)
+print(config_file_path)
 
 # Set the config file name explicitly
 config.config_file_name = str(config_file_path)

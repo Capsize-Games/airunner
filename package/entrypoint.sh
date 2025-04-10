@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 set -x
+pip list
 
 # Diagnostic information for X11 setup
 echo "===== X11 Setup Diagnostic Information ====="
