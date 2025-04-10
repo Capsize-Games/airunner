@@ -138,7 +138,7 @@ punkt_path = os.path.join(root_path, 'lib/tokenizers/punkt/')
 
 # Copy files to dist paths
 internal_path = os.path.join(base_path, dist, "airunner/_internal")
-data_path_out = os.path.join(base_path, dist, "airunner/data)
+data_path_out = os.path.join(base_path, dist, "airunner/data")
 
 print(f"Copy images from {images_path}...")
 shutil.copytree(images_path, os.path.join(internal_path, "airunner/images"))
