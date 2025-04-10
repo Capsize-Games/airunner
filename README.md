@@ -141,7 +141,7 @@ Below is a high-level list of capabilities in AI Runner:
 
 2. **Get the latest docker image**
    ```bash
-   docker pull ghcr.io/capsize-games/airunner/airunner:dev_latest
+   docker pull ghcr.io/capsize-games/airunner/airunner:linux
    ```
 
 3. **Clone AI Runner and Run Setup**  

@@ -51,6 +51,7 @@ setup(
             "python-dotenv==1.0.1",
             "coverage==7.8.0",
             "black==25.1.0",
+            "pyinstaller==6.12.0",
         ],
         "art": [  # Art generation dependencies
             "DeepCache==0.1.1",
