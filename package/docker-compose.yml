@@ -87,6 +87,8 @@ services:
       - ${XAUTHORITY}:${XAUTHORITY}:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/torch/hub:/home/appuser/.cache/torch/hub:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python:/home/appuser/.local:rw,z
+      - ../build:/app/build:rw,z
+      - ../dist:/app/dist:rw,z
     working_dir: /app
     runtime: nvidia
     ports:

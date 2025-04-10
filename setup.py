@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="airunner",
-    version="4.1.2",
+    version="4.1.3",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -19,7 +19,7 @@ setup(
         "torchvision==0.21.0",
         "torchaudio==2.6.0",
         "accelerate==1.3.0",
-        "huggingface-hub==0.28.1",
+        "huggingface-hub>=0.24.0,<1.0",
         "tokenizers==0.21.1",
         "optimum==1.24.0",
         "numpy==1.26.4",
