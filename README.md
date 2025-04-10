@@ -227,18 +227,11 @@ AI Runner supports a simple database system. See the [Wiki](https://github.com/C
 
 ---
 
-## Missing or Planned Features
-
-- Additional model auto-downloaders  
-- Automated plugin discovery from community repositories  
-- Fine-tuning workflow for LLMs  
-- Desktop packaging (PyInstaller or similar)
-
----
-
 ## Contributing
 
 We welcome pull requests for new features, bug fixes, or documentation improvements. You can also build and share **extensions** to expand AI Runner’s functionality. For details, see the [Extensions Wiki](https://github.com/Capsize-Games/airunner/wiki/Extensions).
+
+Take a look at the [Contributing document](https://github.com/Capsize-Games/airunner/CONTRIBUTING.md) and the [Development wiki page](https://github.com/Capsize-Games/airunner/wiki/Development) for detailed instructions.
 
 **If you find this project useful**, please consider giving us a ⭐ on GitHub—it really helps with visibility and encourages further development.
 
