@@ -101,7 +101,7 @@ RUN if [ "$INSTALL_XCB_CURSOR" = "1" ]; then \
  apt-get update && apt-get install -y x11-xserver-utils && \
  mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
 COPY --chown=appuser:appuser . /app/
-COPY ./package/entrypoint.sh /app/package/entrypoint.sh
+COPY ./package/entrypoint.sh /home/appuser/entrypoint.sh
 RUN chmod +x /app/package/entrypoint.sh
 
 # Download butler
