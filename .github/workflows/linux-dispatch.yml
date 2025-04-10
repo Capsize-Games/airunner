@@ -25,9 +25,7 @@ jobs:
           docker pull $DOCKER_IMAGE
       - name: Build Linux
         run: |
-          docker run --rm \
-            -e BUTLER_API_KEY=${{ secrets.BUTLER_API_KEY }} \
-            -e ITCHIO_USERNAME=${{ secrets.ITCHIO_USERNAME }} \
+          docker compose -f package/docker-compose.yml run --rm \
             -e DEV_ENV=0 \
             -e AIRUNNER_ENABLE_OPEN_VOICE=0 \
             -e PYTHONOPTIMIZE=0 \
@@ -44,5 +42,5 @@ jobs:
             -e OPENROUTER_API_KEY="" \
             -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
             -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
-            -v $(pwd)/dist:/app/dist \
-            ghcr.io/capsize-games/airunner/airunner:linux bash /app/package/pyinstaller/build.sh
+            -e PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages \
+            airunner_dev bash /app/package/pyinstaller/build.sh
