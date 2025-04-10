@@ -38,7 +38,13 @@ else
   chown -R $HOST_UID:$HOST_GID "$PYTHON_DIR"
 fi
 
-DB_FILE="${HOME}/.local/share/airunner/data/airunner.db"
+if [ "$DEV_ENV" == "1" ]; then
+  DEFAULT_DB_NAME=airunner.dev.db
+else
+  DEFAULT_DB_NAME=airunner.db
+fi
+
+DB_FILE="$HOME/.local/share/airunner/data/$DEFAULT_DB_NAME"
 if [ ! -f "$DB_FILE" ]; then
   mkdir -p "$(dirname "$DB_FILE")"
   touch "$DB_FILE"
@@ -126,7 +132,7 @@ fi
 
 if [ "$1" == "linuxbuild" ]; then
   echo "Building for linux..."
-  $DOCKER_COMPOSE up -d && $DOCKER_EXEC sh ./package/pyinstaller/build.sh
+  $DOCKER_COMPOSE run --rm airunner_dev sh ./package/pyinstaller/build.sh
   exit 0
 fi
 
@@ -134,8 +140,7 @@ fi
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
   echo "$DOCKER_COMPOSE up -d && $DOCKER_EXEC bash"
-  $DOCKER_COMPOSE up -d && $DOCKER_EXEC bash
+  $DOCKER_COMPOSE run --rm airunner_dev bash
 else
-  $DOCKER_COMPOSE up -d && echo "Executing command: $@"
-  $DOCKER_EXEC "$@"
+  $DOCKER_COMPOSE run --rm airunner_dev "$@"
 fi
