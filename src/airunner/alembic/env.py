@@ -1,5 +1,6 @@
-# src/airunner/alembic/env.py
 import os
+
+from pathlib import Path
 
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
@@ -10,7 +11,9 @@ config = context.config
 config.set_main_option("sqlalchemy.url", AIRUNNER_DB_URL)
 
 # check if db file exists
-if AIRUNNER_DB_URL.__contains__("sqlite") and not os.path.exists(AIRUNNER_DB_URL.replace("sqlite:///", "")):
+if AIRUNNER_DB_URL.__contains__("sqlite") and not os.path.exists(
+    AIRUNNER_DB_URL.replace("sqlite:///", "")
+):
     print(f"Database file not found at {AIRUNNER_DB_URL}")
 
 # Import your models here
@@ -20,8 +23,13 @@ from airunner.data.models.base import Base
 # access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# Get the path to the alembic.ini file
+config_file_path = Path(__file__).parent / "../../alembic.ini"
+
+# Set the config file name explicitly
+config.config_file_name = str(config_file_path)
+
+# Interpret the config file for Python logging
 fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
@@ -30,6 +38,7 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -47,11 +56,12 @@ def run_migrations_offline():
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=False,
-        compare_server_default=False
+        compare_server_default=False,
     )
 
     with context.begin_transaction():
         context.run_migrations()
+
 
 def run_migrations_online():
     """Run migrations in 'online' mode.
@@ -66,15 +76,16 @@ def run_migrations_online():
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, 
+            connection=connection,
             target_metadata=target_metadata,
             compare_type=False,
-            compare_server_default=False
+            compare_server_default=False,
         )
 
         with context.begin_transaction():
             context.run_migrations()
             connection.commit()
+
 
 if context.is_offline_mode():
     run_migrations_offline()

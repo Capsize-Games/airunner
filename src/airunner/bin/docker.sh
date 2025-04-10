@@ -124,6 +124,12 @@ if [ "$1" == "build" ]; then
   exit 0
 fi
 
+if [ "$1" == "linuxbuild" ]; then
+  echo "Building for linux..."
+  $DOCKER_COMPOSE up -d && $DOCKER_EXEC sh ./package/pyinstaller/build.sh
+  exit 0
+fi
+
 # Get user command
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."

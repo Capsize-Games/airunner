@@ -104,4 +104,11 @@ COPY --chown=appuser:appuser . /app/
 COPY ./package/entrypoint.sh /app/package/entrypoint.sh
 RUN chmod +x /app/package/entrypoint.sh
 
+# Download butler
+WORKDIR /home/appuser/
+RUN mkdir -p /home/appuser/butler && \
+    cd /home/appuser/butler && \
+    wget https://dl.itch.ovh/butler/linux-amd64/head/butler && chmod +x butler && \
+    cd /home/appuser
+
 CMD ["/bin/bash"]
