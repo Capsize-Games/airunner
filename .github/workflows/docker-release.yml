@@ -40,7 +40,7 @@ jobs:
     - name: Build and push Docker image via Compose
       run: |
           docker compose -f package/docker-compose.yml build airunner_dev
-          docker push ghcr.io/capsize-games/airunner/airunner:dev_latest
+          docker push ghcr.io/capsize-games/airunner/airunner:linux
 
     - name: Clean up Docker
       if: always()
