@@ -52,6 +52,23 @@ fi
 $USE_SUDO chmod -R 755 "$CACHE_DIR"
 $USE_SUDO chown -R $HOST_UID:$HOST_GID "$CACHE_DIR"
 
+# Ensure build and dist exist and have correct permissions
+BUILD_DIR="/app/build"
+if [ ! -d "$BUILD_DIR" ]; then
+  echo "Creating directory: $BUILD_DIR"
+  mkdir -p "$BUILD_DIR"
+fi
+$USE_SUDO chmod -R 755 "$BUILD_DIR"
+$USE_SUDO chown -R $HOST_UID:$HOST_GID "$BUILD_DIR"
+
+DIST_DIR="/app/dist"
+if [ ! -d "$DIST_DIR" ]; then
+  echo "Creating directory: $DIST_DIR"
+  mkdir -p "$DIST_DIR"
+fi
+$USE_SUDO chmod -R 755 "$DIST_DIR"
+$USE_SUDO chown -R $HOST_UID:$HOST_GID "$DIST_DIR"
+
 # Ensure the log file exists and has the correct permissions
 LOG_FILE="${HOME}/.local/share/airunner/airunner.log"
 if [ ! -f "$LOG_FILE" ]; then
@@ -185,8 +202,6 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -v $PWD/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw \
     -v $PWD/.local/share/airunner/torch/hub:/home/appuser/.cache/torch/hub:rw \
     -v $PWD/.local/share/airunner/python:/home/appuser/.local/share/airunner/python:rw \
-    -v $PWD/build:/app/build:rw \
-    -v $PWD/dist:/app/dist:rw \
     -e HOST_UID=$(id -u) \
     -e HOST_GID=$(id -g) \
     -e UID=$(id -u) \
