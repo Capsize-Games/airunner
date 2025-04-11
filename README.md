@@ -140,6 +140,13 @@ Below is a high-level list of capabilities in AI Runner:
 
 1. **Install NVIDIA Container Toolkit**  
    Follow the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to enable GPU passthrough for Docker.
+2. ```bash
+   ./src/airunner/bin/docker.sh
+   ```
+
+----
+
+OLD, DELETE:
 
 2. **Get the latest docker image**
    ```bash
