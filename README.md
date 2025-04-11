@@ -140,20 +140,7 @@ Below is a high-level list of capabilities in AI Runner:
 
 1. **Install NVIDIA Container Toolkit**  
    Follow the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to enable GPU passthrough for Docker.
-2. ```bash
-   ./src/airunner/bin/docker.sh
-   ```
-
-----
-
-OLD, DELETE:
-
-2. **Get the latest docker image**
-   ```bash
-   docker pull ghcr.io/capsize-games/airunner/airunner:linux
-   ```
-
-3. **Clone AI Runner and Run Setup**  
+2. **Clone AI Runner and Run Setup**  
    ```bash
    git clone https://github.com/Capsize-Games/airunner.git
    cd airunner
@@ -163,12 +150,11 @@ OLD, DELETE:
    ```
    - _Choose option **1** (Setup xhost)_
    - _Choose option **2** (Install AI Runner scripts)_
-
-5. **Start AI Runner**
-   ```bash
-   airunner-docker airunner
+3. ```bash
+   docker pull ghcr.io/capsize-games/airunner/airunner:linux
+   ./src/airunner/bin/docker.sh airunner
    ```
-   This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
+This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
 
 For detailed steps, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
