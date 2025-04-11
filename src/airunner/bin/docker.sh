@@ -2,6 +2,8 @@
 
 echo "Starting docker"
 
+#docker pull ghcr.io/capsize-games/airunner/airunner:linux
+
 # Detect if running in GitHub Actions
 if [ -n "$GITHUB_ACTIONS" ]; then
   # In GitHub Actions, don't use sudo
@@ -22,6 +24,7 @@ TORCH_HUB_DIR=${HOME}/.local/share/airunner/torch/hub
 
 # Set PYTHONUSERBASE to redirect pip installations to .local/share/airunner/python
 export PYTHONUSERBASE=$AIRUNNER_HOME_DIR/python
+export PYTHONPATH=$PYTHONUSERBASE/python/local/lib/python3.10/dist-packages:$PYTHONPATH
 
 # Ensure the Python directory structure exists with proper permissions before mounting
 PYTHON_DIRS=("$PYTHONUSERBASE/bin" "$PYTHONUSERBASE/lib" "$PYTHONUSERBASE/share" "$PYTHONUSERBASE/include")
@@ -40,6 +43,15 @@ if [ ! -d "$PYTHONUSERBASE" ]; then
   mkdir -p "$PYTHONUSERBASE"
 fi
 
+# Ensure the pip cache directory exists and has the correct permissions on the host
+CACHE_DIR="$AIRUNNER_HOME_DIR/.cache/pip"
+if [ ! -d "$CACHE_DIR" ]; then
+  echo "Creating pip cache directory: $CACHE_DIR"
+  mkdir -p "$CACHE_DIR"
+fi
+$USE_SUDO chmod -R 755 "$CACHE_DIR"
+$USE_SUDO chown -R $HOST_UID:$HOST_GID "$CACHE_DIR"
+
 # Ensure the log file exists and has the correct permissions
 LOG_FILE="${HOME}/.local/share/airunner/airunner.log"
 if [ ! -f "$LOG_FILE" ]; then
@@ -50,24 +62,20 @@ chmod 664 "$LOG_FILE"  # Allow read/write for owner and group
 $USE_SUDO chown $HOST_UID:$HOST_GID "$LOG_FILE"  # Set ownership to the current user and group
 
 # Ensure the parent directory has the correct permissions
-# recursively set permissions, but skip site-packages
 PYTHON_DIR=$AIRUNNER_HOME_DIR/python
 if [ -d "$PYTHON_DIR" ]; then
   if [ $(stat -c "%a" "$PYTHON_DIR") -ne 775 ]; then
     echo "Setting permissions for $PYTHON_DIR"
-    $USE_SUDO chmod -R 775 "$PYTHON_DIR"
-    $USE_SUDO chown $HOST_UID:$HOST_GID "$PYTHON_DIR"
   fi
 else
   mkdir -p "$PYTHON_DIR"
-  mkdir -p "$PYTHON_DIR/site-packages"
   mkdir -p "$PYTHON_DIR/bin"
   mkdir -p "$PYTHON_DIR/lib"
   mkdir -p "$PYTHON_DIR/include"
   mkdir -p "$PYTHON_DIR/share"
-  chmod -R 775 "$PYTHON_DIR"
-  $USE_SUDO chown -R $HOST_UID:$HOST_GID "$PYTHON_DIR"
 fi
+$USE_SUDO chmod -R 775 "$PYTHON_DIR"
+$USE_SUDO chown -R $HOST_UID:$HOST_GID "$PYTHON_DIR"
 
 if [ "$DEV_ENV" == "1" ]; then
   DEFAULT_DB_NAME=airunner.dev.db
@@ -199,7 +207,7 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e OPENROUTER_API_KEY="" \
     -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
     -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
-    -e PYTHONPATH=/home/appuser/.local/share/airunner/python/lib/python3.10/site-packages:/app \
+    -e PYTHONPATH=/home/appuser/.local/share/airunner/python/local/lib/python3.10/dist-packages:/app \
     -e PYTHONUSERBASE=/home/appuser/.local/share/airunner/python \
     -e HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface \
     -e HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface \
@@ -210,7 +218,7 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e QT_LOGGING_RULES="*.debug=false;driver.usb.debug=true" \
     -e QT_DEBUG_PLUGINS=0 \
     -e PYTHONLOGLEVEL=WARNING \
-    -e QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/share/airunner/python/lib/python3.10/site-packages/PySide6/Qt/plugins/platforms \
+    -e QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/share/airunner/python/local/lib/python3.10/dist-packages/PySide6/Qt/plugins/platforms \
     -e QT_QPA_PLATFORM=xcb \
     -e PYTHONUNBUFFERED=1 \
     -e NO_AT_BRIDGE=1 \
@@ -221,7 +229,7 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e TF_ENABLE_ONEDNN_OPTS=0 \
     -e BUTLER_API_KEY="${BUTLER_API_KEY}" \
     -e CR_PAT="${CR_PAT}" \
-    -e LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages \
+    -e LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/home/appuser/.local/share/airunner/python/local/lib/python3.10/dist-packages \
     -w /app \
     $DOCKER_IMAGE \
     bash -c "bash /app/package/entrypoint.sh && bash /app/package/pyinstaller/build.sh"

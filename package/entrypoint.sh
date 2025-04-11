@@ -4,6 +4,25 @@ set -x
 
 # Set PYTHONUSERBASE to ensure pip installs packages into the correct directory
 export PYTHONUSERBASE=/home/appuser/.local/share/airunner/python
+export PATH=/home/appuser/.local/share/airunner/python/bin:$PATH
+
+# Ensure the PATH includes the bin directory under PYTHONUSERBASE
+export PATH=$PYTHONUSERBASE/bin:$PATH
+
+# Update PYTHONPATH to include the dist-packages directory under PYTHONUSERBASE
+export PYTHONPATH=$PYTHONUSERBASE/local/lib/python3.10/dist-packages:$PYTHONPATH
+
+# Remove PIP_USER to avoid conflicts with --prefix
+unset PIP_USER
+
+# Ensure pip uses the correct cache directory
+export PIP_CACHE_DIR=$AIRUNNER_HOME_DIR/.cache/pip
+
+echo "PATH set to $PATH"
+echo "PYTHONPATH set to $PYTHONPATH"
+echo "PIP_CACHE_DIR set to $PIP_CACHE_DIR"
+
+# Diagnostic information
 echo "PYTHONUSERBASE set to $PYTHONUSERBASE"
 
 # Ensure the directory structure exists (but don't try to chmod mounted volumes)
@@ -12,8 +31,6 @@ mkdir -p $PYTHONUSERBASE/{bin,lib,share}
 # Diagnostic information
 echo "User: $(whoami)"
 echo "PYTHONUSERBASE: $PYTHONUSERBASE"
-echo "PIP_USER: $PIP_USER"
-pip list
 
 # Diagnostic information for X11 setup
 echo "===== X11 Setup Diagnostic Information ====="
@@ -32,50 +49,7 @@ else
   echo "X connection failed"
 fi
 
-# Use --prefix to explicitly specify installation location
-pip install --no-cache-dir --prefix $PYTHONUSERBASE pip setuptools wheel --upgrade
-pip install --no-cache-dir --prefix $PYTHONUSERBASE torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-
-# Check if AIRUNNER_ENABLE_OPEN_VOICE==1
-if [ "$AIRUNNER_ENABLE_OPEN_VOICE" == "1" ]; then
-  echo "Installing OpenVoice and MeloTTS..."
-  # Check if OpenVoice exists
-  if [ ! -d "OpenVoice" ]; then
-    git clone https://github.com/myshell-ai/OpenVoice.git
-  fi
-  cd OpenVoice
-  pip install --no-cache-dir --prefix $PYTHONUSERBASE .
-  cd ..
-  rm -rf OpenVoice
-
-  # Check if MeloTTS exists
-  if [ ! -d "MeloTTS" ]; then
-    git clone https://github.com/myshell-ai/MeloTTS.git
-  fi
-  cd MeloTTS
-  git checkout v0.1.2
-  pip install --no-cache-dir --prefix $PYTHONUSERBASE .
-  cd ..
-  rm -rf MeloTTS
-
-  echo "Downloading unidic..."
-  python3 -m unidic download
-  echo "Unidic download complete."
-  exit 0
-else
-  echo "Uninstalling OpenVoice and MeloTTS..."
-  pip uninstall myshell-openvoice -y
-  pip uninstall melotts -y
-fi
-
-# Install python packages at runtime
-pip install --no-cache-dir --prefix $PYTHONUSERBASE -e .[nvidia,gui,linux,dev,art,llm,llm_weather,tts] \
- -U langchain-community \
- -U mediapipe
-pip install --no-cache-dir --prefix $PYTHONUSERBASE -U timm
-python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
-python3 -c "import nltk; nltk.download('punkt')"
-rm -rf .cache/pip
+/app/package/install_python_packages.sh
 
 # Modify the script to handle interactive sessions properly
 if [ "$#" -eq 0 ]; then
