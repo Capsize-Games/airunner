@@ -169,7 +169,6 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
     -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
     -e PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages:/app \
-    -e PIP_USER=1 \
     -e HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface \
     -e HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface \
     -e HF_HUB_DISABLE_TELEMETRY=1 \
