@@ -33,6 +33,11 @@ jobs:
           mkdir -p ${{ github.workspace }}/.local/share/airunner/torch/hub
           mkdir -p ${{ github.workspace }}/.local/share/airunner/python
 
+      - name: Set PYTHONUSERBASE
+        run: |
+          export PYTHONUSERBASE=${{ github.workspace }}/.local/share/airunner/python
+          mkdir -p $PYTHONUSERBASE
+
       - name: Build Linux
         run: |
           python3 src/airunner/bin/docker_wrapper.py linuxbuild-prod
