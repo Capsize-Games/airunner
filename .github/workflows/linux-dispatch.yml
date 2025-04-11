@@ -32,6 +32,7 @@ jobs:
       - name: Build Linux
         run: |
           docker run --rm \
+            --user 1000:1000 \
             -v ${{ github.workspace }}:/app:rw \
             -v ${{ github.workspace }}/package/entrypoint.sh:/app/package/entrypoint.sh:ro \
             -v ${{ github.workspace }}/.local/share/airunner:/home/appuser/.local/share/airunner:rw \
