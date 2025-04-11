@@ -53,7 +53,7 @@ $USE_SUDO chmod -R 755 "$CACHE_DIR"
 $USE_SUDO chown -R $HOST_UID:$HOST_GID "$CACHE_DIR"
 
 # Ensure build and dist exist and have correct permissions
-BUILD_DIR="/app/build"
+BUILD_DIR="$AIRUNNER_HOME_DIR/build"
 if [ ! -d "$BUILD_DIR" ]; then
   echo "Creating directory: $BUILD_DIR"
   mkdir -p "$BUILD_DIR"
@@ -61,7 +61,7 @@ fi
 $USE_SUDO chmod -R 755 "$BUILD_DIR"
 $USE_SUDO chown -R $HOST_UID:$HOST_GID "$BUILD_DIR"
 
-DIST_DIR="/app/dist"
+DIST_DIR="$AIRUNNER_HOME_DIR/dist"
 if [ ! -d "$DIST_DIR" ]; then
   echo "Creating directory: $DIST_DIR"
   mkdir -p "$DIST_DIR"
