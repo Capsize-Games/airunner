@@ -130,9 +130,70 @@ if [ "$1" == "build" ]; then
   exit 0
 fi
 
-if [ "$1" == "linuxbuild" ]; then
+if [ "$1" == "linuxbuild-dev" ]; then
   echo "Building for linux..."
   $DOCKER_COMPOSE run --rm airunner_dev sh ./package/pyinstaller/build.sh
+  exit 0
+fi
+
+if [ "$1" == "linuxbuild-prod" ]; then
+  echo "Building for Linux production..."
+  docker run --rm \
+    --user 1000:1000 \
+    -v $PWD:/app:rw \
+    -v $PWD/package/entrypoint.sh:/app/package/entrypoint.sh:ro \
+    -v $PWD/.local/share/airunner:/home/appuser/.local/share/airunner:rw \
+    -v $PWD/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw \
+    -v $PWD/.local/share/airunner/torch/hub:/home/appuser/.cache/torch/hub:rw \
+    -v $PWD/.local/share/airunner/python:/home/appuser/.local:rw \
+    -v $PWD/build:/app/build:rw \
+    -v $PWD/dist:/app/dist:rw \
+    -e HOST_UID=$(id -u) \
+    -e HOST_GID=$(id -g) \
+    -e UID=$(id -u) \
+    -e GID=$(id -g) \
+    -e DEV_ENV=0 \
+    -e AIRUNNER_ENABLE_OPEN_VOICE=0 \
+    -e PYTHONOPTIMIZE=0 \
+    -e AIRUNNER_ENVIRONMENT=prod \
+    -e AIRUNNER_OS=linux \
+    -e PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512,expandable_segments:True \
+    -e NUMBA_CACHE_DIR=/tmp/numba_cache \
+    -e DISABLE_TELEMETRY=1 \
+    -e AIRUNNER_LLM_USE_LOCAL=1 \
+    -e AIRUNNER_SAVE_LOG_TO_FILE=0 \
+    -e AIRUNNER_LOG_LEVEL=WARNING \
+    -e AIRUNNER_DISABLE_FACEHUGGERSHIELD=1 \
+    -e AIRUNNER_LLM_USE_OPENROUTER=0 \
+    -e OPENROUTER_API_KEY="" \
+    -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
+    -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
+    -e PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages:/app \
+    -e PIP_USER=1 \
+    -e HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface \
+    -e HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface \
+    -e HF_HUB_DISABLE_TELEMETRY=1 \
+    -e XAUTHORITY=/home/appuser/.Xauthority \
+    -e DEBIAN_FRONTEND=noninteractive \
+    -e TZ=America/Denver \
+    -e QT_LOGGING_RULES="*.debug=false;driver.usb.debug=true" \
+    -e QT_DEBUG_PLUGINS=0 \
+    -e PYTHONLOGLEVEL=WARNING \
+    -e QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/plugins/platforms \
+    -e QT_QPA_PLATFORM=xcb \
+    -e PYTHONUNBUFFERED=1 \
+    -e NO_AT_BRIDGE=1 \
+    -e TORCH_USE_CUDA_DSA=1 \
+    -e CUDA_LAUNCH_BLOCKING=1 \
+    -e TORCH_HOME=/home/appuser/.local/share/airunner/torch/hub \
+    -e XDG_CACHE_HOME=/home/appuser/.local/share/airunner/.cache \
+    -e TF_ENABLE_ONEDNN_OPTS=0 \
+    -e BUTLER_API_KEY="${BUTLER_API_KEY}" \
+    -e CR_PAT="${CR_PAT}" \
+    -e LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages \
+    -w /app \
+    $DOCKER_IMAGE \
+    bash -c "bash /app/package/entrypoint.sh && bash /app/package/pyinstaller/build.sh"
   exit 0
 fi
 
