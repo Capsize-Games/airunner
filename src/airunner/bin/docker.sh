@@ -2,6 +2,17 @@
 
 echo "Starting docker"
 
+# Detect if running in GitHub Actions
+if [ -n "$GITHUB_ACTIONS" ]; then
+  # In GitHub Actions, don't use sudo
+  USE_SUDO=""
+  echo "Running in GitHub Actions - sudo disabled"
+else
+  # On regular systems, use sudo
+  USE_SUDO="sudo"
+  echo "Running on regular system - sudo enabled"
+fi
+
 # Export HOST_UID and HOST_GID for the current user
 export HOST_UID=$(id -u)
 export HOST_GID=$(id -g)
@@ -11,6 +22,18 @@ TORCH_HUB_DIR=${HOME}/.local/share/airunner/torch/hub
 
 # Set PYTHONUSERBASE to redirect pip installations to .local/share/airunner/python
 export PYTHONUSERBASE=$AIRUNNER_HOME_DIR/python
+
+# Ensure the Python directory structure exists with proper permissions before mounting
+PYTHON_DIRS=("$PYTHONUSERBASE/bin" "$PYTHONUSERBASE/lib" "$PYTHONUSERBASE/share" "$PYTHONUSERBASE/include")
+for dir in "${PYTHON_DIRS[@]}"; do
+  if [ ! -d "$dir" ]; then
+    echo "Creating directory: $dir"
+    mkdir -p "$dir"
+  fi
+  # Set proper permissions, use sudo conditionally
+  chmod 775 "$dir"
+  $USE_SUDO chown $HOST_UID:$HOST_GID "$dir"
+done
 
 # Ensure the target directory exists
 if [ ! -d "$PYTHONUSERBASE" ]; then
@@ -24,7 +47,7 @@ if [ ! -f "$LOG_FILE" ]; then
   touch "$LOG_FILE"
 fi
 chmod 664 "$LOG_FILE"  # Allow read/write for owner and group
-chown $HOST_UID:$HOST_GID "$LOG_FILE"  # Set ownership to the current user and group
+$USE_SUDO chown $HOST_UID:$HOST_GID "$LOG_FILE"  # Set ownership to the current user and group
 
 # Ensure the parent directory has the correct permissions
 # recursively set permissions, but skip site-packages
@@ -32,8 +55,8 @@ PYTHON_DIR=$AIRUNNER_HOME_DIR/python
 if [ -d "$PYTHON_DIR" ]; then
   if [ $(stat -c "%a" "$PYTHON_DIR") -ne 775 ]; then
     echo "Setting permissions for $PYTHON_DIR"
-    sudo chmod -R 775 "$PYTHON_DIR"
-    sudo chown $HOST_UID:$HOST_GID "$PYTHON_DIR"
+    $USE_SUDO chmod -R 775 "$PYTHON_DIR"
+    $USE_SUDO chown $HOST_UID:$HOST_GID "$PYTHON_DIR"
   fi
 else
   mkdir -p "$PYTHON_DIR"
@@ -43,7 +66,7 @@ else
   mkdir -p "$PYTHON_DIR/include"
   mkdir -p "$PYTHON_DIR/share"
   chmod -R 775 "$PYTHON_DIR"
-  chown -R $HOST_UID:$HOST_GID "$PYTHON_DIR"
+  $USE_SUDO chown -R $HOST_UID:$HOST_GID "$PYTHON_DIR"
 fi
 
 if [ "$DEV_ENV" == "1" ]; then
@@ -63,16 +86,16 @@ if [ -d "$AIRUNNER_HOME_DIR" ]; then
   # Check if permissions need to be updated
   if [ $(stat -c "%a" "$AIRUNNER_HOME_DIR") -ne 775 ]; then
     echo "Updating permissions for $AIRUNNER_HOME_DIR..."
-    sudo chmod -R 775 "$AIRUNNER_HOME_DIR"  # Allow read/write/execute for owner and group
+    $USE_SUDO chmod -R 775 "$AIRUNNER_HOME_DIR"  # Allow read/write/execute for owner and group
   fi
   # Check if the group ID bit is already set
   if [ $(stat -c "%A" "$AIRUNNER_HOME_DIR" | cut -c 6) != "s" ]; then
     echo "Setting group ID bit on $AIRUNNER_HOME_DIR..."
-    sudo chmod g+s "$AIRUNNER_HOME_DIR"  # Set the group ID on new files and directories
+    $USE_SUDO chmod g+s "$AIRUNNER_HOME_DIR"  # Set the group ID on new files and directories
   fi
   if [ $(stat -c "%a" "$AIRUNNER_HOME_DIR") -ne 775 ]; then
     echo "Updating permissions for $AIRUNNER_HOME_DIR..."
-    sudo chmod -R 775 "$AIRUNNER_HOME_DIR"  # Allow read/write/execute for owner and group
+    $USE_SUDO chmod -R 775 "$AIRUNNER_HOME_DIR"  # Allow read/write/execute for owner and group
   fi
 fi
 
@@ -81,12 +104,12 @@ if [ -d "$TORCH_HUB_DIR" ]; then
   # Check if permissions need to be updated
   if [ $(stat -c "%a" "$TORCH_HUB_DIR") -ne 775 ]; then
     echo "Updating permissions for $TORCH_HUB_DIR..."
-    sudo chmod -R 775 "$TORCH_HUB_DIR"  # Allow read/write/execute for owner and group
+    $USE_SUDO chmod -R 775 "$TORCH_HUB_DIR"  # Allow read/write/execute for owner and group
   fi
   # Check if the group ID bit is already set
   if [ $(stat -c "%A" "$TORCH_HUB_DIR" | cut -c 6) != "s" ]; then
     echo "Setting group ID bit on $TORCH_HUB_DIR..."
-    sudo chmod g+s "$TORCH_HUB_DIR"  # Set the group ID on new files and directories
+    $USE_SUDO chmod g+s "$TORCH_HUB_DIR"  # Set the group ID on new files and directories
   fi
 fi
 
@@ -153,7 +176,7 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -v $PWD/.local/share/airunner:/home/appuser/.local/share/airunner:rw \
     -v $PWD/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw \
     -v $PWD/.local/share/airunner/torch/hub:/home/appuser/.cache/torch/hub:rw \
-    -v $PWD/.local/share/airunner/python:/home/appuser/.local:rw \
+    -v $PWD/.local/share/airunner/python:/home/appuser/.local/share/airunner/python:rw \
     -v $PWD/build:/app/build:rw \
     -v $PWD/dist:/app/dist:rw \
     -e HOST_UID=$(id -u) \
@@ -176,7 +199,8 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e OPENROUTER_API_KEY="" \
     -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
     -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
-    -e PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages:/app \
+    -e PYTHONPATH=/home/appuser/.local/share/airunner/python/lib/python3.10/site-packages:/app \
+    -e PYTHONUSERBASE=/home/appuser/.local/share/airunner/python \
     -e HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface \
     -e HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface \
     -e HF_HUB_DISABLE_TELEMETRY=1 \
@@ -186,7 +210,7 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e QT_LOGGING_RULES="*.debug=false;driver.usb.debug=true" \
     -e QT_DEBUG_PLUGINS=0 \
     -e PYTHONLOGLEVEL=WARNING \
-    -e QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/plugins/platforms \
+    -e QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/share/airunner/python/lib/python3.10/site-packages/PySide6/Qt/plugins/platforms \
     -e QT_QPA_PLATFORM=xcb \
     -e PYTHONUNBUFFERED=1 \
     -e NO_AT_BRIDGE=1 \
