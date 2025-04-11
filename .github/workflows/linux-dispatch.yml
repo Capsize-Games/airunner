@@ -14,76 +14,25 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
+
       - name: Pull docker image
         run: |
           docker pull $DOCKER_IMAGE
+
       - name: Create required directories
         run: |
           mkdir -p ${{ github.workspace }}/.local/share/airunner
           mkdir -p ${{ github.workspace }}/.local/share/airunner/data
           mkdir -p ${{ github.workspace }}/.local/share/airunner/torch/hub
           mkdir -p ${{ github.workspace }}/.local/share/airunner/python
+
       - name: Build Linux
         run: |
-          docker run --rm \
-            --user 1000:1000 \
-            -v ${{ github.workspace }}:/app:rw \
-            -v ${{ github.workspace }}/package/entrypoint.sh:/app/package/entrypoint.sh:ro \
-            -v ${{ github.workspace }}/.local/share/airunner:/home/appuser/.local/share/airunner:rw \
-            -v ${{ github.workspace }}/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw \
-            -v ${{ github.workspace }}/.local/share/airunner/torch/hub:/home/appuser/.cache/torch/hub:rw \
-            -v ${{ github.workspace }}/.local/share/airunner/python:/home/appuser/.local:rw \
-            -v ${{ github.workspace }}/build:/app/build:rw \
-            -v ${{ github.workspace }}/dist:/app/dist:rw \
-            -e HOST_UID=1000 \
-            -e HOST_GID=1000 \
-            -e UID=1000 \
-            -e GID=1000 \
-            -e DEV_ENV=0 \
-            -e AIRUNNER_ENABLE_OPEN_VOICE=0 \
-            -e PYTHONOPTIMIZE=0 \
-            -e AIRUNNER_ENVIRONMENT=prod \
-            -e AIRUNNER_OS=linux \
-            -e PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512,expandable_segments:True \
-            -e NUMBA_CACHE_DIR=/tmp/numba_cache \
-            -e DISABLE_TELEMETRY=1 \
-            -e AIRUNNER_LLM_USE_LOCAL=1 \
-            -e AIRUNNER_SAVE_LOG_TO_FILE=0 \
-            -e AIRUNNER_LOG_LEVEL=WARNING \
-            -e AIRUNNER_DISABLE_FACEHUGGERSHIELD=1 \
-            -e AIRUNNER_LLM_USE_OPENROUTER=0 \
-            -e OPENROUTER_API_KEY="" \
-            -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
-            -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
-            -e PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages:/app \
-            -e PIP_USER=1 \
-            -e HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface \
-            -e HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface \
-            -e HF_HUB_DISABLE_TELEMETRY=1 \
-            -e XAUTHORITY=/home/appuser/.Xauthority \
-            -e DEBIAN_FRONTEND=noninteractive \
-            -e TZ=America/Denver \
-            -e QT_LOGGING_RULES="*.debug=false;driver.usb.debug=true" \
-            -e QT_DEBUG_PLUGINS=0 \
-            -e PYTHONLOGLEVEL=WARNING \
-            -e QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/plugins/platforms \
-            -e QT_QPA_PLATFORM=xcb \
-            -e PYTHONUNBUFFERED=1 \
-            -e NO_AT_BRIDGE=1 \
-            -e TORCH_USE_CUDA_DSA=1 \
-            -e CUDA_LAUNCH_BLOCKING=1 \
-            -e TORCH_HOME=/home/appuser/.local/share/airunner/torch/hub \
-            -e XDG_CACHE_HOME=/home/appuser/.local/share/airunner/.cache \
-            -e TF_ENABLE_ONEDNN_OPTS=0 \
-            -e BUTLER_API_KEY="${{ secrets.BUTLER_API_KEY }}" \
-            -e CR_PAT="${{ secrets.CR_PAT }}" \
-            -e LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages \
-            -w /app \
-            $DOCKER_IMAGE \
-            bash -c "bash /app/package/entrypoint.sh && bash /app/package/pyinstaller/build.sh"
+          python3 src/airunner/bin/docker_wrapper.py linuxbuild-prod
