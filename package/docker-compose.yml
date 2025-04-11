@@ -17,9 +17,9 @@ services:
       - GID=${GID}
       - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512,expandable_segments:True
       - NUMBA_CACHE_DIR=/tmp/numba_cache
-      - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
+      - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/home/appuser/.local/share/airunner/python/local/lib/python3.10/dist-packages
       - DISABLE_TELEMETRY=1
-      - PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages:/app
+      - PYTHONPATH=/home/appuser/.local/share/airunner/python/local/lib/python3.10/dist-packages:/app
       - DISPLAY
       - HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface
       - HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface
@@ -33,7 +33,7 @@ services:
       - QT_LOGGING_RULES=*.debug=false;driver.usb.debug=true
       - QT_DEBUG_PLUGINS=0
       - PYTHONLOGLEVEL=WARNING
-      - QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/plugins/platforms
+      - QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/share/airunner/python/local/lib/python3.10/dist-packages/PySide6/Qt/plugins/platforms
       - QT_QPA_PLATFORM=xcb
       - PYTHONUNBUFFERED=1
       - NO_AT_BRIDGE=1
