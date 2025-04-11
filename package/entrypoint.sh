@@ -6,9 +6,8 @@ set -x
 export PYTHONUSERBASE=/home/appuser/.local/share/airunner/python
 echo "PYTHONUSERBASE set to $PYTHONUSERBASE"
 
-# Ensure the directory structure exists and is writable
+# Ensure the directory structure exists (but don't try to chmod mounted volumes)
 mkdir -p $PYTHONUSERBASE/{bin,lib,share}
-chmod -R 775 $PYTHONUSERBASE
 
 # Diagnostic information
 echo "User: $(whoami)"
@@ -79,7 +78,7 @@ python3 -c "import nltk; nltk.download('punkt')"
 rm -rf .cache/pip
 
 # Modify the script to handle interactive sessions properly
-if [ "$#" -eq 0]; then
+if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
   exec bash
 else
