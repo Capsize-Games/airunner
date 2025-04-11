@@ -33,10 +33,6 @@ logging.getLogger("bitsandbytes").setLevel(logging.WARNING)
 import sys
 from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE
 
-if AIRUNNER_SAVE_LOG_TO_FILE:
-    sys.stdout = open(AIRUNNER_LOG_FILE, "a")
-    sys.stderr = open(AIRUNNER_LOG_FILE, "a")
-
 import os
 import argparse
 from airunner.utils.settings.get_qsettings import get_qsettings
@@ -45,6 +41,18 @@ base_path = os.path.join(
     os.path.expanduser("~"), ".local", "share", "airunner"
 )
 
+################################################################
+# Ensure that the base directory exists.
+################################################################
+base_dir = os.path.join(base_path, "data")
+try:
+    os.makedirs(base_dir, exist_ok=True)
+except FileExistsError:
+    pass
+
+if AIRUNNER_SAVE_LOG_TO_FILE:
+    sys.stdout = open(AIRUNNER_LOG_FILE, "a")
+    sys.stderr = open(AIRUNNER_LOG_FILE, "a")
 
 ################################################################
 # Set the environment variable for PyTorch to use expandable
@@ -56,15 +64,6 @@ torch.hub.set_dir(
         "TORCH_HOME", "/home/appuser/.local/share/airunner/torch/hub"
     )
 )
-
-################################################################
-# Ensure that the base directory exists.
-################################################################
-base_dir = os.path.join(base_path, "data")
-try:
-    os.makedirs(base_dir, exist_ok=True)
-except FileExistsError:
-    pass
 
 ################################################################
 # Import the main application class for AI Runner.
