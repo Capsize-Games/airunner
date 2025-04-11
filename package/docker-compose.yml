@@ -20,7 +20,6 @@ services:
       - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
       - DISABLE_TELEMETRY=1
       - PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages:/app
-      - PIP_USER=1
       - DISPLAY
       - HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface
       - HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface
