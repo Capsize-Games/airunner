@@ -1,5 +1,19 @@
 #!/usr/bin/bash
 # this should be called from within docker to kick off a build
+
+# Ensure the /app/build directory has the correct permissions
+if [ ! -d /app/build ]; then
+  mkdir -p /app/build
+fi
+chmod -R 775 /app/build
+chown -R $(id -u):$(id -g) /app/build
+
+if [ ! -d /app/dist ]; then
+  mkdir -p /app/dist
+fi
+chmod -R 775 /app/dist
+chown -R $(id -u):$(id -g) /app/dist
+
 cd /app
 
 echo ""
