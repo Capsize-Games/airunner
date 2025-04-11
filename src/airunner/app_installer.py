@@ -55,7 +55,7 @@ class AppInstaller(
     def do_show_setup_wizard(self) -> bool:
         """
         This flag is used to determine if the setup wizard should be displayed.
-        If the setup wizard has not been dcompleted, various agreements have not been accepted,
+        If the setup wizard has not been completed, various agreements have not been accepted,
         or the paths have not been initialized, the setup wizard will be displayed.
         :return: bool
         """
