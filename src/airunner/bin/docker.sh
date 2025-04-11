@@ -9,6 +9,14 @@ export HOST_HOME=$HOME
 export AIRUNNER_HOME_DIR=${HOST_HOME}/.local/share/airunner
 TORCH_HUB_DIR=${HOME}/.local/share/airunner/torch/hub
 
+# Set PYTHONUSERBASE to redirect pip installations to .local/share/airunner/python
+export PYTHONUSERBASE=$AIRUNNER_HOME_DIR/python
+
+# Ensure the target directory exists
+if [ ! -d "$PYTHONUSERBASE" ]; then
+  mkdir -p "$PYTHONUSERBASE"
+fi
+
 # Ensure the log file exists and has the correct permissions
 LOG_FILE="${HOME}/.local/share/airunner/airunner.log"
 if [ ! -f "$LOG_FILE" ]; then
