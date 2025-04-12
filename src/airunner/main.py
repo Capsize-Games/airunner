@@ -24,7 +24,6 @@ logging.getLogger("google.cloud.storage._opentelemetry_tracing").setLevel(
     logging.WARNING
 )
 logging.getLogger("numba").setLevel(logging.WARNING)
-logging.getLogger("tensorflow").setLevel(logging.WARNING)
 logging.getLogger("h5py._conv").setLevel(logging.WARNING)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 logging.getLogger("datasets").setLevel(logging.WARNING)

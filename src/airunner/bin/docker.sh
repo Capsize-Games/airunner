@@ -24,7 +24,6 @@ TORCH_HUB_DIR=${HOME}/.local/share/airunner/torch/hub
 
 # Set PYTHONUSERBASE to redirect pip installations to .local/share/airunner/python
 export PYTHONUSERBASE=$AIRUNNER_HOME_DIR/python
-export PYTHONPATH=$PYTHONUSERBASE/python/local/lib/python3.10/dist-packages:$PYTHONPATH
 
 # Ensure the Python directory structure exists with proper permissions before mounting
 PYTHON_DIRS=("$PYTHONUSERBASE/bin" "$PYTHONUSERBASE/lib" "$PYTHONUSERBASE/share" "$PYTHONUSERBASE/include")
@@ -53,7 +52,7 @@ $USE_SUDO chmod -R 755 "$CACHE_DIR"
 $USE_SUDO chown -R $HOST_UID:$HOST_GID "$CACHE_DIR"
 
 # Ensure build and dist exist and have correct permissions
-BUILD_DIR="$AIRUNNER_HOME_DIR/build"
+BUILD_DIR="$PWD/build"
 if [ ! -d "$BUILD_DIR" ]; then
   echo "Creating directory: $BUILD_DIR"
   mkdir -p "$BUILD_DIR"
@@ -61,7 +60,7 @@ fi
 $USE_SUDO chmod -R 755 "$BUILD_DIR"
 $USE_SUDO chown -R $HOST_UID:$HOST_GID "$BUILD_DIR"
 
-DIST_DIR="$AIRUNNER_HOME_DIR/dist"
+DIST_DIR="$PWD/dist"
 if [ ! -d "$DIST_DIR" ]; then
   echo "Creating directory: $DIST_DIR"
   mkdir -p "$DIST_DIR"
@@ -220,9 +219,9 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e AIRUNNER_DISABLE_FACEHUGGERSHIELD=1 \
     -e AIRUNNER_LLM_USE_OPENROUTER=0 \
     -e OPENROUTER_API_KEY="" \
+    -e PATH=/usr/local/cuda/bin:/home/appuser/.local/bin:$PATH \
     -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
     -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
-    -e PYTHONPATH=/home/appuser/.local/share/airunner/python/local/lib/python3.10/dist-packages:/app \
     -e PYTHONUSERBASE=/home/appuser/.local/share/airunner/python \
     -e HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface \
     -e HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface \
@@ -233,7 +232,7 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e QT_LOGGING_RULES="*.debug=false;driver.usb.debug=true" \
     -e QT_DEBUG_PLUGINS=0 \
     -e PYTHONLOGLEVEL=WARNING \
-    -e QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/share/airunner/python/local/lib/python3.10/dist-packages/PySide6/Qt/plugins/platforms \
+    -e QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/share/airunner/python/local/lib/python3.10/site-packages/PySide6/Qt/plugins/platforms \
     -e QT_QPA_PLATFORM=xcb \
     -e PYTHONUNBUFFERED=1 \
     -e NO_AT_BRIDGE=1 \
@@ -244,7 +243,7 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e TF_ENABLE_ONEDNN_OPTS=0 \
     -e BUTLER_API_KEY="${BUTLER_API_KEY}" \
     -e CR_PAT="${CR_PAT}" \
-    -e LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/home/appuser/.local/share/airunner/python/local/lib/python3.10/dist-packages \
+    -e LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/home/appuser/.local/share/airunner/python/local/lib/python3.10/site-packages \
     -w /app \
     $DOCKER_IMAGE \
     bash -c "bash /app/package/entrypoint.sh && bash /app/package/pyinstaller/build.sh"
