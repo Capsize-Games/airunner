@@ -195,18 +195,18 @@ if [ "$1" == "linuxbuild-prod" ]; then
   echo "Building for Linux production..."
   docker run --rm \
     --user 1000:1000 \
-    -v $PWD:/app:rw \
-    -v $PWD/package/entrypoint.sh:/app/package/entrypoint.sh:ro \
-    -v $PWD/.local/share/airunner:/home/appuser/.local/share/airunner:rw \
-    -v $PWD/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw \
-    -v $PWD/.local/share/airunner/torch/hub:/home/appuser/.cache/torch/hub:rw \
-    -v $PWD/.local/share/airunner/python:/home/appuser/.local/share/airunner/python:rw \
+    -v $WORKING_HOME:/app:rw \
+    -v $WORKING_HOME/package/entrypoint.sh:/app/package/entrypoint.sh:ro \
+    -v $WORKING_HOME/.local/share/airunner:/home/appuser/.local/share/airunner:rw \
+    -v $WORKING_HOME/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw \
+    -v $WORKING_HOME/.local/share/airunner/torch/hub:/home/appuser/.cache/torch/hub:rw \
+    -v $WORKING_HOME/.local/share/airunner/python:/home/appuser/.local/share/airunner/python:rw \
     -e HOST_UID=$(id -u) \
     -e HOST_GID=$(id -g) \
     -e UID=$(id -u) \
     -e GID=$(id -g) \
     -e DEV_ENV=0 \
-    -e WORKING_HOME=/home/airunner \
+    -e WORKING_HOME=WORKING_HOME \
     -e AIRUNNER_ENABLE_OPEN_VOICE=0 \
     -e PYTHONOPTIMIZE=0 \
     -e AIRUNNER_ENVIRONMENT=prod \
