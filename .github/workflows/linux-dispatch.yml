@@ -7,7 +7,7 @@ on:
 
 env:
   DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux
-  WORKING_HOME: /home/airunner
+  WORKING_HOME: ${{ github.workspace }}
 
 jobs:
   buildLinux:
