@@ -121,7 +121,7 @@ Below is a high-level list of capabilities in AI Runner:
 - **Memory**: 16 GB RAM  
 - **GPU**: NVIDIA RTX 3060 or better (for Stable Diffusion, TTS/Whisper)  
 - **Network**: Broadband (used to download models)  
-- **Storage**: 130 GB free (model files can be large)
+- **Storage**: 36 GB free (model files can be large)
 
 ### Recommended Specs
 
@@ -129,7 +129,7 @@ Below is a high-level list of capabilities in AI Runner:
 - **CPU**: Intel i7 (or equivalent)  
 - **Memory**: 30+ GB RAM  
 - **GPU**: NVIDIA RTX 4090 or higher  
-- **Storage**: 130 GB free  
+- **Storage**: 50 GB free  
 - **Network**: Needed initially for model downloads
 
 ---
