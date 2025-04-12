@@ -5,16 +5,18 @@ import os
 from os.path import join
 
 base_path = "/app"
-site_packages_path = "/home/appuser/.local/share/airunner/python/local/lib/python3.10/dist-packages/"
+site_packages_path = "/home/appuser/.local/share/airunner/python/lib/python3.10/site-packages/"
 dist = join(base_path, "dist")
 airunner_path = join(base_path, "src/airunner")
 cudnn_lib = join(site_packages_path, 'nvidia/cudnn/lib')
 pyside_lib = join(site_packages_path, 'PySide6/Qt/lib')
 linux_lib = '/usr/lib/x86_64-linux-gnu'
-nss_lib = '/usr/lib/x86_64-linux-gnu'  # NSS libraries location
-gtk_lib = '/usr/lib/x86_64-linux-gnu'  # GTK libraries location
-db_lib = '/usr/lib/x86_64-linux-gnu'   # Database libraries location
+nss_lib = linux_lib  # NSS libraries location
+gtk_lib = linux_lib  # GTK libraries location
+db_lib = linux_lib   # Database libraries location
 cuda_lib = '/usr/local/cuda-11/lib64'  # CUDA libraries location
+qt_lib = '/home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/lib/'
+cudnn_lib = '/home/appuser/.local/lib/python3.10/site-packages/nvidia/cudnn/lib/'
 
 a = Analysis(
     [join(airunner_path, 'main.py')],
@@ -22,7 +24,7 @@ a = Analysis(
         join(base_path, 'src'),
     ],
     binaries=[
-        (join(site_packages_path, 'tiktoken/_tiktoken.cpython-310-x86_64-linux-gnu.so'), '.'),
+        ('/home/appuser/.local/lib/python3.10/site-packages/tiktoken/_tiktoken.cpython-310-x86_64-linux-gnu.so', '.'),
         (join(cudnn_lib, 'libcudnn_adv.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn_cnn.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn_engines_precompiled.so.9'), '.'),
@@ -31,14 +33,15 @@ a = Analysis(
         (join(cudnn_lib, 'libcudnn_heuristic.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn_ops.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn.so.9'), '.'),
-        (join(pyside_lib, 'libQt6XcbQpa.so.6'), '.'),
-        (join(pyside_lib, 'libQt6DBus.so.6'), '.'),
-        (join(pyside_lib, 'libQt6Widgets.so.6'), '.'),
-        (join(pyside_lib, 'libQt6Gui.so.6'), '.'),
-        (join(pyside_lib, 'libQt6Core.so.6'), '.'),
-        (join(linux_lib, 'libpython3.10.so.1.0'), '.'),
-        (join(linux_lib, 'libxcb.so.1.1.0'), '.'),
-        (join(linux_lib, 'libxkbcommon-x11.so.0.0.0'), '.'),
+        # QT libraries
+        (join(qt_lib, 'libQt6XcbQpa.so.6'), '.'),
+        (join(qt_lib, 'libQt6DBus.so.6'), '.'),
+        (join(qt_lib, 'libQt6Widgets.so.6'), '.'),
+        (join(qt_lib, 'libQt6Gui.so.6'), '.'),
+        (join(qt_lib, 'libQt6Core.so.6'), '.'),
+        ('/usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libxkbcommon-x11.so.0.0.0', '.'),
         # NSS libraries for QtWebEngine
         (join(nss_lib, 'libplds4.so'), '.'),
         (join(nss_lib, 'libplc4.so'), '.'),
@@ -70,12 +73,9 @@ a = Analysis(
         (join(linux_lib, 'libtbb.so.12.5'), '.'),
         (join(linux_lib, 'libtbb.so.12'), '.'),
         # CUDA libraries
-        ('/home/appuser/.local/local/lib/python3.10/dist-packages/nvidia/cublas/lib/libcublas.so.11', '.'),
-        ('/home/appuser/.local/local/lib/python3.10/dist-packages/nvidia/cusparse/lib/libcusparse.so.11', '.'),
-        ('/home/appuser/.local/local/lib/python3.10/dist-packages/nvidia/cuda_runtime/lib/libcudart.so.11.0', '.'),
-        ('/home/appuser/.local/local/lib/python3.10/dist-packages/nvidia/cublas/lib/libcublasLt.so.11', '.'),
-        # Qt Virtual Keyboard
-        # (join(pyside_lib, 'libQt6VirtualKeyboardSettings.so.6'), '.'),
+        ('/home/appuser/.local/lib/python3.10/site-packages/nvidia/cublas/lib/libcublas.so.12', '.'),
+        ('/home/appuser/.local/lib/python3.10/site-packages/nvidia/cusparse/lib/libcusparse.so.12', '.'),
+        ('/home/appuser/.local/lib/python3.10/site-packages/nvidia/cublas/lib/libcublasLt.so.12', '.'),
     ],
     datas=[
         (join(airunner_path, 'alembic.ini'), 'airunner'),

@@ -32,7 +32,7 @@ DEV_ENV = os.environ.get("DEV_ENV", "0") == "1"
 NLTK_DOWNLOAD_DIR = os.path.join(
     python_venv_dir,
     "..",
-    "lib/python3.10/dist-packages/llama_index/legacy/_static/nltk_cache/",
+    "lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/",
 )
 AIRUNNER_DEFAULT_LLM_HF_PATH = os.environ.get(
     "AIRUNNER_AIRUNNER_DEFAULT_LLM_HF_PATH",
