@@ -11,6 +11,10 @@ airunner_path = join(base_path, "src/airunner")
 cudnn_lib = join(site_packages_path, 'nvidia/cudnn/lib')
 pyside_lib = join(site_packages_path, 'PySide6/Qt/lib')
 linux_lib = '/usr/lib/x86_64-linux-gnu'
+nss_lib = '/usr/lib/x86_64-linux-gnu'  # NSS libraries location
+gtk_lib = '/usr/lib/x86_64-linux-gnu'  # GTK libraries location
+db_lib = '/usr/lib/x86_64-linux-gnu'   # Database libraries location
+cuda_lib = '/usr/local/cuda-11/lib64'  # CUDA libraries location
 
 a = Analysis(
     [join(airunner_path, 'main.py')],
@@ -35,9 +39,46 @@ a = Analysis(
         (join(linux_lib, 'libpython3.10.so.1.0'), '.'),
         (join(linux_lib, 'libxcb.so.1.1.0'), '.'),
         (join(linux_lib, 'libxkbcommon-x11.so.0.0.0'), '.'),
+        # NSS libraries for QtWebEngine
+        (join(nss_lib, 'libplds4.so'), '.'),
+        (join(nss_lib, 'libplc4.so'), '.'),
+        (join(nss_lib, 'libnss3.so'), '.'),
+        (join(nss_lib, 'libnssutil3.so'), '.'),
+        (join(nss_lib, 'libnspr4.so'), '.'),
+        (join(nss_lib, 'libsmime3.so'), '.'),
+        # GTK libraries
+        (join(gtk_lib, 'libatk-1.0.so.0'), '.'),
+        (join(gtk_lib, 'libgtk-3.so.0'), '.'),
+        (join(gtk_lib, 'libgdk-3.so.0'), '.'),
+        # Database libraries
+        (join(linux_lib, 'libpq.so.5'), '.'),
+        (join(linux_lib, 'libodbc.so.2'), '.'),
+        (join(linux_lib, 'libmysqlclient.so.21'), '.'),
+        # Other system libraries
+        (join(linux_lib, 'libpcsclite.so'), '.'),
+        (join(linux_lib, 'libpcsclite.so.1'), '.'),
+        (join(linux_lib, 'libcups.so'), '.'),
+        (join(linux_lib, 'libcups.so.2'), '.'),
+        (join(linux_lib, 'libspeechd.so'), '.'),
+        (join(linux_lib, 'libspeechd.so.2'), '.'),
+        (join(linux_lib, 'libspeechd.so.2.6.0'), '.'),
+        (join(linux_lib, 'libsox.so'), '.'),
+        (join(linux_lib, 'libsox.so.3'), '.'),
+        (join(linux_lib, 'libsox.so.3.0.0'), '.'),
+        (join(linux_lib, 'libtbb.so'), '.'),
+        (join(linux_lib, 'libtbb.so.2'), '.'),
+        (join(linux_lib, 'libtbb.so.12.5'), '.'),
+        (join(linux_lib, 'libtbb.so.12'), '.'),
+        # CUDA libraries
+        ('/home/appuser/.local/local/lib/python3.10/dist-packages/nvidia/cublas/lib/libcublas.so.11', '.'),
+        ('/home/appuser/.local/local/lib/python3.10/dist-packages/nvidia/cusparse/lib/libcusparse.so.11', '.'),
+        ('/home/appuser/.local/local/lib/python3.10/dist-packages/nvidia/cuda_runtime/lib/libcudart.so.11.0', '.'),
+        ('/home/appuser/.local/local/lib/python3.10/dist-packages/nvidia/cublas/lib/libcublasLt.so.11', '.'),
+        # Qt Virtual Keyboard
+        # (join(pyside_lib, 'libQt6VirtualKeyboardSettings.so.6'), '.'),
     ],
     datas=[
-        (join(airunner_path, 'alembic.ini'), '.'),
+        (join(airunner_path, 'alembic.ini'), 'airunner'),
         (join(site_packages_path, 'inflect'), 'inflect'),
         (join(site_packages_path, 'controlnet_aux'), 'controlnet_aux'),
         (join(site_packages_path, 'diffusers'), 'diffusers'),
@@ -95,11 +136,15 @@ a = Analysis(
         'logging',
         'logging.config',
         'PySide6',
+        'scipy.special._cdflib',
+        'pysqlite2',
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        'tensorflow',
+    ],
     noarchive=False,
     optimize=0,
 )
