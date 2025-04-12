@@ -6,13 +6,11 @@ on:
   workflow_dispatch:
 
 env:
-  BASE_IMAGE: ghcr.io/capsize-games/airunner/airunner:base
-  BUILDER_IMAGE: ghcr.io/capsize-games/airunner/airunner:builder
-  FINAL_IMAGE: ghcr.io/capsize-games/airunner/airunner:release
+  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux
 
 jobs:
   buildLinux:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -24,62 +22,22 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
-      - name: Pull builder image
+      - name: Pull docker image
         run: |
-          docker pull $BUILDER_IMAGE
+          docker pull $DOCKER_IMAGE
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # Build the release image using the builder image with mounted output directory
-      - name: Build Linux Release
+      - name: Create required directories
         run: |
-          # Create a container to build the application
-          docker run --name airunner-build \
-            -v ${{ github.workspace }}/dist:/dist \
-            -e PYTHONUSERBASE=/home/appuser/.local/share/airunner/python \
-            $BUILDER_IMAGE \
-            bash -c "cd /app && python3 -m PyInstaller --clean --distpath=/dist package/pyinstaller/airunner.spec"
-          
-          # Extract the build artifacts
-          mkdir -p ${{ github.workspace }}/build-artifacts
-          docker cp airunner-build:/dist ${{ github.workspace }}/build-artifacts/
-          docker rm airunner-build
+          mkdir -p ${{ github.workspace }}/.local/share/airunner
+          mkdir -p ${{ github.workspace }}/.local/share/airunner/data
+          mkdir -p ${{ github.workspace }}/.local/share/airunner/torch/hub
+          mkdir -p ${{ github.workspace }}/.local/share/airunner/python
 
-      # Build the final minimal runtime image with just the PyInstaller output
-      - name: Build and push final runtime Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./package/Dockerfile.release
-          push: true
-          tags: ${{ env.FINAL_IMAGE }}
-          build-args: |
-            BASE_IMAGE=${{ env.BASE_IMAGE }}
-          build-context: |
-            dist=${{ github.workspace }}/build-artifacts/dist
+      - name: Set PYTHONUSERBASE
+        run: |
+          export PYTHONUSERBASE=${{ github.workspace }}/.local/share/airunner/python
+          mkdir -p $PYTHONUSERBASE
 
-      # Upload smaller artifacts (not the entire dist folder) if needed for release
-      - name: Upload build metadata as artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-metadata
-          path: |
-            ${{ github.workspace }}/build-artifacts/dist/*.pkg
-            ${{ github.workspace }}/build-artifacts/dist/*.toc
-          retention-days: 7
-
-      # Create GitHub Release with the final Docker image info
-      - name: Update GitHub Release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            ${{ github.workspace }}/build-artifacts/dist/*.pkg
-          body: |
-            Docker image: ${{ env.FINAL_IMAGE }}
-            
-            Pull with: `docker pull ${{ env.FINAL_IMAGE }}`
-            
-            Run with: `docker run --rm ${{ env.FINAL_IMAGE }}`
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Linux
+        run: |
+          python3 src/airunner/bin/docker_wrapper.py linuxbuild-prod
