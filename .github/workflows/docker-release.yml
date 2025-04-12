@@ -37,10 +37,42 @@ jobs:
         echo "HOST_HOME=/home/runner" >> .env
         echo "XAUTHORITY=/home/runner/.Xauthority" >> .env
 
-    - name: Build and push Docker image via Compose
-      run: |
-          docker compose -f package/docker-compose.yml build airunner_dev
-          docker push ghcr.io/capsize-games/airunner/airunner:linux
+    # Build and push base image with minimal dependencies
+    - name: Build and push base Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./package/Dockerfile
+        push: true
+        tags: ghcr.io/capsize-games/airunner/airunner:base
+        cache-from: type=registry,ref=ghcr.io/capsize-games/airunner/airunner:base
+        cache-to: type=inline
+
+    # Build and push builder image with all pip libraries installed
+    - name: Build and push builder Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./package/Dockerfile.builder
+        push: true
+        tags: ghcr.io/capsize-games/airunner/airunner:builder
+        cache-from: type=registry,ref=ghcr.io/capsize-games/airunner/airunner:builder
+        cache-to: type=inline
+        build-args: |
+          BASE_IMAGE=ghcr.io/capsize-games/airunner/airunner:base
+
+    # Build and push final runtime image for development
+    - name: Build and push development Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./package/Dockerfile.dev
+        push: true
+        tags: ghcr.io/capsize-games/airunner/airunner:linux
+        cache-from: type=registry,ref=ghcr.io/capsize-games/airunner/airunner:linux
+        cache-to: type=inline
+        build-args: |
+          BUILDER_IMAGE=ghcr.io/capsize-games/airunner/airunner:builder
 
     - name: Clean up Docker
       if: always()
