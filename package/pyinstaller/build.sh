@@ -2,6 +2,8 @@
 # this should be called from within docker to kick off a build
 cd /app
 
+export PATH=/home/appuser/.local/bin:/home/appuser/.local/share/airunner/python/bin:$PATH
+pip list
 echo ""
 echo "============================================"
 echo "Build airunner for linux"
