@@ -102,16 +102,15 @@ RUN apt-get update && apt-get install -y software-properties-common && \
  libtbb-dev \
  libtbb2 \
  libnss3 \
- # Install CUDA libs if needed (or add a separate step for this)
  && \
  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Set environment variables for CUDA and cuDNN, nvidia runtime and path
-ENV PATH=/usr/local/cuda/bin:$PATH
+ENV PATH=/usr/local/cuda/bin:/home/appuser/.local/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=$CUDA_HOME/bin:$PATH
-ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/.local/share/airunner/python/local/lib/python3.10/dist-packages/PySide6/Qt/lib:/ususe_grr/lib/x86_64-linux-gnu:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
+ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/.local/share/airunner/python/local/lib/python3.10/site-packages/PySide6/Qt/lib:/ususe_grr/lib/x86_64-linux-gnu:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
@@ -128,6 +127,12 @@ RUN if [ "$INSTALL_XCB_CURSOR" = "1" ]; then \
  groupadd -g 1001 airunner_group && usermod -aG airunner_group appuser && \
  apt-get update && apt-get install -y x11-xserver-utils && \
  mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
+
+# Install sudo and configure passwordless sudo for appuser
+RUN apt-get update && apt-get install -y sudo && \
+    echo "appuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+
 COPY --chown=appuser:appuser . /app/
 COPY ./package/entrypoint.sh /home/appuser/entrypoint.sh
 RUN chmod +x /app/package/entrypoint.sh
@@ -138,6 +143,11 @@ RUN mkdir -p /home/appuser/butler && \
     cd /home/appuser/butler && \
     wget https://dl.itch.ovh/butler/linux-amd64/head/butler && chmod +x butler && \
     cd /home/appuser
+
+
+COPY ./package/pip.conf /etc/pip.conf
+RUN chown -R appuser:appuser /etc/pip.conf && \
+    chmod 644 /etc/pip.conf
 
 USER appuser
 
