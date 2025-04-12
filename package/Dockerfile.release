@@ -1,0 +1,31 @@
+ARG BASE_IMAGE=ghcr.io/capsize-games/airunner/airunner:base
+FROM ${BASE_IMAGE} as runtime
+
+# Install minimal runtime dependencies
+USER root
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libfontconfig1 \
+    libxcursor1 \
+    libxi6 \
+    libxtst6 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create necessary directories
+RUN mkdir -p /app/dist \
+    && chown -R appuser:appuser /app
+
+# Copy only the PyInstaller build output from the dist build context
+COPY --from=dist --chown=appuser:appuser / /app/dist/
+
+# Setup entrypoint
+USER appuser
+WORKDIR /app
+ENV PATH="/app/dist:$PATH"
+
+ENTRYPOINT ["/app/dist/airunner"]
