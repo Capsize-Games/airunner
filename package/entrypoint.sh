@@ -4,7 +4,7 @@ set -x
 
 # Set PYTHONUSERBASE to ensure pip installs packages into the correct directory
 export PYTHONUSERBASE=/home/appuser/.local/share/airunner/python
-export PATH=/home/appuser/.local/share/airunner/python/bin:$PATH
+export PATH=/home/appuser/.local/share/airunner/python/bin:/home/appuser/.local/share/airunner/python/bin:$PATH
 
 # Ensure the PATH includes the bin directory under PYTHONUSERBASE
 export PATH=$PYTHONUSERBASE/bin:$PATH
