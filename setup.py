@@ -5,7 +5,7 @@ extras_require = {
     # behavior of the application or add new features if installed.
     "nvidia": [  # NVIDIA dependencies: skip if installing NVIDIA manually
         "nvidia-pyindex==1.0.9",
-        "nvidia-cuda-runtime-cu11",
+        "nvidia-cuda-runtime-cu12",
     ],
     "gui": [  # GUI dependencies
         "PySide6==6.7.0",
