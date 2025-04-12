@@ -75,7 +75,35 @@ RUN apt-get update && apt-get install -y software-properties-common && \
  tmux \
  libstdc++6 \
  wget \
- gnupg && \
+ gnupg \
+ # NSS libraries for WebEngine
+ libnss3 \
+ libnss3-dev \
+ libnspr4 \
+ libnspr4-dev \
+ # GTK libraries
+ libgtk-3-0 \
+ libgtk-3-dev \
+ libgdk-pixbuf2.0-dev \
+ libatk1.0-0 \
+ libatk1.0-dev \
+ # Database libraries
+ libmysqlclient-dev \
+ libpq-dev \
+ unixodbc-dev \
+ # Other system libraries
+ libpcsclite-dev \
+ libpcsclite1 \
+ libcups2 \
+ libcups2-dev \
+ libspeechd-dev \
+ libsox-dev \
+ libsox-fmt-all \
+ libtbb-dev \
+ libtbb2 \
+ libnss3 \
+ # Install CUDA libs if needed (or add a separate step for this)
+ && \
  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Set environment variables for CUDA and cuDNN, nvidia runtime and path
