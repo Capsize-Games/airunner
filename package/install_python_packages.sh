@@ -1,6 +1,6 @@
 cd /app
 
-export PATH=/home/appuser/.local/bin:$PATH
+export PATH=/home/appuser/.local/bin:/home/appuser/.local/share/airunner/python/bin:$PATH
 
 # Check if torch is installed before continuing
 if python3 -c "import torch" 2>/dev/null; then
