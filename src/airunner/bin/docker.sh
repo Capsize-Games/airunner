@@ -2,8 +2,6 @@
 
 echo "Starting docker"
 
-#docker pull ghcr.io/capsize-games/airunner/airunner:linux
-
 # Detect if running in GitHub Actions
 if [ -n "$GITHUB_ACTIONS" ]; then
   # In GitHub Actions, don't use sudo
@@ -18,9 +16,9 @@ fi
 # Export HOST_UID and HOST_GID for the current user
 export HOST_UID=$(id -u)
 export HOST_GID=$(id -g)
-export HOST_HOME=$WORKING_HOME
+export HOST_HOME=$HOME
 export AIRUNNER_HOME_DIR=${HOST_HOME}/.local/share/airunner
-TORCH_HUB_DIR=${WORKING_HOME}/.local/share/airunner/torch/hub
+TORCH_HUB_DIR=${HOME}/.local/share/airunner/torch/hub
 
 # Set PYTHONUSERBASE to redirect pip installations to .local/share/airunner/python
 export PYTHONUSERBASE=$AIRUNNER_HOME_DIR/python
@@ -69,7 +67,7 @@ $USE_SUDO chmod -R 755 "$DIST_DIR"
 $USE_SUDO chown -R $HOST_UID:$HOST_GID "$DIST_DIR"
 
 # Ensure the log file exists and has the correct permissions
-LOG_FILE="${WORKING_HOME}/.local/share/airunner/airunner.log"
+LOG_FILE="${HOME}/.local/share/airunner/airunner.log"
 if [ ! -f "$LOG_FILE" ]; then
   mkdir -p "$(dirname "$LOG_FILE")"
   touch "$LOG_FILE"
@@ -99,7 +97,7 @@ else
   DEFAULT_DB_NAME=airunner.db
 fi
 
-DB_FILE="$WORKING_HOME/.local/share/airunner/data/$DEFAULT_DB_NAME"
+DB_FILE="$HOME/.local/share/airunner/data/$DEFAULT_DB_NAME"
 if [ ! -f "$DB_FILE" ]; then
   mkdir -p "$(dirname "$DB_FILE")"
   touch "$DB_FILE"
@@ -159,7 +157,7 @@ EOL
 
 # Replace any $HOST_HOME variables in .env with the actual value
 if [ -f .env ]; then
-  sed -i "s|\$HOST_HOME|$WORKING_HOME|g" .env
+  sed -i "s|\$HOST_HOME|$HOME|g" .env
 else
   echo ".env file not found. Skipping replacement."
 fi
@@ -195,18 +193,17 @@ if [ "$1" == "linuxbuild-prod" ]; then
   echo "Building for Linux production..."
   docker run --rm \
     --user 1000:1000 \
-    -v $WORKING_HOME:/app:rw \
-    -v $WORKING_HOME/package/entrypoint.sh:/app/package/entrypoint.sh:ro \
-    -v $WORKING_HOME/.local/share/airunner:/home/appuser/.local/share/airunner:rw \
-    -v $WORKING_HOME/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw \
-    -v $WORKING_HOME/.local/share/airunner/torch/hub:/home/appuser/.cache/torch/hub:rw \
-    -v $WORKING_HOME/.local/share/airunner/python:/home/appuser/.local/share/airunner/python:rw \
+    -v $PWD:/app:rw \
+    -v $PWD/package/entrypoint.sh:/app/package/entrypoint.sh:ro \
+    -v $PWD/.local/share/airunner:/home/appuser/.local/share/airunner:rw \
+    -v $PWD/.local/share/airunner/data:/home/appuser/.local/share/airunner/data:rw \
+    -v $PWD/.local/share/airunner/torch/hub:/home/appuser/.cache/torch/hub:rw \
+    -v $PWD/.local/share/airunner/python:/home/appuser/.local/share/airunner/python:rw \
     -e HOST_UID=$(id -u) \
     -e HOST_GID=$(id -g) \
     -e UID=$(id -u) \
     -e GID=$(id -g) \
     -e DEV_ENV=0 \
-    -e WORKING_HOME=WORKING_HOME \
     -e AIRUNNER_ENABLE_OPEN_VOICE=0 \
     -e PYTHONOPTIMIZE=0 \
     -e AIRUNNER_ENVIRONMENT=prod \
@@ -220,7 +217,7 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e AIRUNNER_DISABLE_FACEHUGGERSHIELD=1 \
     -e AIRUNNER_LLM_USE_OPENROUTER=0 \
     -e OPENROUTER_API_KEY="" \
-    -e PATH=/usr/local/cuda/bin:/home/appuser/.local/bin:$PATH \
+    -e PATH=/usr/local/cuda/bin:/home/appuser/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin \
     -e TCL_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
     -e TK_LIBDIR_PATH=/usr/lib/x86_64-linux-gnu/ \
     -e PYTHONUSERBASE=/home/appuser/.local/share/airunner/python \
@@ -239,7 +236,7 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e NO_AT_BRIDGE=1 \
     -e TORCH_USE_CUDA_DSA=1 \
     -e CUDA_LAUNCH_BLOCKING=1 \
-    -e TORCH_HOME=/home/appuser/.local/share/airunner/torch/hub \
+    -e TORCH_HOME=/home/appuser/.local/share/airunner/torch/hub \package/pyinstaller/build.sh
     -e XDG_CACHE_HOME=/home/appuser/.local/share/airunner/.cache \
     -e TF_ENABLE_ONEDNN_OPTS=0 \
     -e BUTLER_API_KEY="${BUTLER_API_KEY}" \
