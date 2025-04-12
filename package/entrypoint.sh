@@ -9,9 +9,6 @@ export PATH=/home/appuser/.local/share/airunner/python/bin:$PATH
 # Ensure the PATH includes the bin directory under PYTHONUSERBASE
 export PATH=$PYTHONUSERBASE/bin:$PATH
 
-# Update PYTHONPATH to include the dist-packages directory under PYTHONUSERBASE
-export PYTHONPATH=$PYTHONUSERBASE/local/lib/python3.10/dist-packages:$PYTHONPATH
-
 # Remove PIP_USER to avoid conflicts with --prefix
 unset PIP_USER
 
@@ -19,7 +16,6 @@ unset PIP_USER
 export PIP_CACHE_DIR=$AIRUNNER_HOME_DIR/.cache/pip
 
 echo "PATH set to $PATH"
-echo "PYTHONPATH set to $PYTHONPATH"
 echo "PIP_CACHE_DIR set to $PIP_CACHE_DIR"
 
 # Diagnostic information
@@ -49,13 +45,13 @@ else
   echo "X connection failed"
 fi
 
-/app/package/install_python_packages.sh
+sudo -u appuser /app/package/install_python_packages.sh
 
-# Modify the script to handle interactive sessions properly
+# Handle interactive sessions
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
-  exec bash
+  exec sudo -u appuser bash
 else
   echo "Executing command: $@"
-  exec "$@"
+  exec sudo -u appuser "$@"
 fi
