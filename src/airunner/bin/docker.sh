@@ -18,9 +18,9 @@ fi
 # Export HOST_UID and HOST_GID for the current user
 export HOST_UID=$(id -u)
 export HOST_GID=$(id -g)
-export HOST_HOME=$HOME
+export HOST_HOME=$WORKING_HOME
 export AIRUNNER_HOME_DIR=${HOST_HOME}/.local/share/airunner
-TORCH_HUB_DIR=${HOME}/.local/share/airunner/torch/hub
+TORCH_HUB_DIR=${WORKING_HOME}/.local/share/airunner/torch/hub
 
 # Set PYTHONUSERBASE to redirect pip installations to .local/share/airunner/python
 export PYTHONUSERBASE=$AIRUNNER_HOME_DIR/python
@@ -69,7 +69,7 @@ $USE_SUDO chmod -R 755 "$DIST_DIR"
 $USE_SUDO chown -R $HOST_UID:$HOST_GID "$DIST_DIR"
 
 # Ensure the log file exists and has the correct permissions
-LOG_FILE="${HOME}/.local/share/airunner/airunner.log"
+LOG_FILE="${WORKING_HOME}/.local/share/airunner/airunner.log"
 if [ ! -f "$LOG_FILE" ]; then
   mkdir -p "$(dirname "$LOG_FILE")"
   touch "$LOG_FILE"
@@ -99,7 +99,7 @@ else
   DEFAULT_DB_NAME=airunner.db
 fi
 
-DB_FILE="$HOME/.local/share/airunner/data/$DEFAULT_DB_NAME"
+DB_FILE="$WORKING_HOME/.local/share/airunner/data/$DEFAULT_DB_NAME"
 if [ ! -f "$DB_FILE" ]; then
   mkdir -p "$(dirname "$DB_FILE")"
   touch "$DB_FILE"
@@ -159,7 +159,7 @@ EOL
 
 # Replace any $HOST_HOME variables in .env with the actual value
 if [ -f .env ]; then
-  sed -i "s|\$HOST_HOME|$HOME|g" .env
+  sed -i "s|\$HOST_HOME|$WORKING_HOME|g" .env
 else
   echo ".env file not found. Skipping replacement."
 fi
@@ -206,6 +206,7 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e UID=$(id -u) \
     -e GID=$(id -g) \
     -e DEV_ENV=0 \
+    -e WORKING_HOME=/home/airunner \
     -e AIRUNNER_ENABLE_OPEN_VOICE=0 \
     -e PYTHONOPTIMIZE=0 \
     -e AIRUNNER_ENVIRONMENT=prod \
