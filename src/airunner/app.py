@@ -1,7 +1,3 @@
-################################################################
-# Importing this module sets the Hugging Face environment
-# variables for the application.
-################################################################
 from typing import Optional, Dict
 import os.path
 import sys
