@@ -7,19 +7,13 @@ on:
 
 env:
   DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux
-  WORKING_HOME: ${{ github.workspace }}
 
 jobs:
   buildLinux:
     runs-on: self-hosted
     steps:
-      - name: Create WORKING_HOME directory
-        run: mkdir -p ${{ env.WORKING_HOME }}
-        
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          path: ${{ env.WORKING_HOME }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
