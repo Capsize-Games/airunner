@@ -1,14 +1,10 @@
 #!/usr/bin/bash
-# this should be called from within docker to kick off a build
 cd /app
-
-export PATH=/home/appuser/.local/bin:/home/appuser/.local/share/airunner/python/bin:$PATH
-pip list
-echo ""
 echo "============================================"
 echo "Build airunner for linux"
 echo "============================================"
 echo ""
+echo "Running PyInstaller"
 DEV_ENV=0 AIRUNNER_ENVIRONMENT="prod" PYTHONOPTIMIZE=0 python3 -m PyInstaller --log-level=INFO --noconfirm /app/package/pyinstaller/airunner.spec 2>&1 | tee build.log
 echo ""
 echo "============================================"
