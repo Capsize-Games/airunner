@@ -236,7 +236,7 @@ if [ "$1" == "linuxbuild-prod" ]; then
     -e NO_AT_BRIDGE=1 \
     -e TORCH_USE_CUDA_DSA=1 \
     -e CUDA_LAUNCH_BLOCKING=1 \
-    -e TORCH_HOME=/home/appuser/.local/share/airunner/torch/hub \package/pyinstaller/build.sh
+    -e TORCH_HOME=/home/appuser/.local/share/airunner/torch/hub \
     -e XDG_CACHE_HOME=/home/appuser/.local/share/airunner/.cache \
     -e TF_ENABLE_ONEDNN_OPTS=0 \
     -e BUTLER_API_KEY="${BUTLER_API_KEY}" \
