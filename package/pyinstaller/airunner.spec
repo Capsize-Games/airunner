@@ -5,7 +5,7 @@ import os
 from os.path import join
 
 base_path = "/app"
-site_packages_path = "/home/appuser/.local/share/airunner/python/lib/python3.10/site-packages/"
+site_packages_path = "/home/appuser/.local/lib/python3.10/site-packages"
 dist = join(base_path, "dist")
 airunner_path = join(base_path, "src/airunner")
 cudnn_lib = join(site_packages_path, 'nvidia/cudnn/lib')
