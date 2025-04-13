@@ -2,6 +2,9 @@ cd /app
 
 export PATH=/home/appuser/.local/bin:/home/appuser/.local/share/airunner/python/bin:$PATH
 
+sudo chown -R appuser:appuser /home/appuser/.local
+sudo chown -R appuser:appuser /home/appuser/.cache
+
 # Check if torch is installed before continuing
 if python3 -c "import torch" 2>/dev/null; then
   echo "Torch is already installed."
@@ -10,7 +13,7 @@ else
   pip install -v torch torchvision torchaudio
 fi
 
-# # Check if AIRUNNER_ENABLE_OPEN_VOICE==1
+# Check if AIRUNNER_ENABLE_OPEN_VOICE==1
 if [ "$AIRUNNER_ENABLE_OPEN_VOICE" == "1" ]; then
   if python3 -c "import openvoice" 2>/dev/null; then
     echo "OpenVoice is already installed."
