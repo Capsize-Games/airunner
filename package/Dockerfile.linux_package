@@ -1,0 +1,17 @@
+FROM capsize-games/airunner/airunner:linux_build_runtime
+WORKDIR /app
+ENV DEV_ENV=0
+ENV AIRUNNER_ENVIRONMENT="prod"
+ENV PYTHONOPTIMIZE=0
+
+# USER appuser
+# RUN python3 -m PyInstaller --log-level=INFO --noconfirm /app/package/pyinstaller/airunner.spec 2>&1 | tee build.log
+# RUN ls -alh /app
+# COPY /app/setup.py /app/dist/airunner/_internal/airunner/
+
+# USER root
+# RUN chown -R 1000:1000 dist && \
+#     LATEST_TAG=$(grep -oP '(?<=version=).*(?=,)' /app/setup.py | tr -d '"') && \
+#     /home/appuser/butler/butler \
+#     push /app/dist/airunner capsizegames/ai-runner:ubuntu \
+#     --userversion $LATEST_TAG

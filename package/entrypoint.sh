@@ -5,8 +5,6 @@ set -x
 # Set PYTHONUSERBASE to ensure pip installs packages into the correct directory
 export PYTHONUSERBASE=/home/appuser/.local/share/airunner/python
 export PATH=/home/appuser/.local/share/airunner/python/bin:/home/appuser/.local/share/airunner/python/bin:$PATH
-
-# Ensure the PATH includes the bin directory under PYTHONUSERBASE
 export PATH=$PYTHONUSERBASE/bin:$PATH
 
 # Remove PIP_USER to avoid conflicts with --prefix
@@ -45,7 +43,7 @@ else
   echo "X connection failed"
 fi
 
-sudo -u appuser /app/package/install_python_packages.sh
+# sudo -u appuser DO_BUILD=$DO_BUILD /app/package/install_python_packages.sh
 
 # Handle interactive sessions
 if [ "$#" -eq 0 ]; then
