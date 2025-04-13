@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE: capsize-games/airunner/airunner:linux_build_runtime
+  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux
 
 jobs:
   buildLinux:
