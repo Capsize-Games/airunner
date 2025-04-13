@@ -38,10 +38,10 @@ No cloud dependency. No complicated setup. Just install, run, and create.
 
 ## Overview
 
-AI Runner is a local-first, **open-source** application that enables you to run:
+AI Runner is a local-first, **open-source** application built with HuggingFace and Llama-index libraries that enables you to run:
 
 - **Large Language Models (LLMs)** for chat and text generation  
-- **Stable Diffusion** for image generation and manipulation  
+- **Stable Diffusion** for image generation and manipulation
 - **Text-to-Speech (TTS)**  
 - **Speech-to-Text (STT)**  
 
