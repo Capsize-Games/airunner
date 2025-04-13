@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux
+  DOCKER_IMAGE: capsize-games/airunner/airunner:linux_build_runtime
 
 jobs:
   buildLinux:
@@ -38,6 +38,11 @@ jobs:
           export PYTHONUSERBASE=${{ github.workspace }}/.local/share/airunner/python
           mkdir -p $PYTHONUSERBASE
 
-      - name: Build Linux
+      - name: Build Linux Runtime
         run: |
-          python3 src/airunner/bin/docker_wrapper.py linuxbuild-prod
+          python3 src/airunner/bin/docker_wrapper.py build_runtime
+      
+      - name: Build Linux Package
+        run: |
+          python3 src/airunner/bin/docker_wrapper.py build_package
+

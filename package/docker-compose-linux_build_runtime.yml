@@ -1,0 +1,21 @@
+services:
+  airunner_build_runtime:
+    container_name: airunner_build_runtime
+    image: capsize-games/airunner/airunner:linux_build_runtime
+    build:
+      context: ..
+      dockerfile: package/Dockerfile.linux_build_runtime
+      args:
+        - INSTALL_XCB_CURSOR=1
+    user: "${HOST_UID}:${HOST_GID}"
+    env_file:
+      - ../.env
+    stdin_open: true
+    tty: true
+    entrypoint: ["/home/appuser/entrypoint.sh"]
+    working_dir: /app
+    runtime: nvidia
+    ports:
+      - "8000:8000"
+    ipc: host
+    network_mode: "host"
