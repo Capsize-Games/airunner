@@ -112,7 +112,7 @@ setup(
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
         "setuptools==78.1.0",
-        "facehuggershield==0.1.12",
+        "facehuggershield==0.1.13",
     ],
     extras_require=extras_require,
     package_data={

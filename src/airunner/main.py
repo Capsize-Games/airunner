@@ -25,6 +25,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
         ],
         nullscream_whitelist=[
             "huggingface_hub.file_download",
+            "huggingface_hub.repocard_data",
             "transformers.utils.hub.PushToHubMixin",
             "transformers",
         ],
