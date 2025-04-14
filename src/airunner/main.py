@@ -12,8 +12,10 @@ Do not change the order of the imports.
 ################################################################
 from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 import os
+
 if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
     from facehuggershield.huggingface import activate
+
     airunner_path = os.path.join(
         os.path.expanduser("~"), ".local", "share", "airunner"
     )
@@ -34,6 +36,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
 
 # Initialize the logger
 import logging
+
 logging.getLogger("torio._extension.utils").setLevel(logging.WARNING)
 logging.getLogger("google.cloud.storage._opentelemetry_tracing").setLevel(
     logging.WARNING
@@ -145,8 +148,9 @@ def main():
 
     if application_settings.run_setup_wizard:
         run_setup_wizard()
-    else:
-        API()
+
+    # Start the main application
+    API()
 
 
 if __name__ == "__main__":
