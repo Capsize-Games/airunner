@@ -18,7 +18,7 @@ RUN if python3 -c "import torch" 2>/dev/null; then \
     echo "Torch is already installed."; \
   else \
     echo "Torch is not installed. Installing torch, torchvision, and torchaudio..."; \
-    pip install -v torch torchvision torchaudio; \
+    pip install --no-cache-dir -v torch torchvision torchaudio; \
   fi
 
 # Handle OpenVoice and MeloTTS installation
@@ -28,14 +28,14 @@ RUN if [ "$AIRUNNER_ENABLE_OPEN_VOICE" == "1" ]; then \
         else \
             echo "OpenVoice is not installed. Installing OpenVoice..."; \
             [ ! -d "OpenVoice" ] && git clone https://github.com/myshell-ai/OpenVoice.git; \
-            cd OpenVoice && pip install -v . && cd .. && rm -rf OpenVoice; \
+            cd OpenVoice && pip install --no-cache-dir -v . && cd .. && rm -rf OpenVoice; \
         fi; \
         if python3 -c "import melo" 2>/dev/null; then \
             echo "MeloTTS is already installed."; \
         else \
             echo "MeloTTS is not installed. Installing MeloTTS..."; \
             [ ! -d "MeloTTS" ] && git clone https://github.com/myshell-ai/MeloTTS.git; \
-            cd MeloTTS && git checkout v0.1.2 && pip install -v . && cd .. && rm -rf MeloTTS; \
+            cd MeloTTS && git checkout v0.1.2 && pip install --no-cache-dir -v . && cd .. && rm -rf MeloTTS; \
         fi; \
         echo "Downloading unidic..."; \
         python3 -m unidic download && echo "Unidic download complete."; \
@@ -54,19 +54,19 @@ RUN if python3 -c "import airunner" 2>/dev/null; then \
         echo "Required version: $REQUIRED_VERSION"; \
         if [ "$INSTALLED_VERSION" != "$REQUIRED_VERSION" ]; then \
             echo "Airunner version $INSTALLED_VERSION is installed, but version $REQUIRED_VERSION is required."; \
-            pip install -v -e .[all_dev] && \
-            pip install -v -U langchain-community && \
-            pip install -v -U mediapipe && \
-            pip install -v -U timm; \
+            pip install --no-cache-dir -v -e .[all_dev] && \
+            pip install --no-cache-dir -v -U langchain-community && \
+            pip install --no-cache-dir -v -U mediapipe && \
+            pip install --no-cache-dir -v -U timm; \
         else \
             echo "Airunner version $INSTALLED_VERSION is already installed."; \
         fi; \
     else \
         echo "Airunner is not installed. Installing the latest version..."; \
-        pip install -v -e .[all_dev] && \
-        pip install -v -U langchain-community && \
-        pip install -v -U mediapipe && \
-        pip install -v -U timm; \
+        pip install --no-cache-dir -v -e .[all_dev] && \
+        pip install --no-cache-dir -v -U langchain-community && \
+        pip install --no-cache-dir -v -U mediapipe && \
+        pip install --no-cache-dir -v -U timm; \
     fi
 
 # Handle NLTK punkt tokenizer installation
@@ -76,3 +76,12 @@ RUN if [ -f "/home/appuser/nltk_data/tokenizers/punkt/english.pickle" ]; then \
         echo "NLTK punkt tokenizer is not installed. Installing..."; \
         python3 -c "import nltk; nltk.download('punkt')"; \
     fi
+
+# Remove pip cache directories to save space
+RUN rm -rf /home/appuser/.local/share/airunner/.cache/pip/http && \
+    rm -rf /home/appuser/.local/share/airunner/.cache/pip/wheels && \
+    find /home/appuser/.local/lib/python3.10/site-packages -name "*.dist-info" -exec rm -rf {} + && \
+    find /home/appuser/.local/lib/python3.10/site-packages -name "*.egg-info" -exec rm -rf {} + && \
+    find /home/appuser/.local/lib/python3.10/site-packages -name "tests" -type d -exec rm -rf {} + && \
+    find /home/appuser/.local/lib/python3.10/site-packages -name "*.pyc" -exec rm -rf {} + && \
+    find /home/appuser/.local/lib/python3.10/site-packages -name "__pycache__" -type d -exec rm -rf {}
