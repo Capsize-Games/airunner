@@ -1,7 +1,7 @@
 services:
   airunner_build_runtime:
     container_name: airunner_build_runtime
-    image: capsize-games/airunner/airunner:linux_build_runtime
+    image: ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
     build:
       context: ..
       dockerfile: package/Dockerfile.linux_build_runtime
