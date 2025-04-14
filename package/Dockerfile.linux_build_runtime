@@ -45,6 +45,8 @@ RUN if [ "$AIRUNNER_ENABLE_OPEN_VOICE" == "1" ]; then \
         pip uninstall melotts -y || true; \
     fi
 
+RUN pip install --no-cache-dir -v altgraph
+
 # Handle Airunner installation
 RUN if python3 -c "import airunner" 2>/dev/null; then \
         echo "Airunner is already installed."; \
