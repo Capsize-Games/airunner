@@ -25,6 +25,7 @@ from airunner.data.models import Article, Conversation
 from airunner.handlers.llm.agent import HtmlFileReader
 from airunner.handlers.llm.agent.chat_engine import RefreshContextChatEngine
 from airunner.handlers.llm.agent.tools import RAGEngineTool
+from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 
 
 class RAGMixin:
@@ -491,7 +492,10 @@ class RAGMixin:
             )
 
             try:
-                self.__embedding = HuggingFaceEmbedding(model_name=path)
+                self.__embedding = HuggingFaceEmbedding(
+                    model_name=path,
+                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY
+                )
             except NotImplementedError as e:
                 self.logger.error("Error loading embeddings " + str(e))
         return self.__embedding
