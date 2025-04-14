@@ -1,3 +1,5 @@
+import threading
+
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit, QApplication, QWidget
 from PySide6.QtGui import QFontMetrics
@@ -56,9 +58,13 @@ class MessageWidget(BaseWidget):
     def on_delete_messages_after_id(self, data):
         message_id = data.get("message_id", None)
         if self.message_id > message_id:
-            if not self._deleted:  # Check if the widget has already been deleted
+            if (
+                not self._deleted
+            ):  # Check if the widget has already been deleted
                 try:
-                    if self.parentWidget():  # Check if the widget still has a parent
+                    if (
+                        self.parentWidget()
+                    ):  # Check if the widget still has a parent
                         self.deleteLater()
                 except RuntimeError:
                     pass
@@ -93,11 +99,15 @@ class MessageWidget(BaseWidget):
             if self.font_family in available_families:
                 font = QFont(self.font_family, self.font_size)
             else:
-                font = QFont("Ubuntu", self.font_size)  # Fallback to Ubuntu if Arial is not available
-            font.setFamilies([
-                font.family(),
-                "Noto Color Emoji",
-            ])
+                font = QFont(
+                    "Ubuntu", self.font_size
+                )  # Fallback to Ubuntu if Arial is not available
+            font.setFamilies(
+                [
+                    font.family(),
+                    "Noto Color Emoji",
+                ]
+            )
             self.ui.content.setFont(font)
 
     def set_content_size(self):
@@ -111,7 +121,8 @@ class MessageWidget(BaseWidget):
         self.textChanged.emit()
 
     def resizeEvent(self, event):
-        self.set_content_size()
+        thread = threading.Thread(target=self.set_content_size)
+        thread.start()
         super().resizeEvent(event)
 
     def sizeHint(self):
@@ -135,19 +146,24 @@ class MessageWidget(BaseWidget):
         if not self._deleted:  # Check if the widget has already been deleted
             self._deleted = True
             with session_scope() as session:
-                conversation = session.query(Conversation).filter(
-                    Conversation.id == self.conversation_id
-                ).first()
+                conversation = (
+                    session.query(Conversation)
+                    .filter(Conversation.id == self.conversation_id)
+                    .first()
+                )
                 messages = conversation.value
                 if self.message_id == 0:
                     conversation.value = []
                 else:
-                    conversation.value = messages[0:self.message_id]
+                    conversation.value = messages[0 : self.message_id]
                 session.add(conversation)
                 session.commit()
-            self.emit_signal(SignalCode.DELETE_MESSAGES_AFTER_ID, {
+            self.emit_signal(
+                SignalCode.DELETE_MESSAGES_AFTER_ID,
+                {
                     "message_id": self.message_id,
-                })
+                },
+            )
             self.setParent(None)
             QTimer.singleShot(0, self.deleteLater)
 
