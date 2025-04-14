@@ -43,6 +43,7 @@ jobs:
           DEV_ENV: "0"
         run: |
           python3 src/airunner/bin/docker_wrapper.py build_runtime
+          docker tag ghcr.io/capsize-games/airunner/airunner:linux_build_runtime ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
           docker push ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
       
       - name: Build Linux Package
