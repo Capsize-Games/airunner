@@ -85,4 +85,4 @@ RUN rm -rf /home/appuser/.local/share/airunner/.cache/pip/http && \
     find /home/appuser/.local/lib/python3.10/site-packages -name "*.egg-info" -exec rm -rf {} + && \
     find /home/appuser/.local/lib/python3.10/site-packages -name "tests" -type d -exec rm -rf {} + && \
     find /home/appuser/.local/lib/python3.10/site-packages -name "*.pyc" -exec rm -rf {} + && \
-    find /home/appuser/.local/lib/python3.10/site-packages -name "__pycache__" -type d -exec rm -rf {}
+    find /home/appuser/.local/lib/python3.10/site-packages -name "__pycache__" -type d -exec rm -rf {} +
