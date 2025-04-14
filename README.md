@@ -117,7 +117,7 @@ Below is a high-level list of capabilities in AI Runner:
 ### Minimum Specs
 
 - **OS**: Linux or Windows  
-- **CPU**: Intel i5 (or equivalent)  
+- **CPU**: Ryzen 2700K or Intel Core i7-8700K
 - **Memory**: 16 GB RAM  
 - **GPU**: NVIDIA RTX 3060 or better (for Stable Diffusion, TTS/Whisper)  
 - **Network**: Broadband (used to download models)  
@@ -126,9 +126,9 @@ Below is a high-level list of capabilities in AI Runner:
 ### Recommended Specs
 
 - **OS**: Ubuntu 22.04  
-- **CPU**: Intel i7 (or equivalent)  
+- **CPU**: Ryzen 5800X or Intel Core i7-11700K
 - **Memory**: 30+ GB RAM  
-- **GPU**: NVIDIA RTX 4090 or higher  
+- **GPU**: NVIDIA RTX 4090 or higher
 - **Network**: Broadband (used to download models)  
 - **Storage**: 50 GB
 
