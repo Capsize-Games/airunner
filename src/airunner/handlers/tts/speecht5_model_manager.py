@@ -39,7 +39,6 @@ class SpeechT5ModelManager(TTSModelManager):
     processor_class: ClassVar[Type[ProcessorMixin]] = SpeechT5Processor
     vocoder_class: ClassVar[Type[PreTrainedModel]] = SpeechT5HifiGan
     tokenizer_class: ClassVar[Type[AutoTokenizer]] = AutoTokenizer
-    dataset_path: ClassVar[str] = "Matthijs/cmu-arctic-xvectors"
     speakers: Dict[str, str] = {
         SpeechT5Voices.US_MALE.value: "bdl",
         SpeechT5Voices.US_MALE_2.value: "rms",
@@ -66,7 +65,13 @@ class SpeechT5ModelManager(TTSModelManager):
         self._cancel_generated_speech = False
         self._paused = False
 
-    # Refactored properties for better readability
+    @property
+    def speaker_embeddings_path(self) -> str:
+        return os.path.join(
+            self.path_settings.tts_model_path,
+            "datasets/w4ffl35/speecht5_speaker_embeddings/speaker_embeddings",
+        )
+
     @property
     def model(self) -> Type[PreTrainedModel]:
         return self._model
@@ -250,30 +255,17 @@ class SpeechT5ModelManager(TTSModelManager):
 
     def _load_speaker_embeddings(self):
         self.logger.debug("Loading speaker embeddings...")
-        embeddings_dataset = load_dataset(
-            self.dataset_path, split=datasets.Split.VALIDATION
-        )
-        speaker_key = self.speakers[self.speech_t5_settings.voice]
-        embeddings = self._load_dataset_by_speaker_key(
-            speaker_key, embeddings_dataset
-        )
-        if embeddings is None:
-            self.logger.error(
-                "Failed to load speaker embeddings. Using fallback"
-            )
-            embeddings = self._load_dataset_by_speaker_key(
-                "slt", embeddings_dataset
-            )
 
-        self._speaker_embeddings = embeddings
-        if self._speaker_embeddings is not None:
-            if self.use_cuda:
-                self.logger.info("Moving speaker embeddings to CUDA")
-                self._speaker_embeddings = self._speaker_embeddings.to(
-                    torch.bfloat16
-                ).cuda()
-        else:
+        try:
+            self._speaker_embeddings = torch.load(
+                self.speaker_embeddings_path
+            )
+            if self.use_cuda and self._speaker_embeddings is not None:
+                self._speaker_embeddings = self._speaker_embeddings.to(torch.bfloat16).cuda()
+
+        except Exception as e:
             self.logger.error("Failed to load speaker embeddings")
+            self.logger.error(e)
 
     @staticmethod
     def _extract_speaker_key(filename):
