@@ -8,8 +8,6 @@ services:
       args:
         - INSTALL_XCB_CURSOR=1
     user: "${HOST_UID}:${HOST_GID}"
-    env_file:
-      - ../.env
     stdin_open: true
     tty: true
     entrypoint: []
