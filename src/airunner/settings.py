@@ -27,7 +27,7 @@ if os.environ.get("DEV_ENV", "1") == "1":
 
 python_venv_dir = os.path.dirname(sys.executable)
 
-DEV_ENV = os.environ.get("DEV_ENV", "0") == "1"
+DEV_ENV = os.environ.get("DEV_ENV", "1") == "1"
 
 NLTK_DOWNLOAD_DIR = os.path.join(
     python_venv_dir,

@@ -5,20 +5,28 @@ Import order is crucial for AI Runner to work as expected.
 Do not change the order of the imports.
 ----------------------------------------------------------------
 """
-
 ################################################################
-# Importing this module sets the Hugging Face environment
-# variables for the application.
+# Facehugger Shield is a privacy library that locks down
+# file system, network and log operations.
+# Keep this at the top of the main file.
 ################################################################
 from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
-
+import os
 if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
     from facehuggershield.huggingface import activate
+    airunner_path = os.path.join(
+        os.path.expanduser("~"), ".local", "share", "airunner"
+    )
+    activate(
+        darklock_os_whitelisted_directories=[
+            airunner_path,
+            os.path.join(airunner_path, "data"),
+        ]
+    )
+#################################################################
 
-    activate(activate_nullscream=False)
-
+# Initialize the logger
 import logging
-
 logging.getLogger("torio._extension.utils").setLevel(logging.WARNING)
 logging.getLogger("google.cloud.storage._opentelemetry_tracing").setLevel(
     logging.WARNING
@@ -31,8 +39,6 @@ logging.getLogger("bitsandbytes").setLevel(logging.WARNING)
 
 import sys
 from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE
-
-import os
 import argparse
 from airunner.utils.settings.get_qsettings import get_qsettings
 
@@ -49,7 +55,8 @@ try:
 except FileExistsError:
     pass
 
-if AIRUNNER_SAVE_LOG_TO_FILE:
+DEV_ENV = os.environ.get("DEV_ENV", "1") == "1"
+if AIRUNNER_SAVE_LOG_TO_FILE and not DEV_ENV:
     sys.stdout = open(AIRUNNER_LOG_FILE, "a")
     sys.stderr = open(AIRUNNER_LOG_FILE, "a")
 
