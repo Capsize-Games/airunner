@@ -18,10 +18,16 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
         os.path.expanduser("~"), ".local", "share", "airunner"
     )
     activate(
+        # sactivate_nullscream=False,
         darklock_os_whitelisted_directories=[
             airunner_path,
             os.path.join(airunner_path, "data"),
-        ]
+        ],
+        nullscream_whitelist=[
+            "huggingface_hub.file_download",
+            "transformers.utils.hub.PushToHubMixin",
+            "transformers",
+        ],
     )
 #################################################################
 
