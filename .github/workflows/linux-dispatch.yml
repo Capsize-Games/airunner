@@ -43,6 +43,8 @@ jobs:
           python3 src/airunner/bin/docker_wrapper.py build_runtime
       
       - name: Build Linux Package
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
         run: |
           python3 src/airunner/bin/docker_wrapper.py build_package
 
