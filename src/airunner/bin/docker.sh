@@ -159,7 +159,13 @@ EOL
 if [ -f .env ]; then
   sed -i "s|\$HOST_HOME|$HOME|g" .env
 else
-  echo ".env file not found. Skipping replacement."
+  # create env file
+  echo "HOST_HOME=$HOME" > .env
+  echo "HOST_UID=$HOST_UID" >> .env
+  echo "HOST_GID=$HOST_GID" >> .env
+  chmod 644 .env
+  $USE_SUDO chown $HOST_UID:$HOST_GID .env
+  echo "Created .env file with HOST_HOME=$HOME, HOST_UID=$HOST_UID, HOST_GID=$HOST_GID"
 fi
 
 DOCKER_COMPOSE_BUILD_BASE="docker compose --env-file .env -f ./package/docker-compose.yml"
