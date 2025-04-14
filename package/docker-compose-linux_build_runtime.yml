@@ -17,3 +17,5 @@ services:
       - "8000:8000"
     ipc: host
     network_mode: "host"
+    environment:
+      - DEV_ENV=${DEV_ENV}
