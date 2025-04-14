@@ -74,7 +74,8 @@ RUN if [ -f "/home/appuser/nltk_data/tokenizers/punkt/english.pickle" ]; then \
         echo "NLTK punkt tokenizer is already installed."; \
     else \
         echo "NLTK punkt tokenizer is not installed. Installing..."; \
-        python3 -c "import nltk; nltk.download('punkt')"; \
+        python3 -c "import nltk; nltk.download('punkt', quiet=True, halt_on_error=False, raise_on_error=False)"; \
+        python3 -c "import nltk; nltk.download('stopwords', quiet=True, halt_on_error=False, raise_on_error=False)"; \
     fi
 
 # Remove pip cache directories to save space
