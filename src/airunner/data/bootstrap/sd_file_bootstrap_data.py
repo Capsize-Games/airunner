@@ -19,9 +19,6 @@ SD_FILE_BOOTSTRAP_DATA = {
             "tokenizer/vocab.json",
             # "v1-5-pruned-emaonly.safetensors",
         ],
-        "datasets": [
-            "Matthijs/cmu-arctic-xvectors"
-        ],
         "inpaint": [
             "feature_extractor/preprocessor_config.json",
             "safety_checker/config.json",
