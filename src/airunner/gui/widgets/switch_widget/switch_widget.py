@@ -99,9 +99,6 @@ class SwitchWidget(QAbstractButton):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.dPtr.draw(painter)
 
-    def resizeEvent(self, event):
-        self.update()
-
     @Property(QColor)
     def backgroundColor(self):
         return self._backgroundColor  # Return the internal attribute
