@@ -1,8 +1,6 @@
 import os.path
 
-import nltk
 from PySide6.QtCore import QObject, QThread, Slot, Signal
-from sqlalchemy import func
 
 from airunner.data.models import AIModels, ControlnetModel
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
@@ -14,14 +12,12 @@ from airunner.data.bootstrap.whisper import WHISPER_FILES
 from airunner.data.bootstrap.speech_t5 import SPEECH_T5_FILES
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.settings import NLTK_DOWNLOAD_DIR
 from airunner.utils.network import HuggingfaceDownloader
 from airunner.utils.os import create_airunner_paths
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.windows.setup_wizard.base_wizard import BaseWizard
 from airunner.gui.windows.setup_wizard.installation_settings.templates.install_page_ui import Ui_install_page
 
-nltk.data.path.append(NLTK_DOWNLOAD_DIR)
 
 CONTROLNET_PATHS = [
     "lllyasviel/control_v11p_sd15_canny",
@@ -325,43 +321,6 @@ class InstallWorker(
                 except Exception as e:
                     print(f"Error downloading {filename}: {e}")
 
-    def download_nltk_files(self):
-        self.parent.on_set_downloading_status_label({
-            "label": "Downloading NLTK models..."
-        })
-        path = os.path.expanduser(os.path.join(
-            NLTK_DOWNLOAD_DIR,
-            "corpora"
-        ))
-        try:
-            os.makedirs(path, exist_ok=True)
-        except FileExistsError:
-            pass
-        path = os.path.expanduser(os.path.join(
-            NLTK_DOWNLOAD_DIR,
-            "tokenizers",
-            "punkt"
-        ))
-        try:
-            os.makedirs(path, exist_ok=True)
-        except FileExistsError:
-            pass
-        nltk.download(
-            "stopwords",
-            download_dir=NLTK_DOWNLOAD_DIR,
-            quiet=True,
-            halt_on_error=False,
-            raise_on_error=False
-        )
-        nltk.download(
-            "punkt",
-            download_dir=NLTK_DOWNLOAD_DIR,
-            quiet=True,
-            halt_on_error=False,
-            raise_on_error=False
-        )
-        self.download_finished()
-
     def finalize_installation(self, *_args):
         self.parent.on_set_downloading_status_label({
             "label": "Installation complete."
@@ -437,17 +396,11 @@ class InstallWorker(
             self.download_tts()
         elif self.current_step == 5:
             self.parent.on_set_downloading_status_label({
-                "label": f"Downloading NLTK files"
-            })
-            self.current_step = 6
-            self.download_nltk_files()
-        elif self.current_step == 6:
-            self.parent.on_set_downloading_status_label({
                 "label": f"Downloading Speech-to-Text"
             })
-            self.current_step = 7
+            self.current_step = 6
             self.download_stt()
-        elif self.current_step == 7:
+        elif self.current_step == 6:
             self.hf_downloader.download_model(
                 requested_path="",
                 requested_file_name="",
