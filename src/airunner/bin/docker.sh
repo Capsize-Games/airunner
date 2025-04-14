@@ -207,7 +207,7 @@ fi
 # Get user command
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
-  $DOCKER_COMPOSE_BUILD_PACKAGE run --rm airunner_package bash
+  $DOCKER_COMPOSE_BUILD_RUNTIME run --rm airunner_build_runtime bash
 else
-  $DOCKER_COMPOSE run --rm airunner_dev "$@"
+  $DOCKER_COMPOSE_BUILD_RUNTIME run --rm airunner_dev "$@"
 fi
