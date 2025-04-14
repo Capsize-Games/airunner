@@ -19,3 +19,4 @@ services:
     network_mode: "host"
     environment:
       - BUTLER_API_KEY=${BUTLER_API_KEY}
+      - DEV_ENV=${DEV_ENV}
