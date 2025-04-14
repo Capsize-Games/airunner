@@ -17,3 +17,5 @@ services:
       - "8000:8000"
     ipc: host
     network_mode: "host"
+    environment:
+      - BUTLER_API_KEY=${BUTLER_API_KEY}
