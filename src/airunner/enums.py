@@ -417,6 +417,7 @@ class TTSModel(Enum):
 
 
 class ImagePreset(Enum):
+    NONE = ""
     ILLUSTRATION = "Illustration"
     PHOTOGRAPH = "Photograph"
     PAINTING = "Painting"
