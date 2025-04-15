@@ -170,7 +170,9 @@ fi
 
 DOCKER_COMPOSE_BUILD_BASE="docker compose --env-file .env -f ./package/docker-compose.yml"
 DOCKER_COMPOSE_BUILD_RUNTIME="docker compose --env-file .env -f ./package/docker-compose-linux_build_runtime.yml"
+DOCKER_COMPOSE_BUILD_DEV_RUNTIME="docker compose --env-file .env -f ./package/docker-compose-linux_build_dev_runtime.yml"
 DOCKER_COMPOSE_BUILD_PACKAGE="docker compose --env-file .env -f ./package/docker-compose-linux_package.yml"
+DOCKER_COMPOSE_BUILD_DEV_PACKAGE="docker compose --env-file .env -f ./package/docker-compose-linux_dev_package.yml"
 DOCKER_EXEC="docker exec -it airunner_dev"
 
 if [ "$1" == "down" ]; then
@@ -197,10 +199,23 @@ if [ "$1" == "build_runtime" ]; then
   exit 0
 fi
 
+if [ "$1" == "build_dev_runtime" ]; then
+  echo "Building the Docker Compose services for Linux dev packaging..."
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME build
+  exit 0
+fi
+
 if [ "$1" == "build_package" ]; then
   echo "Building for Linux production..."
   $DOCKER_COMPOSE_BUILD_PACKAGE build
   $DOCKER_COMPOSE_BUILD_PACKAGE run --rm airunner_package /app/package/pyinstaller/build.sh
+  exit 0
+fi
+
+if [ "$1" == "build_dev_package" ]; then
+  echo "Building for Linux production..."
+  $DOCKER_COMPOSE_BUILD_DEV_PACKAGE build
+  $DOCKER_COMPOSE_BUILD_DEV_PACKAGE run --rm airunner_package /app/package/pyinstaller/build_dev.sh
   exit 0
 fi
 
