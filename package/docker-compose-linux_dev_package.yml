@@ -1,0 +1,23 @@
+services:
+  linux_dev_package:
+    container_name: linux_dev_package
+    image: capsize-games/airunner/airunner:linux_dev_package
+    build:
+      context: ..
+      dockerfile: package/Dockerfile.linux_dev_package
+      args:
+        - INSTALL_XCB_CURSOR=1
+    user: "${HOST_UID}:${HOST_GID}"
+    stdin_open: true
+    tty: true
+    entrypoint: []
+    working_dir: /app
+    runtime: nvidia
+    ports:
+      - "8000:8000"
+    ipc: host
+    network_mode: "host"
+    environment:
+      - DEV_ENV=1
+    volumes:
+      - ../:/app:rw
