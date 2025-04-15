@@ -2,6 +2,7 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass, asdict
 
 from airunner.settings import AIRUNNER_DEFAULT_SCHEDULER
+from airunner.enums import ImagePreset
 
 
 @dataclass
@@ -33,6 +34,7 @@ class ImageRequest:
     width: int = 512
     height: int = 512
     callback: Optional[callable] = None
+    image_preset: ImagePreset = ImagePreset.NONE
 
     additional_prompts: Optional[List[Dict[str, str]]] = None
 
