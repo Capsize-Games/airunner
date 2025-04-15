@@ -1,0 +1,86 @@
+FROM ghcr.io/capsize-games/airunner/airunner:linux
+
+WORKDIR /app
+
+COPY setup.py ./
+COPY package ./
+
+ENV PATH=/home/appuser/.local/bin:/home/appuser/.local/share/airunner/python/bin:$PATH
+
+# Ensure the appuser exists and directories are created
+RUN id -u appuser >/dev/null 2>&1 || useradd -m -s /bin/bash appuser && \
+    mkdir -p /home/appuser/.local /home/appuser/.cache && \
+    sudo chown -R appuser:appuser /home/appuser/.local && \
+    sudo chown -R appuser:appuser /home/appuser/.cache
+
+# Check if AIRUNNER_ENABLE_OPEN_VOICE==1
+USER appuser
+
+# Check if torch is installed before continuing
+RUN if python3 -c "import torch" 2>/dev/null; then \
+    echo "Torch is already installed."; \
+  else \
+    echo "Torch is not installed. Installing torch, torchvision, and torchaudio..."; \
+    pip install --no-cache-dir -v torch torchvision torchaudio; \
+  fi
+
+# Handle OpenVoice and MeloTTS installation
+RUN if [ "$AIRUNNER_ENABLE_OPEN_VOICE" == "1" ]; then \
+        if python3 -c "import openvoice" 2>/dev/null; then \
+            echo "OpenVoice is already installed."; \
+        else \
+            echo "OpenVoice is not installed. Installing OpenVoice..."; \
+            [ ! -d "OpenVoice" ] && git clone https://github.com/myshell-ai/OpenVoice.git; \
+            cd OpenVoice && pip install --no-cache-dir -v . && cd .. && rm -rf OpenVoice; \
+        fi; \
+        if python3 -c "import melo" 2>/dev/null; then \
+            echo "MeloTTS is already installed."; \
+        else \
+            echo "MeloTTS is not installed. Installing MeloTTS..."; \
+            [ ! -d "MeloTTS" ] && git clone https://github.com/myshell-ai/MeloTTS.git; \
+            cd MeloTTS && git checkout v0.1.2 && pip install --no-cache-dir -v . && cd .. && rm -rf MeloTTS; \
+        fi; \
+        echo "Downloading unidic..."; \
+        python3 -m unidic download && echo "Unidic download complete."; \
+    else \
+        echo "Uninstalling OpenVoice and MeloTTS..."; \
+        pip uninstall myshell-openvoice -y || true; \
+        pip uninstall melotts -y || true; \
+    fi
+
+RUN pip install --no-cache-dir -v altgraph
+
+# Handle Airunner installation
+RUN if python3 -c "import airunner" 2>/dev/null; then \
+        echo "Airunner is already installed."; \
+        INSTALLED_VERSION=$(pip show airunner | grep Version | cut -d ' ' -f 2); \
+        REQUIRED_VERSION=$(grep 'version=' /app/setup.py | sed -n "s/.*version=['\"]\([^'\"]*\)['\"].*/\1/p"); \
+        echo "Installed version: $INSTALLED_VERSION"; \
+        echo "Required version: $REQUIRED_VERSION"; \
+        if [ "$INSTALLED_VERSION" != "$REQUIRED_VERSION" ]; then \
+            echo "Airunner version $INSTALLED_VERSION is installed, but version $REQUIRED_VERSION is required."; \
+            pip install --no-cache-dir -v -e .[all_dev] && \
+            pip install --no-cache-dir -v -U langchain-community && \
+            pip install --no-cache-dir -v -U mediapipe && \
+            pip install --no-cache-dir -v -U timm; \
+        else \
+            echo "Airunner version $INSTALLED_VERSION is already installed."; \
+        fi; \
+    else \
+        echo "Airunner is not installed. Installing the latest version..."; \
+        pip install --no-cache-dir -v -e .[all_dev] && \
+        pip install --no-cache-dir -v -U langchain-community && \
+        pip install --no-cache-dir -v -U mediapipe && \
+        pip install --no-cache-dir -v -U timm; \
+    fi
+
+# Handle NLTK punkt tokenizer installation
+RUN if [ -f "/home/appuser/nltk_data/tokenizers/punkt/english.pickle" ]; then \
+        echo "NLTK punkt tokenizer is already installed."; \
+    else \
+        echo "NLTK punkt tokenizer is not installed. Installing..."; \
+        python3 -c "import nltk; nltk.download('punkt', quiet=True, halt_on_error=False, raise_on_error=False)"; \
+        python3 -c "import nltk; nltk.download('stopwords', quiet=True, halt_on_error=False, raise_on_error=False)"; \
+    fi
+
+COPY . /app
