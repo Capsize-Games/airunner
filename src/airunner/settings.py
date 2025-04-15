@@ -153,6 +153,14 @@ AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
 AIRUNNER_BASE_PATH = os.environ.get(
     "AIRUNNER_BASE_PATH", os.path.expanduser("~/.local/share/airunner")
 )
+AIRUNNER_PHOTO_REALISTIC_PROMPT = os.environ.get(
+    "AIRUNNER_PHOTO_REALISTIC_PROMPT",
+    (
+        "photo, photograph, photography, high-definition, video, "
+        "realistic, hyper-realistic, film, 8k, 4k, ultra-detailed, "
+        "highly detailed, realistic lighting"
+    ),
+)
 AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT = os.environ.get(
     "AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT",
     (
@@ -160,13 +168,27 @@ AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT = os.environ.get(
         "3d art, sculpture, animation, anime, Digital art, Concept art, Pixel art"
     ),
 )
-
+AIRUNNER_ILLUSTRATION_PROMPT = os.environ.get(
+    "AIRUNNER_ILLUSTRATION_PROMPT",
+    (
+        "illustration, drawing, cartoon, not real, fake, cgi, 3d animation, "
+        "3d art, sculpture, animation, anime, Digital art, Concept art, Pixel art"
+    ),
+)
 AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT = os.environ.get(
     "AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT",
     (
         "photo, photograph, photography, high-definition, video, "
         "realistic, hyper-realistic, film"
     ),
+)
+AIRUNNER_PAINTING_PROMPT = os.environ.get(
+    "AIRUNNER_PAINTING_PROMPT",
+    ("painting, art, canvas, brush strokes, colors, professional painting, "),
+)
+AIRUNNER_PAINTING_NEGATIVE_PROMPT = os.environ.get(
+    "AIRUNNER_PAINTING_NEGATIVE_PROMPT",
+    AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT,
 )
 AIRUNNER_BUG_REPORT_LINK = os.environ.get(
     "AIRUNNER_BUG_REPORT_LINK",
