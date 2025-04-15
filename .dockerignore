@@ -1,5 +1,5 @@
 # Ignore virtual environments
-venv
+venv/
 
 # Ignore git files
 .git
