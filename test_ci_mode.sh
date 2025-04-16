@@ -71,24 +71,30 @@ fi
 # Test 4: Create a mock build to test output
 log_result "Test 4: Testing package output access"
 
-cat > /tmp/mock_build.sh << 'EOF'
-#!/bin/bash
-mkdir -p /app/dist
-echo "Mock build output: $(date)" > /app/dist/mock_build_output.txt
-echo "Build completed successfully!"
-EOF
-chmod +x /tmp/mock_build.sh
+# Ensure dist directory exists on host
+mkdir -p ./dist
 
-# Copy and run the mock build
-./src/airunner/bin/docker.sh --ci bash -c "cat > /app/mock_build.sh << EOF
-$(cat /tmp/mock_build.sh)
-EOF
-chmod +x /app/mock_build.sh && /app/mock_build.sh"
+# Clear any previous test files
+rm -f ./dist/mock_build_output.txt
 
+# Run the commands directly in the container without using a script file
+./src/airunner/bin/docker.sh --ci bash -c "mkdir -p /app/dist && echo 'Mock build output: $(date)' > /app/dist/mock_build_output.txt && echo 'Build completed successfully!'"
+
+# Check if output is accessible
 if [ -f "./dist/mock_build_output.txt" ]; then
   log_result "✅ Build output is accessible from host"
 else
   log_error "❌ Build output is not visible on host"
+fi
+
+# Additional isolation verification
+TEST_ISOLATION_FILE="isolation_test_$(date +%s).txt"
+./src/airunner/bin/docker.sh --ci bash -c "echo 'Isolation test' > /home/appuser/$TEST_ISOLATION_FILE"
+
+if [ -f "$HOME/$TEST_ISOLATION_FILE" ]; then
+  log_error "❌ Container isolation failed - isolation test file appeared on host"
+else
+  log_result "✅ Container isolation confirmed while build outputs are accessible"
 fi
 
 # Test 5: Verify docker-compose files
