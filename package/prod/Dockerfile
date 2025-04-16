@@ -3,6 +3,31 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV DEBCONF_NOWARNINGS="yes"
 WORKDIR /app
 
+ARG INSTALL_XCB_CURSOR=0
+ARG HOST_UID=$HOST_UID
+ARG HOST_GID=$HOST_GID
+
+RUN set -eux; \
+    echo "Creating group ${HOST_GID} and user ${HOST_UID}"; \
+    if ! getent group ${HOST_GID} > /dev/null 2>&1; then \
+        groupadd -g ${HOST_GID} appgroup; \
+        echo "Group appgroup (${HOST_GID}) created."; \
+    else \
+        # If group exists, capture its name for potential use in useradd/usermod
+        EXISTING_GROUP_NAME=$(getent group ${HOST_GID} | cut -d: -f1); \
+        echo "Group with GID ${HOST_GID} (name: ${EXISTING_GROUP_NAME}) already exists."; \
+    fi; \
+    # Ensure the target group name exists for useradd
+    TARGET_GROUP_NAME=$(getent group ${HOST_GID} | cut -d: -f1); \
+    if ! id -u ${HOST_UID} > /dev/null 2>&1; then \
+        useradd --system --create-home --no-log-init -u ${HOST_UID} -g ${TARGET_GROUP_NAME} -s /bin/bash appuser; \
+        echo "User appuser (${HOST_UID}) created with primary group ${TARGET_GROUP_NAME} (${HOST_GID})."; \
+    else \
+        # If user exists, ensure their primary group is correct
+        usermod -g ${HOST_GID} $(getent passwd ${HOST_UID} | cut -d: -f1); \
+        echo "User with UID ${HOST_UID} already exists. Ensured primary group GID is ${HOST_GID}."; \
+    fi
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y software-properties-common && \
  add-apt-repository ppa:ubuntu-toolchain-r/test && \
@@ -132,25 +157,6 @@ ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/.local/share/airunner/python/local/lib/python3.
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
-# Dynamically set the UID and GID for appuser
-ARG INSTALL_XCB_CURSOR=0
-ARG HOST_UID=1000
-ARG HOST_GID=1000
-RUN if [ "$INSTALL_XCB_CURSOR" = "1" ]; then \
-        apt-get update && apt-get install -y libxcb-cursor0; \
-    fi && \
- groupadd -g 1000 appuser && useradd -m -u 1000 -g 1000 appuser && \
- groupmod -g ${HOST_GID} appuser && usermod -u ${HOST_UID} -g ${HOST_GID} appuser && \
- chown -R appuser:appuser /app && \
- groupadd -g 1001 airunner_group && usermod -aG airunner_group appuser && \
- apt-get update && apt-get install -y x11-xserver-utils && \
- mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
-
-# Install sudo and configure passwordless sudo for appuser
-RUN apt-get update && apt-get install -y sudo && \
-    echo "appuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-
-
 COPY --chown=appuser:appuser . /app/
 COPY ./package/prod/entrypoint.sh /home/appuser/entrypoint.sh
 RUN chmod +x /home/appuser/entrypoint.sh
@@ -167,6 +173,8 @@ COPY ./package/pip.conf /etc/pip.conf
 RUN chown -R appuser:appuser /etc/pip.conf && \
     chmod 644 /etc/pip.conf
 
-USER appuser
+USER ${HOST_UID}:${HOST_GID}
+
+WORKDIR /app
 
 CMD ["/bin/bash"]
