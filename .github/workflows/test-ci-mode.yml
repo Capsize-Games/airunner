@@ -1,0 +1,41 @@
+name: Test CI Mode
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'package/prod/docker-compose-ci*.yml'
+      - 'package/prod/Dockerfile.ci*'
+      - 'src/airunner/bin/docker.sh'
+
+jobs:
+  test_ci_mode:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up environment
+        run: |
+          echo "HOST_UID=$(id -u)" >> $GITHUB_ENV
+          echo "HOST_GID=$(id -g)" >> $GITHUB_ENV
+          echo "CI_MODE=1" >> $GITHUB_ENV
+          chmod +x ./test_ci_mode.sh
+
+      - name: Run CI mode tests
+        run: ./test_ci_mode.sh
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ci-mode-test-results
+          path: |
+            ci_mode_test_results.log
+            ci_mode_test_errors.log
+
+      - name: Clean up Docker
+        if: always()
+        run: docker system prune -af
