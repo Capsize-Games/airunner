@@ -134,8 +134,8 @@ ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 # Dynamically set the UID and GID for appuser
 ARG INSTALL_XCB_CURSOR=0
-ARG HOST_UID=1000
-ARG HOST_GID=1000
+ARG HOST_UID=$HOST_UID
+ARG HOST_GID=$HOST_GID
 RUN if [ "$INSTALL_XCB_CURSOR" = "1" ]; then \
         apt-get update && apt-get install -y libxcb-cursor0; \
     fi && \
