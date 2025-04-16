@@ -20,10 +20,12 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
         os.path.expanduser("~"), ".local", "share", "airunner"
     )
     activate(
-        # sactivate_nullscream=False,
+        activate_shadowlogger=False,
+        darklock_os_whitelisted_operations=["makedirs", "mkdir", "open"],
         darklock_os_whitelisted_directories=[
             airunner_path,
             os.path.join(airunner_path, "data"),
+            os.path.join(os.path.expanduser("~"), ".triton/cache/"),
         ],
         nullscream_whitelist=[
             "huggingface_hub.file_download",

@@ -1,0 +1,5 @@
+FROM capsize-games/airunner/airunner:dev_latest
+WORKDIR /app
+ENV DEV_ENV=${DEV_ENV:-1}
+ENV AIRUNNER_ENVIRONMENT="prod"
+ENV PYTHONOPTIMIZE=0

@@ -35,7 +35,7 @@ extras_require = {
     "llm": [  # LLM dependencies (also text-to-speech and speech-to-text)
         "transformers==4.48.1",
         "auto-gptq==0.7.1",
-        "bitsandbytes==0.45.2",
+        "bitsandbytes==0.45.5",
         "datasets==3.2.0",
         "sentence_transformers==3.4.1",
         "sounddevice==0.5.1",
@@ -86,7 +86,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="4.1.2",
+    version="4.1.3",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
