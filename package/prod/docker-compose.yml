@@ -75,7 +75,7 @@ services:
     entrypoint: ["/home/appuser/entrypoint.sh"]
     volumes:
       - ../../:/app:rw
-      - ../../package/prod/entrypoint.sh:/app/package/entrypoint.sh:ro
+      - ../../package/prod/entrypoint.sh:/home/appuser/entrypoint.sh:ro
       - ../../package/prod/asound.conf:/etc/asound.conf:rw
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}:/home/appuser/.local/share/airunner:rw,z"
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/data:/home/appuser/.local/share/airunner/data:rw,z"
