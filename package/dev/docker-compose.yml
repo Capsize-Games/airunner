@@ -88,6 +88,10 @@ services:
       # - ${XAUTHORITY}:${XAUTHORITY}:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/torch/hub:/home/appuser/.cache/torch/hub:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python:/home/appuser/.local:rw,z
+      - "${HOST_HOME}/.local/lib:/home/appuser/.local/lib:rw,z"
+      - "${HOST_HOME}/.local/lib/python3.10:/home/appuser/.local/lib/python3.10:rw,z"
+      - "${HOST_HOME}/.local/lib/python3.10/site-packages:/home/appuser/.local/lib/python3.10/site-packages:rw,z"
+      - "${HOST_HOME}/.local/lib/python3.10/site-packages/wheel:/home/appuser/.local/lib/python3.10/site-packages/wheel:rw,z"
     working_dir: /app
     runtime: nvidia
     ports:
