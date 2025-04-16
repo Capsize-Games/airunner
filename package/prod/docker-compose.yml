@@ -7,14 +7,14 @@ services:
       dockerfile: package/prod/Dockerfile
       args:
         - INSTALL_XCB_CURSOR=1
+        - HOST_UID=${HOST_UID}
+        - HOST_GID=${HOST_GID}
     user: "${HOST_UID}:${HOST_GID}"
     environment:
       - DEV_ENV=1
       - AIRUNNER_ENVIRONMENT=dev
       - HOST_UID=${HOST_UID}
       - HOST_GID=${HOST_GID}
-      - UID=${UID}
-      - GID=${GID}
       - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512,expandable_segments:True
       - NUMBA_CACHE_DIR=/tmp/numba_cache
       - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/home/appuser/.local/share/airunner/python/local/lib/python3.10/site-packages
@@ -72,7 +72,7 @@ services:
       - ../../.env
     stdin_open: true
     tty: true
-    entrypoint: ["/home/appuser/entrypoint.sh"]
+    entrypoint: ["/app/package/dev/entrypoint.sh"]
     volumes:
       - ../../:/app:rw
       - ../../package/prod/entrypoint.sh:/home/appuser/entrypoint.sh:ro
@@ -81,7 +81,7 @@ services:
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/data:/home/appuser/.local/share/airunner/data:rw,z"
       - "${HOST_HOME}/.cache/huggingface:/home/appuser/.cache/huggingface:rw,z"
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - /run/user/1000/pulse:/run/user/1000/pulse:ro
+      - /run/user/${HOST_UID}/pulse:/run/user/1000/pulse:ro
       - ${XAUTHORITY}:${XAUTHORITY}:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/torch/hub:/home/appuser/.cache/torch/hub:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python:/home/appuser/.local:rw,z
