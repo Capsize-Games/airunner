@@ -43,8 +43,6 @@ else
   echo "X connection failed"
 fi
 
-# sudo -u appuser DO_BUILD=$DO_BUILD /app/package/install_python_packages.sh
-
 # Handle interactive sessions
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
