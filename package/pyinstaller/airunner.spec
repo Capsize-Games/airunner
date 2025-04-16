@@ -17,6 +17,7 @@ db_lib = linux_lib   # Database libraries location
 cuda_lib = '/usr/local/cuda-11/lib64'  # CUDA libraries location
 qt_lib = '/home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/lib/'
 cudnn_lib = '/home/appuser/.local/lib/python3.10/site-packages/nvidia/cudnn/lib/'
+python_include_path = "/usr/include/python3.10"
 
 a = Analysis(
     [join(airunner_path, 'main.py')],
@@ -79,6 +80,7 @@ a = Analysis(
     ],
     datas=[
         (join(airunner_path, 'alembic.ini'), 'airunner'),
+        (python_include_path, 'include/python3.10'),
         (join(site_packages_path, 'inflect'), 'inflect'),
         (join(site_packages_path, 'controlnet_aux'), 'controlnet_aux'),
         (join(site_packages_path, 'diffusers'), 'diffusers'),
