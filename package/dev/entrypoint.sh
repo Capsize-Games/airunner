@@ -52,7 +52,6 @@ pip install --no-cache-dir -e .[nvidia,gui,linux,dev,art,llm,llm_weather,tts] \
  -U langchain-community \
  -U mediapipe
 pip install -U timm
-python3 -c "from accelerate.utils import write_basic_config; write_basic_config(mixed_precision='fp16')"
 python3 -c "import nltk; nltk.download('punkt')"
 rm -rf .cache/pip
 
