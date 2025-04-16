@@ -1,10 +1,10 @@
 services:
-  airunner_dev:
-    container_name: airunner_dev
+  airunner_prod:
+    container_name: airunner_prod
     image: ghcr.io/capsize-games/airunner/airunner:linux
     build:
-      context: ..
-      dockerfile: package/Dockerfile
+      context: ../..
+      dockerfile: package/prod/Dockerfile
       args:
         - INSTALL_XCB_CURSOR=1
     user: "${HOST_UID}:${HOST_GID}"
@@ -69,14 +69,14 @@ services:
       - HOST_HOME=${HOST_HOME}
       - AIRUNNER_HOME_DIR=${HOST_HOME}/.local/share/airunner
     env_file:
-      - ../.env
+      - ../../.env
     stdin_open: true
     tty: true
     entrypoint: ["/home/appuser/entrypoint.sh"]
     volumes:
-      - ../:/app:rw
-      - ../package/entrypoint.sh:/app/package/entrypoint.sh:ro
-      - ../package/asound.conf:/etc/asound.conf:rw
+      - ../../:/app:rw
+      - ../../package/prod/entrypoint.sh:/home/appuser/entrypoint.sh:ro
+      - ../../package/prod/asound.conf:/etc/asound.conf:rw
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}:/home/appuser/.local/share/airunner:rw,z"
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/data:/home/appuser/.local/share/airunner/data:rw,z"
       - "${HOST_HOME}/.cache/huggingface:/home/appuser/.cache/huggingface:rw,z"
@@ -85,8 +85,8 @@ services:
       - ${XAUTHORITY}:${XAUTHORITY}:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/torch/hub:/home/appuser/.cache/torch/hub:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python:/home/appuser/.local:rw,z
-      - ../build:/app/build:rw,z
-      - ../dist:/app/dist:rw,z
+      - ../../build:/app/build:rw,z
+      - ../../dist:/app/dist:rw,z
     working_dir: /app
     runtime: nvidia
     ports:

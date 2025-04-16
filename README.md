@@ -121,7 +121,7 @@ Below is a high-level list of capabilities in AI Runner:
 - **Memory**: 16 GB RAM  
 - **GPU**: NVIDIA RTX 3060 or better
 - **Network**: Broadband (used to download models)  
-- **Storage**: 36 GB
+- **Storage**: 22.6 GB
 
 ### Recommended Specs
 
@@ -134,29 +134,59 @@ Below is a high-level list of capabilities in AI Runner:
 
 ---
 
+These are the sizes of the various models that power AI Runner.
+
+| Model                | Size     |
+|-------------------------|----------|
+| Controlnet              | 10.6 GB  |
+| Safety Checker + Feature Extractor               | 3.2 GB   |
+| SDXL 1.0                | 675 MB   |
+| LLM                     | 5.8 GB   |
+| e5 large (embedding model) | 1.3 GB   |
+| Whisper Tiny            | 155.4 MB |
+| Speech T5 (Voice)       | 654.4 MB |
+
+---
+
 ## Quick Start (Docker)
+
+
+### Development Environment setup
 
 **Recommended for most developers**—it avoids Python environment headaches and streamlines GPU access.
 
 1. **Install NVIDIA Container Toolkit**  
    Follow the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to enable GPU passthrough for Docker.
-2. **Clone AI Runner and Run Setup**  
+2. **Clone AI Runner**  
    ```bash
    git clone https://github.com/Capsize-Games/airunner.git
    cd airunner
-   python3 -m venv venv
-   source venv/bin/activate
-   ./src/airunner/bin/setup.sh
    ```
-   - _Choose option **1** (Setup xhost)_
-   - _Choose option **2** (Install AI Runner scripts)_
-3. ```bash
-   docker pull ghcr.io/capsize-games/airunner/airunner:linux
+3. **Pull the docker image and run airunner**
+   ```bash
    ./src/airunner/bin/docker.sh airunner
    ```
 This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
 
-For detailed steps, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
+### Build the package locally
+
+AI Runner uses PyInstaller to create a standalone package. If you want to build it for yourself, follow these steps.
+
+1. **Follow the *Development Environment setup* steps above.**
+2. **Build the package**  
+   ```bash
+   ./src/airunner/bin/docker.sh build_dev_package
+   ```
+
+#### Building the package for production
+
+If you want to build the production package, follow these steps.
+
+1. **Follow the *Development Environment setup* steps above.**
+2. **Build the package**  
+   ```bash
+   ./src/airunner/bin/docker.sh build_package
+   ```
 
 ---
 

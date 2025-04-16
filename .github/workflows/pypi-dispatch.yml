@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux
+  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
   CR_PAT: ${{ secrets.CR_PAT }}
   CR_REPO: ${{ secrets.CR_REPO }}
   CR_USERNAME: ${{ secrets.CR_USERNAME }}

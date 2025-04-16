@@ -8,19 +8,16 @@ import numpy as np
 import tomesd
 import torch
 from DeepCache import DeepCacheSDHelper
-from PIL import (
-    ImageDraw,
-    ImageFont
-)
+from PIL import ImageDraw, ImageFont
 from PIL.Image import Image
 from compel import (
-    Compel, 
-    DiffusersTextualInversionManager, 
-    ReturnedEmbeddingsType
+    Compel,
+    DiffusersTextualInversionManager,
+    ReturnedEmbeddingsType,
 )
 from controlnet_aux.processor import MODELS as controlnet_aux_models
 from diffusers import (
-    StableDiffusionPipeline, 
+    StableDiffusionPipeline,
     StableDiffusionImg2ImgPipeline,
     StableDiffusionInpaintPipeline,
     StableDiffusionControlNetPipeline,
@@ -34,35 +31,37 @@ from diffusers import (
     StableDiffusionXLControlNetInpaintPipeline,
     ControlNetModel,
     AutoencoderTiny,
-    AutoencoderKL
+    AutoencoderKL,
+)
+from airunner.settings import (
+    AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT,
+    AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT,
+    AIRUNNER_PAINTING_NEGATIVE_PROMPT,
+    AIRUNNER_PHOTO_REALISTIC_PROMPT,
+    AIRUNNER_ILLUSTRATION_PROMPT,
+    AIRUNNER_PAINTING_PROMPT,
 )
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import (
-    CLIPFeatureExtractor, 
-    CLIPTextModel, 
-    CLIPTextModelWithProjection
+    CLIPFeatureExtractor,
 )
-from transformers import BitsAndBytesConfig as TransformersBitsAndBytesConfig
 from airunner.handlers.base_model_manager import BaseModelManager
-from airunner.data.models import (
-    Schedulers, 
-    Lora, 
-    Embedding, 
-    ControlnetModel
-)
+from airunner.data.models import Schedulers, Lora, Embedding, ControlnetModel
 from airunner.enums import (
-    StableDiffusionVersion, 
-    GeneratorSection, 
-    ModelStatus, 
-    ModelType, 
-    SignalCode, 
+    StableDiffusionVersion,
+    GeneratorSection,
+    ModelStatus,
+    ModelType,
+    SignalCode,
     HandlerState,
-    EngineResponseCode, 
-    ModelAction
+    EngineResponseCode,
+    ModelAction,
+    ImagePreset,
 )
 from airunner.exceptions import PipeNotLoadedException, InterruptedException
-from airunner.handlers.stablediffusion.prompt_weight_bridge import \
-    PromptWeightBridge
+from airunner.handlers.stablediffusion.prompt_weight_bridge import (
+    PromptWeightBridge,
+)
 from airunner.settings import (
     AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG,
     AIRUNNER_LOCAL_FILES_ONLY,
@@ -78,14 +77,11 @@ from airunner.settings import (
     AIRUNNER_MEM_USE_TILED_VAE,
     AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE,
 )
-from airunner.utils.memory import (
-    clear_memory,
-    is_ampere_or_newer
-)
+from airunner.utils.memory import clear_memory, is_ampere_or_newer
 from airunner.utils.image import (
-    convert_binary_to_image, 
-    convert_image_to_binary, 
-    export_images
+    convert_binary_to_image,
+    convert_image_to_binary,
+    export_images,
 )
 from airunner.utils.application import get_torch_device
 from airunner.handlers.stablediffusion.image_request import ImageRequest
@@ -96,14 +92,14 @@ from diffusers import SchedulerMixin
 
 class StableDiffusionModelManager(BaseModelManager):
     def __init__(
-        self, 
+        self,
         model_path: str,
         model_version: str,
         pipeline: str,
         scheduler_name: str,
         use_compel: bool,
-        *args, 
-        **kwargs
+        *args,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self._model_path = model_path
@@ -145,7 +141,9 @@ class StableDiffusionModelManager(BaseModelManager):
         self._current_negative_prompt_2: str = ""
         self._generator: Optional[torch.Generator] = None
         self._latents = None
-        self._textual_inversion_manager: Optional[DiffusersTextualInversionManager] = None
+        self._textual_inversion_manager: Optional[
+            DiffusersTextualInversionManager
+        ] = None
         self._compel_proc: Optional[Compel] = None
         self._loaded_lora: Dict = {}
         self._disabled_lora: List = []
@@ -155,8 +153,8 @@ class StableDiffusionModelManager(BaseModelManager):
         self.do_interrupt_image_generation: bool = False
 
         # The following properties must be set to None before generating an
-        # image each time generate is called. These are cached properties that 
-        # come from the database. 
+        # image each time generate is called. These are cached properties that
+        # come from the database.
         # Caching them here allows us to avoid querying the database each time.
         self._outpaint_image = None
         self._img2img_image = None
@@ -167,16 +165,16 @@ class StableDiffusionModelManager(BaseModelManager):
         self._outpaint_settings = None
         self._path_settings = None
         self._current_memory_settings = None
-    
+
     def on_application_settings_changed(self):
         if self._pipe:
             pipeline_class = self._pipe.__class__
             if (
-                pipeline_class in self.img2img_pipelines and 
-                not self.image_to_image_settings.enabled
+                pipeline_class in self.img2img_pipelines
+                and not self.image_to_image_settings.enabled
             ) or (
-                pipeline_class in self.txt2img_pipelines and 
-                self.image_to_image_settings.enabled
+                pipeline_class in self.txt2img_pipelines
+                and self.image_to_image_settings.enabled
             ):
                 self._swap_pipeline()
 
@@ -208,7 +206,7 @@ class StableDiffusionModelManager(BaseModelManager):
             StableDiffusionXLImg2ImgPipeline,
             StableDiffusionXLControlNetImg2ImgPipeline,
             StableDiffusionImg2ImgPipeline,
-            StableDiffusionControlNetImg2ImgPipeline
+            StableDiffusionControlNetImg2ImgPipeline,
         )
 
     @property
@@ -217,7 +215,7 @@ class StableDiffusionModelManager(BaseModelManager):
             StableDiffusionXLPipeline,
             StableDiffusionXLControlNetPipeline,
             StableDiffusionPipeline,
-            StableDiffusionControlNetPipeline
+            StableDiffusionControlNetPipeline,
         )
 
     @property
@@ -226,7 +224,7 @@ class StableDiffusionModelManager(BaseModelManager):
             StableDiffusionXLInpaintPipeline,
             StableDiffusionInpaintPipeline,
             StableDiffusionControlNetInpaintPipeline,
-            StableDiffusionXLControlNetInpaintPipeline
+            StableDiffusionXLControlNetInpaintPipeline,
         )
 
     @property
@@ -240,23 +238,27 @@ class StableDiffusionModelManager(BaseModelManager):
     def controlnet_path(self):
         version: str = self.controlnet_model.version
         path: str = self.controlnet_model.path
-        return os.path.expanduser(os.path.join(
-            self.path_settings_cached.base_path,
-            "art",
-            "models",
-            version,
-            "controlnet",
-            path
-        ))
+        return os.path.expanduser(
+            os.path.join(
+                self.path_settings_cached.base_path,
+                "art",
+                "models",
+                version,
+                "controlnet",
+                path,
+            )
+        )
 
     @property
     def controlnet_processor_path(self):
-        return os.path.expanduser(os.path.join(
-            self.path_settings_cached.base_path,
-            "art",
-            "models",
-            "controlnet_processors"
-        ))
+        return os.path.expanduser(
+            os.path.join(
+                self.path_settings_cached.base_path,
+                "art",
+                "models",
+                "controlnet_processors",
+            )
+        )
 
     @property
     def model_status(self):
@@ -268,7 +270,9 @@ class StableDiffusionModelManager(BaseModelManager):
 
     @property
     def is_sd_xl_turbo(self) -> bool:
-        return self.real_model_version == StableDiffusionVersion.SDXL_TURBO.value
+        return (
+            self.real_model_version == StableDiffusionVersion.SDXL_TURBO.value
+        )
 
     @property
     def is_sd_xl_or_turbo(self) -> bool:
@@ -301,7 +305,7 @@ class StableDiffusionModelManager(BaseModelManager):
     @property
     def image_request(self) -> ImageRequest:
         return self._image_request
-    
+
     @image_request.setter
     def image_request(self, value: ImageRequest):
         self._image_request = value
@@ -322,21 +326,25 @@ class StableDiffusionModelManager(BaseModelManager):
     @property
     def controlnet_model(self) -> Optional[ControlnetModel]:
         if (
-            self._controlnet_model is None or
-            self._controlnet_model.version != self.version or
-            self._controlnet_model.display_name != self.controlnet_settings_cached.controlnet
+            self._controlnet_model is None
+            or self._controlnet_model.version != self.version
+            or self._controlnet_model.display_name
+            != self.controlnet_settings_cached.controlnet
         ):
-            
+
             self._controlnet_model = ControlnetModel.objects.filter_by_first(
                 display_name=self.controlnet_settings_cached.controlnet,
-                version=self.version
+                version=self.version,
             )
-            
+
         return self._controlnet_model
 
     @property
     def controlnet_enabled(self) -> bool:
-        return self.controlnet_settings_cached.enabled and self.application_settings.controlnet_enabled
+        return (
+            self.controlnet_settings_cached.enabled
+            and self.application_settings.controlnet_enabled
+        )
 
     @property
     def controlnet_strength(self) -> int:
@@ -349,7 +357,7 @@ class StableDiffusionModelManager(BaseModelManager):
     @property
     def controlnet_is_loading(self) -> bool:
         return self.model_status[ModelType.CONTROLNET] is ModelStatus.LOADING
-    
+
     @property
     def pipeline(self) -> str:
         action = self._pipeline
@@ -360,7 +368,7 @@ class StableDiffusionModelManager(BaseModelManager):
     @property
     def scheduler_name(self) -> str:
         return self._scheduler_name
-    
+
     @scheduler_name.setter
     def scheduler_name(self, value: str):
         self._scheduler_name = value
@@ -368,11 +376,11 @@ class StableDiffusionModelManager(BaseModelManager):
     @property
     def scheduler(self) -> Type[SchedulerMixin]:
         return self._scheduler
-    
+
     @scheduler.setter
     def scheduler(self, value: Type[SchedulerMixin]):
         self._scheduler = value
-    
+
     @property
     def real_model_version(self) -> str:
         """
@@ -383,7 +391,7 @@ class StableDiffusionModelManager(BaseModelManager):
         if self.image_request and self.image_request.version != "":
             version = self.image_request.version
         return version
-    
+
     @property
     def version(self) -> str:
         """
@@ -398,22 +406,22 @@ class StableDiffusionModelManager(BaseModelManager):
     def section(self) -> GeneratorSection:
         section = GeneratorSection.TXT2IMG
         if (
-            self.img2img_image_cached is not None and
-            self.image_to_image_settings.enabled
+            self.img2img_image_cached is not None
+            and self.image_to_image_settings.enabled
         ):
             section = GeneratorSection.IMG2IMG
         if (
-            self.drawing_pad_settings.mask is not None and
-            self.drawing_pad_settings.image is not None and
-            self.pipeline == "inpaint" and
-            self.outpaint_settings_cached.enabled
+            self.drawing_pad_settings.mask is not None
+            and self.drawing_pad_settings.image is not None
+            and self.pipeline == "inpaint"
+            and self.outpaint_settings_cached.enabled
         ):
             section = GeneratorSection.OUTPAINT
         return section
 
     @property
     def model_path(self) -> str:
-        path = self.image_request.model_path if self.image_request else  None
+        path = self.image_request.model_path if self.image_request else None
         if path is None or path == "":
             path = self._model_path
         return path
@@ -425,7 +433,7 @@ class StableDiffusionModelManager(BaseModelManager):
                 self.path_settings_cached.base_path,
                 "art/models",
                 self.version,
-                "lora"
+                "lora",
             )
         )
 
@@ -455,7 +463,9 @@ class StableDiffusionModelManager(BaseModelManager):
 
     @property
     def safety_checker_is_loading(self):
-        return self.model_status[ModelType.SAFETY_CHECKER] is ModelStatus.LOADING
+        return (
+            self.model_status[ModelType.SAFETY_CHECKER] is ModelStatus.LOADING
+        )
 
     @property
     def sd_is_loading(self):
@@ -498,7 +508,7 @@ class StableDiffusionModelManager(BaseModelManager):
                 "outpaint": StableDiffusionXLInpaintPipeline,
                 "txt2img_controlnet": StableDiffusionXLControlNetPipeline,
                 "img2img_controlnet": StableDiffusionXLControlNetImg2ImgPipeline,
-                "outpaint_controlnet": StableDiffusionXLControlNetInpaintPipeline
+                "outpaint_controlnet": StableDiffusionXLControlNetInpaintPipeline,
             }
         else:
             pipeline_map = {
@@ -507,67 +517,118 @@ class StableDiffusionModelManager(BaseModelManager):
                 "outpaint": StableDiffusionInpaintPipeline,
                 "txt2img_controlnet": StableDiffusionControlNetPipeline,
                 "img2img_controlnet": StableDiffusionControlNetImg2ImgPipeline,
-                "outpaint_controlnet": StableDiffusionControlNetInpaintPipeline
+                "outpaint_controlnet": StableDiffusionControlNetInpaintPipeline,
             }
         return pipeline_map.get(operation_type)
 
     @property
     def mask_blur(self) -> int:
         return self.outpaint_settings_cached.mask_blur
-    
+
     @property
     def do_join_prompts(self) -> bool:
         return (
-            self.use_compel and 
-            self.image_request.additional_prompts and
-            len(self.image_request.additional_prompts) > 0
+            self.use_compel
+            and self.image_request.additional_prompts
+            and len(self.image_request.additional_prompts) > 0
         )
+
+    @property
+    def prompt_preset(self) -> str:
+        if self.image_request.image_preset is ImagePreset.PHOTOGRAPH:
+            return AIRUNNER_PHOTO_REALISTIC_PROMPT
+        elif self.image_request.image_preset is ImagePreset.ILLUSTRATION:
+            return AIRUNNER_ILLUSTRATION_PROMPT
+        elif self.image_request.image_preset is ImagePreset.PAINTING:
+            return AIRUNNER_PAINTING_PROMPT
+        return ""
+
+    @property
+    def negative_prompt_preset(self) -> str:
+        if self.image_request.image_preset is ImagePreset.PHOTOGRAPH:
+            return AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT
+        elif self.image_request.image_preset is ImagePreset.ILLUSTRATION:
+            return AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT
+        elif self.image_request.image_preset is ImagePreset.PAINTING:
+            return AIRUNNER_PAINTING_NEGATIVE_PROMPT
+        return ""
 
     @property
     def prompt(self) -> str:
         prompt = self.image_request.prompt
+        prompt_preset = self.prompt_preset
+        print("IMAGE REQUEST PRESET IS", self.image_request.image_preset)
 
         # Format the prompt
         formatted_prompt = None
         if self.do_join_prompts:
             prompts = [f'"{prompt}"']
-            for additional_prompt_settings in self.image_request.additional_prompts:
-                addtional_prompt = additional_prompt_settings['prompt']
+            for (
+                additional_prompt_settings
+            ) in self.image_request.additional_prompts:
+                addtional_prompt = additional_prompt_settings["prompt"]
                 prompts.append(f'"{addtional_prompt}"')
-            formatted_prompt = f'({", ".join(prompts)}).and()'       
+            formatted_prompt = (
+                f'({", ".join(prompts)}, "{prompt_preset}").and()'
+            )
+
+        if prompt_preset != "":
+            prompt = f'("{prompt}", "{prompt_preset}").and(0.5, 0.75)'
+
         formatted_prompt = formatted_prompt or prompt
 
-        return PromptWeightBridge.convert(formatted_prompt)
+        return formatted_prompt
 
     @property
     def second_prompt(self) -> str:
         if not self.is_sd_xl_or_turbo:
             return ""
         prompt = self.image_request.second_prompt
+        prompt_preset = self.prompt_preset
 
         # Format the prompt
         formatted_prompt = None
         if self.do_join_prompts:
             prompts = [f'"{prompt}"']
-            for additional_prompt_settings in self.image_request.additional_prompts:
-                addtional_prompt = additional_prompt_settings['prompt_secondary']
+            for (
+                additional_prompt_settings
+            ) in self.image_request.additional_prompts:
+                addtional_prompt = additional_prompt_settings[
+                    "prompt_secondary"
+                ]
                 prompts.append(f'"{addtional_prompt}"')
-            formatted_prompt = f'({", ".join(prompts)}).and()'
+            formatted_prompt = (
+                f'({", ".join(prompts)}, "{prompt_preset}").and()'
+            )
+
+        if prompt_preset != "":
+            prompt = f'("{prompt}", "{prompt_preset}").and()'
+
         formatted_prompt = formatted_prompt or prompt
 
-        return PromptWeightBridge.convert(formatted_prompt)
+        return formatted_prompt
 
     @property
     def negative_prompt(self) -> str:
         prompt = self.image_request.negative_prompt
-        return PromptWeightBridge.convert(prompt)
+        negative_prompt_preset = self.negative_prompt_preset
+
+        if negative_prompt_preset != "":
+            prompt = f'("{prompt}", "{negative_prompt_preset}").and()'
+
+        return prompt
 
     @property
     def second_negative_prompt(self) -> str:
         if not self.is_sd_xl_or_turbo:
             return ""
         prompt = self.image_request.second_negative_prompt
-        return PromptWeightBridge.convert(prompt)
+        negative_prompt_preset = self.negative_prompt_preset
+
+        if negative_prompt_preset != "":
+            prompt = f'("{prompt}", "{negative_prompt_preset}").and()'
+
+        return prompt
 
     def load_safety_checker(self):
         """
@@ -641,7 +702,7 @@ class StableDiffusionModelManager(BaseModelManager):
             return
         elif self._current_state in (
             HandlerState.PREPARING_TO_GENERATE,
-            HandlerState.GENERATING
+            HandlerState.GENERATING,
         ):
             self.interrupt_image_generation()
             self.requested_action = ModelAction.CLEAR
@@ -661,19 +722,19 @@ class StableDiffusionModelManager(BaseModelManager):
 
     def handle_generate_signal(self, message: Optional[Dict] = None):
         self.image_request = message.get("sd_request", None)
-        
+
         if not self.image_request:
             raise ValueError("ImageRequest is None")
-    
+
         if self.image_request.scheduler != self.scheduler_name:
             self._load_scheduler(self.image_request.scheduler)
-        
+
         self.load()
         self._clear_cached_properties()
         self._swap_pipeline()
         if self._current_state not in (
             HandlerState.GENERATING,
-            HandlerState.PREPARING_TO_GENERATE
+            HandlerState.PREPARING_TO_GENERATE,
         ):
             self._current_state = HandlerState.PREPARING_TO_GENERATE
             response = None
@@ -695,20 +756,19 @@ class StableDiffusionModelManager(BaseModelManager):
                 if self.image_request.callback:
                     self.image_request.callback(message)
             self.emit_signal(
-                SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, 
-                {
-                    'code': code,
-                    'message': response
-                }
+                SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
+                {"code": code, "message": response},
             )
             self._current_state = HandlerState.READY
             clear_memory()
         self.handle_requested_action()
 
     def reload_lora(self):
-        if self.model_status[ModelType.SD] is not ModelStatus.LOADED or self._current_state in (
+        if self.model_status[
+            ModelType.SD
+        ] is not ModelStatus.LOADED or self._current_state in (
             HandlerState.PREPARING_TO_GENERATE,
-            HandlerState.GENERATING
+            HandlerState.GENERATING,
         ):
             return
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
@@ -718,9 +778,11 @@ class StableDiffusionModelManager(BaseModelManager):
         self.change_model_status(ModelType.SD, ModelStatus.LOADED)
 
     def reload_embeddings(self):
-        if self.model_status[ModelType.SD] is not ModelStatus.LOADED or self._current_state in (
+        if self.model_status[
+            ModelType.SD
+        ] is not ModelStatus.LOADED or self._current_state in (
             HandlerState.PREPARING_TO_GENERATE,
-            HandlerState.GENERATING
+            HandlerState.GENERATING,
         ):
             return
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
@@ -734,7 +796,7 @@ class StableDiffusionModelManager(BaseModelManager):
     def interrupt_image_generation(self):
         if self._current_state in (
             HandlerState.PREPARING_TO_GENERATE,
-            HandlerState.GENERATING
+            HandlerState.GENERATING,
         ):
             self.do_interrupt_image_generation = True
 
@@ -742,10 +804,12 @@ class StableDiffusionModelManager(BaseModelManager):
         pipeline_class_ = self._pipeline_class
         if self._pipe.__class__ is pipeline_class_:  # noqa
             return
-       
-        self.logger.debug("Swapping pipeline from %s to %s", 
-                          self._pipe.__class__ if self.pipe else "", 
-                          pipeline_class_)
+
+        self.logger.debug(
+            "Swapping pipeline from %s to %s",
+            self._pipe.__class__ if self.pipe else "",
+            pipeline_class_,
+        )
         try:
             kwargs = {}
             if pipeline_class_ in (
@@ -754,7 +818,7 @@ class StableDiffusionModelManager(BaseModelManager):
                 StableDiffusionControlNetInpaintPipeline,
                 StableDiffusionXLControlNetPipeline,
                 StableDiffusionXLControlNetImg2ImgPipeline,
-                StableDiffusionXLControlNetInpaintPipeline
+                StableDiffusionXLControlNetInpaintPipeline,
             ):
                 kwargs.update(controlnet=self._controlnet)
             kwargs = self._prepare_tiny_autoencoder(kwargs)
@@ -778,15 +842,14 @@ class StableDiffusionModelManager(BaseModelManager):
             self.application_settings_cached.working_height,
         )
         active_rect.translate(
-            -self.drawing_pad_settings.x_pos,
-            -self.drawing_pad_settings.y_pos
+            -self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos
         )
         args = self._prepare_data(active_rect)
         self._current_state = HandlerState.GENERATING
 
         with torch.no_grad():
             results = self._pipe(**args)
-        
+
         clear_memory()
 
         images = results.get("images", [])
@@ -795,10 +858,13 @@ class StableDiffusionModelManager(BaseModelManager):
         )
 
         if images is not None:
-            self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
-                "step": self.image_request.steps,
-                "total": self.image_request.steps,
-            })
+            self.emit_signal(
+                SignalCode.SD_PROGRESS_SIGNAL,
+                {
+                    "step": self.image_request.steps,
+                    "total": self.image_request.steps,
+                },
+            )
             self._export_images(images, args)
         else:
             images = images or []
@@ -808,10 +874,12 @@ class StableDiffusionModelManager(BaseModelManager):
             data=args,
             nsfw_content_detected=any(nsfw_content_detected),
             active_rect=active_rect,
-            is_outpaint=self.is_outpaint
+            is_outpaint=self.is_outpaint,
         )
-    
-    def _initialize_metadata(self, images: List[Any], data: Dict) -> Optional[dict]:
+
+    def _initialize_metadata(
+        self, images: List[Any], data: Dict
+    ) -> Optional[dict]:
         metadata = None
         if self.metadata_settings.export_metadata:
             metadata_dict = {}
@@ -819,8 +887,12 @@ class StableDiffusionModelManager(BaseModelManager):
                 metadata_dict["prompt"] = self._current_prompt
                 metadata_dict["prompt_2"] = self._current_prompt_2
             if self.metadata_settings.image_export_metadata_negative_prompt:
-                metadata_dict["negative_prompt"] = self._current_negative_prompt
-                metadata_dict["negative_prompt_2"] = self._current_negative_prompt_2
+                metadata_dict["negative_prompt"] = (
+                    self._current_negative_prompt
+                )
+                metadata_dict["negative_prompt_2"] = (
+                    self._current_negative_prompt_2
+                )
             if self.metadata_settings.image_export_metadata_scale:
                 metadata_dict["scale"] = data.get("guidance_scale", 0)
             if self.metadata_settings.image_export_metadata_seed:
@@ -830,7 +902,9 @@ class StableDiffusionModelManager(BaseModelManager):
             if self.metadata_settings.image_export_metadata_ddim_eta:
                 metadata_dict["ddim_eta"] = self.image_request.ddim_eta
             if self.metadata_settings.image_export_metadata_iterations:
-                metadata_dict["num_inference_steps"] = data["num_inference_steps"]
+                metadata_dict["num_inference_steps"] = data[
+                    "num_inference_steps"
+                ]
             if self.metadata_settings.image_export_metadata_samples:
                 metadata_dict["n_samples"] = self.image_request.n_samples
             if self.metadata_settings.image_export_metadata_model:
@@ -846,44 +920,58 @@ class StableDiffusionModelManager(BaseModelManager):
             if self.metadata_settings.image_export_metadata_embeddings:
                 metadata_dict["embeddings"] = self._loaded_embeddings
             if self.metadata_settings.image_export_metadata_timestamp:
-                metadata_dict["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-            if self.metadata_settings.image_export_metadata_controlnet and self.controlnet_enabled:
-                metadata_dict.update({
-                    "guess_mode": data["guess_mode"],
-                    "control_guidance_start": data["control_guidance_start"],
-                    "control_guidance_end": data["control_guidance_end"],
-                    "controlnet_strength": data["strength"],
-                    "controlnet_guidance_scale": data["guidance_scale"],
-                    "controlnet_conditioning_scale": data["controlnet_conditioning_scale"],
-                    "controlnet": self.controlnet_settings_cached.controlnet,
-                })
+                metadata_dict["timestamp"] = datetime.datetime.now(
+                    datetime.timezone.utc
+                ).isoformat()
+            if (
+                self.metadata_settings.image_export_metadata_controlnet
+                and self.controlnet_enabled
+            ):
+                metadata_dict.update(
+                    {
+                        "guess_mode": data["guess_mode"],
+                        "control_guidance_start": data[
+                            "control_guidance_start"
+                        ],
+                        "control_guidance_end": data["control_guidance_end"],
+                        "controlnet_strength": data["strength"],
+                        "controlnet_guidance_scale": data["guidance_scale"],
+                        "controlnet_conditioning_scale": data[
+                            "controlnet_conditioning_scale"
+                        ],
+                        "controlnet": self.controlnet_settings_cached.controlnet,
+                    }
+                )
             if self.is_txt2img:
                 metadata_dict["action"] = "txt2img"
             elif self.is_img2img:
                 metadata_dict["action"] = "img2img"
             elif self.is_outpaint:
-                metadata_dict.update({
-                    "action": "inpaint",
-                    "mask_blur": self.mask_blur,
-                })
-            metadata_dict["tome_sd"] = self._memory_settings_flags["use_tome_sd"]
-            metadata_dict["tome_ratio"] = self._memory_settings_flags["tome_ratio"]
+                metadata_dict.update(
+                    {
+                        "action": "inpaint",
+                        "mask_blur": self.mask_blur,
+                    }
+                )
+            metadata_dict["tome_sd"] = self._memory_settings_flags[
+                "use_tome_sd"
+            ]
+            metadata_dict["tome_ratio"] = self._memory_settings_flags[
+                "tome_ratio"
+            ]
             metadata = [metadata_dict for _ in range(len(images))]
         return metadata
 
     def _export_images(self, images: List[Any], data: Dict):
-        if (
-            not self.application_settings_cached.auto_export_images
-        ):
+        if not self.application_settings_cached.auto_export_images:
             return
-        
+
         self.logger.debug("Exporting images")
         extension = self.application_settings_cached.image_export_type
         filename = "image"
         file_path = os.path.expanduser(
             os.path.join(
-                self.path_settings_cached.image_path,
-                f"{filename}.{extension}"
+                self.path_settings_cached.image_path, f"{filename}.{extension}"
             )
         )
         metadata = self._initialize_metadata(images, data)
@@ -895,10 +983,12 @@ class StableDiffusionModelManager(BaseModelManager):
 
         self._safety_checker.to(self._device)
 
-        safety_checker_input = self._feature_extractor(images, return_tensors="pt").to(self._device)
+        safety_checker_input = self._feature_extractor(
+            images, return_tensors="pt"
+        ).to(self._device)
         _, has_nsfw_concepts = self._safety_checker(
             images=[np.array(img) for img in images],
-            clip_input=safety_checker_input.pixel_values.to(self._device)
+            clip_input=safety_checker_input.pixel_values.to(self._device),
         )
 
         # Mark images as NSFW if NSFW content is detected
@@ -908,7 +998,9 @@ class StableDiffusionModelManager(BaseModelManager):
                 img.paste((0, 0, 0), (0, 0, img.size[0], img.size[1]))
 
                 draw = ImageDraw.Draw(img)
-                font = ImageFont.load_default(50)  # load_default() does not support size argument
+                font = ImageFont.load_default(
+                    50
+                )  # load_default() does not support size argument
 
                 # Text you want to center
                 text = "NSFW"
@@ -923,7 +1015,9 @@ class StableDiffusionModelManager(BaseModelManager):
                 text_y = (img.height - text_height) // 2
 
                 # Draw the text at the calculated position, ensuring the text line is centered
-                draw.text((text_x, text_y), text, font=font, fill=(255, 255, 255))
+                draw.text(
+                    (text_x, text_y), text, font=font, fill=(255, 255, 255)
+                )
 
                 images[i] = img
 
@@ -932,7 +1026,10 @@ class StableDiffusionModelManager(BaseModelManager):
         return images, has_nsfw_concepts
 
     def _load_safety_checker(self):
-        if not self.application_settings_cached.nsfw_filter or self.safety_checker_is_loading:
+        if (
+            not self.application_settings_cached.nsfw_filter
+            or self.safety_checker_is_loading
+        ):
             return
         self._load_safety_checker_model()
         self._load_feature_extractor()
@@ -947,25 +1044,33 @@ class StableDiffusionModelManager(BaseModelManager):
                 "models",
                 "SD 1.5",
                 "txt2img",
-                "safety_checker"
+                "safety_checker",
             )
         )
         try:
-            self._safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-                safety_checker_path,
-                torch_dtype=self.data_type,
-                device_map="cpu",
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                use_safetensors=False
+            self._safety_checker = (
+                StableDiffusionSafetyChecker.from_pretrained(
+                    safety_checker_path,
+                    torch_dtype=self.data_type,
+                    device_map="cpu",
+                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                    use_safetensors=False,
+                )
             )
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED)
+            self.change_model_status(
+                ModelType.SAFETY_CHECKER, ModelStatus.LOADED
+            )
         except Exception as e:
             self.logger.error(f"Unable to load safety checker: {e}")
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED)
+            self.change_model_status(
+                ModelType.SAFETY_CHECKER, ModelStatus.FAILED
+            )
 
     def _load_feature_extractor(self):
         self.logger.debug("Loading feature extractor")
-        self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING)
+        self.change_model_status(
+            ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING
+        )
         feature_extractor_path = os.path.expanduser(
             os.path.join(
                 self.path_settings_cached.base_path,
@@ -973,7 +1078,7 @@ class StableDiffusionModelManager(BaseModelManager):
                 "models",
                 "SD 1.5",
                 "txt2img",
-                "feature_extractor"
+                "feature_extractor",
             )
         )
         try:
@@ -981,12 +1086,16 @@ class StableDiffusionModelManager(BaseModelManager):
                 feature_extractor_path,
                 torch_dtype=self.data_type,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                use_safetensors=True
+                use_safetensors=True,
             )
-            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED)
+            self.change_model_status(
+                ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED
+            )
         except Exception as e:
             self.logger.error(f"Unable to load feature extractor {e}")
-            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED)
+            self.change_model_status(
+                ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED
+            )
 
     def _load_controlnet(self):
         if not self.controlnet_enabled or self.controlnet_is_loading:
@@ -1014,7 +1123,9 @@ class StableDiffusionModelManager(BaseModelManager):
             return
         self.logger.debug(f"Loading controlnet model")
         if not self.controlnet_model:
-            raise ValueError(f"Unable to find controlnet model {self.controlnet_settings_cached.controlnet}")
+            raise ValueError(
+                f"Unable to find controlnet model {self.controlnet_settings_cached.controlnet}"
+            )
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
         self._controlnet = ControlNetModel.from_pretrained(
             self.controlnet_path,
@@ -1022,20 +1133,22 @@ class StableDiffusionModelManager(BaseModelManager):
             device=self._device,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             use_safetensors=True,
-            use_fp16=True
+            use_fp16=True,
         )
 
     def _load_controlnet_processor(self):
         if self._controlnet_processor is not None:
             return
-        self.logger.debug(f"Loading controlnet processor {self.controlnet_model.name}")
+        self.logger.debug(
+            f"Loading controlnet processor {self.controlnet_model.name}"
+        )
         controlnet_data = controlnet_aux_models[self.controlnet_model.name]
         controlnet_class_: Any = controlnet_data["class"]
         checkpoint: bool = controlnet_data["checkpoint"]
         if checkpoint:
             self._controlnet_processor = controlnet_class_.from_pretrained(
                 self.controlnet_processor_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             )
         else:
             self._controlnet_processor = controlnet_class_()
@@ -1052,10 +1165,10 @@ class StableDiffusionModelManager(BaseModelManager):
                 scheduler_version,
                 "txt2img",
                 "scheduler",
-                "scheduler_config.json"
+                "scheduler_config.json",
             )
         )
-        
+
         scheduler = Schedulers.objects.filter_by_first(
             display_name=scheduler_name
         )
@@ -1068,68 +1181,19 @@ class StableDiffusionModelManager(BaseModelManager):
             self.scheduler = scheduler_class.from_pretrained(
                 scheduler_path,
                 subfolder="scheduler",
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             )
             self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
             self.current_scheduler_name = scheduler_name
             self.logger.debug(f"Loaded scheduler {scheduler_name}")
         except Exception as e:
-            self.logger.error(f"Failed to load scheduler {scheduler_name}: {e}")
+            self.logger.error(
+                f"Failed to load scheduler {scheduler_name}: {e}"
+            )
             self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
             return
         if self._pipe:
             self._pipe.scheduler = self.scheduler
-
-    def _prepare_quantization_settings(self, data: dict) -> dict:
-        """
-        Quantize the model if possible.
-        """
-        if self.is_sd_xl_turbo:
-            return data
-        
-        path = os.path.expanduser(os.path.join(
-            self.path_settings_cached.base_path,
-            "art",
-            "models",
-            StableDiffusionVersion.SDXL1_0.value if self.is_sd_xl_or_turbo else StableDiffusionVersion.SD1_5.value,
-            "inpaint" if self.is_outpaint else "txt2img"
-        ))
-
-        existing_file_path = os.path.join(path, "text_encoder", "model.fp16.safetensors")
-        expected_file_path = os.path.join(path, "text_encoder", "model.safetensors")
-        if not os.path.exists(expected_file_path) and os.path.exists(existing_file_path):
-            os.rename(existing_file_path, expected_file_path)
-
-        quant_config = TransformersBitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True
-        )
-        data["text_encoder"] = CLIPTextModel.from_pretrained(
-            path,
-            subfolder="text_encoder",
-            quantization_config=quant_config,
-            torch_dtype=torch.float16,
-            use_safetensors=True
-        )
-        
-        if self.is_sd_xl_or_turbo:
-            """
-            text encoder 2 is downloaded with the name model.fp16.safetensors
-            which worked when we were not quantizing the model but now when we 
-            are loading from pretrained it is looking for model.safetensors
-            """
-            existing_file_path = os.path.join(path, "text_encoder_2", "model.fp16.safetensors")
-            expected_file_path = os.path.join(path, "text_encoder_2", "model.safetensors")
-            if not os.path.exists(expected_file_path) and os.path.exists(existing_file_path):
-                os.rename(existing_file_path, expected_file_path)
-            data["text_encoder_2"] = CLIPTextModelWithProjection.from_pretrained(
-                path,
-                subfolder="text_encoder_2",
-                quantization_config=quant_config,
-                torch_dtype=torch.float16,
-                use_safetensors=True
-            )
-        return data
 
     def _prepare_tiny_autoencoder(self, data: Dict) -> Optional[Dict]:
         if not self.is_outpaint:
@@ -1141,26 +1205,26 @@ class StableDiffusionModelManager(BaseModelManager):
                 version = StableDiffusionVersion.SD1_5.value
                 repo_path = "madebyollin/taesd"
                 autoencoder_class_ = AutoencoderTiny
-            path = os.path.expanduser(os.path.join(
-                self.path_settings_cached.base_path,
-                "art",
-                "models",
-                version,
-                "tiny_autoencoder",
-                repo_path
-            ))
+            path = os.path.expanduser(
+                os.path.join(
+                    self.path_settings_cached.base_path,
+                    "art",
+                    "models",
+                    version,
+                    "tiny_autoencoder",
+                    repo_path,
+                )
+            )
             if not os.path.exists(path):
                 self.logger.error("Tiny autoencoder path does not exist")
                 self.emit_signal(SignalCode.MISSING_REQUIRED_MODELS)
-                self.emit_signal(SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                    "model": ModelType.SD,
-                    "status": ModelStatus.FAILED
-                })
+                self.emit_signal(
+                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                    {"model": ModelType.SD, "status": ModelStatus.FAILED},
+                )
                 return None
             data["vae"] = autoencoder_class_.from_pretrained(
-                path,
-                torch_dtype=torch.float16,
-                use_safetensors=True
+                path, torch_dtype=torch.float16, use_safetensors=True
             )
         return data
 
@@ -1177,20 +1241,20 @@ class StableDiffusionModelManager(BaseModelManager):
             data["controlnet"] = self._controlnet
 
         pipeline_class_ = self._pipeline_class
-
-        data = self._prepare_quantization_settings(data)
         data = self._prepare_tiny_autoencoder(data)
         if data is None:
             return
-        
+
         if self.is_sd_xl_turbo:
-            config_path = os.path.expanduser(os.path.join(
-                self.path_settings_cached.base_path,
-                "art",
-                "models",
-                StableDiffusionVersion.SDXL1_0.value,
-                self.image_request.pipeline_action
-            ))
+            config_path = os.path.expanduser(
+                os.path.join(
+                    self.path_settings_cached.base_path,
+                    "art",
+                    "models",
+                    StableDiffusionVersion.SDXL1_0.value,
+                    self.image_request.pipeline_action,
+                )
+            )
         else:
             config_path = os.path.dirname(self.model_path)
 
@@ -1199,26 +1263,23 @@ class StableDiffusionModelManager(BaseModelManager):
                 self.model_path,
                 config=config_path,
                 add_watermarker=False,
-                **data
+                **data,
             )
         except (
-            FileNotFoundError, 
-            EnvironmentError, 
-            torch.OutOfMemoryError, 
-            ValueError
+            FileNotFoundError,
+            EnvironmentError,
+            torch.OutOfMemoryError,
+            ValueError,
         ) as e:
             self.logger.error(
                 f"Failed to load model from {self.model_path}: {e}"
             )
-            self.change_model_status(
-                ModelType.SD, 
-                ModelStatus.FAILED
-            )
+            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
 
         self._send_pipeline_loaded_signal()
         self._move_pipe_to_device()
-    
+
     def _send_pipeline_loaded_signal(self):
         pipeline_type = None
         if self._pipe:
@@ -1230,8 +1291,7 @@ class StableDiffusionModelManager(BaseModelManager):
             elif pipeline_class in self.outpaint_pipelines:
                 pipeline_type = "inpaint"
         self.emit_signal(
-            SignalCode.SD_PIPELINE_LOADED_SIGNAL, 
-            {"pipeline": pipeline_type}
+            SignalCode.SD_PIPELINE_LOADED_SIGNAL, {"pipeline": pipeline_type}
         )
 
     def _move_pipe_to_device(self):
@@ -1244,10 +1304,9 @@ class StableDiffusionModelManager(BaseModelManager):
                 self.logger.error(f"Failed to load model to device: {e}")
 
     def _load_lora(self):
-        
+
         enabled_lora = Lora.objects.filter_by(
-            version=self.version,
-            enabled=True
+            version=self.version, enabled=True
         )
         for lora in enabled_lora:
             self._load_lora_weights(lora)
@@ -1265,9 +1324,7 @@ class StableDiffusionModelManager(BaseModelManager):
             adapter_name = os.path.splitext(filename)[0]
             adapter_name = adapter_name.replace(".", "_")
             self._pipe.load_lora_weights(
-                lora_base_path,
-                weight_name=filename,
-                adapter_name=adapter_name
+                lora_base_path, weight_name=filename, adapter_name=adapter_name
             )
             self._loaded_lora[lora.path] = lora
         except AttributeError as _e:
@@ -1284,18 +1341,20 @@ class StableDiffusionModelManager(BaseModelManager):
 
     def _set_lora_adapters(self):
         self.logger.debug("Setting LORA adapters")
-        
+
         loaded_lora_id = [lora.id for lora in self._loaded_lora.values()]
-        enabled_lora = Lora.objects.filter_by(
-            Lora.id.in_(loaded_lora_id)
-        )
+        enabled_lora = Lora.objects.filter_by(Lora.id.in_(loaded_lora_id))
         adapter_weights = []
         adapter_names = []
         for lora in enabled_lora:
             adapter_weights.append(lora.scale / 100.0)
-            adapter_names.append(os.path.splitext(os.path.basename(lora.path))[0])
+            adapter_names.append(
+                os.path.splitext(os.path.basename(lora.path))[0]
+            )
         if len(adapter_weights) > 0:
-            self._pipe.set_adapters(adapter_names, adapter_weights=adapter_weights)
+            self._pipe.set_adapters(
+                adapter_names, adapter_weights=adapter_weights
+            )
             self.logger.debug("LORA adapters set")
         else:
             self.logger.debug("No LORA adapters to set")
@@ -1309,27 +1368,34 @@ class StableDiffusionModelManager(BaseModelManager):
             self._pipe.unload_textual_inversion()
         except RuntimeError as e:
             self.logger.error(f"Failed to unload embeddings: {e}")
-        
-        embeddings = Embedding.objects.filter_by(
-            version=self.version
-        )
-        
+
+        embeddings = Embedding.objects.filter_by(version=self.version)
+
         for embedding in embeddings:
             embedding_path = embedding.path
-            if embedding.active and embedding_path not in self._loaded_embeddings:
+            if (
+                embedding.active
+                and embedding_path not in self._loaded_embeddings
+            ):
                 if not os.path.exists(embedding_path):
-                    self.logger.error(f"Embedding path {embedding_path} does not exist")
+                    self.logger.error(
+                        f"Embedding path {embedding_path} does not exist"
+                    )
                 else:
                     try:
-                        self.logger.debug(f"Loading embedding {embedding_path}")
+                        self.logger.debug(
+                            f"Loading embedding {embedding_path}"
+                        )
                         self._pipe.load_textual_inversion(
                             embedding_path,
                             token=embedding.name,
-                            weight_name=embedding_path
+                            weight_name=embedding_path,
                         )
                         self._loaded_embeddings.append(embedding_path)
                     except Exception as e:
-                        self.logger.error(f"Failed to load embedding {embedding_path}: {e}")
+                        self.logger.error(
+                            f"Failed to load embedding {embedding_path}: {e}"
+                        )
         if len(self._loaded_embeddings) > 0:
             self.logger.debug("Embeddings loaded")
         else:
@@ -1347,10 +1413,7 @@ class StableDiffusionModelManager(BaseModelManager):
 
     def _load_deep_cache(self):
         self._deep_cache_helper = DeepCacheSDHelper(pipe=self._pipe)
-        self._deep_cache_helper.set_params(
-            cache_interval=3,
-            cache_branch_id=0
-        )
+        self._deep_cache_helper.set_params(cache_interval=3, cache_branch_id=0)
         try:
             self._deep_cache_helper.enable()
         except AttributeError as e:
@@ -1358,26 +1421,29 @@ class StableDiffusionModelManager(BaseModelManager):
 
     def _load_textual_inversion_manager(self):
         self.logger.debug("Loading textual inversion manager")
-        self._textual_inversion_manager = DiffusersTextualInversionManager(self._pipe)
+        self._textual_inversion_manager = DiffusersTextualInversionManager(
+            self._pipe
+        )
 
     def _load_compel_proc(self):
         self.logger.debug("Loading compel proc")
         parameters = {
             "truncate_long_prompts": False,
-            "textual_inversion_manager": self._textual_inversion_manager
+            "textual_inversion_manager": self._textual_inversion_manager,
         }
         if self.is_sd_xl_or_turbo:
             tokenizer = [self._pipe.tokenizer, self._pipe.tokenizer_2]
             text_encoder = [self._pipe.text_encoder, self._pipe.text_encoder_2]
-            parameters["returned_embeddings_type"] = ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED
+            parameters["returned_embeddings_type"] = (
+                ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED
+            )
             parameters["requires_pooled"] = [False, True]
         else:
             tokenizer = self._pipe.tokenizer
             text_encoder = self._pipe.text_encoder
-        parameters.update({
-            "tokenizer": tokenizer,
-            "text_encoder": text_encoder
-        })
+        parameters.update(
+            {"tokenizer": tokenizer, "text_encoder": text_encoder}
+        )
         self._compel_proc = Compel(**parameters)
 
     def _make_memory_efficient(self):
@@ -1388,34 +1454,59 @@ class StableDiffusionModelManager(BaseModelManager):
             return
 
         memory_settings = [
-            ("last_channels_applied", "use_last_channels", self._apply_last_channels),
-            ("vae_slicing_applied", "use_enable_vae_slicing", self._apply_vae_slicing),
-            ("attention_slicing_applied", "use_attention_slicing", self._apply_attention_slicing),
+            (
+                "last_channels_applied",
+                "use_last_channels",
+                self._apply_last_channels,
+            ),
+            (
+                "vae_slicing_applied",
+                "use_enable_vae_slicing",
+                self._apply_vae_slicing,
+            ),
+            (
+                "attention_slicing_applied",
+                "use_attention_slicing",
+                self._apply_attention_slicing,
+            ),
             ("tiled_vae_applied", "use_tiled_vae", self._apply_tiled_vae),
-            ("accelerated_transformers_applied", "use_accelerated_transformers", self._apply_accelerated_transformers),
-            ("cpu_offload_applied", "use_enable_sequential_cpu_offload", self._apply_cpu_offload),
-            ("model_cpu_offload_applied", "enable_model_cpu_offload", self._apply_model_offload),
+            (
+                "accelerated_transformers_applied",
+                "use_accelerated_transformers",
+                self._apply_accelerated_transformers,
+            ),
+            (
+                "cpu_offload_applied",
+                "use_enable_sequential_cpu_offload",
+                self._apply_cpu_offload,
+            ),
+            (
+                "model_cpu_offload_applied",
+                "enable_model_cpu_offload",
+                self._apply_model_offload,
+            ),
             ("tome_sd_applied", "use_tome_sd", self._apply_tome),
         ]
 
         for setting_name, attribute_name, apply_func in memory_settings:
-            self._apply_memory_setting(setting_name, attribute_name, apply_func)
+            self._apply_memory_setting(
+                setting_name, attribute_name, apply_func
+            )
 
     def _finalize_load_stable_diffusion(self):
         safety_checker_ready = True
         if self.use_safety_checker:
             safety_checker_ready = (
-                self._safety_checker is not None and
-                self._feature_extractor is not None
+                self._safety_checker is not None
+                and self._feature_extractor is not None
             )
-        if (
-            self._pipe is not None
-            and safety_checker_ready
-        ):
+        if self._pipe is not None and safety_checker_ready:
             self._current_state = HandlerState.READY
             self.change_model_status(ModelType.SD, ModelStatus.LOADED)
         else:
-            self.logger.error("Something went wrong with Stable Diffusion loading")
+            self.logger.error(
+                "Something went wrong with Stable Diffusion loading"
+            )
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             self.unload()
             self._clear_cached_properties()
@@ -1438,8 +1529,14 @@ class StableDiffusionModelManager(BaseModelManager):
         enabled = AIRUNNER_MEM_USE_LAST_CHANNELS
         if enabled is None:
             enabled = attr_val
-        self.logger.debug(f"{'Enabling' if enabled else 'Disabling'} torch.channels_last")
-        self._pipe.unet.to(memory_format=torch.channels_last if enabled else torch.contiguous_format)
+        self.logger.debug(
+            f"{'Enabling' if enabled else 'Disabling'} torch.channels_last"
+        )
+        self._pipe.unet.to(
+            memory_format=(
+                torch.channels_last if enabled else torch.contiguous_format
+            )
+        )
 
     def _apply_vae_slicing(self, attr_val):
         enabled = AIRUNNER_MEM_USE_ENABLE_VAE_SLICING
@@ -1488,13 +1585,21 @@ class StableDiffusionModelManager(BaseModelManager):
         enabled = AIRUNNER_MEM_USE_ACCELERATED_TRANSFORMERS
         if enabled is None:
             enabled = attr_val
-        
+
         if not is_ampere_or_newer(self._device_index):
             enabled = False
 
-        from diffusers.models.attention_processor import AttnProcessor, AttnProcessor2_0
-        self.logger.debug(f"{'Enabling' if enabled else 'Disabling'} accelerated transformers")
-        self._pipe.unet.set_attn_processor(AttnProcessor2_0() if enabled else AttnProcessor())
+        from diffusers.models.attention_processor import (
+            AttnProcessor,
+            AttnProcessor2_0,
+        )
+
+        self.logger.debug(
+            f"{'Enabling' if enabled else 'Disabling'} accelerated transformers"
+        )
+        self._pipe.unet.set_attn_processor(
+            AttnProcessor2_0() if enabled else AttnProcessor()
+        )
 
     def _apply_cpu_offload(self, attr_val):
         enabled = AIRUNNER_MEM_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD
@@ -1506,7 +1611,9 @@ class StableDiffusionModelManager(BaseModelManager):
                 self.logger.debug("Enabling sequential cpu offload")
                 self._pipe.enable_sequential_cpu_offload(self._device_index)
             except NotImplementedError as e:
-                self.logger.warning(f"Error applying sequential cpu offload: {e}")
+                self.logger.warning(
+                    f"Error applying sequential cpu offload: {e}"
+                )
                 self._pipe.to(self._device)
         else:
             self.logger.debug("Sequential cpu offload disabled")
@@ -1515,7 +1622,10 @@ class StableDiffusionModelManager(BaseModelManager):
         enabled = AIRUNNER_MEM_ENABLE_MODEL_CPU_OFFLOAD
         if enabled is None:
             enabled = attr_val
-        if enabled and not self.memory_settings.use_enable_sequential_cpu_offload:
+        if (
+            enabled
+            and not self.memory_settings.use_enable_sequential_cpu_offload
+        ):
             self.logger.debug("Enabling model cpu offload")
             # self._move_stable_diffusion_to_cpu()
             self._pipe.enable_model_cpu_offload(self._device_index)
@@ -1532,12 +1642,16 @@ class StableDiffusionModelManager(BaseModelManager):
                 ratio = self.memory_settings.tome_sd_ratio / 1000
             else:
                 ratio = float(ratio)
-            self.logger.debug(f"Applying ToMe SD weight merging with ratio {ratio}")
+            self.logger.debug(
+                f"Applying ToMe SD weight merging with ratio {ratio}"
+            )
             self._remove_tome_sd()
             try:
                 tomesd.apply_patch(self._pipe, ratio=ratio)
             except Exception as e:
-                self.logger.error(f"Error applying ToMe SD weight merging: {e}")
+                self.logger.error(
+                    f"Error applying ToMe SD weight merging: {e}"
+                )
         else:
             self._remove_tome_sd()
 
@@ -1552,7 +1666,9 @@ class StableDiffusionModelManager(BaseModelManager):
         self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING)
         self._unload_safety_checker_model()
         self._unload_feature_extractor_model()
-        self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED)
+        self.change_model_status(
+            ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED
+        )
 
     def _unload_safety_checker_model(self):
         self.logger.debug("Unloading safety checker model")
@@ -1563,7 +1679,9 @@ class StableDiffusionModelManager(BaseModelManager):
             try:
                 self._safety_checker.to("cpu")
             except RuntimeError as e:
-                self.logger.warning(f"Failed to load model from {self.model_path}: {e}")
+                self.logger.warning(
+                    f"Failed to load model from {self.model_path}: {e}"
+                )
         del self._safety_checker
         self._safety_checker = None
 
@@ -1697,15 +1815,20 @@ class StableDiffusionModelManager(BaseModelManager):
             if self._compel_proc is not None:
                 self._unload_compel()
             return
-        
+
         if self._compel_proc is None:
-            self.logger.debug("Compel proc is not loading - attempting to load")
+            self.logger.debug(
+                "Compel proc is not loading - attempting to load"
+            )
             self._load_compel()
-        
+
         prompt = self.prompt
         negative_prompt = self.negative_prompt
         second_prompt = self.second_prompt
         second_negative_prompt = self.second_negative_prompt
+
+        print("PROMPT", prompt)
+        print("NEGATIVE PROMPT", negative_prompt)
 
         if (
             self._current_prompt != prompt
@@ -1721,10 +1844,10 @@ class StableDiffusionModelManager(BaseModelManager):
             self._unload_prompt_embeds()
 
         if (
-            self._prompt_embeds is None or 
-            self._negative_prompt_embeds is None or
-            self._pooled_prompt_embeds is None or
-            self._negative_pooled_prompt_embeds is None
+            self._prompt_embeds is None
+            or self._negative_prompt_embeds is None
+            or self._pooled_prompt_embeds is None
+            or self._negative_pooled_prompt_embeds is None
         ):
             self.logger.debug("Loading prompt embeds")
 
@@ -1741,7 +1864,9 @@ class StableDiffusionModelManager(BaseModelManager):
                 compel_prompt = ""
 
             if negative_prompt != "" and second_negative_prompt != "":
-                compel_negative_prompt = f'("{negative_prompt}", "{second_negative_prompt}").and()'
+                compel_negative_prompt = (
+                    f'("{negative_prompt}", "{second_negative_prompt}").and()'
+                )
             elif negative_prompt != "" and second_negative_prompt == "":
                 compel_negative_prompt = negative_prompt
             elif negative_prompt == "" and second_negative_prompt != "":
@@ -1750,20 +1875,28 @@ class StableDiffusionModelManager(BaseModelManager):
                 compel_negative_prompt = ""
 
             if self.is_sd_xl_or_turbo:
-                prompt_embeds, pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
-                negative_prompt_embeds, negative_pooled_prompt_embeds = self._compel_proc.build_conditioning_tensor(
-                    compel_negative_prompt
+                prompt_embeds, pooled_prompt_embeds = (
+                    self._compel_proc.build_conditioning_tensor(compel_prompt)
+                )
+                negative_prompt_embeds, negative_pooled_prompt_embeds = (
+                    self._compel_proc.build_conditioning_tensor(
+                        compel_negative_prompt
+                    )
                 )
             else:
-                prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
-                negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
-            [
-                prompt_embeds,
-                negative_prompt_embeds
-            ] = self._compel_proc.pad_conditioning_tensors_to_same_length([
-                prompt_embeds,
-                negative_prompt_embeds
-            ])
+                prompt_embeds = self._compel_proc.build_conditioning_tensor(
+                    compel_prompt
+                )
+                negative_prompt_embeds = (
+                    self._compel_proc.build_conditioning_tensor(
+                        compel_negative_prompt
+                    )
+                )
+            [prompt_embeds, negative_prompt_embeds] = (
+                self._compel_proc.pad_conditioning_tensors_to_same_length(
+                    [prompt_embeds, negative_prompt_embeds]
+                )
+            )
 
             self._prompt_embeds = prompt_embeds
             self._negative_prompt_embeds = negative_prompt_embeds
@@ -1809,16 +1942,20 @@ class StableDiffusionModelManager(BaseModelManager):
             self._set_lora_adapters()
 
         if self.use_compel:
-            args.update({
-                "prompt_embeds": self._prompt_embeds,
-                "negative_prompt_embeds": self._negative_prompt_embeds,
-            })
+            args.update(
+                {
+                    "prompt_embeds": self._prompt_embeds,
+                    "negative_prompt_embeds": self._negative_prompt_embeds,
+                }
+            )
 
             if self.is_sd_xl_or_turbo:
-                args.update({
-                    "pooled_prompt_embeds": self._pooled_prompt_embeds,
-                    "negative_pooled_prompt_embeds": self._negative_pooled_prompt_embeds,
-                })
+                args.update(
+                    {
+                        "pooled_prompt_embeds": self._pooled_prompt_embeds,
+                        "negative_pooled_prompt_embeds": self._negative_pooled_prompt_embeds,
+                    }
+                )
 
                 for key in [
                     "negative_target_size",
@@ -1826,19 +1963,20 @@ class StableDiffusionModelManager(BaseModelManager):
                     "crops_coords_top_left",
                 ]:
                     val = getattr(self.image_request, key, None)
-                    if val and val.get("width", None) and val.get("height", None):
-                        args.update({
-                            key: (
-                                val["width"],
-                                val["height"]
-                            )
-                        })
-                        
+                    if (
+                        val
+                        and val.get("width", None)
+                        and val.get("height", None)
+                    ):
+                        args.update({key: (val["width"], val["height"])})
+
         else:
-            args.update({
-                "prompt": self.prompt,
-                "negative_prompt": self.negative_prompt
-            })
+            args.update(
+                {
+                    "prompt": self.prompt,
+                    "negative_prompt": self.negative_prompt,
+                }
+            )
 
         width = int(self.application_settings_cached.working_width)
         height = int(self.application_settings_cached.working_height)
@@ -1846,15 +1984,17 @@ class StableDiffusionModelManager(BaseModelManager):
         mask = None
 
         if self.is_txt2img or self.is_outpaint or self.is_img2img:
-            args.update({
-                "width": width,
-                "height": height
-            })
+            args.update({"width": width, "height": height})
 
         if self.is_img2img:
             image = self.img2img_image
-            if args["num_inference_steps"] < AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG:
-                args["num_inference_steps"] = AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
+            if (
+                args["num_inference_steps"]
+                < AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
+            ):
+                args["num_inference_steps"] = (
+                    AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
+                )
         elif self.is_outpaint:
             image = self.outpaint_image
             if not image:
@@ -1864,7 +2004,14 @@ class StableDiffusionModelManager(BaseModelManager):
             # Crop the image based on the active grid location
             active_grid_x = active_rect.left()
             active_grid_y = active_rect.top()
-            cropped_image = image.crop((active_grid_x, active_grid_y, width + active_grid_x, height + active_grid_y))
+            cropped_image = image.crop(
+                (
+                    active_grid_x,
+                    active_grid_y,
+                    width + active_grid_x,
+                    height + active_grid_y,
+                )
+            )
 
             # Create a new image with a black strip at the bottom
             new_image = PIL.Image.new("RGBA", (width, height), (0, 0, 0, 255))
@@ -1877,19 +2024,24 @@ class StableDiffusionModelManager(BaseModelManager):
             if self.is_img2img:
                 args["strength"] = self.image_request.strength / 100.0
             elif self.is_outpaint:
-                args["strength"] = self.outpaint_settings_cached.strength / 100.0
-        
+                args["strength"] = (
+                    self.outpaint_settings_cached.strength / 100.0
+                )
 
         # set the image to controlnet image if controlnet is enabled
         if self.controlnet_enabled:
             controlnet_image = self.controlnet_image
             if controlnet_image:
-                controlnet_image = self._resize_image(controlnet_image, width, height)
-                control_image = self._controlnet_processor(controlnet_image, to_pil=True)
+                controlnet_image = self._resize_image(
+                    controlnet_image, width, height
+                )
+                control_image = self._controlnet_processor(
+                    controlnet_image, to_pil=True
+                )
                 if control_image is not None:
                     self.update_controlnet_settings(
                         "generated_image",
-                        convert_image_to_binary(control_image)
+                        convert_image_to_binary(control_image),
                     )
                     if self.is_txt2img:
                         image = control_image
@@ -1904,22 +2056,29 @@ class StableDiffusionModelManager(BaseModelManager):
 
         if mask is not None and self.is_outpaint:
             mask = self._resize_image(mask, width, height)
-            mask = self._pipe.mask_processor.blur(mask, blur_factor=self.mask_blur)
+            mask = self._pipe.mask_processor.blur(
+                mask, blur_factor=self.mask_blur
+            )
             args["mask_image"] = mask
 
         if self.controlnet_enabled:
-            args.update({
-                "guess_mode": False,
-                "control_guidance_start": 0.0,
-                "control_guidance_end": 1.0,
-                "strength": self.controlnet_strength / 100.0,
-                "guidance_scale": self.image_request.scale,
-                "controlnet_conditioning_scale": self.controlnet_conditioning_scale / 100.0
-            })
+            args.update(
+                {
+                    "guess_mode": False,
+                    "control_guidance_start": 0.0,
+                    "control_guidance_end": 1.0,
+                    "strength": self.controlnet_strength / 100.0,
+                    "guidance_scale": self.image_request.scale,
+                    "controlnet_conditioning_scale": self.controlnet_conditioning_scale
+                    / 100.0,
+                }
+            )
         return args
 
     @staticmethod
-    def _resize_image(image: Image, max_width: int, max_height: int) -> Optional[Image]:
+    def _resize_image(
+        image: Image, max_width: int, max_height: int
+    ) -> Optional[Image]:
         """
         Resize the image to ensure it is not larger than max_width and max_height,
         while maintaining the aspect ratio.
@@ -1953,7 +2112,9 @@ class StableDiffusionModelManager(BaseModelManager):
             new_width = int(new_height * aspect_ratio)
 
         # Resize the image
-        resized_image = image.resize((new_width, new_height), PIL.Image.Resampling.LANCZOS)
+        resized_image = image.resize(
+            (new_width, new_height), PIL.Image.Resampling.LANCZOS
+        )
         return resized_image
 
     def _set_seed(self):
@@ -1961,10 +2122,10 @@ class StableDiffusionModelManager(BaseModelManager):
         self.generator.manual_seed(seed)
 
     def _callback(self, step: int, _time_step, latents):
-        self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {
-            "step": step,
-            "total": self.image_request.steps
-        })
+        self.emit_signal(
+            SignalCode.SD_PROGRESS_SIGNAL,
+            {"step": step, "total": self.image_request.steps},
+        )
         if self._latents is None:
             self._latents = latents
         return {}

@@ -4,10 +4,15 @@ import shutil
 import os
 from os.path import join
 
-base_path = "/app"
-site_packages_path = "/home/appuser/.local/lib/python3.10/site-packages"
-dist = join(base_path, "dist")
-airunner_path = join(base_path, "src/airunner")
+HOME = os.getenv('HOME')
+
+base_path = os.path.expanduser(HOME)
+project_path = join(base_path, "Projects/airunner")
+airunner_path = join(project_path, "src/airunner")
+python_env_path = os.path.join(project_path, "venv")
+
+site_packages_path = join(base_path, python_env_path, "lib/python3.10/site-packages")
+dist = join(project_path, "dist")
 cudnn_lib = join(site_packages_path, 'nvidia/cudnn/lib')
 pyside_lib = join(site_packages_path, 'PySide6/Qt/lib')
 linux_lib = '/usr/lib/x86_64-linux-gnu'
@@ -15,17 +20,16 @@ nss_lib = linux_lib  # NSS libraries location
 gtk_lib = linux_lib  # GTK libraries location
 db_lib = linux_lib   # Database libraries location
 cuda_lib = '/usr/local/cuda-11/lib64'  # CUDA libraries location
-qt_lib = '/home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/lib/'
-cudnn_lib = '/home/appuser/.local/lib/python3.10/site-packages/nvidia/cudnn/lib/'
-python_include_path = "/usr/include/python3.10"
+qt_lib = join(base_path, python_env_path, 'lib/python3.10/site-packages/PySide6/Qt/lib/')
+cudnn_lib = join(base_path, python_env_path, 'lib/python3.10/site-packages/nvidia/cudnn/lib/')
 
 a = Analysis(
     [join(airunner_path, 'main.py')],
     pathex=[
-        join(base_path, 'src'),
+        join(project_path, 'src'),
     ],
     binaries=[
-        ('/home/appuser/.local/lib/python3.10/site-packages/tiktoken/_tiktoken.cpython-310-x86_64-linux-gnu.so', '.'),
+        (join(base_path, python_env_path, 'lib/python3.10/site-packages/tiktoken/_tiktoken.cpython-310-x86_64-linux-gnu.so'), '.'),
         (join(cudnn_lib, 'libcudnn_adv.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn_cnn.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn_engines_precompiled.so.9'), '.'),
@@ -40,9 +44,9 @@ a = Analysis(
         (join(qt_lib, 'libQt6Widgets.so.6'), '.'),
         (join(qt_lib, 'libQt6Gui.so.6'), '.'),
         (join(qt_lib, 'libQt6Core.so.6'), '.'),
-        (join(linux_lib, 'libpython3.10.so.1.0'), '.'),
-        (join(linux_lib, 'libxcb.so.1.1.0'), '.'),
-        (join(linux_lib, 'libxkbcommon-x11.so.0.0.0'), '.'),
+        ('/usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libxkbcommon-x11.so.0.0.0', '.'),
         # NSS libraries for QtWebEngine
         (join(nss_lib, 'libplds4.so'), '.'),
         (join(nss_lib, 'libplc4.so'), '.'),
@@ -74,13 +78,12 @@ a = Analysis(
         (join(linux_lib, 'libtbb.so.12.5'), '.'),
         (join(linux_lib, 'libtbb.so.12'), '.'),
         # CUDA libraries
-        ('/home/appuser/.local/lib/python3.10/site-packages/nvidia/cublas/lib/libcublas.so.12', '.'),
-        ('/home/appuser/.local/lib/python3.10/site-packages/nvidia/cusparse/lib/libcusparse.so.12', '.'),
-        ('/home/appuser/.local/lib/python3.10/site-packages/nvidia/cublas/lib/libcublasLt.so.12', '.'),
+        (join(base_path, python_env_path, 'lib/python3.10/site-packages/nvidia/cublas/lib/libcublas.so.12'), '.'),
+        (join(base_path, python_env_path, 'lib/python3.10/site-packages/nvidia/cusparse/lib/libcusparse.so.12'), '.'),
+        (join(base_path, python_env_path, 'lib/python3.10/site-packages/nvidia/cublas/lib/libcublasLt.so.12'), '.'),
     ],
     datas=[
         (join(airunner_path, 'alembic.ini'), 'airunner'),
-        (python_include_path, 'include/python3.10'),
         (join(site_packages_path, 'inflect'), 'inflect'),
         (join(site_packages_path, 'controlnet_aux'), 'controlnet_aux'),
         (join(site_packages_path, 'diffusers'), 'diffusers'),
@@ -91,6 +94,8 @@ a = Analysis(
         (join(site_packages_path, 'llama_index'), 'llama_index'),
         (join(site_packages_path, 'PySide6'), 'PySide6'),
         (join(site_packages_path, 'PySide6/Qt/plugins/platforms'), 'platforms'),
+        (join(site_packages_path, 'triton'), 'triton'),
+        (join(site_packages_path, 'bitsandbytes'), 'bitsandbytes'),
         (join(airunner_path, 'alembic'), 'airunner/alembic'),
         (join(airunner_path, 'alembic.ini'), '.'),
     ],
@@ -120,6 +125,14 @@ a = Analysis(
         'torch.jit._script',
         'torch.jit.frontend',
         'torch._sources',
+        'triton',
+        'triton.runtime',
+        'triton.runtime.driver',
+        'triton.backends',
+        'triton.backends.nvidia',
+        'bitsandbytes',
+        'bitsandbytes.nn',
+        'bitsandbytes.triton',
         'tiktoken',
         'tiktoken.model',
         'tiktoken.registry',
@@ -182,7 +195,7 @@ coll = COLLECT(
 )
 
 # Copy files to dist paths
-internal_path = join(base_path, dist, "airunner/_internal")
+internal_path = join(project_path, dist, "airunner/_internal")
 
 images_path = join(airunner_path, 'gui/images/')
 images_path_out = join(internal_path, "airunner/gui/images")
@@ -200,11 +213,11 @@ print(f"Copy alembic from {alembic_path} to {alembic_path_out}")
 shutil.copytree(alembic_path, alembic_path_out)
 
 data_path = join(airunner_path, 'data/')
-data_path_out = join(base_path, dist, "airunner/_internal/airunner/data")
+data_path_out = join(project_path, dist, "airunner/_internal/airunner/data")
 print(f"Copy data from {data_path} to {data_path_out}")
 shutil.copytree(data_path, data_path_out)
 
-punkt_path = '/home/appuser/nltk_data/tokenizers/punkt'
+punkt_path = join(base_path, 'nltk_data/tokenizers/punkt')
 punkt_path_out = join(internal_path, "llama_index/core/_static/nltk_cache/tokenizers/punkt")
 print(f"Copy punkt from {punkt_path} to {punkt_path_out}")
 shutil.copytree(punkt_path, punkt_path_out)
