@@ -19,6 +19,8 @@ services:
     environment:
       - DEV_ENV=1
       - BNB_CUDA_VERSION=124
+      - HOST_UID=${HOST_UID}
+      - HOST_GID=${HOST_GID}
     entrypoint: ["/home/appuser/entrypoint.sh"]
     volumes:
       - ../../:/app:rw,z
@@ -28,7 +30,7 @@ services:
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/data:/home/appuser/.local/share/airunner/data:rw,z"
       - "${HOST_HOME}/.cache/huggingface:/home/appuser/.cache/huggingface:rw,z"
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - /run/user/1000/pulse:/run/user/1000/pulse:ro
+      - /run/user/${HOST_UID}/pulse:/run/user/1000/pulse:ro
       - ${XAUTHORITY}:${XAUTHORITY}:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/torch/hub:/home/appuser/.cache/torch/hub:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python:/home/appuser/.local:rw,z
