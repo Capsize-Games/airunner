@@ -154,23 +154,17 @@ These are the sizes of the various models that power AI Runner.
 
 1. **Install NVIDIA Container Toolkit**  
    Follow the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to enable GPU passthrough for Docker.
-2. **Clone AI Runner and Run Setup**  
+2. **Clone AI Runner**  
    ```bash
    git clone https://github.com/Capsize-Games/airunner.git
    cd airunner
-   python3 -m venv venv
-   source venv/bin/activate
-   ./src/airunner/bin/setup.sh
    ```
-   - _Choose option **1** (Setup xhost)_
-   - _Choose option **2** (Install AI Runner scripts)_
-3. ```bash
+3. **Pull the docker image and run airunner**
+   ```bash
    docker pull ghcr.io/capsize-games/airunner/airunner:linux
-   ./src/airunner/bin/docker.sh airunner
+   docker compose --env-file .env -f ./package/dev/docker-compose.yml run --rm airunner_dev airunner
    ```
 This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
-
-For detailed steps, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
 ---
 
