@@ -170,7 +170,7 @@ RUN mkdir -p /home/appuser/butler && \
 
 
 COPY ./package/pip.conf /etc/pip.conf
-RUN chown -R appuser:appuser /etc/pip.conf && \
+RUN chown -R 1000:1000 /etc/pip.conf && \
     chmod 644 /etc/pip.conf
 
 USER ${HOST_UID}:${HOST_GID}
