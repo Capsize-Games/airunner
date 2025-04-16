@@ -258,8 +258,6 @@ We welcome pull requests for new features, bug fixes, or documentation improveme
 
 Take a look at the [Contributing document](https://github.com/Capsize-Games/airunner/CONTRIBUTING.md) and the [Development wiki page](https://github.com/Capsize-Games/airunner/wiki/Development) for detailed instructions.
 
-**If you find this project useful**, please consider giving us a ⭐ on GitHub—it really helps with visibility and encourages further development.
-
 ---
 
 ## Thank You!
