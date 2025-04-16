@@ -1018,7 +1018,7 @@ class BaseAgent(
             f"{backstory_prompt}"
             f"{system_instructions}"
             f"{guardrails}"
-            f"{self.conversation_summaries}"
+            # f"{self.conversation_summaries}"
             "------\n"
             "**Here is more context that you can use to generate a response:**\n"
             f"{self.date_time_prompt}"
@@ -1085,7 +1085,7 @@ class BaseAgent(
     @chat_memory.setter
     def chat_memory(self, value: Optional[ChatMemoryBuffer]):
         self._chat_memory = value
-    
+
     def _llm_updated(self):
         pass
 

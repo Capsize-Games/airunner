@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict
 import json
 import re
 import time
@@ -8,34 +8,26 @@ from PySide6.QtWidgets import QApplication, QWidget
 
 from airunner.data.models import ShortcutKeys
 from airunner.enums import (
-    SignalCode, 
-    GeneratorSection, 
-    ImageCategory, 
-    ImagePreset, 
+    SignalCode,
+    GeneratorSection,
+    ImagePreset,
     StableDiffusionVersion,
-    ModelStatus, 
-    ModelType, 
-    LLMActionType
+    ModelStatus,
+    ModelType,
+    LLMActionType,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.settings import (
-    AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT, 
-    AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT
-)
 from airunner.utils.application import random_seed
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.stablediffusion.\
-templates.stablediffusion_generator_form_ui import (
-    Ui_stablediffusion_generator_form
+from airunner.gui.widgets.stablediffusion.templates.stablediffusion_generator_form_ui import (
+    Ui_stablediffusion_generator_form,
 )
 from airunner.gui.widgets.stablediffusion.prompt_container_widget import (
-    PromptContainerWidget
+    PromptContainerWidget,
 )
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.handlers.llm.llm_response import LLMResponse
-from airunner.handlers.stablediffusion.image_request import (
-    ImageRequest
-)
+from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.utils.widgets import load_splitter_settings
 
 
@@ -79,8 +71,8 @@ class SaveGeneratorSettingsWorker(
 
             x = self.parent.ui.crops_coord_top_left_x.text()
             y = self.parent.ui.crops_coord_top_left_y.text()
-            x = int(x) if x != '' else 0
-            y = int(y) if y != '' else 0
+            x = int(x) if x != "" else 0
+            y = int(y) if y != "" else 0
 
             if self.crops_coord_top_left_x != x:
                 self.crops_coord_top_left_x = x
@@ -93,12 +85,18 @@ class SaveGeneratorSettingsWorker(
                 do_update_settings = False
                 generator_settings = self.generator_settings
                 generator_settings.prompt = self.current_prompt_value
-                generator_settings.negative_prompt = self.current_negative_prompt_value
-                generator_settings.second_prompt = self.current_secondary_prompt_value
-                generator_settings.second_negative_prompt = self.current_secondary_negative_prompt_value
+                generator_settings.negative_prompt = (
+                    self.current_negative_prompt_value
+                )
+                generator_settings.second_prompt = (
+                    self.current_secondary_prompt_value
+                )
+                generator_settings.second_negative_prompt = (
+                    self.current_secondary_negative_prompt_value
+                )
                 generator_settings.crops_coord_top_left = {
                     "x": self.crops_coord_top_left_x,
-                    "y": self.crops_coord_top_left_y
+                    "y": self.crops_coord_top_left_y,
                 }
                 generator_settings.save()
 
@@ -146,8 +144,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
     @property
     def is_sd_xl_or_turbo(self) -> bool:
         return (
-            self._sd_version == StableDiffusionVersion.SDXL1_0.value or
-            self._sd_version == StableDiffusionVersion.SDXL_TURBO.value
+            self._sd_version == StableDiffusionVersion.SDXL1_0.value
+            or self._sd_version == StableDiffusionVersion.SDXL_TURBO.value
         )
 
     def on_delete_prompt_clicked(self, data: Dict):
@@ -156,34 +154,34 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.logger.error(f"Unable to delete prompt")
             return
         prompt_container = self._prompt_containers[prompt_id]
-        self.ui.additional_prompts_container_layout.removeWidget(prompt_container)
+        self.ui.additional_prompts_container_layout.removeWidget(
+            prompt_container
+        )
         prompt_container.deleteLater()
         self._prompt_containers.pop(prompt_id)
-        
+
         # Save the updated prompt containers after deletion
         self.save_prompt_containers_to_settings()
 
     def on_application_settings_changed(self, data: Dict):
         if data.get("setting_name") == "generator_settings":
-            if data.get("column_name") in (
-                "use_compel",
-            ):
+            if data.get("column_name") in ("use_compel",):
                 self._toggle_compel_form_elements(data.get("value", True))
 
     def on_widget_element_changed(self, data: Dict):
         self._toggle_compel_form_elements(self.generator_settings.use_compel)
-        
-        if data.get("element") in (
-            "sd_version",
-        ):
+
+        if data.get("element") in ("sd_version",):
             self._sd_version = data.get("version")
             self._toggle_sdxl_form_elements()
-    
+
     def _toggle_compel_form_elements(self, value: bool):
         self.logger.info("Toggle compel form elements")
         # Iterate over all widgets in the layout and enable/disable them
         for i in range(self.ui.additional_prompts_container_layout.count()):
-            widget = self.ui.additional_prompts_container_layout.itemAt(i).widget()
+            widget = self.ui.additional_prompts_container_layout.itemAt(
+                i
+            ).widget()
             if widget:
                 widget.show() if value else widget.hide()
 
@@ -231,9 +229,11 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.active_grid_settings.pos_x,
             self.active_grid_settings.pos_y,
             self.application_settings.working_width,
-            self.application_settings.working_height
+            self.application_settings.working_height,
         )
-        rect.translate(-self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos)
+        rect.translate(
+            -self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos
+        )
 
         return rect
 
@@ -261,24 +261,19 @@ class StableDiffusionGeneratorForm(BaseWidget):
         It sets the prompts in the generator form UI and continues the image generation process.
         """
         # Unload non-Stable Diffusion models
-        self.emit_signal(SignalCode.UNLOAD_NON_SD_MODELS, dict(
-            callback=self.unload_llm_callback
-        ))
+        self.emit_signal(
+            SignalCode.UNLOAD_NON_SD_MODELS,
+            dict(callback=self.unload_llm_callback),
+        )
         # Set the prompts in the generator form UI
         data = data["message"]
         self.update_application_settings("working_width", data["width"])
         self.update_application_settings("working_height", data["height"])
+        self.update_generator_settings("image_preset", data.get("type", ""))
         prompt = data.get("prompt", None)
         secondary_prompt = data.get("secondary_prompt", None)
-        prompt_type = data.get("type", ImageCategory.PHOTO.value)
-        if prompt_type == "photo":
-            negative_prompt = AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT
-        else:
-            negative_prompt = AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT
         self.ui.prompt.setPlainText(prompt)
-        self.ui.negative_prompt.setPlainText(negative_prompt)
         self.ui.secondary_prompt.setPlainText(secondary_prompt)
-        self.ui.secondary_negative_prompt.setPlainText(negative_prompt)
 
     def unload_llm_callback(self, _data: dict = None):
         """
@@ -288,48 +283,63 @@ class StableDiffusionGeneratorForm(BaseWidget):
             # If SD is not enabled, enable it and then emit a signal to generate the image
             # The callback function is handled by the signal handler for the SD_LOAD_SIGNAL.
             # The finalize function is a callback which is called after the image has been generated.
-            self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
-                callback=self.handle_generate_button_clicked,
-                finalize=self.finalize_image_generated_by_llm
-            ))
+            self.emit_signal(
+                SignalCode.TOGGLE_SD_SIGNAL,
+                dict(
+                    callback=self.handle_generate_button_clicked,
+                    finalize=self.finalize_image_generated_by_llm,
+                ),
+            )
         else:
             # If SD is already enabled, emit a signal to generate the image.
             # The finalize function is a callback which is called after the image has been generated.
-            self.handle_generate_button_clicked(dict(
-                finalize=self.finalize_image_generated_by_llm
-            ))
+            self.handle_generate_button_clicked(
+                dict(finalize=self.finalize_image_generated_by_llm)
+            )
 
     def finalize_image_generated_by_llm(self, _data):
         """
         Callback function to be called after the image has been generated.
         """
-        self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, dict(
-            callback=lambda d: self.emit_signal(SignalCode.LOAD_NON_SD_MODELS, dict(
-                callback=lambda _d: self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
-                    "response": LLMResponse(
-                        message="Your image has been generated",
-                        is_first_message=True,
-                        is_end_of_message=True,
-                        name=self.chatbot.name,
-                        action=LLMActionType.GENERATE_IMAGE
-                    )
-                })
-            ))
-        ))
+        self.emit_signal(
+            SignalCode.TOGGLE_SD_SIGNAL,
+            dict(
+                callback=lambda d: self.emit_signal(
+                    SignalCode.LOAD_NON_SD_MODELS,
+                    dict(
+                        callback=lambda _d: self.emit_signal(
+                            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                            {
+                                "response": LLMResponse(
+                                    message="Your image has been generated",
+                                    is_first_message=True,
+                                    is_end_of_message=True,
+                                    name=self.chatbot.name,
+                                    action=LLMActionType.GENERATE_IMAGE,
+                                )
+                            },
+                        )
+                    ),
+                )
+            ),
+        )
+
     ##########################################################################
     # End LLM Generated Image handlers
     ##########################################################################
 
     @Slot()
     def handle_add_prompt_clicked(self):
-        additional_prompts_container_layout = self.ui.additional_prompts_container_layout
+        additional_prompts_container_layout = (
+            self.ui.additional_prompts_container_layout
+        )
         prompt_container = PromptContainerWidget()
         prompt_container.prompt_id = len(self._prompt_containers.keys())
         additional_prompts_container_layout.addWidget(prompt_container)
 
         # store prompt container in self._prompt_containers
         self._prompt_containers[prompt_container.prompt_id] = prompt_container
-        
+
         # Save the updated prompt containers
         self.save_prompt_containers_to_settings()
 
@@ -345,7 +355,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.prompt.setPlainText(saved_prompt.prompt)
         self.ui.negative_prompt.setPlainText(saved_prompt.negative_prompt)
         self.ui.secondary_prompt.setPlainText(saved_prompt.secondary_prompt)
-        self.ui.secondary_negative_prompt.setPlainText(saved_prompt.secondary_negative_prompt)
+        self.ui.secondary_negative_prompt.setPlainText(
+            saved_prompt.secondary_negative_prompt
+        )
         self.ui.prompt.blockSignals(False)
         self.ui.negative_prompt.blockSignals(False)
         self.ui.secondary_prompt.blockSignals(False)
@@ -359,20 +371,30 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     def do_generate(self, data=None):
         data = data or {}
-        
+
         callback = data.get("finalize", None)
 
         # Update data with additional prompt data from self._prompt_containers
-        additional_prompts = [{
-            "prompt": container.get_prompt(),
-            "prompt_secondary": container.get_prompt_secondary()
-        } for _prompt_id, container in self._prompt_containers.items()]
+        additional_prompts = [
+            {
+                "prompt": container.get_prompt(),
+                "prompt_secondary": container.get_prompt_secondary(),
+            }
+            for _prompt_id, container in self._prompt_containers.items()
+        ]
 
         image_request = ImageRequest(
             prompt=data.get("prompt", self.ui.prompt.toPlainText()),
-            negative_prompt=data.get("negative_prompt", self.ui.negative_prompt.toPlainText()),
-            second_prompt=data.get("second_prompt", self.ui.secondary_prompt.toPlainText()),
-            second_negative_prompt=data.get("second_negative_prompt", self.ui.secondary_negative_prompt.toPlainText()),
+            negative_prompt=data.get(
+                "negative_prompt", self.ui.negative_prompt.toPlainText()
+            ),
+            second_prompt=data.get(
+                "second_prompt", self.ui.secondary_prompt.toPlainText()
+            ),
+            second_negative_prompt=data.get(
+                "second_negative_prompt",
+                self.ui.secondary_negative_prompt.toPlainText(),
+            ),
             crops_coord_top_left=self.generator_settings.crops_coord_top_left,
             pipeline_action=self.generator_settings.pipeline_action,
             generator_name=self.generator_name,
@@ -396,20 +418,25 @@ class StableDiffusionGeneratorForm(BaseWidget):
             negative_original_size=self.generator_settings.negative_original_size,
             lora_scale=self.generator_settings.lora_scale,
             additional_prompts=additional_prompts,
-            callback=callback
+            callback=callback,
+            image_preset=ImagePreset(self.generator_settings.image_preset),
+        )
+        print("SENDING GENERATE SIGNAL WITH PRESET", image_request.image_preset)
+
+        self.emit_signal(
+            SignalCode.DO_GENERATE_SIGNAL, {"sd_request": image_request}
         )
 
-        self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {
-            "sd_request": image_request
-        })
-
     def action_clicked_button_save_prompts(self):
-        self.emit_signal(SignalCode.SD_SAVE_PROMPT_SIGNAL, {
-            "prompt": self.ui.prompt.toPlainText(),
-            "negative_prompt": self.ui.negative_prompt.toPlainText(),
-            "secondary_prompt": self.ui.secondary_prompt.toPlainText(),
-            "secondary_negative_prompt": self.ui.secondary_negative_prompt.toPlainText(),
-        })
+        self.emit_signal(
+            SignalCode.SD_SAVE_PROMPT_SIGNAL,
+            {
+                "prompt": self.ui.prompt.toPlainText(),
+                "negative_prompt": self.ui.negative_prompt.toPlainText(),
+                "secondary_prompt": self.ui.secondary_prompt.toPlainText(),
+                "secondary_negative_prompt": self.ui.secondary_negative_prompt.toPlainText(),
+            },
+        )
 
     def handle_prompt_changed(self):
         pass
@@ -443,7 +470,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     def extract_json_from_message(self, message):
         # Regular expression to find the JSON block
-        json_pattern = re.compile(r'.*`json\s*({.*?})\s*`.*', re.DOTALL)
+        json_pattern = re.compile(r".*`json\s*({.*?})\s*`.*", re.DOTALL)
         match = json_pattern.search(message)
 
         if match:
@@ -489,11 +516,11 @@ class StableDiffusionGeneratorForm(BaseWidget):
             current = 0
         else:
             try:
-                current = (step / total)
+                current = step / total
             except ZeroDivisionError:
                 current = 0
         self.set_progress_bar_value(int(current * 100))
-    
+
     def set_progress_bar_value(self, value):
         progressbar = self.ui.progress_bar
         if not progressbar:
@@ -526,7 +553,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.thread.start()
 
         load_splitter_settings(self.ui, ["generator_form_splitter"])
-        
+
         # Restore prompt containers when widget is shown
         self.restore_prompt_containers_from_settings()
 
@@ -551,19 +578,33 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.quality_effects.blockSignals(True)
 
         self.ui.prompt.setPlainText(self.generator_settings.prompt)
-        self.ui.negative_prompt.setPlainText(self.generator_settings.negative_prompt)
-        self.ui.secondary_prompt.setPlainText(self.generator_settings.second_prompt)
-        self.ui.secondary_negative_prompt.setPlainText(self.generator_settings.second_negative_prompt)
-        self.ui.crops_coord_top_left_x.setText(str(self.generator_settings.crops_coord_top_left["x"]))
-        self.ui.crops_coord_top_left_y.setText(str(self.generator_settings.crops_coord_top_left["y"]))
+        self.ui.negative_prompt.setPlainText(
+            self.generator_settings.negative_prompt
+        )
+        self.ui.secondary_prompt.setPlainText(
+            self.generator_settings.second_prompt
+        )
+        self.ui.secondary_negative_prompt.setPlainText(
+            self.generator_settings.second_negative_prompt
+        )
+        self.ui.crops_coord_top_left_x.setText(
+            str(self.generator_settings.crops_coord_top_left["x"])
+        )
+        self.ui.crops_coord_top_left_y.setText(
+            str(self.generator_settings.crops_coord_top_left["y"])
+        )
 
         image_presets = [""] + [preset.value for preset in ImagePreset]
         self.ui.image_presets.addItems(image_presets)
         self.ui.image_presets.setCurrentIndex(
-            self.ui.image_presets.findText(self.generator_settings.image_preset)
+            self.ui.image_presets.findText(
+                self.generator_settings.image_preset
+            )
         )
 
-        self.ui.quality_effects.setCurrentText(self.generator_settings.quality_effects)
+        self.ui.quality_effects.setCurrentText(
+            self.generator_settings.quality_effects
+        )
 
         self.ui.prompt.blockSignals(False)
         self.ui.negative_prompt.blockSignals(False)
@@ -601,34 +642,42 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
         if generate_image_key:
             self.ui.generate_button.setShortcut(generate_image_key.key)
-            self.ui.generate_button.setToolTip(f"{generate_image_key.display_name} ({generate_image_key.text})")
+            self.ui.generate_button.setToolTip(
+                f"{generate_image_key.display_name} ({generate_image_key.text})"
+            )
         if interrupt_key:
             self.ui.interrupt_button.setShortcut(interrupt_key.key)
-            self.ui.interrupt_button.setToolTip(f"{interrupt_key.display_name} ({interrupt_key.text})")
+            self.ui.interrupt_button.setToolTip(
+                f"{interrupt_key.display_name} ({interrupt_key.text})"
+            )
 
     def save_prompt_containers_to_settings(self):
         """Save all additional prompt containers to QSettings."""
         if not self.initialized:
             return
-            
+
         settings = QSettings()
         settings.beginGroup("sd_additional_prompts")
-        
+
         # Clear existing settings first
         settings.remove("")
-        
+
         # Save the number of containers
         settings.setValue("count", len(self._prompt_containers))
-        
+
         # Save each container's data
-        for i, (prompt_id, container) in enumerate(self._prompt_containers.items()):
+        for i, (prompt_id, container) in enumerate(
+            self._prompt_containers.items()
+        ):
             settings.setValue(f"prompt_{i}_id", prompt_id)
             settings.setValue(f"prompt_{i}_text", container.get_prompt())
-            settings.setValue(f"prompt_{i}_text_secondary", container.get_prompt_secondary())
-        
+            settings.setValue(
+                f"prompt_{i}_text_secondary", container.get_prompt_secondary()
+            )
+
         settings.endGroup()
         settings.sync()
-    
+
     def restore_prompt_containers_from_settings(self):
         """Restore additional prompt containers from QSettings."""
         # Clear existing containers first
@@ -636,24 +685,28 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.ui.additional_prompts_container_layout.removeWidget(container)
             container.deleteLater()
         self._prompt_containers.clear()
-        
+
         settings = QSettings()
         settings.beginGroup("sd_additional_prompts")
-        
+
         count = settings.value("count", 0, type=int)
-        
+
         for i in range(count):
             prompt_id = settings.value(f"prompt_{i}_id", i, type=int)
             prompt_text = settings.value(f"prompt_{i}_text", "", type=str)
-            prompt_text_secondary = settings.value(f"prompt_{i}_text_secondary", "", type=str)
-            
+            prompt_text_secondary = settings.value(
+                f"prompt_{i}_text_secondary", "", type=str
+            )
+
             # Create and add the container
             prompt_container = PromptContainerWidget()
             prompt_container.prompt_id = prompt_id
             prompt_container.set_prompt(prompt_text)
             prompt_container.set_prompt_secondary(prompt_text_secondary)
-            
-            self.ui.additional_prompts_container_layout.addWidget(prompt_container)
+
+            self.ui.additional_prompts_container_layout.addWidget(
+                prompt_container
+            )
             self._prompt_containers[prompt_id] = prompt_container
-        
+
         settings.endGroup()
