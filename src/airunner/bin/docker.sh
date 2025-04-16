@@ -171,7 +171,7 @@ fi
 DOCKER_COMPOSE_BUILD_BASE="docker compose --env-file .env -f ./package/prod/docker-compose.yml"
 DOCKER_COMPOSE_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/docker-compose-linux_build_runtime.yml"
 DOCKER_COMPOSE_BUILD_PACKAGE="docker compose --env-file .env -f ./package/prod/docker-compose-linux_package.yml"
-DOCKER_COMPOSE_BUILD_DEV_RUNTIME="docker compose --env-file .env -f ./package/dev/docker-compose-linux_build_dev_runtime.yml"
+DOCKER_COMPOSE_BUILD_DEV_RUNTIME="docker compose --env-file .env -f ./package/dev/docker-compose.yml"
 DOCKER_COMPOSE_BUILD_DEV_PACKAGE="docker compose --env-file .env -f ./package/dev/docker-compose-linux_dev_package.yml"
 DOCKER_EXEC="docker exec -it airunner_dev"
 
@@ -214,15 +214,16 @@ fi
 
 if [ "$1" == "build_dev_package" ]; then
   echo "Building for Linux production..."
-  $DOCKER_COMPOSE_BUILD_DEV_PACKAGE build
-  $DOCKER_COMPOSE_BUILD_DEV_PACKAGE run --rm airunner_package /app/package/dev/pyinstaller/build_dev.sh
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME build
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --rm airunner_dev /app/package/pyinstaller/build_dev.sh
   exit 0
 fi
 
 # Get user command
+docker pull ghcr.io/capsize-games/airunner/airunner:linux
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
-  $DOCKER_COMPOSE_BUILD_RUNTIME run --rm airunner_build_runtime bash
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --rm airunner_dev bash
 else
-  $DOCKER_COMPOSE_BUILD_RUNTIME run --rm airunner_dev "$@"
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --rm airunner_dev "$@"
 fi
