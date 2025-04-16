@@ -72,7 +72,7 @@ services:
       - ../../.env
     stdin_open: true
     tty: true
-    entrypoint: ["/app/package/dev/entrypoint.sh"]
+    entrypoint: ["/app/package/prod/entrypoint.sh"]
     volumes:
       - ../../:/app:rw
       - ../../package/prod/entrypoint.sh:/home/appuser/entrypoint.sh:ro

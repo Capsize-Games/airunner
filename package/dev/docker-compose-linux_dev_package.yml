@@ -24,9 +24,13 @@ services:
     entrypoint: ["/home/appuser/entrypoint.sh"]
     volumes:
       - ../../:/app:rw,z
-      - ../../package/dev/entrypoint.sh:/home/appuser/entrypoint.sh:ro
       - ../package/asound.conf:/etc/asound.conf:rw
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}:/home/appuser/.local/share/airunner:rw,z"
+      - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python:/home/appuser/.local/share/airunner/python:rw,z"
+      - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/lib:/home/appuser/.local/share/airunner/lib:rw,z"
+      - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/bin:/home/appuser/.local/share/airunner/bin:rw,z"
+      - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/lib/python3.10:/home/appuser/.local/lib/python3.10:rw,z"
+      - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/lib/python3.10/site-packages:/home/appuser/.local/lib/python3.10/site-packages:rw,z"
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/data:/home/appuser/.local/share/airunner/data:rw,z"
       - "${HOST_HOME}/.cache/huggingface:/home/appuser/.cache/huggingface:rw,z"
       - /tmp/.X11-unix:/tmp/.X11-unix:rw

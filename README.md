@@ -153,6 +153,8 @@ These are the sizes of the various models that power AI Runner.
 
 ### Development Environment setup
 
+#### Linux
+
 **Recommended for most developers**—it avoids Python environment headaches and streamlines GPU access.
 
 1. **Install NVIDIA Container Toolkit**  
@@ -168,9 +170,37 @@ These are the sizes of the various models that power AI Runner.
    ```
 This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
 
-### Build the package locally
+#### Windows
+
+1. [Install WSL 2](https://learn.microsoft.com/en-us/windows/wsl/install)
+1. [Install Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)
+1. [Enable WSL for Docker Desktop](https://docs.docker.com/desktop/features/wsl/)
+1. **Clone the repo**
+   Use [Github Desktop](https://github.com/apps/desktop) or powershell to clone this repo
+1. **Create an .env file in the `airunner` root directory**
+   ```bash
+   HOST_GID=1000
+   HOST_UID=1000
+   HOST_HOME=/mnt/c/Users/j/
+   ```
+1. **Connect to WSL Ubuntu terminal**
+   Run this command from Ubuntu WSL terminal
+   `sudo apt install x11-apps`
+1. Test by running `xcalc` - you should see a calculator app
+1. **Start AI Runner**
+   Change into the directory you cloned airunner, for example
+   `cd /mnt/c/Users/foobar/airunner`
+   `docker compose --env-file .env -f ./package/dev/docker-compose.yml run --build --rm airunner_dev airunner`
+
+---
+
+### Building the package
 
 AI Runner uses PyInstaller to create a standalone package. If you want to build it for yourself, follow these steps.
+
+#### Build the package locally
+
+Follow these steps to build the package locally on your machine
 
 1. **Follow the *Development Environment setup* steps above.**
 2. **Build the package**  
@@ -178,9 +208,9 @@ AI Runner uses PyInstaller to create a standalone package. If you want to build 
    ./src/airunner/bin/docker.sh build_dev_package
    ```
 
-#### Building the package for production
+#### Production build
 
-If you want to build the production package, follow these steps.
+Follow these steps to build the package with the intent to distribute - this is run from docker workers.
 
 1. **Follow the *Development Environment setup* steps above.**
 2. **Build the package**  

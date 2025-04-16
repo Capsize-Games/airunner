@@ -17,8 +17,6 @@ services:
       - AIRUNNER_ENVIRONMENT=dev
       - HOST_UID=${HOST_UID}
       - HOST_GID=${HOST_GID}
-      # - UID=${UID}
-      # - GID=${GID}
       - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512,expandable_segments:True
       - NUMBA_CACHE_DIR=/tmp/numba_cache
       - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
@@ -78,17 +76,16 @@ services:
       - ../../.env
     stdin_open: true
     tty: true
-    entrypoint: ["/app/package/dev/entrypoint.sh"]
+    entrypoint: ["/bin/bash", "/home/appuser/entrypoint.sh"]
     volumes:
       - ../../:/app:rw,z
-      - ../../package/dev/entrypoint.sh:/home/appuser/entrypoint.sh:ro
       - ../package/asound.conf:/etc/asound.conf:rw
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}:/home/appuser/.local/share/airunner:rw,z"
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/data:/home/appuser/.local/share/airunner/data:rw,z"
       - "${HOST_HOME}/.cache/huggingface:/home/appuser/.cache/huggingface:rw,z"
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /run/user/${HOST_UID}/pulse:/run/user/1000/pulse:ro
-      - ${XAUTHORITY}:${XAUTHORITY}:rw,z
+      # - ${XAUTHORITY}:${XAUTHORITY}:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/torch/hub:/home/appuser/.cache/torch/hub:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python:/home/appuser/.local:rw,z
     working_dir: /app

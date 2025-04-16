@@ -131,8 +131,10 @@ ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 COPY --chown=${HOST_UID}:${HOST_GID} . /app/
+COPY --chown=${HOST_UID}:${HOST_GID} package/dev/entrypoint.sh /home/appuser/entrypoint.sh
 
 USER ${HOST_UID}:${HOST_GID}
+
 
 WORKDIR /app
 
