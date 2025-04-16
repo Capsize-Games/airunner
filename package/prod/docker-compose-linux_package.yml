@@ -3,8 +3,8 @@ services:
     container_name: linux_package
     image: capsize-games/airunner/airunner:linux_package
     build:
-      context: ..
-      dockerfile: package/Dockerfile.linux_package
+      context: ../..
+      dockerfile: package/prod/Dockerfile.linux_package
       args:
         - INSTALL_XCB_CURSOR=1
     user: "${HOST_UID}:${HOST_GID}"

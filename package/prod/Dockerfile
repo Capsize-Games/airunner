@@ -134,8 +134,8 @@ RUN apt-get update && apt-get install -y sudo && \
 
 
 COPY --chown=appuser:appuser . /app/
-COPY ./package/entrypoint.sh /home/appuser/entrypoint.sh
-RUN chmod +x /app/package/entrypoint.sh
+COPY ./package/prod/entrypoint.sh /home/appuser/entrypoint.sh
+RUN chmod +x /home/appuser/entrypoint.sh
 
 # Download butler
 WORKDIR /home/appuser/
