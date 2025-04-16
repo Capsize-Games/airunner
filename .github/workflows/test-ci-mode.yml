@@ -27,15 +27,6 @@ jobs:
       - name: Run CI mode tests
         run: ./test_ci_mode.sh
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: ci-mode-test-results
-          path: |
-            ci_mode_test_results.log
-            ci_mode_test_errors.log
-
       - name: Clean up Docker
         if: always()
         run: docker system prune -af
