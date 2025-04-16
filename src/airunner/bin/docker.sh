@@ -186,6 +186,11 @@ if [ "$CI_MODE" -eq 1 ]; then
   DOCKER_COMPOSE_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/docker-compose-ci-runtime.yml"
   DOCKER_COMPOSE_BUILD_PACKAGE="docker compose --env-file .env -f ./package/prod/docker-compose-ci-package.yml"
   DOCKER_COMPOSE_BUILD_DEV_RUNTIME="docker compose --env-file .env -f ./package/prod/docker-compose-ci.yml"
+  
+  # Ensure dist directory exists and has correct permissions for CI mode
+  echo "Creating dist directory for CI mode outputs..."
+  mkdir -p ./dist
+  chmod 777 ./dist
 else
   # Regular mode with local volume mounts
   DOCKER_COMPOSE_BUILD_BASE="docker compose --env-file .env -f ./package/prod/docker-compose.yml"
