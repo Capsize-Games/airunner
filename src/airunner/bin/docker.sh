@@ -168,11 +168,11 @@ else
   echo "Created .env file with HOST_HOME=$HOME, HOST_UID=$HOST_UID, HOST_GID=$HOST_GID"
 fi
 
-DOCKER_COMPOSE_BUILD_BASE="docker compose --env-file .env -f ./package/docker-compose.yml"
-DOCKER_COMPOSE_BUILD_RUNTIME="docker compose --env-file .env -f ./package/docker-compose-linux_build_runtime.yml"
-DOCKER_COMPOSE_BUILD_DEV_RUNTIME="docker compose --env-file .env -f ./package/docker-compose-linux_build_dev_runtime.yml"
-DOCKER_COMPOSE_BUILD_PACKAGE="docker compose --env-file .env -f ./package/docker-compose-linux_package.yml"
-DOCKER_COMPOSE_BUILD_DEV_PACKAGE="docker compose --env-file .env -f ./package/docker-compose-linux_dev_package.yml"
+DOCKER_COMPOSE_BUILD_BASE="docker compose --env-file .env -f ./package/prod/docker-compose.yml"
+DOCKER_COMPOSE_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/docker-compose-linux_build_runtime.yml"
+DOCKER_COMPOSE_BUILD_PACKAGE="docker compose --env-file .env -f ./package/prod/docker-compose-linux_package.yml"
+DOCKER_COMPOSE_BUILD_DEV_RUNTIME="docker compose --env-file .env -f ./package/dev/docker-compose-linux_build_dev_runtime.yml"
+DOCKER_COMPOSE_BUILD_DEV_PACKAGE="docker compose --env-file .env -f ./package/dev/docker-compose-linux_dev_package.yml"
 DOCKER_EXEC="docker exec -it airunner_dev"
 
 if [ "$1" == "down" ]; then
@@ -208,14 +208,14 @@ fi
 if [ "$1" == "build_package" ]; then
   echo "Building for Linux production..."
   $DOCKER_COMPOSE_BUILD_PACKAGE build
-  $DOCKER_COMPOSE_BUILD_PACKAGE run --rm airunner_package /app/package/pyinstaller/build.sh
+  $DOCKER_COMPOSE_BUILD_PACKAGE run --rm airunner_package /app/package/prod/pyinstaller/build.sh
   exit 0
 fi
 
 if [ "$1" == "build_dev_package" ]; then
   echo "Building for Linux production..."
   $DOCKER_COMPOSE_BUILD_DEV_PACKAGE build
-  $DOCKER_COMPOSE_BUILD_DEV_PACKAGE run --rm airunner_package /app/package/pyinstaller/build_dev.sh
+  $DOCKER_COMPOSE_BUILD_DEV_PACKAGE run --rm airunner_package /app/package/dev/pyinstaller/build_dev.sh
   exit 0
 fi
 
