@@ -53,6 +53,24 @@ RUN apt-get update && apt-get install -y software-properties-common && \
  patchelf \
  mesa-utils \
  xauth \
+ libnss3 \
+ libatk1.0-0 \
+ libxkbcommon-x11-0 \
+ libgtk-3-0 \
+ libpq5 \
+ libodbc2 \
+ libmysqlclient21 \
+ libpcsclite1 \
+ libpcsclite-dev \
+ libcups2 \
+ libcups2-dev \
+ libspeechd2 \
+ libspeechd-dev \
+ libsox3 \
+ libsox-dev \
+ libtbb12 \
+ libtbb-dev \
+ libtbb2 \
  # Fontconfig and fonts
  fontconfig \
  fonts-liberation \
@@ -134,8 +152,8 @@ RUN apt-get update && apt-get install -y sudo && \
 
 
 COPY --chown=appuser:appuser . /app/
-COPY ./package/entrypoint.sh /home/appuser/entrypoint.sh
-RUN chmod +x /app/package/entrypoint.sh
+COPY ./package/prod/entrypoint.sh /home/appuser/entrypoint.sh
+RUN chmod +x /home/appuser/entrypoint.sh
 
 # Download butler
 WORKDIR /home/appuser/

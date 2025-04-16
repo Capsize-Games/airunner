@@ -1,5 +1,5 @@
 # Ignore virtual environments
-venv
+venv/
 
 # Ignore git files
 .git
@@ -22,7 +22,7 @@ dist/
 build/
 
 # Ignore other unnecessary files
-!package/entrypoint.sh
+entrypoint.sh
 processed
 *.log
 *.tmp
