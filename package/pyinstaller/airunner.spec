@@ -39,9 +39,9 @@ a = Analysis(
         (join(qt_lib, 'libQt6Widgets.so.6'), '.'),
         (join(qt_lib, 'libQt6Gui.so.6'), '.'),
         (join(qt_lib, 'libQt6Core.so.6'), '.'),
-        ('/usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0', '.'),
-        ('/usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0', '.'),
-        ('/usr/lib/x86_64-linux-gnu/libxkbcommon-x11.so.0.0.0', '.'),
+        (join(linux_lib, 'libpython3.10.so.1.0'), '.'),
+        (join(linux_lib, 'libxcb.so.1.1.0'), '.'),
+        (join(linux_lib, 'libxkbcommon-x11.so.0.0.0'), '.'),
         # NSS libraries for QtWebEngine
         (join(nss_lib, 'libplds4.so'), '.'),
         (join(nss_lib, 'libplc4.so'), '.'),
