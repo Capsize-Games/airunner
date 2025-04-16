@@ -79,14 +79,3 @@ RUN if [ -f "/home/appuser/nltk_data/tokenizers/punkt/english.pickle" ]; then \
         python3 -c "import nltk; nltk.download('punkt', quiet=True, halt_on_error=False, raise_on_error=False)"; \
         python3 -c "import nltk; nltk.download('stopwords', quiet=True, halt_on_error=False, raise_on_error=False)"; \
     fi
-
-RUN echo "Precompiling Triton modules..." && \
-    python3 -m triton.compiler.compiler precompile && \
-    echo "Triton precompilation finished." && \
-    mkdir -p /app/triton_cache && \
-    if [ -d "/home/appuser/.triton/cache" ]; then \
-        cp -r /home/appuser/.triton/cache/* /app/triton_cache/; \
-        echo "Copied Triton cache to /app/triton_cache"; \
-    else \
-        echo "Warning: Triton cache directory not found at /home/appuser/.triton/cache"; \
-    fi

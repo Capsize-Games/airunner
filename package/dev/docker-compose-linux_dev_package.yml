@@ -10,7 +10,6 @@ services:
     user: "${HOST_UID}:${HOST_GID}"
     stdin_open: true
     tty: true
-    entrypoint: []
     working_dir: /app
     runtime: nvidia
     ports:
@@ -20,5 +19,16 @@ services:
     environment:
       - DEV_ENV=1
       - BNB_CUDA_VERSION=124
+    entrypoint: ["/home/appuser/entrypoint.sh"]
     volumes:
-      - ../../:/app:rw
+      - ../../:/app:rw,z
+      - ../../package/dev/entrypoint.sh:/home/appuser/entrypoint.sh:ro
+      - ../package/asound.conf:/etc/asound.conf:rw
+      - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}:/home/appuser/.local/share/airunner:rw,z"
+      - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/data:/home/appuser/.local/share/airunner/data:rw,z"
+      - "${HOST_HOME}/.cache/huggingface:/home/appuser/.cache/huggingface:rw,z"
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /run/user/1000/pulse:/run/user/1000/pulse:ro
+      - ${XAUTHORITY}:${XAUTHORITY}:rw,z
+      - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/torch/hub:/home/appuser/.cache/torch/hub:rw,z
+      - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python:/home/appuser/.local:rw,z
