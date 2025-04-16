@@ -74,10 +74,10 @@ services:
       - ../../.env
     stdin_open: true
     tty: true
-    entrypoint: ["/app/package/entrypoint.sh"]
+    entrypoint: ["/home/appuser/entrypoint.sh"]
     volumes:
       - ../../:/app:rw,z
-      - ../../package/dev/entrypoint.sh:/app/package/entrypoint.sh:ro
+      - ../../package/dev/entrypoint.sh:/home/appuser/entrypoint.sh:ro
       - ../package/asound.conf:/etc/asound.conf:rw
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}:/home/appuser/.local/share/airunner:rw,z"
       - "${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/data:/home/appuser/.local/share/airunner/data:rw,z"

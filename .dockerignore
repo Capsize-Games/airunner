@@ -22,7 +22,7 @@ dist/
 build/
 
 # Ignore other unnecessary files
-!package/entrypoint.sh
+entrypoint.sh
 processed
 *.log
 *.tmp
