@@ -199,12 +199,6 @@ if [ "$1" == "build_runtime" ]; then
   exit 0
 fi
 
-if [ "$1" == "build_dev_runtime" ]; then
-  echo "Building the Docker Compose services for Linux dev packaging..."
-  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME build
-  exit 0
-fi
-
 if [ "$1" == "build_package" ]; then
   echo "Building for Linux production..."
   $DOCKER_COMPOSE_BUILD_PACKAGE build
@@ -212,9 +206,14 @@ if [ "$1" == "build_package" ]; then
   exit 0
 fi
 
+if [ "$1" == "build_dev_runtime" ]; then
+  echo "Building the Docker Compose services for Linux dev packaging..."
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME build
+  exit 0
+fi
+
 if [ "$1" == "build_dev_package" ]; then
   echo "Building for Linux production..."
-  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME build
   $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --rm airunner_dev /app/package/pyinstaller/build_dev.sh
   exit 0
 fi
