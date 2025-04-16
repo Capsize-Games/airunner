@@ -150,6 +150,9 @@ These are the sizes of the various models that power AI Runner.
 
 ## Quick Start (Docker)
 
+
+### Development Environment setup
+
 **Recommended for most developers**—it avoids Python environment headaches and streamlines GPU access.
 
 1. **Install NVIDIA Container Toolkit**  
@@ -161,10 +164,29 @@ These are the sizes of the various models that power AI Runner.
    ```
 3. **Pull the docker image and run airunner**
    ```bash
-   docker pull ghcr.io/capsize-games/airunner/airunner:linux
-   docker compose --env-file .env -f ./package/dev/docker-compose.yml run --rm airunner_dev airunner
+   ./src/airunner/bin/docker.sh airunner
    ```
 This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
+
+### Build the package locally
+
+AI Runner uses PyInstaller to create a standalone package. If you want to build it for yourself, follow these steps.
+
+1. **Follow the *Development Environment setup* steps above.**
+2. **Build the package**  
+   ```bash
+   ./src/airunner/bin/docker.sh build_dev_package
+   ```
+
+#### Building the package for production
+
+If you want to build the production package, follow these steps.
+
+1. **Follow the *Development Environment setup* steps above.**
+2. **Build the package**  
+   ```bash
+   ./src/airunner/bin/docker.sh build_package
+   ```
 
 ---
 
