@@ -4,7 +4,7 @@ services:
     image: capsize-games/airunner/airunner:linux_build_dev_runtime
     build:
       context: ../..
-      dockerfile: package/prod/Dockerfile.linux_build_dev_runtime
+      dockerfile: package/dev/Dockerfile.linux_build_dev_runtime
       args:
         - INSTALL_XCB_CURSOR=1
     user: "${HOST_UID}:${HOST_GID}"
