@@ -202,7 +202,7 @@ fi
 if [ "$1" == "build_package" ]; then
   echo "Building for Linux production..."
   $DOCKER_COMPOSE_BUILD_PACKAGE build
-  $DOCKER_COMPOSE_BUILD_PACKAGE run --rm airunner_package /app/package/prod/pyinstaller/build.sh
+  $DOCKER_COMPOSE_BUILD_PACKAGE run --rm airunner_package /app/package/pyinstaller/build.sh
   exit 0
 fi
 
