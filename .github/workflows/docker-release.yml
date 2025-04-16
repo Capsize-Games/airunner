@@ -13,9 +13,8 @@ jobs:
       HOST_GID: 1000
       UID: 1000
       GID: 1000
-      AIRUNNER_HOME_DIR: /home/runner/.local/share/airunner
-      HOST_HOME: /home/runner
-      XAUTHORITY: /home/runner/.Xauthority
+      AIRUNNER_HOME_DIR: /home/appuser/.local/share/airunner
+      CI_MODE: 1
 
     steps:
     - name: Checkout repository
@@ -33,14 +32,14 @@ jobs:
         echo "HOST_GID=1000" >> .env
         echo "UID=1000" >> .env
         echo "GID=1000" >> .env
-        echo "AIRUNNER_HOME_DIR=/home/runner/.local/share/airunner" >> .env
-        echo "HOST_HOME=/home/runner" >> .env
-        echo "XAUTHORITY=/home/runner/.Xauthority" >> .env
+        echo "AIRUNNER_HOME_DIR=/home/appuser/.local/share/airunner" >> .env
+        echo "CI_MODE=1" >> .env
 
     - name: Build and push Docker image via Compose
       run: |
-          docker compose -f package/prod/docker-compose.yml build airunner_prod
-          docker tag ghcr.io/capsize-games/airunner/airunner:linux ghcr.io/capsize-games/airunner/airunner:linux
+          chmod +x ./src/airunner/bin/docker.sh
+          ./src/airunner/bin/docker.sh --ci build_base
+          docker tag ghcr.io/capsize-games/airunner/airunner:linux_ci ghcr.io/capsize-games/airunner/airunner:linux
           docker push ghcr.io/capsize-games/airunner/airunner:linux
 
     - name: Clean up Docker
