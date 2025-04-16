@@ -71,5 +71,6 @@ services:
     ports:
       - "8000:8000"
     ipc: host
-    # Remove network_mode: "host" to enhance isolation
-    # Using only the specific ports needed
+    # Add volume mount for dist directory to allow build artifacts to be accessible
+    volumes:
+      - ../../dist:/app/dist:rw,z
