@@ -2031,8 +2031,12 @@ class StableDiffusionModelManager(BaseModelManager):
                 controlnet_image = self._resize_image(
                     controlnet_image, width, height
                 )
+                controlnet_image.save("controlnetimage.png")
                 control_image = self._controlnet_processor(
-                    controlnet_image, to_pil=True
+                    controlnet_image,
+                    to_pil=True,
+                    image_resolution=min(width, height),
+                    detect_resolution=min(width, height),
                 )
                 if control_image is not None:
                     self.update_controlnet_settings(
@@ -2045,6 +2049,7 @@ class StableDiffusionModelManager(BaseModelManager):
                         args["control_image"] = control_image
                 else:
                     raise ValueError("Controlnet image is None")
+                control_image.save("controimage.png")
 
         if image is not None:
             image = self._resize_image(image, width, height)
