@@ -34,6 +34,7 @@ SD_FILE_BOOTSTRAP_DATA = {
         ],
         "controlnet": [
             "config.json",
+            "diffusion_pytorch_model.fp16.safetensors",
         ],
         "safety_checker": [
             "config.json",
@@ -89,6 +90,7 @@ SD_FILE_BOOTSTRAP_DATA = {
         ],
         "controlnet": [
             "config.json",
+            "diffusion_pytorch_model.fp16.safetensors",
         ],
     },
 }
