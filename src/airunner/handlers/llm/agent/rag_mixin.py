@@ -22,10 +22,15 @@ from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
 from llama_index.core.tools import ToolOutput
 
 from airunner.data.models import Article, Conversation
+from airunner.enums import EngineResponseCode, SignalCode
 from airunner.handlers.llm.agent import HtmlFileReader
 from airunner.handlers.llm.agent.chat_engine import RefreshContextChatEngine
 from airunner.handlers.llm.agent.tools import RAGEngineTool
-from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner.settings import (
+    AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE,
+    AIRUNNER_LOCAL_FILES_ONLY,
+    CUDA_ERROR,
+)
 
 
 class RAGMixin:
@@ -493,11 +498,20 @@ class RAGMixin:
 
             try:
                 self.__embedding = HuggingFaceEmbedding(
-                    model_name=path,
-                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY
+                    model_name=path, local_files_only=AIRUNNER_LOCAL_FILES_ONLY
                 )
-            except NotImplementedError as e:
-                self.logger.error("Error loading embeddings " + str(e))
+            except Exception as e:
+                code = EngineResponseCode.ERROR
+                error_message = "Error loading embeddings " + str(e)
+                response = error_message
+                if CUDA_ERROR in str(e):
+                    code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
+                    response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
+                self.logger.error(error_message)
+                self.emit_signal(
+                    SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
+                    {"code": code, "message": response},
+                )
         return self.__embedding
 
     @embedding.setter
