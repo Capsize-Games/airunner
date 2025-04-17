@@ -1,0 +1,9 @@
+git FROM ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_ci
+
+WORKDIR /app
+
+ENV DEV_ENV=0
+ENV AIRUNNER_ENVIRONMENT="prod"
+ENV PYTHONOPTIMIZE=0
+ENV PYTHONUSERBASE=/home/appuser/.local/share/airunner/python
+ENV PATH=/home/appuser/.local/bin:/home/appuser/.local/share/airunner/python/bin:$PATH
