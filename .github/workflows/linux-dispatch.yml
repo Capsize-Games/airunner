@@ -6,7 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux
+  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux_ci
+  DOCKER_BUILDKIT: 1
 
 jobs:
   buildLinux:
@@ -22,34 +23,32 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
-      - name: Pull docker image
+      - name: Set environment variables for CI mode
         run: |
-          docker pull $DOCKER_IMAGE
+          echo "HOST_UID=$(id -u)" >> $GITHUB_ENV
+          echo "HOST_GID=$(id -g)" >> $GITHUB_ENV
+          echo "CI_MODE=1" >> $GITHUB_ENV
 
-      - name: Create required directories
+      - name: Create .env file for container-isolated builds
         run: |
-          mkdir -p ${{ github.workspace }}/.local/share/airunner
-          mkdir -p ${{ github.workspace }}/.local/share/airunner/data
-          mkdir -p ${{ github.workspace }}/.local/share/airunner/torch/hub
-          mkdir -p ${{ github.workspace }}/.local/share/airunner/python
+          echo "HOST_UID=$(id -u)" > .env
+          echo "HOST_GID=$(id -g)" >> .env
+          # Use paths inside the container instead of host paths
+          echo "AIRUNNER_HOME_DIR=/home/appuser/.local/share/airunner" >> .env
 
-      - name: Set PYTHONUSERBASE
-        run: |
-          export PYTHONUSERBASE=${{ github.workspace }}/.local/share/airunner/python
-          mkdir -p $PYTHONUSERBASE
-
-      - name: Build Linux Runtime
+      - name: Build Linux Runtime with CI mode (no local mounts)
         env:
           DEV_ENV: "0"
         run: |
-          python3 src/airunner/bin/docker_wrapper.py build_runtime
-          docker tag ghcr.io/capsize-games/airunner/airunner:linux_build_runtime ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
+          src/airunner/bin/docker.sh --ci build_base
+          src/airunner/bin/docker.sh --ci build_runtime
+          docker tag ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_ci ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
           docker push ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
       
-      - name: Build Linux Package
+      - name: Build Linux Package with CI mode (no local mounts)
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
           DEV_ENV: "0"
         run: |
-          python3 src/airunner/bin/docker_wrapper.py build_package
+          src/airunner/bin/docker.sh --ci build_package
 
