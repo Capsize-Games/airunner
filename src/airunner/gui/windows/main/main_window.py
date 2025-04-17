@@ -473,7 +473,7 @@ class MainWindow(
 
     @Slot(bool)
     def action_image_generator_toggled(self, val: bool):
-        self.on_toggle_sd(val=val)
+        self.on_toggle_sd({"enabled": val})
 
     @Slot(bool)
     def tts_button_toggled(self, val: bool):
@@ -1022,9 +1022,8 @@ class MainWindow(
             data,
         )
 
-    def on_toggle_sd(self, data: Dict = None, val=None):
-        if val is None:
-            val = not self.application_settings.sd_enabled
+    def on_toggle_sd(self, data: Dict):
+        val = data.get("enabled", False)
         self._update_action_button(
             ModelType.SD,
             self.ui.actionToggle_Stable_Diffusion,
@@ -1419,17 +1418,9 @@ class MainWindow(
         drawing_pad_settings.mask = base64_image
         drawing_pad_settings.save()
 
-    def display_missing_models_error(self):
+    def display_missing_models_error(self, data):
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Critical)
-        msg_box.setWindowTitle("Error: Missing models")
-        msg_box.setText("You are missing some required models.")
-
-        download_missing_models = msg_box.addButton(
-            "Download missing models", QMessageBox.AcceptRole
-        )
-
+        msg_box.setWindowTitle(data.get("title", "Error: Missing models"))
+        msg_box.setText(data.get("message", "Something went wrong"))
         msg_box.exec()
-
-        if msg_box.clickedButton() == download_missing_models:
-            self.show_setup_wizard()

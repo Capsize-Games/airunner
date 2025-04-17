@@ -1,3 +1,4 @@
+import os
 from typing import Dict
 import threading
 
@@ -78,7 +79,7 @@ class SDWorker(Worker):
         if self.sd:
             thread = threading.Thread(target=self._unload_safety_checker)
             thread.start()
-    
+
     def on_application_settings_changed(self):
         if self.sd:
             self.sd.on_application_settings_changed()
@@ -123,6 +124,22 @@ class SDWorker(Worker):
 
     def on_load_stablediffusion_signal(self, data: Dict = None):
         if self.sd:
+            settings = self.generator_settings
+            model_path = settings.aimodel.path if settings.aimodel else ""
+
+            if model_path is None or model_path == "":
+                self.send_missing_model_alert(
+                    "You have no Stable Diffusion models. Download one and try again."
+                )
+                return
+
+            # check if the path exists
+            if not os.path.exists(model_path):
+                self.send_missing_model_alert(
+                    f"The model at path {model_path} does not exist."
+                )
+                return
+
             thread = threading.Thread(target=self._load_sd, args=(data,))
             thread.start()
 
@@ -167,22 +184,36 @@ class SDWorker(Worker):
 
     def start_worker_thread(self):
         generator_settings = self.generator_settings
-        model_path = generator_settings.aimodel.path if generator_settings.aimodel else ""
+        model_path = (
+            generator_settings.aimodel.path
+            if generator_settings.aimodel
+            else ""
+        )
         if AIRUNNER_ART_MODEL_PATH != "":
             model_path = AIRUNNER_ART_MODEL_PATH
-        
-        model_version = generator_settings.version if generator_settings.version else ""
+
+        model_version = (
+            generator_settings.version if generator_settings.version else ""
+        )
         if AIRUNNER_ART_MODEL_VERSION != "":
             model_version = AIRUNNER_ART_MODEL_VERSION
-        
-        pipeline = generator_settings.pipeline_action if generator_settings.pipeline_action else ""
+
+        pipeline = (
+            generator_settings.pipeline_action
+            if generator_settings.pipeline_action
+            else ""
+        )
         if AIRUNNER_ART_PIPELINE != "":
             pipeline = AIRUNNER_ART_PIPELINE
-        
-        scheduler_name = generator_settings.scheduler if generator_settings.scheduler else ""
+
+        scheduler_name = (
+            generator_settings.scheduler
+            if generator_settings.scheduler
+            else ""
+        )
         if AIRUNNER_ART_SCHEDULER != "":
             scheduler_name = AIRUNNER_ART_SCHEDULER
-        
+
         use_compel = generator_settings.use_compel
         if AIRUNNER_ART_USE_COMPEL != "":
             use_compel = AIRUNNER_ART_USE_COMPEL
@@ -192,9 +223,9 @@ class SDWorker(Worker):
             model_version=model_version,
             pipeline=pipeline,
             scheduler_name=scheduler_name,
-            use_compel=use_compel
+            use_compel=use_compel,
         )
-        
+
         if self.application_settings.sd_enabled or AIRUNNER_SD_ON:
             self.sd.load()
 
@@ -215,8 +246,27 @@ class SDWorker(Worker):
 
     def on_do_generate_signal(self, message: Dict):
         if self.sd:
+            settings = self.generator_settings
+
             if not message.get("image_request", None):
-                settings = self.generator_settings
+                model_path = settings.aimodel.path if settings.aimodel else ""
+            else:
+                model_path = message["image_request"].model_path
+
+            if model_path is None or model_path == "":
+                self.send_missing_model_alert(
+                    "You have no Stable Diffusion models. Download one and try again."
+                )
+                return
+
+            # check if the path exists
+            if not os.path.exists(model_path):
+                self.send_missing_model_alert(
+                    f"The model at path {model_path} does not exist."
+                )
+                return
+
+            if not message.get("image_request", None):
                 message["image_request"] = ImageRequest(
                     pipeline_action=settings.pipeline_action,
                     generator_name=settings.generator_name,
@@ -225,7 +275,7 @@ class SDWorker(Worker):
                     second_prompt=settings.second_prompt,
                     second_negative_prompt=settings.second_negative_prompt,
                     random_seed=settings.random_seed,
-                    model_path=settings.aimodel.path if settings.aimodel else "",
+                    model_path=model_path,
                     scheduler=settings.scheduler,
                     version=settings.version,
                     use_compel=settings.use_compel,
@@ -258,6 +308,7 @@ class SDWorker(Worker):
     @staticmethod
     def handle_error(error_message):
         import traceback
+
         traceback.print_stack()
         print(f"SDWorker Error: {error_message}")
 
@@ -274,3 +325,17 @@ class SDWorker(Worker):
             if self.__requested_action is ModelAction.CLEAR:
                 self.on_unload_stablediffusion_signal()
             self.__requested_action = ModelAction.NONE
+
+    def send_missing_model_alert(self, message):
+        self.emit_signal(
+            SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL,
+            {"do_clear": True},
+        )
+        self.emit_signal(
+            SignalCode.MISSING_REQUIRED_MODELS,
+            {
+                "title": "Model Not Found",
+                "message": message,
+            },
+        )
+        self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, {"enabled": False})
