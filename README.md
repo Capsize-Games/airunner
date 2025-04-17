@@ -138,7 +138,8 @@ These are the sizes of the various models that power AI Runner.
 
 | Model                | Size     |
 |-------------------------|----------|
-| Controlnet              | 10.6 GB  |
+| Controlnet (SD 1.5)             | 10.6 GB  |
+| Controlnet (SDXL)             | 320.2 MB  |
 | Safety Checker + Feature Extractor               | 3.2 GB   |
 | SDXL 1.0                | 675 MB   |
 | LLM                     | 5.8 GB   |
