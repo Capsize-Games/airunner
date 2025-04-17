@@ -21,7 +21,7 @@ from llama_index.core.storage.chat_store import SimpleChatStore
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from airunner.enums import LLMActionType, SignalCode
+from airunner.enums import LLMActionType, SignalCode, ImagePreset
 from airunner.data.models import Conversation, User, Tab
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
@@ -562,6 +562,7 @@ class BaseAgent(
     @property
     def generate_image_tool(self) -> FunctionTool:
         if not hasattr(self, "_generate_image_tool"):
+            image_preset_options = [item.value for item in ImagePreset]
 
             def generate_image(
                 prompt: Annotated[
@@ -584,7 +585,7 @@ class BaseAgent(
                     str,
                     (
                         "The type of image to generate. "
-                        "Can be 'photo' or 'art'."
+                        f"Can be {image_preset_options}."
                     ),
                 ],
                 width: Annotated[
@@ -611,8 +612,6 @@ class BaseAgent(
                     # get as close to multiple of 64 as possible
                     height = (height // 64) * 64
 
-                if image_type not in ["photo", "art"]:
-                    image_type = "photo"
                 self.emit_signal(
                     SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
                     {

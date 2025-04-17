@@ -839,7 +839,6 @@ class StableDiffusionModelManager(BaseModelManager):
                 StableDiffusionXLControlNetInpaintPipeline,
             ):
                 kwargs.update(controlnet=self._controlnet)
-            kwargs = self._prepare_tiny_autoencoder(kwargs)
             self._pipe = pipeline_class_.from_pipe(self._pipe, **kwargs)
         except Exception as e:
             self.logger.error(f"Error swapping pipeline: {e}")
@@ -1200,39 +1199,6 @@ class StableDiffusionModelManager(BaseModelManager):
         if self._pipe:
             self._pipe.scheduler = self.scheduler
 
-    def _prepare_tiny_autoencoder(self, data: Dict) -> Optional[Dict]:
-        if not self.is_outpaint:
-            if self.is_sd_xl_or_turbo:
-                version = StableDiffusionVersion.SDXL1_0.value
-                repo_path = "madebyollin/sdxl-vae-fp16-fix"
-                autoencoder_class_ = AutoencoderKL
-            else:
-                version = StableDiffusionVersion.SD1_5.value
-                repo_path = "madebyollin/taesd"
-                autoencoder_class_ = AutoencoderTiny
-            path = os.path.expanduser(
-                os.path.join(
-                    self.path_settings_cached.base_path,
-                    "art",
-                    "models",
-                    version,
-                    "tiny_autoencoder",
-                    repo_path,
-                )
-            )
-            if not os.path.exists(path):
-                self.logger.error("Tiny autoencoder path does not exist")
-                self.emit_signal(SignalCode.MISSING_REQUIRED_MODELS)
-                self.emit_signal(
-                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
-                    {"model": ModelType.SD, "status": ModelStatus.FAILED},
-                )
-                return None
-            data["vae"] = autoencoder_class_.from_pretrained(
-                path, torch_dtype=torch.float16, use_safetensors=True
-            )
-        return data
-
     def _load_pipe(self):
         self.logger.debug("Loading pipe")
         data = {
@@ -1246,7 +1212,6 @@ class StableDiffusionModelManager(BaseModelManager):
             data["controlnet"] = self._controlnet
 
         pipeline_class_ = self._pipeline_class
-        data = self._prepare_tiny_autoencoder(data)
         if data is None:
             return
 

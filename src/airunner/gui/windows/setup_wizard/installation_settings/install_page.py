@@ -10,10 +10,6 @@ from airunner.data.bootstrap.controlnet_bootstrap_data import (
 from airunner.data.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
-from airunner.data.bootstrap.tiny_autoencoder import (
-    TINY_AUTOENCODER_FILES_SD,
-    TINY_AUTOENCODER_FILES_SDXL,
-)
 from airunner.data.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
@@ -118,59 +114,6 @@ class InstallWorker(
                 try:
                     self.hf_downloader.download_model(
                         requested_path=model["path"],
-                        requested_file_name=filename,
-                        requested_file_path=requested_file_path,
-                        requested_callback=self.progress_updated.emit,
-                    )
-                except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
-
-    def download_tiny_autoencoders(self):
-        self.parent.on_set_downloading_status_label(
-            {"label": "Downloading Tiny Autoencoders..."}
-        )
-        self.total_models_in_current_step += len(
-            TINY_AUTOENCODER_FILES_SD["madebyollin/taesd"]
-        )
-        self.total_models_in_current_step += len(
-            TINY_AUTOENCODER_FILES_SDXL["madebyollin/sdxl-vae-fp16-fix"]
-        )
-        for k, v in TINY_AUTOENCODER_FILES_SD.items():
-            for filename in v:
-                requested_file_path = os.path.expanduser(
-                    os.path.join(
-                        self.path_settings.base_path,
-                        "art",
-                        "models",
-                        "SD 1.5",
-                        "tiny_autoencoder",
-                        k,
-                    )
-                )
-                try:
-                    self.hf_downloader.download_model(
-                        requested_path=k,
-                        requested_file_name=filename,
-                        requested_file_path=requested_file_path,
-                        requested_callback=self.progress_updated.emit,
-                    )
-                except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
-        for k, v in TINY_AUTOENCODER_FILES_SDXL.items():
-            for filename in v:
-                requested_file_path = os.path.expanduser(
-                    os.path.join(
-                        self.path_settings.base_path,
-                        "art",
-                        "models",
-                        "SDXL 1.0",
-                        "tiny_autoencoder",
-                        k,
-                    )
-                )
-                try:
-                    self.hf_downloader.download_model(
-                        requested_path=k,
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
                         requested_callback=self.progress_updated.emit,
@@ -387,7 +330,6 @@ class InstallWorker(
             )
             self.current_step = 1
             self.download_stable_diffusion()
-            self.download_tiny_autoencoders()
         elif (
             self.application_settings.stable_diffusion_agreement_checked
             and self.current_step == 1
@@ -460,10 +402,6 @@ class InstallPage(BaseWizard):
         llm_model_count = len(llm_model_count_query)
 
         self.total_steps += controlnet_model_count * controlnet_version_count
-        self.total_steps += len(TINY_AUTOENCODER_FILES_SD["madebyollin/taesd"])
-        self.total_steps += len(
-            TINY_AUTOENCODER_FILES_SDXL["madebyollin/sdxl-vae-fp16-fix"]
-        )
         self.total_steps += llm_model_count
         self.total_steps += len(SPEECH_T5_FILES["microsoft/speecht5_tts"])
         self.total_steps += len(WHISPER_FILES["openai/whisper-tiny"])
