@@ -134,19 +134,39 @@ done
 # Test 7: Test PyInstaller mini-build
 log_result "Test 7: Testing minimal PyInstaller build"
 
-cat > /tmp/mini_spec.py << 'EOF'
+# Define the spec content
+MINI_SPEC_CONTENT=$(cat << 'EOF'
 # Simple spec for testing PyInstaller
 a = Analysis(['./src/airunner/__main__.py'], pathex=[])
 pyz = PYZ(a.pure, a.zipped_data)
 exe = EXE(pyz, a.scripts, [], name='mini_airunner', debug=False)
 EOF
+)
 
-./src/airunner/bin/docker.sh --ci bash -c "pip install pyinstaller && cp /tmp/mini_spec.py /app/mini_spec.py && cd /app && python -m PyInstaller --clean mini_spec.py"
+./src/airunner/bin/docker.sh --ci bash -c " \
+  echo 'Installing PyInstaller...' && \
+  pip install pyinstaller && \
+  echo 'Creating spec file in /app directory...' && \
+  echo \"${MINI_SPEC_CONTENT}\" > /app/mini_airunner.spec && \
+  echo 'Ensuring dist directory exists and is writable...' && \
+  mkdir -p /app/dist && \
+  echo 'Verifying source file path inside container...' && \
+  ls -la /app/src/airunner/ && \
+  echo 'Running PyInstaller...' && \
+  cd /app && \
+  python3 -m PyInstaller /app/mini_airunner.spec && \
+  echo 'Files in dist directory:' && \
+  ls -la /app/dist/ \
+" || log_error "PyInstaller build command failed"
 
-if [ -f "./dist/mini_airunner" ]; then
+# Check for the executable with proper name matching
+if [ -f "./dist/mini_airunner" ] || [ -d "./dist/mini_airunner" ]; then
   log_result "✅ PyInstaller build completed successfully"
 else
-  log_error "❌ PyInstaller build failed"
+  # Diagnostic - show what files were actually produced
+  echo "Files found in dist directory:"
+  ls -la ./dist/
+  log_error "❌ PyInstaller build failed - output file 'mini_airunner' not found in ./dist"
 fi
 
 # All tests passed
