@@ -481,6 +481,7 @@ class MainWindow(
 
     @Slot(bool)
     def action_controlnet_toggled(self, val: bool):
+        self.update_controlnet_settings("enabled", val)
         self._update_action_button(
             ModelType.CONTROLNET,
             self.ui.actionToggle_Controlnet,
