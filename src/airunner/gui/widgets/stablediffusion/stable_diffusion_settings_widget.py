@@ -1,18 +1,16 @@
-
 from airunner.data.models import AIModels, GeneratorSettings
 from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.stablediffusion.templates.stable_diffusion_settings_ui import Ui_stable_diffusion_settings_widget
+from airunner.gui.widgets.stablediffusion.templates.stable_diffusion_settings_ui import (
+    Ui_stable_diffusion_settings_widget,
+)
 from airunner.gui.windows.main.pipeline_mixin import PipelineMixin
 from airunner.utils.application.create_worker import create_worker
 from airunner.workers.model_scanner_worker import ModelScannerWorker
 from airunner.settings import AIRUNNER_ART_ENABLED
 
 
-class StableDiffusionSettingsWidget(
-    BaseWidget,
-    PipelineMixin
-):
+class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     widget_class_ = Ui_stable_diffusion_settings_widget
 
     def __init__(self, *args, **kwargs):
@@ -32,18 +30,30 @@ class StableDiffusionSettingsWidget(
         steps = self.generator_settings.steps
         scale = self.generator_settings.scale
 
-        current_steps = self.get_form_element("steps_widget").property("current_value")
-        current_scale = self.get_form_element("scale_widget").property("current_value")
+        current_steps = self.get_form_element("steps_widget").property(
+            "current_value"
+        )
+        current_scale = self.get_form_element("scale_widget").property(
+            "current_value"
+        )
 
         if steps != current_steps:
-            self.get_form_element("steps_widget").setProperty("current_value", steps)
+            self.get_form_element("steps_widget").setProperty(
+                "current_value", steps
+            )
 
         if scale != current_scale:
-            self.get_form_element("scale_widget").setProperty("current_value", scale)
+            self.get_form_element("scale_widget").setProperty(
+                "current_value", scale
+            )
 
         try:
-            self.ui.seed_widget.setProperty("generator_section", self.generator_settings.pipeline_action)
-            self.ui.seed_widget.setProperty("generator_name", ImageGenerator.STABLEDIFFUSION.value)
+            self.ui.seed_widget.setProperty(
+                "generator_section", self.generator_settings.pipeline_action
+            )
+            self.ui.seed_widget.setProperty(
+                "generator_name", ImageGenerator.STABLEDIFFUSION.value
+            )
             self.ui.ddim_eta_slider_widget.hide()
             self.ui.frames_slider_widget.hide()
         except RuntimeError as e:
@@ -58,28 +68,40 @@ class StableDiffusionSettingsWidget(
             if AIRUNNER_ART_ENABLED:
                 self.logger.error(f"Error updating compel: {e}")
 
+        if self.generator_settings.model is None:
+            self._update_model_id()
+
     def toggled_use_compel(self, val):
         self.update_generator_settings("use_compel", val)
 
     def handle_model_changed(self, _model_name):
+        self._update_model_id()
+        if self.application_settings.sd_enabled:
+            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {"do_reload": True})
+
+    def _update_model_id(self):
         index = self.ui.model.currentIndex()
         model_id = self.ui.model.itemData(index)
         self.update_generator_settings("model", model_id)
-        if self.application_settings.sd_enabled:
-            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
-                "do_reload": True
-            })
 
     def handle_scheduler_changed(self, name):
         self.update_generator_settings("scheduler", name)
-        self.emit_signal(SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": name})
+        self.emit_signal(
+            SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": name}
+        )
 
     def handle_pipeline_changed(self, val):
-        if val == f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}":
+        if (
+            val
+            == f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}"
+        ):
             val = GeneratorSection.TXT2IMG.value
-        elif val == f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}":
+        elif (
+            val
+            == f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}"
+        ):
             val = GeneratorSection.INPAINT.value
-        
+
         generator_settings = GeneratorSettings.objects.first()
         do_reload = False
         if val == GeneratorSection.TXT2IMG.value:
@@ -91,7 +113,7 @@ class StableDiffusionSettingsWidget(
                     AIModels.version == generator_settings.version,
                     AIModels.pipeline_action == val,
                     AIModels.enabled is True,
-                    AIModels.is_default is False
+                    AIModels.is_default is False,
                 )
                 if model is not None:
                     generator_settings.model = model.id
@@ -100,45 +122,43 @@ class StableDiffusionSettingsWidget(
                 do_reload = True
         generator_settings.pipeline_action = val
         generator_settings.save()
-        
+
         self.load_versions()
         self.load_models()
         if do_reload:
             if self.application_settings.sd_enabled:
-                self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
-                    "do_reload": True
-                })
+                self.emit_signal(
+                    SignalCode.SD_LOAD_SIGNAL, {"do_reload": True}
+                )
 
     def handle_version_changed(self, val):
         self.update_generator_settings("version", val)
-        self.emit_signal(SignalCode.WIDGET_ELEMENT_CHANGED, {
-            "element": "sd_version",
-            "version": val
-        })
-        
+        self.emit_signal(
+            SignalCode.WIDGET_ELEMENT_CHANGED,
+            {"element": "sd_version", "version": val},
+        )
+
         generator_settings = GeneratorSettings.objects.first()
         model = AIModels.objects.filter_first(
             AIModels.version == val,
             AIModels.pipeline_action == generator_settings.pipeline_action,
             AIModels.enabled.is_(True),
-            AIModels.is_default.is_(False)
+            AIModels.is_default.is_(False),
         )
         generator_settings.version = val
         generator_settings.model = model.id
         generator_settings.save()
-        
+
         self.load_models()
         if self.application_settings.sd_enabled:
-            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {
-                "do_reload": True
-            })
+            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {"do_reload": True})
 
     def _load_pipelines(self):
         self.ui.pipeline.blockSignals(True)
         self.ui.pipeline.clear()
         pipeline_names = [
             f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}",
-            f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}"
+            f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}",
         ]
         self.ui.pipeline.addItems(pipeline_names)
         current_pipeline = self.generator_settings.pipeline_action
@@ -149,11 +169,13 @@ class StableDiffusionSettingsWidget(
                 current_pipeline = f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}"
             self.ui.pipeline.setCurrentText(current_pipeline)
         self.ui.pipeline.blockSignals(False)
-    
+
     def load_versions(self):
         self.ui.version.blockSignals(True)
         self.ui.version.clear()
-        pipelines = self.get_pipelines(category=ImageGenerator.STABLEDIFFUSION.value)
+        pipelines = self.get_pipelines(
+            category=ImageGenerator.STABLEDIFFUSION.value
+        )
         version_names = set([pipeline["version"] for pipeline in pipelines])
         self.ui.version.addItems(version_names)
         current_version = self.generator_settings.version
@@ -184,16 +206,16 @@ class StableDiffusionSettingsWidget(
         pipeline = generator_settings.pipeline_action
         version = generator_settings.version
         pipeline_actions = [GeneratorSection.TXT2IMG.value]
-        
+
         if pipeline == GeneratorSection.INPAINT.value:
             pipeline_actions.append(GeneratorSection.INPAINT.value)
-        
+
         models = AIModels.objects.filter(
             AIModels.category == image_generator,
             AIModels.pipeline_action.in_(pipeline_actions),
             AIModels.version == version,
             AIModels.enabled.is_(True),
-            AIModels.is_default.is_(False)
+            AIModels.is_default.is_(False),
         )
 
         model_id = generator_settings.model
@@ -201,10 +223,10 @@ class StableDiffusionSettingsWidget(
             current_model = models[0]
             generator_settings.model = current_model.id
             generator_settings.save()
-        
+
         for model in models:
             self.ui.model.addItem(model.name, model.id)
-        
+
         if model_id:
             index = self.ui.model.findData(model_id)
             if index != -1:
@@ -222,5 +244,7 @@ class StableDiffusionSettingsWidget(
             self.ui.scheduler.setCurrentText(current_scheduler)
         else:
             self.generator_settings.scheduler = self.ui.scheduler.currentText()
-        self.update_generator_settings("scheduler", self.generator_settings.scheduler)
+        self.update_generator_settings(
+            "scheduler", self.generator_settings.scheduler
+        )
         self.ui.scheduler.blockSignals(False)
