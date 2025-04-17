@@ -333,11 +333,6 @@ class StableDiffusionVersion(Enum):
     SD1_5 = "SD 1.5"
 
 
-class ImageCategory(Enum):
-    ART = "art"
-    PHOTO = "photo"
-
-
 class Language(Enum):
     ENGLISH = "English"
     SPANISH = "Spanish"
