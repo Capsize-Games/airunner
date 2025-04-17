@@ -6,7 +6,7 @@ import time
 from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot, QSettings
 from PySide6.QtWidgets import QApplication, QWidget
 
-from airunner.data.models import ShortcutKeys
+from airunner.data.models import ShortcutKeys, AIModels
 from airunner.enums import (
     SignalCode,
     GeneratorSection,
@@ -246,8 +246,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def on_generate_image_signal(self, _data):
         self.handle_generate_button_clicked()
 
-    def on_stop_image_generator_progress_bar_signal(self, _data):
-        self.stop_progress_bar()
+    def on_stop_image_generator_progress_bar_signal(self, data: Dict):
+        self.stop_progress_bar(data.get("do_clear", False))
 
     def on_progress_signal(self, message):
         self.handle_progress_bar(message)
@@ -294,7 +294,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
             # If SD is already enabled, emit a signal to generate the image.
             # The finalize function is a callback which is called after the image has been generated.
             self.handle_generate_button_clicked(
-                dict(finalize=self.finalize_image_generated_by_llm)
+                dict(
+                    enabled=True, finalize=self.finalize_image_generated_by_llm
+                )
             )
 
     def finalize_image_generated_by_llm(self, _data):
@@ -320,7 +322,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
                             },
                         )
                     ),
-                )
+                ),
+                enabled=False,
             ),
         )
 
@@ -383,6 +386,23 @@ class StableDiffusionGeneratorForm(BaseWidget):
             for _prompt_id, container in self._prompt_containers.items()
         ]
 
+        model_path = ""
+        model_id = self.generator_settings.model
+        if model_id is not None:
+            aimodel = AIModels.objects.get(model_id)
+            if aimodel is not None:
+                model_path = model_path
+
+        if model_path == "":
+            if self.generator_settings.model is not None:
+                aimodel = AIModels.objects.get(self.generator_settings.model)
+            else:
+                aimodel = AIModels.objects.first()
+                
+            if aimodel is not None:
+                model_path = aimodel.path
+                self.update_generator_settings("model", aimodel.id)
+
         image_request = ImageRequest(
             prompt=data.get("prompt", self.ui.prompt.toPlainText()),
             negative_prompt=data.get(
@@ -399,7 +419,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             pipeline_action=self.generator_settings.pipeline_action,
             generator_name=self.generator_name,
             random_seed=self.generator_settings.random_seed,
-            model_path=self.generator_settings.model_name,
+            model_path=model_path,
             scheduler=self.generator_settings.scheduler,
             version=self.generator_settings.version,
             use_compel=self.generator_settings.use_compel,
