@@ -7,6 +7,7 @@ import diffusers
 import numpy as np
 import tomesd
 import torch
+import torch.amp
 from DeepCache import DeepCacheSDHelper
 from PIL import ImageDraw, ImageFont
 from PIL.Image import Image
@@ -864,7 +865,10 @@ class StableDiffusionModelManager(BaseModelManager):
         args = self._prepare_data(active_rect)
         self._current_state = HandlerState.GENERATING
 
-        with torch.no_grad():
+        # Use torch.amp.autocast for mixed precision handling
+        with torch.no_grad(), torch.amp.autocast(
+            "cuda", dtype=self.data_type, enabled=True
+        ):
             results = self._pipe(**args)
 
         clear_memory()
