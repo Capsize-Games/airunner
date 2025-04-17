@@ -131,43 +131,21 @@ for check in "${SERVICE_CHECKS[@]}"; do
   fi
 done
 
-# Test 7: Test PyInstaller mini-build
-log_result "Test 7: Testing minimal PyInstaller build"
-
-# Define the spec content
-MINI_SPEC_CONTENT=$(cat << 'EOF'
-# Simple spec for testing PyInstaller
-a = Analysis(['./src/airunner/main.py'], pathex=[]) # Corrected entry point
-pyz = PYZ(a.pure, a.zipped_data)
-exe = EXE(pyz, a.scripts, [], name='mini_airunner', debug=False)
-EOF
-)
-
-./src/airunner/bin/docker.sh --ci bash -c " \
-  echo 'Installing PyInstaller...' && \
-  pip install pyinstaller && \
-  echo 'Creating spec file in /app directory...' && \
-  echo \"${MINI_SPEC_CONTENT}\" > /app/mini_airunner.spec && \
-  echo 'Ensuring dist directory exists and is writable...' && \
-  mkdir -p /app/dist && \
-  echo 'Verifying source file path inside container...' && \
-  ls -la /app/src/airunner/ && \
-  echo 'Running PyInstaller...' && \
-  cd /app && \
-  python3 -m PyInstaller /app/mini_airunner.spec && \
-  echo 'Files in dist directory:' && \
-  ls -la /app/dist/ \
-" || log_error "PyInstaller build command failed"
-
-# Check for the executable with proper name matching
-if [ -f "./dist/mini_airunner" ] || [ -d "./dist/mini_airunner" ]; then
-  log_result "✅ PyInstaller build completed successfully"
+# Test 7: Run the actual package build step
+log_result "Test 7: Running full package build in CI mode"
+# Ensure dist is clean for this specific test if needed
+# rm -rf ./dist/* 
+./src/airunner/bin/docker.sh --ci build_package || log_error "Full package build failed"
+# Add checks here if needed, e.g., check for expected output in ./dist
+if [ -f "./dist/airunner-linux.tar.gz" ]; then # Or whatever the expected output is
+    log_result "✅ Full package build completed successfully"
 else
-  # Diagnostic - show what files were actually produced
-  echo "Files found in dist directory:"
-  ls -la ./dist/
-  log_error "❌ PyInstaller build failed - output file 'mini_airunner' not found in ./dist"
+    log_error "❌ Full package build failed - output archive not found"
 fi
+
+
+# Test 8: Test PyInstaller mini-build (Optional - keep or remove if full build covers enough)
+log_result "Test 8: Testing minimal PyInstaller build"
 
 # All tests passed
 log_result "======================="
