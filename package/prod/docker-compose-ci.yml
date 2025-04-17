@@ -71,6 +71,7 @@ services:
     ports:
       - "8000:8000"
     ipc: host
+    network_mode: "host" # Add host network mode for consistency
     # Add volume mount for dist directory to allow build artifacts to be accessible
     volumes:
       - ../../dist:/app/dist:rw,z

@@ -137,7 +137,7 @@ log_result "Test 7: Testing minimal PyInstaller build"
 # Define the spec content
 MINI_SPEC_CONTENT=$(cat << 'EOF'
 # Simple spec for testing PyInstaller
-a = Analysis(['./src/airunner/__main__.py'], pathex=[])
+a = Analysis(['./src/airunner/main.py'], pathex=[]) # Corrected entry point
 pyz = PYZ(a.pure, a.zipped_data)
 exe = EXE(pyz, a.scripts, [], name='mini_airunner', debug=False)
 EOF
