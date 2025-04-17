@@ -40,3 +40,4 @@ airunner.wiki
 coverage_report.txt
 package/asound.conf
 .secrets
+*.log
