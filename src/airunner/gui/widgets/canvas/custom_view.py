@@ -57,8 +57,12 @@ class CustomGraphicsView(
         self._resize_timer.timeout.connect(self._handle_resize_timeout)
 
         # Add settings to handle negative coordinates properly
+        self.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+        )  # Set once here
+        self._last_viewport_size = self.viewport().size()  # Track last size
         self.setViewportUpdateMode(
-            QGraphicsView.ViewportUpdateMode.FullViewportUpdate
+            QGraphicsView.ViewportUpdateMode.BoundingRectViewportUpdate
         )
 
         # Use setOptimizationFlags directly instead of the enum that doesn't exist in your PySide6 version
@@ -362,13 +366,11 @@ class CustomGraphicsView(
         self.do_draw()
 
     def _handle_resize_timeout(self):
-        self.setAlignment(
-            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
-        )
-        self.setSceneRect(
-            0, 0, self.viewport().width(), self.viewport().height()
-        )
-        self.do_draw()
+        new_size = self.viewport().size()
+        if new_size != self._last_viewport_size:
+            self.setSceneRect(0, 0, new_size.width(), new_size.height())
+            self.do_draw()
+            self._last_viewport_size = new_size
 
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -385,13 +387,6 @@ class CustomGraphicsView(
 
         self.toggle_drag_mode()
 
-        # Ensure the viewport is aligned to the top-left corner
-        self.setAlignment(
-            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
-        )
-        self.setSceneRect(
-            0, 0, self.viewport().width(), self.viewport().height()
-        )
         self.set_canvas_color(self.scene)
         self.show_active_grid_area()
 
