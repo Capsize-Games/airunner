@@ -5,7 +5,8 @@ import os
 from os.path import join
 
 base_path = "/app"
-site_packages_path = "/home/appuser/.local/lib/python3.10/site-packages"
+# Correct the site-packages path for the CI environment
+site_packages_path = "/home/appuser/.local/share/airunner/python/lib/python3.10/site-packages"
 dist = join(base_path, "dist")
 airunner_path = join(base_path, "src/airunner")
 cudnn_lib = join(site_packages_path, 'nvidia/cudnn/lib')
@@ -15,8 +16,7 @@ nss_lib = linux_lib  # NSS libraries location
 gtk_lib = linux_lib  # GTK libraries location
 db_lib = linux_lib   # Database libraries location
 cuda_lib = '/usr/local/cuda-11/lib64'  # CUDA libraries location
-qt_lib = '/home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/lib/'
-cudnn_lib = '/home/appuser/.local/lib/python3.10/site-packages/nvidia/cudnn/lib/'
+qt_lib = join(site_packages_path, 'PySide6/Qt/lib/')
 python_include_path = "/usr/include/python3.10"
 
 a = Analysis(
@@ -25,7 +25,8 @@ a = Analysis(
         join(base_path, 'src'),
     ],
     binaries=[
-        ('/home/appuser/.local/share/airunner/python/lib/python3.10/site-packages/tiktoken/_tiktoken.cpython-310-x86_64-linux-gnu.so', 'tiktoken'),
+        # Use the corrected site_packages_path variable
+        (join(site_packages_path, 'tiktoken/_tiktoken.cpython-310-x86_64-linux-gnu.so'), 'tiktoken'),
         (join(cudnn_lib, 'libcudnn_adv.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn_cnn.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn_engines_precompiled.so.9'), '.'),
@@ -34,7 +35,7 @@ a = Analysis(
         (join(cudnn_lib, 'libcudnn_heuristic.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn_ops.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn.so.9'), '.'),
-        # QT libraries
+        # QT libraries - Use corrected qt_lib variable
         (join(qt_lib, 'libQt6XcbQpa.so.6'), '.'),
         (join(qt_lib, 'libQt6DBus.so.6'), '.'),
         (join(qt_lib, 'libQt6Widgets.so.6'), '.'),
@@ -73,14 +74,15 @@ a = Analysis(
         (join(linux_lib, 'libtbb.so.2'), '.'),
         (join(linux_lib, 'libtbb.so.12.5'), '.'),
         (join(linux_lib, 'libtbb.so.12'), '.'),
-        # CUDA libraries
-        ('/home/appuser/.local/lib/python3.10/site-packages/nvidia/cublas/lib/libcublas.so.12', '.'),
-        ('/home/appuser/.local/lib/python3.10/site-packages/nvidia/cusparse/lib/libcusparse.so.12', '.'),
-        ('/home/appuser/.local/lib/python3.10/site-packages/nvidia/cublas/lib/libcublasLt.so.12', '.'),
+        # CUDA libraries - Use corrected site_packages_path variable
+        (join(site_packages_path, 'nvidia/cublas/lib/libcublas.so.12'), '.'),
+        (join(site_packages_path, 'nvidia/cusparse/lib/libcusparse.so.12'), '.'),
+        (join(site_packages_path, 'nvidia/cublas/lib/libcublasLt.so.12'), '.'),
     ],
     datas=[
         (join(airunner_path, 'alembic.ini'), 'airunner'),
         (python_include_path, 'include/python3.10'),
+        # Use corrected site_packages_path variable for data entries
         (join(site_packages_path, 'inflect'), 'inflect'),
         (join(site_packages_path, 'controlnet_aux'), 'controlnet_aux'),
         (join(site_packages_path, 'diffusers'), 'diffusers'),
