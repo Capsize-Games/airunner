@@ -7,6 +7,7 @@ import diffusers
 import numpy as np
 import tomesd
 import torch
+import torch.amp
 from DeepCache import DeepCacheSDHelper
 from PIL import ImageDraw, ImageFont
 from PIL.Image import Image
@@ -312,9 +313,7 @@ class StableDiffusionModelManager(BaseModelManager):
 
     @property
     def controlnet_settings_cached(self):
-        if self._controlnet_settings is None:
-            self._controlnet_settings = self.controlnet_settings
-        return self._controlnet_settings
+        return self.controlnet_settings
 
     @property
     def controlnet_image(self) -> Image:
@@ -651,10 +650,30 @@ class StableDiffusionModelManager(BaseModelManager):
         """
         # clear the controlnet settings so that we get the latest selected controlnet model
         if not self.controlnet_enabled or self.controlnet_is_loading:
+            if not self.controlnet_enabled:
+                print("controlnet not enabled")
+            if self.controlnet_is_loading:
+                print("controlnet is loading")
             return
         self._controlnet_model = None
         self._controlnet_settings = None
-        self._load_controlnet()
+        self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
+
+        try:
+            self._load_controlnet_model()
+        except Exception as e:
+            self.logger.error(f"Error loading controlnet {e}")
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
+            return
+
+        try:
+            self._load_controlnet_processor()
+        except Exception as e:
+            self.logger.error(f"Error loading controlnet processor {e}")
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
+            return
+
+        self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
 
     def unload_controlnet(self):
         """
@@ -686,7 +705,7 @@ class StableDiffusionModelManager(BaseModelManager):
         self.unload()
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         self._load_safety_checker()
-        self._load_controlnet()
+        self.load_controlnet()
         self._load_pipe()
         self._load_scheduler()
         self._load_lora()
@@ -806,7 +825,7 @@ class StableDiffusionModelManager(BaseModelManager):
 
         self.logger.debug(
             "Swapping pipeline from %s to %s",
-            self._pipe.__class__ if self.pipe else "",
+            self._pipe.__class__ if self._pipe else "",
             pipeline_class_,
         )
         try:
@@ -846,7 +865,10 @@ class StableDiffusionModelManager(BaseModelManager):
         args = self._prepare_data(active_rect)
         self._current_state = HandlerState.GENERATING
 
-        with torch.no_grad():
+        # Use torch.amp.autocast for mixed precision handling
+        with torch.no_grad(), torch.amp.autocast(
+            "cuda", dtype=self.data_type, enabled=True
+        ):
             results = self._pipe(**args)
 
         clear_memory()
@@ -1096,27 +1118,6 @@ class StableDiffusionModelManager(BaseModelManager):
                 ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED
             )
 
-    def _load_controlnet(self):
-        if not self.controlnet_enabled or self.controlnet_is_loading:
-            return
-        self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
-
-        try:
-            self._load_controlnet_model()
-        except Exception as e:
-            self.logger.error(f"Error loading controlnet {e}")
-            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
-            return
-
-        try:
-            self._load_controlnet_processor()
-        except Exception as e:
-            self.logger.error(f"Error loading controlnet processor {e}")
-            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
-            return
-
-        self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
-
     def _load_controlnet_model(self):
         if self._controlnet is not None:
             return
@@ -1133,6 +1134,7 @@ class StableDiffusionModelManager(BaseModelManager):
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             use_safetensors=True,
             use_fp16=True,
+            variant="fp16",
         )
 
     def _load_controlnet_processor(self):
@@ -2033,8 +2035,12 @@ class StableDiffusionModelManager(BaseModelManager):
                 controlnet_image = self._resize_image(
                     controlnet_image, width, height
                 )
+                controlnet_image.save("controlnetimage.png")
                 control_image = self._controlnet_processor(
-                    controlnet_image, to_pil=True
+                    controlnet_image,
+                    to_pil=True,
+                    image_resolution=min(width, height),
+                    detect_resolution=min(width, height),
                 )
                 if control_image is not None:
                     self.update_controlnet_settings(
@@ -2047,6 +2053,7 @@ class StableDiffusionModelManager(BaseModelManager):
                         args["control_image"] = control_image
                 else:
                     raise ValueError("Controlnet image is None")
+                control_image.save("controimage.png")
 
         if image is not None:
             image = self._resize_image(image, width, height)
