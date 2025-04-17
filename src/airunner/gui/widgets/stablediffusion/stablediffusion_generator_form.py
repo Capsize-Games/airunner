@@ -593,7 +593,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             str(self.generator_settings.crops_coord_top_left["y"])
         )
 
-        image_presets = [""] + [preset.value for preset in ImagePreset]
+        image_presets = [preset.value for preset in ImagePreset]
         self.ui.image_presets.addItems(image_presets)
         self.ui.image_presets.setCurrentIndex(
             self.ui.image_presets.findText(
