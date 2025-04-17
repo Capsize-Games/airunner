@@ -203,6 +203,10 @@ ENV HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface
 ENV HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface
 ENV PIP_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/pip
 
+RUN mkdir -p /app/dist && \
+    chown -R ${HOST_UID}:${HOST_GID} /app && \
+    chmod -R u+w /app
+
 # Switch to appuser
 USER ${HOST_UID}:${HOST_GID}
 WORKDIR /app
