@@ -650,10 +650,6 @@ class StableDiffusionModelManager(BaseModelManager):
         """
         # clear the controlnet settings so that we get the latest selected controlnet model
         if not self.controlnet_enabled or self.controlnet_is_loading:
-            if not self.controlnet_enabled:
-                print("controlnet not enabled")
-            if self.controlnet_is_loading:
-                print("controlnet is loading")
             return
         self._controlnet_model = None
         self._controlnet_settings = None
