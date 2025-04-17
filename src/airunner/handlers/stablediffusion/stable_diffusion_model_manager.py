@@ -47,7 +47,13 @@ from transformers import (
     CLIPFeatureExtractor,
 )
 from airunner.handlers.base_model_manager import BaseModelManager
-from airunner.data.models import Schedulers, Lora, Embedding, ControlnetModel, AIModels
+from airunner.data.models import (
+    Schedulers,
+    Lora,
+    Embedding,
+    ControlnetModel,
+    AIModels,
+)
 from airunner.enums import (
     StableDiffusionVersion,
     GeneratorSection,
@@ -778,6 +784,10 @@ class StableDiffusionModelManager(BaseModelManager):
             self._current_state = HandlerState.READY
             clear_memory()
         self.handle_requested_action()
+
+        # Clear the image request so that we no longer
+        # use its values in the next request.
+        self.image_request = None
 
     def reload_lora(self):
         if self.model_status[
