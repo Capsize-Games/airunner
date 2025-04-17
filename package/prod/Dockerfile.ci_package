@@ -1,4 +1,4 @@
-FROM ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_ci
+git FROM ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_ci
 
 WORKDIR /app
 
