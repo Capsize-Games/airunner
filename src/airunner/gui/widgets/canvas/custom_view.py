@@ -1,13 +1,13 @@
 from typing import Optional, Dict
 
 from PySide6 import QtGui
-from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent
+from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, QTimer
 from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen
 from PySide6.QtWidgets import (
-    QGraphicsView, 
-    QGraphicsItemGroup, 
-    QGraphicsLineItem, 
-    QGraphicsScene
+    QGraphicsView,
+    QGraphicsItemGroup,
+    QGraphicsLineItem,
+    QGraphicsScene,
 )
 
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
@@ -16,7 +16,9 @@ from airunner.utils.image import convert_image_to_binary
 from airunner.utils.application import snap_to_grid
 from airunner.gui.widgets.canvas.brush_scene import BrushScene
 from airunner.gui.widgets.canvas.custom_scene import CustomScene
-from airunner.gui.widgets.canvas.draggables.active_grid_area import ActiveGridArea
+from airunner.gui.widgets.canvas.draggables.active_grid_area import (
+    ActiveGridArea,
+)
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.widgets.canvas.zoom_handler import ZoomHandler
 from airunner.utils.settings import get_qsettings
@@ -30,7 +32,7 @@ class CustomGraphicsView(
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.setMouseTracking(True)
-        
+
         self._scene: Optional[CustomScene] = None
         self._canvas_color: str = "#000000"
         self.current_background_color: Optional[QColor] = None
@@ -48,12 +50,22 @@ class CustomGraphicsView(
         self._middle_mouse_pressed: bool = False
         self.load_canvas_offset()
 
+        # Timer for debouncing resize events
+        self._resize_timer = QTimer(self)
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.setInterval(100)  # 100ms debounce, adjust as needed
+        self._resize_timer.timeout.connect(self._handle_resize_timeout)
+
         # Add settings to handle negative coordinates properly
-        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
-        
+        self.setViewportUpdateMode(
+            QGraphicsView.ViewportUpdateMode.FullViewportUpdate
+        )
+
         # Use setOptimizationFlags directly instead of the enum that doesn't exist in your PySide6 version
-        self.setOptimizationFlags(QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing | 
-                                 QGraphicsView.OptimizationFlag.DontSavePainterState)
+        self.setOptimizationFlags(
+            QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing
+            | QGraphicsView.OptimizationFlag.DontSavePainterState
+        )
 
         # register signal handlers
         signal_handlers = {
@@ -94,17 +106,18 @@ class CustomGraphicsView(
                 scene = BrushScene(canvas_type=self.canvas_type)
             else:
                 import traceback
+
                 traceback.print_stack()
                 self.logger.error(f"Unknown canvas type: {self.canvas_type}")
                 return
-        
+
         if scene:
             scene.parent = self
             self._scene = scene
             self.setScene(scene)
             self.set_canvas_color(scene)
         return self._scene
-    
+
     @scene.setter
     def scene(self, value: Optional[CustomScene]):
         self._scene = value
@@ -153,10 +166,10 @@ class CustomGraphicsView(
 
     def on_application_settings_changed_signal(self, data: Dict):
         if (
-            data.get("setting_name") == "grid_settings" and 
-            data.get("column_name") == "canvas_color" and 
-            self._canvas_color != data.get("value", self._canvas_color) and
-            self.scene
+            data.get("setting_name") == "grid_settings"
+            and data.get("column_name") == "canvas_color"
+            and self._canvas_color != data.get("value", self._canvas_color)
+            and self.scene
         ):
             self._canvas_color = data.get("value")
             self.set_canvas_color(self.scene, self._canvas_color)
@@ -166,10 +179,7 @@ class CustomGraphicsView(
         else:
             self.clear_lines()
 
-    def do_draw(
-        self,
-        force_draw: bool = False
-    ):
+    def do_draw(self, force_draw: bool = False):
         if (self.drawing or not self.initialized) and not force_draw:
             return
         self.drawing = True
@@ -235,7 +245,10 @@ class CustomGraphicsView(
                 self.line_group.addToGroup(line)
 
         # Hide unused lines
-        for i in range(num_vertical_lines + num_horizontal_lines, len(self.line_group.childItems())):
+        for i in range(
+            num_vertical_lines + num_horizontal_lines,
+            len(self.line_group.childItems()),
+        ):
             self.line_group.childItems()[i].setVisible(False)
 
     def clear_lines(self):
@@ -256,10 +269,7 @@ class CustomGraphicsView(
             return
         canvas_container_size = self.viewport().size()
         self.scene.setSceneRect(
-            0,
-            0,
-            canvas_container_size.width(),
-            canvas_container_size.height()
+            0, 0, canvas_container_size.width(), canvas_container_size.height()
         )
 
     def update_scene(self):
@@ -290,10 +300,7 @@ class CustomGraphicsView(
 
         # this will update the active grid area in the settings
         if selection_start_pos is not None and selection_stop_pos is not None:
-            rect = QRect(
-                selection_start_pos,
-                selection_stop_pos
-            )
+            rect = QRect(selection_start_pos, selection_stop_pos)
 
             # Ensure width and height ar divisible by 8
             width = rect.width()
@@ -335,13 +342,13 @@ class CustomGraphicsView(
             self.active_grid_area = ActiveGridArea()
             self.active_grid_area.setZValue(10)
             self.scene.addItem(self.active_grid_area)
-            
+
         # Adjust active grid area position based on canvas offset
         if self.active_grid_area:
             # Get the position from settings, subtract the canvas offset to display correctly
             pos_x = self.active_grid_settings.pos_x - self.canvas_offset.x()
             pos_y = self.active_grid_settings.pos_y - self.canvas_offset.y()
-            
+
             # Update the position property of the active grid area
             self.active_grid_area.setPos(pos_x, pos_y)
 
@@ -354,11 +361,18 @@ class CustomGraphicsView(
         # Redraw lines
         self.do_draw()
 
+    def _handle_resize_timeout(self):
+        self.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+        )
+        self.setSceneRect(
+            0, 0, self.viewport().width(), self.viewport().height()
+        )
+        self.do_draw()
+
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         super().resizeEvent(event)
-        self.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-        self.setSceneRect(0, 0, self.viewport().width(), self.viewport().height())
-        self.do_draw()
+        self._resize_timer.start()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -372,15 +386,19 @@ class CustomGraphicsView(
         self.toggle_drag_mode()
 
         # Ensure the viewport is aligned to the top-left corner
-        self.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-        self.setSceneRect(0, 0, self.viewport().width(), self.viewport().height())
+        self.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+        )
+        self.setSceneRect(
+            0, 0, self.viewport().width(), self.viewport().height()
+        )
         self.set_canvas_color(self.scene)
         self.show_active_grid_area()
 
     def set_canvas_color(
-        self, 
+        self,
         scene: Optional[CustomScene] = None,
-        canvas_color: Optional[str] = None
+        canvas_color: Optional[str] = None,
     ):
         scene = self.scene if not scene else scene
         canvas_color = canvas_color or self.grid_settings.canvas_color
@@ -398,7 +416,9 @@ class CustomGraphicsView(
         else:
             self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
-    def snap_to_grid(self, event: QMouseEvent, use_floor: bool = True) -> QMouseEvent:
+    def snap_to_grid(
+        self, event: QMouseEvent, use_floor: bool = True
+    ) -> QMouseEvent:
         """
         This is used to adjust the selection tool to the grid
         in real time during rubberband mode.
@@ -407,7 +427,9 @@ class CustomGraphicsView(
         :return:
         """
         if self.current_tool is CanvasToolName.SELECTION:
-            x, y = snap_to_grid(self.grid_settings, event.pos().x(), event.pos().y(), use_floor)
+            x, y = snap_to_grid(
+                self.grid_settings, event.pos().x(), event.pos().y(), use_floor
+            )
         else:
             x = event.pos().x()
             y = event.pos().y()
@@ -423,7 +445,7 @@ class CustomGraphicsView(
             point,
             event.button(),
             event.buttons(),
-            event.modifiers()
+            event.modifiers(),
         )
         return new_event
 
@@ -432,55 +454,65 @@ class CustomGraphicsView(
             delta = event.pos() - self.last_pos
             self.canvas_offset += delta
             self.last_pos = event.pos()
-            
+
             # Update the active grid area position when panning
             if self.active_grid_area:
-                pos_x = self.active_grid_settings.pos_x - self.canvas_offset.x()
-                pos_y = self.active_grid_settings.pos_y - self.canvas_offset.y()
+                pos_x = (
+                    self.active_grid_settings.pos_x - self.canvas_offset.x()
+                )
+                pos_y = (
+                    self.active_grid_settings.pos_y - self.canvas_offset.y()
+                )
                 self.active_grid_area.setPos(pos_x, pos_y)
-            
+
             # Update image positions directly without relying on complex logic
             self.updateImagePositions()
-            
+
             # Then update the grid
             self.do_draw()
-                
+
         super().mouseMoveEvent(event)
-    
+
     def updateImagePositions(self):
         """Update positions of all images in the scene based on canvas offset."""
-        if not self.scene or not hasattr(self.scene, 'item') or not self.scene.item:
+        if (
+            not self.scene
+            or not hasattr(self.scene, "item")
+            or not self.scene.item
+        ):
             return
-        
+
         # Get the main item directly
         item = self.scene.item
-        
+
         # Make sure the item is visible
         item.setVisible(True)
-        
+
         # Store original position if needed
         if item not in self.scene._original_item_positions:
             self.scene._original_item_positions[item] = item.pos()
-        
+
         # Get original position
         original_pos = self.scene._original_item_positions[item]
-        
+
         # Calculate new position
         new_x = original_pos.x() - self.canvas_offset.x()
         new_y = original_pos.y() - self.canvas_offset.y()
-        
+
         # Set new position
         item.setPos(new_x, new_y)
-        
+
         # Ensure image has high Z value for visibility
         item.setZValue(5)
-        
+
         # Ensure the item's bounding rect is properly updated
         item.prepareGeometryChange()
-        
+
         # Force the scene to update the entire viewport
-        self.scene.invalidate(item.boundingRect(), QGraphicsScene.SceneLayer.ItemLayer)
-        
+        self.scene.invalidate(
+            item.boundingRect(), QGraphicsScene.SceneLayer.ItemLayer
+        )
+
         # Force entire viewport update to handle negative coordinates
         self.viewport().update()
 
