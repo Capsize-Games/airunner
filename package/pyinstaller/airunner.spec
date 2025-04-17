@@ -25,7 +25,7 @@ a = Analysis(
         join(base_path, 'src'),
     ],
     binaries=[
-        ('/home/appuser/.local/lib/python3.10/site-packages/tiktoken/_tiktoken.cpython-310-x86_64-linux-gnu.so', '.'),
+        ('/home/appuser/.local/share/airunner/python/lib/python3.10/site-packages/tiktoken/_tiktoken.cpython-310-x86_64-linux-gnu.so', 'tiktoken'),
         (join(cudnn_lib, 'libcudnn_adv.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn_cnn.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn_engines_precompiled.so.9'), '.'),
