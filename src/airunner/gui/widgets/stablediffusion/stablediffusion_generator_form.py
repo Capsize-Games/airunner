@@ -421,7 +421,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
             callback=callback,
             image_preset=ImagePreset(self.generator_settings.image_preset),
         )
-        print("SENDING GENERATE SIGNAL WITH PRESET", image_request.image_preset)
 
         self.emit_signal(
             SignalCode.DO_GENERATE_SIGNAL, {"sd_request": image_request}
@@ -594,7 +593,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             str(self.generator_settings.crops_coord_top_left["y"])
         )
 
-        image_presets = [""] + [preset.value for preset in ImagePreset]
+        image_presets = [preset.value for preset in ImagePreset]
         self.ui.image_presets.addItems(image_presets)
         self.ui.image_presets.setCurrentIndex(
             self.ui.image_presets.findText(
