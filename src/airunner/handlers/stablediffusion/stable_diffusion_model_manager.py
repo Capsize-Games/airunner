@@ -41,6 +41,7 @@ from airunner.settings import (
     AIRUNNER_PHOTO_REALISTIC_PROMPT,
     AIRUNNER_ILLUSTRATION_PROMPT,
     AIRUNNER_PAINTING_PROMPT,
+    CUDA_ERROR,
 )
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import (
@@ -767,13 +768,13 @@ class StableDiffusionModelManager(BaseModelManager):
             except PipeNotLoadedException as e:
                 self.logger.error(e)
             except Exception as e:
-                if "CUDA out of memory" in str(e):
+                code = EngineResponseCode.ERROR
+                error_message = f"Error generating image: {e}"
+                response = error_message
+                if CUDA_ERROR in str(e):
                     code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
                     response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
-                error_message = f"Error generating image: {e}"
                 self.logger.error(error_message)
-                code = EngineResponseCode.ERROR
-                response = error_message
             if message is not None:
                 if self.image_request.callback:
                     self.image_request.callback(message)
@@ -1252,8 +1253,16 @@ class StableDiffusionModelManager(BaseModelManager):
             torch.OutOfMemoryError,
             ValueError,
         ) as e:
-            self.logger.error(
-                f"Failed to load model from {self.model_path}: {e}"
+            code = EngineResponseCode.ERROR
+            error_message = f"Failed to load model from {self.model_path}: {e}"
+            response = error_message
+            if CUDA_ERROR in str(e):
+                code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
+                response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
+            self.logger.error(error_message)
+            self.emit_signal(
+                SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
+                {"code": code, "message": response},
             )
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
