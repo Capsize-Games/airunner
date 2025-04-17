@@ -47,7 +47,7 @@ from transformers import (
     CLIPFeatureExtractor,
 )
 from airunner.handlers.base_model_manager import BaseModelManager
-from airunner.data.models import Schedulers, Lora, Embedding, ControlnetModel
+from airunner.data.models import Schedulers, Lora, Embedding, ControlnetModel, AIModels
 from airunner.enums import (
     StableDiffusionVersion,
     GeneratorSection,
@@ -103,8 +103,6 @@ class StableDiffusionModelManager(BaseModelManager):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self._model_path = model_path
-        self._model_version = model_version
         self._pipeline = pipeline
         self._scheduler_name = scheduler_name
         self._use_compel = use_compel
@@ -386,9 +384,9 @@ class StableDiffusionModelManager(BaseModelManager):
         The real model version. Only use this when we need to
         check the real version of the model.
         """
-        version = self._model_version
-        if self.image_request and self.image_request.version != "":
-            version = self.image_request.version
+        version = self.image_request.version if self.image_request else None
+        if not version:
+            version = self.generator_settings.version
         return version
 
     @property
@@ -422,7 +420,11 @@ class StableDiffusionModelManager(BaseModelManager):
     def model_path(self) -> str:
         path = self.image_request.model_path if self.image_request else None
         if path is None or path == "":
-            path = self._model_path
+            model_id = self.generator_settings.model
+            if model_id is not None:
+                model = AIModels.objects.get(model_id)
+                if model is not None:
+                    path = model.path
         return path
 
     @property
@@ -694,7 +696,7 @@ class StableDiffusionModelManager(BaseModelManager):
     def load(self):
         if self.sd_is_loading or self.sd_is_loaded:
             return
-        if self._model_path is None:
+        if self.model_path is None or self.model_path == "":
             self.logger.error("No model selected")
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
@@ -819,7 +821,7 @@ class StableDiffusionModelManager(BaseModelManager):
         if self._pipe.__class__ is pipeline_class_:  # noqa
             return
 
-        self.logger.debug(
+        self.logger.info(
             "Swapping pipeline from %s to %s",
             self._pipe.__class__ if self._pipe else "",
             pipeline_class_,
@@ -1225,6 +1227,9 @@ class StableDiffusionModelManager(BaseModelManager):
             config_path = os.path.dirname(self.model_path)
 
         try:
+            self.logger.info(
+                f"LOADING {pipeline_class_.__class__} {self.model_path}"
+            )
             self._pipe = pipeline_class_.from_single_file(
                 self.model_path,
                 config=config_path,
