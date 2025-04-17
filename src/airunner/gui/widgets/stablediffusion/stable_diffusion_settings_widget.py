@@ -146,11 +146,16 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             AIModels.is_default.is_(False),
         )
         generator_settings.version = val
-        generator_settings.model = model.id
-        generator_settings.save()
+
+        if model is not None:
+            generator_settings.model = model.id
+            generator_settings.save()
 
         self.load_models()
-        if self.application_settings.sd_enabled:
+
+        if model is None:
+            self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL, {})
+        elif self.application_settings.sd_enabled:
             self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {"do_reload": True})
 
     def _load_pipelines(self):
