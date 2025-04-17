@@ -824,7 +824,7 @@ class StableDiffusionModelManager(BaseModelManager):
 
         self.logger.debug(
             "Swapping pipeline from %s to %s",
-            self._pipe.__class__ if self.pipe else "",
+            self._pipe.__class__ if self._pipe else "",
             pipeline_class_,
         )
         try:
@@ -1130,6 +1130,7 @@ class StableDiffusionModelManager(BaseModelManager):
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             use_safetensors=True,
             use_fp16=True,
+            variant="fp16",
         )
 
     def _load_controlnet_processor(self):
