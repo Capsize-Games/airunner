@@ -557,7 +557,6 @@ class StableDiffusionModelManager(BaseModelManager):
     def prompt(self) -> str:
         prompt = self.image_request.prompt
         prompt_preset = self.prompt_preset
-        print("IMAGE REQUEST PRESET IS", self.image_request.image_preset)
 
         # Format the prompt
         formatted_prompt = None
@@ -1154,7 +1153,11 @@ class StableDiffusionModelManager(BaseModelManager):
             self._controlnet_processor = controlnet_class_()
 
     def _load_scheduler(self, scheduler_name: Optional[str] = None):
+        if not scheduler_name:
+            return
+
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
+
         self.scheduler_name = scheduler_name or self.scheduler_name
         base_path: str = self.path_settings_cached.base_path
         scheduler_version: str = self.version
@@ -1405,6 +1408,12 @@ class StableDiffusionModelManager(BaseModelManager):
         if self.use_compel:
             try:
                 self._load_textual_inversion_manager()
+            except Exception as e:
+                self.logger.error(
+                    f"Error creating textual inversion manager: {e}"
+                )
+
+            try:
                 self._load_compel_proc()
             except Exception as e:
                 self.logger.error(f"Error creating compel proc: {e}")
@@ -1827,9 +1836,6 @@ class StableDiffusionModelManager(BaseModelManager):
         second_prompt = self.second_prompt
         second_negative_prompt = self.second_negative_prompt
 
-        print("PROMPT", prompt)
-        print("NEGATIVE PROMPT", negative_prompt)
-
         if (
             self._current_prompt != prompt
             or self._current_negative_prompt != negative_prompt
@@ -2019,14 +2025,6 @@ class StableDiffusionModelManager(BaseModelManager):
             image = new_image.convert("RGB")
 
         args["guidance_scale"] = self.image_request.scale
-
-        if not self.controlnet_enabled:
-            if self.is_img2img:
-                args["strength"] = self.image_request.strength / 100.0
-            elif self.is_outpaint:
-                args["strength"] = (
-                    self.outpaint_settings_cached.strength / 100.0
-                )
 
         # set the image to controlnet image if controlnet is enabled
         if self.controlnet_enabled:
