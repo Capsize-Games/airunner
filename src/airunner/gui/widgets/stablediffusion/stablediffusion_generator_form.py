@@ -421,7 +421,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
             callback=callback,
             image_preset=ImagePreset(self.generator_settings.image_preset),
         )
-        print("SENDING GENERATE SIGNAL WITH PRESET", image_request.image_preset)
 
         self.emit_signal(
             SignalCode.DO_GENERATE_SIGNAL, {"sd_request": image_request}
