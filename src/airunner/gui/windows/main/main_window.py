@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QSystemTrayIcon,
     QMenu,
+    QPushButton,
 )
 from PySide6.QtGui import QIcon
 
@@ -84,6 +85,7 @@ from airunner.gui.windows.settings.airunner_settings import SettingsWindow
 from airunner.gui.windows.update.update_window import UpdateWindow
 from airunner.gui.managers.icon_manager import IconManager
 from airunner.plugin_loader import PluginLoader
+from airunner.gui.widgets.nodegraph_widget import NodeGraphWidget
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
@@ -773,6 +775,17 @@ class MainWindow(
 
         self.ui.center_tab_container.setCurrentIndex(active_index)
 
+        # Add NodeGraph tab
+        if hasattr(self.ui, "center_tab_container"):
+            self.nodegraph_widget = NodeGraphWidget(self)
+            self.ui.center_tab_container.addTab(
+                self.nodegraph_widget, "Agent Workflow"
+            )
+        else:
+            self.logger.error(
+                "Could not find 'center_tab_container' to add the NodeGraphWidget tab."
+            )
+
         self.set_stylesheet()
 
         load_splitter_settings(self.ui, ["main_window_splitter"])
@@ -798,6 +811,17 @@ class MainWindow(
         self.ui.actionCollapse_to_system_tray.setChecked(
             self.close_to_system_tray
         )
+
+        # Add a temporary test button to the status bar
+        test_button = QPushButton("Test Workflow", self)
+        test_button.clicked.connect(self.test_nodegraph_workflow)
+        self.statusBar().insertWidget(0, test_button)
+
+    def test_nodegraph_workflow(self):
+        if hasattr(self, "nodegraph_widget"):
+            self.nodegraph_widget.execute_workflow()
+        else:
+            print("NodeGraphWidget not initialized.")
 
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
