@@ -861,14 +861,17 @@ class StableDiffusionModelManager(BaseModelManager):
             raise PipeNotLoadedException()
         self._load_prompt_embeds()
         clear_memory()
+        pos = self.active_grid_settings.pos
         active_rect = Rect(
-            self.active_grid_settings.pos_x,
-            self.active_grid_settings.pos_y,
+            pos[0],
+            pos[1],
             self.application_settings_cached.working_width,
             self.application_settings_cached.working_height,
         )
+        drawing_pad_pos = self.drawing_pad_settings.pos
         active_rect.translate(
-            -self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos
+            -drawing_pad_pos[0],
+            -drawing_pad_pos[1],
         )
         args = self._prepare_data(active_rect)
         self._current_state = HandlerState.GENERATING
