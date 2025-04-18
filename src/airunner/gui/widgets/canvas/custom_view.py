@@ -80,7 +80,6 @@ class CustomGraphicsView(
             SignalCode.SCENE_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
-            SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL: self.handle_active_grid_area_moved_signal,
             SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
             SignalCode.RECENTER_GRID_SIGNAL: self.on_recenter_grid_signal,
         }
@@ -151,9 +150,6 @@ class CustomGraphicsView(
             CanvasType.IMAGE.value,
             CanvasType.BRUSH.value,
         )
-
-    def handle_active_grid_area_moved_signal(self):
-        self.active_grid_area.snap_to_grid()
 
     def on_recenter_grid_signal(self):
         self.canvas_offset = QPoint(0, 0)
@@ -356,8 +352,9 @@ class CustomGraphicsView(
         # Adjust active grid area position based on canvas offset
         if self.active_grid_area:
             # Get the position from settings, subtract the canvas offset to display correctly
-            pos_x = self.active_grid_settings.pos_x - self.canvas_offset.x()
-            pos_y = self.active_grid_settings.pos_y - self.canvas_offset.y()
+            pos = self.active_grid_settings.pos
+            pos_x = pos[0] - self.canvas_offset.x()
+            pos_y = pos[1] - self.canvas_offset.y()
 
             # Update the position property of the active grid area
             self.active_grid_area.setPos(pos_x, pos_y)
@@ -425,8 +422,9 @@ class CustomGraphicsView(
 
     def update_active_grid_area_position(self):
         if self.active_grid_area:
-            pos_x = self.active_grid_settings.pos_x - self.canvas_offset.x()
-            pos_y = self.active_grid_settings.pos_y - self.canvas_offset.y()
+            pos = self.active_grid_settings.pos
+            pos_x = pos[0] - self.canvas_offset.x()
+            pos_y = pos[1] - self.canvas_offset.y()
             self.active_grid_area.setPos(pos_x, pos_y)
 
     def updateImagePositions(self):
