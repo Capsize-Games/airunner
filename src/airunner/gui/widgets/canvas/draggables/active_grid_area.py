@@ -7,7 +7,9 @@ from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, Qt
 from PySide6.QtWidgets import QGraphicsItem
 
 from airunner.enums import SignalCode, CanvasToolName
-from airunner.gui.widgets.canvas.draggables.draggable_pixmap import DraggablePixmap
+from airunner.gui.widgets.canvas.draggables.draggable_pixmap import (
+    DraggablePixmap,
+)
 
 
 class ActiveGridArea(DraggablePixmap):
@@ -35,15 +37,11 @@ class ActiveGridArea(DraggablePixmap):
         self.snap_to_grid(
             x=min(self.rect.x(), self.rect.x() + self.rect.width()),
             y=min(self.rect.y(), self.rect.y() + self.rect.height()),
-            save=True
+            save=True,
         )
-        self.setFlag(
-            QGraphicsItem.GraphicsItemFlag.ItemIsMovable,
-            True
-        )
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.register(
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
-            self.render_fill
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.render_fill
         )
 
     def update_position(self, x: int, y: int, save: bool = True):
@@ -58,7 +56,7 @@ class ActiveGridArea(DraggablePixmap):
             self.active_grid_settings.pos_x,
             self.active_grid_settings.pos_y,
             self.application_settings.working_width,
-            self.application_settings.working_height
+            self.application_settings.working_height,
         )
 
     def render_fill(self):
@@ -75,7 +73,11 @@ class ActiveGridArea(DraggablePixmap):
         else:
             self.image = self.image.scaled(width, height)
 
-        fill_color = self.get_fill_color() if self._do_render_fill else QColor(0, 0, 0, 1)
+        fill_color = (
+            self.get_fill_color()
+            if self._do_render_fill
+            else QColor(0, 0, 0, 1)
+        )
         self.image.fill(fill_color)
         pixmap = QPixmap.fromImage(self.image)
         self.setPixmap(pixmap)
@@ -110,21 +112,12 @@ class ActiveGridArea(DraggablePixmap):
             line_width = self.grid_settings.line_width
 
             self._draggable_rect = QRect(
-                0,
-                0,
-                abs(self.rect.width()),
-                abs(self.rect.height())
+                0, 0, abs(self.rect.width()), abs(self.rect.height())
             )
             border_color = QColor(self.active_grid_settings.border_color)
             border_color.setAlpha(self.active_grid_settings.border_opacity)
-            self._border_pen = QPen(
-                border_color,
-                line_width
-            )
-            self._outer_border_pen = QPen(
-                border_color,
-                line_width + 1
-            )
+            self._border_pen = QPen(border_color, line_width)
+            self._outer_border_pen = QPen(border_color, line_width + 1)
             self._border_color = QColor(0, 0, 0, 0)
             self._border_brush = QBrush(self._border_color)
 
@@ -155,9 +148,13 @@ class ActiveGridArea(DraggablePixmap):
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
-        if self.mouse_press_pos and self.current_tool is CanvasToolName.ACTIVE_GRID_AREA and (
-            self.mouse_press_pos.x() != event.pos().x() or
-            self.mouse_press_pos.y() != event.pos().y()
+        if (
+            self.mouse_press_pos
+            and self.current_tool is CanvasToolName.ACTIVE_GRID_AREA
+            and (
+                self.mouse_press_pos.x() != event.pos().x()
+                or self.mouse_press_pos.y() != event.pos().y()
+            )
         ):
             self.emit_signal(SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL)
             self.emit_signal(SignalCode.GENERATE_MASK)
