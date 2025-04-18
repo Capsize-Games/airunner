@@ -349,8 +349,7 @@ class CustomGraphicsView(
             self.active_grid_area.setZValue(10)
             self.scene.addItem(self.active_grid_area)
 
-        # Adjust active grid area position based on canvas offset
-        if self.active_grid_area:
+            # Only set position when first creating the active grid area
             # Get the position from settings, subtract the canvas offset to display correctly
             pos = self.active_grid_settings.pos
             pos_x = pos[0] - self.canvas_offset.x()
