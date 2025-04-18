@@ -1,0 +1,2 @@
+class AgentActionMessage:
+    pass
