@@ -16,6 +16,6 @@ class DrawingPadSettings(BaseModel):
 
     @property
     def pos(self) -> tuple[int, int]:
-        x = self.pos_x if self.x_pos is not None else 0
-        y = self.pos_y if self.y_pos is not None else 0
+        x = self.x_pos if self.x_pos is not None else 0
+        y = self.y_pos if self.y_pos is not None else 0
         return x, y
