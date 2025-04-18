@@ -2149,22 +2149,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionToggle_Selection</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_toggle_select(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>426</x>
-     <y>332</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionToggle_Brush</sender>
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
@@ -2466,7 +2450,6 @@
   <slot>stt_button_toggled(bool)</slot>
   <slot>ocr_button_toggled(bool)</slot>
   <slot>action_reset_settings()</slot>
-  <slot>action_toggle_select(bool)</slot>
   <slot>import_controlnet_image()</slot>
   <slot>export_controlnet_image()</slot>
   <slot>import_drawingpad_image()</slot>

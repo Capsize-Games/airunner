@@ -149,13 +149,6 @@ class CanvasWidget(
             "active": val
         })
 
-    @Slot(bool)
-    def action_toggle_select(self, val: bool):
-        self.emit_signal(SignalCode.TOGGLE_TOOL, {
-            "tool": CanvasToolName.SELECTION,
-            "active": val
-        })
-
     def on_toggle_tool_signal(self, message: dict):
         tool = message.get("tool", None)
         active = message.get("active", False)

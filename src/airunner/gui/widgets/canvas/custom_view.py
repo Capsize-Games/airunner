@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.image import convert_image_to_binary
-from airunner.utils.application import snap_to_grid
 from airunner.gui.widgets.canvas.brush_scene import BrushScene
 from airunner.gui.widgets.canvas.custom_scene import CustomScene
 from airunner.gui.widgets.canvas.draggables.active_grid_area import (
@@ -407,43 +406,7 @@ class CustomGraphicsView(
         self.toggle_drag_mode()
 
     def toggle_drag_mode(self):
-        if self.current_tool is CanvasToolName.SELECTION:
-            self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
-        else:
-            self.setDragMode(QGraphicsView.DragMode.NoDrag)
-
-    def snap_to_grid(
-        self, event: QMouseEvent, use_floor: bool = True
-    ) -> QMouseEvent:
-        """
-        This is used to adjust the selection tool to the grid
-        in real time during rubberband mode.
-        :param event:
-        :param use_floor:
-        :return:
-        """
-        if self.current_tool is CanvasToolName.SELECTION:
-            x, y = snap_to_grid(
-                self.grid_settings, event.pos().x(), event.pos().y(), use_floor
-            )
-        else:
-            x = event.pos().x()
-            y = event.pos().y()
-
-        x = float(x)
-        y = float(y)
-
-        point = QPointF(x, y)
-        event_type: QEvent.Type = QEvent.Type(event.type())
-
-        new_event = QMouseEvent(
-            event_type,
-            point,
-            event.button(),
-            event.buttons(),
-            event.modifiers(),
-        )
-        return new_event
+        self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
     def mouseMoveEvent(self, event: QMouseEvent):
         if self._middle_mouse_pressed:
@@ -517,9 +480,7 @@ class CustomGraphicsView(
             self._middle_mouse_pressed = True
             self.last_pos = event.pos()
 
-        new_event = self.snap_to_grid(event)
-
-        super().mousePressEvent(new_event)
+        super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.MiddleButton:

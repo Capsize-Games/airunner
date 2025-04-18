@@ -947,23 +947,6 @@ class CustomScene(
         ):
             view = self.views()[0]
             pos = view.mapFromScene(event.scenePos())
-            if (
-                self.grid_settings.snap_to_grid
-                and self.current_tool is CanvasToolName.SELECTION
-            ):
-                x, y = snap_to_grid(
-                    self.grid_settings, pos.x(), pos.y(), False
-                )
-                pos = QPoint(x, y)
-                if is_press_event:
-                    self.selection_stop_pos = None
-                    self.selection_start_pos = QPoint(pos.x(), pos.y())
-                else:
-                    self.selection_stop_pos = QPoint(pos.x(), pos.y())
-                self.emit_signal(
-                    SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL
-                )
-                return True
         return False
 
     def _handle_left_mouse_press(self, event) -> bool:
