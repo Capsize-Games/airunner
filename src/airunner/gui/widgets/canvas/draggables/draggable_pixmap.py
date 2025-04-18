@@ -6,6 +6,7 @@ from airunner.enums import CanvasToolName
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import snap_to_grid
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.utils.settings import get_qsettings
 
 
 class DraggablePixmap(
@@ -22,6 +23,13 @@ class DraggablePixmap(
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         x = self.drawing_pad_settings.x_pos
         y = self.drawing_pad_settings.y_pos
+        self.settings = get_qsettings()
+        self.canvas_offset_x = self.settings.value(
+            "canvas_offset_x", 0, type=float
+        )
+        self.canvas_offset_y = self.settings.value(
+            "canvas_offset_y", 0, type=float
+        )
         self.setPos(QPoint(x, y))
 
     @property
@@ -34,7 +42,7 @@ class DraggablePixmap(
         ]:
             return
         super().mouseMoveEvent(event)
-        self.snap_to_grid()
+        self.snap_to_grid_when_close()
 
     def mouseReleaseEvent(self, event):
         if self.current_tool in [
@@ -49,10 +57,31 @@ class DraggablePixmap(
         if y is None:
             y = int(self.y())
         if self.grid_settings.snap_to_grid:
-            x, y = snap_to_grid(self.grid_settings, x, y, False)
+            x, y = snap_to_grid(
+                self.grid_settings,
+                x + self.canvas_offset_x,
+                y + self.canvas_offset_y,
+                False,
+            )
         x += self.last_pos.x()
         y += self.last_pos.y()
         self.update_position(x, y, save)
+    
+    def snap_to_grid_when_close(self, x=None, y=None):
+        if x is None:
+            x = int(self.x())
+        if y is None:
+            y = int(self.y())
+        if self.grid_settings.snap_to_grid:
+            x, y = snap_to_grid(
+                self.grid_settings,
+                x + self.canvas_offset_x,
+                y + self.canvas_offset_y,
+                False,
+            )
+        x += self.last_pos.x()
+        y += self.last_pos.y()
+        self.update_position(x, y, save=False)
 
     def update_position(self, x: int, y: int, save: bool = True):
         self.setPos(QPoint(x, y))
