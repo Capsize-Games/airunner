@@ -63,15 +63,16 @@ class GeneratorForm(BaseWidget):
 
     @property
     def active_rect(self):
+        pos = self.active_grid_settings.pos
         rect = QRect(
-            self.active_grid_settings.pos_x,
-            self.active_grid_settings.pos_y,
+            pos[0],
+            pos[1],
             self.application_settings.working_width,
             self.application_settings.working_height,
         )
-        rect.translate(
-            -self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos
-        )
+
+        drawing_pad_pos = self.drawing_pad_settings.pos
+        rect.translate(-drawing_pad_pos[0], -drawing_pad_pos[1])
 
         return rect
 
