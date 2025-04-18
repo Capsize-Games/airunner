@@ -153,6 +153,7 @@ class CustomGraphicsView(
 
     def on_recenter_grid_signal(self):
         self.canvas_offset = QPoint(0, 0)
+        self.updateImagePositions()
         self.do_draw()
 
     def on_mask_generator_worker_response_signal(self, message: dict):

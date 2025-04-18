@@ -5,7 +5,7 @@ from typing import Optional, Tuple, Dict
 
 import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
-from PIL.ImageQt import QImage
+from PySide6.QtGui import QImage
 from PySide6.QtCore import Qt, QPoint, QRect, QPointF
 from PySide6.QtGui import (
     QEnterEvent,
