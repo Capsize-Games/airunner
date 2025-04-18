@@ -15,20 +15,21 @@ class MaskGeneratorWorker(Worker):
 
     @property
     def active_rect(self):
+        pos = self.active_grid_settings.pos
         rect = QRect(
-            self.active_grid_settings.pos_x,
-            self.active_grid_settings.pos_y,
+            pos[0],
+            pos[1],
             self.application_settings.working_width,
-            self.application_settings.working_height
+            self.application_settings.working_height,
         )
-        rect.translate(-self.drawing_pad_settings.x_pos, -self.drawing_pad_settings.y_pos)
+        drawing_pad_pos = self.drawing_pad_settings.pos
+        rect.translate(-drawing_pad_pos[0], -drawing_pad_pos[1])
         return rect
 
     def on_generate_mask_signal(self, _message: dict):
         mask = self.generate_mask()
         self.emit_signal(
-            SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL,
-            {"mask": mask}
+            SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL, {"mask": mask}
         )
 
     def generate_mask(self) -> Image:
@@ -36,40 +37,64 @@ class MaskGeneratorWorker(Worker):
         if base_64_image is None:
             return
         image = convert_binary_to_image(base_64_image)
-        image = image.convert('RGBA')
+        image = image.convert("RGBA")
         if image is not None:
             image_width = image.width
             image_height = image.height
 
             # Create a white image of the same size as the working area
-            mask = Image.new('RGB', (self.application_settings.working_width, self.application_settings.working_height),
-                             'white')
+            mask = Image.new(
+                "RGB",
+                (
+                    self.application_settings.working_width,
+                    self.application_settings.working_height,
+                ),
+                "white",
+            )
             mask_data = np.array(mask)
 
             # Calculate the position and size of the black rectangle (image)
             black_left = max(0, -self.active_rect.left())
             black_top = max(0, -self.active_rect.top())
-            black_right = min(image_width, self.application_settings.working_width - self.active_rect.left())
-            black_bottom = min(image_height, self.application_settings.working_height - self.active_rect.top())
+            black_right = min(
+                image_width,
+                self.application_settings.working_width
+                - self.active_rect.left(),
+            )
+            black_bottom = min(
+                image_height,
+                self.application_settings.working_height
+                - self.active_rect.top(),
+            )
 
             # Ensure the coordinates are valid
             if black_right >= black_left and black_bottom >= black_top:
                 # Draw the black rectangle (image) on the mask
-                mask_data[black_top:black_bottom, black_left:black_right] = [0, 0, 0]
+                mask_data[black_top:black_bottom, black_left:black_right] = [
+                    0,
+                    0,
+                    0,
+                ]
 
             # Check for transparent pixels and draw them as white on the mask
-            if image.mode == 'RGBA':
+            if image.mode == "RGBA":
                 image_data = np.array(image)
-                transparent_pixels = (image_data[:, :, 3] == 0)
+                transparent_pixels = image_data[:, :, 3] == 0
 
                 # Calculate the mask coordinates for transparent pixels
-                mask_y, mask_x = np.where(transparent_pixels)  # Note the order of mask_x and mask_y
+                mask_y, mask_x = np.where(
+                    transparent_pixels
+                )  # Note the order of mask_x and mask_y
                 mask_x -= self.active_rect.left()
                 mask_y -= self.active_rect.top()
 
                 # Ensure the coordinates are within the mask bounds
-                valid_coords = (mask_x >= 0) & (mask_x < self.application_settings.working_width) & \
-                               (mask_y >= 0) & (mask_y < self.application_settings.working_height)
+                valid_coords = (
+                    (mask_x >= 0)
+                    & (mask_x < self.application_settings.working_width)
+                    & (mask_y >= 0)
+                    & (mask_y < self.application_settings.working_height)
+                )
                 mask_x = mask_x[valid_coords]
                 mask_y = mask_y[valid_coords]
 

@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.image import convert_image_to_binary
-from airunner.utils.application import snap_to_grid
 from airunner.gui.widgets.canvas.brush_scene import BrushScene
 from airunner.gui.widgets.canvas.custom_scene import CustomScene
 from airunner.gui.widgets.canvas.draggables.active_grid_area import (
@@ -48,7 +47,6 @@ class CustomGraphicsView(
         self.canvas_offset = QPoint(0, 0)  # Offset for infinite scrolling
         self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
-        self.load_canvas_offset()
 
         # Timer for debouncing resize events
         self._resize_timer = QTimer(self)
@@ -82,7 +80,6 @@ class CustomGraphicsView(
             SignalCode.SCENE_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
-            SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL: self.handle_active_grid_area_moved_signal,
             SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
             SignalCode.RECENTER_GRID_SIGNAL: self.on_recenter_grid_signal,
         }
@@ -94,9 +91,15 @@ class CustomGraphicsView(
         x = self.settings.value("canvas_offset_x", 0, type=float)
         y = self.settings.value("canvas_offset_y", 0, type=float)
         self.canvas_offset = QPointF(x, y)
+        self.update_active_grid_area_position()
+        self.updateImagePositions()
+        self.do_draw()
 
     def save_canvas_offset(self):
         """Save the canvas offset to QSettings."""
+        self.logger.info(
+            f"Saving canvas offset to settings: {self.canvas_offset}"
+        )
         self.settings.setValue("canvas_offset_x", self.canvas_offset.x())
         self.settings.setValue("canvas_offset_y", self.canvas_offset.y())
 
@@ -148,11 +151,10 @@ class CustomGraphicsView(
             CanvasType.BRUSH.value,
         )
 
-    def handle_active_grid_area_moved_signal(self):
-        self.active_grid_area.snap_to_grid()
-
     def on_recenter_grid_signal(self):
         self.canvas_offset = QPoint(0, 0)
+        self.save_canvas_offset()
+        self.updateImagePositions()
         self.do_draw()
 
     def on_mask_generator_worker_response_signal(self, message: dict):
@@ -347,14 +349,30 @@ class CustomGraphicsView(
             self.active_grid_area.setZValue(10)
             self.scene.addItem(self.active_grid_area)
 
-        # Adjust active grid area position based on canvas offset
-        if self.active_grid_area:
-            # Get the position from settings, subtract the canvas offset to display correctly
-            pos_x = self.active_grid_settings.pos_x - self.canvas_offset.x()
-            pos_y = self.active_grid_settings.pos_y - self.canvas_offset.y()
+            # Load the absolute position directly from QSettings if available
+            absolute_x = self.settings.value("active_grid_pos_x", None)
+            absolute_y = self.settings.value("active_grid_pos_y", None)
 
-            # Update the position property of the active grid area
-            self.active_grid_area.setPos(pos_x, pos_y)
+            # If we have saved positions in QSettings, use them
+            if absolute_x is not None and absolute_y is not None:
+                # Convert to appropriate types
+                absolute_x = float(absolute_x)
+                absolute_y = float(absolute_y)
+
+                # Calculate relative position by subtracting canvas offset
+                pos_x = absolute_x - self.canvas_offset.x()
+                pos_y = absolute_y - self.canvas_offset.y()
+
+                # Set position directly and update settings for consistency
+                self.active_grid_area.setPos(pos_x, pos_y)
+                self.update_active_grid_settings("pos_x", absolute_x)
+                self.update_active_grid_settings("pos_y", absolute_y)
+            else:
+                # Fall back to the settings from the database if QSettings don't have values
+                pos = self.active_grid_settings.pos
+                pos_x = pos[0] - self.canvas_offset.x()
+                pos_y = pos[1] - self.canvas_offset.y()
+                self.active_grid_area.setPos(pos_x, pos_y)
 
     def on_zoom_level_changed_signal(self):
         transform = self.zoom_handler.on_zoom_level_changed()
@@ -378,15 +396,11 @@ class CustomGraphicsView(
 
     def showEvent(self, event):
         super().showEvent(event)
-
         self.setContentsMargins(0, 0, 0, 0)
-
         self.do_draw(True)
-
         self.scene.initialize_image()
-
+        self.load_canvas_offset()
         self.toggle_drag_mode()
-
         self.set_canvas_color(self.scene)
         self.show_active_grid_area()
 
@@ -406,67 +420,27 @@ class CustomGraphicsView(
         self.toggle_drag_mode()
 
     def toggle_drag_mode(self):
-        if self.current_tool is CanvasToolName.SELECTION:
-            self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
-        else:
-            self.setDragMode(QGraphicsView.DragMode.NoDrag)
-
-    def snap_to_grid(
-        self, event: QMouseEvent, use_floor: bool = True
-    ) -> QMouseEvent:
-        """
-        This is used to adjust the selection tool to the grid
-        in real time during rubberband mode.
-        :param event:
-        :param use_floor:
-        :return:
-        """
-        if self.current_tool is CanvasToolName.SELECTION:
-            x, y = snap_to_grid(
-                self.grid_settings, event.pos().x(), event.pos().y(), use_floor
-            )
-        else:
-            x = event.pos().x()
-            y = event.pos().y()
-
-        x = float(x)
-        y = float(y)
-
-        point = QPointF(x, y)
-        event_type: QEvent.Type = QEvent.Type(event.type())
-
-        new_event = QMouseEvent(
-            event_type,
-            point,
-            event.button(),
-            event.buttons(),
-            event.modifiers(),
-        )
-        return new_event
+        self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
     def mouseMoveEvent(self, event: QMouseEvent):
+        self.handle_pan_canvas(event)
+        super().mouseMoveEvent(event)
+
+    def handle_pan_canvas(self, event: QMouseEvent):
         if self._middle_mouse_pressed:
             delta = event.pos() - self.last_pos
             self.canvas_offset += delta
             self.last_pos = event.pos()
-
-            # Update the active grid area position when panning
-            if self.active_grid_area:
-                pos_x = (
-                    self.active_grid_settings.pos_x - self.canvas_offset.x()
-                )
-                pos_y = (
-                    self.active_grid_settings.pos_y - self.canvas_offset.y()
-                )
-                self.active_grid_area.setPos(pos_x, pos_y)
-
-            # Update image positions directly without relying on complex logic
+            self.update_active_grid_area_position()
             self.updateImagePositions()
-
-            # Then update the grid
             self.do_draw()
 
-        super().mouseMoveEvent(event)
+    def update_active_grid_area_position(self):
+        if self.active_grid_area:
+            pos = self.active_grid_settings.pos
+            pos_x = pos[0] - self.canvas_offset.x()
+            pos_y = pos[1] - self.canvas_offset.y()
+            self.active_grid_area.setPos(pos_x, pos_y)
 
     def updateImagePositions(self):
         """Update positions of all images in the scene based on canvas offset."""
@@ -516,12 +490,11 @@ class CustomGraphicsView(
             self._middle_mouse_pressed = True
             self.last_pos = event.pos()
 
-        new_event = self.snap_to_grid(event)
-
-        super().mousePressEvent(new_event)
+        super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.MiddleButton:
+            self.save_canvas_offset()
             self._middle_mouse_pressed = False
             self.last_pos = None
         super().mouseReleaseEvent(event)
@@ -533,8 +506,3 @@ class CustomGraphicsView(
         """
         self.scene.leaveEvent(event)
         super().leaveEvent(event)
-
-    def closeEvent(self, event):
-        """Save canvas offset on close."""
-        self.save_canvas_offset()
-        super().closeEvent(event)
