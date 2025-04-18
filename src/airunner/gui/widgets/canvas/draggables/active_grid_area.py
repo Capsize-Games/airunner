@@ -31,12 +31,6 @@ class ActiveGridArea(DraggablePixmap):
         self.render_fill()
         painter = self.draw_border()
         super().paint(painter, None, None)
-        # self.setPos(
-        #     QPoint(
-        #         self.drawing_pad_settings.x_pos,
-        #         self.drawing_pad_settings.y_pos,
-        #     )
-        # )
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.register(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.render_fill
@@ -50,7 +44,6 @@ class ActiveGridArea(DraggablePixmap):
     ):
         super().update_position(x, y, save)
         if save and x is not None and y is not None:
-            # Update both active_grid_settings and drawing_pad_settings for consistency
             self.update_active_grid_settings("pos_x", x)
             self.update_active_grid_settings("pos_y", y)
             # Also add canvas offset to get the absolute position
