@@ -19,10 +19,7 @@ class DraggablePixmap(
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.last_pos = QPoint(0, 0)
         self.save = False
-        self.setFlag(
-            QGraphicsItem.GraphicsItemFlag.ItemIsMovable,
-            True
-        )
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         x = self.drawing_pad_settings.x_pos
         y = self.drawing_pad_settings.y_pos
         self.setPos(QPoint(x, y))

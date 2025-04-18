@@ -994,31 +994,31 @@ class CustomScene(
         filtered_image = filter_object.filter(image)
         return filtered_image
 
-    def update_image_position(self, canvas_offset):
-        """Update the position of image items in the scene based on the canvas offset."""
-        if not self.item:
-            return
+    # def update_image_position(self, canvas_offset):
+    #     """Update the position of image items in the scene based on the canvas offset."""
+    #     if not self.item:
+    #         return
 
-        # Store the original position if we haven't already
-        if self.item not in self._original_item_positions:
-            self._original_item_positions[self.item] = self.item.pos()
+    #     # Store the original position if we haven't already
+    #     if self.item not in self._original_item_positions:
+    #         self._original_item_positions[self.item] = self.item.pos()
 
-        # Get the original position
-        original_pos = self._original_item_positions[self.item]
+    #     # Get the original position
+    #     original_pos = self._original_item_positions[self.item]
 
-        # Calculate and set the new position
-        new_x = original_pos.x() - canvas_offset.x()
-        new_y = original_pos.y() - canvas_offset.y()
+    #     # Calculate and set the new position
+    #     new_x = original_pos.x() - canvas_offset.x()
+    #     new_y = original_pos.y() - canvas_offset.y()
 
-        # Before changing position, prepare the item for geometry change
-        self.item.prepareGeometryChange()
-        self.item.setPos(new_x, new_y)
+    #     # Before changing position, prepare the item for geometry change
+    #     self.item.prepareGeometryChange()
+    #     self.item.setPos(new_x, new_y)
 
-        # Make sure the item is visible and in focus
-        self.item.setVisible(True)
-        self.item.setZValue(5)  # Priority rendering
+    #     # Make sure the item is visible and in focus
+    #     self.item.setVisible(True)
+    #     self.item.setZValue(5)  # Priority rendering
 
-        # Update the entire viewport to ensure image is visible even at negative coordinates
-        self.invalidate(
-            self._extended_viewport_rect, QGraphicsScene.SceneLayer.ItemLayer
-        )
+    #     # Update the entire viewport to ensure image is visible even at negative coordinates
+    #     self.invalidate(
+    #         self._extended_viewport_rect, QGraphicsScene.SceneLayer.ItemLayer
+    #     )
