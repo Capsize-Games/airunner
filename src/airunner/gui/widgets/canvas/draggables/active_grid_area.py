@@ -49,9 +49,17 @@ class ActiveGridArea(DraggablePixmap):
         save: bool = True,
     ):
         super().update_position(x, y, save)
-        if save:
+        if save and x is not None and y is not None:
+            # Update both active_grid_settings and drawing_pad_settings for consistency
             self.update_active_grid_settings("pos_x", x)
             self.update_active_grid_settings("pos_y", y)
+            # Also add canvas offset to get the absolute position
+            absolute_x = x + self.canvas_offset_x
+            absolute_y = y + self.canvas_offset_y
+            # Store absolute position in settings
+            self.settings.setValue("active_grid_pos_x", absolute_x)
+            self.settings.setValue("active_grid_pos_y", absolute_y)
+            self.settings.sync()  # Force immediate write to ensure settings are saved
 
     @property
     def rect(self):

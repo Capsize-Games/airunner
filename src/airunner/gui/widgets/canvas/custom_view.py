@@ -349,14 +349,30 @@ class CustomGraphicsView(
             self.active_grid_area.setZValue(10)
             self.scene.addItem(self.active_grid_area)
 
-            # Only set position when first creating the active grid area
-            # Get the position from settings, subtract the canvas offset to display correctly
-            pos = self.active_grid_settings.pos
-            pos_x = pos[0] - self.canvas_offset.x()
-            pos_y = pos[1] - self.canvas_offset.y()
+            # Load the absolute position directly from QSettings if available
+            absolute_x = self.settings.value("active_grid_pos_x", None)
+            absolute_y = self.settings.value("active_grid_pos_y", None)
 
-            # Update the position property of the active grid area
-            self.active_grid_area.setPos(pos_x, pos_y)
+            # If we have saved positions in QSettings, use them
+            if absolute_x is not None and absolute_y is not None:
+                # Convert to appropriate types
+                absolute_x = float(absolute_x)
+                absolute_y = float(absolute_y)
+
+                # Calculate relative position by subtracting canvas offset
+                pos_x = absolute_x - self.canvas_offset.x()
+                pos_y = absolute_y - self.canvas_offset.y()
+
+                # Set position directly and update settings for consistency
+                self.active_grid_area.setPos(pos_x, pos_y)
+                self.update_active_grid_settings("pos_x", absolute_x)
+                self.update_active_grid_settings("pos_y", absolute_y)
+            else:
+                # Fall back to the settings from the database if QSettings don't have values
+                pos = self.active_grid_settings.pos
+                pos_x = pos[0] - self.canvas_offset.x()
+                pos_y = pos[1] - self.canvas_offset.y()
+                self.active_grid_area.setPos(pos_x, pos_y)
 
     def on_zoom_level_changed_signal(self):
         transform = self.zoom_handler.on_zoom_level_changed()
