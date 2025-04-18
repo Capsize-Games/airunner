@@ -47,7 +47,6 @@ class CustomGraphicsView(
         self.canvas_offset = QPoint(0, 0)  # Offset for infinite scrolling
         self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
-        self.load_canvas_offset()
 
         # Timer for debouncing resize events
         self._resize_timer = QTimer(self)
@@ -93,9 +92,15 @@ class CustomGraphicsView(
         x = self.settings.value("canvas_offset_x", 0, type=float)
         y = self.settings.value("canvas_offset_y", 0, type=float)
         self.canvas_offset = QPointF(x, y)
+        self.update_active_grid_area_position()
+        self.updateImagePositions()
+        self.do_draw()
 
     def save_canvas_offset(self):
         """Save the canvas offset to QSettings."""
+        self.logger.info(
+            f"Saving canvas offset to settings: {self.canvas_offset}"
+        )
         self.settings.setValue("canvas_offset_x", self.canvas_offset.x())
         self.settings.setValue("canvas_offset_y", self.canvas_offset.y())
 
@@ -152,6 +157,7 @@ class CustomGraphicsView(
 
     def on_recenter_grid_signal(self):
         self.canvas_offset = QPoint(0, 0)
+        self.save_canvas_offset()
         self.updateImagePositions()
         self.do_draw()
 
@@ -378,15 +384,11 @@ class CustomGraphicsView(
 
     def showEvent(self, event):
         super().showEvent(event)
-
         self.setContentsMargins(0, 0, 0, 0)
-
         self.do_draw(True)
-
         self.scene.initialize_image()
-
+        self.load_canvas_offset()
         self.toggle_drag_mode()
-
         self.set_canvas_color(self.scene)
         self.show_active_grid_area()
 
@@ -409,28 +411,23 @@ class CustomGraphicsView(
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
     def mouseMoveEvent(self, event: QMouseEvent):
+        self.handle_pan_canvas(event)
+        super().mouseMoveEvent(event)
+
+    def handle_pan_canvas(self, event: QMouseEvent):
         if self._middle_mouse_pressed:
             delta = event.pos() - self.last_pos
             self.canvas_offset += delta
             self.last_pos = event.pos()
-
-            # Update the active grid area position when panning
-            if self.active_grid_area:
-                pos_x = (
-                    self.active_grid_settings.pos_x - self.canvas_offset.x()
-                )
-                pos_y = (
-                    self.active_grid_settings.pos_y - self.canvas_offset.y()
-                )
-                self.active_grid_area.setPos(pos_x, pos_y)
-
-            # Update image positions directly without relying on complex logic
+            self.update_active_grid_area_position()
             self.updateImagePositions()
-
-            # Then update the grid
             self.do_draw()
 
-        super().mouseMoveEvent(event)
+    def update_active_grid_area_position(self):
+        if self.active_grid_area:
+            pos_x = self.active_grid_settings.pos_x - self.canvas_offset.x()
+            pos_y = self.active_grid_settings.pos_y - self.canvas_offset.y()
+            self.active_grid_area.setPos(pos_x, pos_y)
 
     def updateImagePositions(self):
         """Update positions of all images in the scene based on canvas offset."""
@@ -484,6 +481,7 @@ class CustomGraphicsView(
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.MiddleButton:
+            self.save_canvas_offset()
             self._middle_mouse_pressed = False
             self.last_pos = None
         super().mouseReleaseEvent(event)
@@ -495,8 +493,3 @@ class CustomGraphicsView(
         """
         self.scene.leaveEvent(event)
         super().leaveEvent(event)
-
-    def closeEvent(self, event):
-        """Save canvas offset on close."""
-        self.save_canvas_offset()
-        super().closeEvent(event)
