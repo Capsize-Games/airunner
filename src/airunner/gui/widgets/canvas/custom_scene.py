@@ -437,8 +437,7 @@ class CustomScene(
                 self.right_mouse_button_pressed = True
                 self.start_pos = event.scenePos()
             elif event.button() == Qt.MouseButton.LeftButton:
-                if not self._handle_left_mouse_press(event):
-                    super(CustomScene, self).mousePressEvent(event)
+                super(CustomScene, self).mousePressEvent(event)
         self._handle_cursor(event)
         self.last_pos = event.scenePos()
         self.update()
@@ -454,7 +453,7 @@ class CustomScene(
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.RightButton:
             self.right_mouse_button_pressed = False
-        elif not self._handle_left_mouse_release(event):
+        else:
             super(CustomScene, self).mouseReleaseEvent(event)
         self._handle_cursor(event)
 
@@ -940,24 +939,11 @@ class CustomScene(
             {"undo": len(self.undo_history), "redo": len(self.redo_history)},
         )
 
-    def _handle_mouse_event(self, event, is_press_event) -> bool:
-        if (
-            isinstance(event, QMouseEvent)
-            and event.button() == Qt.MouseButton.LeftButton
-        ):
-            view = self.views()[0]
-            pos = view.mapFromScene(event.scenePos())
-        return False
-
-    def _handle_left_mouse_press(self, event) -> bool:
+    def _handle_left_mouse_press(self, event):
         try:
             self.start_pos = event.scenePos()
         except AttributeError:
             self.logger.error("Failed to get scenePos from left click event")
-        return self._handle_mouse_event(event, True)
-
-    def _handle_left_mouse_release(self, event) -> bool:
-        return self._handle_mouse_event(event, False)
 
     def _handle_cursor(self, event, apply_cursor: bool = True):
         self.emit_signal(

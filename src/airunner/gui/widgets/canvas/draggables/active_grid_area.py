@@ -27,34 +27,38 @@ class ActiveGridArea(DraggablePixmap):
         self._outer_border_pen: Optional[QPen] = None
         self._border_color: Optional[QColor] = None
         self._border_brush: Optional[QBrush] = None
-
         super().__init__(QPixmap())
         self.render_fill()
-
         painter = self.draw_border()
         super().paint(painter, None, None)
-
-        self.snap_to_grid(
-            x=min(self.rect.x(), self.rect.x() + self.rect.width()),
-            y=min(self.rect.y(), self.rect.y() + self.rect.height()),
-            save=True,
-        )
+        # self.setPos(
+        #     QPoint(
+        #         self.drawing_pad_settings.x_pos,
+        #         self.drawing_pad_settings.y_pos,
+        #     )
+        # )
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.register(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.render_fill
         )
 
-    def update_position(self, x: int, y: int, save: bool = True):
-        self.setPos(QPoint(x, y))
+    def update_position(
+        self,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
+        save: bool = True,
+    ):
+        super().update_position(x, y, save)
         if save:
             self.update_active_grid_settings("pos_x", x)
             self.update_active_grid_settings("pos_y", y)
 
     @property
     def rect(self):
+        pos = self.active_grid_settings.pos
         return QRect(
-            self.active_grid_settings.pos_x,
-            self.active_grid_settings.pos_y,
+            pos[0],
+            pos[1],
             self.application_settings.working_width,
             self.application_settings.working_height,
         )
@@ -156,7 +160,6 @@ class ActiveGridArea(DraggablePixmap):
                 or self.mouse_press_pos.y() != event.pos().y()
             )
         ):
-            self.emit_signal(SignalCode.ACTIVE_GRID_AREA_MOVED_SIGNAL)
             self.emit_signal(SignalCode.GENERATE_MASK)
         self.mouse_press_pos = None
 
