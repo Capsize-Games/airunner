@@ -5,7 +5,7 @@ from typing import Optional, Tuple, Dict
 
 import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
-from PIL.ImageQt import QImage
+from PySide6.QtGui import QImage
 from PySide6.QtCore import Qt, QPoint, QRect, QPointF
 from PySide6.QtGui import (
     QEnterEvent,
@@ -437,8 +437,7 @@ class CustomScene(
                 self.right_mouse_button_pressed = True
                 self.start_pos = event.scenePos()
             elif event.button() == Qt.MouseButton.LeftButton:
-                if not self._handle_left_mouse_press(event):
-                    super(CustomScene, self).mousePressEvent(event)
+                super(CustomScene, self).mousePressEvent(event)
         self._handle_cursor(event)
         self.last_pos = event.scenePos()
         self.update()
@@ -454,7 +453,7 @@ class CustomScene(
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.RightButton:
             self.right_mouse_button_pressed = False
-        elif not self._handle_left_mouse_release(event):
+        else:
             super(CustomScene, self).mouseReleaseEvent(event)
         self._handle_cursor(event)
 
@@ -940,41 +939,11 @@ class CustomScene(
             {"undo": len(self.undo_history), "redo": len(self.redo_history)},
         )
 
-    def _handle_mouse_event(self, event, is_press_event) -> bool:
-        if (
-            isinstance(event, QMouseEvent)
-            and event.button() == Qt.MouseButton.LeftButton
-        ):
-            view = self.views()[0]
-            pos = view.mapFromScene(event.scenePos())
-            if (
-                self.grid_settings.snap_to_grid
-                and self.current_tool is CanvasToolName.SELECTION
-            ):
-                x, y = snap_to_grid(
-                    self.grid_settings, pos.x(), pos.y(), False
-                )
-                pos = QPoint(x, y)
-                if is_press_event:
-                    self.selection_stop_pos = None
-                    self.selection_start_pos = QPoint(pos.x(), pos.y())
-                else:
-                    self.selection_stop_pos = QPoint(pos.x(), pos.y())
-                self.emit_signal(
-                    SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL
-                )
-                return True
-        return False
-
-    def _handle_left_mouse_press(self, event) -> bool:
+    def _handle_left_mouse_press(self, event):
         try:
             self.start_pos = event.scenePos()
         except AttributeError:
             self.logger.error("Failed to get scenePos from left click event")
-        return self._handle_mouse_event(event, True)
-
-    def _handle_left_mouse_release(self, event) -> bool:
-        return self._handle_mouse_event(event, False)
 
     def _handle_cursor(self, event, apply_cursor: bool = True):
         self.emit_signal(
@@ -1011,31 +980,31 @@ class CustomScene(
         filtered_image = filter_object.filter(image)
         return filtered_image
 
-    def update_image_position(self, canvas_offset):
-        """Update the position of image items in the scene based on the canvas offset."""
-        if not self.item:
-            return
+    # def update_image_position(self, canvas_offset):
+    #     """Update the position of image items in the scene based on the canvas offset."""
+    #     if not self.item:
+    #         return
 
-        # Store the original position if we haven't already
-        if self.item not in self._original_item_positions:
-            self._original_item_positions[self.item] = self.item.pos()
+    #     # Store the original position if we haven't already
+    #     if self.item not in self._original_item_positions:
+    #         self._original_item_positions[self.item] = self.item.pos()
 
-        # Get the original position
-        original_pos = self._original_item_positions[self.item]
+    #     # Get the original position
+    #     original_pos = self._original_item_positions[self.item]
 
-        # Calculate and set the new position
-        new_x = original_pos.x() - canvas_offset.x()
-        new_y = original_pos.y() - canvas_offset.y()
+    #     # Calculate and set the new position
+    #     new_x = original_pos.x() - canvas_offset.x()
+    #     new_y = original_pos.y() - canvas_offset.y()
 
-        # Before changing position, prepare the item for geometry change
-        self.item.prepareGeometryChange()
-        self.item.setPos(new_x, new_y)
+    #     # Before changing position, prepare the item for geometry change
+    #     self.item.prepareGeometryChange()
+    #     self.item.setPos(new_x, new_y)
 
-        # Make sure the item is visible and in focus
-        self.item.setVisible(True)
-        self.item.setZValue(5)  # Priority rendering
+    #     # Make sure the item is visible and in focus
+    #     self.item.setVisible(True)
+    #     self.item.setZValue(5)  # Priority rendering
 
-        # Update the entire viewport to ensure image is visible even at negative coordinates
-        self.invalidate(
-            self._extended_viewport_rect, QGraphicsScene.SceneLayer.ItemLayer
-        )
+    #     # Update the entire viewport to ensure image is visible even at negative coordinates
+    #     self.invalidate(
+    #         self._extended_viewport_rect, QGraphicsScene.SceneLayer.ItemLayer
+    #     )
