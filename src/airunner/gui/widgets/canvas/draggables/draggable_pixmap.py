@@ -117,10 +117,6 @@ class DraggablePixmap(
         if x is not None and y is not None:
             self.setPos(QPoint(x, y))
 
-        if save:
-            self.update_drawing_pad_settings("x_pos", x)
-            self.update_drawing_pad_settings("y_pos", y)
-
     def paint(self, painter: QPainter, option, widget=None):
         painter.drawPixmap(self.pixmap.rect(), self.pixmap)
 
