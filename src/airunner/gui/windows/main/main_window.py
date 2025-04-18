@@ -293,10 +293,6 @@ class MainWindow(
         self.toggle_tool(CanvasToolName.ERASER, active)
 
     @Slot(bool)
-    def action_toggle_select(self, active: bool):
-        self.toggle_tool(CanvasToolName.SELECTION, active)
-
-    @Slot(bool)
     def action_toggle_active_grid_area(self, active: bool):
         self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, active)
 

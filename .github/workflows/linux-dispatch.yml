@@ -45,7 +45,7 @@ jobs:
           docker tag ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_ci ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
           docker push ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
       
-      - name: Build Linux Package with CI mode (no local mounts)
+      - name: Push Linux Runtime to It
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
           DEV_ENV: "0"
