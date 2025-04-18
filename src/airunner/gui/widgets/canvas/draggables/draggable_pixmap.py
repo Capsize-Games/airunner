@@ -52,7 +52,10 @@ class DraggablePixmap(
         if self.current_tool in [
             CanvasToolName.ACTIVE_GRID_AREA,
         ]:
-            self.update_position(x=None, y=None, save=True)
+            # Pass the current position for saving instead of None values
+            current_x = int(self.x())
+            current_y = int(self.y())
+            self.update_position(x=current_x, y=current_y, save=True)
         super().mouseReleaseEvent(event)
 
     def snap_to_grid_when_close(self, x=None, y=None):
