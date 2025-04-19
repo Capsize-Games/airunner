@@ -52,9 +52,9 @@ class Logger:
         self.logger.debug(message, extra=extra, *args, **kwargs)
 
     def error(self, message: str, *args, **kwargs):
+        extra = self._get_caller_info()
         self.logger.error(message, extra=extra, *args, **kwargs)
         traceback.print_stack()
-        extra = self._get_caller_info()
 
     def info(self, message: str, *args, **kwargs):
         extra = self._get_caller_info()

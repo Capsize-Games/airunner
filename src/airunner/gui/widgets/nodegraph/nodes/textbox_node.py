@@ -19,8 +19,9 @@ class TextboxNode(BaseWorkflowNode):
         self.add_multiline_textbox("prompt", "Prompt", tab="settings")
 
     def execute(self, input_data):
-        # return {"image": img}
-        pass
+        prompt = self.get_property("prompt")
+        # Using proper way to pass data between nodes by returning a dictionary
+        return {"prompt": prompt}
 
     def add_multiline_textbox(
         self,
@@ -62,9 +63,3 @@ class TextboxNode(BaseWorkflowNode):
         for port in self.out_prompt_port.connected_ports():
             # set it into the downstream node
             port.node().set_property(port.name(), text)
-
-    def execute(self, input_data):
-        prompt = self.get_property("prompt")
-        # echo it back on the output port
-        self.out_prompt_port.set_data(prompt)
-        return {"prompt": prompt}
