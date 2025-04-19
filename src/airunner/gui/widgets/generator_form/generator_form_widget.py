@@ -32,6 +32,7 @@ class GeneratorForm(BaseWidget):
         self.ui.generator_form_tabs.currentChanged.connect(
             self.on_tab_section_changed
         )
+        self.ui.generator_form_tabs.tabBar().setVisible(False)
 
     @Slot(int)
     def on_tab_section_changed(self, index: int):

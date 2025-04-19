@@ -1,3 +1,4 @@
+from NodeGraphQt import NodesPaletteWidget
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -8,7 +9,9 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QLabel,
     QToolBar,
+    QSplitter,
 )
+from PySide6.QtCore import Qt
 
 from airunner.gui.widgets.nodegraph.nodes.agent_action_node import (
     AgentActionNode,
@@ -28,6 +31,21 @@ from airunner.gui.widgets.nodegraph.nodes.textbox_node import (
 from airunner.gui.widgets.nodegraph.nodes.random_number_node import (
     RandomNumberNode,
 )
+from airunner.gui.widgets.nodegraph.nodes.number_node import (
+    NumberNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.float_node import (
+    FloatNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.boolean_node import (
+    BooleanNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.llm_request_node import (
+    LLMRequestNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.run_llm_node import (
+    RunLLMNode,
+)
 from airunner.gui.widgets.nodegraph.add_port_dialog import (
     AddPortDialog,
 )
@@ -46,33 +64,6 @@ class NodeGraphWidget(QWidget):
         # Add toolbar with buttons
         toolbar = QToolBar()
 
-        # Add node buttons
-        add_agent_node_btn = QPushButton("Add Agent Action")
-        add_agent_node_btn.clicked.connect(self.add_agent_node)
-        toolbar.addWidget(add_agent_node_btn)
-
-        add_workflow_node_btn = QPushButton("Add Workflow")
-        add_workflow_node_btn.clicked.connect(self.add_workflow_node)
-        toolbar.addWidget(add_workflow_node_btn)
-
-        add_image_node_btn = QPushButton("Add Image node")
-        add_image_node_btn.clicked.connect(self.add_image_node)
-        toolbar.addWidget(add_image_node_btn)
-
-        add_prompt_node_btn = QPushButton("Add Prompt node")
-        add_prompt_node_btn.clicked.connect(self.add_prompt_node)
-        toolbar.addWidget(add_prompt_node_btn)
-
-        add_textbox_node_btn = QPushButton("Add Textbox node")
-        add_textbox_node_btn.clicked.connect(self.add_textbox_node)
-        toolbar.addWidget(add_textbox_node_btn)
-
-        add_random_number_node_btn = QPushButton("Add Random Number node")
-        add_random_number_node_btn.clicked.connect(self.add_random_number_node)
-        toolbar.addWidget(add_random_number_node_btn)
-
-        toolbar.addSeparator()
-
         # Add workflow control buttons
         save_btn = QPushButton("Save Workflow")
         save_btn.clicked.connect(lambda: self.save_workflow("test_workflow"))
@@ -88,6 +79,7 @@ class NodeGraphWidget(QWidget):
 
         # Hint about right-click
         hint_label = QLabel("Right-click on nodes for more options")
+        hint_label.setFixedHeight(35)
 
         # Add toolbar to layout
         layout.addWidget(toolbar)
@@ -108,6 +100,18 @@ class NodeGraphWidget(QWidget):
         self.graph.register_node(PromptNode)
         self.graph.register_node(TextboxNode)
         self.graph.register_node(RandomNumberNode)
+        self.graph.register_node(NumberNode)
+        self.graph.register_node(FloatNode)
+        self.graph.register_node(BooleanNode)
+        self.graph.register_node(LLMRequestNode)
+        self.graph.register_node(RunLLMNode)
+
+        self.nodes_palette = NodesPaletteWidget(
+            parent=None,
+            node_graph=self.graph,
+        )
+        # Remove the standalone show() call since we're embedding the palette
+        # self.nodes_palette.show()
 
         # define a test function.
         def test_func(graph, node):
@@ -157,8 +161,14 @@ class NodeGraphWidget(QWidget):
         # Connect to the context menu prompt signal to add custom actions
         # context_menu.connect(self.on_context_menu)
 
-        # Add the viewer to layout
-        layout.addWidget(self.viewer)
+        # Create and configure the splitter
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.addWidget(self.viewer)
+        splitter.addWidget(self.nodes_palette)
+
+        # Set initial sizes - graph takes most of the space, palette gets 200px
+        splitter.setSizes([700, 200])
+        layout.addWidget(splitter)
 
         # Add layout to the widget
         self.setLayout(layout)
@@ -242,6 +252,47 @@ class NodeGraphWidget(QWidget):
         node = self.graph.create_node(
             "airunner.workflow.nodes.RandomNumberNode",
             name="RND",
+        )
+        self.graph.center_on([node])
+        return node
+
+    def add_number_node(self):
+        """Add a new number node at the center of the view."""
+        node = self.graph.create_node(
+            "airunner.workflow.nodes.NumberNode", name="New Number Node"
+        )
+        self.graph.center_on([node])
+        return node
+
+    def add_float_node(self):
+        """Add a new float node at the center of the view."""
+        node = self.graph.create_node(
+            "airunner.workflow.nodes.FloatNode", name="New Float Node"
+        )
+        self.graph.center_on([node])
+        return node
+
+    def add_boolean_node(self):
+        """Add a new boolean node at the center of the view."""
+        node = self.graph.create_node(
+            "airunner.workflow.nodes.BooleanNode", name="New Boolean Node"
+        )
+        self.graph.center_on([node])
+        return node
+
+    def add_llm_request_node(self):
+        """Add a new LLM request node at the center of the view."""
+        node = self.graph.create_node(
+            "airunner.workflow.nodes.LLMRequestNode",
+            name="New LLM Request Node",
+        )
+        self.graph.center_on([node])
+        return node
+
+    def add_run_llm_node(self):
+        """Add a new run LLM node at the center of the view."""
+        node = self.graph.create_node(
+            "airunner.workflow.nodes.RunLLMNode", name="New Run LLM Node"
         )
         self.graph.center_on([node])
         return node
