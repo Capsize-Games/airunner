@@ -1,7 +1,14 @@
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import BaseWorkflowNode
+from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
+    BaseWorkflowNode,
+)
 from airunner.handlers.stablediffusion.image_request import ImageRequest
+from airunner.handlers.stablediffusion.image_response import ImageResponse
+from airunner.handlers.stablediffusion.rect import Rect
 from airunner.enums import ImagePreset
 from airunner.settings import AIRUNNER_DEFAULT_SCHEDULER
+import PIL.Image
+import numpy as np
+import random
 
 
 class ImageGenerationNode(BaseWorkflowNode):
@@ -41,8 +48,8 @@ class ImageGenerationNode(BaseWorkflowNode):
         self.add_input("negative_target_size", display_name=True)
         self.add_input("additional_prompts", display_name=True)
 
-        # Output
-        self.add_output("image")
+        # Output - change to image_response to match our new node
+        self.add_output("image_response")
 
         # UI elements
         self.add_combo_menu(
@@ -163,7 +170,33 @@ class ImageGenerationNode(BaseWorkflowNode):
         # TODO: Implement the actual image generation using the request
         # This would involve calling the appropriate backend service
 
-        # Placeholder for now
-        img = None
+        # For now, create a simple test image with the prompt text
+        prompt = prompt_data.get("prompt", "Empty prompt")
+        width = int(input_data.get("width", 512))
+        height = int(input_data.get("height", 512))
 
-        return {"image": img}
+        # Create a simple colored image for testing
+        color = (
+            random.randint(0, 255),
+            random.randint(0, 255),
+            random.randint(0, 255),
+        )
+        img = PIL.Image.new("RGB", (width, height), color)
+
+        # Create and return an ImageResponse object
+        response = ImageResponse(
+            images=[img],  # List with our test image
+            data={
+                "prompt": prompt,
+                "request": request,
+            },  # Include request data
+            nsfw_content_detected=False,
+            active_rect=Rect(0, 0, width, height),
+            is_outpaint=False,
+        )
+
+        # Return the ImageResponse in the image_response output
+        return {
+            "image_response": response,
+            "_exec_triggered": self.EXEC_OUT_PORT_NAME,
+        }
