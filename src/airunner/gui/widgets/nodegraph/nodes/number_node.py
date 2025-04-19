@@ -18,14 +18,13 @@ class NumberNode(BaseWorkflowNode):
         super().__init__()
 
         # Output port for the number
-        self.add_output("value")
+        self.out_port = self.add_output("value")
 
-        # Add an integer input using NodeGraphQt's built-in widget type
-        self.create_property(
-            "number_value",
-            0,
-            widget_type=NodePropWidgetEnum.INT.value,
-            range=(-1000, 1000),
+        self.add_text_input(
+            name="number_value",
+            label="Value",
+            text="0",
+            tooltip="Enter a number",
             tab="settings",
         )
 
@@ -42,5 +41,4 @@ class NumberNode(BaseWorkflowNode):
         except (ValueError, TypeError):
             # If conversion fails, default to 0
             value = 0
-
         return {"value": value}
