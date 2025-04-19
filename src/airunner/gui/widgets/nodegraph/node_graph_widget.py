@@ -47,6 +47,14 @@ from airunner.gui.widgets.nodegraph.nodes.llm_request_node import (
 from airunner.gui.widgets.nodegraph.nodes.run_llm_node import (
     RunLLMNode,
 )
+from airunner.gui.widgets.nodegraph.nodes.image_display_node import (
+    ImageDisplayNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.start_node import StartNode  # Added
+from airunner.gui.widgets.nodegraph.nodes.branch_node import (
+    BranchNode,
+)  # Added
+
 from airunner.gui.widgets.nodegraph.add_port_dialog import (
     AddPortDialog,
 )
@@ -107,6 +115,9 @@ class NodeGraphWidget(QWidget):
         self.graph.register_node(BooleanNode)
         self.graph.register_node(LLMRequestNode)
         self.graph.register_node(RunLLMNode)
+        self.graph.register_node(ImageDisplayNode)  # Register the new node
+        self.graph.register_node(StartNode)  # Added
+        self.graph.register_node(BranchNode)  # Added
 
         self.nodes_palette = NodesPaletteWidget(
             parent=None,
@@ -365,53 +376,49 @@ class NodeGraphWidget(QWidget):
 
     def execute_workflow(self, initial_input_data=None):
         if initial_input_data is None:
-            initial_input_data = {
-                "start_data": "Initial Data"
-            }  # Example initial data structure
+            initial_input_data = {}
 
-        executed_order = []
-        node_outputs = (
-            {}
-        )  # Store outputs of executed nodes {node_id: {port_name: data}}
-
-        # Topological sort (simple version for DAGs)
-        nodes_to_process = self.graph.all_nodes()
+        node_outputs = {}  # Store data outputs {node_id: {port_name: data}}
         execution_queue = []
-        node_dependencies = {node.id: 0 for node in nodes_to_process}
-        node_successors = {node.id: [] for node in nodes_to_process}
-        node_map = {node.id: node for node in nodes_to_process}
+        executed_nodes = (
+            set()
+        )  # Keep track of nodes already executed in this run
+        node_map = {node.id: node for node in self.graph.all_nodes()}
 
-        # Build dependency graph
-        for node in nodes_to_process:
-            for port in node.inputs().values():
-                for connected_port in port.connected_ports():
-                    source_node_id = connected_port.node().id
-                    node_dependencies[node.id] += 1
-                    node_successors[source_node_id].append(node.id)
-
-        # Initialize queue with nodes having no dependencies (inputs not connected within the graph)
-        for node_id, dep_count in node_dependencies.items():
-            if dep_count == 0:
+        # Find all StartNodes to begin execution
+        for node_id, node in node_map.items():
+            if isinstance(node, StartNode):
                 execution_queue.append(node_id)
+                executed_nodes.add(node_id)  # Mark start node as executed
 
-        # Process nodes in topological order
-        while execution_queue:
+        print(f"Starting workflow execution from nodes: {execution_queue}")
+
+        processed_count = 0
+        max_steps = len(node_map) * 2  # Safety break for potential cycles
+
+        while execution_queue and processed_count < max_steps:
             node_id = execution_queue.pop(0)
             current_node = node_map[node_id]
-            executed_order.append(current_node.name())
+            processed_count += 1
 
-            # Prepare input data for the current node
+            print(
+                f"---\nExecuting node: {current_node.name()} (ID: {node_id})"
+            )
+
+            # 1. Prepare input data for the current node
             current_input_data = {}
             for port_name, port in current_node.inputs().items():
-                # Ensure port_name is always a string before comparison
-                port_name_str = str(port_name) if port_name is not None else ""
+                # Skip execution ports for data collection
+                if port_name == current_node.EXEC_IN_PORT_NAME:
+                    continue
 
                 connected_ports = port.connected_ports()
                 if connected_ports:
-                    # Assuming single connection per input for simplicity here
+                    # Assume only one connection for data ports for simplicity
                     source_port = connected_ports[0]
                     source_node_id = source_port.node().id
                     source_port_name = source_port.name()
+
                     if (
                         source_node_id in node_outputs
                         and source_port_name in node_outputs[source_node_id]
@@ -419,51 +426,120 @@ class NodeGraphWidget(QWidget):
                         current_input_data[port_name] = node_outputs[
                             source_node_id
                         ][source_port_name]
-                    else:
-                        # Input connected, but source hasn't run or didn't produce required output
                         print(
-                            f"Warning: Input '{port_name}' on node '{current_node.name()}' missing data from source '{source_port.node().name()}.{source_port_name}'."
+                            f"  Input '{port_name}' received data from '{source_port.node().name()}.{source_port_name}'"
+                        )
+                    else:
+                        print(
+                            f"  Warning: Input '{port_name}' missing data from source '{source_port.node().name()}.{source_port_name}'. Using None."
                         )
                         current_input_data[port_name] = None
-                elif (
-                    node_dependencies[node_id] == 0
-                ):  # Root node, provide initial data if port matches
-                    if port_name_str in initial_input_data:
-                        current_input_data[port_name] = initial_input_data[
-                            port_name_str
-                        ]
+                # else: # Input port not connected, might use default value or be optional
+                # print(f"  Input '{port_name}' is not connected.")
 
-            # Execute the node
+            # Add initial data if this is a root node (like StartNode, though it usually has no data inputs)
+            # This part might need refinement based on how initial data is intended to be used
+            if not any(
+                p.connected_ports()
+                for p_name, p in current_node.inputs().items()
+                if p_name != current_node.EXEC_IN_PORT_NAME
+            ):
+                for port_name in current_node.inputs():
+                    if (
+                        port_name != current_node.EXEC_IN_PORT_NAME
+                        and port_name in initial_input_data
+                    ):
+                        current_input_data[port_name] = initial_input_data[
+                            port_name
+                        ]
+                        print(f"  Input '{port_name}' received initial data.")
+
+            # 2. Execute the node
+            outputs = {}
+            triggered_exec_port_name = None
             if hasattr(current_node, "execute") and callable(
                 getattr(current_node, "execute")
             ):
                 try:
-                    print("EXECUTING")
                     outputs = current_node.execute(current_input_data)
-                    node_outputs[node_id] = outputs if outputs else {}
+                    if outputs is None:
+                        outputs = {}
+                    node_outputs[node_id] = outputs
                     print(
-                        f"Node '{current_node.name()}' executed. Output: {outputs}"
+                        f"  Node '{current_node.name()}' executed. Raw Output: {outputs}"
                     )
+
+                    # Check which execution port was triggered
+                    triggered_exec_port_name = outputs.pop(
+                        "_exec_triggered", None
+                    )
+                    if triggered_exec_port_name:
+                        print(
+                            f"  Execution triggered on port: {triggered_exec_port_name}"
+                        )
+                    else:
+                        # If no specific exec port is triggered, try the default if it exists
+                        if (
+                            current_node.EXEC_OUT_PORT_NAME
+                            in current_node.outputs()
+                        ):
+                            triggered_exec_port_name = (
+                                current_node.EXEC_OUT_PORT_NAME
+                            )
+                            print(
+                                f"  Default execution triggered on port: {triggered_exec_port_name}"
+                            )
+
                 except Exception as e:
-                    print(f"Error executing node {current_node.name()}: {e}")
-                    node_outputs[node_id] = {}  # Mark as failed or store error
+                    print(f"  Error executing node {current_node.name()}: {e}")
+                    node_outputs[node_id] = {}  # Mark as failed
             else:
-                print(f"Node {current_node.name()} has no execute method.")
+                print(f"  Node {current_node.name()} has no execute method.")
                 node_outputs[node_id] = {}
 
-            # Decrement dependency count for successors and add to queue if ready
-            for successor_id in node_successors[node_id]:
-                node_dependencies[successor_id] -= 1
-                if node_dependencies[successor_id] == 0:
-                    execution_queue.append(successor_id)
+            # 3. Find and queue the next node(s) based on the triggered execution port
+            if (
+                triggered_exec_port_name
+                and triggered_exec_port_name in current_node.outputs()
+            ):
+                exec_output_port = current_node.outputs()[
+                    triggered_exec_port_name
+                ]
+                connected_exec_inputs = exec_output_port.connected_ports()
 
-        print("Workflow execution finished.")
-        print("Execution order:", executed_order)
-        # Find final output (e.g., from nodes with no successors)
-        final_outputs = {}
-        for node_id, outputs in node_outputs.items():
-            if not node_successors[
-                node_id
-            ]:  # Node has no outgoing connections within the graph
-                final_outputs[node_map[node_id].name()] = outputs
-        print("Final output(s):", final_outputs)
+                for next_port in connected_exec_inputs:
+                    next_node = next_port.node()
+                    next_node_id = next_node.id
+                    # Only queue if not already executed in this run to prevent immediate cycles
+                    # More robust cycle detection might be needed for complex graphs
+                    if next_node_id not in executed_nodes:
+                        print(
+                            f"  Queueing next node: {next_node.name()} (ID: {next_node_id}) via port {next_port.name()}"
+                        )
+                        execution_queue.append(next_node_id)
+                        executed_nodes.add(next_node_id)
+                    else:
+                        print(
+                            f"  Skipping already executed node: {next_node.name()} (ID: {next_node_id})"
+                        )
+            elif triggered_exec_port_name:
+                print(
+                    f"  Warning: Triggered execution port '{triggered_exec_port_name}' not found on node '{current_node.name()}'. Execution stops here."
+                )
+            else:
+                print(
+                    f"  Node '{current_node.name()}' did not trigger an execution output. Execution path ends here."
+                )
+
+        if processed_count >= max_steps:
+            print(
+                "Workflow execution stopped: Maximum processing steps reached (potential cycle detected)."
+            )
+        else:
+            print("---\nWorkflow execution finished.")
+
+        # Optional: Log final outputs from nodes that didn't trigger further execution
+        final_outputs = {
+            node_map[nid].name(): data for nid, data in node_outputs.items()
+        }
+        print("Final Node Outputs:", final_outputs)
