@@ -47,7 +47,10 @@ class ReActAgentTool(ChatEngineTool):
         is_first_message = True
         for token in streaming_response.response_gen:
             response += token
-            self.agent.handle_response(token, is_first_message)
+            self.agent.handle_response(
+                token,
+                is_first_message,
+            )
             is_first_message = False
 
         self.chat_engine.chat_history.append(
