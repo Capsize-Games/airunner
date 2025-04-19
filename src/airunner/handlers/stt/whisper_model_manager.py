@@ -135,6 +135,7 @@ class WhisperModelManager(BaseModelManager):
             self._model.to(device)
         except Exception as e:
             self.logger.error(f"Failed to load model: {e}")
+            self.change_model_status(ModelType.STT, ModelStatus.FAILED)
             return None
 
     def _load_processor(self):
