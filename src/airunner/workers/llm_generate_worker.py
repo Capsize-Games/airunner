@@ -30,10 +30,10 @@ class LLMGenerateWorker(Worker):
 
     def on_conversation_deleted_signal(self, data):
         self.llm.on_conversation_deleted(data)
-    
+
     def on_section_changed_signal(self):
         self.llm.on_section_changed()
-    
+
     def on_web_browser_page_html_signal(self, data):
         if self.llm:
             self.llm.on_web_browser_page_html(data.get("content", ""))
@@ -63,6 +63,9 @@ class LLMGenerateWorker(Worker):
             self.llm.clear_history(data)
 
     def on_llm_request_signal(self, message: dict):
+        print(
+            "on_llm_request_signalon_llm_request_signalon_llm_request_signalon_llm_request_signalon_llm_request_signal"
+        )
         self.add_to_queue(message)
 
     def llm_on_interrupt_process_signal(self):
@@ -91,7 +94,9 @@ class LLMGenerateWorker(Worker):
             self.llm.handle_request(message)
 
     def _load_llm_thread(self, data=None):
-        self._llm_thread = threading.Thread(target=self._load_llm, args=(data,))
+        self._llm_thread = threading.Thread(
+            target=self._load_llm, args=(data,)
+        )
         self._llm_thread.start()
 
     def load(self):
@@ -100,7 +105,9 @@ class LLMGenerateWorker(Worker):
     def _load_llm(self, data=None):
         data = data or {}
         if self.llm is None:
-            self.llm = LLMModelManager(local_agent_class=self.local_agent_class)
+            self.llm = LLMModelManager(
+                local_agent_class=self.local_agent_class
+            )
 
         self.llm.load()
 

@@ -1506,6 +1506,7 @@ class BaseAgent(
                         is_first_message=is_first_message,
                         is_end_of_message=is_last_message,
                         name=self.botname,
+                        node_id=self.llm.llm_request.node_id,
                     ),
                     "do_tts_reply": do_tts_reply,
                 },

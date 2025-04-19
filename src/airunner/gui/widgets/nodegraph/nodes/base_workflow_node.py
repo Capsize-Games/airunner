@@ -1,8 +1,14 @@
 from NodeGraphQt import BaseNode
 
+from airunner.utils.application.mediator_mixin import MediatorMixin
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
 
-# Base class for all workflow nodes in this system
-class BaseWorkflowNode(BaseNode):
+
+class BaseWorkflowNode(
+    MediatorMixin,
+    SettingsMixin,
+    BaseNode,
+):
     # Base identifier for easier registration and type checking
     __identifier__ = "airunner.workflow.nodes"
 
