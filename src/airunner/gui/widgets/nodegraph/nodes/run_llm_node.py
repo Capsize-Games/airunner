@@ -194,7 +194,6 @@ class RunLLMNode(BaseWorkflowNode):
                 SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
                 {
                     "llm_request": True,
-                    "graph_request": True,  # Flag this request as originating from the graph
                     "node_id": self.id,  # Include node ID for routing response
                     "request_data": {
                         "action": LLMActionType.CHAT,
@@ -218,29 +217,75 @@ class RunLLMNode(BaseWorkflowNode):
             self._accumulated_response_text = error_response.message
 
     def _on_llm_text_streamed(self, data: Dict):
-        # Assuming the signal sends the final LLMResponse object upon completion
-        # If it sends text chunks, accumulation logic would be needed here.
         llm_response: Optional[LLMResponse] = data.get("response", None)
 
-        if llm_response.node_id != self.id:
-            print(
-                "stream failed",
-                self.id,
-            )
+        if not llm_response or llm_response.node_id != self.id:
             return
 
-        if llm_response:
-            self._current_llm_response = llm_response
-            # Store the response in instance variables instead of trying to set port values directly
-            self._accumulated_response_text = llm_response.message
-            # The output will be returned by the execute method
-        else:
-            # Handle potential errors or empty responses from the signal if needed
-            # Create a default error response
-            self._current_llm_response = LLMResponse(
-                text="Error: No response received from LLM.",
-                metadata={"error": "Missing response object in signal data"},
-            )
-            self._accumulated_response_text = (
-                self._current_llm_response.message
-            )
+        # Reset accumulator if this is the first message chunk
+        if llm_response.is_first_message:
+            self._accumulated_response_text = ""
+
+        # Append the new message chunk to the accumulator
+        self._accumulated_response_text += llm_response.message
+
+        # Store the latest response object (might be useful for metadata)
+        self._current_llm_response = llm_response
+
+        # Propagate the *accumulated* text to connected output ports
+        self._propagate_outputs_to_downstream_nodes()
+
+        # If this is the end of the message, maybe log or finalize something
+        if llm_response.is_end_of_message:
+            # Optionally, you could store the final complete response object if needed
+            # self._final_complete_response = llm_response # If LLMResponse structure supports final state
+            pass
+
+    def _propagate_outputs_to_downstream_nodes(self):
+        """
+        Propagate current outputs to all connected downstream nodes.
+        This is called when an asynchronous response is received to update downstream nodes.
+        """
+        if not self._current_llm_response:
+            return
+
+        # Get the output data that would be returned by execute()
+        output_data = {
+            "llm_response": self._current_llm_response,
+            "llm_message": self._accumulated_response_text,
+        }
+
+        # For each output port, find all connected ports and update their nodes
+        for port_name, output_port in self.outputs().items():
+            if port_name not in output_data:
+                continue
+
+            # Get the data for this port
+            port_data = output_data[port_name]
+
+            # For each connected port, update its node with our data
+            for connected_port in output_port.connected_ports():
+                downstream_node = connected_port.node()
+                downstream_port_name = connected_port.name()
+
+                # If the downstream node has a 'set_property' method, use it.
+                # This is the primary way to update nodes like TextboxNode.
+                if hasattr(downstream_node, "set_property"):
+                    # Check if the port name matches what TextboxNode expects (e.g., 'prompt')
+                    # or if the downstream node can handle the specific port_name directly.
+                    # Assuming TextboxNode's input is 'prompt' and we connect 'llm_message' to it.
+                    if port_name == "llm_message":
+                        # Use the name of the *connected input port* on the downstream node
+                        downstream_node.set_property(
+                            downstream_port_name, port_data
+                        )
+                        print(
+                            f"Updated {downstream_node.name()} property '{downstream_port_name}' via set_property"
+                        )
+                    # Handle other potential output ports if necessary
+                    elif port_name == "llm_response":
+                        # Example: Propagate the full response object if needed
+                        # downstream_node.set_property(downstream_port_name, port_data)
+                        pass  # Adjust as needed for llm_response propagation
+
+        print(f"Propagated LLM response to all connected nodes")

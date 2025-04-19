@@ -19,9 +19,16 @@ class TextboxNode(BaseWorkflowNode):
         self.add_multiline_textbox("prompt", "Prompt", tab="settings")
 
     def execute(self, input_data):
-        prompt = self.get_property("prompt")
-        # Using proper way to pass data between nodes by returning a dictionary
-        return {"prompt": prompt}
+        # If input data is provided for the 'prompt' port, update the property and widget
+        if "prompt" in input_data and input_data["prompt"] is not None:
+            new_prompt = input_data["prompt"]
+            # Use set_property to ensure widget updates too
+            self.set_property("prompt", new_prompt)
+        else:
+            # Otherwise, get the current property value
+            new_prompt = self.get_property("prompt")
+
+        return {"prompt": new_prompt}
 
     def add_multiline_textbox(
         self,
@@ -50,16 +57,25 @@ class TextboxNode(BaseWorkflowNode):
         self.view.draw_node()
 
     def handle_text_change(self, name, text):
-        # Handle the text change event
-        in_connections = self.in_prompt_port.connected_ports()
-        if len(in_connections) > 0:
-            text = (
-                in_connections[0].node().get_property(in_connections[0].name())
-            )
+        # Triggered when the user edits the text_box widget.
+        # Update the internal property with the new text from the widget.
+        # Use blockSignals on the *widget* to prevent feedback loops.
+        if self.text_box:
             self.text_box.blockSignals(True)
-            self.text_box.set_value(text)
+        self.set_property(
+            name, text, push_undo=False
+        )  # Update internal property silently first
+        if self.text_box:
             self.text_box.blockSignals(False)
-        self.set_property(name, text)
-        for port in self.out_prompt_port.connected_ports():
-            # set it into the downstream node
-            port.node().set_property(port.name(), text)
+
+        # Propagation is handled by set_property or NodeGraphQt's mechanisms
+
+    # Override set_property to update the widget when the property changes externally
+    def set_property(self, name, value, push_undo=True):
+        super().set_property(name, value, push_undo=push_undo)
+        # If the 'prompt' property is updated, also update the text_box widget
+        if name == "prompt" and self.text_box:
+            # Block signals on the widget to prevent handle_text_change from firing unnecessarily
+            self.text_box.blockSignals(True)
+            self.text_box.set_value(str(value))  # Ensure value is string
+            self.text_box.blockSignals(False)
