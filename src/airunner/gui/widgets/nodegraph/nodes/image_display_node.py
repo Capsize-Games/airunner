@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtCore import Qt
 from PIL.ImageQt import ImageQt
@@ -9,6 +9,40 @@ from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 
 
+# Wrapper widget required by NodeGraphQt
+class ImageDisplayWidget(QWidget):
+    def __init__(self, parent=None, name="image_display_widget"):
+        super().__init__(parent)
+        self._name = name
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.image_label = QLabel("No Image")
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setMinimumSize(128, 128)  # Set a minimum size
+        layout.addWidget(self.image_label)
+
+    # Implement the method expected by NodeGraphQt
+    def widget(self):
+        return self
+
+    def get_name(self):
+        return self._name
+
+    def set_pixmap(self, pixmap):
+        self.image_label.setPixmap(pixmap)
+
+    def set_text(self, text):
+        self.image_label.setText(text)
+
+    def get_label_size(self):
+        return self.image_label.size()
+
+    # Add methods required by NodeGraphQt if needed
+    def setDisabled(self, state):
+        self.image_label.setDisabled(state)
+        super().setDisabled(state)
+
+
 class ImageDisplayNode(BaseWorkflowNode):
     NODE_NAME = "Image Display"
     __identifier__ = "airunner.workflow.nodes"  # Ensure consistent identifier
@@ -17,18 +51,17 @@ class ImageDisplayNode(BaseWorkflowNode):
         super().__init__()
 
         # Input port for ImageResponse object
-        self.add_input("image_response")  # Remove data_type argument
+        self.add_input("image_response")
 
-        # Output port (optional, could pass through the response or other data)
-        # self.add_output("output_data") # Keep exec_out from base class
-
-        # UI Element to display the image
-        self.image_label = QLabel("No Image")
-        self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setMinimumSize(128, 128)  # Set a minimum size
-        self.add_widget(
-            self.image_label
-        )  # Use the base class method if available, or directly add
+        # Create and add the custom wrapper widget to the node's view
+        self.image_widget = ImageDisplayWidget(name="image_display")
+        # Call add_widget on the view object
+        if hasattr(self, "view") and hasattr(self.view, "add_widget"):
+            self.view.add_widget(self.image_widget)
+        else:
+            print(
+                f"Warning: Could not add widget to {self.NODE_NAME}. View or add_widget method not found."
+            )
 
     def execute(self, input_data):
         image_response = self.get_input_data("image_response", input_data)
@@ -44,31 +77,20 @@ class ImageDisplayNode(BaseWorkflowNode):
                 pixmap = QPixmap.fromImage(qimage)
                 # Scale pixmap to fit the label while maintaining aspect ratio
                 scaled_pixmap = pixmap.scaled(
-                    self.image_label.size(),
+                    self.image_widget.get_label_size(),  # Use wrapper method
                     Qt.KeepAspectRatio,
                     Qt.SmoothTransformation,
                 )
-                self.image_label.setPixmap(scaled_pixmap)
+                self.image_widget.set_pixmap(
+                    scaled_pixmap
+                )  # Use wrapper method
             else:
-                self.image_label.setText("Image Data Empty")
+                self.image_widget.set_text(
+                    "Image Data Empty"
+                )  # Use wrapper method
         else:
-            self.image_label.setText("Invalid Input")
+            self.image_widget.set_text("Invalid Input")  # Use wrapper method
 
         # Return empty dict as this node primarily displays data
         # Execution flow is handled by the graph executor via exec ports
         return {}
-
-    # Override add_widget if BaseWorkflowNode doesn't have it
-    # Assuming BaseNode or a parent provides a way to add widgets to the node's view
-    def add_widget(self, widget):
-        if hasattr(
-            self.view, "add_widget"
-        ):  # Check if the view object has add_widget
-            self.view.add_widget(widget)
-        else:
-            # Fallback or alternative method if direct view manipulation is needed
-            # This might depend on the specifics of NodeGraphQt's node view structure
-            print(
-                f"Warning: Node {self.name()} cannot directly add widget. View object lacks 'add_widget'."
-            )
-            # You might need to access a layout within the view or use a specific method provided by the library.
