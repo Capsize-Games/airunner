@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from airunner.enums import LLMActionType, SignalCode
 from airunner.gui.widgets.nodegraph.nodes.agent_action_node import (
     AgentActionNode,
 )
@@ -127,56 +126,11 @@ class NodeGraphWidget(QWidget):
             parent=None,
             node_graph=self.graph,
         )
-        # Remove the standalone show() call since we're embedding the palette
-        # self.nodes_palette.show()
 
-        # define a test function.
-        def test_func(graph, node):
-            print("Clicked on node: {}".format(node.name()))
-
-        context_menu = self.graph.get_context_menu("nodes")
-        # context_menu.add_command(
-        #     "Test",
-        #     func=test_func,
-        #     node_type="airunner.workflow.nodes.AgentActionNode",
-        # )
-        # Check if the context menu is for a node and if it's one of our custom nodes
-        # Add rename option
-        context_menu.add_command(
-            "Rename Node",
-            func=lambda g, n: self.rename_node_action(n),
-            node_type="airunner.workflow.nodes.AgentActionNode",
-        )
-
-        # Add port actions
-        context_menu.add_separator()
-        context_menu.add_command(
-            "Add Input Port",
-            func=lambda g, n: self.add_input_port_action(n),
-            node_type="airunner.workflow.nodes.AgentActionNode",
-        )
-        context_menu.add_command(
-            "Add Output Port",
-            func=lambda g, n: self.add_output_port_action(n),
-            node_type="airunner.workflow.nodes.AgentActionNode",
-        )
-        context_menu.add_separator()
-        context_menu.add_command(
-            "Delete Node",
-            func=lambda g, n: self.delete_node_action(n),
-            node_type="airunner.workflow.nodes.AgentActionNode",
-        )
-        context_menu.add_command(
-            "Delete Node",
-            func=lambda g, n: self.delete_node_action(n),
-            node_type="airunner.workflow.nodes.BaseWorkflowNode",
-        )
+        self.initialize_context_menu()
 
         # Get the viewer
         self.viewer = self.graph.widget
-
-        # Connect to the context menu prompt signal to add custom actions
-        # context_menu.connect(self.on_context_menu)
 
         # Create and configure the splitter
         splitter = QSplitter(Qt.Horizontal)
@@ -189,6 +143,33 @@ class NodeGraphWidget(QWidget):
 
         # Add layout to the widget
         self.setLayout(layout)
+
+    def initialize_context_menu(self):
+        context_menu = self.graph.get_context_menu("nodes")
+        registered_nodes = self.graph.registered_nodes()
+        for node_type in registered_nodes:
+            context_menu.add_command(
+                "Rename Node",
+                func=lambda g, n: self.rename_node_action(n),
+                node_type=node_type,
+            )
+            context_menu.add_separator()
+            context_menu.add_command(
+                "Add Input Port",
+                func=lambda g, n: self.add_input_port_action(n),
+                node_type=node_type,
+            )
+            context_menu.add_command(
+                "Add Output Port",
+                func=lambda g, n: self.add_output_port_action(n),
+                node_type=node_type,
+            )
+            context_menu.add_separator()
+            context_menu.add_command(
+                "Delete Node",
+                func=lambda g, n: self.delete_node_action(n),
+                node_type=node_type,
+            )
 
     def rename_node_action(self, node):
         """Show dialog to rename a node."""
