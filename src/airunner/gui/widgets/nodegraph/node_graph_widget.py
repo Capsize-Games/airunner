@@ -52,10 +52,24 @@ from airunner.gui.widgets.nodegraph.nodes.run_llm_node import (
 from airunner.gui.widgets.nodegraph.nodes.image_display_node import (
     ImageDisplayNode,
 )
-from airunner.gui.widgets.nodegraph.nodes.start_node import StartNode  # Added
+from airunner.gui.widgets.nodegraph.nodes.start_node import StartNode
 from airunner.gui.widgets.nodegraph.nodes.branch_node import (
     BranchNode,
-)  # Added
+)
+
+# Import the new loop nodes
+from airunner.gui.widgets.nodegraph.nodes.for_each_loop_node import (
+    ForEachLoopNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.for_loop_node import (
+    ForLoopNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.while_loop_node import (
+    WhileLoopNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.reverse_for_each_loop_node import (
+    ReverseForEachLoopNode,
+)
 
 from airunner.gui.widgets.nodegraph.add_port_dialog import (
     AddPortDialog,
@@ -121,6 +135,12 @@ class NodeGraphWidget(QWidget):
         self.graph.register_node(ImageDisplayNode)  # Register the new node
         self.graph.register_node(StartNode)  # Added
         self.graph.register_node(BranchNode)  # Added
+
+        # Register the new loop nodes
+        self.graph.register_node(ForEachLoopNode)
+        self.graph.register_node(ForLoopNode)
+        self.graph.register_node(WhileLoopNode)
+        self.graph.register_node(ReverseForEachLoopNode)
 
         self.nodes_palette = NodesPaletteWidget(
             parent=None,
