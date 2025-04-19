@@ -1,3 +1,4 @@
+from typing import List, Dict
 import os.path
 
 from PySide6.QtCore import QObject, QThread, Slot, Signal
@@ -64,9 +65,10 @@ class InstallWorker(
     file_download_finished = Signal()
     progress_updated = Signal(int, int)
 
-    def __init__(self, parent):
+    def __init__(self, parent, models_enabled: List[str]):
         super().__init__()
         self.parent = parent
+        self.models_enabled = models_enabled
         self.current_step = -1
         self.total_models_in_current_step = 0
         self.hf_downloader = HuggingfaceDownloader(
@@ -79,6 +81,9 @@ class InstallWorker(
         self.register(SignalCode.PATH_SET, self.path_set)
 
     def download_stable_diffusion(self):
+        if not self.models_enabled["stable_diffusion"]:
+            self.set_page()
+            return
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading Stable Diffusion models..."}
         )
@@ -96,6 +101,8 @@ class InstallWorker(
             else:
                 action = model["pipeline_action"]
                 action_key = model["pipeline_action"]
+            if not self.models_enabled.get(action, True):
+                continue
             try:
                 files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
             except KeyError:
@@ -122,11 +129,16 @@ class InstallWorker(
                     print(f"Error downloading {filename}: {e}")
 
     def download_controlnet(self):
+        if not self.models_enabled["stable_diffusion"]:
+            self.set_page()
+            return
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading Controlnet models..."}
         )
         self.total_models_in_current_step += len(controlnet_bootstrap_data)
         for controlnet_model in controlnet_bootstrap_data:
+            if not self.models_enabled.get(controlnet_model["name"], True):
+                continue
             files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]][
                 "controlnet"
             ]
@@ -153,6 +165,9 @@ class InstallWorker(
                     print(f"Error downloading {filename}: {e}")
 
     def download_controlnet_processors(self):
+        if not self.models_enabled["stable_diffusion"]:
+            self.set_page()
+            return
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading Controlnet processors..."}
         )
@@ -202,11 +217,20 @@ class InstallWorker(
                 print(f"Error downloading {filename}: {e}")
 
     def download_llms(self):
-        models = [
-            model
-            for model in model_bootstrap_data
-            if model["category"] == "llm"
-        ]
+        if not self.models_enabled["mistral"]:
+            self.set_page()
+            return
+
+        models = []
+        for model in model_bootstrap_data:
+            if model["category"] == "llm":
+                if model["pipeline_action"] == "embedding":
+                    if not self.models_enabled["embedding_model"]:
+                        continue
+                else:
+                    if not self.models_enabled["mistral"]:
+                        continue
+                models.append(model)
         self.total_models_in_current_step += len(models)
         for model in models:
             files = LLM_FILE_BOOTSTRAP_DATA[model["path"]]["files"]
@@ -233,6 +257,9 @@ class InstallWorker(
                     print(f"Error downloading {filename}: {e}")
 
     def download_stt(self):
+        if not self.models_enabled["whisper"]:
+            self.set_page()
+            return
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading STT models..."}
         )
@@ -260,6 +287,9 @@ class InstallWorker(
                     print(f"Error downloading {filename}: {e}")
 
     def download_tts(self):
+        if not self.models_enabled["speecht5"]:
+            self.set_page()
+            return
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading TTS models..."}
         )
@@ -289,8 +319,7 @@ class InstallWorker(
         self.parent.on_set_downloading_status_label(
             {"label": "Installation complete."}
         )
-        self.parent.update_progress_bar()
-        self.parent.parent.show_final_page()
+        self.parent.update_progress_bar(final=True)
 
     @staticmethod
     def update_progress(current, total):
@@ -375,8 +404,15 @@ class InstallWorker(
 class InstallPage(BaseWizard):
     class_name_ = Ui_install_page
 
-    def __init__(self, parent):
+    def __init__(
+        self,
+        parent,
+        stablediffusion_models: List[Dict[str, str]],
+        models_enabled: List[str],
+    ):
         super(InstallPage, self).__init__(parent)
+        self.stablediffusion_models = stablediffusion_models
+        self.models_enabled = models_enabled
         self.steps_completed = 0
 
         # reset the progress bar
@@ -385,26 +421,53 @@ class InstallPage(BaseWizard):
 
         # These will increase
         self.total_steps = 0
-        if self.application_settings.stable_diffusion_agreement_checked:
-            self.total_steps += 1
 
-        controlnet_model_ids = ControlnetModel.objects.distinct(
-            ControlnetModel.id
-        ).all()
-        controlnet_model_count = len(controlnet_model_ids)
+        self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["txt2img"])
+        self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["inpaint"])
 
-        controlnet_model_versions = ControlnetModel.objects.distinct(
-            ControlnetModel.version
-        ).all()
-        controlnet_version_count = len(controlnet_model_versions)
+        # Determine total controlnet models being downloaded
+        if self.models_enabled["safety_checker"]:
+            self.total_steps += len(
+                SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["safety_checker"]
+            )
 
-        llm_model_count_query = AIModels.objects.filter_by(category="llm")
-        llm_model_count = len(llm_model_count_query)
+        if self.models_enabled["feature_extractor"]:
+            self.total_steps += len(
+                SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["feature_extractor"]
+            )
 
-        self.total_steps += controlnet_model_count * controlnet_version_count
-        self.total_steps += llm_model_count
-        self.total_steps += len(SPEECH_T5_FILES["microsoft/speecht5_tts"])
-        self.total_steps += len(WHISPER_FILES["openai/whisper-tiny"])
+        # Controlnet models
+        for model in self.stablediffusion_models:
+            if model["name"] in (
+                "safety_checker",
+                "feature_extractor",
+            ):
+                continue
+            if self.models_enabled[model["name"]]:
+                self.total_steps += len(
+                    SD_FILE_BOOTSTRAP_DATA[model["version"]][
+                        model["pipeline_action"]
+                    ]
+                )
+
+        # Increase total number of LLMs downloaded
+        if self.models_enabled["mistral"]:
+            self.total_steps += len(
+                LLM_FILE_BOOTSTRAP_DATA[
+                    "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
+                ]["files"]
+            )
+
+        if self.models_enabled["speecht5"]:
+            self.total_steps += len(SPEECH_T5_FILES["microsoft/speecht5_tts"])
+
+        if self.models_enabled["whisper"]:
+            self.total_steps += len(WHISPER_FILES["openai/whisper-tiny"])
+
+        if self.models_enabled["embedding_model"]:
+            self.total_steps += len(
+                LLM_FILE_BOOTSTRAP_DATA["intfloat/e5-large"]["files"]
+            )
 
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.update_progress_bar)
         self.register(SignalCode.DOWNLOAD_PROGRESS, self.download_progress)
@@ -418,7 +481,7 @@ class InstallPage(BaseWizard):
         )
 
         self.thread = QThread()
-        self.worker = InstallWorker(self)
+        self.worker = InstallWorker(self, models_enabled=self.models_enabled)
         self.worker.moveToThread(self.thread)
 
     def start(self):
@@ -439,8 +502,11 @@ class InstallPage(BaseWizard):
             progress = data["current"] / data["total"]
         self.ui.status_bar.setValue(progress * 100)
 
-    def update_progress_bar(self):
-        self.steps_completed += 1
+    def update_progress_bar(self, final: bool = False):
+        if final:
+            self.steps_completed = self.total_steps
+        else:
+            self.steps_completed += 1
         if self.total_steps == self.steps_completed:
             self.ui.progress_bar.setValue(100)
         else:
