@@ -66,7 +66,7 @@ class PromptNode(BaseWorkflowNode):
 
     def handle_text_change(self, name, text):
         # Handle the text change event
-        in_connections = self.in_prompt_port.connected_ports()
+        in_connections = self.ports["in"]["prompt"].connected_ports()
         if len(in_connections) > 0:
             for in_conn in in_connections:
                 if in_conn.name() == name:
@@ -76,7 +76,7 @@ class PromptNode(BaseWorkflowNode):
             self.text_box.set_value(text)
             self.text_box.blockSignals(False)
         self.set_property(name, text)
-        for port in self.out_prompt_port.connected_ports():
+        for port in self.ports["out"]["prompt_data"].connected_ports():
             # set it into the downstream node
             port.node().set_property(port.name(), text)
 
