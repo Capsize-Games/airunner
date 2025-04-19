@@ -14,7 +14,7 @@ class BaseWorkflowNode(
     BaseNode,
 ):
     # Base identifier for easier registration and type checking
-    __identifier__ = "airunner.workflow.nodes"
+    __identifier__ = "airunner.workflow.nodes.BaseWorkflowNode"
     # Execution port constants
     EXEC_IN_PORT_NAME = "exec_in"
     EXEC_OUT_PORT_NAME = "exec_out"
