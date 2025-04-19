@@ -1,5 +1,6 @@
 # Random Number Generator Node
 import random
+from NodeGraphQt.constants import NodePropWidgetEnum
 from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
     BaseWorkflowNode,
 )
@@ -18,8 +19,26 @@ class RandomNumberNode(BaseWorkflowNode):
         # Output for the random number
         self.add_output("random_value")
 
+        # Add default min value using NodeGraphQt's built-in integer widget
+        self.create_property(
+            "default_min",
+            0,
+            widget_type=NodePropWidgetEnum.INT.value,
+            range=(-1000, 1000),
+            tab="settings",
+        )
+
+        # Add default max value using NodeGraphQt's built-in integer widget
+        self.create_property(
+            "default_max",
+            100,
+            widget_type=NodePropWidgetEnum.INT.value,
+            range=(-1000, 1000),
+            tab="settings",
+        )
+
     def execute(self, input_data):
-        # Get input values or use defaults from text inputs
+        # Get input values or use defaults from property widgets
         try:
             min_val = input_data.get("min")
             if min_val is None:
