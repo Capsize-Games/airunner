@@ -13,6 +13,8 @@ class NumberNode(BaseWorkflowNode):
     """
 
     NODE_NAME = "Number"
+    has_exec_in_port = False
+    has_exec_out_port = False
 
     def __init__(self):
         super().__init__()

@@ -13,6 +13,8 @@ class FloatNode(BaseWorkflowNode):
     """
 
     NODE_NAME = "Float"
+    has_exec_in_port = False
+    has_exec_out_port = False
 
     def __init__(self):
         super().__init__()
