@@ -24,20 +24,82 @@ class BaseWorkflowNode(
     def __init__(self):
         super().__init__()
         # Add standard execution ports
-        # Allow multiple execution inputs to converge on one node
+        # Allow only one connection for execution ports (1-to-1)
         if self.has_exec_in_port:
             self.add_input(
                 self.EXEC_IN_PORT_NAME,
-                multi_input=True,
+                multi_input=False,  # Only one connection allowed to exec_in
                 display_name=False,
                 painter_func=self._draw_exec_port,
             )
         if self.has_exec_out_port:
             self.add_output(
                 self.EXEC_OUT_PORT_NAME,
+                multi_output=False,  # Only one connection allowed from exec_out
                 display_name=False,
                 painter_func=self._draw_exec_port,
             )
+
+        # Connect to the connection changed signals
+        if hasattr(self.graph, "connection_changed"):
+            self.graph.connection_changed.connect(self._on_connection_changed)
+
+    def on_input_connected(self, in_port, out_port):
+        """
+        Override method called when a connection is made to an input port.
+        Ensures exec_in port only maintains one connection.
+        """
+        super().on_input_connected(in_port, out_port)
+        if in_port.name() == self.EXEC_IN_PORT_NAME:
+            # Disconnect any other connections to this exec_in port except the new one
+            for connected_port in in_port.connected_ports():
+                if connected_port != out_port:
+                    in_port.disconnect_from(connected_port)
+
+    def on_output_connected(self, out_port, in_port):
+        """
+        Override method called when a connection is made from an output port.
+        Ensures exec_out port only maintains one connection.
+        """
+        super().on_output_connected(out_port, in_port)
+        if out_port.name() == self.EXEC_OUT_PORT_NAME:
+            # Disconnect any other connections from this exec_out port except the new one
+            for connected_port in out_port.connected_ports():
+                if connected_port != in_port:
+                    out_port.disconnect_from(connected_port)
+
+    def _on_connection_changed(self, disconnected, connected):
+        """
+        Handle connection changes in the graph.
+        This is a fallback method if the on_input_connected and on_output_connected
+        are not sufficient.
+        """
+        if not connected:
+            return
+
+        # For each new connection, check if it involves our exec ports
+        for src_port, tgt_port in connected:
+            # If this node is the source with exec_out
+            if (
+                src_port.node().id() == self.id()
+                and src_port.name() == self.EXEC_OUT_PORT_NAME
+            ):
+                out_port = self.output(self.EXEC_OUT_PORT_NAME)
+                # Disconnect all others except the new connection
+                for conn_port in list(out_port.connected_ports()):
+                    if conn_port != tgt_port:
+                        out_port.disconnect_from(conn_port)
+
+            # If this node is the target with exec_in
+            elif (
+                tgt_port.node().id() == self.id()
+                and tgt_port.name() == self.EXEC_IN_PORT_NAME
+            ):
+                in_port = self.input(self.EXEC_IN_PORT_NAME)
+                # Disconnect all others except the new connection
+                for conn_port in list(in_port.connected_ports()):
+                    if conn_port != src_port:
+                        in_port.disconnect_from(conn_port)
 
     # Custom painter function for execution ports (simple triangle)
     @staticmethod
