@@ -5,6 +5,7 @@ from airunner.data.models.base import BaseModel
 
 class WorkflowNode(BaseModel):
     __tablename__ = "workflow_nodes"
+    NODE_NAME = "Workflow Node"
 
     id = Column(Integer, primary_key=True)
     workflow_id = Column(Integer, ForeignKey("workflows.id"), nullable=False)

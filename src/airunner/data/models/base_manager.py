@@ -224,6 +224,26 @@ class BaseManager:
                 self.logger.error(f"Error in update({pk}, {kwargs}): {e}")
                 return False
 
+    def update_by(self, filter: dict, **kwargs) -> bool:
+        print("FILTER", filter)
+        with session_scope() as session:
+            try:
+                objs = session.query(self.cls).filter_by(**filter)
+                if objs.count() > 0:
+                    for obj in objs:
+                        for key, value in kwargs.items():
+                            setattr(obj, key, value)
+                            session.commit()
+                    return True
+                else:
+                    self.logger.debug(
+                        f"No {self.cls.__name__} found with {kwargs}"
+                    )
+                    return False
+            except Exception as e:
+                self.logger.error(f"Error in update: {e}")
+                return False
+
     def merge(self, obj) -> bool:
         with session_scope() as session:
             try:

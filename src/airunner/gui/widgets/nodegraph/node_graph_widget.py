@@ -1,154 +1,39 @@
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
-    QHBoxLayout,
     QPushButton,
     QLineEdit,
     QDialog,
     QFormLayout,
     QDialogButtonBox,
-    QMenu,
     QLabel,
     QToolBar,
 )
-from PySide6.QtCore import QPoint, Qt
-from NodeGraphQt import NodeGraph, BaseNode, NodeGraphMenu
 
-
-# Base class for all workflow nodes in this system
-class BaseWorkflowNode(BaseNode):
-    # Base identifier for easier registration and type checking
-    __identifier__ = "airunner.workflow.nodes"
-
-    def __init__(self):
-        super().__init__()
-        # Add common properties or methods if needed
-
-    # Method to dynamically add an input port
-    def add_dynamic_input(
-        self, name="input", multi_input=False, display_name=True, color=None
-    ):
-        # Ensure port name is unique before adding
-        if name not in self.inputs():
-            return self.add_input(
-                name,
-                multi_input=multi_input,
-                display_name=display_name,
-                color=color,
-            )
-        return self.input(name)
-
-    # Method to dynamically add an output port
-    def add_dynamic_output(
-        self, name="output", multi_output=True, display_name=True, color=None
-    ):
-        # Ensure port name is unique before adding
-        if name not in self.outputs():
-            return self.add_output(
-                name,
-                multi_output=multi_output,
-                display_name=display_name,
-                color=color,
-            )
-        return self.output(name)
-
-    # Placeholder for execution logic - subclasses should override
-    def execute(self, input_data):
-        print(
-            f"Executing node {self.name()} - Base implementation does nothing."
-        )
-        # By default, pass input data through if an output exists
-        if self.outputs():
-            output_port_name = list(self.outputs().keys())[0]
-            return {
-                output_port_name: input_data
-            }  # Return data keyed by output port name
-        return {}
-
-
-# Node representing a single Agent Action
-class AgentActionNode(BaseWorkflowNode):
-    NODE_NAME = (
-        "Agent Action"  # Default name, can be overridden or set instance-wise
-    )
-
-    def __init__(self):
-        super().__init__()
-        # Default ports - can be customized via properties or methods
-        self.add_input("in_message")
-        self.add_output("out_message")
-        # Add a text input widget to specify the action class/name
-        self.add_text_input("action_name", "Action Name", tab="widgets")
-
-    # Override execute for AgentAction specific logic (placeholder)
-    def execute(self, input_data):
-        action_name = self.get_property("action_name")
-        in_message = input_data.get(
-            "in_message", None
-        )  # Get data from the connected input port
-        print(
-            f"Executing Agent Action: {action_name} with input: {in_message}"
-        )
-        # Dummy logic: Find the corresponding AgentAction class based on action_name
-        # and call its run method. For now, just pass data through.
-        output_data = f"Action '{action_name}' processed: {in_message}"
-        return {
-            "out_message": output_data
-        }  # Return data for the 'out_message' port
-
-
-# Node representing a nested Workflow
-class WorkflowNode(BaseWorkflowNode):
-    NODE_NAME = "Workflow"  # Default name
-
-    def __init__(self):
-        super().__init__()
-        # Ports for triggering and receiving results from the nested workflow
-        self.add_input("start_flow")
-        self.add_output("flow_complete")
-        # Add a property to store the ID or name of the nested workflow
-        self.add_text_input(
-            "nested_workflow_id", "Workflow ID/Name", tab="widgets"
-        )
-
-    # Override execute for Workflow specific logic (placeholder)
-    def execute(self, input_data):
-        nested_workflow_id = self.get_property("nested_workflow_id")
-        start_data = input_data.get("start_flow", None)
-        print(
-            f"Executing nested Workflow: {nested_workflow_id} with start data: {start_data}"
-        )
-        # Dummy logic: Load and execute the nested workflow based on nested_workflow_id.
-        # For now, just pass data through.
-        output_data = f"Workflow '{nested_workflow_id}' completed, result from: {start_data}"
-        return {
-            "flow_complete": output_data
-        }  # Return data for the 'flow_complete' port
-
-
-class AddPortDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Add Port")
-        layout = QFormLayout(self)
-
-        self.port_name_input = QLineEdit(self)
-        self.port_type_input = QLineEdit(
-            self
-        )  # Simple text for now, could be dropdown
-
-        layout.addRow("Port Name:", self.port_name_input)
-        layout.addRow("Port Type (optional):", self.port_type_input)
-
-        self.buttons = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self
-        )
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
-
-    def get_port_info(self):
-        return self.port_name_input.text(), self.port_type_input.text()
+from airunner.gui.widgets.nodegraph.nodes.agent_action_node import (
+    AgentActionNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
+    BaseWorkflowNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.image_generation_node import (
+    ImageGenerationNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.prompt_node import (
+    PromptNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.textbox_node import (
+    TextboxNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.random_number_node import (
+    RandomNumberNode,
+)
+from airunner.gui.widgets.nodegraph.add_port_dialog import (
+    AddPortDialog,
+)
+from airunner.gui.widgets.nodegraph.custom_node_graph import (
+    CustomNodeGraph,
+)
 
 
 class NodeGraphWidget(QWidget):
@@ -169,6 +54,22 @@ class NodeGraphWidget(QWidget):
         add_workflow_node_btn = QPushButton("Add Workflow")
         add_workflow_node_btn.clicked.connect(self.add_workflow_node)
         toolbar.addWidget(add_workflow_node_btn)
+
+        add_image_node_btn = QPushButton("Add Image node")
+        add_image_node_btn.clicked.connect(self.add_image_node)
+        toolbar.addWidget(add_image_node_btn)
+
+        add_prompt_node_btn = QPushButton("Add Prompt node")
+        add_prompt_node_btn.clicked.connect(self.add_prompt_node)
+        toolbar.addWidget(add_prompt_node_btn)
+
+        add_textbox_node_btn = QPushButton("Add Textbox node")
+        add_textbox_node_btn.clicked.connect(self.add_textbox_node)
+        toolbar.addWidget(add_textbox_node_btn)
+
+        add_random_number_node_btn = QPushButton("Add Random Number node")
+        add_random_number_node_btn.clicked.connect(self.add_random_number_node)
+        toolbar.addWidget(add_random_number_node_btn)
 
         toolbar.addSeparator()
 
@@ -193,76 +94,111 @@ class NodeGraphWidget(QWidget):
         layout.addWidget(hint_label)
 
         # Initialize the graph
-        self.graph = NodeGraph()
+        self.graph = CustomNodeGraph()
+
+        # get the main context menu.
+        def my_test(graph):
+            selected_nodes = graph.selected_nodes()
+            print("Number of nodes selected: {}".format(len(selected_nodes)))
 
         # Register node types
         self.graph.register_node(AgentActionNode)
-        self.graph.register_node(WorkflowNode)
+        self.graph.register_node(BaseWorkflowNode)
+        self.graph.register_node(ImageGenerationNode)
+        self.graph.register_node(PromptNode)
+        self.graph.register_node(TextboxNode)
+        self.graph.register_node(RandomNumberNode)
 
-        # --- Setup Custom Node Context Menu ---
-        # Get the default node context menu
-        node_menu = self.graph.get_context_menu("nodes")
+        # define a test function.
+        def test_func(graph, node):
+            print("Clicked on node: {}".format(node.name()))
 
-        # Add custom actions using add_command
-        # The provided function will receive graph and node objects
-        node_menu.add_command(
+        context_menu = self.graph.get_context_menu("nodes")
+        # context_menu.add_command(
+        #     "Test",
+        #     func=test_func,
+        #     node_type="airunner.workflow.nodes.AgentActionNode",
+        # )
+        # Check if the context menu is for a node and if it's one of our custom nodes
+        # Add rename option
+        context_menu.add_command(
             "Rename Node",
-            self.rename_node_action,
-            node_type="BaseWorkflowNode",
+            func=lambda g, n: self.rename_node_action(n),
+            node_type="airunner.workflow.nodes.AgentActionNode",
         )
-        node_menu.add_separator()
-        node_menu.add_command(
+
+        # Add port actions
+        context_menu.add_separator()
+        context_menu.add_command(
             "Add Input Port",
-            self.add_input_port_action,
-            node_type="BaseWorkflowNode",
+            func=lambda g, n: self.add_input_port_action(n),
+            node_type="airunner.workflow.nodes.AgentActionNode",
         )
-        node_menu.add_command(
+        context_menu.add_command(
             "Add Output Port",
-            self.add_output_port_action,
-            node_type="BaseWorkflowNode",
+            func=lambda g, n: self.add_output_port_action(n),
+            node_type="airunner.workflow.nodes.AgentActionNode",
         )
-        # --- End Custom Context Menu Setup ---
-
-        # Create the graph view and add to layout
-        viewer = self.graph.widget
-        layout.addWidget(viewer)
-
-        # Example node creation
-        node1 = self.graph.create_node(
-            "airunner.workflow.nodes.AgentActionNode",
-            name="Analyze Convo Action",
-            pos=[100, 100],
+        context_menu.add_separator()
+        context_menu.add_command(
+            "Delete Node",
+            func=lambda g, n: self.delete_node_action(n),
+            node_type="airunner.workflow.nodes.AgentActionNode",
         )
-        node1.set_property("action_name", "AnalyzeConversation")
-
-        node2 = self.graph.create_node(
-            "airunner.workflow.nodes.AgentActionNode",
-            name="Update Mood Action",
-            pos=[400, 100],
+        context_menu.add_command(
+            "Delete Node",
+            func=lambda g, n: self.delete_node_action(n),
+            node_type="airunner.workflow.nodes.BaseWorkflowNode",
         )
-        node2.set_property("action_name", "UpdateMood")
 
-        # Connect nodes - correct way to connect output to input
-        if node1.outputs() and node2.inputs():
-            output_port = list(node1.outputs().values())[0]
-            input_port = list(node2.inputs().values())[0]
-            output_port.connect_to(input_port)
+        # Get the viewer
+        self.viewer = self.graph.widget
 
-        # Example Workflow Node
-        workflow_node = self.graph.create_node(
-            "airunner.workflow.nodes.WorkflowNode",
-            name="Sub Workflow",
-            pos=[100, 300],
-        )
-        workflow_node.set_property(
-            "nested_workflow_id", "mood_update_sub_flow"
-        )
+        # Connect to the context menu prompt signal to add custom actions
+        # context_menu.connect(self.on_context_menu)
+
+        # Add the viewer to layout
+        layout.addWidget(self.viewer)
+
+        # Add layout to the widget
+        self.setLayout(layout)
+
+        # # Example node creation
+        # node1 = self.graph.create_node(
+        #     "airunner.workflow.nodes.AgentActionNode",
+        #     name="Analyze Convo Action",
+        #     pos=[100, 100],
+        # )
+        # node1.set_property("action_name", "AnalyzeConversation")
+
+        # node2 = self.graph.create_node(
+        #     "airunner.workflow.nodes.AgentActionNode",
+        #     name="Update Mood Action",
+        #     pos=[400, 100],
+        # )
+        # node2.set_property("action_name", "UpdateMood")
+
+        # # Connect nodes - correct way to connect output to input
+        # if node1.outputs() and node2.inputs():
+        #     output_port = list(node1.outputs().values())[0]
+        #     input_port = list(node2.inputs().values())[0]
+        #     output_port.connect_to(input_port)
+
+        # # Example Workflow Node
+        # workflow_node = self.graph.create_node(
+        #     "airunner.workflow.nodes.WorkflowNode",
+        #     name="Sub Workflow",
+        #     pos=[100, 300],
+        # )
+        # workflow_node.set_property(
+        #     "nested_workflow_id", "mood_update_sub_flow"
+        # )
 
     def add_agent_node(self):
         """Add a new agent action node at the center of the view."""
         node = self.graph.create_node(
             "airunner.workflow.nodes.AgentActionNode", name="New Agent Action"
-        )
+        )  # Ensure closing parenthesis is present
         # Position the new node in view
         self.graph.center_on([node])
         return node
@@ -270,14 +206,47 @@ class NodeGraphWidget(QWidget):
     def add_workflow_node(self):
         """Add a new workflow node at the center of the view."""
         node = self.graph.create_node(
-            "airunner.workflow.nodes.WorkflowNode", name="New Workflow"
-        )
+            "airunner.workflow.nodes.BaseWorkflowNode", name="New Workflow"
+        )  # Ensure closing parenthesis is present
         # Position the new node in view
         self.graph.center_on([node])
         return node
 
-    # Modified action handlers to accept graph and node arguments
-    def rename_node_action(self, graph, node):
+    def add_image_node(self):
+        """Add a new image generation node at the center of the view."""
+        node = self.graph.create_node(
+            "airunner.workflow.nodes.ImageGenerationNode",
+            name="New Image Generation Node",
+        )
+        self.graph.center_on([node])
+        return node
+
+    def add_prompt_node(self):
+        """Add a new prompt node at the center of the view."""
+        node = self.graph.create_node(
+            "airunner.workflow.nodes.PromptNode", name="New Prompt Node"
+        )
+        self.graph.center_on([node])
+        return node
+
+    def add_textbox_node(self):
+        """Add a new textbox node at the center of the view."""
+        node = self.graph.create_node(
+            "airunner.workflow.nodes.TextboxNode", name="New Textbox Node"
+        )
+        self.graph.center_on([node])
+        return node
+
+    def add_random_number_node(self):
+        """Add a new random number node at the center of the view."""
+        node = self.graph.create_node(
+            "airunner.workflow.nodes.RandomNumberNode",
+            name="RND",
+        )
+        self.graph.center_on([node])
+        return node
+
+    def rename_node_action(self, node):
         """Show dialog to rename a node."""
         # Only act on our custom node types if needed (optional check)
         if not isinstance(node, BaseWorkflowNode):
@@ -302,7 +271,7 @@ class NodeGraphWidget(QWidget):
             if new_name:
                 node.set_name(new_name)
 
-    def add_input_port_action(self, graph, node):
+    def add_input_port_action(self, node):
         """Adds a dynamic input port to the node."""
         if not isinstance(node, BaseWorkflowNode):
             return
@@ -314,7 +283,7 @@ class NodeGraphWidget(QWidget):
                 node.add_dynamic_input(port_name)
                 # TODO: Update node properties in DB model if saving is implemented
 
-    def add_output_port_action(self, graph, node):
+    def add_output_port_action(self, node):
         """Adds a dynamic output port to the node."""
         if not isinstance(node, BaseWorkflowNode):
             return
@@ -325,6 +294,12 @@ class NodeGraphWidget(QWidget):
             if port_name:
                 node.add_dynamic_output(port_name)
                 # TODO: Update node properties in DB model if saving is implemented
+
+    def delete_node_action(self, node):
+        """Deletes the selected node from the graph."""
+        if not isinstance(node, BaseWorkflowNode):
+            return
+        self.graph.delete_node(node)
 
     # --- Database Interaction Placeholders ---
     def save_workflow(self, name, description=""):
