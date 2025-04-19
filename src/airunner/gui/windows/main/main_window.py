@@ -85,7 +85,7 @@ from airunner.gui.windows.settings.airunner_settings import SettingsWindow
 from airunner.gui.windows.update.update_window import UpdateWindow
 from airunner.gui.managers.icon_manager import IconManager
 from airunner.plugin_loader import PluginLoader
-from airunner.gui.widgets.nodegraph_widget import NodeGraphWidget
+from airunner.gui.widgets.nodegraph.node_graph_widget import NodeGraphWidget
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
@@ -765,16 +765,6 @@ class MainWindow(
         if not AIRUNNER_ART_ENABLED:
             self._disable_aiart_gui_elements()
 
-        active_index = 0
-
-        tabs = Tab.objects.filter_by(section="center")
-        for tab in tabs:
-            if tab.active:
-                active_index = tab.index
-                break
-
-        self.ui.center_tab_container.setCurrentIndex(active_index)
-
         # Add NodeGraph tab
         if hasattr(self.ui, "center_tab_container"):
             self.nodegraph_widget = NodeGraphWidget(self)
@@ -785,6 +775,18 @@ class MainWindow(
             self.logger.error(
                 "Could not find 'center_tab_container' to add the NodeGraphWidget tab."
             )
+
+        active_index = 0
+        tab = Tab.objects.filter_by(section="center", active=True)
+        if tab:
+            print(tab)
+            active_index = tab[0].index
+
+        self.ui.center_tab_container.setCurrentIndex(active_index)
+        # on tab change, track the Tab index on the Tab object
+        self.ui.center_tab_container.currentChanged.connect(
+            lambda index: self.update_tab_index(section="center", index=index)
+        )
 
         self.set_stylesheet()
 
@@ -816,6 +818,12 @@ class MainWindow(
         test_button = QPushButton("Test Workflow", self)
         test_button.clicked.connect(self.test_nodegraph_workflow)
         self.statusBar().insertWidget(0, test_button)
+
+    def update_tab_index(self, section: str, index: int):
+        Tab.objects.update_by(filter=dict(section=section), active=False)
+        Tab.objects.update_by(
+            filter=dict(section=section, index=index), active=True
+        )
 
     def test_nodegraph_workflow(self):
         if hasattr(self, "nodegraph_widget"):
