@@ -1,5 +1,5 @@
-from typing import Optional, Dict, List
-from dataclasses import dataclass, asdict
+from typing import Optional
+from dataclasses import dataclass
 
 from airunner.enums import LLMActionType
 
@@ -9,41 +9,20 @@ class LLMResponse:
     """
     Represents a response from a Large Language Model.
 
-    This dataclass encapsulates the structured output from an LLM,
-    including the generated text, token counts, and metadata.
+    This class encapsulates the message content and metadata about the message state,
+    such as whether it's the first or last message in a sequence.
 
     Attributes:
-        text: The generated text response.
-        tokens_generated: Number of tokens in the generated response.
-        tokens_processed: Number of tokens in the input that were processed.
-        total_time: Time taken for generation in seconds.
-        metadata: Optional dictionary containing additional information.
+        message: The text content of the LLM response.
+        is_first_message: Flag indicating if this is the first message in a sequence.
+        is_end_of_message: Flag indicating if this is the last message in a sequence.
+        name: Optional name associated with the response (e.g., assistant name).
+        action: The type of action this response represents.
     """
 
-    text: str
-    tokens_generated: int = 0
-    tokens_processed: int = 0
-    total_time: float = 0.0
-    metadata: Optional[Dict] = None
-
-    def to_dict(self) -> Dict:
-        """
-        Convert the response to a dictionary.
-
-        Returns:
-            Dict: Dictionary representation of the response.
-        """
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: Dict) -> "LLMResponse":
-        """
-        Create an LLMResponse from a dictionary.
-
-        Args:
-            data: Dictionary containing response data.
-
-        Returns:
-            LLMResponse: A new instance with data from the dictionary.
-        """
-        return cls(**data)
+    message: str = ""
+    is_first_message: bool = False
+    is_end_of_message: bool = False
+    name: Optional[str] = None
+    action: LLMActionType = LLMActionType.CHAT
+    node_id: Optional[str] = None

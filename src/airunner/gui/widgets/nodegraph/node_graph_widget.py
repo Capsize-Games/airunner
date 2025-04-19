@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
+from airunner.enums import LLMActionType, SignalCode
 from airunner.gui.widgets.nodegraph.nodes.agent_action_node import (
     AgentActionNode,
 )
@@ -74,7 +75,8 @@ class NodeGraphWidget(QWidget):
         toolbar.addWidget(load_btn)
 
         execute_btn = QPushButton("Execute Workflow")
-        execute_btn.clicked.connect(self.execute_workflow)
+        # Use a lambda to call execute_workflow without arguments
+        execute_btn.clicked.connect(lambda: self.execute_workflow())
         toolbar.addWidget(execute_btn)
 
         # Hint about right-click
@@ -401,6 +403,9 @@ class NodeGraphWidget(QWidget):
             # Prepare input data for the current node
             current_input_data = {}
             for port_name, port in current_node.inputs().items():
+                # Ensure port_name is always a string before comparison
+                port_name_str = str(port_name) if port_name is not None else ""
+
                 connected_ports = port.connected_ports()
                 if connected_ports:
                     # Assuming single connection per input for simplicity here
@@ -423,9 +428,9 @@ class NodeGraphWidget(QWidget):
                 elif (
                     node_dependencies[node_id] == 0
                 ):  # Root node, provide initial data if port matches
-                    if port_name in initial_input_data:
+                    if port_name_str in initial_input_data:
                         current_input_data[port_name] = initial_input_data[
-                            port_name
+                            port_name_str
                         ]
 
             # Execute the node
@@ -433,6 +438,7 @@ class NodeGraphWidget(QWidget):
                 getattr(current_node, "execute")
             ):
                 try:
+                    print("EXECUTING")
                     outputs = current_node.execute(current_input_data)
                     node_outputs[node_id] = outputs if outputs else {}
                     print(
