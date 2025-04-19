@@ -44,6 +44,9 @@ from airunner.gui.widgets.nodegraph.nodes.boolean_node import (
 from airunner.gui.widgets.nodegraph.nodes.llm_request_node import (
     LLMRequestNode,
 )
+from airunner.gui.widgets.nodegraph.nodes.image_request_node import (
+    ImageRequestNode,
+)
 from airunner.gui.widgets.nodegraph.nodes.run_llm_node import (
     RunLLMNode,
 )
@@ -114,6 +117,7 @@ class NodeGraphWidget(QWidget):
         self.graph.register_node(FloatNode)
         self.graph.register_node(BooleanNode)
         self.graph.register_node(LLMRequestNode)
+        self.graph.register_node(ImageRequestNode)
         self.graph.register_node(RunLLMNode)
         self.graph.register_node(ImageDisplayNode)  # Register the new node
         self.graph.register_node(StartNode)  # Added
@@ -185,130 +189,6 @@ class NodeGraphWidget(QWidget):
 
         # Add layout to the widget
         self.setLayout(layout)
-
-        # # Example node creation
-        # node1 = self.graph.create_node(
-        #     "airunner.workflow.nodes.AgentActionNode",
-        #     name="Analyze Convo Action",
-        #     pos=[100, 100],
-        # )
-        # node1.set_property("action_name", "AnalyzeConversation")
-
-        # node2 = self.graph.create_node(
-        #     "airunner.workflow.nodes.AgentActionNode",
-        #     name="Update Mood Action",
-        #     pos=[400, 100],
-        # )
-        # node2.set_property("action_name", "UpdateMood")
-
-        # # Connect nodes - correct way to connect output to input
-        # if node1.outputs() and node2.inputs():
-        #     output_port = list(node1.outputs().values())[0]
-        #     input_port = list(node2.inputs().values())[0]
-        #     output_port.connect_to(input_port)
-
-        # # Example Workflow Node
-        # workflow_node = self.graph.create_node(
-        #     "airunner.workflow.nodes.WorkflowNode",
-        #     name="Sub Workflow",
-        #     pos=[100, 300],
-        # )
-        # workflow_node.set_property(
-        #     "nested_workflow_id", "mood_update_sub_flow"
-        # )
-
-    def add_agent_node(self):
-        """Add a new agent action node at the center of the view."""
-        node = self.graph.create_node(
-            "airunner.workflow.nodes.AgentActionNode", name="New Agent Action"
-        )  # Ensure closing parenthesis is present
-        # Position the new node in view
-        self.graph.center_on([node])
-        return node
-
-    def add_workflow_node(self):
-        """Add a new workflow node at the center of the view."""
-        node = self.graph.create_node(
-            "airunner.workflow.nodes.BaseWorkflowNode", name="New Workflow"
-        )  # Ensure closing parenthesis is present
-        # Position the new node in view
-        self.graph.center_on([node])
-        return node
-
-    def add_image_node(self):
-        """Add a new image generation node at the center of the view."""
-        node = self.graph.create_node(
-            "airunner.workflow.nodes.ImageGenerationNode",
-            name="New Image Generation Node",
-        )
-        self.graph.center_on([node])
-        return node
-
-    def add_prompt_node(self):
-        """Add a new prompt node at the center of the view."""
-        node = self.graph.create_node(
-            "airunner.workflow.nodes.PromptNode", name="New Prompt Node"
-        )
-        self.graph.center_on([node])
-        return node
-
-    def add_textbox_node(self):
-        """Add a new textbox node at the center of the view."""
-        node = self.graph.create_node(
-            "airunner.workflow.nodes.TextboxNode", name="New Textbox Node"
-        )
-        self.graph.center_on([node])
-        return node
-
-    def add_random_number_node(self):
-        """Add a new random number node at the center of the view."""
-        node = self.graph.create_node(
-            "airunner.workflow.nodes.RandomNumberNode",
-            name="RND",
-        )
-        self.graph.center_on([node])
-        return node
-
-    def add_number_node(self):
-        """Add a new number node at the center of the view."""
-        node = self.graph.create_node(
-            "airunner.workflow.nodes.NumberNode", name="New Number Node"
-        )
-        self.graph.center_on([node])
-        return node
-
-    def add_float_node(self):
-        """Add a new float node at the center of the view."""
-        node = self.graph.create_node(
-            "airunner.workflow.nodes.FloatNode", name="New Float Node"
-        )
-        self.graph.center_on([node])
-        return node
-
-    def add_boolean_node(self):
-        """Add a new boolean node at the center of the view."""
-        node = self.graph.create_node(
-            "airunner.workflow.nodes.BooleanNode", name="New Boolean Node"
-        )
-        self.graph.center_on([node])
-        return node
-
-    def add_llm_request_node(self):
-        """Add a new LLM request node at the center of the view."""
-        node = self.graph.create_node(
-            "airunner.workflow.nodes.LLMRequestNode",
-            name="New LLM Request Node",
-        )
-        self.graph.center_on([node])
-        return node
-
-    def add_run_llm_node(self):
-        """Add a new run LLM node at the center of the view."""
-        node = self.graph.create_node(
-            "airunner.workflow.nodes.RunLLMNode", name="New Run LLM Node"
-        )
-        self.graph.center_on([node])
-        return node
 
     def rename_node_action(self, node):
         """Show dialog to rename a node."""
