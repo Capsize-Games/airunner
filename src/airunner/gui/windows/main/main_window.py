@@ -765,17 +765,6 @@ class MainWindow(
         if not AIRUNNER_ART_ENABLED:
             self._disable_aiart_gui_elements()
 
-        # Add NodeGraph tab
-        if hasattr(self.ui, "center_tab_container"):
-            self.nodegraph_widget = NodeGraphWidget(self)
-            self.ui.center_tab_container.addTab(
-                self.nodegraph_widget, "Agent Workflow"
-            )
-        else:
-            self.logger.error(
-                "Could not find 'center_tab_container' to add the NodeGraphWidget tab."
-            )
-
         active_index = 0
         tab = Tab.objects.filter_by(section="center", active=True)
         if tab:
@@ -814,22 +803,11 @@ class MainWindow(
             self.close_to_system_tray
         )
 
-        # Add a temporary test button to the status bar
-        test_button = QPushButton("Test Workflow", self)
-        test_button.clicked.connect(self.test_nodegraph_workflow)
-        self.statusBar().insertWidget(0, test_button)
-
     def update_tab_index(self, section: str, index: int):
         Tab.objects.update_by(filter=dict(section=section), active=False)
         Tab.objects.update_by(
             filter=dict(section=section, index=index), active=True
         )
-
-    def test_nodegraph_workflow(self):
-        if hasattr(self, "nodegraph_widget"):
-            self.nodegraph_widget.execute_workflow()
-        else:
-            print("NodeGraphWidget not initialized.")
 
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
