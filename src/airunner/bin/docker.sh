@@ -191,7 +191,7 @@ if [ "$CI_MODE" -eq 1 ]; then
   # CI mode - Use docker-compose files that don't mount local directories
   DOCKER_COMPOSE_BUILD_BASE="docker compose --env-file .env -f ./package/prod/docker-compose-ci.yml"
   DOCKER_COMPOSE_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/docker-compose-ci-runtime.yml"
-  DOCKER_COMPOSE_RTX50XX_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/50xx/docker-compose-ci-runtime.yml"
+  DOCKER_COMPOSE_RTX50XX_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/50xx/docker-compose-ci-runtime-50xx.yml"
   DOCKER_COMPOSE_BUILD_PACKAGE="docker compose --env-file .env -f ./package/prod/docker-compose-ci-package.yml"
   DOCKER_COMPOSE_BUILD_DEV_RUNTIME="docker compose --env-file .env -f ./package/prod/docker-compose-ci.yml"
   
