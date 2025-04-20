@@ -1,17 +1,12 @@
 from NodeGraphQt import NodesPaletteWidget
 from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QPushButton,
     QLineEdit,
     QDialog,
     QFormLayout,
     QDialogButtonBox,
-    QLabel,
-    QToolBar,
     QSplitter,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 
 
 from airunner.gui.widgets.nodegraph.nodes import (
@@ -36,8 +31,12 @@ from airunner.gui.widgets.nodegraph.nodes import (
     ReverseForEachLoopNode,
 )
 
+from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.nodegraph.add_port_dialog import AddPortDialog
 from airunner.gui.widgets.nodegraph.custom_node_graph import CustomNodeGraph
+from airunner.gui.widgets.nodegraph.templates.node_graph_ui import (
+    Ui_node_graph_widget,
+)
 
 # Import database models and managers
 from airunner.data.models.workflow import Workflow
@@ -62,68 +61,38 @@ IGNORED_NODE_PROPERTIES = {
 }
 
 
-class NodeGraphWidget(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+class NodeGraphWidget(BaseWidget):
+    widget_class_ = Ui_node_graph_widget
 
-        # Main layout
-        layout = QVBoxLayout(self)
-
-        # Add toolbar with buttons
-        toolbar = QToolBar()
-
-        # Add workflow control buttons
-        save_btn = QPushButton("Save Workflow")
-        save_btn.clicked.connect(lambda: self.save_workflow("test_workflow"))
-        toolbar.addWidget(save_btn)
-
-        load_btn = QPushButton("Load Workflow")
-        load_btn.clicked.connect(lambda: self.load_workflow("test_workflow"))
-        toolbar.addWidget(load_btn)
-
-        execute_btn = QPushButton("Execute Workflow")
-        # Use a lambda to call execute_workflow without arguments
-        execute_btn.clicked.connect(lambda: self.execute_workflow())
-        toolbar.addWidget(execute_btn)
-
-        # Hint about right-click
-        hint_label = QLabel("Right-click on nodes for more options")
-        hint_label.setFixedHeight(35)
-
-        # Add toolbar to layout
-        layout.addWidget(toolbar)
-        layout.addWidget(hint_label)
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # Initialize the graph
         self.graph = CustomNodeGraph()
 
-        # get the main context menu.
-        def my_test(graph):
-            selected_nodes = graph.selected_nodes()
-            print("Number of nodes selected: {}".format(len(selected_nodes)))
-
         # Register node types
-        self.graph.register_node(AgentActionNode)
-        self.graph.register_node(BaseWorkflowNode)
-        self.graph.register_node(ImageGenerationNode)
-        self.graph.register_node(PromptNode)
-        self.graph.register_node(TextboxNode)
-        self.graph.register_node(RandomNumberNode)
-        self.graph.register_node(NumberNode)
-        self.graph.register_node(FloatNode)
-        self.graph.register_node(BooleanNode)
-        self.graph.register_node(LLMRequestNode)
-        self.graph.register_node(ImageRequestNode)
-        self.graph.register_node(RunLLMNode)
-        self.graph.register_node(ImageDisplayNode)  # Register the new node
-        self.graph.register_node(StartNode)  # Added
-        self.graph.register_node(BranchNode)  # Added
-
-        # Register the new loop nodes
-        self.graph.register_node(ForEachLoopNode)
-        self.graph.register_node(ForLoopNode)
-        self.graph.register_node(WhileLoopNode)
-        self.graph.register_node(ReverseForEachLoopNode)
+        for node_cls in [
+            AgentActionNode,
+            BaseWorkflowNode,
+            ImageGenerationNode,
+            PromptNode,
+            TextboxNode,
+            RandomNumberNode,
+            NumberNode,
+            FloatNode,
+            BooleanNode,
+            LLMRequestNode,
+            ImageRequestNode,
+            RunLLMNode,
+            ImageDisplayNode,
+            StartNode,
+            BranchNode,
+            ForEachLoopNode,
+            ForLoopNode,
+            WhileLoopNode,
+            ReverseForEachLoopNode,
+        ]:
+            self.graph.register_node(node_cls)
 
         self.nodes_palette = NodesPaletteWidget(
             parent=None,
@@ -142,10 +111,35 @@ class NodeGraphWidget(QWidget):
 
         # Set initial sizes - graph takes most of the space, palette gets 200px
         splitter.setSizes([700, 200])
-        layout.addWidget(splitter)
+        self.ui.graph_widget.layout().addWidget(splitter)
 
-        # Add layout to the widget
-        self.setLayout(layout)
+    @Slot()
+    def on_run_workflow(self):
+        self.execute_workflow()
+
+    @Slot()
+    def on_pause_workflow(self):
+        print("TODO: PAUSE WORKFLOW")
+
+    @Slot()
+    def on_stop_workflow(self):
+        print("TODO: STOP WORKFLOW")
+
+    @Slot()
+    def on_save_workflow(self):
+        self.save_workflow()
+
+    @Slot()
+    def on_load_workflow(self):
+        self.load_workflow("test_workflow")
+
+    @Slot()
+    def on_edit_workflow(self):
+        print("TODO: EDIT WORKFLOW")
+
+    @Slot()
+    def on_delete_workflow(self):
+        print("TODO: DELETE WORKFLOW")
 
     def initialize_context_menu(self):
         context_menu = self.graph.get_context_menu("nodes")
@@ -233,84 +227,112 @@ class NodeGraphWidget(QWidget):
     # --- Database Interaction ---
     def save_workflow(self, name, description=""):
         """Saves the current node graph state to the database."""
-        print(f"Saving workflow '{name}'...")
+        self.logger.info(f"Saving workflow '{name}'...")
 
-        # 1. Find or create the Workflow record
+        # Step 1: Find or create the workflow
+        workflow = self._find_or_create_workflow(name, description)
+        if not workflow:
+            self.logger.error("Failed to create or retrieve workflow.")
+            return
+
+        # Step 2: Save nodes
+        nodes_map = self._save_nodes(workflow)
+
+        # Step 3: Save connections
+        self._save_connections(workflow, nodes_map)
+
+        self.logger.info(f"Workflow '{name}' saved successfully.")
+
+    def _find_or_create_workflow(self, name, description):
+        """Find an existing workflow or create a new one."""
         workflow = Workflow.objects.filter_by_first(name=name)
         if workflow:
-            print(f"Updating existing workflow ID: {workflow.id}")
-            # Clear existing nodes and connections for this workflow before saving new ones
-            # Note: Deleting nodes should cascade delete connections via relationships
-            deleted_node_count = WorkflowNode.objects.delete_by(
-                workflow_id=workflow.id
-            )
-            print(
-                f"  Deleted {deleted_node_count} existing nodes (and their connections)."
-            )
-            # Connections are deleted via cascade from nodes
+            self.logger.info(f"Updating existing workflow ID: {workflow.id}")
+            self._clear_existing_workflow_data(workflow)
         else:
-            print(f"Creating new workflow '{name}'")
+            self.logger.info(f"Creating new workflow '{name}'")
             workflow = Workflow.objects.create(
                 name=name, description=description
             )
-            if not workflow:
-                print("Error: Failed to create workflow database entry.")
-                return
-            print(f"Created new workflow with ID: {workflow.id}")
+            if workflow:
+                self.logger.info(
+                    f"Created new workflow with ID: {workflow.id}"
+                )
+            else:
+                self.logger.error(
+                    "Error: Failed to create workflow database entry."
+                )
+        return workflow
 
-        # 2. Save Nodes
+    def _clear_existing_workflow_data(self, workflow):
+        """Clear existing nodes and connections for the workflow."""
+        deleted_node_count = WorkflowNode.objects.delete_by(
+            workflow_id=workflow.id
+        )
+        self.logger.info(
+            f"Deleted {deleted_node_count} existing nodes (and their connections)."
+        )
+
+    def _save_nodes(self, workflow):
+        """Save all nodes in the graph to the database."""
         nodes_map = {}  # Map graph node ID to database node ID
         all_graph_nodes = self.graph.all_nodes()
-        print(f"Found {len(all_graph_nodes)} nodes in the graph.")
+        self.logger.info(f"Found {len(all_graph_nodes)} nodes in the graph.")
 
         for node in all_graph_nodes:
-            # Get node properties, excluding ignored ones
-            properties_to_save = {}
-            raw_properties = node.properties()  # Get all properties
-            for key, value in raw_properties.items():
-                if key not in IGNORED_NODE_PROPERTIES:
-                    properties_to_save[key] = value
-
-            # Store dynamic ports if they exist (these are custom, so keep them)
-            dynamic_inputs = getattr(node, "_dynamic_inputs", {})
-            dynamic_outputs = getattr(node, "_dynamic_outputs", {})
-            if dynamic_inputs:  # Only save if not empty
-                properties_to_save["_dynamic_inputs"] = dynamic_inputs
-            if dynamic_outputs:  # Only save if not empty
-                properties_to_save["_dynamic_outputs"] = dynamic_outputs
-
-            # Ensure color is saved as a list (JSON compatible) if it exists
-            if "color" in properties_to_save and isinstance(
-                properties_to_save["color"], tuple
-            ):
-                properties_to_save["color"] = list(properties_to_save["color"])
-
+            properties_to_save = self._extract_node_properties(node)
             db_node = WorkflowNode.objects.create(
                 workflow_id=workflow.id,
-                node_identifier=node.type_,  # Use node.type_ which is like 'ai_runner.nodes.AgentActionNode'
+                node_identifier=node.type_,
                 name=node.name(),
                 pos_x=node.pos()[0],
                 pos_y=node.pos()[1],
-                properties=properties_to_save,  # Save filtered properties
+                properties=properties_to_save,
             )
             if db_node:
-                nodes_map[node.id] = (
-                    db_node.id
-                )  # Map graph node ID to DB node ID
-                print(
-                    f"  Saved node: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id}) Properties: {properties_to_save}"
+                nodes_map[node.id] = db_node.id
+                self.logger.info(
+                    f"Saved node: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id}) Properties: {properties_to_save}"
                 )
             else:
-                print(f"  Error saving node: {node.name()}")
+                self.logger.error(f"Error saving node: {node.name()}")
+        return nodes_map
 
-        # 3. Save Connections
+    def _extract_node_properties(self, node):
+        """Extract and filter properties of a node for saving."""
+        properties_to_save = {}
+        raw_properties = node.properties()
+        for key, value in raw_properties.items():
+            if key not in IGNORED_NODE_PROPERTIES:
+                properties_to_save[key] = value
+
+        # Save dynamic ports if they exist
+        dynamic_inputs = getattr(node, "_dynamic_inputs", {})
+        dynamic_outputs = getattr(node, "_dynamic_outputs", {})
+        if dynamic_inputs:
+            properties_to_save["_dynamic_inputs"] = dynamic_inputs
+        if dynamic_outputs:
+            properties_to_save["_dynamic_outputs"] = dynamic_outputs
+
+        # Ensure color is saved as a list (JSON compatible)
+        if "color" in properties_to_save and isinstance(
+            properties_to_save["color"], tuple
+        ):
+            properties_to_save["color"] = list(properties_to_save["color"])
+
+        return properties_to_save
+
+    def _save_connections(self, workflow, nodes_map):
+        """Save all connections in the graph to the database."""
         all_connections = self.graph.all_connections()
-        print(f"Found {len(all_connections)} connections in the graph.")
+        self.logger.info(
+            f"Found {len(all_connections)} connections in the graph."
+        )
+
         for conn in all_connections:
             output_node_graph_id = conn.out_port.node().id
             input_node_graph_id = conn.in_port.node().id
 
-            # Ensure both nodes were saved successfully
             if (
                 output_node_graph_id in nodes_map
                 and input_node_graph_id in nodes_map
@@ -325,21 +347,48 @@ class NodeGraphWidget(QWidget):
                     input_node_id=input_node_db_id,
                     input_port_name=conn.in_port.name(),
                 )
-                print(
-                    f"  Saved connection: {conn.out_port.node().name()}.{conn.out_port.name()} -> {conn.in_port.node().name()}.{conn.in_port.name()}"
+                self.logger.info(
+                    f"Saved connection: {conn.out_port.node().name()}.{conn.out_port.name()} -> {conn.in_port.node().name()}.{conn.in_port.name()}"
                 )
             else:
-                print(
-                    f"  Skipping connection due to missing node DB ID: {conn}"
+                self.logger.warning(
+                    f"Skipping connection due to missing node DB ID: {conn}"
                 )
-
-        print(f"Workflow '{name}' saved successfully.")
 
     def load_workflow(self, workflow_id_or_name):
         """Loads a workflow from the database into the node graph."""
-        print(f"Loading workflow '{workflow_id_or_name}'...")
+        self.logger.info(f"Loading workflow '{workflow_id_or_name}'...")
 
-        # 1. Find the workflow
+        # Find the workflow and fetch its data
+        workflow, db_nodes, db_connections = self._find_workflow_and_data(
+            workflow_id_or_name
+        )
+        if not workflow:
+            return
+
+        # Handle empty workflow
+        if not db_nodes:
+            self.logger.info(
+                f"Workflow '{workflow.name}' has no nodes to load."
+            )
+            self.graph.clear_session()
+            return
+
+        # Clear the current graph
+        self.logger.info("Clearing current graph session...")
+        self.graph.clear_session()
+
+        # Load nodes and create mapping
+        node_map = self._load_workflow_nodes(db_nodes)
+
+        # Load connections between nodes
+        self._load_workflow_connections(db_connections, node_map)
+
+        self.logger.info(f"Workflow '{workflow.name}' loaded successfully.")
+
+    def _find_workflow_and_data(self, workflow_id_or_name):
+        """Find workflow by ID/name and fetch its nodes and connections."""
+        # Find the workflow
         if isinstance(workflow_id_or_name, int):
             workflow = Workflow.objects.get(pk=workflow_id_or_name)
         else:
@@ -348,18 +397,22 @@ class NodeGraphWidget(QWidget):
             )
 
         if not workflow:
-            print(f"Error: Workflow '{workflow_id_or_name}' not found.")
-            return
+            self.logger.error(f"Workflow '{workflow_id_or_name}' not found.")
+            return None, [], []
 
-        # Initialize lists to hold data, default to empty
+        # Get workflow data using eager loading first, then fallback to separate queries
+        db_nodes, db_connections = self._fetch_workflow_data(workflow)
+        return workflow, db_nodes, db_connections
+
+    def _fetch_workflow_data(self, workflow):
+        """Fetch workflow data using eager loading or separate queries as fallback."""
         db_nodes = []
         db_connections = []
 
         # Try eager loading first
         try:
-            # Use filter_by_first with eager loading
             workflow_data = Workflow.objects.filter_by_first(
-                id=workflow.id,  # Filter by ID to get the specific workflow
+                id=workflow.id,
                 eager_load=["nodes", "connections"],
             )
             if (
@@ -377,18 +430,19 @@ class NodeGraphWidget(QWidget):
                     if workflow_data.connections is not None
                     else []
                 )
-                print(
+                self.logger.info(
                     f"Successfully fetched workflow data with eager loading for ID {workflow.id}"
                 )
             else:
                 raise ValueError(
                     "Eager loading failed or returned incomplete data."
-                )  # Force fallback
+                )
 
         except Exception as e_eager:
-            print(
-                f"Warning: Eager loading failed ({e_eager}). Falling back to separate queries."
+            self.logger.warning(
+                f"Eager loading failed ({e_eager}). Falling back to separate queries."
             )
+
             # Fallback to fetching separately
             try:
                 nodes_result = WorkflowNode.objects.filter_by(
@@ -404,178 +458,333 @@ class NodeGraphWidget(QWidget):
                     if connections_result is not None
                     else []
                 )
-                print(
+
+                self.logger.info(
                     f"Successfully fetched nodes ({len(db_nodes)}) and connections ({len(db_connections)}) separately."
                 )
             except Exception as e_fallback:
-                print(
-                    f"Error: Fallback query also failed ({e_fallback}). Cannot load workflow."
+                self.logger.error(
+                    f"Fallback query also failed ({e_fallback}). Cannot load workflow."
                 )
-                # Clear graph maybe? Or just return
                 self.graph.clear_session()
-                return
 
-        if not db_nodes:
-            print(f"Workflow '{workflow.name}' has no nodes to load.")
-            # Clear the graph if loading an empty/failed workflow
-            self.graph.clear_session()
-            return  # Proceed to clear and show empty graph
+        return db_nodes, db_connections
 
-        # 2. Clear the current graph
-        print("Clearing current graph session...")
-        self.graph.clear_session()
-
-        # 3. Load Nodes
+    def _load_workflow_nodes(self, db_nodes):
+        """Load nodes from database records into the graph."""
         node_map = {}  # Map database node ID to graph node instance
-        print(f"Loading {len(db_nodes)} nodes...")
+        self.logger.info(f"Loading {len(db_nodes)} nodes...")
+
         for db_node in db_nodes:
             try:
                 # Create the node instance using its identifier and saved position
                 node_instance = self.graph.create_node(
                     db_node.node_identifier,
                     name=db_node.name,
-                    pos=(
-                        db_node.pos_x,
-                        db_node.pos_y,
-                    ),  # Set position during creation
+                    pos=(db_node.pos_x, db_node.pos_y),
                 )
+
                 if node_instance:
-                    # Restore properties (like text in TextboxNode, etc.)
+                    # Restore node properties
                     if db_node.properties:
-                        print(
-                            f"  Restoring properties for {node_instance.name()}: {db_node.properties}"
+                        self._restore_node_properties(
+                            node_instance, db_node.properties
                         )
-                        for (
-                            prop_name,
-                            prop_value,
-                        ) in db_node.properties.items():
-                            # Skip ignored properties explicitly (double safety)
-                            if prop_name in IGNORED_NODE_PROPERTIES:
-                                continue
 
-                            try:
-                                # Handle dynamic ports first
-                                if prop_name == "_dynamic_inputs":
-                                    if hasattr(
-                                        node_instance, "add_dynamic_input"
-                                    ) and isinstance(prop_value, dict):
-                                        for (
-                                            port_name,
-                                            port_data,
-                                        ) in prop_value.items():
-                                            node_instance.add_dynamic_input(
-                                                port_name
-                                            )
-                                    # Store for reference if needed, though adding should suffice
-                                    # node_instance._dynamic_inputs = prop_value
-                                elif prop_name == "_dynamic_outputs":
-                                    if hasattr(
-                                        node_instance, "add_dynamic_output"
-                                    ) and isinstance(prop_value, dict):
-                                        for (
-                                            port_name,
-                                            port_data,
-                                        ) in prop_value.items():
-                                            node_instance.add_dynamic_output(
-                                                port_name
-                                            )
-                                    # node_instance._dynamic_outputs = prop_value
-                                # Handle color: convert list back to tuple
-                                elif prop_name == "color" and isinstance(
-                                    prop_value, list
-                                ):
-                                    node_instance.set_color(
-                                        *prop_value
-                                    )  # Unpack list as args
-                                    print(
-                                        f"    Set color: {tuple(prop_value)}"
-                                    )
-                                # Try standard setters first (e.g., set_text)
-                                elif hasattr(
-                                    node_instance, f"set_{prop_name}"
-                                ):
-                                    getattr(node_instance, f"set_{prop_name}")(
-                                        prop_value
-                                    )
-                                    print(
-                                        f"    Set property using set_{prop_name}: {prop_value}"
-                                    )
-                                # Try direct attribute setting
-                                elif hasattr(node_instance, prop_name):
-                                    setattr(
-                                        node_instance, prop_name, prop_value
-                                    )
-                                    print(
-                                        f"    Set property using setattr: {prop_name} = {prop_value}"
-                                    )
-                                # else: # Property not found or settable - ignore silently now
-                                #    print(f"    Warning: Property '{prop_name}' not found or settable on node {node_instance.name()}")
-
-                            except Exception as prop_e:
-                                print(
-                                    f"    Warning: Could not set property '{prop_name}' on node {node_instance.name()}: {prop_e}"
-                                )
-
-                    node_map[db_node.id] = (
-                        node_instance  # Map DB ID to graph node
-                    )
-                    print(
+                    # Map DB ID to graph node
+                    node_map[db_node.id] = node_instance
+                    self.logger.info(
                         f"  Loaded node: {node_instance.name()} (DB ID: {db_node.id}, Graph ID: {node_instance.id})"
                     )
                 else:
-                    print(
+                    self.logger.error(
                         f"  Error creating node instance for DB ID: {db_node.id} (Identifier: {db_node.node_identifier})"
                     )
 
             except Exception as e:
-                # Catch potential errors during node creation itself (e.g., identifier not found)
-                print(
+                # Catch potential errors during node creation
+                self.logger.error(
                     f"  FATAL Error loading node DB ID {db_node.id} (Identifier: {db_node.node_identifier}): {e}"
                 )
                 import traceback
 
-                traceback.print_exc()  # Print full traceback for node creation errors
+                traceback.print_exc()
 
-        # 4. Load Connections
-        print(f"Loading {len(db_connections)} connections...")
-        for db_conn in db_connections:
-            output_node = node_map.get(db_conn.output_node_id)
-            input_node = node_map.get(db_conn.input_node_id)
-            output_port_name = db_conn.output_port_name
-            input_port_name = db_conn.input_port_name
+        return node_map
 
-            if output_node and input_node:
-                # Find the actual port objects on the node instances
-                out_port = output_node.outputs().get(output_port_name)
-                in_port = input_node.inputs().get(input_port_name)
+    def _restore_node_properties(self, node_instance, properties):
+        """Restore node properties from saved data."""
+        self.logger.info(
+            f"  Restoring properties for {node_instance.name()}: {properties}"
+        )
 
-                if out_port and in_port:
-                    try:
-                        self.graph.connect_ports(out_port, in_port)
-                        print(
-                            f"  Connected: {output_node.name()}.{output_port_name} -> {input_node.name()}.{input_port_name}"
-                        )
-                    except Exception as e:
-                        print(
-                            f"  Error connecting ports: {output_node.name()}.{output_port_name} -> {input_node.name()}.{input_port_name}: {e}"
-                        )
+        for prop_name, prop_value in properties.items():
+            # Skip ignored properties
+            if prop_name in IGNORED_NODE_PROPERTIES:
+                continue
+
+            try:
+                # Handle dynamic input ports
+                if prop_name == "_dynamic_inputs":
+                    self._restore_dynamic_ports(
+                        node_instance, prop_value, "input"
+                    )
+
+                # Handle dynamic output ports
+                elif prop_name == "_dynamic_outputs":
+                    self._restore_dynamic_ports(
+                        node_instance, prop_value, "output"
+                    )
+
+                # Handle color property specifically
+                elif prop_name == "color" and isinstance(prop_value, list):
+                    node_instance.set_color(*prop_value)  # Unpack list as args
+                    self.logger.info(f"    Set color: {tuple(prop_value)}")
+
+                # Try standard setter methods
+                elif hasattr(node_instance, f"set_{prop_name}"):
+                    getattr(node_instance, f"set_{prop_name}")(prop_value)
+                    self.logger.info(
+                        f"    Set property using set_{prop_name}: {prop_value}"
+                    )
+
+                # Try direct attribute setting
+                elif hasattr(node_instance, prop_name):
+                    setattr(node_instance, prop_name, prop_value)
+                    self.logger.info(
+                        f"    Set property directly: {prop_name} = {prop_value}"
+                    )
+
                 else:
-                    # More detailed logging for port finding issues
-                    out_ports_avail = list(output_node.outputs().keys())
-                    in_ports_avail = list(input_node.inputs().keys())
-                    print(f"  Skipping connection: Port not found.")
-                    print(
-                        f"    Output: Wanted '{output_port_name}' on {output_node.name()}. Available: {out_ports_avail}"
+                    self.logger.warning(
+                        f"    Property '{prop_name}' not handled for node instance."
                     )
-                    print(
-                        f"    Input:  Wanted '{input_port_name}' on {input_node.name()}. Available: {in_ports_avail}"
-                    )
+            except Exception as e:
+                self.logger.error(
+                    f"  Error restoring property '{prop_name}' for node '{node_instance.name()}': {e}"
+                )
+                import traceback
+
+                traceback.print_exc()
+        self.logger.info(
+            f"  Finished restoring properties for {node_instance.name()}."
+        )
+        self.logger.info(f"  Node properties restored successfully.")
+
+    def load_workflow(self, workflow_id_or_name):
+        """Loads a workflow from the database into the node graph."""
+        self.logger.info(f"Loading workflow '{workflow_id_or_name}'...")
+
+        # Find the workflow and fetch its data
+        workflow, db_nodes, db_connections = self._find_workflow_and_data(
+            workflow_id_or_name
+        )
+        if not workflow:
+            return
+
+        # Handle empty workflow
+        if not db_nodes:
+            self.logger.info(
+                f"Workflow '{workflow.name}' has no nodes to load."
+            )
+            self.graph.clear_session()
+            return
+
+        # Clear the current graph
+        self.logger.info("Clearing current graph session...")
+        self.graph.clear_session()
+
+        # Load nodes and create mapping
+        node_map = self._load_workflow_nodes(db_nodes)
+
+        # Load connections between nodes
+        self._load_workflow_connections(db_connections, node_map)
+
+        self.logger.info(f"Workflow '{workflow.name}' loaded successfully.")
+
+    def _find_workflow_and_data(self, workflow_id_or_name):
+        """Find workflow by ID/name and fetch its nodes and connections."""
+        # Find the workflow
+        if isinstance(workflow_id_or_name, int):
+            workflow = Workflow.objects.get(pk=workflow_id_or_name)
+        else:
+            workflow = Workflow.objects.filter_by_first(
+                name=workflow_id_or_name
+            )
+
+        if not workflow:
+            self.logger.error(f"Workflow '{workflow_id_or_name}' not found.")
+            return None, [], []
+
+        # Get workflow data using eager loading first, then fallback to separate queries
+        db_nodes, db_connections = self._fetch_workflow_data(workflow)
+        return workflow, db_nodes, db_connections
+
+    def _fetch_workflow_data(self, workflow):
+        """Fetch workflow data using eager loading or separate queries as fallback."""
+        db_nodes = []
+        db_connections = []
+
+        # Try eager loading first
+        try:
+            workflow_data = Workflow.objects.filter_by_first(
+                id=workflow.id,
+                eager_load=["nodes", "connections"],
+            )
+            if (
+                workflow_data
+                and hasattr(workflow_data, "nodes")
+                and hasattr(workflow_data, "connections")
+            ):
+                db_nodes = (
+                    workflow_data.nodes
+                    if workflow_data.nodes is not None
+                    else []
+                )
+                db_connections = (
+                    workflow_data.connections
+                    if workflow_data.connections is not None
+                    else []
+                )
+                self.logger.info(
+                    f"Successfully fetched workflow data with eager loading for ID {workflow.id}"
+                )
             else:
-                print(
-                    f"  Skipping connection: Node instance not found for DB IDs {db_conn.output_node_id} or {db_conn.input_node_id}"
+                raise ValueError(
+                    "Eager loading failed or returned incomplete data."
                 )
 
-        print(f"Workflow '{workflow.name}' loaded successfully.")
+        except Exception as e_eager:
+            self.logger.warning(
+                f"Eager loading failed ({e_eager}). Falling back to separate queries."
+            )
+
+            # Fallback to fetching separately
+            try:
+                nodes_result = WorkflowNode.objects.filter_by(
+                    workflow_id=workflow.id
+                )
+                connections_result = WorkflowConnection.objects.filter_by(
+                    workflow_id=workflow.id
+                )
+
+                db_nodes = nodes_result if nodes_result is not None else []
+                db_connections = (
+                    connections_result
+                    if connections_result is not None
+                    else []
+                )
+
+                self.logger.info(
+                    f"Successfully fetched nodes ({len(db_nodes)}) and connections ({len(db_connections)}) separately."
+                )
+            except Exception as e_fallback:
+                self.logger.error(
+                    f"Fallback query also failed ({e_fallback}). Cannot load workflow."
+                )
+                self.graph.clear_session()
+
+        return db_nodes, db_connections
+
+    def _load_workflow_nodes(self, db_nodes):
+        """Load nodes from database records into the graph."""
+        node_map = {}  # Map database node ID to graph node instance
+        self.logger.info(f"Loading {len(db_nodes)} nodes...")
+
+        for db_node in db_nodes:
+            try:
+                # Create the node instance using its identifier and saved position
+                node_instance = self.graph.create_node(
+                    db_node.node_identifier,
+                    name=db_node.name,
+                    pos=(db_node.pos_x, db_node.pos_y),
+                )
+
+                if node_instance:
+                    # Restore node properties
+                    if db_node.properties:
+                        self._restore_node_properties(
+                            node_instance, db_node.properties
+                        )
+
+                    # Map DB ID to graph node
+                    node_map[db_node.id] = node_instance
+                    self.logger.info(
+                        f"  Loaded node: {node_instance.name()} (DB ID: {db_node.id}, Graph ID: {node_instance.id})"
+                    )
+                else:
+                    self.logger.error(
+                        f"  Error creating node instance for DB ID: {db_node.id} (Identifier: {db_node.node_identifier})"
+                    )
+
+            except Exception as e:
+                # Catch potential errors during node creation
+                self.logger.error(
+                    f"  FATAL Error loading node DB ID {db_node.id} (Identifier: {db_node.node_identifier}): {e}"
+                )
+                import traceback
+
+                traceback.print_exc()
+
+        return node_map
+
+    def _restore_node_properties(self, node_instance, properties):
+        """Restore node properties from saved data."""
+        self.logger.info(
+            f"  Restoring properties for {node_instance.name()}: {properties}"
+        )
+
+        for prop_name, prop_value in properties.items():
+            # Skip ignored properties
+            if prop_name in IGNORED_NODE_PROPERTIES:
+                continue
+
+            try:
+                # Handle dynamic input ports
+                if prop_name == "_dynamic_inputs":
+                    self._restore_dynamic_ports(
+                        node_instance, prop_value, "input"
+                    )
+
+                # Handle dynamic output ports
+                elif prop_name == "_dynamic_outputs":
+                    self._restore_dynamic_ports(
+                        node_instance, prop_value, "output"
+                    )
+
+                # Handle color property specifically
+                elif prop_name == "color" and isinstance(prop_value, list):
+                    node_instance.set_color(*prop_value)  # Unpack list as args
+                    self.logger.info(f"    Set color: {tuple(prop_value)}")
+
+                # Try standard setter methods
+                elif hasattr(node_instance, f"set_{prop_name}"):
+                    getattr(node_instance, f"set_{prop_name}")(prop_value)
+                    self.logger.info(
+                        f"    Set property using set_{prop_name}: {prop_value}"
+                    )
+
+                # Try direct attribute setting
+                elif hasattr(node_instance, prop_name):
+                    setattr(node_instance, prop_name, prop_value)
+                    self.logger.info(
+                        f"    Set property directly: {prop_name} = {prop_value}"
+                    )
+                else:
+                    self.logger.warning(
+                        f"    Property '{prop_name}' not handled for node instance."
+                    )
+            except Exception as e:
+                self.logger.error(
+                    f"  Error restoring property '{prop_name}' for node '{node_instance.name()}': {e}"
+                )
+                import traceback
+
+                traceback.print_exc()
+        self.logger.info(
+            f"  Finished restoring properties for {node_instance.name()}."
+        )
+        self.logger.info(f"  Node properties restored successfully.")
 
     # --- End Database Interaction ---
 
@@ -584,19 +793,9 @@ class NodeGraphWidget(QWidget):
             initial_input_data = {}
 
         node_outputs = {}  # Store data outputs {node_id: {port_name: data}}
-        execution_queue = []
-        executed_nodes = (
-            set()
-        )  # Keep track of nodes already executed in this run
-        node_map = {node.id: node for node in self.graph.all_nodes()}
-
-        # Find all StartNodes to begin execution
-        for node_id, node in node_map.items():
-            if isinstance(node, StartNode):
-                execution_queue.append(node_id)
-                executed_nodes.add(node_id)  # Mark start node as executed
-
-        print(f"Starting workflow execution from nodes: {execution_queue}")
+        execution_queue, executed_nodes, node_map = self._initialize_execution(
+            initial_input_data
+        )
 
         processed_count = 0
         max_steps = len(node_map) * 2  # Safety break for potential cycles
@@ -606,145 +805,188 @@ class NodeGraphWidget(QWidget):
             current_node = node_map[node_id]
             processed_count += 1
 
-            print(
+            self.logger.info(
                 f"---\nExecuting node: {current_node.name()} (ID: {node_id})"
             )
 
-            # 1. Prepare input data for the current node
-            current_input_data = {}
-            for port_name, port in current_node.inputs().items():
-                # Skip execution ports for data collection
-                if port_name == current_node.EXEC_IN_PORT_NAME:
-                    continue
+            # Prepare input data for the current node
+            current_input_data = self._prepare_input_data(
+                current_node, node_outputs, initial_input_data
+            )
 
-                connected_ports = port.connected_ports()
-                if connected_ports:
-                    # Assume only one connection for data ports for simplicity
-                    source_port = connected_ports[0]
-                    source_node_id = source_port.node().id
-                    source_port_name = source_port.name()
+            # Execute the node
+            outputs, triggered_exec_port_name = self._execute_node(
+                current_node, current_input_data, node_outputs
+            )
 
-                    if (
-                        source_node_id in node_outputs
-                        and source_port_name in node_outputs[source_node_id]
-                    ):
-                        current_input_data[port_name] = node_outputs[
-                            source_node_id
-                        ][source_port_name]
-                        print(
-                            f"  Input '{port_name}' received data from '{source_port.node().name()}.{source_port_name}'"
-                        )
-                    else:
-                        print(
-                            f"  Warning: Input '{port_name}' missing data from source '{source_port.node().name()}.{source_port_name}'. Using None."
-                        )
-                        current_input_data[port_name] = None
-                # else: # Input port not connected, might use default value or be optional
-                # print(f"  Input '{port_name}' is not connected.")
+            # Queue the next nodes based on the triggered execution port
+            self._queue_next_nodes(
+                current_node,
+                triggered_exec_port_name,
+                execution_queue,
+                executed_nodes,
+            )
 
-            # Add initial data if this is a root node (like StartNode, though it usually has no data inputs)
-            # This part might need refinement based on how initial data is intended to be used
-            if not any(
-                p.connected_ports()
-                for p_name, p in current_node.inputs().items()
-                if p_name != current_node.EXEC_IN_PORT_NAME
-            ):
-                for port_name in current_node.inputs():
-                    if (
-                        port_name != current_node.EXEC_IN_PORT_NAME
-                        and port_name in initial_input_data
-                    ):
-                        current_input_data[port_name] = initial_input_data[
-                            port_name
-                        ]
-                        print(f"  Input '{port_name}' received initial data.")
+        self._finalize_execution(
+            processed_count, max_steps, node_outputs, node_map
+        )
 
-            # 2. Execute the node
-            outputs = {}
-            triggered_exec_port_name = None
-            if hasattr(current_node, "execute") and callable(
-                getattr(current_node, "execute")
-            ):
-                try:
-                    outputs = current_node.execute(current_input_data)
-                    if outputs is None:
-                        outputs = {}
-                    node_outputs[node_id] = outputs
-                    print(
-                        f"  Node '{current_node.name()}' executed. Raw Output: {outputs}"
+    def _initialize_execution(self, initial_input_data):
+        """Initialize the execution queue, executed nodes, and node map."""
+        execution_queue = []
+        executed_nodes = set()
+        node_map = {node.id: node for node in self.graph.all_nodes()}
+
+        # Find all StartNodes to begin execution
+        for node_id, node in node_map.items():
+            if isinstance(node, StartNode):
+                execution_queue.append(node_id)
+                executed_nodes.add(node_id)  # Mark start node as executed
+
+        self.logger.info(
+            f"Starting workflow execution from nodes: {execution_queue}"
+        )
+        return execution_queue, executed_nodes, node_map
+
+    def _prepare_input_data(
+        self, current_node, node_outputs, initial_input_data
+    ):
+        """Prepare input data for the current node."""
+        current_input_data = {}
+        for port_name, port in current_node.inputs().items():
+            if port_name == current_node.EXEC_IN_PORT_NAME:
+                continue
+
+            connected_ports = port.connected_ports()
+            if connected_ports:
+                source_port = connected_ports[0]
+                source_node_id = source_port.node().id
+                source_port_name = source_port.name()
+
+                if (
+                    source_node_id in node_outputs
+                    and source_port_name in node_outputs[source_node_id]
+                ):
+                    current_input_data[port_name] = node_outputs[
+                        source_node_id
+                    ][source_port_name]
+                    self.logger.info(
+                        f"  Input '{port_name}' received data from '{source_port.node().name()}.{source_port_name}'"
+                    )
+                else:
+                    self.logger.warning(
+                        f"  Input '{port_name}' missing data from source '{source_port.node().name()}.{source_port_name}'. Using None."
+                    )
+                    current_input_data[port_name] = None
+
+        # Add initial data if this is a root node
+        if not any(
+            p.connected_ports()
+            for p_name, p in current_node.inputs().items()
+            if p_name != current_node.EXEC_IN_PORT_NAME
+        ):
+            for port_name in current_node.inputs():
+                if (
+                    port_name != current_node.EXEC_IN_PORT_NAME
+                    and port_name in initial_input_data
+                ):
+                    current_input_data[port_name] = initial_input_data[
+                        port_name
+                    ]
+                    self.logger.info(
+                        f"  Input '{port_name}' received initial data."
                     )
 
-                    # Check which execution port was triggered
-                    triggered_exec_port_name = outputs.pop(
-                        "_exec_triggered", None
+        return current_input_data
+
+    def _execute_node(self, current_node, current_input_data, node_outputs):
+        """Execute the current node and return its outputs and triggered execution port."""
+        outputs = {}
+        triggered_exec_port_name = None
+
+        if hasattr(current_node, "execute") and callable(
+            getattr(current_node, "execute")
+        ):
+            try:
+                outputs = current_node.execute(current_input_data) or {}
+                node_outputs[current_node.id] = outputs
+                self.logger.info(
+                    f"  Node '{current_node.name()}' executed. Raw Output: {outputs}"
+                )
+
+                triggered_exec_port_name = outputs.pop("_exec_triggered", None)
+                if triggered_exec_port_name:
+                    self.logger.info(
+                        f"  Execution triggered on port: {triggered_exec_port_name}"
                     )
-                    if triggered_exec_port_name:
-                        print(
-                            f"  Execution triggered on port: {triggered_exec_port_name}"
-                        )
-                    else:
-                        # If no specific exec port is triggered, try the default if it exists
-                        if (
-                            current_node.EXEC_OUT_PORT_NAME
-                            in current_node.outputs()
-                        ):
-                            triggered_exec_port_name = (
-                                current_node.EXEC_OUT_PORT_NAME
-                            )
-                            print(
-                                f"  Default execution triggered on port: {triggered_exec_port_name}"
-                            )
+                elif current_node.EXEC_OUT_PORT_NAME in current_node.outputs():
+                    triggered_exec_port_name = current_node.EXEC_OUT_PORT_NAME
+                    self.logger.info(
+                        f"  Default execution triggered on port: {triggered_exec_port_name}"
+                    )
 
-                except Exception as e:
-                    print(f"  Error executing node {current_node.name()}: {e}")
-                    node_outputs[node_id] = {}  # Mark as failed
-            else:
-                print(f"  Node {current_node.name()} has no execute method.")
-                node_outputs[node_id] = {}
-
-            # 3. Find and queue the next node(s) based on the triggered execution port
-            if (
-                triggered_exec_port_name
-                and triggered_exec_port_name in current_node.outputs()
-            ):
-                exec_output_port = current_node.outputs()[
-                    triggered_exec_port_name
-                ]
-                connected_exec_inputs = exec_output_port.connected_ports()
-
-                for next_port in connected_exec_inputs:
-                    next_node = next_port.node()
-                    next_node_id = next_node.id
-                    # Only queue if not already executed in this run to prevent immediate cycles
-                    # More robust cycle detection might be needed for complex graphs
-                    if next_node_id not in executed_nodes:
-                        print(
-                            f"  Queueing next node: {next_node.name()} (ID: {next_node_id}) via port {next_port.name()}"
-                        )
-                        execution_queue.append(next_node_id)
-                        executed_nodes.add(next_node_id)
-                    else:
-                        print(
-                            f"  Skipping already executed node: {next_node.name()} (ID: {next_node_id})"
-                        )
-            elif triggered_exec_port_name:
-                print(
-                    f"  Warning: Triggered execution port '{triggered_exec_port_name}' not found on node '{current_node.name()}'. Execution stops here."
+            except Exception as e:
+                self.logger.error(
+                    f"  Error executing node {current_node.name()}: {e}"
                 )
-            else:
-                print(
-                    f"  Node '{current_node.name()}' did not trigger an execution output. Execution path ends here."
-                )
+                node_outputs[current_node.id] = {}  # Mark as failed
+        else:
+            self.logger.info(
+                f"  Node {current_node.name()} has no execute method."
+            )
+            node_outputs[current_node.id] = {}
 
+        return outputs, triggered_exec_port_name
+
+    def _queue_next_nodes(
+        self,
+        current_node,
+        triggered_exec_port_name,
+        execution_queue,
+        executed_nodes,
+    ):
+        """Queue the next nodes based on the triggered execution port."""
+        if (
+            triggered_exec_port_name
+            and triggered_exec_port_name in current_node.outputs()
+        ):
+            exec_output_port = current_node.outputs()[triggered_exec_port_name]
+            connected_exec_inputs = exec_output_port.connected_ports()
+
+            for next_port in connected_exec_inputs:
+                next_node = next_port.node()
+                next_node_id = next_node.id
+                if next_node_id not in executed_nodes:
+                    self.logger.info(
+                        f"  Queueing next node: {next_node.name()} (ID: {next_node_id}) via port {next_port.name()}"
+                    )
+                    execution_queue.append(next_node_id)
+                    executed_nodes.add(next_node_id)
+                else:
+                    self.logger.info(
+                        f"  Skipping already executed node: {next_node.name()} (ID: {next_node_id})"
+                    )
+        elif triggered_exec_port_name:
+            self.logger.warning(
+                f"  Triggered execution port '{triggered_exec_port_name}' not found on node '{current_node.name()}'. Execution stops here."
+            )
+        else:
+            self.logger.info(
+                f"  Node '{current_node.name()}' did not trigger an execution output. Execution path ends here."
+            )
+
+    def _finalize_execution(
+        self, processed_count, max_steps, node_outputs, node_map
+    ):
+        """Finalize the workflow execution and log results."""
         if processed_count >= max_steps:
-            print(
+            self.logger.info(
                 "Workflow execution stopped: Maximum processing steps reached (potential cycle detected)."
             )
         else:
-            print("---\nWorkflow execution finished.")
+            self.logger.info("---\nWorkflow execution finished.")
 
-        # Optional: Log final outputs from nodes that didn't trigger further execution
         final_outputs = {
             node_map[nid].name(): data for nid, data in node_outputs.items()
         }
-        print("Final Node Outputs:", final_outputs)
+        self.logger.info("Final Node Outputs:", final_outputs)
