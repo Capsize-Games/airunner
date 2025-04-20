@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QMainWindow, QMenu,
 
 from airunner.gui.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.gui.widgets.generator_form.generator_form_widget import GeneratorForm
+from airunner.gui.widgets.nodegraph.node_graph_widget import NodeGraphWidget
 from airunner.gui.widgets.tool_tab.tool_tab_widget import ToolTabWidget
 import airunner.feather_rc
 
@@ -523,7 +524,12 @@ class Ui_MainWindow(object):
         self.generator_widget = GeneratorForm(self.main_window_splitter)
         self.generator_widget.setObjectName(u"generator_widget")
         self.generator_widget.setEnabled(True)
-        self.generator_widget.setMinimumSize(QSize(50, 0))
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.generator_widget.sizePolicy().hasHeightForWidth())
+        self.generator_widget.setSizePolicy(sizePolicy1)
+        self.generator_widget.setMinimumSize(QSize(200, 0))
         self.main_window_splitter.addWidget(self.generator_widget)
         self.center_widget = QWidget(self.main_window_splitter)
         self.center_widget.setObjectName(u"center_widget")
@@ -542,11 +548,11 @@ class Ui_MainWindow(object):
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.canvas = CanvasWidget(self.art_tab)
         self.canvas.setObjectName(u"canvas")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.MinimumExpanding)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.canvas.sizePolicy().hasHeightForWidth())
-        self.canvas.setSizePolicy(sizePolicy1)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.canvas.sizePolicy().hasHeightForWidth())
+        self.canvas.setSizePolicy(sizePolicy2)
         self.canvas.setMinimumSize(QSize(0, 0))
         self.canvas.setMaximumSize(QSize(16777215, 16777215))
         self.canvas.setCursor(QCursor(Qt.ArrowCursor))
@@ -555,6 +561,17 @@ class Ui_MainWindow(object):
         self.gridLayout_2.addWidget(self.canvas, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.art_tab, "")
+        self.agent_workflow_tab = QWidget()
+        self.agent_workflow_tab.setObjectName(u"agent_workflow_tab")
+        self.gridLayout_5 = QGridLayout(self.agent_workflow_tab)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.graph = NodeGraphWidget(self.agent_workflow_tab)
+        self.graph.setObjectName(u"graph")
+
+        self.gridLayout_5.addWidget(self.graph, 0, 0, 1, 1)
+
+        self.center_tab_container.addTab(self.agent_workflow_tab, "")
 
         self.gridLayout_4.addWidget(self.center_tab_container, 0, 0, 1, 1)
 
@@ -1001,6 +1018,7 @@ class Ui_MainWindow(object):
         self.actionFoo.setText(QCoreApplication.translate("MainWindow", u"Foo", None))
         self.actionCollapse_to_system_tray.setText(QCoreApplication.translate("MainWindow", u"Close to System Tray", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.art_tab), QCoreApplication.translate("MainWindow", u"Art", None))
+        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.agent_workflow_tab), QCoreApplication.translate("MainWindow", u"Agent Workflow", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
         self.menuChat.setTitle(QCoreApplication.translate("MainWindow", u"Chat", None))
