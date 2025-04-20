@@ -106,9 +106,15 @@
           <property name="enabled">
            <bool>true</bool>
           </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="minimumSize">
            <size>
-            <width>50</width>
+            <width>200</width>
             <height>0</height>
            </size>
           </property>
@@ -2181,42 +2187,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionRecenter</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_center_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>426</x>
-     <y>332</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionToggle_LLM</sender>
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
    <slot>action_toggle_llm(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>414</x>
-     <y>367</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionMask_toggle</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_toggle_mask_layer(bool)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
