@@ -78,6 +78,28 @@ from airunner.gui.widgets.nodegraph.custom_node_graph import (
     CustomNodeGraph,
 )
 
+# Import database models and managers
+from airunner.data.models.workflow import Workflow
+from airunner.data.models.workflow_node import WorkflowNode
+from airunner.data.models.workflow_connection import WorkflowConnection
+
+
+# Properties to explicitly ignore during save/load
+IGNORED_NODE_PROPERTIES = {
+    "selected",
+    "disabled",
+    "visible",
+    "width",
+    "height",
+    "pos",
+    "border_color",
+    "text_color",
+    "type",
+    "id",
+    "icon",
+    # Add any other internal NodeGraphQt properties you don't want persisted
+}
+
 
 class NodeGraphWidget(QWidget):
     def __init__(self, parent=None):
@@ -242,18 +264,359 @@ class NodeGraphWidget(QWidget):
 
     def delete_node_action(self, node):
         """Deletes the selected node from the graph."""
-        if not isinstance(node, BaseWorkflowNode):
-            return
-        self.graph.delete_node(node)
+        # Allow deleting any node, not just BaseWorkflowNode
+        # if not isinstance(node, BaseWorkflowNode):
+        #     return
+        self.graph.delete_node(node)  # Use graph's delete method
 
-    # --- Database Interaction Placeholders ---
+    # --- Database Interaction ---
     def save_workflow(self, name, description=""):
-        print(f"Placeholder: Save workflow '{name}'")
+        """Saves the current node graph state to the database."""
+        print(f"Saving workflow '{name}'...")
+
+        # 1. Find or create the Workflow record
+        workflow = Workflow.objects.filter_by_first(name=name)
+        if workflow:
+            print(f"Updating existing workflow ID: {workflow.id}")
+            # Clear existing nodes and connections for this workflow before saving new ones
+            # Note: Deleting nodes should cascade delete connections via relationships
+            deleted_node_count = WorkflowNode.objects.delete_by(
+                workflow_id=workflow.id
+            )
+            print(
+                f"  Deleted {deleted_node_count} existing nodes (and their connections)."
+            )
+            # Connections are deleted via cascade from nodes
+        else:
+            print(f"Creating new workflow '{name}'")
+            workflow = Workflow.objects.create(
+                name=name, description=description
+            )
+            if not workflow:
+                print("Error: Failed to create workflow database entry.")
+                return
+            print(f"Created new workflow with ID: {workflow.id}")
+
+        # 2. Save Nodes
+        nodes_map = {}  # Map graph node ID to database node ID
+        all_graph_nodes = self.graph.all_nodes()
+        print(f"Found {len(all_graph_nodes)} nodes in the graph.")
+
+        for node in all_graph_nodes:
+            # Get node properties, excluding ignored ones
+            properties_to_save = {}
+            raw_properties = node.properties()  # Get all properties
+            for key, value in raw_properties.items():
+                if key not in IGNORED_NODE_PROPERTIES:
+                    properties_to_save[key] = value
+
+            # Store dynamic ports if they exist (these are custom, so keep them)
+            dynamic_inputs = getattr(node, "_dynamic_inputs", {})
+            dynamic_outputs = getattr(node, "_dynamic_outputs", {})
+            if dynamic_inputs:  # Only save if not empty
+                properties_to_save["_dynamic_inputs"] = dynamic_inputs
+            if dynamic_outputs:  # Only save if not empty
+                properties_to_save["_dynamic_outputs"] = dynamic_outputs
+
+            # Ensure color is saved as a list (JSON compatible) if it exists
+            if "color" in properties_to_save and isinstance(
+                properties_to_save["color"], tuple
+            ):
+                properties_to_save["color"] = list(properties_to_save["color"])
+
+            db_node = WorkflowNode.objects.create(
+                workflow_id=workflow.id,
+                node_identifier=node.type_,  # Use node.type_ which is like 'ai_runner.nodes.AgentActionNode'
+                name=node.name(),
+                pos_x=node.pos()[0],
+                pos_y=node.pos()[1],
+                properties=properties_to_save,  # Save filtered properties
+            )
+            if db_node:
+                nodes_map[node.id] = (
+                    db_node.id
+                )  # Map graph node ID to DB node ID
+                print(
+                    f"  Saved node: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id}) Properties: {properties_to_save}"
+                )
+            else:
+                print(f"  Error saving node: {node.name()}")
+
+        # 3. Save Connections
+        all_connections = self.graph.all_connections()
+        print(f"Found {len(all_connections)} connections in the graph.")
+        for conn in all_connections:
+            output_node_graph_id = conn.out_port.node().id
+            input_node_graph_id = conn.in_port.node().id
+
+            # Ensure both nodes were saved successfully
+            if (
+                output_node_graph_id in nodes_map
+                and input_node_graph_id in nodes_map
+            ):
+                output_node_db_id = nodes_map[output_node_graph_id]
+                input_node_db_id = nodes_map[input_node_graph_id]
+
+                WorkflowConnection.objects.create(
+                    workflow_id=workflow.id,
+                    output_node_id=output_node_db_id,
+                    output_port_name=conn.out_port.name(),
+                    input_node_id=input_node_db_id,
+                    input_port_name=conn.in_port.name(),
+                )
+                print(
+                    f"  Saved connection: {conn.out_port.node().name()}.{conn.out_port.name()} -> {conn.in_port.node().name()}.{conn.in_port.name()}"
+                )
+            else:
+                print(
+                    f"  Skipping connection due to missing node DB ID: {conn}"
+                )
+
+        print(f"Workflow '{name}' saved successfully.")
 
     def load_workflow(self, workflow_id_or_name):
-        print(f"Placeholder: Load workflow '{workflow_id_or_name}'")
+        """Loads a workflow from the database into the node graph."""
+        print(f"Loading workflow '{workflow_id_or_name}'...")
 
-    # --- End Database Interaction Placeholders ---
+        # 1. Find the workflow
+        if isinstance(workflow_id_or_name, int):
+            workflow = Workflow.objects.get(pk=workflow_id_or_name)
+        else:
+            workflow = Workflow.objects.filter_by_first(
+                name=workflow_id_or_name
+            )
+
+        if not workflow:
+            print(f"Error: Workflow '{workflow_id_or_name}' not found.")
+            return
+
+        # Initialize lists to hold data, default to empty
+        db_nodes = []
+        db_connections = []
+
+        # Try eager loading first
+        try:
+            # Use filter_by_first with eager loading
+            workflow_data = Workflow.objects.filter_by_first(
+                id=workflow.id,  # Filter by ID to get the specific workflow
+                eager_load=["nodes", "connections"],
+            )
+            if (
+                workflow_data
+                and hasattr(workflow_data, "nodes")
+                and hasattr(workflow_data, "connections")
+            ):
+                db_nodes = (
+                    workflow_data.nodes
+                    if workflow_data.nodes is not None
+                    else []
+                )
+                db_connections = (
+                    workflow_data.connections
+                    if workflow_data.connections is not None
+                    else []
+                )
+                print(
+                    f"Successfully fetched workflow data with eager loading for ID {workflow.id}"
+                )
+            else:
+                raise ValueError(
+                    "Eager loading failed or returned incomplete data."
+                )  # Force fallback
+
+        except Exception as e_eager:
+            print(
+                f"Warning: Eager loading failed ({e_eager}). Falling back to separate queries."
+            )
+            # Fallback to fetching separately
+            try:
+                nodes_result = WorkflowNode.objects.filter_by(
+                    workflow_id=workflow.id
+                )
+                connections_result = WorkflowConnection.objects.filter_by(
+                    workflow_id=workflow.id
+                )
+
+                db_nodes = nodes_result if nodes_result is not None else []
+                db_connections = (
+                    connections_result
+                    if connections_result is not None
+                    else []
+                )
+                print(
+                    f"Successfully fetched nodes ({len(db_nodes)}) and connections ({len(db_connections)}) separately."
+                )
+            except Exception as e_fallback:
+                print(
+                    f"Error: Fallback query also failed ({e_fallback}). Cannot load workflow."
+                )
+                # Clear graph maybe? Or just return
+                self.graph.clear_session()
+                return
+
+        if not db_nodes:
+            print(f"Workflow '{workflow.name}' has no nodes to load.")
+            # Clear the graph if loading an empty/failed workflow
+            self.graph.clear_session()
+            return  # Proceed to clear and show empty graph
+
+        # 2. Clear the current graph
+        print("Clearing current graph session...")
+        self.graph.clear_session()
+
+        # 3. Load Nodes
+        node_map = {}  # Map database node ID to graph node instance
+        print(f"Loading {len(db_nodes)} nodes...")
+        for db_node in db_nodes:
+            try:
+                # Create the node instance using its identifier and saved position
+                node_instance = self.graph.create_node(
+                    db_node.node_identifier,
+                    name=db_node.name,
+                    pos=(
+                        db_node.pos_x,
+                        db_node.pos_y,
+                    ),  # Set position during creation
+                )
+                if node_instance:
+                    # Restore properties (like text in TextboxNode, etc.)
+                    if db_node.properties:
+                        print(
+                            f"  Restoring properties for {node_instance.name()}: {db_node.properties}"
+                        )
+                        for (
+                            prop_name,
+                            prop_value,
+                        ) in db_node.properties.items():
+                            # Skip ignored properties explicitly (double safety)
+                            if prop_name in IGNORED_NODE_PROPERTIES:
+                                continue
+
+                            try:
+                                # Handle dynamic ports first
+                                if prop_name == "_dynamic_inputs":
+                                    if hasattr(
+                                        node_instance, "add_dynamic_input"
+                                    ) and isinstance(prop_value, dict):
+                                        for (
+                                            port_name,
+                                            port_data,
+                                        ) in prop_value.items():
+                                            node_instance.add_dynamic_input(
+                                                port_name
+                                            )
+                                    # Store for reference if needed, though adding should suffice
+                                    # node_instance._dynamic_inputs = prop_value
+                                elif prop_name == "_dynamic_outputs":
+                                    if hasattr(
+                                        node_instance, "add_dynamic_output"
+                                    ) and isinstance(prop_value, dict):
+                                        for (
+                                            port_name,
+                                            port_data,
+                                        ) in prop_value.items():
+                                            node_instance.add_dynamic_output(
+                                                port_name
+                                            )
+                                    # node_instance._dynamic_outputs = prop_value
+                                # Handle color: convert list back to tuple
+                                elif prop_name == "color" and isinstance(
+                                    prop_value, list
+                                ):
+                                    node_instance.set_color(
+                                        *prop_value
+                                    )  # Unpack list as args
+                                    print(
+                                        f"    Set color: {tuple(prop_value)}"
+                                    )
+                                # Try standard setters first (e.g., set_text)
+                                elif hasattr(
+                                    node_instance, f"set_{prop_name}"
+                                ):
+                                    getattr(node_instance, f"set_{prop_name}")(
+                                        prop_value
+                                    )
+                                    print(
+                                        f"    Set property using set_{prop_name}: {prop_value}"
+                                    )
+                                # Try direct attribute setting
+                                elif hasattr(node_instance, prop_name):
+                                    setattr(
+                                        node_instance, prop_name, prop_value
+                                    )
+                                    print(
+                                        f"    Set property using setattr: {prop_name} = {prop_value}"
+                                    )
+                                # else: # Property not found or settable - ignore silently now
+                                #    print(f"    Warning: Property '{prop_name}' not found or settable on node {node_instance.name()}")
+
+                            except Exception as prop_e:
+                                print(
+                                    f"    Warning: Could not set property '{prop_name}' on node {node_instance.name()}: {prop_e}"
+                                )
+
+                    node_map[db_node.id] = (
+                        node_instance  # Map DB ID to graph node
+                    )
+                    print(
+                        f"  Loaded node: {node_instance.name()} (DB ID: {db_node.id}, Graph ID: {node_instance.id})"
+                    )
+                else:
+                    print(
+                        f"  Error creating node instance for DB ID: {db_node.id} (Identifier: {db_node.node_identifier})"
+                    )
+
+            except Exception as e:
+                # Catch potential errors during node creation itself (e.g., identifier not found)
+                print(
+                    f"  FATAL Error loading node DB ID {db_node.id} (Identifier: {db_node.node_identifier}): {e}"
+                )
+                import traceback
+
+                traceback.print_exc()  # Print full traceback for node creation errors
+
+        # 4. Load Connections
+        print(f"Loading {len(db_connections)} connections...")
+        for db_conn in db_connections:
+            output_node = node_map.get(db_conn.output_node_id)
+            input_node = node_map.get(db_conn.input_node_id)
+            output_port_name = db_conn.output_port_name
+            input_port_name = db_conn.input_port_name
+
+            if output_node and input_node:
+                # Find the actual port objects on the node instances
+                out_port = output_node.outputs().get(output_port_name)
+                in_port = input_node.inputs().get(input_port_name)
+
+                if out_port and in_port:
+                    try:
+                        self.graph.connect_ports(out_port, in_port)
+                        print(
+                            f"  Connected: {output_node.name()}.{output_port_name} -> {input_node.name()}.{input_port_name}"
+                        )
+                    except Exception as e:
+                        print(
+                            f"  Error connecting ports: {output_node.name()}.{output_port_name} -> {input_node.name()}.{input_port_name}: {e}"
+                        )
+                else:
+                    # More detailed logging for port finding issues
+                    out_ports_avail = list(output_node.outputs().keys())
+                    in_ports_avail = list(input_node.inputs().keys())
+                    print(f"  Skipping connection: Port not found.")
+                    print(
+                        f"    Output: Wanted '{output_port_name}' on {output_node.name()}. Available: {out_ports_avail}"
+                    )
+                    print(
+                        f"    Input:  Wanted '{input_port_name}' on {input_node.name()}. Available: {in_ports_avail}"
+                    )
+            else:
+                print(
+                    f"  Skipping connection: Node instance not found for DB IDs {db_conn.output_node_id} or {db_conn.input_node_id}"
+                )
+
+        print(f"Workflow '{workflow.name}' loaded successfully.")
+
+    # --- End Database Interaction ---
 
     def execute_workflow(self, initial_input_data=None):
         if initial_input_data is None:

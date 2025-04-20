@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON, Text
 from sqlalchemy.orm import relationship
 from airunner.data.models.base import BaseModel
+from airunner.data.models.base_manager import BaseManager
 
 
 class WorkflowNode(BaseModel):
@@ -35,5 +36,12 @@ class WorkflowNode(BaseModel):
         cascade="all, delete-orphan",
     )
 
+    # Initialize the manager after the class is fully defined
+    objects = None
+
     def __repr__(self):
         return f"<WorkflowNode(id={self.id}, name='{self.name}', identifier='{self.node_identifier}')>"
+
+
+# Set the manager outside the class definition
+WorkflowNode.objects = BaseManager(WorkflowNode)

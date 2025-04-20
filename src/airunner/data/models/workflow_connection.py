@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from airunner.data.models.base import BaseModel
+from airunner.data.models.base_manager import BaseManager
 
 
 class WorkflowConnection(BaseModel):
@@ -31,5 +32,12 @@ class WorkflowConnection(BaseModel):
         back_populates="input_connections",
     )
 
+    # Initialize the manager after the class is fully defined
+    objects = None
+
     def __repr__(self):
         return f"<WorkflowConnection(id={self.id}, from='{self.output_node_id}:{self.output_port_name}', to='{self.input_node_id}:{self.input_port_name}')>"
+
+
+# Set the manager outside the class definition
+WorkflowConnection.objects = BaseManager(WorkflowConnection)

@@ -31,8 +31,6 @@ from diffusers import (
     StableDiffusionXLControlNetImg2ImgPipeline,
     StableDiffusionXLControlNetInpaintPipeline,
     ControlNetModel,
-    AutoencoderTiny,
-    AutoencoderKL,
 )
 from airunner.settings import (
     AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT,
@@ -96,6 +94,7 @@ from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.handlers.stablediffusion.rect import Rect
 from diffusers import SchedulerMixin
+import time
 
 
 class StableDiffusionModelManager(BaseModelManager):
@@ -876,20 +875,37 @@ class StableDiffusionModelManager(BaseModelManager):
         args = self._prepare_data(active_rect)
         self._current_state = HandlerState.GENERATING
 
+        # Initialize timing dictionary and start time
+        timing = {}
+        start_time = time.time()
+
         # Use torch.amp.autocast for mixed precision handling
         with torch.no_grad(), torch.amp.autocast(
             "cuda", dtype=self.data_type, enabled=True
         ):
             results = self._pipe(**args)
+            timing["pipeline_execution"] = time.time() - start_time
 
+        # Benchmark memory clearing
+        clear_time_start = time.time()
         clear_memory()
+        timing["clear_memory"] = time.time() - clear_time_start
 
+        # Benchmark getting images from results
+        get_images_start = time.time()
         images = results.get("images", [])
+        timing["get_images"] = time.time() - get_images_start
+
+        # Benchmark NSFW check
+        nsfw_check_start = time.time()
         images, nsfw_content_detected = self._check_and_mark_nsfw_images(
             images
         )
+        timing["nsfw_check"] = time.time() - nsfw_check_start
 
         if images is not None:
+            # Benchmark emitting signal
+            signal_start = time.time()
             self.emit_signal(
                 SignalCode.SD_PROGRESS_SIGNAL,
                 {
@@ -897,9 +913,19 @@ class StableDiffusionModelManager(BaseModelManager):
                     "total": self.image_request.steps,
                 },
             )
+            timing["emit_signal"] = time.time() - signal_start
+
+            # Benchmark exporting images
+            export_start = time.time()
             self._export_images(images, args)
+            timing["export_images"] = time.time() - export_start
         else:
             images = images or []
+
+        # Log all timing information
+        total_time = time.time() - start_time
+        timing["total"] = total_time
+        self.logger.info(f"Image generation performance metrics: {timing}")
 
         return ImageResponse(
             images=images,
