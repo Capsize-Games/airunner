@@ -106,9 +106,15 @@
           <property name="enabled">
            <bool>true</bool>
           </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="minimumSize">
            <size>
-            <width>50</width>
+            <width>200</width>
             <height>0</height>
            </size>
           </property>
@@ -188,6 +194,28 @@
                   <bool>true</bool>
                  </property>
                 </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="agent_workflow_tab">
+              <attribute name="title">
+               <string>Agent Workflow</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_5">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="NodeGraphWidget" name="graph" native="true"/>
                </item>
               </layout>
              </widget>
@@ -1583,6 +1611,12 @@
    <header>airunner/gui/widgets/tool_tab/tool_tab_widget</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>NodeGraphWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/nodegraph/node_graph_widget</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <resources>
   <include location="../../../resources/feather.qrc"/>
@@ -2181,42 +2215,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionRecenter</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_center_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>426</x>
-     <y>332</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionToggle_LLM</sender>
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
    <slot>action_toggle_llm(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>414</x>
-     <y>367</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionMask_toggle</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>action_toggle_mask_layer(bool)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
