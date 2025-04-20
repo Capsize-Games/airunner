@@ -40,14 +40,14 @@ jobs:
         env:
           DEV_ENV: "0"
         run: |
-          src/airunner/bin/docker.sh --ci build_base --nightlytorch
-          src/airunner/bin/docker.sh --ci build_runtime --nightlytorch
-          docker tag ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_nightly_torch_ci ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_nightly_torch_ci
-          ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_nightly_torch_ci
+          src/airunner/bin/docker.sh --ci build_base --50xx
+          src/airunner/bin/docker.sh --ci build_runtime --50xx
+          docker tag ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_50xx_ci ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_50xx_ci
+          ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_50xx_ci
       
       - name: Push Linux Runtime to It
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
           DEV_ENV: "0"
         run: |
-          src/airunner/bin/docker.sh --ci build_package --nightlytorch
+          src/airunner/bin/docker.sh --ci build_package --50xx
