@@ -21,9 +21,9 @@ if [ "$1" == "--ci" ]; then
   echo "Running in CI mode - local volume mounts disabled"
 fi
 
-NIGHTLY_TORCH=0
-if [ "$1" == "--nightlytorch" ]; then
-  NIGHTLY_TORCH=1
+RTX50XX=0
+if [ "$1" == "--50xx" ]; then
+  RTX50XX=1
   shift
   echo "Using nightly torch version"
 fi
@@ -191,7 +191,7 @@ if [ "$CI_MODE" -eq 1 ]; then
   # CI mode - Use docker-compose files that don't mount local directories
   DOCKER_COMPOSE_BUILD_BASE="docker compose --env-file .env -f ./package/prod/docker-compose-ci.yml"
   DOCKER_COMPOSE_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/docker-compose-ci-runtime.yml"
-  DOCKER_COMPOSE_NIGHTLY_TORCH_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/nightly_torch/docker-compose-ci-runtime.yml"
+  DOCKER_COMPOSE_RTX50XX_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/50xx/docker-compose-ci-runtime.yml"
   DOCKER_COMPOSE_BUILD_PACKAGE="docker compose --env-file .env -f ./package/prod/docker-compose-ci-package.yml"
   DOCKER_COMPOSE_BUILD_DEV_RUNTIME="docker compose --env-file .env -f ./package/prod/docker-compose-ci.yml"
   
@@ -221,9 +221,9 @@ fi
 
 if [ "$1" == "build_runtime" ]; then
   echo "Building the Docker Compose services for Linux packaging..."
-  if [ "$NIGHTLY_TORCH" -eq 1 ]; then
+  if [ "$RTX50XX" -eq 1 ]; then
     echo "Building with nightly torch version..."
-    $DOCKER_COMPOSE_NIGHTLY_TORCH_BUILD_RUNTIME build
+    $DOCKER_COMPOSE_RTX50XX_BUILD_RUNTIME build
   else
     echo "Building with stable torch version..."
     $DOCKER_COMPOSE_BUILD_RUNTIME build
@@ -234,9 +234,9 @@ fi
 if [ "$1" == "build_package" ]; then
   echo "Building for Linux production..."
   if [ "$CI_MODE" -eq 1 ]; then
-    if [ "$NIGHTLY_TORCH" -eq 1 ]; then
+    if [ "$RTX50XX" -eq 1 ]; then
       echo "Building with nightly torch version..."
-      $DOCKER_COMPOSE_BUILD_PACKAGE run --build --rm airunner_package_ci /app/package/pyinstaller/build_nightly_torch.sh
+      $DOCKER_COMPOSE_BUILD_PACKAGE run --build --rm airunner_package_ci /app/package/pyinstaller/build_50xx.sh
     else
       echo "Building with stable torch version..."
       $DOCKER_COMPOSE_BUILD_PACKAGE run --build --rm airunner_package_ci /app/package/pyinstaller/build.sh
