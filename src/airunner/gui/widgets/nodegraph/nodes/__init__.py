@@ -61,6 +61,9 @@ from airunner.gui.widgets.nodegraph.nodes.while_loop_node import (
 from airunner.gui.widgets.nodegraph.nodes.workflow_node import (
     WorkflowNode,
 )
+from airunner.gui.widgets.nodegraph.nodes.llm_request_node import (
+    LLMRequestNode,
+)
 
 
 __all__ = [
@@ -85,4 +88,5 @@ __all__ = [
     "TextEditNode",
     "WhileLoopNode",
     "WorkflowNode",
+    "LLMRequestNode",
 ]
