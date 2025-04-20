@@ -10,9 +10,7 @@ from airunner.gui.widgets.canvas.templates.canvas_ui import Ui_canvas
 from airunner.utils.application import set_widget_state
 
 
-class CanvasWidget(
-    BaseWidget
-):
+class CanvasWidget(BaseWidget):
     """
     Widget responsible for multiple functionalities:
 
@@ -21,6 +19,7 @@ class CanvasWidget(
     - Displays images.
     - Handles the active grid area.
     """
+
     widget_class_ = Ui_canvas
     icons = [
         ("file-plus", "actionNew"),
@@ -37,18 +36,24 @@ class CanvasWidget(
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
-            SignalCode.ENABLE_BRUSH_TOOL_SIGNAL: lambda _message: self.action_toggle_brush(True),
-            SignalCode.ENABLE_ERASER_TOOL_SIGNAL: lambda _message: self.action_toggle_eraser(True),
-            SignalCode.ENABLE_MOVE_TOOL_SIGNAL: lambda _message: self.action_toggle_active_grid_area(True),
-            SignalCode.ENABLE_SELECTION_TOOL_SIGNAL: lambda _message: self.action_toggle_select(True),
+            SignalCode.ENABLE_BRUSH_TOOL_SIGNAL: lambda _message: self.action_toggle_brush(
+                True
+            ),
+            SignalCode.ENABLE_ERASER_TOOL_SIGNAL: lambda _message: self.action_toggle_eraser(
+                True
+            ),
+            SignalCode.ENABLE_MOVE_TOOL_SIGNAL: lambda _message: self.action_toggle_active_grid_area(
+                True
+            ),
+            SignalCode.ENABLE_SELECTION_TOOL_SIGNAL: lambda _message: self.action_toggle_select(
+                True
+            ),
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_toggle_tool_signal,
             SignalCode.TOGGLE_TOOL: self.on_toggle_tool_signal,
             SignalCode.TOGGLE_GRID: self.on_toggle_grid_signal,
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
         }
-        self.splitters = [
-            "canvas_splitter"
-        ]
+        self.splitters = ["canvas_splitter"]
         super().__init__(*args, **kwargs)
         current_tool = self.current_tool
         show_grid = self.grid_settings.show_grid
@@ -67,9 +72,16 @@ class CanvasWidget(
         self.ui.actionToggle_Grid.setChecked(show_grid)
         self.ui.actionToggle_Grid.blockSignals(False)
 
-        set_widget_state(self.ui.actionToggle_Active_Grid_Area, current_tool is CanvasToolName.ACTIVE_GRID_AREA)
-        set_widget_state(self.ui.actionToggle_Brush, current_tool is CanvasToolName.BRUSH)
-        set_widget_state(self.ui.actionToggle_Eraser, current_tool is CanvasToolName.ERASER)
+        set_widget_state(
+            self.ui.actionToggle_Active_Grid_Area,
+            current_tool is CanvasToolName.ACTIVE_GRID_AREA,
+        )
+        set_widget_state(
+            self.ui.actionToggle_Brush, current_tool is CanvasToolName.BRUSH
+        )
+        set_widget_state(
+            self.ui.actionToggle_Eraser, current_tool is CanvasToolName.ERASER
+        )
         set_widget_state(self.ui.actionToggle_Grid, show_grid is True)
 
     @property
@@ -80,10 +92,7 @@ class CanvasWidget(
     def image_pivot_point(self):
         settings = self.application_settings
         try:
-            return QPoint(
-                settings.pivot_point_x,
-                settings.pivot_point_y
-            )
+            return QPoint(settings.pivot_point_x, settings.pivot_point_y)
         except Exception as e:
             self.logger.error(e)
         return QPoint(0, 0)
@@ -126,17 +135,17 @@ class CanvasWidget(
 
     @Slot(bool)
     def action_toggle_brush(self, val: bool):
-        self.emit_signal(SignalCode.TOGGLE_TOOL, {
-            "tool": CanvasToolName.BRUSH,
-            "active": val
-        })
+        self.emit_signal(
+            SignalCode.TOGGLE_TOOL,
+            {"tool": CanvasToolName.BRUSH, "active": val},
+        )
 
     @Slot(bool)
     def action_toggle_eraser(self, val: bool):
-        self.emit_signal(SignalCode.TOGGLE_TOOL, {
-            "tool": CanvasToolName.ERASER,
-            "active": val
-        })
+        self.emit_signal(
+            SignalCode.TOGGLE_TOOL,
+            {"tool": CanvasToolName.ERASER, "active": val},
+        )
 
     @Slot(bool)
     def action_toggle_mask(self, val: bool):
@@ -144,26 +153,32 @@ class CanvasWidget(
 
     @Slot(bool)
     def action_toggle_active_grid_area(self, val: bool):
-        self.emit_signal(SignalCode.TOGGLE_TOOL, {
-            "tool": CanvasToolName.ACTIVE_GRID_AREA,
-            "active": val
-        })
+        self.emit_signal(
+            SignalCode.TOGGLE_TOOL,
+            {"tool": CanvasToolName.ACTIVE_GRID_AREA, "active": val},
+        )
 
     def on_toggle_tool_signal(self, message: dict):
         tool = message.get("tool", None)
         active = message.get("active", False)
         self._update_action_buttons(tool, active)
         self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
-    
+
     def on_toggle_grid_signal(self, message: dict):
         self.ui.actionToggle_Grid.setChecked(message.get("show_grid", True))
-    
+
     def _update_action_buttons(self, tool, active):
-        self.ui.actionToggle_Active_Grid_Area.setChecked(tool is CanvasToolName.ACTIVE_GRID_AREA and active)
-        self.ui.actionToggle_Brush.setChecked(tool is CanvasToolName.BRUSH and active)
-        self.ui.actionToggle_Eraser.setChecked(tool is CanvasToolName.ERASER and active)
+        self.ui.actionToggle_Active_Grid_Area.setChecked(
+            tool is CanvasToolName.ACTIVE_GRID_AREA and active
+        )
+        self.ui.actionToggle_Brush.setChecked(
+            tool is CanvasToolName.BRUSH and active
+        )
+        self.ui.actionToggle_Eraser.setChecked(
+            tool is CanvasToolName.ERASER and active
+        )
         self.ui.actionToggle_Grid.setChecked(self.grid_settings.show_grid)
-    
+
     def showEvent(self, event):
         super().showEvent(event)
         QTimer.singleShot(100, lambda: self.do_draw(force_draw=True))
@@ -175,7 +190,7 @@ class CanvasWidget(
         if message.get("apply_cursor", None):
             if self.current_tool in (
                 CanvasToolName.BRUSH,
-                CanvasToolName.ERASER
+                CanvasToolName.ERASER,
             ):
                 cursor = circle_cursor(
                     Qt.GlobalColor.white,
@@ -189,18 +204,17 @@ class CanvasWidget(
                     cursor = Qt.CursorShape.OpenHandCursor
         else:
             cursor = Qt.CursorShape.ArrowCursor
-        
+
         if cursor:
             self.setCursor(cursor)
 
     def toggle_grid(self, _val):
         self.do_draw()
 
-    def do_draw(
-        self,
-        force_draw: bool = False
-    ):
-        self.emit_signal(SignalCode.SCENE_DO_DRAW_SIGNAL, {
-            "force_draw": force_draw
-        })
-        self.ui.canvas_container_size = self.ui.canvas_container.viewport().size()
+    def do_draw(self, force_draw: bool = False):
+        self.emit_signal(
+            SignalCode.SCENE_DO_DRAW_SIGNAL, {"force_draw": force_draw}
+        )
+        self.ui.canvas_container_size = (
+            self.ui.canvas_container.viewport().size()
+        )
