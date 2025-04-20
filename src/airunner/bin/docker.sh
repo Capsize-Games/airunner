@@ -193,6 +193,7 @@ if [ "$CI_MODE" -eq 1 ]; then
   DOCKER_COMPOSE_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/docker-compose-ci-runtime.yml"
   DOCKER_COMPOSE_RTX50XX_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/50xx/docker-compose-ci-runtime-50xx.yml"
   DOCKER_COMPOSE_BUILD_PACKAGE="docker compose --env-file .env -f ./package/prod/docker-compose-ci-package.yml"
+  DOCKER_COMPOSE_BUILD_50XX_PACKAGE="docker compose --env-file .env -f ./package/prod/50xx/docker-compose-ci-package-50xx.yml"
   DOCKER_COMPOSE_BUILD_DEV_RUNTIME="docker compose --env-file .env -f ./package/prod/docker-compose-ci.yml"
   
   # Ensure dist directory exists and has correct permissions for CI mode
@@ -236,7 +237,7 @@ if [ "$1" == "build_package" ]; then
   if [ "$CI_MODE" -eq 1 ]; then
     if [ "$RTX50XX" -eq 1 ]; then
       echo "Building with nightly torch version..."
-      $DOCKER_COMPOSE_BUILD_PACKAGE run --build --rm airunner_package_ci /app/package/pyinstaller/build_50xx.sh
+      $DOCKER_COMPOSE_BUILD_50XX_PACKAGE run --build --rm airunner_package_ci /app/package/pyinstaller/build_50xx.sh
     else
       echo "Building with stable torch version..."
       $DOCKER_COMPOSE_BUILD_PACKAGE run --build --rm airunner_package_ci /app/package/pyinstaller/build.sh
