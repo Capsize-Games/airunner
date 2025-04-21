@@ -264,7 +264,6 @@ class BaseManager:
                 return False
 
     def update_by(self, filter: dict, **kwargs) -> bool:
-        print("FILTER", filter)
         with session_scope() as session:
             try:
                 objs = session.query(self.cls).filter_by(**filter)
