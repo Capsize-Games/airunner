@@ -1,7 +1,6 @@
 from typing import Optional, List, TypeVar, Any
-import logging
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Query, joinedload
+from sqlalchemy.orm import Query, joinedload, subqueryload
 
 from airunner.data.session_manager import session_scope
 from airunner.utils.application.get_logger import get_logger
@@ -17,14 +16,37 @@ class BaseManager:
         self.cls = cls
         self.logger = get_logger(cls.__name__, AIRUNNER_LOG_LEVEL)
 
-    def get(self, pk) -> Optional[_T]:
+    def _apply_eager_load(
+        self, query: Query, eager_load: Optional[List[str]]
+    ) -> Query:
+        if eager_load:
+            for relationship in eager_load:
+                try:
+                    # Use subqueryload instead of joinedload
+                    query = query.options(
+                        subqueryload(getattr(self.cls, relationship))
+                    )
+                    self.logger.debug(
+                        f"Applied eager load for relationship: {relationship}"
+                    )
+                except AttributeError:
+                    self.logger.warning(
+                        f"Class {self.cls.__name__} does not have relationship {relationship}"
+                    )
+                except Exception as e:
+                    self.logger.error(
+                        f"Error applying eager load for relationship {relationship}: {e}"
+                    )
+        return query
+
+    def get(self, pk, eager_load: Optional[List[str]] = None) -> Optional[_T]:
         with session_scope() as session:
             try:
-                result = (
-                    session.query(self.cls).filter(self.cls.id == pk).first()
-                )
-                self.logger.debug(f"Query result for get({pk}): {result}")
+                query = session.query(self.cls)
+                query = self._apply_eager_load(query, eager_load)
+                result = query.filter(self.cls.id == pk).first()
                 session.expunge_all()
+                self.logger.debug(f"Query result for get({pk}): {result}")
                 return result
             except Exception as e:
                 self.logger.error(f"Error in get({pk}): {e}")

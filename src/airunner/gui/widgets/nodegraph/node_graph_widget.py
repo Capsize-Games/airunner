@@ -1,3 +1,4 @@
+from typing import Tuple, Optional, List
 from NodeGraphQt import NodesPaletteWidget
 from PySide6.QtWidgets import (
     QLineEdit,
@@ -5,8 +6,19 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QDialogButtonBox,
     QSplitter,
+    QDockWidget,
+    QListWidget,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+    QMenu,
+    QInputDialog,
+    QComboBox,
+    QListWidgetItem,
+    QMessageBox,
 )
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, Slot, QMimeData
+from PySide6.QtGui import QDrag
 
 
 from airunner.gui.widgets.nodegraph.nodes import (
@@ -34,12 +46,21 @@ from airunner.gui.widgets.nodegraph.nodes import (
     EmbeddingNode,
     LLMBranchNode,
 )
+from airunner.gui.widgets.nodegraph.nodes.variable_getter_node import (
+    VariableGetterNode,
+)
 
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.nodegraph.add_port_dialog import AddPortDialog
 from airunner.gui.widgets.nodegraph.custom_node_graph import CustomNodeGraph
 from airunner.gui.widgets.nodegraph.templates.node_graph_ui import (
     Ui_node_graph_widget,
+)
+from airunner.gui.widgets.nodegraph.variable import Variable
+from airunner.gui.widgets.nodegraph.variable_types import (
+    VariableType,
+    get_variable_color,
+    get_variable_type_from_string,
 )
 
 # Import database models and managers
@@ -67,12 +88,20 @@ IGNORED_NODE_PROPERTIES = {
 
 class NodeGraphWidget(BaseWidget):
     widget_class_ = Ui_node_graph_widget
+    # Define a custom MIME type for dragging variables
+    VARIABLE_MIME_TYPE = "application/x-airunner-variable"
 
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Initialize the graph
-        self.graph = CustomNodeGraph()
+        # Initialize the graph using the custom class
+        self.graph = CustomNodeGraph()  # Use CustomNodeGraph
+        self.graph.widget_ref = (
+            self  # Give graph a reference back to the widget
+        )
+
+        # Initialize variables list
+        self.variables: list[Variable] = []
 
         # Register node types
         for node_cls in [
@@ -101,6 +130,7 @@ class NodeGraphWidget(BaseWidget):
             LLMBranchNode,
         ]:
             self.graph.register_node(node_cls)
+        self.graph.register_node(VariableGetterNode)
 
         self.nodes_palette = NodesPaletteWidget(
             parent=None,
@@ -113,13 +143,346 @@ class NodeGraphWidget(BaseWidget):
         self.viewer = self.graph.widget
 
         # Create and configure the splitter
+        # The main layout now needs to accommodate the dock widget
+        # Assuming the parent is a QMainWindow or similar that handles docks
+        # If not, the layout needs adjustment.
+        # We'll add the splitter to the central widget area.
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(self.viewer)
         splitter.addWidget(self.nodes_palette)
 
         # Set initial sizes - graph takes most of the space, palette gets 200px
         splitter.setSizes([700, 200])
-        self.ui.graph_widget.layout().addWidget(splitter)
+        # Instead of adding to ui.graph_widget, set as central widget if possible
+        # Or add to the main layout of this widget if it's not in a QMainWindow
+        self.ui.graph_widget.layout().addWidget(
+            splitter
+        )  # Keep existing layout for now
+
+        # Create and add the variables panel
+        self._create_variables_panel()
+
+    # --- Variables Panel ---
+
+    def _create_variables_panel(self):
+        """Creates the dock widget for managing variables."""
+        self.variables_dock = QDockWidget(
+            "Variables", self
+        )  # Use self as parent
+        self.variables_dock.setObjectName("VariablesDock")
+        self.variables_dock.setAllowedAreas(
+            Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
+        )
+
+        variables_widget = QWidget()
+        variables_layout = QVBoxLayout(variables_widget)
+        variables_layout.setContentsMargins(2, 2, 2, 2)  # Reduce margins
+        variables_layout.setSpacing(2)  # Reduce spacing
+
+        self.variables_list_widget = QListWidget()
+        self.variables_list_widget.setDragEnabled(True)
+        self.variables_list_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.variables_list_widget.customContextMenuRequested.connect(
+            self._show_variable_context_menu
+        )
+        self.variables_list_widget.itemDoubleClicked.connect(
+            self._edit_variable_item
+        )  # Connect double-click
+        # Connect mouse move for drag start
+        self.variables_list_widget.startDrag = (
+            self._start_variable_drag
+        )  # Custom drag start
+
+        self.add_variable_button = QPushButton("Add Variable")
+        self.add_variable_button.clicked.connect(self._add_variable)
+
+        variables_layout.addWidget(self.variables_list_widget)
+        variables_layout.addWidget(self.add_variable_button)
+
+        self.variables_dock.setWidget(variables_widget)
+
+        # Add the dock widget to the main window (assuming parent is QMainWindow)
+        # If NodeGraphWidget is standalone, this needs adjustment.
+        if hasattr(self.parent(), "addDockWidget"):
+            self.parent().addDockWidget(
+                Qt.LeftDockWidgetArea, self.variables_dock
+            )
+        else:
+            # Fallback: Add it to the local layout if no QMainWindow parent
+            # This might not look ideal, consider restructuring if needed.
+            self.layout().addWidget(
+                self.variables_dock
+            )  # Add to this widget's layout
+
+    def _update_variables_list(self):
+        """Updates the QListWidget with the current variables."""
+        self.variables_list_widget.clear()
+        for var in self.variables:
+            item = QListWidgetItem(f"{var.name} ({var.var_type.value})")
+            item.setData(
+                Qt.UserRole, var.name
+            )  # Store variable name in item data
+            color = get_variable_color(var.var_type)
+            item.setForeground(color)  # Set text color
+            # Optionally set an icon color indicator
+            # icon = QIcon(...) # Create an icon with the color
+            # item.setIcon(icon)
+            self.variables_list_widget.addItem(item)
+
+    def _find_variable_by_name(self, name: str) -> Variable | None:
+        """Finds a variable object by its name."""
+        for var in self.variables:
+            if var.name == name:
+                return var
+        return None
+
+    def _is_variable_name_unique(
+        self, name: str, ignore_variable: Variable | None = None
+    ) -> bool:
+        """Checks if a variable name is unique."""
+        for var in self.variables:
+            if var.name.lower() == name.lower() and var is not ignore_variable:
+                return False
+        return True
+
+    @Slot()
+    def _add_variable(self):
+        """Opens a dialog to add a new variable."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Add Variable")
+        layout = QFormLayout(dialog)
+
+        name_input = QLineEdit(dialog)
+        type_combo = QComboBox(dialog)
+        type_combo.addItems([vtype.value for vtype in VariableType])
+
+        layout.addRow("Name:", name_input)
+        layout.addRow("Type:", type_combo)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, dialog
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        if dialog.exec():
+            name = name_input.text().strip()
+            type_str = type_combo.currentText()
+            var_type = get_variable_type_from_string(type_str)
+
+            if not name:
+                QMessageBox.warning(
+                    self, "Add Variable", "Variable name cannot be empty."
+                )
+                return
+            if not self._is_variable_name_unique(name):
+                QMessageBox.warning(
+                    self,
+                    "Add Variable",
+                    f"Variable name '{name}' is already taken.",
+                )
+                return
+            if not var_type:
+                QMessageBox.critical(
+                    self, "Add Variable", "Invalid variable type selected."
+                )  # Should not happen
+                return
+
+            # Determine default value based on type (simple defaults)
+            default_value = None
+            if var_type == VariableType.BOOLEAN:
+                default_value = False
+            elif var_type in [
+                VariableType.BYTE,
+                VariableType.INTEGER,
+                VariableType.INTEGER64,
+            ]:
+                default_value = 0
+            elif var_type in [VariableType.FLOAT, VariableType.DOUBLE]:
+                default_value = 0.0
+            elif var_type in [
+                VariableType.NAME,
+                VariableType.STRING,
+                VariableType.TEXT,
+            ]:
+                default_value = ""
+            # Add defaults for Vector, Rotator, Transform etc. if needed
+
+            new_var = Variable(
+                name=name, var_type=var_type, default_value=default_value
+            )
+            self.variables.append(new_var)
+            self._update_variables_list()
+            self.logger.info(f"Added variable: {name} ({type_str})")
+
+    @Slot(QListWidgetItem)
+    def _edit_variable_item(self, item: QListWidgetItem):
+        """Handles double-clicking a variable item (currently renames)."""
+        var_name = item.data(Qt.UserRole)
+        variable = self._find_variable_by_name(var_name)
+        if variable:
+            self._rename_variable(variable)  # Reuse rename logic for now
+
+    @Slot("QPoint")
+    def _show_variable_context_menu(self, pos):
+        """Shows the context menu for the variables list."""
+        item = self.variables_list_widget.itemAt(pos)
+        if not item:
+            return
+
+        var_name = item.data(Qt.UserRole)
+        variable = self._find_variable_by_name(var_name)
+        if not variable:
+            return
+
+        menu = QMenu(self)
+        rename_action = menu.addAction("Rename")
+        change_type_action = menu.addAction("Change Type")
+        # set_default_action = menu.addAction("Set Default Value") # TODO
+        delete_action = menu.addAction("Delete")
+
+        action = menu.exec(self.variables_list_widget.mapToGlobal(pos))
+
+        if action == rename_action:
+            self._rename_variable(variable)
+        elif action == change_type_action:
+            self._change_variable_type(variable)
+        # elif action == set_default_action:
+        #     self._set_variable_default(variable) # TODO
+        elif action == delete_action:
+            self._delete_variable(variable)
+
+    def _rename_variable(self, variable: Variable):
+        """Handles renaming a variable."""
+        old_name = variable.name
+        new_name, ok = QInputDialog.getText(
+            self, "Rename Variable", "New name:", QLineEdit.Normal, old_name
+        )
+        if ok and new_name.strip() and new_name.strip() != old_name:
+            new_name = new_name.strip()
+            if not self._is_variable_name_unique(
+                new_name, ignore_variable=variable
+            ):
+                QMessageBox.warning(
+                    self,
+                    "Rename Variable",
+                    f"Variable name '{new_name}' is already taken.",
+                )
+                return
+
+            # TODO: Update nodes using this variable (VariableGetterNode, VariableSetterNode)
+            # This requires iterating through graph nodes and checking their variable_name property.
+            # For now, just rename the variable object.
+            variable.name = new_name
+            self._update_variables_list()
+            self.logger.info(f"Renamed variable '{old_name}' to '{new_name}'")
+        elif ok and not new_name.strip():
+            QMessageBox.warning(
+                self, "Rename Variable", "Variable name cannot be empty."
+            )
+
+    def _change_variable_type(self, variable: Variable):
+        """Handles changing the type of a variable."""
+        old_type = variable.var_type
+        type_names = [vtype.value for vtype in VariableType]
+        current_index = (
+            type_names.index(old_type.value)
+            if old_type.value in type_names
+            else 0
+        )
+
+        new_type_str, ok = QInputDialog.getItem(
+            self,
+            "Change Variable Type",
+            "New type:",
+            type_names,
+            current_index,
+            False,
+        )
+
+        if ok and new_type_str:
+            new_type = get_variable_type_from_string(new_type_str)
+            if new_type and new_type != old_type:
+                # TODO: Add type conversion logic or warning if incompatible
+                # For now, just change the type and reset default value
+                variable.var_type = new_type
+                # Reset default value based on new type
+                default_value = None
+                if new_type == VariableType.BOOLEAN:
+                    default_value = False
+                elif new_type in [
+                    VariableType.BYTE,
+                    VariableType.INTEGER,
+                    VariableType.INTEGER64,
+                ]:
+                    default_value = 0
+                elif new_type in [VariableType.FLOAT, VariableType.DOUBLE]:
+                    default_value = 0.0
+                elif new_type in [
+                    VariableType.NAME,
+                    VariableType.STRING,
+                    VariableType.TEXT,
+                ]:
+                    default_value = ""
+                variable.default_value = default_value
+
+                self._update_variables_list()
+                # TODO: Update ports on associated nodes (Getter/Setter)
+                self.logger.info(
+                    f"Changed type of variable '{variable.name}' from {old_type.value} to {new_type.value}"
+                )
+
+    def _delete_variable(self, variable: Variable):
+        """Handles deleting a variable."""
+        reply = QMessageBox.question(
+            self,
+            "Delete Variable",
+            f"Are you sure you want to delete the variable '{variable.name}'?\nThis cannot be undone.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if reply == QMessageBox.Yes:
+            # TODO: Find and delete nodes using this variable (Getters/Setters)
+            # This requires iterating through the graph.
+            # nodes_to_delete = [node for node in self.graph.all_nodes()
+            #                    if isinstance(node, (VariableGetterNode, VariableSetterNode)) # Assuming Setter exists
+            #                    and node.get_variable_name() == variable.name]
+            # for node in nodes_to_delete:
+            #     self.graph.delete_node(node, push_undo=False) # Consider undo stack
+
+            self.variables.remove(variable)
+            self._update_variables_list()
+            self.logger.info(f"Deleted variable: {variable.name}")
+
+    def _start_variable_drag(self, event):
+        """Initiates dragging a variable from the list."""
+        item = self.variables_list_widget.currentItem()
+        if not item:
+            return
+
+        var_name = item.data(Qt.UserRole)
+        variable = self._find_variable_by_name(var_name)
+        if not variable:
+            return
+
+        mime_data = QMimeData()
+        # Encode variable name into the MIME data
+        mime_data.setData(self.VARIABLE_MIME_TYPE, var_name.encode())
+
+        drag = QDrag(self.variables_list_widget)
+        drag.setMimeData(mime_data)
+
+        # Optional: Set a pixmap for the drag cursor
+        # pixmap = QPixmap(...)
+        # drag.setPixmap(pixmap)
+        # drag.setHotSpot(event.pos() - self.variables_list_widget.pos())
+
+        # Start the drag operation
+        drag.exec(Qt.CopyAction | Qt.MoveAction)
+
+    # --- End Variables Panel ---
 
     @Slot()
     def on_run_workflow(self):
@@ -135,11 +498,11 @@ class NodeGraphWidget(BaseWidget):
 
     @Slot()
     def on_save_workflow(self):
-        self.save_workflow("test_workflow")
+        self.save_workflow(3)
 
     @Slot()
     def on_load_workflow(self):
-        self.load_workflow("test_workflow")
+        self.load_workflow(3)
 
     @Slot()
     def on_edit_workflow(self):
@@ -239,46 +602,46 @@ class NodeGraphWidget(BaseWidget):
         self.graph.delete_node(node)  # Use graph's delete method
 
     # --- Database Interaction ---
-    def save_workflow(self, name, description=""):
-        """Saves the current node graph state to the database."""
-        self.logger.info(f"Saving workflow '{name}'...")
-
-        # Step 1: Find or create the workflow
-        workflow = self._find_or_create_workflow(name, description)
+    def save_workflow(self, workflow_id: int, description: str = ""):
+        """Saves the current node graph state, including variables, to the database."""  # Updated docstring
+        self.logger.info(f"Saving workflow '{workflow_id}'...")
+        workflow = self._find_or_create_workflow(workflow_id, description)
         if not workflow:
             self.logger.error("Failed to create or retrieve workflow.")
             return
-
-        # Step 2: Save nodes
+        self._save_variables(workflow)
         nodes_map = self._save_nodes(workflow)
-
-        # Step 3: Save connections
         self._save_connections(workflow, nodes_map)
+        self.logger.info(f"Workflow '{workflow_id}' saved successfully.")
 
-        self.logger.info(f"Workflow '{name}' saved successfully.")
-
-    def _find_or_create_workflow(self, name, description):
+    def _find_or_create_workflow(
+        self,
+        workflow_id: int,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+    ) -> Optional[Workflow]:
         """Find an existing workflow or create a new one."""
-        workflow = Workflow.objects.filter_by_first(
-            name=name,
-            eager_load=["nodes", "connections"],
-        )
+        workflow = self._find_workflow_by_id(workflow_id)
         if workflow:
-            self.logger.info(f"Updating existing workflow ID: {workflow.id}")
             self._clear_existing_workflow_data(workflow)
         else:
-            self.logger.info(f"Creating new workflow '{name}'")
-            workflow = Workflow.objects.create(
-                name=name, description=description
-            )
-            if workflow:
-                self.logger.info(
-                    f"Created new workflow with ID: {workflow.id}"
-                )
-            else:
-                self.logger.error(
-                    "Error: Failed to create workflow database entry."
-                )
+            workflow = self._create_workflow(name, description)
+        return workflow
+
+    def _find_workflow_by_id(self, workflow_id: int) -> Optional[Workflow]:
+        """Find a workflow by its ID."""
+        return Workflow.objects.get(
+            pk=workflow_id,
+            eager_load=["nodes", "connections"],
+        )
+
+    def _create_workflow(self, name: str, description: str) -> Workflow:
+        """Create a new workflow in the database."""
+        self.logger.info(f"Creating new workflow")
+        workflow = Workflow.objects.create(name=name, description=description)
+        if not workflow:
+            self.logger.error("Error: Failed to create workflow.")
+            return None
         return workflow
 
     def _clear_existing_workflow_data(self, workflow):
@@ -290,9 +653,23 @@ class NodeGraphWidget(BaseWidget):
             f"Deleted {deleted_node_count} existing nodes (and their connections)."
         )
 
+    def _save_variables(self, workflow: Workflow):
+        """Saves the graph variables to the workflow's data."""
+        try:
+            variables_data = [var.to_dict() for var in self.variables]
+            workflow.variables = variables_data
+            Workflow.objects.update(workflow)
+            self.logger.info(
+                f"Saved {len(variables_data)} variables to workflow ID {workflow.id}"
+            )
+        except Exception as e:
+            self.logger.error(
+                f"Error saving variables for workflow ID {workflow.id}: {e}"
+            )
+
     def _save_nodes(self, workflow):
         """Save all nodes in the graph to the database."""
-        nodes_map = {}  # Map graph node ID to database node ID
+        nodes_map = {}
         all_graph_nodes = self.graph.all_nodes()
         self.logger.info(f"Found {len(all_graph_nodes)} nodes in the graph.")
 
@@ -372,36 +749,33 @@ class NodeGraphWidget(BaseWidget):
                     f"Skipping connection due to missing node DB ID: {conn}"
                 )
 
-    def load_workflow(self, workflow_id_or_name):
-        """Loads a workflow from the database into the node graph."""
-        self.logger.info(f"Loading workflow '{workflow_id_or_name}'...")
+    def load_workflow(self, workflow_id):
+        """Loads a workflow, including variables, from the database."""
+        self.logger.info(f"Loading workflow '{workflow_id}'...")
 
-        # Find the workflow and fetch its data
-        workflow, db_nodes, db_connections = self._find_workflow_and_data(
-            workflow_id_or_name
-        )
-        if not workflow:
-            return
-
-        # Handle empty workflow
-        if not db_nodes:
-            self.logger.info(
-                f"Workflow '{workflow.name}' has no nodes to load."
+        try:
+            workflow, db_nodes, db_connections = self._find_workflow_and_data(
+                workflow_id=workflow_id
             )
-            self.graph.clear_session()
+        except Exception as e:
+            self.logger.error(e)
             return
 
-        # Clear the current graph
-        self.logger.info("Clearing current graph session...")
+        self._clear_graph_and_variables()
+        self._load_variables(workflow)
+
+        if db_nodes is not None:
+            node_map = self._load_workflow_nodes(db_nodes)
+            self._load_workflow_connections(db_connections, node_map)
+            self.logger.info(
+                f"Workflow '{workflow.name}' loaded successfully."
+            )
+
+    def _clear_graph_and_variables(self):
+        self.logger.info("Clearing current graph session and variables...")
         self.graph.clear_session()
-
-        # Load nodes and create mapping
-        node_map = self._load_workflow_nodes(db_nodes)
-
-        # Load connections between nodes
-        self._load_workflow_connections(db_connections, node_map)
-
-        self.logger.info(f"Workflow '{workflow.name}' loaded successfully.")
+        self.variables.clear()
+        self._update_variables_list()
 
     def _load_workflow_connections(self, db_connections, node_map):
         """Load connections from database records into the graph."""
@@ -434,22 +808,12 @@ class NodeGraphWidget(BaseWidget):
             f"  Finished loading connections. Total loaded: {len(db_connections)}"
         )
 
-    def _find_workflow_and_data(self, workflow_id_or_name):
+    def _find_workflow_and_data(
+        self, workflow_id: int
+    ) -> Tuple[Optional[Workflow], Optional[List], Optional[List]]:
         """Find workflow by ID/name and fetch its nodes and connections."""
-        # Find the workflow
-        if isinstance(workflow_id_or_name, int):
-            workflow = Workflow.objects.get(pk=workflow_id_or_name)
-        else:
-            workflow = Workflow.objects.filter_by_first(
-                name=workflow_id_or_name,
-                eager_load=["nodes", "connections"],
-            )
-
-        if not workflow:
-            self.logger.error(f"Workflow '{workflow_id_or_name}' not found.")
-            return None, [], []
-
-        # Get workflow data using eager loading first, then fallback to separate queries
+        workflow = self._find_workflow_by_id(workflow_id)
+        assert workflow is not None, f"Workflow '{workflow_id}' not found."
         db_nodes, db_connections = self._fetch_workflow_data(workflow)
         return workflow, db_nodes, db_connections
 
@@ -518,6 +882,41 @@ class NodeGraphWidget(BaseWidget):
                 self.graph.clear_session()
 
         return db_nodes, db_connections
+
+    def _load_variables(self, workflow: Workflow):
+        """Loads variables from the workflow data."""
+        if hasattr(workflow, "variables") and workflow.variables:
+            try:
+                loaded_vars = []
+                variables_data = (
+                    workflow.variables
+                )  # Assuming it's already parsed JSON/dict list
+                if isinstance(variables_data, list):
+                    for var_data in variables_data:
+                        variable = Variable.from_dict(var_data)
+                        if variable:
+                            loaded_vars.append(variable)
+                        else:
+                            self.logger.warning(
+                                f"Could not deserialize variable data: {var_data}"
+                            )
+                    self.variables = loaded_vars
+                    self._update_variables_list()
+                    self.logger.info(
+                        f"Loaded {len(self.variables)} variables from workflow ID {workflow.id}"
+                    )
+                else:
+                    self.logger.warning(
+                        f"Workflow variables data is not a list: {type(variables_data)}"
+                    )
+            except Exception as e:
+                self.logger.error(
+                    f"Error loading variables for workflow ID {workflow.id}: {e}"
+                )
+        else:
+            self.logger.info(
+                f"Workflow ID {workflow.id} has no variables data to load."
+            )
 
     def _load_workflow_nodes(self, db_nodes):
         """Load nodes from database records into the graph."""
