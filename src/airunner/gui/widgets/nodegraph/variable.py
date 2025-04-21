@@ -19,6 +19,47 @@ class Variable:
         default_factory=lambda: str(uuid.uuid4())
     )  # Unique ID for potential future use
 
+    def set_value(self, value: Any) -> None:
+        """Sets the variable's value, converting to the appropriate type if needed.
+
+        Args:
+            value: The new value to set
+        """
+        # Try to convert the value to the appropriate type based on the variable type
+        if self.var_type == VariableType.BOOLEAN:
+            self.default_value = bool(value)
+        elif self.var_type in [
+            VariableType.BYTE,
+            VariableType.INTEGER,
+            VariableType.INTEGER64,
+        ]:
+            try:
+                self.default_value = int(value)
+            except (ValueError, TypeError):
+                self.default_value = 0
+        elif self.var_type in [VariableType.FLOAT, VariableType.DOUBLE]:
+            try:
+                self.default_value = float(value)
+            except (ValueError, TypeError):
+                self.default_value = 0.0
+        elif self.var_type in [
+            VariableType.NAME,
+            VariableType.STRING,
+            VariableType.TEXT,
+        ]:
+            self.default_value = str(value) if value is not None else ""
+        else:
+            # For more complex types, simply assign the value
+            self.default_value = value
+
+    def get_value(self) -> Any:
+        """Gets the variable's current value.
+
+        Returns:
+            The variable's current value
+        """
+        return self.default_value
+
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the variable to a dictionary for saving."""
         return {
