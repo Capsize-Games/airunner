@@ -48,6 +48,7 @@ from airunner.gui.widgets.nodegraph.nodes import (
 )
 from airunner.gui.widgets.nodegraph.nodes.variable_getter_node import (
     VariableGetterNode,
+    create_variable_getter_node_class,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -100,8 +101,9 @@ class NodeGraphWidget(BaseWidget):
             self  # Give graph a reference back to the widget
         )
 
-        # Initialize variables list
+        # Initialize variables list and tracking for registered variable nodes
         self.variables: list[Variable] = []
+        self._registered_variable_node_classes = {}
 
         # Register node types
         for node_cls in [
@@ -130,7 +132,8 @@ class NodeGraphWidget(BaseWidget):
             LLMBranchNode,
         ]:
             self.graph.register_node(node_cls)
-        self.graph.register_node(VariableGetterNode)
+        # We no longer register the base VariableGetterNode directly
+        # Variable node classes will be registered dynamically
 
         self.nodes_palette = NodesPaletteWidget(
             parent=None,
@@ -274,6 +277,10 @@ class NodeGraphWidget(BaseWidget):
                 name=name, var_type=var_type, default_value=default_value
             )
             self.variables.append(new_var)
+
+            # Register the variable node for dragging from node palette
+            self._register_variable_node(new_var)
+
             self._update_variables_list()
             self.logger.info(f"Added variable: {name} ({type_str})")
 
@@ -332,10 +339,23 @@ class NodeGraphWidget(BaseWidget):
                 )
                 return
 
-            # TODO: Update nodes using this variable (VariableGetterNode, VariableSetterNode)
-            # This requires iterating through graph nodes and checking their variable_name property.
-            # For now, just rename the variable object.
+            # Unregister the old variable node class
+            self._unregister_variable_node(old_name)
+
+            # Update variable name
             variable.name = new_name
+
+            # Register the new variable node class
+            self._register_variable_node(variable)
+
+            # Update existing variable getter nodes in the graph
+            for node in self.graph.all_nodes():
+                if (
+                    isinstance(node, VariableGetterNode)
+                    and node.variable_name == old_name
+                ):
+                    node.set_variable(new_name, variable.var_type)
+
             self._update_variables_list()
             self.logger.info(f"Renamed variable '{old_name}' to '{new_name}'")
         elif ok and not new_name.strip():
@@ -365,9 +385,12 @@ class NodeGraphWidget(BaseWidget):
         if ok and new_type_str:
             new_type = get_variable_type_from_string(new_type_str)
             if new_type and new_type != old_type:
-                # TODO: Add type conversion logic or warning if incompatible
-                # For now, just change the type and reset default value
+                # Unregister the old variable node class
+                self._unregister_variable_node(variable.name)
+
+                # Update variable type
                 variable.var_type = new_type
+
                 # Reset default value based on new type
                 default_value = None
                 if new_type == VariableType.BOOLEAN:
@@ -388,8 +411,18 @@ class NodeGraphWidget(BaseWidget):
                     default_value = ""
                 variable.default_value = default_value
 
+                # Register the updated variable node class
+                self._register_variable_node(variable)
+
+                # Update existing variable getter nodes in the graph
+                for node in self.graph.all_nodes():
+                    if (
+                        isinstance(node, VariableGetterNode)
+                        and node.variable_name == variable.name
+                    ):
+                        node.set_variable(variable.name, new_type)
+
                 self._update_variables_list()
-                # TODO: Update ports on associated nodes (Getter/Setter)
                 self.logger.info(
                     f"Changed type of variable '{variable.name}' from {old_type.value} to {new_type.value}"
                 )
@@ -405,39 +438,123 @@ class NodeGraphWidget(BaseWidget):
         )
 
         if reply == QMessageBox.Yes:
-            # TODO: Find and delete nodes using this variable (Getters/Setters)
-            # This requires iterating through the graph.
-            # nodes_to_delete = [node for node in self.graph.all_nodes()
-            #                    if isinstance(node, (VariableGetterNode, VariableSetterNode)) # Assuming Setter exists
-            #                    and node.get_variable_name() == variable.name]
-            # for node in nodes_to_delete:
-            #     self.graph.delete_node(node, push_undo=False) # Consider undo stack
+            # Find and delete nodes using this variable (VariableGetterNodes)
+            nodes_to_delete = []
+            for node in self.graph.all_nodes():
+                if (
+                    isinstance(node, VariableGetterNode)
+                    and node.variable_name == variable.name
+                ):
+                    nodes_to_delete.append(node)
 
+            # Delete matching nodes from the graph
+            for node in nodes_to_delete:
+                self.graph.delete_node(node, push_undo=True)
+
+            # Unregister the variable node class
+            self._unregister_variable_node(variable.name)
+
+            # Remove the variable from our list
             self.variables.remove(variable)
             self._update_variables_list()
             self.logger.info(f"Deleted variable: {variable.name}")
 
     def _start_variable_drag(self, event):
-        """Initiates dragging a variable from the list."""
-        item = self.variables_list_widget.currentItem()
-        if not item:
+        """
+        This method is now simplified because we're using the standard node palette
+        drag-and-drop system instead of a custom implementation.
+
+        Variables are registered as node classes in the graph, so they can be
+        dragged from the node palette just like any other node.
+        """
+        # No need for custom drag-and-drop implementation anymore
+        # The standard NodeGraphQt drag-and-drop is used via the node palette
+        pass
+
+    def _register_variable_node(self, variable: Variable):
+        """
+        Dynamically register a VariableGetterNode class for a specific variable.
+        This makes the variable available in the node palette for drag and drop.
+
+        Args:
+            variable: The variable to create a node class for
+        """
+        from airunner.gui.widgets.nodegraph.nodes.variable_getter_node import (
+            create_variable_getter_node_class,
+        )
+
+        # Skip if already registered
+        if variable.name in self._registered_variable_node_classes:
+            self.logger.info(
+                f"Variable node for '{variable.name}' already registered."
+            )
             return
 
-        var_name = item.data(Qt.UserRole)
-        variable = self._find_variable_by_name(var_name)
-        if not variable:
+        # Create a custom VariableGetterNode class for this variable
+        var_node_class = create_variable_getter_node_class(
+            variable.name, variable.var_type
+        )
+
+        # Register the node class with the graph
+        self.graph.register_node(var_node_class)
+
+        # Store the class for later unregistering
+        self._registered_variable_node_classes[variable.name] = var_node_class
+
+        # Update the node palette to include the new variable node
+        # Instead of refresh_tab(), we need to rebuild the nodes palette
+        self.nodes_palette.update()
+
+        self.logger.info(
+            f"Registered variable node class for '{variable.name}'"
+        )
+
+    def _unregister_variable_node(self, variable_name: str):
+        """
+        Unregister a variable node class from the graph and palette.
+
+        Args:
+            variable_name: The name of the variable whose node class should be unregistered
+        """
+        if variable_name not in self._registered_variable_node_classes:
+            self.logger.info(
+                f"No registered variable node found for '{variable_name}'"
+            )
             return
 
-        mime_data = QMimeData()
-        # Encode variable name into the MIME data
-        mime_data.setData(self.VARIABLE_MIME_TYPE, var_name.encode())
+        # Get the node class
+        var_node_class = self._registered_variable_node_classes[variable_name]
 
-        drag = QDrag(self.variables_list_widget)
-        drag.setMimeData(mime_data)
-        drag.setHotSpot(event.pos())
+        # Unregister the node class from the graph
+        self.graph.unregister_node(var_node_class)
 
-        # Start the drag operation
-        drag.exec(Qt.CopyAction)
+        # Remove from our registry
+        del self._registered_variable_node_classes[variable_name]
+
+        # Update the palette to remove the node
+        self.nodes_palette.update()
+
+        self.logger.info(
+            f"Unregistered variable node class for '{variable_name}'"
+        )
+
+    def _register_all_variable_nodes(self):
+        """
+        Register node classes for all variables in the variables list.
+        Call this after loading variables from a workflow.
+        """
+        for variable in self.variables:
+            self._register_variable_node(variable)
+
+    def _unregister_all_variable_nodes(self):
+        """
+        Unregister all variable node classes.
+        Call this before clearing the variables list.
+        """
+        for variable_name in list(
+            self._registered_variable_node_classes.keys()
+        ):
+            self._unregister_variable_node(variable_name)
 
     # --- End Variables Panel ---
 
@@ -887,6 +1004,9 @@ class NodeGraphWidget(BaseWidget):
 
     def _load_variables(self, workflow: Workflow):
         """Loads variables from the workflow data."""
+        # First unregister any existing variable nodes
+        self._unregister_all_variable_nodes()
+
         if hasattr(workflow, "variables") and workflow.variables:
             try:
                 loaded_vars = []
@@ -902,8 +1022,13 @@ class NodeGraphWidget(BaseWidget):
                             self.logger.warning(
                                 f"Could not deserialize variable data: {var_data}"
                             )
+
                     self.variables = loaded_vars
                     self._update_variables_list()
+
+                    # Register node classes for all loaded variables
+                    self._register_all_variable_nodes()
+
                     self.logger.info(
                         f"Loaded {len(self.variables)} variables from workflow ID {workflow.id}"
                     )
