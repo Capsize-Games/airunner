@@ -65,6 +65,15 @@ from airunner.gui.widgets.nodegraph.nodes.llm_request_node import (
     LLMRequestNode,
 )
 from airunner.gui.widgets.nodegraph.nodes.canvas_node import CanvasNode
+from airunner.gui.widgets.nodegraph.nodes.chatbot_node import (
+    ChatbotNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.lora_node import (
+    LoraNode,
+)
+from airunner.gui.widgets.nodegraph.nodes.embedding_node import (
+    EmbeddingNode,
+)
 
 
 __all__ = [
@@ -91,4 +100,7 @@ __all__ = [
     "WorkflowNode",
     "LLMRequestNode",
     "CanvasNode",
+    "ChatbotNode",
+    "LoraNode",
+    "EmbeddingNode",
 ]
