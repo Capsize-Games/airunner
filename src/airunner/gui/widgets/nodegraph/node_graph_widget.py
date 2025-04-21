@@ -434,14 +434,10 @@ class NodeGraphWidget(BaseWidget):
 
         drag = QDrag(self.variables_list_widget)
         drag.setMimeData(mime_data)
-
-        # Optional: Set a pixmap for the drag cursor
-        # pixmap = QPixmap(...)
-        # drag.setPixmap(pixmap)
-        # drag.setHotSpot(event.pos() - self.variables_list_widget.pos())
+        drag.setHotSpot(event.pos())
 
         # Start the drag operation
-        drag.exec(Qt.CopyAction | Qt.MoveAction)
+        drag.exec(Qt.CopyAction)
 
     # --- End Variables Panel ---
 
@@ -475,9 +471,9 @@ class NodeGraphWidget(BaseWidget):
 
     @Slot()
     def on_clear_workflow(self):
-        """Clear the current workflow graph."""
-        self.graph.clear_session()
-        self.logger.info("Workflow graph cleared.")
+        """Clear the current workflow graph and variables."""
+        self._clear_graph_and_variables()
+        self.logger.info("Workflow graph and variables cleared.")
 
     def initialize_context_menu(self):
         context_menu = self.graph.get_context_menu("nodes")
@@ -619,7 +615,7 @@ class NodeGraphWidget(BaseWidget):
         try:
             variables_data = [var.to_dict() for var in self.variables]
             workflow.variables = variables_data
-            Workflow.objects.update(workflow)
+            workflow.save()  # Ensure the ORM actually persists the change
             self.logger.info(
                 f"Saved {len(variables_data)} variables to workflow ID {workflow.id}"
             )
