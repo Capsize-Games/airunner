@@ -1403,6 +1403,43 @@ class BaseAgent(
         setattr(self.user, key, value)
         self.user.save()
 
+    # def chat(
+    #     self,
+    #     message: str,
+    #     action: LLMActionType = LLMActionType.CHAT,
+    #     system_prompt: Optional[str] = None,
+    #     rag_system_prompt: Optional[str] = None,
+    #     llm_request: Optional[LLMRequest] = None,
+    #     **kwargs,
+    # ) -> AgentChatResponse:
+    #     self.action = action
+    #     # system_prompt = system_prompt or self.system_prompt
+    #     system_prompt = self.system_prompt
+    #     self._chat_prompt = message
+    #     self._complete_response = ""
+    #     self.do_interrupt = False
+    #     self._update_memory(action)
+    #     kwargs = kwargs or {}
+    #     kwargs.update(
+    #         {
+    #             "input": f"{self.username}: {message}",
+    #             "chat_history": (
+    #                 self._memory.get_all() if self._memory else None
+    #             ),
+    #             "llm_request": llm_request,
+    #         }
+    #     )
+    #     self._perform_analysis(action)
+    #     self._summarize_conversation()
+    #     self._log_system_prompt(
+    #         action, system_prompt, rag_system_prompt, llm_request
+    #     )
+    #     print("x" * 100)
+    #     print("system_prompt", system_prompt)
+    #     self._update_system_prompt(system_prompt, rag_system_prompt)
+    #     self._update_llm_request(llm_request)
+    #     self._perform_tool_call(action, **kwargs)
+    #     return AgentChatResponse(response=self._complete_response)
     def chat(
         self,
         message: str,
@@ -1412,28 +1449,16 @@ class BaseAgent(
         llm_request: Optional[LLMRequest] = None,
         **kwargs,
     ) -> AgentChatResponse:
-        self.action = action
-        # system_prompt = system_prompt or self.system_prompt
-        system_prompt = self.system_prompt
-        self._chat_prompt = message
-        self._complete_response = ""
-        self.do_interrupt = False
-        self._update_memory(action)
         kwargs = kwargs or {}
         kwargs.update(
             {
-                "input": f"{self.username}: {message}",
-                "chat_history": (
-                    self._memory.get_all() if self._memory else None
-                ),
+                "input": message,
+                "chat_history": [],
                 "llm_request": llm_request,
             }
         )
-        self._perform_analysis(action)
-        self._summarize_conversation()
-        self._log_system_prompt(
-            action, system_prompt, rag_system_prompt, llm_request
-        )
+        self._chat_prompt = message
+        print("CALLING PERFORM TOOL CALL WITH", action, kwargs)
         self._update_system_prompt(system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
         self._perform_tool_call(action, **kwargs)
