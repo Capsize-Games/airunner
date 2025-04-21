@@ -77,12 +77,21 @@ IGNORED_NODE_PROPERTIES = {
     "visible",
     "width",
     "height",
-    "pos",
-    "border_color",
-    "text_color",
-    "type",
-    "id",
-    "icon",
+    "pos",  # Position is saved separately (pos_x, pos_y)
+    "border_color",  # Internal styling
+    "text_color",  # Internal styling
+    "type",  # Internal NodeGraphQt identifier (use node_identifier)
+    "type_",  # Alias for type, also internal
+    "id",  # Internal NodeGraphQt ID (use DB ID mapping)
+    "icon",  # Internal styling/display
+    "name",  # Name is set during node creation
+    "color",  # Internal styling (can be complex object)
+    "layout_direction",  # Internal layout hint
+    "port_deletion_allowed",  # Internal flag
+    "subgraph_session",  # Internal data for subgraphs
+    "outputs",  # Ports are handled via connections
+    "inputs",  # Ports are handled via connections
+    "custom",  # Avoid saving generic custom dict unless specifically needed and serializable
     # Add any other internal NodeGraphQt properties you don't want persisted
 }
 
@@ -825,13 +834,19 @@ class NodeGraphWidget(BaseWidget):
         return workflow
 
     def _clear_existing_workflow_data(self, workflow):
-        """Clear existing nodes and connections for the workflow."""
-        deleted_node_count = WorkflowNode.objects.delete_by(
+        """Clear existing connections and nodes for the workflow."""
+        # Explicitly delete connections first to avoid foreign key issues if cascade isn't reliable
+        deleted_connection_count = WorkflowConnection.objects.delete_by(
             workflow_id=workflow.id
         )
         self.logger.info(
-            f"Deleted {deleted_node_count} existing nodes (and their connections)."
+            f"Deleted {deleted_connection_count} existing connections."
         )
+        # Then delete nodes
+        deleted_node_count = WorkflowNode.objects.delete_by(
+            workflow_id=workflow.id
+        )
+        self.logger.info(f"Deleted {deleted_node_count} existing nodes.")
 
     def _save_variables(self, workflow: Workflow):
         """Saves the graph variables to the workflow's data."""
@@ -1468,7 +1483,7 @@ class NodeGraphWidget(BaseWidget):
         current_node,
         triggered_exec_port_name,
         execution_queue,
-        executed_nodes, # Note: This parameter is no longer strictly needed here, but kept for consistency
+        executed_nodes,  # Note: This parameter is no longer strictly needed here, but kept for consistency
     ):
         """Queue the next nodes based on the triggered execution port."""
         if (
@@ -1491,9 +1506,9 @@ class NodeGraphWidget(BaseWidget):
                     execution_queue.append(next_node_id)
                     # --- FIX: REMOVED this line: executed_nodes.add(next_node_id) ---
                 else:
-                     self.logger.info(
-                         f"  Node already in queue: {next_node.name()} (ID: {next_node_id})"
-                     )
+                    self.logger.info(
+                        f"  Node already in queue: {next_node.name()} (ID: {next_node_id})"
+                    )
         elif triggered_exec_port_name:
             self.logger.warning(
                 f"  Triggered execution port '{triggered_exec_port_name}' not found on node '{current_node.name()}'. Execution stops here."
