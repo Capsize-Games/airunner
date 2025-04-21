@@ -93,6 +93,8 @@ class RunLLMNode(BaseWorkflowNode):
             llm_request = LLMRequest()
 
         # Get the prompt text if provided
+        print("*" * 100)
+        print(input_data)
         prompt = input_data.get("prompt", None)
         if not prompt:
             prompt = "Hello, how are you today?"
