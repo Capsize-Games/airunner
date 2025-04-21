@@ -93,7 +93,7 @@ class RunLLMNode(BaseWorkflowNode):
             llm_request = LLMRequest()
 
         # Get the prompt text if provided
-        prompt = input_data.get("prompt", "")
+        prompt = input_data.get("prompt", None)
         if not prompt:
             prompt = "Hello, how are you today?"
 
@@ -190,25 +190,24 @@ class RunLLMNode(BaseWorkflowNode):
         """
         try:
             llm_request.node_id = self.id
+            print("CALLING LLM TEXT GENERATE REQUEST SIGNAL WITH ", prompt)
             self.emit_signal(
                 SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
                 {
                     "llm_request": True,
-                    "node_id": self.id,  # Include node ID for routing response
+                    "node_id": self.id,
                     "request_data": {
                         "action": LLMActionType.CHAT,
                         "prompt": prompt,
-                        "system_prompt": system_prompt,  # Pass system prompt
-                        "model_type": model_type,  # Pass model info
-                        "model_name": model_name,  # Pass model info
-                        "llm_request": llm_request,  # Pass the LLMRequest object directly, not as dict
+                        # "system_prompt": system_prompt,
+                        # "model_type": model_type,
+                        # "model_name": model_name,
+                        "llm_request": llm_request,
                     },
                 },
             )
         except Exception as e:
-            # Handle error during signal emission if necessary
             print(f"Error emitting LLM request signal for node {self.id}: {e}")
-            # Create an error response and store it in our instance variables
             error_response = LLMResponse(
                 text=f"Error starting LLM call: {str(e)}",
                 metadata={"error": str(e)},
