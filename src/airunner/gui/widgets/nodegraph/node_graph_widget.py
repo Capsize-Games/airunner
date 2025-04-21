@@ -30,6 +30,9 @@ from airunner.gui.widgets.nodegraph.nodes import (
     WhileLoopNode,
     ReverseForEachLoopNode,
     CanvasNode,
+    ChatbotNode,
+    LoraNode,
+    EmbeddingNode,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -93,6 +96,9 @@ class NodeGraphWidget(BaseWidget):
             WhileLoopNode,
             ReverseForEachLoopNode,
             CanvasNode,
+            ChatbotNode,
+            LoraNode,
+            EmbeddingNode,
         ]:
             self.graph.register_node(node_cls)
 
