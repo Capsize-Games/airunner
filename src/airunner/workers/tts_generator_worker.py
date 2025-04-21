@@ -132,9 +132,7 @@ class TTSGeneratorWorker(Worker):
     def _initialize_tts_model_manager(self):
         self.logger.info("Initializing TTS handler...")
         model = (
-            AIRUNNER_TTS_MODEL_TYPE or self.chatbot.voice_settings.model_type
-            if self.chatbot.voice_settings
-            else None
+            AIRUNNER_TTS_MODEL_TYPE or self.chatbot_voice_settings.model_type
         )
         if model is None:
             self.logger.error("No TTS model found. Skipping initialization.")
@@ -239,9 +237,7 @@ class TTSGeneratorWorker(Worker):
             message = message.get("message", "")
 
         model = (
-            AIRUNNER_TTS_MODEL_TYPE or self.chatbot.voice_settings.model_type
-            if self.chatbot.voice_settings
-            else None
+            AIRUNNER_TTS_MODEL_TYPE or self.chatbot_voice_settings.model_type
         )
 
         if model is None:
