@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Type
 
 from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
     BaseWorkflowNode,
@@ -49,15 +49,31 @@ class VariableGetterNode(BaseWorkflowNode):
         # Set node color to match the variable type color
         color = get_variable_color(var_type)
         if color:
-            r, g, b = color
-            self.set_color(r, g, b)
+            # Handle QColor object correctly
+            self.set_color(color.red(), color.green(), color.blue())
 
-        # Remove any existing output port
-        for port in list(self.output_ports().values()):
-            self.delete_output(port.name())
+        # Remove any existing output ports
+        # Use safer approach to handle outputs() that might return a list or dict
+        outputs = self.outputs()
+        if isinstance(outputs, dict):
+            for port in list(outputs.values()):
+                self.delete_output(port.name())
+        else:
+            # If outputs() returns a list, iterate through the list directly
+            for port in list(outputs):
+                self.delete_output(port.name())
 
         # Create a new output port with the variable type
-        self.output_port = self.add_output("value", display_name=name)
+        # Fix: display_name should be True (boolean) and we'll set the actual name as a port attribute
+        self.output_port = self.add_output("value", display_name=True)
+
+        # Set the display name for the port
+        if hasattr(self.view, "get_output_text") and callable(
+            getattr(self.view, "get_output_text")
+        ):
+            output_text = self.view.get_output_text("value")
+            if output_text:
+                output_text.setPlainText(name)
 
         # Update the view
         self.update()
@@ -125,3 +141,41 @@ class VariableGetterNode(BaseWorkflowNode):
             var_type = get_variable_type_from_string(var_type_str)
             if var_type:
                 self.set_variable(var_name, var_type)
+
+
+# Variable node factory for dynamic node registration
+def create_variable_getter_node_class(
+    variable_name: str, variable_type: VariableType
+) -> Type[VariableGetterNode]:
+    """
+    Factory function that creates a customized VariableGetterNode class for a specific variable.
+
+    Args:
+        variable_name: Name of the variable
+        variable_type: Type of the variable
+
+    Returns:
+        A new VariableGetterNode subclass preconfigured for the variable
+    """
+    class_name = f"VariableGetter_{variable_name}"
+
+    # Create a new class that inherits from VariableGetterNode
+    var_node_class = type(
+        class_name,
+        (VariableGetterNode,),
+        {
+            "__identifier__": f"airunner.variables.{variable_name}",
+            "NODE_NAME": f"Get {variable_name}",
+        },
+    )
+
+    # Override the __init__ method to preconfigure the node for the variable
+    original_init = var_node_class.__init__
+
+    def new_init(self):
+        original_init(self)
+        self.set_variable(variable_name, variable_type)
+
+    var_node_class.__init__ = new_init
+
+    return var_node_class
