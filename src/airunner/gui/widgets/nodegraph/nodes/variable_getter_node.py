@@ -1,4 +1,6 @@
-from typing import Dict, Type
+from typing import Dict, Type, Any
+
+from NodeGraphQt.constants import NodePropWidgetEnum
 
 from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
     BaseWorkflowNode,
@@ -28,9 +30,16 @@ class VariableGetterNode(BaseWorkflowNode):
         self.variable_name = ""  # Name of the variable this node represents
         self.variable_type = None  # VariableType enum member
         self.output_port = None  # Reference to the output port
+        self.value_property_name = (
+            "variable_value"  # Name for the value property
+        )
 
-        # We will add the output port dynamically in set_variable
-        # self.add_output("value") # Placeholder, will be configured
+        # Create a variable value property that will be displayed in the properties panel
+        self.create_property(
+            self.value_property_name,
+            None,  # Initial value will be set in set_variable
+            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,  # Default widget type
+        )
 
     def set_variable(self, name: str, var_type: VariableType):
         """
@@ -75,8 +84,98 @@ class VariableGetterNode(BaseWorkflowNode):
             if output_text:
                 output_text.setPlainText(name)
 
+        # Get the variable object to set up the property widget and initial value
+        if self.graph and hasattr(self.graph, "widget_ref"):
+            variable = self.graph.widget_ref._find_variable_by_name(name)
+            if variable:
+                self._setup_property_widget(variable)
+                self.set_property(
+                    self.value_property_name, variable.get_value()
+                )
+
         # Update the view
         self.update()
+
+    def _setup_property_widget(self, variable):
+        """
+        Set up the appropriate property widget based on the variable type.
+
+        Args:
+            variable: The variable object to set up the widget for
+        """
+        # Remove the existing property if it exists
+        self.view.add_property = (
+            lambda *args, **kwargs: None
+        )  # Temporarily disable add_property
+        self.view.properties.pop(self.value_property_name, None)
+        self.view.add_property = self.__class__.view.add_property.__get__(
+            self.view
+        )  # Re-enable add_property
+
+        # Set up the appropriate widget type based on variable type
+        if variable.var_type == VariableType.BOOLEAN:
+            self.create_property(
+                self.value_property_name,
+                variable.get_value() or False,
+                widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+                tab="Variable",
+            )
+        elif variable.var_type in [
+            VariableType.BYTE,
+            VariableType.INTEGER,
+            VariableType.INTEGER64,
+        ]:
+            self.create_property(
+                self.value_property_name,
+                variable.get_value() or 0,
+                widget_type=NodePropWidgetEnum.INT.value,
+                tab="Variable",
+            )
+        elif variable.var_type in [VariableType.FLOAT, VariableType.DOUBLE]:
+            self.create_property(
+                self.value_property_name,
+                variable.get_value() or 0.0,
+                widget_type=NodePropWidgetEnum.FLOAT.value,
+                tab="Variable",
+            )
+        else:  # Default to text input for other types
+            self.create_property(
+                self.value_property_name,
+                variable.get_value() or "",
+                widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+                tab="Variable",
+            )
+
+    def update_variable_value(self):
+        """Update the variable's value from the property widget."""
+        if (
+            self.graph
+            and hasattr(self.graph, "widget_ref")
+            and self.variable_name
+        ):
+            variable = self.graph.widget_ref._find_variable_by_name(
+                self.variable_name
+            )
+            if variable:
+                value = self.get_property(self.value_property_name)
+                variable.set_value(value)
+
+                # Update all other VariableGetterNodes for this variable
+                for node in self.graph.all_nodes():
+                    if (
+                        isinstance(node, VariableGetterNode)
+                        and node.variable_name == self.variable_name
+                        and node != self
+                    ):
+                        node.set_property(node.value_property_name, value)
+
+                return True
+        return False
+
+    def on_property_changed(self, prop_name):
+        """Called when a property value has changed in the properties bin."""
+        if prop_name == self.value_property_name:
+            self.update_variable_value()
 
     def execute(self, input_data: Dict):
         """
@@ -89,19 +188,73 @@ class VariableGetterNode(BaseWorkflowNode):
             Dict: Output data containing the variable value
         """
         # The connection itself represents the data flow.
-        # Let's return the default value for now if needed.
-        # This requires access to the variable definition (e.g., via the graph)
+        # Get the current value from the variable
         variable = self.graph.widget_ref._find_variable_by_name(
             self.variable_name
         )  # Access via widget ref
         if variable:
-            return {"value": variable.default_value}  # Return default for now
+            # First update our property to match the variable if needed
+            current_value = self.get_property(self.value_property_name)
+            var_value = variable.get_value()
+
+            # Update property if values don't match
+            if current_value != var_value:
+                self.set_property(self.value_property_name, var_value)
+
+            return {"value": var_value}  # Return the actual value
         else:
             # Handle case where variable might have been deleted
             self.logger.warning(
                 f"Variable '{self.variable_name}' not found for node {self.id}"
             )
             return {"value": None}
+
+    def draw(self, painter, option, widget):
+        """Override to draw the variable's value on the node."""
+        super().draw(painter, option, widget)
+
+        # Add label to display the current value
+        if hasattr(self, "view") and self.view:
+            from PySide6.QtGui import QColor, QPen, QFont
+            from PySide6.QtCore import Qt
+
+            value = self.get_property(self.value_property_name)
+            if value is not None:
+                # Format the value for display
+                if isinstance(value, bool):
+                    value_text = "True" if value else "False"
+                elif isinstance(value, (int, float)):
+                    value_text = str(value)
+                else:
+                    # For strings and other types, limit length for display
+                    value_text = str(value)
+                    if len(value_text) > 10:
+                        value_text = value_text[:10] + "..."
+
+                # Create a rect for the value label
+                rect = self.view.boundingRect()
+                width = rect.width()
+                height = rect.height()
+
+                # Prepare painter
+                painter.save()
+
+                # Draw value text at the bottom of the node
+                font = QFont()
+                font.setPointSize(8)
+                painter.setFont(font)
+
+                # Draw with white text on a semi-transparent dark background
+                painter.setPen(QPen(QColor(255, 255, 255)))
+                text_rect = painter.fontMetrics().boundingRect(value_text)
+                bg_rect = text_rect.adjusted(-5, -3, 5, 3)
+                bg_rect.moveCenter(rect.center())
+                bg_rect.moveBottom(height - 5)
+
+                painter.fillRect(bg_rect, QColor(0, 0, 0, 150))
+                painter.drawText(bg_rect, Qt.AlignCenter, value_text)
+
+                painter.restore()
 
     # Optional: Override methods for saving/loading if extra data needed
     def serialize(self):
@@ -117,6 +270,7 @@ class VariableGetterNode(BaseWorkflowNode):
             "variable_type": (
                 self.variable_type.value if self.variable_type else None
             ),
+            "value": self.get_property(self.value_property_name),
         }
         return data
 
@@ -141,6 +295,13 @@ class VariableGetterNode(BaseWorkflowNode):
             var_type = get_variable_type_from_string(var_type_str)
             if var_type:
                 self.set_variable(var_name, var_type)
+
+                # Set the value if it was serialized
+                if "value" in custom_data:
+                    self.set_property(
+                        self.value_property_name, custom_data["value"]
+                    )
+                    self.update_variable_value()
 
 
 # Variable node factory for dynamic node registration
