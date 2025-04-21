@@ -64,6 +64,7 @@ from airunner.gui.widgets.nodegraph.nodes.workflow_node import (
 from airunner.gui.widgets.nodegraph.nodes.llm_request_node import (
     LLMRequestNode,
 )
+from airunner.gui.widgets.nodegraph.nodes.canvas_node import CanvasNode
 
 
 __all__ = [
@@ -89,4 +90,5 @@ __all__ = [
     "WhileLoopNode",
     "WorkflowNode",
     "LLMRequestNode",
+    "CanvasNode",
 ]

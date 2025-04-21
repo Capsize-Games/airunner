@@ -65,10 +65,30 @@
       <property name="bottomMargin">
        <number>10</number>
       </property>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="pause_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Pause workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/pause-circle.svg</normaloff>:/dark/icons/feather/dark/pause-circle.svg</iconset>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="4">
        <widget class="QPushButton" name="save_button">
         <property name="cursor">
          <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Save workflow</string>
         </property>
         <property name="text">
          <string/>
@@ -76,6 +96,74 @@
         <property name="icon">
          <iconset resource="../../../resources/feather.qrc">
           <normaloff>:/dark/icons/feather/dark/save.svg</normaloff>:/dark/icons/feather/dark/save.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QPushButton" name="play_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Run workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/play.svg</normaloff>:/dark/icons/feather/dark/play.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="stop_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Stop workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/stop-circle.svg</normaloff>:/dark/icons/feather/dark/stop-circle.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QPushButton" name="edit_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Edit workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/edit.svg</normaloff>:/dark/icons/feather/dark/edit.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="7">
+       <widget class="QPushButton" name="load_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Load workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/folder.svg</normaloff>:/dark/icons/feather/dark/folder.svg</iconset>
         </property>
        </widget>
       </item>
@@ -92,66 +180,13 @@
         </property>
        </spacer>
       </item>
-      <item row="0" column="5">
-       <widget class="QPushButton" name="edit_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/edit.svg</normaloff>:/dark/icons/feather/dark/edit.svg</iconset>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QPushButton" name="play_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/play.svg</normaloff>:/dark/icons/feather/dark/play.svg</iconset>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QPushButton" name="pause_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/pause-circle.svg</normaloff>:/dark/icons/feather/dark/pause-circle.svg</iconset>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <widget class="QPushButton" name="stop_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/stop-circle.svg</normaloff>:/dark/icons/feather/dark/stop-circle.svg</iconset>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="7">
+      <item row="0" column="8">
        <widget class="QPushButton" name="delete_button">
         <property name="cursor">
          <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Delete workflow</string>
         </property>
         <property name="text">
          <string/>
@@ -162,17 +197,17 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="6">
-       <widget class="QPushButton" name="load_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
+      <item row="0" column="5">
+       <widget class="QPushButton" name="pushButton">
+        <property name="toolTip">
+         <string>Clear workflow</string>
         </property>
         <property name="text">
          <string/>
         </property>
         <property name="icon">
          <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/folder.svg</normaloff>:/dark/icons/feather/dark/folder.svg</iconset>
+          <normaloff>:/dark/icons/feather/dark/x-circle.svg</normaloff>:/dark/icons/feather/dark/x-circle.svg</iconset>
         </property>
        </widget>
       </item>
@@ -240,8 +275,8 @@
    <slot>on_load_workflow()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>860</x>
-     <y>20</y>
+     <x>943</x>
+     <y>30</y>
     </hint>
     <hint type="destinationlabel">
      <x>-1</x>
@@ -256,8 +291,8 @@
    <slot>on_save_workflow()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>886</x>
-     <y>19</y>
+     <x>841</x>
+     <y>29</y>
     </hint>
     <hint type="destinationlabel">
      <x>-2</x>
@@ -272,8 +307,8 @@
    <slot>on_edit_workflow()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>922</x>
-     <y>13</y>
+     <x>909</x>
+     <y>23</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -297,6 +332,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>node_graph_widget</receiver>
+   <slot>on_clear_workflow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>849</x>
+     <y>15</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>870</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>on_run_workflow()</slot>
@@ -306,5 +357,6 @@
   <slot>on_save_workflow()</slot>
   <slot>on_edit_workflow()</slot>
   <slot>on_delete_workflow()</slot>
+  <slot>on_clear_workflow()</slot>
  </slots>
 </ui>
