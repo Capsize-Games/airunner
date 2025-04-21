@@ -29,7 +29,9 @@ class CustomNodeGraph(NodeGraph):
         self._prop_bin.setWindowFlags(Qt.WindowType.Tool)
         # wire signal.
         self.node_double_clicked.connect(self.display_prop_bin)
-        # self.port_connected.connect(self._on_port_connected) # Keep commented if not needed
+        self.port_connected.connect(
+            self._on_port_connected
+        )  # Enable the port connected signal
         # Remove the data_dropped connection as we'll handle drops via events
         # self.data_dropped.connect(self._on_node_data_dropped)
 
@@ -44,12 +46,39 @@ class CustomNodeGraph(NodeGraph):
         if not self._prop_bin.isVisible():
             self._prop_bin.show()
 
-    # Keep commented if not needed
-    # def _on_port_connected(self, in_port, out_port):
-    #     # grab the value from the upstream node
-    #     val = out_port.node().get_property(out_port.name())
-    #     # set it into the downstream node
-    #     in_port.node().set_property(in_port.name(), val)
+    def _on_port_connected(self, in_port, out_port):
+        """
+        Handle connections between ports by transferring values.
+        This is particularly important for variable nodes to transfer their values.
+        """
+        # Check if the output port is from a VariableGetterNode
+        if isinstance(out_port.node(), VariableGetterNode):
+            var_node = out_port.node()
+            # Get the variable value
+            variable = None
+            if hasattr(self, "widget_ref") and self.widget_ref:
+                variable = self.widget_ref._find_variable_by_name(
+                    var_node.variable_name
+                )
+
+            if variable:
+                value = variable.get_value()
+                target_node = in_port.node()
+                port_name = in_port.name()
+
+                # Set the value on the target node if it has the corresponding property
+                if target_node.has_property(port_name):
+                    target_node.set_property(port_name, value)
+                    if hasattr(self, "widget_ref") and self.widget_ref:
+                        self.widget_ref.logger.info(
+                            f"Set property '{port_name}' on node '{target_node.name()}' to value '{value}' from variable '{var_node.variable_name}'"
+                        )
+
+                    # If the target node has an update method, call it
+                    if hasattr(target_node, "update") and callable(
+                        getattr(target_node, "update")
+                    ):
+                        target_node.update()
 
     # --- Drag and Drop Event Handling ---
 

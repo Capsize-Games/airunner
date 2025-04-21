@@ -527,8 +527,30 @@ class NodeGraphWidget(BaseWidget):
         # Get the node class
         var_node_class = self._registered_variable_node_classes[variable_name]
 
-        # Unregister the node class from the graph
-        self.graph.unregister_node(var_node_class)
+        # Unregister the node class - handle different NodeGraph implementations
+        # Some versions might have unregister_node, others might not
+        if hasattr(self.graph, "unregister_node") and callable(
+            getattr(self.graph, "unregister_node")
+        ):
+            self.graph.unregister_node(var_node_class)
+        else:
+            # Fallback approach: if we can't unregister directly, we can still remove from the node palette
+            # and update our internal registry
+            self.logger.info(
+                f"Graph does not have unregister_node method, using fallback approach"
+            )
+
+            # If the graph's node factory has a node registry we can clear from there
+            if hasattr(self.graph, "_node_factory") and hasattr(
+                self.graph._node_factory, "_nodes"
+            ):
+                # Find and remove the class from the node factory registry
+                identifier = var_node_class.__identifier__
+                if identifier in self.graph._node_factory._nodes:
+                    del self.graph._node_factory._nodes[identifier]
+                    self.logger.info(
+                        f"Removed node class '{identifier}' from factory registry"
+                    )
 
         # Remove from our registry
         del self._registered_variable_node_classes[variable_name]
