@@ -63,9 +63,6 @@ class LLMGenerateWorker(Worker):
             self.llm.clear_history(data)
 
     def on_llm_request_signal(self, message: dict):
-        print(
-            "on_llm_request_signalon_llm_request_signalon_llm_request_signalon_llm_request_signalon_llm_request_signal"
-        )
         self.add_to_queue(message)
 
     def llm_on_interrupt_process_signal(self):

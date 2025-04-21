@@ -664,6 +664,11 @@ class NodeGraphWidget(BaseWidget):
                     node.set_property(node.value_property_name, new_value)
                     node.update()  # Force visual update
 
+            # Ensure the variable in self.variables is updated
+            for v in self.variables:
+                if v.name == variable.name:
+                    v.set_value(new_value)
+
             self.logger.info(
                 f"Set value of variable '{variable.name}' to: {new_value}"
             )
@@ -852,6 +857,11 @@ class NodeGraphWidget(BaseWidget):
         """Saves the graph variables to the workflow's data."""
         try:
             variables_data = [var.to_dict() for var in self.variables]
+            # --- Add logging here ---
+            self.logger.info(
+                f"Data being saved to workflow.variables: {variables_data}"
+            )
+            # --- End logging ---
             workflow.variables = variables_data
             workflow.save()  # Ensure the ORM actually persists the change
             self.logger.info(
@@ -1000,7 +1010,37 @@ class NodeGraphWidget(BaseWidget):
 
     def _clear_graph_and_variables(self):
         self.logger.info("Clearing current graph session and variables...")
+
+        # Unregister all dynamic variable nodes first
+        self._unregister_all_variable_nodes()
+
+        # Clear the graph session
         self.graph.clear_session()
+
+        # Explicitly try to clear the node factory registry as well
+        if hasattr(self.graph, "_node_factory") and hasattr(
+            self.graph._node_factory, "_nodes"
+        ):
+            # Keep only the base nodes, remove dynamically registered ones (like variable getters)
+            # This assumes base nodes don't follow the VariableGetter naming pattern
+            # A safer approach might involve checking the class inheritance if possible
+            original_node_types = {
+                identifier: cls
+                for identifier, cls in self.graph._node_factory._nodes.items()
+                if not identifier.startswith(
+                    "airunner.variables."
+                )  # Adjust prefix if needed
+            }
+            self.graph._node_factory._nodes = original_node_types
+            self.logger.info(
+                f"Explicitly cleared dynamic nodes from factory. Remaining: {list(original_node_types.keys())}"
+            )
+        else:
+            self.logger.warning(
+                "Could not explicitly clear node factory registry."
+            )
+
+        # Clear the local variable list
         self.variables.clear()
         self._update_variables_list()
 

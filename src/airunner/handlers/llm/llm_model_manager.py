@@ -276,7 +276,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         return self._do_generate(
             prompt=data["request_data"]["prompt"],
             action=data["request_data"]["action"],
-            llm_request=data["request_data"]["llm_request"]
+            llm_request=data["request_data"]["llm_request"],
         )
 
     def do_interrupt(self) -> None:
@@ -581,6 +581,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             self.load()
 
         # Generate response using chat agent
+        print("GENEARATING RESPONSE WITH CHAT AGENT", prompt)
         response = self._chat_agent.chat(
             message=prompt,
             action=action,
