@@ -211,6 +211,7 @@ class SignalCode(Enum):
     VOICE_SAVED = enum.auto()
     PLAYBACK_DEVICE_CHANGED = enum.auto()
     RECORDING_DEVICE_CHANGED = enum.auto()
+    NODE_EXECUTION_COMPLETED_SIGNAL = enum.auto()
 
 
 class EngineResponseCode(Enum):
