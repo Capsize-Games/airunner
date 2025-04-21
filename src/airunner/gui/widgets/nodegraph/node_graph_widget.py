@@ -661,13 +661,18 @@ class NodeGraphWidget(BaseWidget):
             if key not in IGNORED_NODE_PROPERTIES:
                 properties_to_save[key] = value
 
-        # Save dynamic ports if they exist
-        dynamic_inputs = getattr(node, "_dynamic_inputs", {})
-        dynamic_outputs = getattr(node, "_dynamic_outputs", {})
-        if dynamic_inputs:
-            properties_to_save["_dynamic_inputs"] = dynamic_inputs
-        if dynamic_outputs:
-            properties_to_save["_dynamic_outputs"] = dynamic_outputs
+        # Explicitly save the names of dynamically added ports
+        # Check if the node is an instance of our base class that supports dynamic ports
+        if isinstance(node, BaseWorkflowNode):
+            dynamic_input_names = [p.name() for p in node.inputs().values() if p.is_dynamic()]
+            if dynamic_input_names:
+                properties_to_save["_dynamic_input_names"] = dynamic_input_names
+                self.logger.info(f"  Saving dynamic input names for {node.name()}: {dynamic_input_names}")
+
+            dynamic_output_names = [p.name() for p in node.outputs().values() if p.is_dynamic()]
+            if dynamic_output_names:
+                properties_to_save["_dynamic_output_names"] = dynamic_output_names
+                self.logger.info(f"  Saving dynamic output names for {node.name()}: {dynamic_output_names}")
 
         # Ensure color is saved as a list (JSON compatible)
         if "color" in properties_to_save and isinstance(
@@ -741,24 +746,26 @@ class NodeGraphWidget(BaseWidget):
     def _load_workflow_connections(self, db_connections, node_map):
         """Load connections from database records into the graph."""
         self.logger.info(f"Loading {len(db_connections)} connections...")
-
+        connections_loaded = 0
         for db_conn in db_connections:
             try:
                 output_node = node_map.get(db_conn.output_node_id)
                 input_node = node_map.get(db_conn.input_node_id)
 
                 if output_node and input_node:
-                    # Create the connection in the graph
-                    self.graph.create_connection(
-                        output_node.outputs()[db_conn.output_port_name],
-                        input_node.inputs()[db_conn.input_port_name],
-                    )
-                    self.logger.info(
-                        f"  Loaded connection: {output_node.name()}.{db_conn.output_port_name} -> {input_node.name()}.{db_conn.input_port_name}"
-                    )
+                    # Find the port objects on the nodes
+                    output_port = output_node.outputs().get(db_conn.output_port_name)
+                    input_port = input_node.inputs().get(db_conn.input_port_name)
+
+                    if output_port and input_port:
+                        self.graph.connect_ports(output_port, input_port)
+                        connections_loaded += 1
+                        self.logger.info(f"  Connected: {output_node.name()}.{output_port.name()} -> {input_node.name()}.{input_port.name()}")
+                    else:
+                        self.logger.warning(f"  Skipping connection: Port not found. Output: '{db_conn.output_port_name}' on {output_node.name()}, Input: '{db_conn.input_port_name}' on {input_node.name()}")
                 else:
-                    self.logger.error(
-                        f"  Error loading connection: Missing nodes for DB IDs {db_conn.output_node_id} or {db_conn.input_node_id}"
+                    self.logger.warning(
+                        f"  Skipping connection: Node not found in map. Output DB ID: {db_conn.output_node_id}, Input DB ID: {db_conn.input_node_id}"
                     )
 
             except Exception as e:
@@ -766,7 +773,7 @@ class NodeGraphWidget(BaseWidget):
                     f"  FATAL Error loading connection DB ID {db_conn.id}: {e}"
                 )
         self.logger.info(
-            f"  Finished loading connections. Total loaded: {len(db_connections)}"
+            f"  Finished loading connections. Total loaded: {connections_loaded}/{len(db_connections)}"
         )
 
     def _find_workflow_and_data(
@@ -891,89 +898,77 @@ class NodeGraphWidget(BaseWidget):
                     db_node.node_identifier,
                     name=db_node.name,
                     pos=(db_node.pos_x, db_node.pos_y),
+                    push_undo=False, # Avoid polluting undo stack during load
                 )
 
-                if node_instance:
-                    # Restore node properties
-                    if db_node.properties:
-                        self._restore_node_properties(
-                            node_instance, db_node.properties
-                        )
+                if not node_instance:
+                    self.logger.error(f"  Failed to create node instance for identifier: {db_node.node_identifier}, name: {db_node.name}")
+                    continue
 
-                    # Map DB ID to graph node
-                    node_map[db_node.id] = node_instance
-                    self.logger.info(
-                        f"  Loaded node: {node_instance.name()} (DB ID: {db_node.id}, Graph ID: {node_instance.id})"
-                    )
-                else:
-                    self.logger.error(
-                        f"  Error creating node instance for DB ID: {db_node.id} (Identifier: {db_node.node_identifier})"
-                    )
+                # Restore dynamic ports BEFORE restoring other properties
+                if isinstance(node_instance, BaseWorkflowNode) and db_node.properties:
+                    dynamic_input_names = db_node.properties.get("_dynamic_input_names", [])
+                    for name in dynamic_input_names:
+                        node_instance.add_dynamic_input(name)
+                        self.logger.info(f"  Restored dynamic input '{name}' for node {node_instance.name()}")
+
+                    dynamic_output_names = db_node.properties.get("_dynamic_output_names", [])
+                    for name in dynamic_output_names:
+                        node_instance.add_dynamic_output(name)
+                        self.logger.info(f"  Restored dynamic output '{name}' for node {node_instance.name()}")
+
+                # Restore other properties
+                if db_node.properties:
+                    self._restore_node_properties(node_instance, db_node.properties)
+
+                node_map[db_node.id] = node_instance
+                self.logger.info(
+                    f"  Loaded node: {node_instance.name()} (DB ID: {db_node.id}, Graph ID: {node_instance.id})"
+                )
 
             except Exception as e:
-                # Catch potential errors during node creation
                 self.logger.error(
-                    f"  FATAL Error loading node DB ID {db_node.id} (Identifier: {db_node.node_identifier}): {e}"
+                    f"  FATAL Error loading node DB ID {db_node.id} ({db_node.name}): {e}",
+                    exc_info=True # Log traceback for debugging
                 )
 
+        self.graph.undo_stack().clear() # Clear undo stack after loading
+        self.logger.info(f"Finished loading nodes. Total loaded: {len(node_map)}/{len(db_nodes)}")
         return node_map
 
     def _restore_node_properties(self, node_instance, properties):
         """Restore node properties from saved data."""
         self.logger.info(
-            f"  Restoring properties for {node_instance.name()}: {properties}"
+            f"  Restoring properties for {node_instance.name()}: {list(properties.keys())}" # Log only keys for brevity
         )
 
         for prop_name, prop_value in properties.items():
-            # Skip ignored properties
-            if prop_name in IGNORED_NODE_PROPERTIES:
+            # Skip ignored properties and dynamic port lists (handled in _load_workflow_nodes)
+            if prop_name in IGNORED_NODE_PROPERTIES or prop_name in ["_dynamic_input_names", "_dynamic_output_names"]:
+                self.logger.debug(f"    Skipping property: {prop_name}")
                 continue
 
+            # Handle color conversion from list back to tuple if needed by NodeGraphQt
+            if prop_name == "color" and isinstance(prop_value, list):
+                prop_value = tuple(prop_value)
+
             try:
-                # Handle dynamic input ports
-                if prop_name == "_dynamic_inputs":
-                    self._restore_dynamic_ports(
-                        node_instance, prop_value, "input"
-                    )
-
-                # Handle dynamic output ports
-                elif prop_name == "_dynamic_outputs":
-                    self._restore_dynamic_ports(
-                        node_instance, prop_value, "output"
-                    )
-
-                # Handle color property specifically
-                elif prop_name == "color" and isinstance(prop_value, list):
-                    if len(prop_value) > 3:
-                        prop_value = prop_value[:3]
-                    node_instance.set_color(*prop_value)  # Unpack list as args
-                    self.logger.info(f"    Set color: {tuple(prop_value)}")
-
-                # Try standard setter methods
-                elif hasattr(node_instance, f"set_{prop_name}"):
-                    getattr(node_instance, f"set_{prop_name}")(prop_value)
-                    self.logger.info(
-                        f"    Set property using set_{prop_name}: {prop_value}"
-                    )
-
-                # Try direct attribute setting
-                elif hasattr(node_instance, prop_name):
-                    setattr(node_instance, prop_name, prop_value)
-                    self.logger.info(
-                        f"    Set property directly: {prop_name} = {prop_value}"
-                    )
+                # Use NodeGraphQt's property system primarily
+                if node_instance.has_property(prop_name):
+                    node_instance.set_property(prop_name, prop_value)
+                    self.logger.info(f"    Set property {prop_name} = {prop_value}")
+                # Fallback for direct attributes ONLY if necessary and NOT callable (methods)
+                elif hasattr(node_instance, prop_name) and not callable(getattr(node_instance, prop_name)):
+                     setattr(node_instance, prop_value)
+                     self.logger.warning(f"    Set attribute directly (use with caution): {prop_name} = {prop_value}")
                 else:
-                    self.logger.warning(
-                        f"    Property '{prop_name}' not handled for node instance."
-                    )
+                     self.logger.warning(f"    Property '{prop_name}' not found or settable on node {node_instance.name()}. Skipping.")
+
             except Exception as e:
-                self.logger.error(
-                    f"  Error restoring property '{prop_name}' for node '{node_instance.name()}': {e}"
-                )
-        self.logger.info(
-            f"  Finished restoring properties for {node_instance.name()}."
-        )
-        self.logger.info(f"  Node properties restored successfully.")
+                self.logger.error(f"    Error restoring property '{prop_name}' for node {node_instance.name()}: {e}")
+
+        # No need for separate success message here, handled per property
+        # self.logger.info(f"  Finished restoring properties for {node_instance.name()}.")
 
     # --- End Database Interaction ---
 
@@ -991,34 +986,47 @@ class NodeGraphWidget(BaseWidget):
 
         while execution_queue and processed_count < max_steps:
             node_id = execution_queue.pop(0)
-            current_node = node_map[node_id]
-            processed_count += 1
+            if node_id in executed_nodes:
+                continue # Skip if already processed (e.g., in loops)
 
-            self.logger.info(
-                f"---\nExecuting node: {current_node.name()} (ID: {node_id})"
-            )
+            current_node = node_map.get(node_id)
+            if not current_node:
+                self.logger.warning(f"Node ID {node_id} not found in map during execution. Skipping.")
+                continue
+
+            self.logger.info(f"Executing node: {current_node.name()} (ID: {node_id})")
 
             # Prepare input data for the current node
             current_input_data = self._prepare_input_data(
                 current_node, node_outputs, initial_input_data
             )
 
-            # Execute the node
-            outputs, triggered_exec_port_name = self._execute_node(
+            # Execute the node's logic
+            triggered_exec_port_name, output_data = self._execute_node(
                 current_node, current_input_data, node_outputs
             )
 
-            # Queue the next nodes based on the triggered execution port
-            self._queue_next_nodes(
-                current_node,
-                triggered_exec_port_name,
-                execution_queue,
-                executed_nodes,
-            )
+            # Store the output data
+            if output_data:
+                node_outputs[node_id] = output_data
+                self.logger.info(f"  Node {current_node.name()} produced output: {list(output_data.keys())}")
 
-        self._finalize_execution(
-            processed_count, max_steps, node_outputs, node_map
-        )
+            # Mark as executed
+            executed_nodes.add(node_id)
+            processed_count += 1
+
+            # Queue next nodes based on the triggered execution port
+            if triggered_exec_port_name:
+                self._queue_next_nodes(
+                    current_node,
+                    triggered_exec_port_name,
+                    execution_queue,
+                    executed_nodes,
+                )
+            else:
+                self.logger.info(f"  Node {current_node.name()} did not trigger an execution output.")
+
+        self._finalize_execution(processed_count, max_steps, node_outputs, node_map)
 
     def _initialize_execution(self, initial_input_data):
         """Initialize the execution queue, executed nodes, and node map."""
