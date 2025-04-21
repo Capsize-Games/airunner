@@ -191,8 +191,3 @@ class BaseWorkflowNode(
     # Helper to get data from a specific input port name
     def get_input_data(self, port_name, input_data, default=None):
         return input_data.get(port_name, default)
-
-
-# Need to import Qt classes used in the painter function
-from PySide6.QtGui import QPolygonF, QPen, QBrush
-from PySide6.QtCore import QPointF, Qt

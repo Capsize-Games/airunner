@@ -57,6 +57,8 @@ class LLMBranchNode(BaseWorkflowNode):
         self._accumulated_response_text = ""
         self._condition_result = None
         self._execution_pending = False
+        self._waiting_for_llm = False
+        self._exec_data = {}
 
         self.create_property(
             "condition",
@@ -115,13 +117,13 @@ class LLMBranchNode(BaseWorkflowNode):
             input_data: Dictionary containing input values, including a condition and LLMRequest.
 
         Returns:
-            dict: A dictionary with the _exec_triggered key pointing to either TRUE or FALSE output.
+            dict: A dictionary with data outputs, but no execution flow triggering.
+                  The execution flow will be triggered by signals when the LLM evaluation completes.
         """
         # Reset state for this execution
         self._accumulated_response_text = ""
         self._current_response = None
         self._condition_result = None
-        self._execution_pending = True
 
         llm_prompt = self._get_value(input_data, "llm_prompt", str)
         if llm_prompt:
@@ -151,41 +153,38 @@ class LLMBranchNode(BaseWorkflowNode):
         if use_mock:
             # Generate a mock response for testing (synchronous)
             result = self._generate_mock_condition_result(condition)
-            return {
-                "_exec_triggered": (
-                    self.EXEC_TRUE_PORT_NAME
-                    if result
-                    else self.EXEC_FALSE_PORT_NAME
-                )
-            }
+            # Immediately emit the completion signal
+            self.emit_signal(
+                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
+                {
+                    "node_id": self.id,
+                    "result": (
+                        self.EXEC_TRUE_PORT_NAME
+                        if result
+                        else self.EXEC_FALSE_PORT_NAME
+                    ),
+                },
+            )
         else:
+            print(f"Starting LLM evaluation for condition: {condition}")
+
+            # Store execution data for later use when the response comes back
+            self._exec_data = {
+                "condition": condition,
+                "timeout": timeout,
+                "start_time": time.time(),
+            }
+
             # Start the LLM call to evaluate the condition
             self._call_llm_for_condition(
                 condition, system_prompt, llm_request, model_type, model_name
             )
 
-            # Wait for the result with a timeout
-            start_time = time.time()
-            while (
-                self._condition_result is None
-                and time.time() - start_time < timeout
-            ):
-                time.sleep(0.1)  # Small wait to avoid tight loop
+            # Start timeout timer
+            self._start_timeout_timer(timeout)
 
-            # If we got a result, return it; otherwise default to FALSE
-            if self._condition_result is not None:
-                return {
-                    "_exec_triggered": (
-                        self.EXEC_TRUE_PORT_NAME
-                        if self._condition_result
-                        else self.EXEC_FALSE_PORT_NAME
-                    )
-                }
-            else:
-                print(
-                    f"LLM condition evaluation timed out after {timeout} seconds. Defaulting to FALSE."
-                )
-                return {"_exec_triggered": self.EXEC_FALSE_PORT_NAME}
+        # Return empty dict - execution will continue via signals instead of return value
+        return {}
 
     def _generate_mock_condition_result(self, condition: str) -> bool:
         """
@@ -235,7 +234,7 @@ class LLMBranchNode(BaseWorkflowNode):
         """
         try:
             # Prepare a clear prompt that will yield a TRUE/FALSE response
-            prompt = f"""Please evaluate the following condition and respond ONLY with either "TRUE" or "FALSE" (all caps). 
+            prompt = f"""Evaluate the following condition and respond ONLY with either "TRUE" or "FALSE" (all caps). 
 
 No other text, no explanation:
 
@@ -249,9 +248,7 @@ CONDITION: {condition}"""
                     "request_data": {
                         "action": LLMActionType.CHAT,
                         "prompt": prompt,
-                        "system_prompt": system_prompt,
-                        "model_type": model_type,
-                        "model_name": model_name,
+                        # "system_prompt": system_prompt,
                         "llm_request": llm_request,
                     },
                 },
@@ -281,20 +278,28 @@ CONDITION: {condition}"""
             self._accumulated_response_text = ""
 
         # Append the new message chunk to the accumulator
-        self._accumulated_response_text += llm_response.message
+        if type(llm_response.message) is str:
+            self._accumulated_response_text += llm_response.message
 
         # Store the latest response object
         self._current_response = llm_response
 
         # If this is the end of the message, evaluate the result
         if llm_response.is_end_of_message:
+            print("End of LLM message received")
             self._evaluate_condition_result()
+            self._waiting_for_llm = False  # Mark that we're done waiting
             self._execution_pending = False
+
+            # Trigger the next execution step
+            self._trigger_next_execution()
 
     def _evaluate_condition_result(self):
         """
         Evaluate the final text to determine if the condition is TRUE or FALSE.
         """
+        print("x" * 100)
+        print("EVALUATE CONDITION", self._accumulated_response_text)
         if not self._accumulated_response_text:
             self._condition_result = False
             return
@@ -314,6 +319,53 @@ CONDITION: {condition}"""
         print(
             f"Condition evaluated as: {self._condition_result} based on response: '{self._accumulated_response_text}'"
         )
+
+    def _trigger_next_execution(self):
+        """
+        Trigger the next execution step based on the condition result.
+        """
+        # Get execution data
+        condition = self._exec_data.get("condition")
+        timeout = self._exec_data.get("timeout")
+        start_time = self._exec_data.get("start_time")
+
+        # Check if we have no more execution data (already processed)
+        if not self._exec_data:
+            return
+
+        current_time = time.time()
+        elapsed_time = current_time - start_time if start_time else 0
+
+        print(f"Condition evaluated in {elapsed_time:.2f} seconds")
+
+        # Check if we got a result
+        if self._condition_result is not None:
+            # We have a result, determine the appropriate execution path name
+            output_port_name = (
+                self.EXEC_TRUE_PORT_NAME
+                if self._condition_result
+                else self.EXEC_FALSE_PORT_NAME
+            )
+            self._exec_data = {}  # Clear execution data
+
+            # Emit signal indicating completion and which port to trigger next
+            self.emit_signal(
+                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
+                {"node_id": self.id, "result": output_port_name},
+            )
+
+        elif elapsed_time >= timeout:
+            # We timed out, default to FALSE
+            print(
+                f"LLM condition evaluation timed out after {timeout} seconds. Defaulting to FALSE."
+            )
+            self._exec_data = {}  # Clear execution data
+
+            # Emit signal indicating completion and trigger the FALSE port
+            self.emit_signal(
+                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
+                {"node_id": self.id, "result": self.EXEC_FALSE_PORT_NAME},
+            )
 
     def _get_value(self, input_data, name, expected_type):
         """
@@ -346,3 +398,47 @@ CONDITION: {condition}"""
             elif expected_type == float:
                 return float(value)
             return value
+
+    def _start_timeout_timer(self, timeout_seconds):
+        """
+        Start a timer to handle the LLM timeout.
+        After the specified timeout period, if no response was received,
+        the execution will default to the FALSE path.
+
+        Args:
+            timeout_seconds: Number of seconds to wait before timing out
+        """
+        # Import QTimer here to avoid making the entire file dependent on Qt
+        from PySide6.QtCore import QTimer
+
+        if not hasattr(self, "_timeout_timer"):
+            self._timeout_timer = QTimer()
+            self._timeout_timer.setSingleShot(True)
+            self._timeout_timer.timeout.connect(self._on_timeout)
+
+        # Ensure any previous timer is stopped
+        self._timeout_timer.stop()
+
+        # Start the timer with the specified timeout in milliseconds
+        self._timeout_timer.start(timeout_seconds * 1000)
+        print(f"Started timeout timer for {timeout_seconds} seconds")
+
+    def _on_timeout(self):
+        """Handle timeout when LLM doesn't respond in time"""
+        # Only handle the timeout if we're still waiting for the LLM
+        if self._exec_data and not self._condition_result:
+            print("LLM evaluation timed out")
+
+            # Default to FALSE on timeout
+            self._condition_result = False
+            self._waiting_for_llm = False
+            self._execution_pending = False
+
+            # Emit signal to continue execution with FALSE path
+            self.emit_signal(
+                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
+                {"node_id": self.id, "result": self.EXEC_FALSE_PORT_NAME},
+            )
+
+            # Clear execution data
+            self._exec_data = {}
