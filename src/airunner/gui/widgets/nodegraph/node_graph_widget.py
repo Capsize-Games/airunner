@@ -21,6 +21,7 @@ from PySide6.QtCore import Qt, Slot, QMimeData
 from PySide6.QtGui import QDrag
 
 
+from airunner.enums import SignalCode
 from airunner.gui.widgets.nodegraph.nodes import (
     AgentActionNode,
     BaseWorkflowNode,
@@ -102,6 +103,9 @@ class NodeGraphWidget(BaseWidget):
     VARIABLE_MIME_TYPE = "application/x-airunner-variable"
 
     def __init__(self, parent=None, *args, **kwargs):
+        self.signal_handlers = {
+            SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL: self._on_node_execution_completed,
+        }
         super().__init__(*args, **kwargs)
 
         # Initialize the graph using the custom class
@@ -109,6 +113,10 @@ class NodeGraphWidget(BaseWidget):
         self.graph.widget_ref = (
             self  # Give graph a reference back to the widget
         )
+        self._node_outputs = {}
+        self._pending_nodes = (
+            {}
+        )  # Keep track of nodes waiting for async completion
 
         # Initialize variables list and tracking for registered variable nodes
         self.variables: list[Variable] = []
@@ -494,17 +502,33 @@ class NodeGraphWidget(BaseWidget):
             create_variable_getter_node_class,
         )
 
-        # Skip if already registered
-        if variable.name in self._registered_variable_node_classes:
-            self.logger.info(
-                f"Variable node for '{variable.name}' already registered."
-            )
-            return
-
         # Create a custom VariableGetterNode class for this variable
         var_node_class = create_variable_getter_node_class(
             variable.name, variable.var_type
         )
+
+        # Get the identifier for the node class
+        identifier = var_node_class.__identifier__
+
+        # Always remove from node factory registry before registering, even if not in registered_variable_node_classes
+        if hasattr(self.graph, "_node_factory") and hasattr(
+            self.graph._node_factory, "_nodes"
+        ):
+            if identifier in self.graph._node_factory._nodes:
+                del self.graph._node_factory._nodes[identifier]
+                self.logger.info(
+                    f"Removed existing node class '{identifier}' from factory registry before registering."
+                )
+
+        # Skip if already registered in our tracking dict
+        if variable.name in self._registered_variable_node_classes:
+            self.logger.info(
+                f"Variable node for '{variable.name}' already in tracking dict. Updating."
+            )
+            # We still need to update our tracking dict
+            self._registered_variable_node_classes[variable.name] = (
+                var_node_class
+            )
 
         # Register the node class with the graph
         self.graph.register_node(var_node_class)
@@ -513,7 +537,6 @@ class NodeGraphWidget(BaseWidget):
         self._registered_variable_node_classes[variable.name] = var_node_class
 
         # Update the node palette to include the new variable node
-        # Instead of refresh_tab(), we need to rebuild the nodes palette
         self.nodes_palette.update()
 
         self.logger.info(
@@ -903,7 +926,25 @@ class NodeGraphWidget(BaseWidget):
         raw_properties = node.properties()
         for key, value in raw_properties.items():
             if key not in IGNORED_NODE_PROPERTIES:
-                properties_to_save[key] = value
+                # Skip internal properties that reference the node itself or other non-serializable objects
+                if key == "_graph_item" or key.startswith("__"):
+                    self.logger.info(
+                        f"  Skipping non-serializable property: {key}"
+                    )
+                    continue
+
+                # Try to filter out other non-serializable values
+                try:
+                    # Quick test for JSON serializability
+                    import json
+
+                    json.dumps(value)
+                    properties_to_save[key] = value
+                except (TypeError, OverflowError):
+                    self.logger.info(
+                        f"  Skipping non-serializable property: {key} with type {type(value).__name__}"
+                    )
+                    continue
 
         # Explicitly save the names of dynamically added ports
         # Check if the node is an instance of our base class that supports dynamic ports
@@ -1335,12 +1376,16 @@ class NodeGraphWidget(BaseWidget):
         )
 
         processed_count = 0
-        max_steps = len(node_map) * 2  # Safety break for potential cycles
+        max_steps = (
+            len(node_map) * 10
+        )  # Increased safety limit to allow for retries of pending nodes
 
         while execution_queue and processed_count < max_steps:
             node_id = execution_queue.pop(0)
+
+            # Skip if already fully executed (important: don't skip nodes that might be pending)
             if node_id in executed_nodes:
-                continue  # Skip if already processed (e.g., in loops)
+                continue
 
             current_node = node_map.get(node_id)
             if not current_node:
@@ -1362,6 +1407,16 @@ class NodeGraphWidget(BaseWidget):
             triggered_exec_port_name, output_data = self._execute_node(
                 current_node, current_input_data, node_outputs
             )
+
+            # Check if the node execution is pending
+            if triggered_exec_port_name is None and output_data is None:
+                # Node execution is pending, add it back to the end of the queue for retry
+                self.logger.info(
+                    f"  Node '{current_node.name()}' is pending execution. Adding back to queue."
+                )
+                execution_queue.append(node_id)
+                # Don't mark as executed yet, don't increment processed_count beyond the retry count
+                continue
 
             # Store the output data
             if output_data:
@@ -1469,7 +1524,15 @@ class NodeGraphWidget(BaseWidget):
         ):
             try:
                 # Execute the node and get its output
-                outputs = current_node.execute(current_input_data) or {}
+                outputs = current_node.execute(current_input_data)
+
+                # Check if the node returned None, which indicates pending execution
+                if outputs is None:
+                    self.logger.info(
+                        f"  Node '{current_node.name()}' execution is pending. Will retry later."
+                    )
+                    # Return None for both values to indicate pending execution
+                    return None, None
 
                 # Make a copy of outputs to avoid modifying the original during pop operations
                 output_data = {k: v for k, v in outputs.items()}
@@ -1568,3 +1631,150 @@ class NodeGraphWidget(BaseWidget):
             node_map[nid].name(): data for nid, data in node_outputs.items()
         }
         self.logger.info(f"Final Node Outputs: {final_outputs}")
+
+    def _on_node_execution_completed(self, data: dict):
+        """
+        Handle the NODE_EXECUTION_COMPLETED_SIGNAL emitted by nodes that complete asynchronous operations.
+        This allows us to continue workflow execution after an async node like LLMBranchNode completes.
+
+        Args:
+            data: Dictionary containing the node_id and result (execution port to trigger)
+        """
+        node_id = data.get("node_id")
+        result = data.get("result")
+
+        if not node_id or not result:
+            self.logger.warning(
+                "Received incomplete node execution completed signal"
+            )
+            return
+
+        self.logger.info(
+            f"Received execution completed signal from node {node_id}, result: {result}"
+        )
+
+        # Find the node in our graph
+        node = None
+        for n in self.graph.all_nodes():
+            if n.id == node_id:
+                node = n
+                break
+
+        if not node:
+            self.logger.warning(f"Could not find node with ID {node_id}")
+            return
+
+        self.logger.info(
+            f"Continuing workflow execution from node {node.name()}"
+        )
+
+        # Create a new execution queue starting from this node's output ports
+        execution_queue = []
+        executed_nodes = set()  # Start fresh
+        node_map = {n.id: n for n in self.graph.all_nodes()}
+
+        # Queue the next nodes manually based on the result port
+        if result in node.outputs():
+            output_port = node.outputs()[result]
+            for connected_port in output_port.connected_ports():
+                next_node = connected_port.node()
+                execution_queue.append(next_node.id)
+                self.logger.info(
+                    f"Queuing node {next_node.name()} for continued execution"
+                )
+
+        # Continue workflow execution from these nodes
+        if execution_queue:
+            # Start a new execution with the current node outputs
+            self.execute_workflow_from_queue(execution_queue, executed_nodes)
+        else:
+            self.logger.info("No nodes to execute after async completion")
+
+    def execute_workflow_from_queue(
+        self, execution_queue, executed_nodes=None, initial_input_data=None
+    ):
+        """
+        Execute a workflow starting from a specific execution queue.
+        Used for continuing workflow execution after async operations.
+        """
+        if executed_nodes is None:
+            executed_nodes = set()
+
+        if initial_input_data is None:
+            initial_input_data = {}
+
+        node_outputs = {}  # Store data outputs {node_id: {port_name: data}}
+        node_map = {node.id: node for node in self.graph.all_nodes()}
+
+        processed_count = 0
+        max_steps = len(node_map) * 10  # Increased safety limit
+
+        self.logger.info(
+            f"Continuing workflow execution with queue: {execution_queue}"
+        )
+
+        while execution_queue and processed_count < max_steps:
+            node_id = execution_queue.pop(0)
+
+            # Skip if already executed
+            if node_id in executed_nodes:
+                continue
+
+            current_node = node_map.get(node_id)
+            if not current_node:
+                self.logger.warning(
+                    f"Node ID {node_id} not found in map during execution. Skipping."
+                )
+                continue
+
+            self.logger.info(
+                f"Executing node: {current_node.name()} (ID: {node_id})"
+            )
+
+            # Prepare input data for the current node
+            current_input_data = self._prepare_input_data(
+                current_node, node_outputs, initial_input_data
+            )
+
+            # Execute the node's logic
+            triggered_exec_port_name, output_data = self._execute_node(
+                current_node, current_input_data, node_outputs
+            )
+
+            # Check if the node execution is pending
+            if triggered_exec_port_name is None and output_data is None:
+                # Node execution is pending, add it back for retry
+                self.logger.info(
+                    f"  Node '{current_node.name()}' is pending execution. Adding back to queue."
+                )
+                execution_queue.append(node_id)
+                # Don't mark as executed yet
+                continue
+
+            # Store the output data
+            if output_data:
+                node_outputs[node_id] = output_data
+                self.logger.info(
+                    f"  Node {current_node.name()} produced output: {list(output_data.keys())}"
+                )
+
+            # Mark as executed
+            executed_nodes.add(node_id)
+            processed_count += 1
+
+            # Queue next nodes based on the triggered execution port
+            if triggered_exec_port_name:
+                self._queue_next_nodes(
+                    current_node,
+                    triggered_exec_port_name,
+                    execution_queue,
+                    executed_nodes,
+                )
+            else:
+                self.logger.info(
+                    f"  Node {current_node.name()} did not trigger an execution output."
+                )
+
+        self._finalize_execution(
+            processed_count, max_steps, node_outputs, node_map
+        )

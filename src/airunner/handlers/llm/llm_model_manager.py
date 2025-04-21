@@ -272,6 +272,8 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         self.logger.debug("Handling request")
         self._do_set_seed()
         self.load()
+        print("-" * 100)
+        print("HANDLE REQUEST")
 
         return self._do_generate(
             prompt=data["request_data"]["prompt"],
@@ -582,30 +584,40 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
         # Generate response using chat agent
         print("GENEARATING RESPONSE WITH CHAT AGENT", prompt)
+        llm_request = llm_request or LLMRequest.from_default()
+
+        # Call the appropriate chat agent method
         response = self._chat_agent.chat(
-            message=prompt,
+            prompt,
             action=action,
             system_prompt=system_prompt,
             rag_system_prompt=rag_system_prompt,
-            llm_request=llm_request,
+            llm_request=llm_request,  # Pass the object directly
         )
 
+        # Handle the response
         # Send end-of-message signal for chat actions
         if action is LLMActionType.CHAT:
-            self._send_final_message()
+            self._send_final_message(llm_request)
 
         return response
 
-    def _send_final_message(self) -> None:
+    def _send_final_message(
+        self, llm_request: Optional[LLMRequest] = None
+    ) -> None:
         """
         Send a signal indicating the end of a message stream.
 
         This helps clients know when a complete response has been delivered.
         """
         self.logger.debug("Sending final message")
+        llm_response = LLMResponse(
+            node_id=llm_request.node_id if llm_request else None,
+            is_end_of_message=True,
+        )
         self.emit_signal(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-            {"response": LLMResponse(is_end_of_message=True)},
+            {"response": llm_response},
         )
 
     def _do_set_seed(self) -> None:
