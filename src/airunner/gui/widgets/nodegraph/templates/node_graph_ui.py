@@ -16,25 +16,16 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QGridLayout, QPushButton, QSizePolicy,
-    QSpacerItem, QWidget)
+    QSpacerItem, QSplitter, QWidget)
 import airunner.feather_rc
 
 class Ui_node_graph_widget(object):
     def setupUi(self, node_graph_widget):
         if not node_graph_widget.objectName():
             node_graph_widget.setObjectName(u"node_graph_widget")
-        node_graph_widget.resize(988, 853)
-        self.gridLayout = QGridLayout(node_graph_widget)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.graph_widget = QWidget(node_graph_widget)
-        self.graph_widget.setObjectName(u"graph_widget")
-        self.gridLayout_2 = QGridLayout(self.graph_widget)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
-
-        self.gridLayout.addWidget(self.graph_widget, 2, 0, 1, 8)
-
+        node_graph_widget.resize(1331, 853)
+        self.gridLayout_5 = QGridLayout(node_graph_widget)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.widget = QWidget(node_graph_widget)
         self.widget.setObjectName(u"widget")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
@@ -121,7 +112,29 @@ class Ui_node_graph_widget(object):
         self.gridLayout_3.addWidget(self.pushButton, 0, 5, 1, 1)
 
 
-        self.gridLayout.addWidget(self.widget, 1, 0, 1, 8)
+        self.gridLayout_5.addWidget(self.widget, 0, 0, 1, 1)
+
+        self.splitter = QSplitter(node_graph_widget)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setOrientation(Qt.Orientation.Horizontal)
+        self.variables = QWidget(self.splitter)
+        self.variables.setObjectName(u"variables")
+        self.gridLayout_4 = QGridLayout(self.variables)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.splitter.addWidget(self.variables)
+        self.graph = QWidget(self.splitter)
+        self.graph.setObjectName(u"graph")
+        self.gridLayout_2 = QGridLayout(self.graph)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.splitter.addWidget(self.graph)
+        self.palette = QWidget(self.splitter)
+        self.palette.setObjectName(u"palette")
+        self.gridLayout = QGridLayout(self.palette)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.splitter.addWidget(self.palette)
+
+        self.gridLayout_5.addWidget(self.splitter, 1, 0, 1, 1)
 
 
         self.retranslateUi(node_graph_widget)

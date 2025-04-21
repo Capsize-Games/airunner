@@ -142,22 +142,9 @@ class NodeGraphWidget(BaseWidget):
         # Get the viewer
         self.viewer = self.graph.widget
 
-        # Create and configure the splitter
-        # The main layout now needs to accommodate the dock widget
-        # Assuming the parent is a QMainWindow or similar that handles docks
-        # If not, the layout needs adjustment.
-        # We'll add the splitter to the central widget area.
-        splitter = QSplitter(Qt.Horizontal)
-        splitter.addWidget(self.viewer)
-        splitter.addWidget(self.nodes_palette)
-
-        # Set initial sizes - graph takes most of the space, palette gets 200px
-        splitter.setSizes([700, 200])
-        # Instead of adding to ui.graph_widget, set as central widget if possible
-        # Or add to the main layout of this widget if it's not in a QMainWindow
-        self.ui.graph_widget.layout().addWidget(
-            splitter
-        )  # Keep existing layout for now
+        self.ui.splitter.setSizes([200, 700, 200])
+        self.ui.graph.layout().addWidget(self.viewer)
+        self.ui.palette.layout().addWidget(self.nodes_palette)
 
         # Create and add the variables panel
         self._create_variables_panel()
@@ -165,19 +152,8 @@ class NodeGraphWidget(BaseWidget):
     # --- Variables Panel ---
 
     def _create_variables_panel(self):
-        """Creates the dock widget for managing variables."""
-        self.variables_dock = QDockWidget(
-            "Variables", self
-        )  # Use self as parent
-        self.variables_dock.setObjectName("VariablesDock")
-        self.variables_dock.setAllowedAreas(
-            Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
-        )
-
         variables_widget = QWidget()
-        variables_layout = QVBoxLayout(variables_widget)
-        variables_layout.setContentsMargins(2, 2, 2, 2)  # Reduce margins
-        variables_layout.setSpacing(2)  # Reduce spacing
+        variables_layout = self.ui.variables.layout()
 
         self.variables_list_widget = QListWidget()
         self.variables_list_widget.setDragEnabled(True)
@@ -198,21 +174,6 @@ class NodeGraphWidget(BaseWidget):
 
         variables_layout.addWidget(self.variables_list_widget)
         variables_layout.addWidget(self.add_variable_button)
-
-        self.variables_dock.setWidget(variables_widget)
-
-        # Add the dock widget to the main window (assuming parent is QMainWindow)
-        # If NodeGraphWidget is standalone, this needs adjustment.
-        if hasattr(self.parent(), "addDockWidget"):
-            self.parent().addDockWidget(
-                Qt.LeftDockWidgetArea, self.variables_dock
-            )
-        else:
-            # Fallback: Add it to the local layout if no QMainWindow parent
-            # This might not look ideal, consider restructuring if needed.
-            self.layout().addWidget(
-                self.variables_dock
-            )  # Add to this widget's layout
 
     def _update_variables_list(self):
         """Updates the QListWidget with the current variables."""
