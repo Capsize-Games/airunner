@@ -101,10 +101,27 @@ class BaseManager:
                 self.logger.error(f"Error in filter({args}): {e}")
                 return None
 
-    def filter_by_first(self, **kwargs) -> Optional[_T]:
+    def filter_by_first(
+        self, eager_load: Optional[List[str]] = None, **kwargs
+    ) -> Optional[_T]:
         with session_scope() as session:
             try:
-                result = session.query(self.cls).filter_by(**kwargs).first()
+                query = session.query(self.cls)
+                if eager_load:
+                    for relationship in eager_load:
+                        try:
+                            query = query.options(
+                                joinedload(getattr(self.cls, relationship))
+                            )
+                        except AttributeError:
+                            self.logger.warning(
+                                (
+                                    f"Class {self.cls.__name__} does "
+                                    "not have relationship {relationship}"
+                                )
+                            )
+                            pass
+                result = query.filter_by(**kwargs).first()
                 self.logger.debug(
                     f"Query result for filter_by({kwargs}): {result}"
                 )

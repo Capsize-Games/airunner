@@ -29,6 +29,7 @@ from airunner.gui.widgets.nodegraph.nodes import (
     ForLoopNode,
     WhileLoopNode,
     ReverseForEachLoopNode,
+    CanvasNode,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -91,6 +92,7 @@ class NodeGraphWidget(BaseWidget):
             ForLoopNode,
             WhileLoopNode,
             ReverseForEachLoopNode,
+            CanvasNode,
         ]:
             self.graph.register_node(node_cls)
 
@@ -127,7 +129,7 @@ class NodeGraphWidget(BaseWidget):
 
     @Slot()
     def on_save_workflow(self):
-        self.save_workflow()
+        self.save_workflow("test_workflow")
 
     @Slot()
     def on_load_workflow(self):
@@ -140,6 +142,12 @@ class NodeGraphWidget(BaseWidget):
     @Slot()
     def on_delete_workflow(self):
         print("TODO: DELETE WORKFLOW")
+
+    @Slot()
+    def on_clear_workflow(self):
+        """Clear the current workflow graph."""
+        self.graph.clear_session()
+        self.logger.info("Workflow graph cleared.")
 
     def initialize_context_menu(self):
         context_menu = self.graph.get_context_menu("nodes")
@@ -245,7 +253,10 @@ class NodeGraphWidget(BaseWidget):
 
     def _find_or_create_workflow(self, name, description):
         """Find an existing workflow or create a new one."""
-        workflow = Workflow.objects.filter_by_first(name=name)
+        workflow = Workflow.objects.filter_by_first(
+            name=name,
+            eager_load=["nodes", "connections"],
+        )
         if workflow:
             self.logger.info(f"Updating existing workflow ID: {workflow.id}")
             self._clear_existing_workflow_data(workflow)
@@ -386,6 +397,37 @@ class NodeGraphWidget(BaseWidget):
 
         self.logger.info(f"Workflow '{workflow.name}' loaded successfully.")
 
+    def _load_workflow_connections(self, db_connections, node_map):
+        """Load connections from database records into the graph."""
+        self.logger.info(f"Loading {len(db_connections)} connections...")
+
+        for db_conn in db_connections:
+            try:
+                output_node = node_map.get(db_conn.output_node_id)
+                input_node = node_map.get(db_conn.input_node_id)
+
+                if output_node and input_node:
+                    # Create the connection in the graph
+                    self.graph.create_connection(
+                        output_node.outputs()[db_conn.output_port_name],
+                        input_node.inputs()[db_conn.input_port_name],
+                    )
+                    self.logger.info(
+                        f"  Loaded connection: {output_node.name()}.{db_conn.output_port_name} -> {input_node.name()}.{db_conn.input_port_name}"
+                    )
+                else:
+                    self.logger.error(
+                        f"  Error loading connection: Missing nodes for DB IDs {db_conn.output_node_id} or {db_conn.input_node_id}"
+                    )
+
+            except Exception as e:
+                self.logger.error(
+                    f"  FATAL Error loading connection DB ID {db_conn.id}: {e}"
+                )
+        self.logger.info(
+            f"  Finished loading connections. Total loaded: {len(db_connections)}"
+        )
+
     def _find_workflow_and_data(self, workflow_id_or_name):
         """Find workflow by ID/name and fetch its nodes and connections."""
         # Find the workflow
@@ -393,7 +435,8 @@ class NodeGraphWidget(BaseWidget):
             workflow = Workflow.objects.get(pk=workflow_id_or_name)
         else:
             workflow = Workflow.objects.filter_by_first(
-                name=workflow_id_or_name
+                name=workflow_id_or_name,
+                eager_load=["nodes", "connections"],
             )
 
         if not workflow:
@@ -506,9 +549,6 @@ class NodeGraphWidget(BaseWidget):
                 self.logger.error(
                     f"  FATAL Error loading node DB ID {db_node.id} (Identifier: {db_node.node_identifier}): {e}"
                 )
-                import traceback
-
-                traceback.print_exc()
 
         return node_map
 
@@ -538,222 +578,8 @@ class NodeGraphWidget(BaseWidget):
 
                 # Handle color property specifically
                 elif prop_name == "color" and isinstance(prop_value, list):
-                    node_instance.set_color(*prop_value)  # Unpack list as args
-                    self.logger.info(f"    Set color: {tuple(prop_value)}")
-
-                # Try standard setter methods
-                elif hasattr(node_instance, f"set_{prop_name}"):
-                    getattr(node_instance, f"set_{prop_name}")(prop_value)
-                    self.logger.info(
-                        f"    Set property using set_{prop_name}: {prop_value}"
-                    )
-
-                # Try direct attribute setting
-                elif hasattr(node_instance, prop_name):
-                    setattr(node_instance, prop_name, prop_value)
-                    self.logger.info(
-                        f"    Set property directly: {prop_name} = {prop_value}"
-                    )
-
-                else:
-                    self.logger.warning(
-                        f"    Property '{prop_name}' not handled for node instance."
-                    )
-            except Exception as e:
-                self.logger.error(
-                    f"  Error restoring property '{prop_name}' for node '{node_instance.name()}': {e}"
-                )
-                import traceback
-
-                traceback.print_exc()
-        self.logger.info(
-            f"  Finished restoring properties for {node_instance.name()}."
-        )
-        self.logger.info(f"  Node properties restored successfully.")
-
-    def load_workflow(self, workflow_id_or_name):
-        """Loads a workflow from the database into the node graph."""
-        self.logger.info(f"Loading workflow '{workflow_id_or_name}'...")
-
-        # Find the workflow and fetch its data
-        workflow, db_nodes, db_connections = self._find_workflow_and_data(
-            workflow_id_or_name
-        )
-        if not workflow:
-            return
-
-        # Handle empty workflow
-        if not db_nodes:
-            self.logger.info(
-                f"Workflow '{workflow.name}' has no nodes to load."
-            )
-            self.graph.clear_session()
-            return
-
-        # Clear the current graph
-        self.logger.info("Clearing current graph session...")
-        self.graph.clear_session()
-
-        # Load nodes and create mapping
-        node_map = self._load_workflow_nodes(db_nodes)
-
-        # Load connections between nodes
-        self._load_workflow_connections(db_connections, node_map)
-
-        self.logger.info(f"Workflow '{workflow.name}' loaded successfully.")
-
-    def _find_workflow_and_data(self, workflow_id_or_name):
-        """Find workflow by ID/name and fetch its nodes and connections."""
-        # Find the workflow
-        if isinstance(workflow_id_or_name, int):
-            workflow = Workflow.objects.get(pk=workflow_id_or_name)
-        else:
-            workflow = Workflow.objects.filter_by_first(
-                name=workflow_id_or_name
-            )
-
-        if not workflow:
-            self.logger.error(f"Workflow '{workflow_id_or_name}' not found.")
-            return None, [], []
-
-        # Get workflow data using eager loading first, then fallback to separate queries
-        db_nodes, db_connections = self._fetch_workflow_data(workflow)
-        return workflow, db_nodes, db_connections
-
-    def _fetch_workflow_data(self, workflow):
-        """Fetch workflow data using eager loading or separate queries as fallback."""
-        db_nodes = []
-        db_connections = []
-
-        # Try eager loading first
-        try:
-            workflow_data = Workflow.objects.filter_by_first(
-                id=workflow.id,
-                eager_load=["nodes", "connections"],
-            )
-            if (
-                workflow_data
-                and hasattr(workflow_data, "nodes")
-                and hasattr(workflow_data, "connections")
-            ):
-                db_nodes = (
-                    workflow_data.nodes
-                    if workflow_data.nodes is not None
-                    else []
-                )
-                db_connections = (
-                    workflow_data.connections
-                    if workflow_data.connections is not None
-                    else []
-                )
-                self.logger.info(
-                    f"Successfully fetched workflow data with eager loading for ID {workflow.id}"
-                )
-            else:
-                raise ValueError(
-                    "Eager loading failed or returned incomplete data."
-                )
-
-        except Exception as e_eager:
-            self.logger.warning(
-                f"Eager loading failed ({e_eager}). Falling back to separate queries."
-            )
-
-            # Fallback to fetching separately
-            try:
-                nodes_result = WorkflowNode.objects.filter_by(
-                    workflow_id=workflow.id
-                )
-                connections_result = WorkflowConnection.objects.filter_by(
-                    workflow_id=workflow.id
-                )
-
-                db_nodes = nodes_result if nodes_result is not None else []
-                db_connections = (
-                    connections_result
-                    if connections_result is not None
-                    else []
-                )
-
-                self.logger.info(
-                    f"Successfully fetched nodes ({len(db_nodes)}) and connections ({len(db_connections)}) separately."
-                )
-            except Exception as e_fallback:
-                self.logger.error(
-                    f"Fallback query also failed ({e_fallback}). Cannot load workflow."
-                )
-                self.graph.clear_session()
-
-        return db_nodes, db_connections
-
-    def _load_workflow_nodes(self, db_nodes):
-        """Load nodes from database records into the graph."""
-        node_map = {}  # Map database node ID to graph node instance
-        self.logger.info(f"Loading {len(db_nodes)} nodes...")
-
-        for db_node in db_nodes:
-            try:
-                # Create the node instance using its identifier and saved position
-                node_instance = self.graph.create_node(
-                    db_node.node_identifier,
-                    name=db_node.name,
-                    pos=(db_node.pos_x, db_node.pos_y),
-                )
-
-                if node_instance:
-                    # Restore node properties
-                    if db_node.properties:
-                        self._restore_node_properties(
-                            node_instance, db_node.properties
-                        )
-
-                    # Map DB ID to graph node
-                    node_map[db_node.id] = node_instance
-                    self.logger.info(
-                        f"  Loaded node: {node_instance.name()} (DB ID: {db_node.id}, Graph ID: {node_instance.id})"
-                    )
-                else:
-                    self.logger.error(
-                        f"  Error creating node instance for DB ID: {db_node.id} (Identifier: {db_node.node_identifier})"
-                    )
-
-            except Exception as e:
-                # Catch potential errors during node creation
-                self.logger.error(
-                    f"  FATAL Error loading node DB ID {db_node.id} (Identifier: {db_node.node_identifier}): {e}"
-                )
-                import traceback
-
-                traceback.print_exc()
-
-        return node_map
-
-    def _restore_node_properties(self, node_instance, properties):
-        """Restore node properties from saved data."""
-        self.logger.info(
-            f"  Restoring properties for {node_instance.name()}: {properties}"
-        )
-
-        for prop_name, prop_value in properties.items():
-            # Skip ignored properties
-            if prop_name in IGNORED_NODE_PROPERTIES:
-                continue
-
-            try:
-                # Handle dynamic input ports
-                if prop_name == "_dynamic_inputs":
-                    self._restore_dynamic_ports(
-                        node_instance, prop_value, "input"
-                    )
-
-                # Handle dynamic output ports
-                elif prop_name == "_dynamic_outputs":
-                    self._restore_dynamic_ports(
-                        node_instance, prop_value, "output"
-                    )
-
-                # Handle color property specifically
-                elif prop_name == "color" and isinstance(prop_value, list):
+                    if len(prop_value) > 3:
+                        prop_value = prop_value[:3]
                     node_instance.set_color(*prop_value)  # Unpack list as args
                     self.logger.info(f"    Set color: {tuple(prop_value)}")
 
@@ -778,9 +604,6 @@ class NodeGraphWidget(BaseWidget):
                 self.logger.error(
                     f"  Error restoring property '{prop_name}' for node '{node_instance.name()}': {e}"
                 )
-                import traceback
-
-                traceback.print_exc()
         self.logger.info(
             f"  Finished restoring properties for {node_instance.name()}."
         )
@@ -989,4 +812,4 @@ class NodeGraphWidget(BaseWidget):
         final_outputs = {
             node_map[nid].name(): data for nid, data in node_outputs.items()
         }
-        self.logger.info("Final Node Outputs:", final_outputs)
+        self.logger.info(f"Final Node Outputs: {final_outputs}")
