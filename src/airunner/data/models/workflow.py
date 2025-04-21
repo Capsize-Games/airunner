@@ -11,6 +11,7 @@ class Workflow(BaseModel):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False, unique=True)
     description = Column(Text)
+    variables = Column(JSON)  # Added column to store variables as JSON
 
     nodes = relationship(
         "WorkflowNode",
