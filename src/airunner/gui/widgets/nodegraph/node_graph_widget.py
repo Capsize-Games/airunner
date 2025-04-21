@@ -1343,13 +1343,18 @@ class NodeGraphWidget(BaseWidget):
         node_map = {node.id: node for node in self.graph.all_nodes()}
 
         # Find all StartNodes to begin execution
+        start_node_ids = []
         for node_id, node in node_map.items():
             if isinstance(node, StartNode):
-                execution_queue.append(node_id)
-                executed_nodes.add(node_id)  # Mark start node as executed
+                start_node_ids.append(node_id)
+                # --- FIX: Do NOT mark start node as executed here. ---
+                # executed_nodes.add(node_id)
+
+        # Add start nodes to the front of the queue
+        execution_queue.extend(start_node_ids)
 
         self.logger.info(
-            f"Starting workflow execution from nodes: {execution_queue}"
+            f"Starting workflow execution. Initial queue: {start_node_ids}"
         )
         return execution_queue, executed_nodes, node_map
 
@@ -1406,49 +1411,64 @@ class NodeGraphWidget(BaseWidget):
 
     def _execute_node(self, current_node, current_input_data, node_outputs):
         """Execute the current node and return its outputs and triggered execution port."""
-        outputs = {}
+        output_data = {}
         triggered_exec_port_name = None
 
         if hasattr(current_node, "execute") and callable(
             getattr(current_node, "execute")
         ):
             try:
+                # Execute the node and get its output
                 outputs = current_node.execute(current_input_data) or {}
-                node_outputs[current_node.id] = outputs
+
+                # Make a copy of outputs to avoid modifying the original during pop operations
+                output_data = {k: v for k, v in outputs.items()}
+
+                # Check if the node triggered an execution output
+                if "_exec_triggered" in outputs:
+                    triggered_exec_port_name = outputs["_exec_triggered"]
+                    # Don't store the execution trigger in the node's outputs
+                    output_data.pop("_exec_triggered", None)
+                elif current_node.EXEC_OUT_PORT_NAME in current_node.outputs():
+                    # Default to standard execution output if available
+                    triggered_exec_port_name = current_node.EXEC_OUT_PORT_NAME
+
+                # Store outputs for use by downstream nodes
+                node_outputs[current_node.id] = output_data
                 self.logger.info(
-                    f"  Node '{current_node.name()}' executed. Raw Output: {outputs}"
+                    f"  Node '{current_node.name()}' executed. Output: {list(output_data.keys())}"
                 )
 
-                triggered_exec_port_name = outputs.pop("_exec_triggered", None)
                 if triggered_exec_port_name:
                     self.logger.info(
-                        f"  Execution triggered on port: {triggered_exec_port_name}"
+                        f"  Execution will flow through port: {triggered_exec_port_name}"
                     )
-                elif current_node.EXEC_OUT_PORT_NAME in current_node.outputs():
-                    triggered_exec_port_name = current_node.EXEC_OUT_PORT_NAME
+                else:
                     self.logger.info(
-                        f"  Default execution triggered on port: {triggered_exec_port_name}"
+                        f"  No execution port triggered, execution path ends here"
                     )
 
             except Exception as e:
                 self.logger.error(
-                    f"  Error executing node {current_node.name()}: {e}"
+                    f"  Error executing node {current_node.name()}: {e}",
+                    exc_info=True,
                 )
-                node_outputs[current_node.id] = {}  # Mark as failed
+                # Mark as failed but don't halt workflow
+                node_outputs[current_node.id] = {}
         else:
             self.logger.info(
                 f"  Node {current_node.name()} has no execute method."
             )
             node_outputs[current_node.id] = {}
 
-        return outputs, triggered_exec_port_name
+        return triggered_exec_port_name, output_data
 
     def _queue_next_nodes(
         self,
         current_node,
         triggered_exec_port_name,
         execution_queue,
-        executed_nodes,
+        executed_nodes, # Note: This parameter is no longer strictly needed here, but kept for consistency
     ):
         """Queue the next nodes based on the triggered execution port."""
         if (
@@ -1461,16 +1481,19 @@ class NodeGraphWidget(BaseWidget):
             for next_port in connected_exec_inputs:
                 next_node = next_port.node()
                 next_node_id = next_node.id
-                if next_node_id not in executed_nodes:
+                # --- FIX: Only check if it's already *in the queue* to avoid duplicates,
+                #          but don't check executed_nodes here.
+                #          The check for already executed nodes happens at the start of the main loop.
+                if next_node_id not in execution_queue:
                     self.logger.info(
                         f"  Queueing next node: {next_node.name()} (ID: {next_node_id}) via port {next_port.name()}"
                     )
                     execution_queue.append(next_node_id)
-                    executed_nodes.add(next_node_id)
+                    # --- FIX: REMOVED this line: executed_nodes.add(next_node_id) ---
                 else:
-                    self.logger.info(
-                        f"  Skipping already executed node: {next_node.name()} (ID: {next_node_id})"
-                    )
+                     self.logger.info(
+                         f"  Node already in queue: {next_node.name()} (ID: {next_node_id})"
+                     )
         elif triggered_exec_port_name:
             self.logger.warning(
                 f"  Triggered execution port '{triggered_exec_port_name}' not found on node '{current_node.name()}'. Execution stops here."
