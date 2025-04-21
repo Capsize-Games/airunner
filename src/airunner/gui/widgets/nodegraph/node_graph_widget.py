@@ -24,7 +24,6 @@ from airunner.gui.widgets.nodegraph.nodes import (
     RunLLMNode,
     ImageDisplayNode,
     StartNode,
-    BranchNode,
     ForEachLoopNode,
     ForLoopNode,
     WhileLoopNode,
@@ -33,6 +32,7 @@ from airunner.gui.widgets.nodegraph.nodes import (
     ChatbotNode,
     LoraNode,
     EmbeddingNode,
+    LLMBranchNode,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -90,7 +90,6 @@ class NodeGraphWidget(BaseWidget):
             RunLLMNode,
             ImageDisplayNode,
             StartNode,
-            BranchNode,
             ForEachLoopNode,
             ForLoopNode,
             WhileLoopNode,
@@ -99,6 +98,7 @@ class NodeGraphWidget(BaseWidget):
             ChatbotNode,
             LoraNode,
             EmbeddingNode,
+            LLMBranchNode,
         ]:
             self.graph.register_node(node_cls)
 

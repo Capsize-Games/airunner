@@ -10,6 +10,8 @@ from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
 
 class TextboxNode(BaseWorkflowNode):
     NODE_NAME = "Textbox"
+    has_exec_in_port: bool = False
+    has_exec_out_port: bool = False
 
     def __init__(self):
         super().__init__()

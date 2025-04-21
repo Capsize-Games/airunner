@@ -7,9 +7,6 @@ from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
 from airunner.gui.widgets.nodegraph.nodes.boolean_node import (
     BooleanNode,
 )
-from airunner.gui.widgets.nodegraph.nodes.branch_node import (
-    BranchNode,
-)
 from airunner.gui.widgets.nodegraph.nodes.float_node import (
     FloatNode,
 )
@@ -74,13 +71,15 @@ from airunner.gui.widgets.nodegraph.nodes.lora_node import (
 from airunner.gui.widgets.nodegraph.nodes.embedding_node import (
     EmbeddingNode,
 )
+from airunner.gui.widgets.nodegraph.nodes.llm_logic.llm_branch_node import (
+    LLMBranchNode,
+)
 
 
 __all__ = [
     "AgentActionNode",
     "BaseWorkflowNode",
     "BooleanNode",
-    "BranchNode",
     "FloatNode",
     "ForEachLoopNode",
     "ForLoopNode",
@@ -103,4 +102,5 @@ __all__ = [
     "ChatbotNode",
     "LoraNode",
     "EmbeddingNode",
+    "LLMBranchNode",
 ]
