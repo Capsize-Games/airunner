@@ -13,12 +13,16 @@ class Workflow(BaseModel):
     description = Column(Text)
 
     nodes = relationship(
-        "WorkflowNode", back_populates="workflow", cascade="all, delete-orphan"
+        "WorkflowNode",
+        back_populates="workflow",
+        cascade="all, delete-orphan",
+        lazy="select",
     )
     connections = relationship(
         "WorkflowConnection",
         back_populates="workflow",
         cascade="all, delete-orphan",
+        lazy="select",
     )
 
     # Initialize the manager after the class is fully defined
