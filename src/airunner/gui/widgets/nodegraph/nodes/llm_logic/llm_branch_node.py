@@ -123,6 +123,11 @@ class LLMBranchNode(BaseWorkflowNode):
         self._condition_result = None
         self._execution_pending = True
 
+        llm_prompt = self._get_value(input_data, "llm_prompt", str)
+        if llm_prompt:
+            # If llm_prompt is provided, use it as the system prompt
+            self.set_property("condition", llm_prompt)
+
         # Get the condition from input or use property
         condition = self._get_value(input_data, "condition", str)
 

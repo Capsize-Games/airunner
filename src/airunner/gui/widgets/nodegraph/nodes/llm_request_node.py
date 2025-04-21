@@ -1,4 +1,5 @@
 from typing import Dict, Optional
+import inspect
 
 from NodeGraphQt.constants import NodePropWidgetEnum
 
@@ -207,25 +208,31 @@ class LLMRequestNode(BaseWorkflowNode):
             input_data, "decoder_start_token_id", int, allow_none=True
         )  # Get decoder_start_token_id
 
-        # Create LLMRequest object
-        llm_request = LLMRequest(
-            do_sample=do_sample,
-            early_stopping=early_stopping,
-            eta_cutoff=eta_cutoff,
-            length_penalty=length_penalty,
-            max_new_tokens=max_new_tokens,
-            min_length=min_length,
-            no_repeat_ngram_size=no_repeat_ngram_size,
-            num_beams=num_beams,
-            num_return_sequences=num_return_sequences,
-            repetition_penalty=repetition_penalty,
-            temperature=temperature,
-            top_k=top_k,
-            top_p=top_p,
-            use_cache=use_cache,
-            do_tts_reply=do_tts_reply,
-            decoder_start_token_id=decoder_start_token_id,  # Pass decoder_start_token_id
-        )
+        # Instead of passing all parameters, filter to only those accepted by LLMRequest
+        llm_request_args = inspect.signature(LLMRequest.__init__).parameters
+        llm_request_kwargs = {
+            k: v
+            for k, v in {
+                "do_sample": do_sample,
+                "early_stopping": early_stopping,
+                "eta_cutoff": eta_cutoff,
+                "length_penalty": length_penalty,
+                "max_new_tokens": max_new_tokens,
+                "min_length": min_length,
+                "no_repeat_ngram_size": no_repeat_ngram_size,
+                "num_beams": num_beams,
+                "num_return_sequences": num_return_sequences,
+                "repetition_penalty": repetition_penalty,
+                "temperature": temperature,
+                "top_k": top_k,
+                "top_p": top_p,
+                "use_cache": use_cache,
+                "do_tts_reply": do_tts_reply,
+                "decoder_start_token_id": decoder_start_token_id,
+            }.items()
+            if k in llm_request_args
+        }
+        llm_request = LLMRequest(**llm_request_kwargs)
 
         return {"llm_request": llm_request}
 

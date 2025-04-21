@@ -1413,7 +1413,8 @@ class BaseAgent(
         **kwargs,
     ) -> AgentChatResponse:
         self.action = action
-        system_prompt = system_prompt or self.system_prompt
+        # system_prompt = system_prompt or self.system_prompt
+        system_prompt = self.system_prompt
         self._chat_prompt = message
         self._complete_response = ""
         self.do_interrupt = False

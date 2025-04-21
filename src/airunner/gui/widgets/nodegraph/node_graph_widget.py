@@ -1416,18 +1416,24 @@ class NodeGraphWidget(BaseWidget):
     def _prepare_input_data(
         self, current_node, node_outputs, initial_input_data
     ):
-        """Prepare input data for the current node."""
         current_input_data = {}
         for port_name, port in current_node.inputs().items():
             if port_name == current_node.EXEC_IN_PORT_NAME:
                 continue
-
             connected_ports = port.connected_ports()
             if connected_ports:
                 source_port = connected_ports[0]
-                source_node_id = source_port.node().id
+                source_node = source_port.node()
+                source_node_id = source_node.id
                 source_port_name = source_port.name()
-
+                # If the source node hasn't been executed, do it now
+                if source_node_id not in node_outputs:
+                    self.logger.info(
+                        f"  For input '{port_name}', executing upstream node '{source_node.name()}' (ID: {source_node_id}) to get value."
+                    )
+                    output = source_node.execute({})
+                    node_outputs[source_node_id] = output
+                # Now get the value
                 if (
                     source_node_id in node_outputs
                     and source_port_name in node_outputs[source_node_id]
@@ -1435,33 +1441,22 @@ class NodeGraphWidget(BaseWidget):
                     current_input_data[port_name] = node_outputs[
                         source_node_id
                     ][source_port_name]
-                    self.logger.info(
-                        f"  Input '{port_name}' received data from '{source_port.node().name()}.{source_port_name}'"
-                    )
                 else:
                     self.logger.warning(
-                        f"  Input '{port_name}' missing data from source '{source_port.node().name()}.{source_port_name}'. Using None."
+                        f"  Input '{port_name}' missing data from source '{source_node.name()}.{source_port_name}'. Using None."
                     )
                     current_input_data[port_name] = None
-
-        # Add initial data if this is a root node
-        if not any(
-            p.connected_ports()
-            for p_name, p in current_node.inputs().items()
-            if p_name != current_node.EXEC_IN_PORT_NAME
-        ):
-            for port_name in current_node.inputs():
-                if (
-                    port_name != current_node.EXEC_IN_PORT_NAME
-                    and port_name in initial_input_data
-                ):
-                    current_input_data[port_name] = initial_input_data[
-                        port_name
-                    ]
-                    self.logger.info(
-                        f"  Input '{port_name}' received initial data."
-                    )
-
+        # ...existing code for initial data...
+        for port_name in current_node.inputs():
+            if (
+                port_name != current_node.EXEC_IN_PORT_NAME
+                and port_name not in current_input_data
+                and port_name in initial_input_data
+            ):
+                current_input_data[port_name] = initial_input_data[port_name]
+                self.logger.info(
+                    f"  Input '{port_name}' received initial data."
+                )
         return current_input_data
 
     def _execute_node(self, current_node, current_input_data, node_outputs):
