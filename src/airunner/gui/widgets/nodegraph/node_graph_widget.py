@@ -307,7 +307,9 @@ class NodeGraphWidget(BaseWidget):
         menu = QMenu(self)
         rename_action = menu.addAction("Rename")
         change_type_action = menu.addAction("Change Type")
-        # set_default_action = menu.addAction("Set Default Value") # TODO
+        set_value_action = menu.addAction(
+            "Set Value"
+        )  # Add Set Value menu item
         delete_action = menu.addAction("Delete")
 
         action = menu.exec(self.variables_list_widget.mapToGlobal(pos))
@@ -316,8 +318,8 @@ class NodeGraphWidget(BaseWidget):
             self._rename_variable(variable)
         elif action == change_type_action:
             self._change_variable_type(variable)
-        # elif action == set_default_action:
-        #     self._set_variable_default(variable) # TODO
+        elif action == set_value_action:
+            self._set_variable_value(variable)  # Call new method to set value
         elif action == delete_action:
             self._delete_variable(variable)
 
@@ -555,6 +557,88 @@ class NodeGraphWidget(BaseWidget):
             self._registered_variable_node_classes.keys()
         ):
             self._unregister_variable_node(variable_name)
+
+    def _set_variable_value(self, variable: Variable):
+        """Handles setting a variable's value via a dialog."""
+        from PySide6.QtWidgets import (
+            QDialog,
+            QFormLayout,
+            QDialogButtonBox,
+            QLineEdit,
+            QSpinBox,
+            QDoubleSpinBox,
+            QCheckBox,
+        )
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Set Value for '{variable.name}'")
+        layout = QFormLayout(dialog)
+
+        # Create appropriate input widget based on variable type
+        if variable.var_type == VariableType.BOOLEAN:
+            value_input = QCheckBox(dialog)
+            value_input.setChecked(bool(variable.get_value()))
+            get_value = lambda: value_input.isChecked()
+        elif variable.var_type in [
+            VariableType.BYTE,
+            VariableType.INTEGER,
+            VariableType.INTEGER64,
+        ]:
+            value_input = QSpinBox(dialog)
+            value_input.setRange(-1000000, 1000000)  # Set a reasonable range
+            current_val = variable.get_value()
+            value_input.setValue(
+                int(current_val) if current_val is not None else 0
+            )
+            get_value = lambda: value_input.value()
+        elif variable.var_type in [VariableType.FLOAT, VariableType.DOUBLE]:
+            value_input = QDoubleSpinBox(dialog)
+            value_input.setRange(-1000000, 1000000)  # Set a reasonable range
+            value_input.setDecimals(6)  # Allow for precision
+            current_val = variable.get_value()
+            value_input.setValue(
+                float(current_val) if current_val is not None else 0.0
+            )
+            get_value = lambda: value_input.value()
+        else:  # Default to string input for other types
+            value_input = QLineEdit(dialog)
+            current_val = variable.get_value()
+            value_input.setText(
+                str(current_val) if current_val is not None else ""
+            )
+            get_value = lambda: value_input.text()
+
+        layout.addRow(f"Value ({variable.var_type.value}):", value_input)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, dialog
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        if dialog.exec():
+            # Get the value from the input widget
+            new_value = get_value()
+
+            # Set the variable value
+            variable.set_value(new_value)
+
+            # Update all VariableGetterNodes using this variable
+            for node in self.graph.all_nodes():
+                if (
+                    isinstance(node, VariableGetterNode)
+                    and node.variable_name == variable.name
+                ):
+                    node.set_property(node.value_property_name, new_value)
+                    node.update()  # Force visual update
+
+            self.logger.info(
+                f"Set value of variable '{variable.name}' to: {new_value}"
+            )
+            return True
+
+        return False
 
     # --- End Variables Panel ---
 
