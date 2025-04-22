@@ -17,6 +17,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QGridLayout, QPushButton, QSizePolicy,
     QSpacerItem, QSplitter, QWidget)
+
+from airunner.gui.widgets.nodegraph.variables_panel import VariablesPanelWidget
 import airunner.feather_rc
 
 class Ui_node_graph_widget(object):
@@ -118,7 +120,7 @@ class Ui_node_graph_widget(object):
         self.splitter = QSplitter(node_graph_widget)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Orientation.Horizontal)
-        self.variables = QWidget(self.splitter)
+        self.variables = VariablesPanelWidget(self.splitter)
         self.variables.setObjectName(u"variables")
         self.gridLayout_4 = QGridLayout(self.variables)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
