@@ -65,6 +65,9 @@ from airunner.gui.widgets.nodegraph.nodes.embedding_node import (
 from airunner.gui.widgets.nodegraph.nodes.llm_logic.llm_branch_node import (
     LLMBranchNode,
 )
+from airunner.gui.widgets.nodegraph.nodes.set_node import (
+    SetNode,
+)
 
 
 __all__ = [
@@ -91,4 +94,5 @@ __all__ = [
     "LoraNode",
     "EmbeddingNode",
     "LLMBranchNode",
+    "SetNode",
 ]
