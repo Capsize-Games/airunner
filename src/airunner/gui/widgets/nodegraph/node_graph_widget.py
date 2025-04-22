@@ -582,7 +582,9 @@ class NodeGraphWidget(BaseWidget):
     def _save_variables(self, workflow: Workflow):
         """Saves the graph variables to the workflow's data."""
         try:
-            variables_data = [var.to_dict() for var in self.variables]
+            variables_data = [
+                var.to_dict() for var in self.ui.variables.variables
+            ]
             # --- Add logging here ---
             self.logger.info(
                 f"Data being saved to workflow.variables: {variables_data}"
