@@ -4,12 +4,6 @@ from airunner.gui.widgets.nodegraph.nodes.agent_action_node import (
 from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
     BaseWorkflowNode,
 )
-from airunner.gui.widgets.nodegraph.nodes.boolean_node import (
-    BooleanNode,
-)
-from airunner.gui.widgets.nodegraph.nodes.float_node import (
-    FloatNode,
-)
 from airunner.gui.widgets.nodegraph.nodes.for_each_loop_node import (
     ForEachLoopNode,
 )
@@ -24,9 +18,6 @@ from airunner.gui.widgets.nodegraph.nodes.image_generation_node import (
 )
 from airunner.gui.widgets.nodegraph.nodes.image_request_node import (
     ImageRequestNode,
-)
-from airunner.gui.widgets.nodegraph.nodes.number_node import (
-    NumberNode,
 )
 from airunner.gui.widgets.nodegraph.nodes.prompt_node import (
     PromptNode,
@@ -79,14 +70,11 @@ from airunner.gui.widgets.nodegraph.nodes.llm_logic.llm_branch_node import (
 __all__ = [
     "AgentActionNode",
     "BaseWorkflowNode",
-    "BooleanNode",
-    "FloatNode",
     "ForEachLoopNode",
     "ForLoopNode",
     "ImageDisplayNode",
     "ImageGenerationNode",
     "ImageRequestNode",
-    "NumberNode",
     "PromptNode",
     "RandomNumberNode",
     "ReverseForEachLoopNode",
