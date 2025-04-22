@@ -5,11 +5,8 @@ from PySide6.QtWidgets import (
     QDialog,
     QFormLayout,
     QDialogButtonBox,
-    QSplitter,
-    QDockWidget,
     QListWidget,
     QPushButton,
-    QVBoxLayout,
     QWidget,
     QMenu,
     QInputDialog,
@@ -17,8 +14,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
 )
-from PySide6.QtCore import Qt, Slot, QMimeData
-from PySide6.QtGui import QDrag
+from PySide6.QtCore import Qt, Slot
 
 
 from airunner.enums import SignalCode
@@ -49,7 +45,6 @@ from airunner.gui.widgets.nodegraph.nodes import (
 )
 from airunner.gui.widgets.nodegraph.nodes.variable_getter_node import (
     VariableGetterNode,
-    create_variable_getter_node_class,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -65,7 +60,6 @@ from airunner.gui.widgets.nodegraph.variable_types import (
     get_variable_type_from_string,
 )
 
-# Import database models and managers
 from airunner.data.models.workflow import Workflow
 from airunner.data.models.workflow_node import WorkflowNode
 from airunner.data.models.workflow_connection import WorkflowConnection
@@ -78,22 +72,21 @@ IGNORED_NODE_PROPERTIES = {
     "visible",
     "width",
     "height",
-    "pos",  # Position is saved separately (pos_x, pos_y)
-    "border_color",  # Internal styling
-    "text_color",  # Internal styling
-    "type",  # Internal NodeGraphQt identifier (use node_identifier)
-    "type_",  # Alias for type, also internal
-    "id",  # Internal NodeGraphQt ID (use DB ID mapping)
-    "icon",  # Internal styling/display
-    "name",  # Name is set during node creation
-    "color",  # Internal styling (can be complex object)
-    "layout_direction",  # Internal layout hint
-    "port_deletion_allowed",  # Internal flag
-    "subgraph_session",  # Internal data for subgraphs
-    "outputs",  # Ports are handled via connections
-    "inputs",  # Ports are handled via connections
-    "custom",  # Avoid saving generic custom dict unless specifically needed and serializable
-    # Add any other internal NodeGraphQt properties you don't want persisted
+    "pos",
+    "border_color",
+    "text_color",
+    "type",
+    "type_",
+    "id",
+    "icon",
+    "name",
+    "color",
+    "layout_direction",
+    "port_deletion_allowed",
+    "subgraph_session",
+    "outputs",
+    "inputs",
+    "custom",
 }
 
 
@@ -107,22 +100,24 @@ class NodeGraphWidget(BaseWidget):
             SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL: self._on_node_execution_completed,
         }
         super().__init__(*args, **kwargs)
-
-        # Initialize the graph using the custom class
-        self.graph = CustomNodeGraph()  # Use CustomNodeGraph
-        self.graph.widget_ref = (
-            self  # Give graph a reference back to the widget
-        )
+        self.graph = CustomNodeGraph()
+        self.graph.widget_ref = self
+        self.viewer = self.graph.widget
         self._node_outputs = {}
-        self._pending_nodes = (
-            {}
-        )  # Keep track of nodes waiting for async completion
-
-        # Initialize variables list and tracking for registered variable nodes
+        self._pending_nodes = {}
         self.variables: list[Variable] = []
         self._registered_variable_node_classes = {}
+        self.nodes_palette: Optional[NodesPaletteWidget] = None
+        self._register_nodes()
+        self.initialize_context_menu()
+        self._initialize_ui()
+        self._create_variables_panel()
 
-        # Register node types
+    def _register_nodes(self):
+        self.nodes_palette = NodesPaletteWidget(
+            parent=None,
+            node_graph=self.graph,
+        )
         for node_cls in [
             AgentActionNode,
             BaseWorkflowNode,
@@ -149,25 +144,11 @@ class NodeGraphWidget(BaseWidget):
             LLMBranchNode,
         ]:
             self.graph.register_node(node_cls)
-        # We no longer register the base VariableGetterNode directly
-        # Variable node classes will be registered dynamically
 
-        self.nodes_palette = NodesPaletteWidget(
-            parent=None,
-            node_graph=self.graph,
-        )
-
-        self.initialize_context_menu()
-
-        # Get the viewer
-        self.viewer = self.graph.widget
-
+    def _initialize_ui(self):
         self.ui.splitter.setSizes([200, 700, 200])
         self.ui.graph.layout().addWidget(self.viewer)
         self.ui.palette.layout().addWidget(self.nodes_palette)
-
-        # Create and add the variables panel
-        self._create_variables_panel()
 
     # --- Variables Panel ---
 
@@ -204,10 +185,7 @@ class NodeGraphWidget(BaseWidget):
                 Qt.UserRole, var.name
             )  # Store variable name in item data
             color = get_variable_color(var.var_type)
-            item.setForeground(color)  # Set text color
-            # Optionally set an icon color indicator
-            # icon = QIcon(...) # Create an icon with the color
-            # item.setIcon(icon)
+            item.setForeground(color)
             self.variables_list_widget.addItem(item)
 
     def _find_variable_by_name(self, name: str) -> Variable | None:
@@ -486,9 +464,6 @@ class NodeGraphWidget(BaseWidget):
         Variables are registered as node classes in the graph, so they can be
         dragged from the node palette just like any other node.
         """
-        # No need for custom drag-and-drop implementation anymore
-        # The standard NodeGraphQt drag-and-drop is used via the node palette
-        pass
 
     def _register_variable_node(self, variable: Variable):
         """
@@ -715,11 +690,199 @@ class NodeGraphWidget(BaseWidget):
 
     @Slot()
     def on_save_workflow(self):
-        self.save_workflow(3)
+        """Shows a dialog to save the workflow, allowing creation of a new one or overwriting an existing one."""
+        workflows = Workflow.objects.all()
+        workflow_map = {
+            wf.name: wf for wf in workflows
+        }  # Map name to workflow object
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Save Workflow")
+        layout = QFormLayout(dialog)
+
+        # Combo box to choose action
+        action_combo = QComboBox(dialog)
+        action_combo.addItem("Create New Workflow", "new")
+        action_combo.addItem("Overwrite Existing Workflow", "existing")
+
+        # Workflow Name input (enabled only for new)
+        name_input = QLineEdit(dialog)
+        name_input.setPlaceholderText(
+            "Enter a unique name for the new workflow"
+        )
+
+        # Workflow Description input
+        description_input = QLineEdit(dialog)
+        description_input.setPlaceholderText(
+            "(Optional) Describe the workflow"
+        )
+
+        # Combo box for existing workflows (enabled only for overwrite)
+        existing_combo = QComboBox(dialog)
+        existing_combo.addItem("-- Select Workflow --", -1)  # Placeholder
+        for wf in workflows:
+            existing_combo.addItem(f"{wf.name} (ID: {wf.id})", wf.id)
+
+        # Add widgets to layout
+        layout.addRow("Action:", action_combo)
+        layout.addRow("Name:", name_input)
+        layout.addRow("Existing Workflow:", existing_combo)
+        layout.addRow("Description:", description_input)
+
+        # Dialog buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Save | QDialogButtonBox.Cancel, dialog
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        # Initial state and signal connection
+        def update_dialog_state():
+            action = action_combo.currentData()
+            is_new = action == "new"
+            name_input.setEnabled(is_new)
+            existing_combo.setEnabled(not is_new)
+            if not is_new and existing_combo.currentIndex() > 0:
+                selected_id = existing_combo.currentData()
+                selected_wf = next(
+                    (wf for wf in workflows if wf.id == selected_id), None
+                )
+                if selected_wf:
+                    name_input.setText(
+                        selected_wf.name
+                    )  # Show name but disable editing
+                    description_input.setText(selected_wf.description or "")
+                else:
+                    name_input.clear()
+                    description_input.clear()
+            elif is_new:
+                name_input.clear()  # Clear name for new entry
+                description_input.clear()
+
+        action_combo.currentIndexChanged.connect(update_dialog_state)
+        existing_combo.currentIndexChanged.connect(
+            update_dialog_state
+        )  # Update description on selection change
+        update_dialog_state()  # Set initial state
+
+        if dialog.exec():
+            action = action_combo.currentData()
+            name = name_input.text().strip()
+            description = description_input.text().strip()
+
+            if action == "new":
+                if not name:
+                    QMessageBox.warning(
+                        self,
+                        "Save Workflow",
+                        "Workflow name cannot be empty for a new workflow.",
+                    )
+                    return
+
+                # Check if name already exists
+                if name in workflow_map:
+                    reply = QMessageBox.question(
+                        self,
+                        "Workflow Exists",
+                        f"A workflow named '{name}' already exists (ID: {workflow_map[name].id}). Do you want to overwrite it?",
+                        QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+                        QMessageBox.Cancel,
+                    )
+                    if reply == QMessageBox.Yes:
+                        # Overwrite existing
+                        self._perform_save(
+                            workflow_map[name].id, name, description
+                        )
+                    elif reply == QMessageBox.Cancel:
+                        return  # User cancelled
+                    else:
+                        QMessageBox.information(
+                            self,
+                            "Save Workflow",
+                            "Save cancelled. Please choose a different name.",
+                        )
+                        return
+                else:
+                    # Create and save new
+                    self._create_and_save_workflow(name, description)
+
+            elif action == "existing":
+                selected_id = existing_combo.currentData()
+                if selected_id == -1:
+                    QMessageBox.warning(
+                        self,
+                        "Save Workflow",
+                        "Please select an existing workflow to overwrite.",
+                    )
+                    return
+                # Save to existing (name is taken from the selected workflow, description is updated)
+                selected_wf = next(
+                    (wf for wf in workflows if wf.id == selected_id), None
+                )
+                if selected_wf:
+                    self._perform_save(
+                        selected_id, selected_wf.name, description
+                    )
+                else:
+                    QMessageBox.critical(
+                        self, "Save Workflow", "Selected workflow not found."
+                    )
 
     @Slot()
     def on_load_workflow(self):
-        self.load_workflow(3)
+        """Shows a dialog to select and load an existing workflow."""
+        try:
+            workflows = Workflow.objects.all()
+            if not workflows:
+                QMessageBox.information(
+                    self, "Load Workflow", "No saved workflows found."
+                )
+                return
+        except Exception as e:
+            self.logger.error(f"Error fetching workflows: {e}", exc_info=True)
+            QMessageBox.critical(
+                self, "Load Workflow", f"Error fetching workflows: {e}"
+            )
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Load Workflow")
+        layout = QFormLayout(dialog)
+
+        combo = QComboBox(dialog)
+        combo.addItem("-- Select Workflow --", -1)  # Placeholder item
+        for wf in workflows:
+            combo.addItem(
+                f"{wf.name} (ID: {wf.id})", wf.id
+            )  # Display name and ID, store ID
+
+        layout.addRow("Workflow:", combo)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Open | QDialogButtonBox.Cancel, dialog
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        if dialog.exec():
+            selected_id = combo.currentData()
+            if selected_id != -1:
+                try:
+                    self._perform_load(selected_id)
+                except Exception as e:
+                    self.logger.error(
+                        f"Error loading workflow ID {selected_id}: {e}",
+                        exc_info=True,
+                    )
+                    QMessageBox.critical(
+                        self, "Load Workflow", f"Failed to load workflow: {e}"
+                    )
+            else:
+                QMessageBox.warning(
+                    self, "Load Workflow", "No workflow selected."
+                )
 
     @Slot()
     def on_edit_workflow(self):
@@ -813,36 +976,104 @@ class NodeGraphWidget(BaseWidget):
 
     def delete_node_action(self, node):
         """Deletes the selected node from the graph."""
-        # Allow deleting any node, not just BaseWorkflowNode
-        # if not isinstance(node, BaseWorkflowNode):
-        #     return
         self.graph.delete_node(node)  # Use graph's delete method
 
     # --- Database Interaction ---
-    def save_workflow(self, workflow_id: int, description: str = ""):
-        """Saves the current node graph state, including variables, to the database."""  # Updated docstring
-        self.logger.info(f"Saving workflow '{workflow_id}'...")
-        workflow = self._find_or_create_workflow(workflow_id, description)
+    def _perform_save(
+        self, workflow_id: int, name: str, description: str = ""
+    ):
+        """Saves the current node graph state, including variables, to the specified workflow ID."""
+        self.logger.info(f"Saving workflow '{name}' (ID: {workflow_id})...")
+        workflow = self._find_workflow_by_id(workflow_id)
         if not workflow:
-            self.logger.error("Failed to create or retrieve workflow.")
+            self.logger.error(
+                f"Workflow with ID {workflow_id} not found for saving."
+            )
+            QMessageBox.critical(
+                self, "Save Error", f"Workflow ID {workflow_id} not found."
+            )
             return
+
+        # Update name and description before clearing data
+        workflow.name = name
+        workflow.description = description
+        try:
+            workflow.save()
+            self.logger.info(
+                f"Updated metadata for workflow '{name}' (ID: {workflow_id})."
+            )
+        except Exception as e:
+            self.logger.error(
+                f"Error updating workflow metadata for ID {workflow_id}: {e}",
+                exc_info=True,
+            )
+            QMessageBox.critical(
+                self, "Save Error", f"Could not update workflow metadata: {e}"
+            )
+            return  # Stop if we can't even save the metadata
+
+        # Now clear existing data and save new state
+        self._clear_existing_workflow_data(workflow)
         self._save_variables(workflow)
         nodes_map = self._save_nodes(workflow)
         self._save_connections(workflow, nodes_map)
-        self.logger.info(f"Workflow '{workflow_id}' saved successfully.")
+        self.logger.info(
+            f"Workflow '{name}' (ID: {workflow_id}) saved successfully."
+        )
+        QMessageBox.information(
+            self, "Save Workflow", f"Workflow '{name}' saved successfully."
+        )
+
+    def _create_and_save_workflow(self, name: str, description: str):
+        """Creates a new workflow record and then saves the current graph to it."""
+        self.logger.info(
+            f"Attempting to create and save new workflow: '{name}'"
+        )
+        try:
+            # Ensure name uniqueness again just before creation (though dialog should handle it)
+            existing = Workflow.objects.filter_by_first(name=name)
+            if existing:
+                self.logger.warning(
+                    f"Workflow '{name}' already exists (ID: {existing.id}). Aborting creation."
+                )
+                QMessageBox.warning(
+                    self,
+                    "Save Error",
+                    f"Workflow '{name}' already exists. Save aborted.",
+                )
+                return
+
+            workflow = self._create_workflow(name, description)
+            if workflow:
+                self.logger.info(
+                    f"Created new workflow '{name}' with ID {workflow.id}"
+                )
+                # Now save the graph data to this new workflow
+                self._perform_save(workflow.id, name, description)
+            else:
+                # _create_workflow already logs error
+                QMessageBox.critical(
+                    self,
+                    "Save Error",
+                    "Failed to create the new workflow record in the database.",
+                )
+        except Exception as e:
+            self.logger.error(
+                f"Error during creation/saving of new workflow '{name}': {e}",
+                exc_info=True,
+            )
+            QMessageBox.critical(
+                self, "Save Error", f"An unexpected error occurred: {e}"
+            )
 
     def _find_or_create_workflow(
         self,
         workflow_id: int,
-        name: Optional[str] = None,
+        name: Optional[str] = None,  # Name is now primarily handled by dialogs
         description: Optional[str] = None,
     ) -> Optional[Workflow]:
-        """Find an existing workflow or create a new one."""
+        """Find an existing workflow. Creation is handled by _create_and_save_workflow."""
         workflow = self._find_workflow_by_id(workflow_id)
-        if workflow:
-            self._clear_existing_workflow_data(workflow)
-        else:
-            workflow = self._create_workflow(name, description)
         return workflow
 
     def _find_workflow_by_id(self, workflow_id: int) -> Optional[Workflow]:
@@ -1026,6 +1257,43 @@ class NodeGraphWidget(BaseWidget):
                 self.logger.warning(
                     f"Skipping connection due to missing node DB ID mapping: {out_port.node().name()}.{out_port.name()} -> {in_port.node().name()}.{in_port.name()}"
                 )
+
+    def _perform_load(self, workflow_id):
+        """Loads a workflow, including variables, from the database."""
+        self.logger.info(f"Loading workflow ID '{workflow_id}'...")
+
+        try:
+            workflow, db_nodes, db_connections = self._find_workflow_and_data(
+                workflow_id=workflow_id
+            )
+            if (
+                not workflow
+            ):  # Should be caught by _find_workflow_and_data assertion, but double check
+                raise ValueError(f"Workflow ID {workflow_id} not found.")
+
+        except Exception as e:
+            self.logger.error(
+                f"Failed to find or fetch data for workflow ID {workflow_id}: {e}",
+                exc_info=True,
+            )
+            # Raise the exception to be caught by the caller (on_load_workflow) for user message
+            raise  # Re-raise the exception
+
+        # Proceed with loading if data fetch was successful
+        self._clear_graph_and_variables()
+        self._load_variables(workflow)  # Load variables first
+
+        if db_nodes is not None:
+            node_map = self._load_workflow_nodes(db_nodes)
+            self._load_workflow_connections(db_connections, node_map)
+            self.logger.info(
+                f"Workflow '{workflow.name}' (ID: {workflow_id}) loaded successfully."
+            )
+        else:
+            self.logger.warning(
+                f"No nodes found for workflow ID {workflow_id}, graph will be empty."
+            )
+            # No critical error, just an empty graph was loaded
 
     def load_workflow(self, workflow_id):
         """Loads a workflow, including variables, from the database."""
@@ -1361,9 +1629,6 @@ class NodeGraphWidget(BaseWidget):
                     f"    Error restoring property '{prop_name}' for node {node_instance.name()}: {e}"
                 )
 
-        # No need for separate success message here, handled per property
-        # self.logger.info(f"  Finished restoring properties for {node_instance.name()}.")
-
     # --- End Database Interaction ---
 
     def execute_workflow(self, initial_input_data=None):
@@ -1376,9 +1641,7 @@ class NodeGraphWidget(BaseWidget):
         )
 
         processed_count = 0
-        max_steps = (
-            len(node_map) * 10
-        )  # Increased safety limit to allow for retries of pending nodes
+        max_steps = len(node_map) * 10
 
         while execution_queue and processed_count < max_steps:
             node_id = execution_queue.pop(0)
@@ -1457,8 +1720,6 @@ class NodeGraphWidget(BaseWidget):
         for node_id, node in node_map.items():
             if isinstance(node, StartNode):
                 start_node_ids.append(node_id)
-                # --- FIX: Do NOT mark start node as executed here. ---
-                # executed_nodes.add(node_id)
 
         # Add start nodes to the front of the queue
         execution_queue.extend(start_node_ids)
@@ -1483,11 +1744,22 @@ class NodeGraphWidget(BaseWidget):
                 source_port_name = source_port.name()
                 # If the source node hasn't been executed, do it now
                 if source_node_id not in node_outputs:
-                    self.logger.info(
-                        f"  For input '{port_name}', executing upstream node '{source_node.name()}' (ID: {source_node_id}) to get value."
+                    self.logger.warning(
+                        f"  Source node '{source_node.name()}' for input '{port_name}' not executed yet. Attempting to execute it recursively."
                     )
-                    output = source_node.execute({})
-                    node_outputs[source_node_id] = output
+                    source_input_data = self._prepare_input_data(
+                        source_node, node_outputs, initial_input_data
+                    )
+                    _, source_output_data = self._execute_node(
+                        source_node, source_input_data, node_outputs
+                    )
+                    if source_output_data:
+                        node_outputs[source_node_id] = source_output_data
+                    else:
+                        self.logger.error(
+                            f"  Recursive execution of source node '{source_node.name()}' failed or produced no output."
+                        )
+
                 # Now get the value
                 if (
                     source_node_id in node_outputs
@@ -1496,12 +1768,15 @@ class NodeGraphWidget(BaseWidget):
                     current_input_data[port_name] = node_outputs[
                         source_node_id
                     ][source_port_name]
+                    self.logger.info(
+                        f"  Input '{port_name}' received data from '{source_node.name()}.{source_port_name}'"
+                    )
                 else:
+                    current_input_data[port_name] = None
                     self.logger.warning(
                         f"  Input '{port_name}' missing data from source '{source_node.name()}.{source_port_name}'. Using None."
                     )
                     current_input_data[port_name] = None
-        # ...existing code for initial data...
         for port_name in current_node.inputs():
             if (
                 port_name != current_node.EXEC_IN_PORT_NAME
@@ -1581,7 +1856,7 @@ class NodeGraphWidget(BaseWidget):
         current_node,
         triggered_exec_port_name,
         execution_queue,
-        executed_nodes,  # Note: This parameter is no longer strictly needed here, but kept for consistency
+        executed_nodes,
     ):
         """Queue the next nodes based on the triggered execution port."""
         if (
@@ -1594,15 +1869,11 @@ class NodeGraphWidget(BaseWidget):
             for next_port in connected_exec_inputs:
                 next_node = next_port.node()
                 next_node_id = next_node.id
-                # --- FIX: Only check if it's already *in the queue* to avoid duplicates,
-                #          but don't check executed_nodes here.
-                #          The check for already executed nodes happens at the start of the main loop.
                 if next_node_id not in execution_queue:
                     self.logger.info(
                         f"  Queueing next node: {next_node.name()} (ID: {next_node_id}) via port {next_port.name()}"
                     )
                     execution_queue.append(next_node_id)
-                    # --- FIX: REMOVED this line: executed_nodes.add(next_node_id) ---
                 else:
                     self.logger.info(
                         f"  Node already in queue: {next_node.name()} (ID: {next_node_id})"
