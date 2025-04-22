@@ -1,7 +1,9 @@
-from typing import Dict, Optional, Any, List
+from typing import Dict
+
+# Import QTimer
+from PySide6.QtCore import QTimer
 
 from NodeGraphQt.constants import NodePropWidgetEnum
-from NodeGraphQt.base.port import Port
 
 from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
     BaseWorkflowNode,
@@ -190,13 +192,16 @@ class SetNode(BaseWorkflowNode):
                     )
                     self._on_variable_connected(connected_node)
 
-    def _on_variable_connected(self, variable_node):
+    def _on_variable_connected(
+        self, variable_node, variable
+    ):  # Added variable parameter
         """Process a connection to a variable node.
 
         Args:
             variable_node: The node providing the variable information
+            variable: The actual Variable object from the graph context
         """
-        # Extract variable information
+        # Extract variable information from the node
         self.variable_name = variable_node.variable_name
         self.variable_type = variable_node.variable_type
 
@@ -215,17 +220,10 @@ class SetNode(BaseWorkflowNode):
             )
             self.set_color(color.red(), color.green(), color.blue())
 
-        # Get the variable object to update our value
-        if self.graph and hasattr(self.graph, "widget_ref"):
-            variable = self.graph.widget_ref._find_variable_by_name(
-                self.variable_name
-            )
-            if variable:
-                # Update the property widget
-                self._setup_property_widget(variable)
-                self.set_property(
-                    self.value_property_name, variable.get_value()
-                )
+        # Update the property widget using the passed variable object
+        self._setup_property_widget(variable)
+        # Set the property value using the actual variable's current value
+        self.set_property(self.value_property_name, variable.get_value())
 
         # Update the view
         self.update()
@@ -281,8 +279,7 @@ class SetNode(BaseWorkflowNode):
                             widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
                         )
             except Exception as e:
-                if hasattr(self, "logger"):
-                    self.logger.error(f"Error resetting property: {e}")
+                self.logger.error(f"Error resetting property: {e}")
 
         # Update the view
         self.update()
@@ -290,29 +287,46 @@ class SetNode(BaseWorkflowNode):
     def _setup_property_widget(self, variable):
         """
         Set up the appropriate property widget based on the variable type.
+        Uses QTimer.singleShot to defer creation after deletion.
 
         Args:
             variable: The variable object to set up the widget for
         """
-        # Fix: safely handle the property widget setup
         try:
-            # Get all current properties using our helper method
-            props = self._get_properties()
+            # Check if the property exists using the node's own method
+            if self.has_property(self.value_property_name):
+                self.logger.debug(
+                    f"Property '{self.value_property_name}' exists, deleting."
+                )
+                # Use the built-in delete_property method
+                self.delete_property(self.value_property_name)
+                # Defer the creation to the next event loop cycle
+                QTimer.singleShot(
+                    0, lambda: self._create_property_for_variable(variable)
+                )
+            else:
+                self.logger.debug(
+                    f"Property '{self.value_property_name}' does not exist, creating directly."
+                )
+                # If it doesn't exist, create it immediately
+                self._create_property_for_variable(variable)
 
-            # Only remove if it exists
-            if self.value_property_name in props or (
-                hasattr(self, "view")
-                and hasattr(self.view, "properties")
-                and self.value_property_name in self.view.properties
-            ):
-                # Remove the existing property
-                if hasattr(self, "view") and hasattr(self.view, "properties"):
-                    if self.value_property_name in self.view.properties:
-                        self.view.properties.pop(
-                            self.value_property_name, None
-                        )
+        except Exception as e:
+            # Log error if property setup fails
+            if hasattr(self, "logger"):
+                import traceback
 
-            # Set up the appropriate widget type based on variable type
+                self.logger.error(
+                    f"Error in _setup_property_widget: {e}\n{traceback.format_exc()}"
+                )
+
+    def _create_property_for_variable(self, variable):
+        """Creates the property based on the variable type."""
+        try:
+            self.logger.debug(
+                f"Creating property '{self.value_property_name}' for type {variable.var_type}"
+            )
+            # Now create the new property based on the variable type
             if variable.var_type == VariableType.BOOLEAN:
                 self.create_property(
                     self.value_property_name,
@@ -348,10 +362,20 @@ class SetNode(BaseWorkflowNode):
                     widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
                     tab="Variable",
                 )
+            self.logger.debug(
+                f"Successfully created property: {self.value_property_name}"
+            )
+            # Explicitly update the view after property creation if needed
+            self.update()
+
         except Exception as e:
-            # Log error if property setup fails
+            # Log error if property creation fails
             if hasattr(self, "logger"):
-                self.logger.error(f"Error setting up property widget: {e}")
+                import traceback
+
+                self.logger.error(
+                    f"Error in _create_property_for_variable: {e}\n{traceback.format_exc()}"
+                )
 
     def on_property_changed(self, prop_name):
         """Called when a property value has changed in the properties bin."""
@@ -552,6 +576,7 @@ class SetNode(BaseWorkflowNode):
             in_port: input port (our port).
             out_port: connected output port.
         """
+        # Call super method first
         super().on_input_connected(in_port, out_port)
 
         # Handle connection to the variable input port
@@ -565,7 +590,24 @@ class SetNode(BaseWorkflowNode):
                 self.logger.debug(
                     f"Input connected callback: Variable {connected_node.variable_name}"
                 )
-                self._on_variable_connected(connected_node)
+                # Find the actual variable object
+                if self.graph and hasattr(self.graph, "widget_ref"):
+                    variable = self.graph.widget_ref._find_variable_by_name(
+                        connected_node.variable_name
+                    )
+                    if variable:
+                        # Pass both the connected node and the actual variable object
+                        self._on_variable_connected(
+                            variable_node=connected_node, variable=variable
+                        )
+                    else:
+                        self.logger.warning(
+                            f"Variable '{connected_node.variable_name}' not found in graph context."
+                        )
+                else:
+                    self.logger.warning(
+                        "Graph or widget_ref not available to find variable."
+                    )
 
     def on_input_disconnected(self, in_port, out_port):
         """Called when an input port has been disconnected.
