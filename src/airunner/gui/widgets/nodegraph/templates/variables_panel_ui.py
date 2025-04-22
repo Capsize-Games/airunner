@@ -25,7 +25,7 @@ class Ui_variables_panel(object):
         variables_panel.resize(400, 300)
         self.gridLayout = QGridLayout(variables_panel)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout.setContentsMargins(0, 0, 10, 0)
         self.variables_list_widget = QListWidget(variables_panel)
         self.variables_list_widget.setObjectName(u"variables_list_widget")
         self.variables_list_widget.setDragEnabled(True)
