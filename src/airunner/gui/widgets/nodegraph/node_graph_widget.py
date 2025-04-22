@@ -33,6 +33,7 @@ from airunner.gui.widgets.nodegraph.nodes import (
     LoraNode,
     EmbeddingNode,
     LLMBranchNode,
+    SetNode,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -86,9 +87,9 @@ class NodeGraphWidget(BaseWidget):
         self.viewer = self.graph.widget
         self._node_outputs = {}
         self._pending_nodes = {}
-        self.nodes_palette: Optional[NodesPaletteWidget] = None
+        self._nodes_palette: Optional[NodesPaletteWidget] = None
         self._register_nodes()
-        self.initialize_context_menu()
+        self._initialize_context_menu()
         self._register_graph()
 
     @Slot()
@@ -314,7 +315,7 @@ class NodeGraphWidget(BaseWidget):
         self.logger.info("Workflow graph and variables cleared.")
 
     def _register_nodes(self):
-        self.nodes_palette = NodesPaletteWidget(
+        self._nodes_palette = NodesPaletteWidget(
             parent=None,
             node_graph=self.graph,
         )
@@ -339,6 +340,7 @@ class NodeGraphWidget(BaseWidget):
             LoraNode,
             EmbeddingNode,
             LLMBranchNode,
+            SetNode,
         ]:
             self.graph.register_node(node_cls)
 
@@ -351,7 +353,7 @@ class NodeGraphWidget(BaseWidget):
             SignalCode.REGISTER_GRAPH_SIGNAL,
             {
                 "graph": self.graph,
-                "nodes_palette": self.nodes_palette,
+                "nodes_palette": self._nodes_palette,
                 "callback": lambda: self._finalize_register_graph(),
             },
         )
@@ -366,9 +368,9 @@ class NodeGraphWidget(BaseWidget):
     def _initialize_ui(self):
         self.ui.splitter.setSizes([200, 700, 200])
         self.ui.graph.layout().addWidget(self.viewer)
-        self.ui.palette.layout().addWidget(self.nodes_palette)
+        self.ui.palette.layout().addWidget(self._nodes_palette)
 
-    def initialize_context_menu(self):
+    def _initialize_context_menu(self):
         context_menu = self.graph.get_context_menu("nodes")
         registered_nodes = self.graph.registered_nodes()
         for node_type in registered_nodes:
