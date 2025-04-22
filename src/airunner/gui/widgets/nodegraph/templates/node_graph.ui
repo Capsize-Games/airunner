@@ -26,6 +26,9 @@
    <property name="bottomMargin">
     <number>10</number>
    </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
    <item row="0" column="0">
     <widget class="QWidget" name="widget" native="true">
      <property name="sizePolicy">
@@ -46,6 +49,12 @@
       </property>
       <property name="bottomMargin">
        <number>10</number>
+      </property>
+      <property name="horizontalSpacing">
+       <number>5</number>
+      </property>
+      <property name="verticalSpacing">
+       <number>0</number>
       </property>
       <item row="0" column="1">
        <widget class="QPushButton" name="pause_button">
@@ -215,6 +224,9 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
+       <property name="spacing">
+        <number>0</number>
+       </property>
       </layout>
      </widget>
      <widget class="QWidget" name="graph" native="true">
@@ -231,6 +243,9 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
+       <property name="spacing">
+        <number>0</number>
+       </property>
       </layout>
      </widget>
      <widget class="QWidget" name="palette" native="true">
@@ -245,6 +260,9 @@
         <number>0</number>
        </property>
        <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="spacing">
         <number>0</number>
        </property>
       </layout>
