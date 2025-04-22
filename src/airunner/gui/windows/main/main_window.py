@@ -157,6 +157,14 @@ class MainWindow(
         ("message-square", "actionDiscord"),
         ("download", "actionImport_image"),
         ("upload", "actionExport_image_button"),
+        ("codesandbox", "menuWorkflow"),
+        ("trash-2", "workflow_actionClear"),
+        ("edit", "workflow_actionEdit"),
+        ("folder", "workflow_actionOpen"),
+        ("pause-circle", "workflow_actionPause"),
+        ("play", "workflow_actionRun"),
+        ("save", "workflow_actionSave"),
+        ("stop-circle", "workflow_actionStop"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -760,6 +768,28 @@ class MainWindow(
 
         self.ui.setupUi(self)
 
+        self.ui.workflow_actionClear.triggered.connect(
+            self.ui.graph.on_run_workflow
+        )
+        self.ui.workflow_actionEdit.triggered.connect(
+            self.ui.graph.on_edit_workflow
+        )
+        self.ui.workflow_actionOpen.triggered.connect(
+            self.ui.graph.on_load_workflow
+        )
+        self.ui.workflow_actionPause.triggered.connect(
+            self.ui.graph.on_pause_workflow
+        )
+        self.ui.workflow_actionRun.triggered.connect(
+            self.ui.graph.on_run_workflow
+        )
+        self.ui.workflow_actionSave.triggered.connect(
+            self.ui.graph.on_save_workflow
+        )
+        self.ui.workflow_actionStop.triggered.connect(
+            self.ui.graph.on_stop_workflow
+        )
+
         self.icon_manager = IconManager(self.icons, self.ui)
 
         if not AIRUNNER_ART_ENABLED:
@@ -787,9 +817,6 @@ class MainWindow(
         self.statusBar().addPermanentWidget(self.status_widget)
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
         self.initialize_widget_elements()
-
-        self.ui.actionUndo.setEnabled(False)
-        self.ui.actionRedo.setEnabled(False)
         self._load_plugins()
         self.emit_signal(
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL,
