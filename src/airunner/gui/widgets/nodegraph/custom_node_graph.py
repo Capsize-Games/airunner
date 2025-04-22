@@ -1,13 +1,12 @@
 from NodeGraphQt import (
     NodeGraph,
     PropertiesBinWidget,
-    BaseNode,  # Added BaseNode import
 )
-from PySide6.QtCore import Qt, QMimeData, QPoint
-from PySide6.QtWidgets import QApplication  # Added QApplication import
+from PySide6.QtCore import Qt
 
-from NodeGraphQt.constants import ViewerEnum
 
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.widgets.nodegraph.nodes.variable_getter_node import (
     VariableGetterNode,
 )
@@ -16,26 +15,17 @@ from airunner.gui.widgets.nodegraph.nodes.variable_getter_node import (
 VARIABLE_MIME_TYPE = "application/x-airunner-variable"
 
 
-class CustomNodeGraph(NodeGraph):
+class CustomNodeGraph(MediatorMixin, SettingsMixin, NodeGraph):
     """Custom NodeGraph class to handle specific events like variable drops."""
 
-    # Add a reference to the parent widget if needed for accessing variables
-    widget_ref = None  # Set this from NodeGraphWidget.__init__
+    widget_ref = None
 
     def __init__(self, parent=None):
         super(CustomNodeGraph, self).__init__(parent)
-        # properties bin widget.
         self._prop_bin = PropertiesBinWidget(node_graph=self)
         self._prop_bin.setWindowFlags(Qt.WindowType.Tool)
-        # wire signal.
         self.node_double_clicked.connect(self.display_prop_bin)
-        self.port_connected.connect(
-            self._on_port_connected
-        )  # Enable the port connected signal
-        # Remove the data_dropped connection as we'll handle drops via events
-        # self.data_dropped.connect(self._on_node_data_dropped)
-
-        # Enable drop events on the viewer widget
+        self.port_connected.connect(self._on_port_connected)
         self.viewer().setAcceptDrops(True)
 
     def display_prop_bin(self, node):
@@ -70,7 +60,7 @@ class CustomNodeGraph(NodeGraph):
                 if target_node.has_property(port_name):
                     target_node.set_property(port_name, value)
                     if hasattr(self, "widget_ref") and self.widget_ref:
-                        self.widget_ref.logger.info(
+                        self.logger.info(
                             f"Set property '{port_name}' on node '{target_node.name()}' to value '{value}' from variable '{var_node.variable_name}'"
                         )
 
@@ -131,33 +121,29 @@ class CustomNodeGraph(NodeGraph):
                             getter_node.set_variable(
                                 variable.name, variable.var_type
                             )
-                            self.widget_ref.logger.info(  # Use logger from widget_ref
+                            self.logger.info(
                                 f"Created Getter node for variable: {variable.name} at {pos.x()},{pos.y()}"
                             )
                         else:
-                            self.widget_ref.logger.error(  # Use logger from widget_ref
+                            self.logger.error(
                                 f"Failed to create node with identifier: {node_identifier}"
                             )
                     except Exception as e:
-                        self.widget_ref.logger.error(  # Use logger from widget_ref
+                        self.logger.error(
                             f"Error creating VariableGetterNode: {e}",
                             exc_info=True,
                         )
 
                 else:
                     if self.widget_ref:
-                        self.widget_ref.logger.warning(  # Use logger from widget_ref
+                        self.logger.warning(
                             f"Dropped variable '{variable_name}' not found."
                         )
             else:
                 print(
                     "Error: Cannot access variable list from graph (widget_ref missing or invalid)."
-                )  # Keep print for critical failure
+                )
 
         else:
             # Important: Pass unhandled events to the base class for default node dropping etc.
             super().dropEvent(event)
-
-    # Removed _on_node_data_dropped as it's replaced by dropEvent override
-    # def _on_node_data_dropped(self, mime_data: QMimeData, pos: QPoint):
-    #     ...
