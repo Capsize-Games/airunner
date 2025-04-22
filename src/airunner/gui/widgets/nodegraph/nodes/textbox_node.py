@@ -32,6 +32,31 @@ class TextboxNode(BaseWorkflowNode):
 
         return {"prompt": new_prompt}
 
+    def on_input_connected(self, in_port, out_port):
+        """Called when an input port is connected to an output port."""
+        super().on_input_connected(in_port, out_port)
+
+        # When something connects to our prompt input, immediately request data from it
+        if in_port == self.in_prompt_port:
+            # Get the connected node
+            connected_node = out_port.node()
+            if connected_node:
+                # Get the output data from the connected node
+                out_data = connected_node.execute({})
+
+                # If there's data in the expected format, update our textbox right away
+                if (
+                    "value" in out_data
+                ):  # Variable node outputs use "value" key
+                    self.set_property("prompt", out_data["value"])
+                elif (
+                    "prompt" in out_data
+                ):  # Other nodes might use "prompt" key
+                    self.set_property("prompt", out_data["prompt"])
+            else:
+                print("X" * 100)
+                print("FAILED TO GET CONNECTED NODE")
+
     def add_multiline_textbox(
         self,
         name,
