@@ -1,0 +1,32 @@
+services:
+  airunner_build_runtime_50xx_ci:
+    container_name: airunner_build_runtime_50xx_ci
+    image: ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_50xx_ci
+    build:
+      context: ../../..
+      dockerfile: package/prod/50xx/Dockerfile.ci_build_50xx_runtime
+      args:
+        - INSTALL_XCB_CURSOR=1
+        - HOST_UID=${HOST_UID:-1000}
+        - HOST_GID=${HOST_GID:-1000}
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    stdin_open: true
+    tty: true
+    working_dir: /app
+    runtime: nvidia
+    ports:
+      - "8000:8000"
+    ipc: host
+    environment:
+      - DEV_ENV=${DEV_ENV:-0}
+      - AIRUNNER_ENVIRONMENT=${AIRUNNER_ENVIRONMENT:-prod}
+      - HOST_UID=${HOST_UID:-1000}
+      - HOST_GID=${HOST_GID:-1000}
+      - PYTHONUSERBASE=/home/appuser/.local/share/airunner/python
+      - TORCH_HOME=/home/appuser/.local/share/airunner/torch/hub
+      - HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface
+      - HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface
+      - PIP_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/pip
+    # Add volume mount for dist directory to allow build artifacts to be accessible
+    volumes:
+      - ../../../dist:/app/dist:rw,z
