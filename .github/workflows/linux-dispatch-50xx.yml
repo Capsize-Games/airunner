@@ -1,0 +1,51 @@
+name: Linux 50xx Build
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux_ci
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  buildLinux:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set environment variables for CI mode
+        run: |
+          echo "HOST_UID=$(id -u)" >> $GITHUB_ENV
+          echo "HOST_GID=$(id -g)" >> $GITHUB_ENV
+          echo "CI_MODE=1" >> $GITHUB_ENV
+
+      - name: Create .env file for container-isolated builds
+        run: |
+          echo "HOST_UID=$(id -u)" > .env
+          echo "HOST_GID=$(id -g)" >> .env
+          # Use paths inside the container instead of host paths
+          echo "AIRUNNER_HOME_DIR=/home/appuser/.local/share/airunner" >> .env
+
+      - name: Build Linux Runtime with CI mode (no local mounts)
+        env:
+          DEV_ENV: "0"
+        run: |
+          src/airunner/bin/docker.sh --ci --50xx build_base
+          src/airunner/bin/docker.sh --ci --50xx build_runtime
+      
+      - name: Push Linux Runtime to It
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          DEV_ENV: "0"
+        run: |
+          src/airunner/bin/docker.sh --ci --50xx build_package

@@ -14,75 +14,7 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="0">
-    <widget class="QGroupBox" name="groupBox">
-     <property name="font">
-      <font>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="title">
-      <string>Stable Diffusion 1.5: Older art model</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_2">
-      <item row="0" column="0">
-       <widget class="QScrollArea" name="scrollArea">
-        <property name="widgetResizable">
-         <bool>true</bool>
-        </property>
-        <widget class="QWidget" name="scrollAreaWidgetContents">
-         <property name="geometry">
-          <rect>
-           <x>0</x>
-           <y>0</y>
-           <width>571</width>
-           <height>68</height>
-          </rect>
-         </property>
-        </widget>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="QGroupBox" name="groupBox_4">
-     <property name="font">
-      <font>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="title">
-      <string>SpeechT5: Required for Text-to-Speech</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_5">
-      <item row="0" column="0">
-       <widget class="QScrollArea" name="scrollArea_4">
-        <property name="widgetResizable">
-         <bool>true</bool>
-        </property>
-        <widget class="QWidget" name="scrollAreaWidgetContents_4">
-         <property name="geometry">
-          <rect>
-           <x>0</x>
-           <y>0</y>
-           <width>571</width>
-           <height>68</height>
-          </rect>
-         </property>
-        </widget>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="7" column="0">
+   <item row="8" column="0">
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Orientation::Vertical</enum>
@@ -95,161 +27,210 @@
      </property>
     </spacer>
    </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="label">
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="page_title">
+       <property name="font">
+        <font>
+         <pointsize>11</pointsize>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Choose models to download</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="total_size_label">
+       <property name="text">
+        <string>0MB</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0">
+    <widget class="QGroupBox" name="groupBox">
      <property name="font">
       <font>
-       <pointsize>11</pointsize>
        <bold>true</bold>
       </font>
      </property>
-     <property name="text">
-      <string>Choose models to download</string>
+     <property name="title">
+      <string>Stable Diffusion Controlnet</string>
      </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QScrollArea" name="stable_diffusion_scrollarea">
+        <property name="widgetResizable">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="stable_diffusion_layout">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>571</width>
+           <height>294</height>
+          </rect>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout"/>
+        </widget>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item row="5" column="0">
-    <widget class="QGroupBox" name="groupBox_3">
-     <property name="font">
-      <font>
-       <bold>true</bold>
-      </font>
+    <widget class="QCheckBox" name="speecht5_checkbox">
+     <property name="text">
+      <string>SpeechT5: Text-to-Speech</string>
      </property>
-     <property name="title">
-      <string>Whisper: Required for Speech-to-Text (voice conversations)</string>
-     </property>
-     <property name="checkable">
+     <property name="checked">
       <bool>true</bool>
      </property>
-     <layout class="QGridLayout" name="gridLayout_6">
-      <item row="0" column="0">
-       <widget class="QScrollArea" name="scrollArea_5">
-        <property name="widgetResizable">
-         <bool>true</bool>
-        </property>
-        <widget class="QWidget" name="scrollAreaWidgetContents_5">
-         <property name="geometry">
-          <rect>
-           <x>0</x>
-           <y>0</y>
-           <width>571</width>
-           <height>68</height>
-          </rect>
-         </property>
-        </widget>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QGroupBox" name="groupBox_2">
-     <property name="font">
-      <font>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="title">
-      <string>SDXL 1.0: Advanced art model</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_3">
-      <item row="0" column="0">
-       <widget class="QScrollArea" name="scrollArea_2">
-        <property name="widgetResizable">
-         <bool>true</bool>
-        </property>
-        <widget class="QWidget" name="scrollAreaWidgetContents_2">
-         <property name="geometry">
-          <rect>
-           <x>0</x>
-           <y>0</y>
-           <width>571</width>
-           <height>68</height>
-          </rect>
-         </property>
-        </widget>
-       </widget>
-      </item>
-     </layout>
     </widget>
    </item>
    <item row="3" column="0">
-    <widget class="QGroupBox" name="groupBox_5">
-     <property name="font">
-      <font>
-       <bold>true</bold>
-      </font>
+    <widget class="QCheckBox" name="ministral_checkbox">
+     <property name="text">
+      <string>Ministral 8B Instruct 4bit: Large Language Model (LLM)</string>
      </property>
-     <property name="title">
-      <string>Controlnet: Helps with image generation</string>
-     </property>
-     <property name="checkable">
+     <property name="checked">
       <bool>true</bool>
      </property>
-     <layout class="QGridLayout" name="gridLayout_4">
-      <item row="0" column="0">
-       <widget class="QScrollArea" name="scrollArea_3">
-        <property name="widgetResizable">
-         <bool>true</bool>
-        </property>
-        <widget class="QWidget" name="scrollAreaWidgetContents_3">
-         <property name="geometry">
-          <rect>
-           <x>0</x>
-           <y>0</y>
-           <width>571</width>
-           <height>68</height>
-          </rect>
-         </property>
-        </widget>
-       </widget>
-      </item>
-     </layout>
     </widget>
    </item>
    <item row="6" column="0">
-    <widget class="QGroupBox" name="groupBox_6">
-     <property name="font">
-      <font>
-       <bold>true</bold>
-      </font>
+    <widget class="QCheckBox" name="whisper_checkbox">
+     <property name="text">
+      <string>Whisper: Speech-to-Text (voice conversations)</string>
      </property>
-     <property name="title">
-      <string>Ministral 8B Instruct 4bit</string>
-     </property>
-     <property name="checkable">
+     <property name="checked">
       <bool>true</bool>
      </property>
-     <layout class="QGridLayout" name="gridLayout_7">
-      <item row="0" column="0">
-       <widget class="QScrollArea" name="scrollArea_6">
-        <property name="widgetResizable">
-         <bool>true</bool>
-        </property>
-        <widget class="QWidget" name="scrollAreaWidgetContents_6">
-         <property name="geometry">
-          <rect>
-           <x>0</x>
-           <y>0</y>
-           <width>571</width>
-           <height>68</height>
-          </rect>
-         </property>
-        </widget>
-       </widget>
-      </item>
-     </layout>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QCheckBox" name="checkBox">
+     <property name="text">
+      <string>e5 Large: Embedding model (RAG search)</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>ministral_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>install_success_page</receiver>
+   <slot>ministral_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>177</x>
+     <y>406</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>338</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>speecht5_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>install_success_page</receiver>
+   <slot>speecht5_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>62</x>
+     <y>460</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>414</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>whisper_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>install_success_page</receiver>
+   <slot>whisper_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>145</x>
+     <y>488</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>471</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>groupBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>install_success_page</receiver>
+   <slot>stable_diffusion_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>172</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>18</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>install_success_page</receiver>
+   <slot>embedding_model_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>82</x>
+     <y>432</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>389</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
  <slots>
   <slot>yes_toggled(bool)</slot>
   <slot>no_toggled(bool)</slot>
+  <slot>ministral_toggled(bool)</slot>
+  <slot>speecht5_toggled(bool)</slot>
+  <slot>whisper_toggled(bool)</slot>
+  <slot>stable_diffusion_toggled(bool)</slot>
+  <slot>embedding_model_toggled(bool)</slot>
  </slots>
 </ui>
