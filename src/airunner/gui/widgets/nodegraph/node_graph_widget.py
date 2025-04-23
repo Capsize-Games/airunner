@@ -15,7 +15,6 @@ from airunner.enums import SignalCode
 from airunner.gui.widgets.nodegraph.nodes import (
     AgentActionNode,
     BaseWorkflowNode,
-    ImageGenerationNode,
     PromptNode,
     TextboxNode,
     RandomNumberNode,
@@ -34,6 +33,7 @@ from airunner.gui.widgets.nodegraph.nodes import (
     EmbeddingNode,
     LLMBranchNode,
     SetNode,
+    GenerateImageNode,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -322,7 +322,6 @@ class NodeGraphWidget(BaseWidget):
         for node_cls in [
             AgentActionNode,
             BaseWorkflowNode,
-            ImageGenerationNode,
             PromptNode,
             TextboxNode,
             RandomNumberNode,
@@ -341,6 +340,7 @@ class NodeGraphWidget(BaseWidget):
             EmbeddingNode,
             LLMBranchNode,
             SetNode,
+            GenerateImageNode,
         ]:
             self.graph.register_node(node_cls)
 
