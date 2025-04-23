@@ -41,6 +41,7 @@ class LLMRequestNode(BaseWorkflowNode):
         self.add_input("use_cache", display_name=True)
         self.add_input("do_tts_reply", display_name=True)
         self.add_input("decoder_start_token_id", display_name=True)
+        self.add_input("use_memory", display_name=True)
 
         # Add output port for the LLMRequest object
         self.add_output("llm_request")
@@ -139,6 +140,13 @@ class LLMRequestNode(BaseWorkflowNode):
             tab="advanced",
         )
 
+        self.create_property(
+            "use_memory",
+            True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+            tab="advanced",
+        )
+
         # Float parameters using built-in float widget
         self.create_property(
             "length_penalty",
@@ -206,7 +214,8 @@ class LLMRequestNode(BaseWorkflowNode):
         do_tts_reply = self._get_value(input_data, "do_tts_reply", bool)
         decoder_start_token_id = self._get_value(
             input_data, "decoder_start_token_id", int, allow_none=True
-        )  # Get decoder_start_token_id
+        )
+        use_memory = self._get_value(input_data, "use_memory", bool)
 
         # Instead of passing all parameters, filter to only those accepted by LLMRequest
         llm_request_args = inspect.signature(LLMRequest.__init__).parameters
@@ -229,6 +238,7 @@ class LLMRequestNode(BaseWorkflowNode):
                 "use_cache": use_cache,
                 "do_tts_reply": do_tts_reply,
                 "decoder_start_token_id": decoder_start_token_id,
+                "use_memory": use_memory,
             }.items()
             if k in llm_request_args
         }
