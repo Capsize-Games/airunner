@@ -70,6 +70,7 @@ class NodeGraphWidget(BaseWidget):
         self._register_nodes()
         self._initialize_context_menu()
         self._register_graph()
+        self._add_start_node()
 
     @Slot()
     def on_run_workflow(self):
@@ -590,12 +591,33 @@ class NodeGraphWidget(BaseWidget):
         """
         Save nodes in the graph to the database using CRUD operations.
         Updates existing nodes, creates new ones, and removes obsolete ones.
+        Ensures only one StartNode is saved.
         """
         nodes_map = {}  # Maps graph node IDs to database node IDs
         all_graph_nodes = self.graph.all_nodes()
         self.logger.info(
             f"Processing {len(all_graph_nodes)} nodes for saving..."
         )
+
+        # Check for multiple StartNodes in the graph
+        start_nodes = [
+            node for node in all_graph_nodes if isinstance(node, StartNode)
+        ]
+        if len(start_nodes) > 1:
+            self.logger.warning(
+                f"Multiple StartNodes ({len(start_nodes)}) detected in graph. Will save only the first one."
+            )
+            # Keep only the first StartNode - remove others from processing
+            kept_start_node = start_nodes[0]
+            all_graph_nodes = [
+                node
+                for node in all_graph_nodes
+                if not isinstance(node, StartNode)
+                or node.id == kept_start_node.id
+            ]
+            self.logger.info(
+                f"Keeping StartNode: {kept_start_node.name()} (ID: {kept_start_node.id}), filtering out {len(start_nodes) - 1} duplicate StartNodes."
+            )
 
         # First, get all existing nodes for this workflow
         try:
@@ -622,9 +644,6 @@ class NodeGraphWidget(BaseWidget):
         # Process all graph nodes
         for node in all_graph_nodes:
             properties_to_save = self._extract_node_properties(node)
-
-            print("*" * 100)
-            print("properties_to_save", properties_to_save)
 
             # Create a key to match with existing nodes
             node_key = f"{node.type_}_{node.pos()[0]}_{node.pos()[1]}"
@@ -692,6 +711,49 @@ class NodeGraphWidget(BaseWidget):
                 self.logger.error(
                     f"Error deleting obsolete nodes: {e}", exc_info=True
                 )
+
+        # Check if we have any StartNodes at all in the database after saving
+        start_node_identifiers = [
+            node_type
+            for node_type in self.graph.registered_nodes()
+            if issubclass(node_type, StartNode)
+        ]
+
+        if start_node_identifiers:
+            start_node_db_check = WorkflowNode.objects.filter_by_first(
+                workflow_id=workflow_id,
+                node_identifier__in=start_node_identifiers,
+            )
+
+            if not start_node_db_check:
+                self.logger.warning(
+                    "No StartNode found in database after saving. Adding one automatically."
+                )
+                self._add_start_node()
+                # We need to update the nodes_map to include the newly created StartNode
+                for node in self.graph.all_nodes():
+                    if (
+                        isinstance(node, StartNode)
+                        and node.id not in nodes_map
+                    ):
+                        try:
+                            db_node = WorkflowNode.objects.create(
+                                workflow_id=workflow_id,
+                                node_identifier=node.type_,
+                                name=node.name(),
+                                pos_x=node.pos()[0],
+                                pos_y=node.pos()[1],
+                                properties=self._extract_node_properties(node),
+                            )
+                            if db_node:
+                                nodes_map[node.id] = db_node.id
+                                self.logger.info(
+                                    f"Created new StartNode: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id})"
+                                )
+                        except Exception as e:
+                            self.logger.error(
+                                f"Error creating StartNode: {e}", exc_info=True
+                            )
 
         return nodes_map
 
@@ -992,7 +1054,7 @@ class NodeGraphWidget(BaseWidget):
         self._add_start_node()
 
     def _add_start_node(self):
-        """Add a StartNode to the workflow at a default position."""
+        """Add a StartNode to the workflow at a default position if one doesn't already exist."""
         # Check if there's already a StartNode in the graph
         existing_start_nodes = [
             node
@@ -1000,19 +1062,27 @@ class NodeGraphWidget(BaseWidget):
             if isinstance(node, StartNode)
         ]
 
-        if not existing_start_nodes:
-            # Create a new StartNode at a default position
-            start_node = self.graph.create_node(
-                "airunner.workflow.nodes.control.StartNode",
-                name="Start Workflow",
-                pos=(0, 0),
+        if existing_start_nodes:
+            self.logger.info(
+                f"StartNode already exists in workflow. Found {len(existing_start_nodes)} StartNode(s)."
             )
-            if start_node:
-                self.logger.info("Added default StartNode to workflow")
-            else:
-                self.logger.error(
-                    "Failed to add default StartNode to workflow"
+            # If multiple StartNodes exist, log a warning but don't add another one
+            if len(existing_start_nodes) > 1:
+                self.logger.warning(
+                    f"Multiple StartNodes detected in workflow: {len(existing_start_nodes)}. Only one StartNode should exist."
                 )
+            return  # Don't add another StartNode
+
+        # Create a new StartNode at a default position
+        start_node = self.graph.create_node(
+            "airunner.workflow.nodes.control.StartNode",
+            name="Start Workflow",
+            pos=(0, 0),
+        )
+        if start_node:
+            self.logger.info("Added default StartNode to workflow")
+        else:
+            self.logger.error("Failed to add default StartNode to workflow")
 
     def _load_workflow_connections(self, db_connections, node_map):
         """Load connections from database records into the graph."""
