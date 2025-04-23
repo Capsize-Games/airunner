@@ -15,8 +15,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QLabel,
-    QScrollArea, QSizePolicy, QSpacerItem, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QGridLayout, QGroupBox,
+    QHBoxLayout, QLabel, QScrollArea, QSizePolicy,
+    QSpacerItem, QVBoxLayout, QWidget)
 
 class Ui_install_success_page(object):
     def setupUi(self, install_success_page):
@@ -25,149 +26,99 @@ class Ui_install_success_page(object):
         install_success_page.resize(615, 853)
         self.gridLayout = QGridLayout(install_success_page)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout.addItem(self.verticalSpacer, 8, 0, 1, 1)
+
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.page_title = QLabel(install_success_page)
+        self.page_title.setObjectName(u"page_title")
+        font = QFont()
+        font.setPointSize(11)
+        font.setBold(True)
+        self.page_title.setFont(font)
+
+        self.horizontalLayout.addWidget(self.page_title)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+        self.total_size_label = QLabel(install_success_page)
+        self.total_size_label.setObjectName(u"total_size_label")
+
+        self.horizontalLayout.addWidget(self.total_size_label)
+
+
+        self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
+
         self.groupBox = QGroupBox(install_success_page)
         self.groupBox.setObjectName(u"groupBox")
-        font = QFont()
-        font.setBold(True)
-        self.groupBox.setFont(font)
+        font1 = QFont()
+        font1.setBold(True)
+        self.groupBox.setFont(font1)
         self.groupBox.setCheckable(True)
         self.gridLayout_2 = QGridLayout(self.groupBox)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.scrollArea = QScrollArea(self.groupBox)
-        self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollAreaWidgetContents = QWidget()
-        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 571, 68))
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        self.stable_diffusion_scrollarea = QScrollArea(self.groupBox)
+        self.stable_diffusion_scrollarea.setObjectName(u"stable_diffusion_scrollarea")
+        self.stable_diffusion_scrollarea.setWidgetResizable(True)
+        self.stable_diffusion_layout = QWidget()
+        self.stable_diffusion_layout.setObjectName(u"stable_diffusion_layout")
+        self.stable_diffusion_layout.setGeometry(QRect(0, 0, 571, 294))
+        self.verticalLayout = QVBoxLayout(self.stable_diffusion_layout)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.stable_diffusion_scrollarea.setWidget(self.stable_diffusion_layout)
 
-        self.gridLayout_2.addWidget(self.scrollArea, 0, 0, 1, 1)
-
-
-        self.gridLayout.addWidget(self.groupBox, 1, 0, 1, 1)
-
-        self.groupBox_4 = QGroupBox(install_success_page)
-        self.groupBox_4.setObjectName(u"groupBox_4")
-        self.groupBox_4.setFont(font)
-        self.groupBox_4.setCheckable(True)
-        self.gridLayout_5 = QGridLayout(self.groupBox_4)
-        self.gridLayout_5.setObjectName(u"gridLayout_5")
-        self.scrollArea_4 = QScrollArea(self.groupBox_4)
-        self.scrollArea_4.setObjectName(u"scrollArea_4")
-        self.scrollArea_4.setWidgetResizable(True)
-        self.scrollAreaWidgetContents_4 = QWidget()
-        self.scrollAreaWidgetContents_4.setObjectName(u"scrollAreaWidgetContents_4")
-        self.scrollAreaWidgetContents_4.setGeometry(QRect(0, 0, 571, 68))
-        self.scrollArea_4.setWidget(self.scrollAreaWidgetContents_4)
-
-        self.gridLayout_5.addWidget(self.scrollArea_4, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.stable_diffusion_scrollarea, 0, 0, 1, 1)
 
 
-        self.gridLayout.addWidget(self.groupBox_4, 4, 0, 1, 1)
+        self.gridLayout.addWidget(self.groupBox, 2, 0, 1, 1)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.speecht5_checkbox = QCheckBox(install_success_page)
+        self.speecht5_checkbox.setObjectName(u"speecht5_checkbox")
+        self.speecht5_checkbox.setChecked(True)
 
-        self.gridLayout.addItem(self.verticalSpacer, 7, 0, 1, 1)
+        self.gridLayout.addWidget(self.speecht5_checkbox, 5, 0, 1, 1)
 
-        self.label = QLabel(install_success_page)
-        self.label.setObjectName(u"label")
-        font1 = QFont()
-        font1.setPointSize(11)
-        font1.setBold(True)
-        self.label.setFont(font1)
+        self.ministral_checkbox = QCheckBox(install_success_page)
+        self.ministral_checkbox.setObjectName(u"ministral_checkbox")
+        self.ministral_checkbox.setChecked(True)
 
-        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.ministral_checkbox, 3, 0, 1, 1)
 
-        self.groupBox_3 = QGroupBox(install_success_page)
-        self.groupBox_3.setObjectName(u"groupBox_3")
-        self.groupBox_3.setFont(font)
-        self.groupBox_3.setCheckable(True)
-        self.gridLayout_6 = QGridLayout(self.groupBox_3)
-        self.gridLayout_6.setObjectName(u"gridLayout_6")
-        self.scrollArea_5 = QScrollArea(self.groupBox_3)
-        self.scrollArea_5.setObjectName(u"scrollArea_5")
-        self.scrollArea_5.setWidgetResizable(True)
-        self.scrollAreaWidgetContents_5 = QWidget()
-        self.scrollAreaWidgetContents_5.setObjectName(u"scrollAreaWidgetContents_5")
-        self.scrollAreaWidgetContents_5.setGeometry(QRect(0, 0, 571, 68))
-        self.scrollArea_5.setWidget(self.scrollAreaWidgetContents_5)
+        self.whisper_checkbox = QCheckBox(install_success_page)
+        self.whisper_checkbox.setObjectName(u"whisper_checkbox")
+        self.whisper_checkbox.setChecked(True)
 
-        self.gridLayout_6.addWidget(self.scrollArea_5, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.whisper_checkbox, 6, 0, 1, 1)
 
+        self.checkBox = QCheckBox(install_success_page)
+        self.checkBox.setObjectName(u"checkBox")
+        self.checkBox.setChecked(True)
 
-        self.gridLayout.addWidget(self.groupBox_3, 5, 0, 1, 1)
-
-        self.groupBox_2 = QGroupBox(install_success_page)
-        self.groupBox_2.setObjectName(u"groupBox_2")
-        self.groupBox_2.setFont(font)
-        self.groupBox_2.setCheckable(True)
-        self.gridLayout_3 = QGridLayout(self.groupBox_2)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.scrollArea_2 = QScrollArea(self.groupBox_2)
-        self.scrollArea_2.setObjectName(u"scrollArea_2")
-        self.scrollArea_2.setWidgetResizable(True)
-        self.scrollAreaWidgetContents_2 = QWidget()
-        self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 571, 68))
-        self.scrollArea_2.setWidget(self.scrollAreaWidgetContents_2)
-
-        self.gridLayout_3.addWidget(self.scrollArea_2, 0, 0, 1, 1)
-
-
-        self.gridLayout.addWidget(self.groupBox_2, 2, 0, 1, 1)
-
-        self.groupBox_5 = QGroupBox(install_success_page)
-        self.groupBox_5.setObjectName(u"groupBox_5")
-        self.groupBox_5.setFont(font)
-        self.groupBox_5.setCheckable(True)
-        self.gridLayout_4 = QGridLayout(self.groupBox_5)
-        self.gridLayout_4.setObjectName(u"gridLayout_4")
-        self.scrollArea_3 = QScrollArea(self.groupBox_5)
-        self.scrollArea_3.setObjectName(u"scrollArea_3")
-        self.scrollArea_3.setWidgetResizable(True)
-        self.scrollAreaWidgetContents_3 = QWidget()
-        self.scrollAreaWidgetContents_3.setObjectName(u"scrollAreaWidgetContents_3")
-        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 571, 68))
-        self.scrollArea_3.setWidget(self.scrollAreaWidgetContents_3)
-
-        self.gridLayout_4.addWidget(self.scrollArea_3, 0, 0, 1, 1)
-
-
-        self.gridLayout.addWidget(self.groupBox_5, 3, 0, 1, 1)
-
-        self.groupBox_6 = QGroupBox(install_success_page)
-        self.groupBox_6.setObjectName(u"groupBox_6")
-        self.groupBox_6.setFont(font)
-        self.groupBox_6.setCheckable(True)
-        self.gridLayout_7 = QGridLayout(self.groupBox_6)
-        self.gridLayout_7.setObjectName(u"gridLayout_7")
-        self.scrollArea_6 = QScrollArea(self.groupBox_6)
-        self.scrollArea_6.setObjectName(u"scrollArea_6")
-        self.scrollArea_6.setWidgetResizable(True)
-        self.scrollAreaWidgetContents_6 = QWidget()
-        self.scrollAreaWidgetContents_6.setObjectName(u"scrollAreaWidgetContents_6")
-        self.scrollAreaWidgetContents_6.setGeometry(QRect(0, 0, 571, 68))
-        self.scrollArea_6.setWidget(self.scrollAreaWidgetContents_6)
-
-        self.gridLayout_7.addWidget(self.scrollArea_6, 0, 0, 1, 1)
-
-
-        self.gridLayout.addWidget(self.groupBox_6, 6, 0, 1, 1)
+        self.gridLayout.addWidget(self.checkBox, 4, 0, 1, 1)
 
 
         self.retranslateUi(install_success_page)
+        self.ministral_checkbox.toggled.connect(install_success_page.ministral_toggled)
+        self.speecht5_checkbox.toggled.connect(install_success_page.speecht5_toggled)
+        self.whisper_checkbox.toggled.connect(install_success_page.whisper_toggled)
+        self.groupBox.toggled.connect(install_success_page.stable_diffusion_toggled)
+        self.checkBox.toggled.connect(install_success_page.embedding_model_toggled)
 
         QMetaObject.connectSlotsByName(install_success_page)
     # setupUi
 
     def retranslateUi(self, install_success_page):
         install_success_page.setWindowTitle(QCoreApplication.translate("install_success_page", u"Form", None))
-        self.groupBox.setTitle(QCoreApplication.translate("install_success_page", u"Stable Diffusion 1.5: Older art model", None))
-        self.groupBox_4.setTitle(QCoreApplication.translate("install_success_page", u"SpeechT5: Required for Text-to-Speech", None))
-        self.label.setText(QCoreApplication.translate("install_success_page", u"Choose models to download", None))
-        self.groupBox_3.setTitle(QCoreApplication.translate("install_success_page", u"Whisper: Required for Speech-to-Text (voice conversations)", None))
-        self.groupBox_2.setTitle(QCoreApplication.translate("install_success_page", u"SDXL 1.0: Advanced art model", None))
-        self.groupBox_5.setTitle(QCoreApplication.translate("install_success_page", u"Controlnet: Helps with image generation", None))
-        self.groupBox_6.setTitle(QCoreApplication.translate("install_success_page", u"Ministral 8B Instruct 4bit", None))
+        self.page_title.setText(QCoreApplication.translate("install_success_page", u"Choose models to download", None))
+        self.total_size_label.setText(QCoreApplication.translate("install_success_page", u"0MB", None))
+        self.groupBox.setTitle(QCoreApplication.translate("install_success_page", u"Stable Diffusion Controlnet", None))
+        self.speecht5_checkbox.setText(QCoreApplication.translate("install_success_page", u"SpeechT5: Text-to-Speech", None))
+        self.ministral_checkbox.setText(QCoreApplication.translate("install_success_page", u"Ministral 8B Instruct 4bit: Large Language Model (LLM)", None))
+        self.whisper_checkbox.setText(QCoreApplication.translate("install_success_page", u"Whisper: Speech-to-Text (voice conversations)", None))
+        self.checkBox.setText(QCoreApplication.translate("install_success_page", u"e5 Large: Embedding model (RAG search)", None))
     # retranslateUi
 
