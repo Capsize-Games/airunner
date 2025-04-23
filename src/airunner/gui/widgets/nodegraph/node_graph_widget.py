@@ -426,7 +426,20 @@ class NodeGraphWidget(BaseWidget):
                 # TODO: Update node properties in DB model if saving is implemented
 
     def delete_node_action(self, node):
-        """Deletes the selected node from the graph."""
+        """Deletes the selected node from the graph unless it's a StartNode."""
+        # Prevent StartNode deletion
+        if isinstance(node, StartNode):
+            self.logger.warning(
+                "Cannot delete StartNode as it is required for workflow execution."
+            )
+            QMessageBox.warning(
+                self,
+                "Cannot Delete Node",
+                "The Start Node cannot be deleted as it is required for workflow execution.",
+            )
+            return
+
+        # Delete any other type of node
         self.graph.delete_node(node)  # Use graph's delete method
 
     # --- Database Interaction ---
@@ -949,7 +962,6 @@ class NodeGraphWidget(BaseWidget):
         )
 
     def _finalize_clear_graph(self):
-
         # Clear the graph session
         self.graph.clear_session()
 
@@ -975,6 +987,32 @@ class NodeGraphWidget(BaseWidget):
             self.logger.warning(
                 "Could not explicitly clear node factory registry."
             )
+
+        # Automatically add a StartNode to the workflow
+        self._add_start_node()
+
+    def _add_start_node(self):
+        """Add a StartNode to the workflow at a default position."""
+        # Check if there's already a StartNode in the graph
+        existing_start_nodes = [
+            node
+            for node in self.graph.all_nodes()
+            if isinstance(node, StartNode)
+        ]
+
+        if not existing_start_nodes:
+            # Create a new StartNode at a default position
+            start_node = self.graph.create_node(
+                "airunner.workflow.nodes.control.StartNode",
+                name="Start Workflow",
+                pos=(0, 0),
+            )
+            if start_node:
+                self.logger.info("Added default StartNode to workflow")
+            else:
+                self.logger.error(
+                    "Failed to add default StartNode to workflow"
+                )
 
     def _load_workflow_connections(self, db_connections, node_map):
         """Load connections from database records into the graph."""

@@ -11,19 +11,16 @@ class StartNode(BaseWorkflowNode):
 
     def __init__(self):
         super().__init__()
-        # self._ports_removable = True  # Set instance variable to allow port deletion permanently for this node type
-        # Start node only has an execution output, remove the input exec port
-        # self.delete_input(self.EXEC_IN_PORT_NAME)
-        # No need to set it back to False
 
-        # Optionally, remove all data inputs/outputs if it purely signals start
-        # for name in list(self.inputs().keys()):
-        #     if name != self.EXEC_IN_PORT_NAME: self.delete_input(name)
-        # for name in list(self.outputs().keys()):
-        #      if name != self.EXEC_OUT_PORT_NAME: self.delete_output(name)
+        # Set a distinctive color to make the StartNode easily recognizable
+        self.set_color(50, 150, 250)  # Light blue color
+
+        # Remove the input exec port as this is the first node in the workflow
+        if self.EXEC_IN_PORT_NAME in self.inputs():
+            self.delete_input(self.EXEC_IN_PORT_NAME)
 
     # No specific execution logic needed here, it just starts the flow
     def execute(self, input_data):
         print(f"Executing {self.NODE_NAME}")
-        # Base execute handles passing execution signal, return empty data dict
-        return {}
+        # Simply forward the execution flow to the next nodes
+        return {"_exec_triggered": self.EXEC_OUT_PORT_NAME}
