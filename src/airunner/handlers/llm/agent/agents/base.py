@@ -1071,7 +1071,10 @@ class BaseAgent(
         self._chat_store = value
 
     @property
-    def chat_memory(self) -> ChatMemoryBuffer:
+    def chat_memory(self) -> Optional[ChatMemoryBuffer]:
+        if self.llm and self.llm.llm_request and not self.llm.llm_request.use_memory:
+            return None
+        
         if not self._chat_memory:
             self.logger.info("Loading ChatMemoryBuffer")
             self._chat_memory = ChatMemoryBuffer.from_defaults(
