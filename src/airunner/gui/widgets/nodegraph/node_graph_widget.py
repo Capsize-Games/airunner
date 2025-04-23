@@ -764,27 +764,11 @@ class NodeGraphWidget(BaseWidget):
             SignalCode.WORKFLOW_LOAD_SIGNAL,
             {
                 "workflow": workflow,
-                "callback": lambda _data=data: self._finalize_perform_load(
+                "callback": lambda _data=data: self._finalize_load_workflow(
                     _data
                 ),
             },
         )
-
-    def _finalize_perform_load(self, data: Dict):
-        db_nodes = data.get("db_nodes")
-        db_connections = data.get("db_connections")
-        workflow = data.get("workflow")
-        if db_nodes is not None:
-            node_map = self._load_workflow_nodes(db_nodes)
-            self._load_workflow_connections(db_connections, node_map)
-            self.logger.info(
-                f"Workflow '{workflow.name}' (ID: {workflow.id}) loaded successfully."
-            )
-        else:
-            self.logger.warning(
-                f"No nodes found for workflow ID {workflow.id}, graph will be empty."
-            )
-            # No critical error, just an empty graph was loaded
 
     def load_workflow(self, workflow_id):
         """Loads a workflow from the database."""
