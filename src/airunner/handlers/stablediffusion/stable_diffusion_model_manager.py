@@ -98,20 +98,10 @@ import time
 
 
 class StableDiffusionModelManager(BaseModelManager):
-    def __init__(
-        self,
-        model_path: str,
-        model_version: str,
-        pipeline: str,
-        scheduler_name: str,
-        use_compel: bool,
-        *args,
-        **kwargs,
-    ):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._pipeline = pipeline
-        self._scheduler_name = scheduler_name
-        self._use_compel = use_compel
+        self._pipeline: Optional[str] = None
+        self._scheduler_name: Optional[str] = None
         self._scheduler: Type[SchedulerMixin]
         self._image_request: ImageRequest = None
         self._controlnet_model = None
@@ -199,6 +189,13 @@ class StableDiffusionModelManager(BaseModelManager):
         self._path_settings = None
 
     @property
+    def use_compel(self) -> bool:
+        compel = self.image_request.use_compel if self.image_request else None
+        if compel is None:
+            compel = self.generator_settings.use_compel
+        return compel
+
+    @property
     def generator(self) -> torch.Generator:
         if self._generator is None:
             self.logger.debug("Loading generator")
@@ -231,13 +228,6 @@ class StableDiffusionModelManager(BaseModelManager):
             StableDiffusionControlNetInpaintPipeline,
             StableDiffusionXLControlNetInpaintPipeline,
         )
-
-    @property
-    def use_compel(self) -> bool:
-        use_compel = self._use_compel
-        if self.image_request:
-            use_compel = self.image_request.use_compel
-        return use_compel
 
     @property
     def controlnet_path(self):
@@ -743,7 +733,7 @@ class StableDiffusionModelManager(BaseModelManager):
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
 
     def handle_generate_signal(self, message: Optional[Dict] = None):
-        self.image_request = message.get("sd_request", None)
+        self.image_request = message.get("image_request", None)
 
         if not self.image_request:
             raise ValueError("ImageRequest is None")

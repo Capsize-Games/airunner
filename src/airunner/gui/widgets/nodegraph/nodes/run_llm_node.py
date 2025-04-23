@@ -24,8 +24,8 @@ class RunLLMNode(BaseWorkflowNode):
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self._on_llm_text_streamed,
         }
         super().__init__()
-        self._accumulated_response_text = ""  # Add accumulator for text
-        self._current_llm_response = None  # Store the final response object
+        self._accumulated_response_text = ""
+        self._current_llm_response = None
 
         # Input port for the LLMRequest
         self.add_input("llm_request", display_name=True)
@@ -93,8 +93,6 @@ class RunLLMNode(BaseWorkflowNode):
             llm_request = LLMRequest()
 
         # Get the prompt text if provided
-        print("*" * 100)
-        print(input_data)
         prompt = input_data.get("prompt", None)
         if not prompt:
             prompt = "Hello, how are you today?"
