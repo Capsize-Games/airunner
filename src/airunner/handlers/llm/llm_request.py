@@ -46,6 +46,7 @@ class LLMRequest:
     use_cache: bool = True
     do_tts_reply: bool = True
     node_id: Optional[str] = None
+    use_memory: bool = True
 
     def to_dict(self) -> Dict:
         """
@@ -84,6 +85,7 @@ class LLMRequest:
             del data["early_stopping"]
 
         data.pop("node_id")
+        data.pop("use_memory")
 
         return data
 
