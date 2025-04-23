@@ -18,7 +18,7 @@ from airunner.settings import (
     AIRUNNER_MAX_SEED,
     AIRUNNER_LOCAL_FILES_ONLY,
 )
-from airunner.utils.memory import clear_memory, is_ampere_or_newer
+from airunner.utils.memory import clear_memory
 from airunner.handlers.llm.agent.agents import LocalAgent, OpenRouterQObject
 from airunner.data.models import Conversation, LLMGeneratorSettings
 from airunner.handlers.llm.training_mixin import TrainingMixin
