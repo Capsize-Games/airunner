@@ -1,5 +1,5 @@
 import os
-from typing import Dict
+from typing import Dict, Optional
 import threading
 
 import torch
@@ -10,6 +10,7 @@ from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
 from airunner.workers.worker import Worker
 from airunner.handlers import StableDiffusionModelManager
 from airunner.handlers.stablediffusion.image_request import ImageRequest
+from airunner.data.models.ai_models import AIModels
 from airunner.settings import (
     AIRUNNER_SD_ON,
     AIRUNNER_ART_MODEL_PATH,
@@ -20,25 +21,6 @@ from airunner.settings import (
 )
 
 torch.backends.cuda.matmul.allow_tf32 = True
-
-
-class GenerateWorker(QObject):
-    finished = Signal()
-    error = Signal(str)
-
-    def __init__(self, sd, message):
-        super().__init__()
-        self.sd = sd
-        self.message = message
-
-    @Slot()
-    def run(self):
-        try:
-            self.sd.handle_generate_signal(self.message)
-        except Exception as e:
-            self.error.emit(str(e))
-        finally:
-            self.finished.emit()
 
 
 class SDWorker(Worker):
@@ -123,32 +105,86 @@ class SDWorker(Worker):
             thread.start()
 
     def on_load_stablediffusion_signal(self, data: Dict = None):
-        if self.sd:
-            settings = self.generator_settings
-            model_path = settings.aimodel.path if settings.aimodel else ""
+        data["settings"] = self.generator_settings
+        self._handle_load_stable_diffusion(data)
 
-            if model_path is None or model_path == "":
-                self.send_missing_model_alert(
-                    "You have no Stable Diffusion models. Download one and try again."
-                )
-                return
+    def _get_model_path_from_image_request(
+        self, image_request: Optional[ImageRequest]
+    ) -> Optional[str]:
+        model_path = None
 
-            # check if the path exists
-            if not os.path.exists(model_path):
-                self.send_missing_model_alert(
-                    f"The model at path {model_path} does not exist."
-                )
-                return
+        if image_request is not None:
+            model_path = image_request.model_path
 
-            thread = threading.Thread(target=self._load_sd, args=(data,))
-            thread.start()
+        if (
+            model_path is None or model_path == ""
+        ) and self.generator_settings.model is not None:
+            aimodel = AIModels.objects.get(self.generator_settings.model)
+            if aimodel is not None:
+                model_path = aimodel.path
+
+        if model_path is None or model_path == "":
+            self.send_missing_model_alert(
+                "You have no Stable Diffusion models. Download one and try again."
+            )
+
+        if not os.path.exists(model_path):
+            self.send_missing_model_alert(
+                f"The model at path {model_path} does not exist."
+            )
+
+        return model_path
+
+    def _process_image_request(self, data: Dict) -> Dict:
+        settings = self.generator_settings
+        image_request = data.get("image_request", None)
+        model_path = self._get_model_path_from_image_request(image_request)
+
+        if image_request is None:
+            data["image_request"] = ImageRequest(
+                pipeline_action=settings.pipeline_action,
+                generator_name=settings.generator_name,
+                prompt=settings.prompt,
+                negative_prompt=settings.negative_prompt,
+                second_prompt=settings.second_prompt,
+                second_negative_prompt=settings.second_negative_prompt,
+                random_seed=settings.random_seed,
+                model_path=model_path,
+                scheduler=settings.scheduler,
+                version=settings.version,
+                use_compel=settings.use_compel,
+                steps=settings.steps,
+                ddim_eta=settings.ddim_eta,
+                scale=settings.scale / 100,
+                seed=settings.seed,
+                strength=settings.strength / 100,
+                n_samples=settings.n_samples,
+                clip_skip=settings.clip_skip,
+                crops_coord_top_left=settings.crops_coord_top_left,
+                original_size=settings.original_size,
+                target_size=settings.target_size,
+                negative_original_size=settings.negative_original_size,
+                negative_target_size=settings.negative_target_size,
+                lora_scale=settings.lora_scale,
+            )
+        return data
+
+    def _handle_load_stable_diffusion(self, data: Dict):
+        print("HANDLE LOAD STABLE DIFFUSION", self.sd)
+        data = self._process_image_request(data)
+        self._load_sd(data)
+        # if self.sd:
+        #     thread = threading.Thread(target=self._load_sd, args=(data,))
+        #     thread.start()
 
     def on_unload_stablediffusion_signal(self, data=None):
-        if self.sd:
-            thread = threading.Thread(target=self._unload_sd, args=(data,))
-            thread.start()
+        # if self.sd:
+        #     thread = threading.Thread(target=self._unload_sd, args=(data,))
+        #     thread.start()
+        self._unload_sd(data)
 
     def _load_sd(self, data: Dict = None):
+        print("_LOAD_SD FUNCTION", data)
         do_reload = data.get("do_reload", False)
         if do_reload:
             self.sd.reload()
@@ -183,49 +219,7 @@ class SDWorker(Worker):
             self.sd.sd_load_tokenizer(data)
 
     def start_worker_thread(self):
-        generator_settings = self.generator_settings
-        model_path = (
-            generator_settings.aimodel.path
-            if generator_settings.aimodel
-            else ""
-        )
-        if AIRUNNER_ART_MODEL_PATH != "":
-            model_path = AIRUNNER_ART_MODEL_PATH
-
-        model_version = (
-            generator_settings.version if generator_settings.version else ""
-        )
-        if AIRUNNER_ART_MODEL_VERSION != "":
-            model_version = AIRUNNER_ART_MODEL_VERSION
-
-        pipeline = (
-            generator_settings.pipeline_action
-            if generator_settings.pipeline_action
-            else ""
-        )
-        if AIRUNNER_ART_PIPELINE != "":
-            pipeline = AIRUNNER_ART_PIPELINE
-
-        scheduler_name = (
-            generator_settings.scheduler
-            if generator_settings.scheduler
-            else ""
-        )
-        if AIRUNNER_ART_SCHEDULER != "":
-            scheduler_name = AIRUNNER_ART_SCHEDULER
-
-        use_compel = generator_settings.use_compel
-        if AIRUNNER_ART_USE_COMPEL != "":
-            use_compel = AIRUNNER_ART_USE_COMPEL
-
-        self.sd = StableDiffusionModelManager(
-            model_path=model_path,
-            model_version=model_version,
-            pipeline=pipeline,
-            scheduler_name=scheduler_name,
-            use_compel=use_compel,
-        )
-
+        self.sd = StableDiffusionModelManager()
         if self.application_settings.sd_enabled or AIRUNNER_SD_ON:
             self.sd.load()
 
@@ -245,65 +239,18 @@ class SDWorker(Worker):
         pass
 
     def on_do_generate_signal(self, message: Dict):
-        if self.sd:
-            settings = self.generator_settings
+        print("ON DO GENERATE SIGNAL")
+        message["callback"] = self._finalize_do_generate_signal
+        message["settings"] = self.generator_settings
+        self._handle_load_stable_diffusion(message)
 
-            if not message.get("image_request", None):
-                model_path = settings.aimodel.path if settings.aimodel else ""
-            else:
-                model_path = message["image_request"].model_path
-
-            if model_path is None or model_path == "":
-                self.send_missing_model_alert(
-                    "You have no Stable Diffusion models. Download one and try again."
-                )
-                return
-
-            # check if the path exists
-            if not os.path.exists(model_path):
-                self.send_missing_model_alert(
-                    f"The model at path {model_path} does not exist."
-                )
-                return
-
-            if not message.get("image_request", None):
-                message["image_request"] = ImageRequest(
-                    pipeline_action=settings.pipeline_action,
-                    generator_name=settings.generator_name,
-                    prompt=settings.prompt,
-                    negative_prompt=settings.negative_prompt,
-                    second_prompt=settings.second_prompt,
-                    second_negative_prompt=settings.second_negative_prompt,
-                    random_seed=settings.random_seed,
-                    model_path=model_path,
-                    scheduler=settings.scheduler,
-                    version=settings.version,
-                    use_compel=settings.use_compel,
-                    steps=settings.steps,
-                    ddim_eta=settings.ddim_eta,
-                    scale=settings.scale / 100,
-                    seed=settings.seed,
-                    strength=settings.strength / 100,
-                    n_samples=settings.n_samples,
-                    clip_skip=settings.clip_skip,
-                    crops_coord_top_left=settings.crops_coord_top_left,
-                    original_size=settings.original_size,
-                    target_size=settings.target_size,
-                    negative_original_size=settings.negative_original_size,
-                    negative_target_size=settings.negative_target_size,
-                    lora_scale=settings.lora_scale,
-                )
-            thread = QThread()
-            worker = GenerateWorker(self.sd, message)
-            worker.moveToThread(thread)
-            thread.started.connect(worker.run)
-            worker.finished.connect(thread.quit)
-            worker.finished.connect(worker.deleteLater)
-            thread.finished.connect(thread.deleteLater)
-            worker.error.connect(self.handle_error)
-            self._threads.append(thread)
-            self._workers.append(worker)
-            thread.start()
+    def _finalize_do_generate_signal(self, message: Dict):
+        print("_finalize_do_generate_signal", message)
+        try:
+            self.sd.handle_generate_signal(message)
+        except ValueError as e:
+            self.logger.error(f"Failed to generate: {e}")
+            print(message)
 
     @staticmethod
     def handle_error(error_message):

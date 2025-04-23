@@ -13,9 +13,6 @@ from airunner.gui.widgets.nodegraph.nodes.for_loop_node import (
 from airunner.gui.widgets.nodegraph.nodes.image_display_node import (
     ImageDisplayNode,
 )
-from airunner.gui.widgets.nodegraph.nodes.image_generation_node import (
-    ImageGenerationNode,
-)
 from airunner.gui.widgets.nodegraph.nodes.image_request_node import (
     ImageRequestNode,
 )
@@ -68,6 +65,9 @@ from airunner.gui.widgets.nodegraph.nodes.llm_logic.llm_branch_node import (
 from airunner.gui.widgets.nodegraph.nodes.set_node import (
     SetNode,
 )
+from airunner.gui.widgets.nodegraph.nodes.generate_image_node import (
+    GenerateImageNode,
+)
 
 
 __all__ = [
@@ -76,7 +76,6 @@ __all__ = [
     "ForEachLoopNode",
     "ForLoopNode",
     "ImageDisplayNode",
-    "ImageGenerationNode",
     "ImageRequestNode",
     "PromptNode",
     "RandomNumberNode",
@@ -95,4 +94,5 @@ __all__ = [
     "EmbeddingNode",
     "LLMBranchNode",
     "SetNode",
+    "GenerateImageNode",
 ]

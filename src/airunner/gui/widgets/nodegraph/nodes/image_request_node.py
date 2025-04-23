@@ -17,8 +17,10 @@ class ImageRequestNode(BaseWorkflowNode):
     a properly constructed ImageRequest object for stable diffusion image generation.
     """
 
+    __identifier__ = "airunner.workflow.nodes"
     NODE_NAME = "Image Request"
-    __identifier__ = "airunner.workflow.nodes"  # Ensure consistent identifier
+    has_exec_in_port = False
+    has_exec_out_port = False
 
     def __init__(self):
         super().__init__()
@@ -50,166 +52,154 @@ class ImageRequestNode(BaseWorkflowNode):
         # Add output port for the ImageRequest object
         self.add_output("image_request")
 
-        # String parameters using built-in string widget
-        self.create_property(
-            "pipeline_action",
-            "txt2img",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
-            tab="basic",
-        )
+        props = [
+            {
+                "name": "pipeline_action",
+                "value": "txt2img",
+                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+                "tab": "basic",
+            },
+            {
+                "name": "generator_name",
+                "value": "stablediffusion",
+                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+                "tab": "basic",
+            },
+            {
+                "name": "prompt",
+                "value": "",
+                "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
+                "tab": "prompt",
+            },
+            {
+                "name": "negative_prompt",
+                "value": "",
+                "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
+                "tab": "prompt",
+            },
+            {
+                "name": "second_prompt",
+                "value": "",
+                "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
+                "tab": "prompt",
+            },
+            {
+                "name": "second_negative_prompt",
+                "value": "",
+                "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
+                "tab": "prompt",
+            },
+            {
+                "name": "model_path",
+                "value": "",
+                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+                "tab": "model",
+            },
+            {
+                "name": "scheduler",
+                "value": "DDIM",
+                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+                "tab": "model",
+            },
+            {
+                "name": "version",
+                "value": "SD 1.5",
+                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+                "tab": "model",
+            },
+            {
+                "name": "random_seed",
+                "value": True,
+                "widget_type": NodePropWidgetEnum.QCHECK_BOX,
+                "tab": "generation",
+            },
+            {
+                "name": "use_compel",
+                "value": True,
+                "widget_type": NodePropWidgetEnum.QCHECK_BOX,
+                "tab": "prompt",
+            },
+            {
+                "name": "steps",
+                "value": 20,
+                "widget_type": NodePropWidgetEnum.INT,
+                "range": (1, 150),
+                "tab": "generation",
+            },
+            {
+                "name": "seed",
+                "value": 42,
+                "widget_type": NodePropWidgetEnum.INT,
+                "range": (0, 2147483647),
+                "tab": "generation",
+            },
+            {
+                "name": "n_samples",
+                "value": 1,
+                "widget_type": NodePropWidgetEnum.INT,
+                "range": (1, 8),
+                "tab": "generation",
+            },
+            {
+                "name": "clip_skip",
+                "value": 0,
+                "widget_type": NodePropWidgetEnum.INT,
+                "range": (0, 12),
+                "tab": "advanced",
+            },
+            {
+                "name": "image_width",
+                "value": 512,
+                "widget_type": NodePropWidgetEnum.INT,
+                "range": (64, 2048),
+                "tab": "generation",
+            },
+            {
+                "name": "image_height",
+                "value": 512,
+                "widget_type": NodePropWidgetEnum.INT,
+                "range": (64, 2048),
+                "tab": "generation",
+            },
+            {
+                "name": "ddim_eta",
+                "value": 0.5,
+                "widget_type": NodePropWidgetEnum.FLOAT,
+                "range": (0.0, 1.0),
+                "tab": "advanced",
+            },
+            {
+                "name": "scale",
+                "value": 7.5,
+                "widget_type": NodePropWidgetEnum.FLOAT,
+                "range": (1.0, 30.0),
+                "tab": "generation",
+            },
+            {
+                "name": "strength",
+                "value": 0.5,
+                "widget_type": NodePropWidgetEnum.FLOAT,
+                "range": (0.0, 1.0),
+                "tab": "generation",
+            },
+            {
+                "name": "lora_scale",
+                "value": 1.0,
+                "widget_type": NodePropWidgetEnum.FLOAT,
+                "range": (0.0, 2.0),
+                "tab": "advanced",
+            },
+        ]
 
-        self.create_property(
-            "generator_name",
-            "stablediffusion",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
-            tab="basic",
-        )
-
-        self.create_property(
-            "prompt",
-            "",
-            widget_type=NodePropWidgetEnum.QTEXT_EDIT.value,
-            tab="prompt",
-        )
-
-        self.create_property(
-            "negative_prompt",
-            "",
-            widget_type=NodePropWidgetEnum.QTEXT_EDIT.value,
-            tab="prompt",
-        )
-
-        self.create_property(
-            "second_prompt",
-            "",
-            widget_type=NodePropWidgetEnum.QTEXT_EDIT.value,
-            tab="prompt",
-        )
-
-        self.create_property(
-            "second_negative_prompt",
-            "",
-            widget_type=NodePropWidgetEnum.QTEXT_EDIT.value,
-            tab="prompt",
-        )
-
-        self.create_property(
-            "model_path",
-            "",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
-            tab="model",
-        )
-
-        self.create_property(
-            "scheduler",
-            "DDIM",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
-            tab="model",
-        )
-
-        self.create_property(
-            "version",
-            "SD 1.5",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
-            tab="model",
-        )
-
-        # Boolean parameters using built-in checkbox widget
-        self.create_property(
-            "random_seed",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
-            tab="generation",
-        )
-
-        self.create_property(
-            "use_compel",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
-            tab="prompt",
-        )
-
-        # Integer parameters using built-in integer widget
-        self.create_property(
-            "steps",
-            20,
-            widget_type=NodePropWidgetEnum.INT.value,
-            range=(1, 150),
-            tab="generation",
-        )
-
-        self.create_property(
-            "seed",
-            42,
-            widget_type=NodePropWidgetEnum.INT.value,
-            range=(0, 2147483647),
-            tab="generation",
-        )
-
-        self.create_property(
-            "n_samples",
-            1,
-            widget_type=NodePropWidgetEnum.INT.value,
-            range=(1, 8),
-            tab="generation",
-        )
-
-        self.create_property(
-            "clip_skip",
-            0,
-            widget_type=NodePropWidgetEnum.INT.value,
-            range=(0, 12),
-            tab="advanced",
-        )
-
-        self.create_property(
-            "image_width",
-            512,
-            widget_type=NodePropWidgetEnum.INT.value,
-            range=(64, 2048),
-            tab="generation",
-        )
-
-        self.create_property(
-            "image_height",
-            512,
-            widget_type=NodePropWidgetEnum.INT.value,
-            range=(64, 2048),
-            tab="generation",
-        )
-
-        # Float parameters using built-in float widget
-        self.create_property(
-            "ddim_eta",
-            0.5,
-            widget_type=NodePropWidgetEnum.FLOAT.value,
-            range=(0.0, 1.0),
-            tab="advanced",
-        )
-
-        self.create_property(
-            "scale",
-            7.5,
-            widget_type=NodePropWidgetEnum.FLOAT.value,
-            range=(1.0, 30.0),
-            tab="generation",
-        )
-
-        self.create_property(
-            "strength",
-            0.5,
-            widget_type=NodePropWidgetEnum.FLOAT.value,
-            range=(0.0, 1.0),
-            tab="generation",
-        )
-
-        self.create_property(
-            "lora_scale",
-            1.0,
-            widget_type=NodePropWidgetEnum.FLOAT.value,
-            range=(0.0, 2.0),
-            tab="advanced",
-        )
+        for prop in props:
+            self.create_property(
+                prop["name"],
+                prop["value"],
+                widget_type=prop["widget_type"].value,
+                tab=prop["tab"],
+                range=prop.get("range"),
+                items=prop.get("items"),
+            )
 
         # Enum parameter using built-in combo box
         preset_values = [preset.name for preset in ImagePreset]
@@ -288,7 +278,6 @@ class ImageRequestNode(BaseWorkflowNode):
             height=image_height,
             image_preset=image_preset,
         )
-
         return {"image_request": image_request}
 
     def _get_value(self, input_data, name, expected_type):
