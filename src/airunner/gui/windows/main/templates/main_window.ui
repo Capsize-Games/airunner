@@ -1365,6 +1365,38 @@
    </hints>
   </connection>
   <connection>
+   <sender>actionUndo</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_undo_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>414</x>
+     <y>367</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionRedo</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>action_redo_triggered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>414</x>
+     <y>367</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
    <sender>artActionNew</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
