@@ -49,28 +49,7 @@ from airunner.data.models.workflow_connection import WorkflowConnection
 
 
 # Properties to explicitly ignore during save/load
-IGNORED_NODE_PROPERTIES = {
-    "selected",
-    "disabled",
-    "visible",
-    "width",
-    "height",
-    "pos",
-    "border_color",
-    "text_color",
-    "type",
-    "type_",
-    "id",
-    "icon",
-    "name",
-    "color",
-    "layout_direction",
-    "port_deletion_allowed",
-    "subgraph_session",
-    "outputs",
-    "inputs",
-    "custom",
-}
+IGNORED_NODE_PROPERTIES = {}
 
 
 class NodeGraphWidget(BaseWidget):
@@ -454,41 +433,35 @@ class NodeGraphWidget(BaseWidget):
     def _perform_save(
         self, workflow_id: int, name: str, description: str = ""
     ):
-        """Saves the current node graph state, including variables, to the specified workflow ID."""
+        """Saves the current node graph state to the specified workflow using CRUD operations."""
         self.logger.info(f"Saving workflow '{name}' (ID: {workflow_id})...")
         workflow = self._find_workflow_by_id(workflow_id)
         if not workflow:
-            self.logger.error(
-                f"Workflow with ID {workflow_id} not found for saving."
-            )
+            self.logger.error(f"Workflow with ID {workflow_id} not found.")
             QMessageBox.critical(
                 self, "Save Error", f"Workflow ID {workflow_id} not found."
             )
             return
 
-        # Update name and description before clearing data
+        # Update workflow metadata
         workflow.name = name
         workflow.description = description
         try:
             workflow.save()
-            self.logger.info(
-                f"Updated metadata for workflow '{name}' (ID: {workflow_id})."
-            )
         except Exception as e:
             self.logger.error(
-                f"Error updating workflow metadata for ID {workflow_id}: {e}",
-                exc_info=True,
+                f"Error updating workflow metadata: {e}", exc_info=True
             )
             QMessageBox.critical(
                 self, "Save Error", f"Could not update workflow metadata: {e}"
             )
-            return  # Stop if we can't even save the metadata
+            return
 
-        # Now clear existing data and save new state
-        self._clear_existing_workflow_data(workflow)
+        # Save graph state using CRUD operations
         self._save_variables(workflow)
-        nodes_map = self._save_nodes(workflow)
+        nodes_map = self._save_nodes(workflow_id)
         self._save_connections(workflow, nodes_map)
+
         self.logger.info(
             f"Workflow '{name}' (ID: {workflow_id}) saved successfully."
         )
@@ -600,29 +573,113 @@ class NodeGraphWidget(BaseWidget):
                 f"Error saving variables for workflow ID {workflow.id}: {e}"
             )
 
-    def _save_nodes(self, workflow):
-        """Save all nodes in the graph to the database."""
-        nodes_map = {}
+    def _save_nodes(self, workflow_id: int) -> Dict:
+        """
+        Save nodes in the graph to the database using CRUD operations.
+        Updates existing nodes, creates new ones, and removes obsolete ones.
+        """
+        nodes_map = {}  # Maps graph node IDs to database node IDs
         all_graph_nodes = self.graph.all_nodes()
-        self.logger.info(f"Found {len(all_graph_nodes)} nodes in the graph.")
+        self.logger.info(
+            f"Processing {len(all_graph_nodes)} nodes for saving..."
+        )
 
+        # First, get all existing nodes for this workflow
+        try:
+            existing_nodes = WorkflowNode.objects.filter_by(
+                workflow_id=workflow_id
+            )
+            existing_node_map = {}
+            for db_node in existing_nodes:
+                # Create a key based on node identifier and position to find matching nodes
+                key = f"{db_node.node_identifier}_{db_node.pos_x}_{db_node.pos_y}"
+                existing_node_map[key] = db_node
+            self.logger.info(
+                f"Found {len(existing_node_map)} existing nodes in the database"
+            )
+        except Exception as e:
+            self.logger.error(
+                f"Error retrieving existing nodes: {e}", exc_info=True
+            )
+            existing_node_map = {}
+
+        # Track which database nodes are still in use
+        used_db_node_ids = set()
+
+        # Process all graph nodes
         for node in all_graph_nodes:
             properties_to_save = self._extract_node_properties(node)
-            db_node = WorkflowNode.objects.create(
-                workflow_id=workflow.id,
-                node_identifier=node.type_,
-                name=node.name(),
-                pos_x=node.pos()[0],
-                pos_y=node.pos()[1],
-                properties=properties_to_save,
-            )
+
+            print("*" * 100)
+            print("properties_to_save", properties_to_save)
+
+            # Create a key to match with existing nodes
+            node_key = f"{node.type_}_{node.pos()[0]}_{node.pos()[1]}"
+            db_node = existing_node_map.get(node_key)
+
             if db_node:
-                nodes_map[node.id] = db_node.id
+                # Update existing node
                 self.logger.info(
-                    f"Saved node: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id}) Properties: {properties_to_save}"
+                    f"Updating existing node: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id})"
                 )
+                db_node.name = node.name()
+                db_node.pos_x = node.pos()[0]
+                db_node.pos_y = node.pos()[1]
+                db_node.properties = properties_to_save
+                try:
+                    db_node.save()
+                    nodes_map[node.id] = db_node.id
+                    used_db_node_ids.add(db_node.id)
+                except Exception as e:
+                    self.logger.error(
+                        f"Error updating node {node.name()}: {e}",
+                        exc_info=True,
+                    )
             else:
-                self.logger.error(f"Error saving node: {node.name()}")
+                # Create new node
+                try:
+                    db_node = WorkflowNode.objects.create(
+                        workflow_id=workflow_id,
+                        node_identifier=node.type_,
+                        name=node.name(),
+                        pos_x=node.pos()[0],
+                        pos_y=node.pos()[1],
+                        properties=properties_to_save,
+                    )
+                    if db_node:
+                        nodes_map[node.id] = db_node.id
+                        used_db_node_ids.add(db_node.id)
+                        self.logger.info(
+                            f"Created new node: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id})"
+                        )
+                    else:
+                        self.logger.error(
+                            f"Failed to create node: {node.name()}"
+                        )
+                except Exception as e:
+                    self.logger.error(
+                        f"Error creating node {node.name()}: {e}",
+                        exc_info=True,
+                    )
+
+        # Delete nodes that are no longer in the graph
+        nodes_to_delete = [
+            db_node.id
+            for db_node in existing_nodes
+            if db_node.id not in used_db_node_ids
+        ]
+        if nodes_to_delete:
+            try:
+                for node_id in nodes_to_delete:
+                    WorkflowNode.objects.delete_by(id=node_id)
+                self.logger.info(
+                    f"Deleted {len(nodes_to_delete)} obsolete nodes from the database"
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Error deleting obsolete nodes: {e}", exc_info=True
+                )
+
         return nodes_map
 
     def _extract_node_properties(self, node):
@@ -684,53 +741,128 @@ class NodeGraphWidget(BaseWidget):
         return properties_to_save
 
     def _save_connections(self, workflow, nodes_map):
-        """Save all connections in the graph to the database."""
-        # Get connections by iterating through nodes and their ports,
-        # as self.graph.all_connections() seems unavailable or problematic.
-        all_connections_data = []
-        all_graph_nodes = (
-            self.graph.all_nodes()
-        )  # Assumes self.graph.all_nodes() exists
+        """
+        Save connections in the graph to the database using CRUD operations.
+        Updates existing connections, creates new ones, and removes obsolete ones.
+        """
+        # Collect all current connections in the graph
+        current_connections = []
+        all_graph_nodes = self.graph.all_nodes()
         for node in all_graph_nodes:
             for out_port in node.outputs().values():
                 for in_port in out_port.connected_ports():
-                    # Store connection info in a dictionary mimicking the original structure
-                    all_connections_data.append(
-                        {"out_port": out_port, "in_port": in_port}
+                    current_connections.append(
+                        {
+                            "out_node_id": node.id,
+                            "out_port_name": out_port.name(),
+                            "in_node_id": in_port.node().id,
+                            "in_port_name": in_port.name(),
+                        }
                     )
 
         self.logger.info(
-            f"Found {len(all_connections_data)} connections by iterating through nodes."
+            f"Processing {len(current_connections)} connections for saving..."
         )
 
-        for conn_data in all_connections_data:
-            out_port = conn_data["out_port"]
-            in_port = conn_data["in_port"]
+        # Get all existing connections for this workflow from the database
+        try:
+            existing_connections = WorkflowConnection.objects.filter_by(
+                workflow_id=workflow.id
+            )
+            self.logger.info(
+                f"Found {len(existing_connections)} existing connections in the database"
+            )
+        except Exception as e:
+            self.logger.error(
+                f"Error retrieving existing connections: {e}", exc_info=True
+            )
+            existing_connections = []
 
-            output_node_graph_id = out_port.node().id
-            input_node_graph_id = in_port.node().id
-
+        # Create a map of existing connections for easier lookup
+        existing_conn_map = {}
+        for db_conn in existing_connections:
+            # Create a key based on the connection endpoints
             if (
-                output_node_graph_id in nodes_map
-                and input_node_graph_id in nodes_map
+                db_conn.output_node_id in nodes_map.values()
+                and db_conn.input_node_id in nodes_map.values()
             ):
-                output_node_db_id = nodes_map[output_node_graph_id]
-                input_node_db_id = nodes_map[input_node_graph_id]
+                # We need to look up the graph node IDs from the DB node IDs using the inverse of nodes_map
+                # This is because current_connections uses graph node IDs
+                inv_nodes_map = {
+                    db_id: graph_id for graph_id, db_id in nodes_map.items()
+                }
+                key = f"{inv_nodes_map.get(db_conn.output_node_id)}:{db_conn.output_port_name}:{inv_nodes_map.get(db_conn.input_node_id)}:{db_conn.input_port_name}"
+                existing_conn_map[key] = db_conn
 
-                WorkflowConnection.objects.create(
-                    workflow_id=workflow.id,
-                    output_node_id=output_node_db_id,
-                    output_port_name=out_port.name(),
-                    input_node_id=input_node_db_id,
-                    input_port_name=in_port.name(),
-                )
-                self.logger.info(
-                    f"Saved connection: {out_port.node().name()}.{out_port.name()} -> {in_port.node().name()}.{in_port.name()}"
-                )
+        # Track connections to keep
+        connection_keys_to_keep = set()
+
+        # Process all current connections
+        for conn in current_connections:
+            # Map the graph node IDs to database node IDs
+            if (
+                conn["out_node_id"] in nodes_map
+                and conn["in_node_id"] in nodes_map
+            ):
+                output_node_db_id = nodes_map[conn["out_node_id"]]
+                input_node_db_id = nodes_map[conn["in_node_id"]]
+
+                # Create a key to check if this connection already exists
+                conn_key = f"{conn['out_node_id']}:{conn['out_port_name']}:{conn['in_node_id']}:{conn['in_port_name']}"
+
+                if conn_key in existing_conn_map:
+                    # Connection already exists, mark it to keep
+                    self.logger.info(
+                        f"Connection already exists: {conn['out_port_name']} -> {conn['in_port_name']}"
+                    )
+                    connection_keys_to_keep.add(conn_key)
+                else:
+                    # Create new connection
+                    try:
+                        db_conn = WorkflowConnection.objects.create(
+                            workflow_id=workflow.id,
+                            output_node_id=output_node_db_id,
+                            output_port_name=conn["out_port_name"],
+                            input_node_id=input_node_db_id,
+                            input_port_name=conn["in_port_name"],
+                        )
+                        if db_conn:
+                            self.logger.info(
+                                f"Created new connection: {conn['out_port_name']} -> {conn['in_port_name']}"
+                            )
+                            # Add this new connection to our tracking
+                            new_key = f"{conn['out_node_id']}:{conn['out_port_name']}:{conn['in_node_id']}:{conn['in_port_name']}"
+                            connection_keys_to_keep.add(new_key)
+                    except Exception as e:
+                        self.logger.error(
+                            f"Error creating connection: {e}", exc_info=True
+                        )
             else:
                 self.logger.warning(
-                    f"Skipping connection due to missing node DB ID mapping: {out_port.node().name()}.{out_port.name()} -> {in_port.node().name()}.{in_port.name()}"
+                    f"Skipping connection due to missing node DB ID mapping: {conn['out_port_name']} -> {conn['in_port_name']}"
                 )
+
+        # Delete connections that are no longer in the graph
+        connections_to_delete = [
+            db_conn
+            for key, db_conn in existing_conn_map.items()
+            if key not in connection_keys_to_keep
+        ]
+        if connections_to_delete:
+            try:
+                for db_conn in connections_to_delete:
+                    WorkflowConnection.objects.delete_by(id=db_conn.id)
+                self.logger.info(
+                    f"Deleted {len(connections_to_delete)} obsolete connections from the database"
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Error deleting obsolete connections: {e}", exc_info=True
+                )
+
+        self.logger.info(
+            f"Connection saving complete. {len(current_connections)} processed, {len(connection_keys_to_keep)} kept or created."
+        )
 
     def _perform_load(self, workflow_id):
         """Loads a workflow, including variables, from the database."""
@@ -1040,42 +1172,55 @@ class NodeGraphWidget(BaseWidget):
         )
 
         for prop_name, prop_value in properties.items():
-            # Skip ignored properties and dynamic port lists (handled in _load_workflow_nodes)
-            if prop_name in IGNORED_NODE_PROPERTIES or prop_name in [
-                "_dynamic_input_names",
-                "_dynamic_output_names",
-            ]:
-                self.logger.debug(f"    Skipping property: {prop_name}")
-                continue
-
-            # Handle color conversion from list back to tuple if needed by NodeGraphQt
-            if prop_name == "color" and isinstance(prop_value, list):
-                prop_value = tuple(prop_value)
-
-            try:
-                # Use NodeGraphQt's property system primarily
-                if node_instance.has_property(prop_name):
-                    node_instance.set_property(prop_name, prop_value)
-                    self.logger.info(
-                        f"    Set property {prop_name} = {prop_value}"
+            if prop_name == "custom":
+                for custom_prop_name, custom_prop_value in prop_value.items():
+                    self._set_property_on_node(
+                        node_instance, custom_prop_name, custom_prop_value
                     )
-                # Fallback for direct attributes ONLY if necessary and NOT callable (methods)
-                elif hasattr(node_instance, prop_name) and not callable(
-                    getattr(node_instance, prop_name)
-                ):
-                    setattr(node_instance, prop_value)
-                    self.logger.warning(
-                        f"    Set attribute directly (use with caution): {prop_name} = {prop_value}"
-                    )
-                else:
-                    self.logger.warning(
-                        f"    Property '{prop_name}' not found or settable on node {node_instance.name()}. Skipping."
-                    )
-
-            except Exception as e:
-                self.logger.error(
-                    f"    Error restoring property '{prop_name}' for node {node_instance.name()}: {e}"
+            else:
+                self._set_property_on_node(
+                    node_instance, prop_name, prop_value
                 )
+
+    def _set_property_on_node(self, node_instance, prop_name, prop_value):
+        print("-----------", prop_name, prop_value)
+        # Skip ignored properties and dynamic port lists (handled in _load_workflow_nodes)
+        # if prop_name in IGNORED_NODE_PROPERTIES or prop_name in [
+        #     "_dynamic_input_names",
+        #     "_dynamic_output_names",
+        # ]:
+        if prop_name in IGNORED_NODE_PROPERTIES:
+            self.logger.debug(f"    Skipping property: {prop_name}")
+            return
+
+        # Handle color conversion from list back to tuple if needed by NodeGraphQt
+        if prop_name == "color" and isinstance(prop_value, list):
+            prop_value = tuple(prop_value)
+
+        try:
+            # Use NodeGraphQt's property system primarily
+            if node_instance.has_property(prop_name):
+                node_instance.set_property(prop_name, prop_value)
+                self.logger.info(
+                    f"    Set property {prop_name} = {prop_value}"
+                )
+            # Fallback for direct attributes ONLY if necessary and NOT callable (methods)
+            elif hasattr(node_instance, prop_name) and not callable(
+                getattr(node_instance, prop_name)
+            ):
+                setattr(node_instance, prop_value)
+                self.logger.warning(
+                    f"    Set attribute directly (use with caution): {prop_name} = {prop_value}"
+                )
+            else:
+                self.logger.warning(
+                    f"    Property '{prop_name}' not found or settable on node {node_instance.name()}. Skipping."
+                )
+
+        except Exception as e:
+            self.logger.error(
+                f"    Error restoring property '{prop_name}' for node {node_instance.name()}: {e}"
+            )
 
     # --- End Database Interaction ---
 
