@@ -146,8 +146,7 @@ def main():
     # check for run_setup_wizard boolean
     application_settings = ApplicationSettings.objects.first()
     if not application_settings:
-        application_settings = ApplicationSettings()
-        application_settings.save()
+        ApplicationSettings.objects.create()
         application_settings = ApplicationSettings.objects.first()
 
     if application_settings.run_setup_wizard:
