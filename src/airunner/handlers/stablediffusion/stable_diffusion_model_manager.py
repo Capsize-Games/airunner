@@ -1,24 +1,42 @@
 import os
 
-from diffusers import (
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
     StableDiffusionPipeline,
+)
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
     StableDiffusionImg2ImgPipeline,
+)
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import (
     StableDiffusionInpaintPipeline,
+)
+from diffusers.pipelines.controlnet.pipeline_controlnet import (
     StableDiffusionControlNetPipeline,
+)
+from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
     StableDiffusionControlNetImg2ImgPipeline,
+)
+from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import (
     StableDiffusionControlNetInpaintPipeline,
+)
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
     StableDiffusionXLPipeline,
+)
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
     StableDiffusionXLImg2ImgPipeline,
+)
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_inpaint import (
     StableDiffusionXLInpaintPipeline,
+)
+from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl import (
     StableDiffusionXLControlNetPipeline,
+)
+from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl_img2img import (
     StableDiffusionXLControlNetImg2ImgPipeline,
+)
+from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint_sd_xl import (
     StableDiffusionXLControlNetInpaintPipeline,
 )
-from airunner.enums import (
-    StableDiffusionVersion,
-    ModelStatus,
-    ModelType,
-)
+from airunner.enums import StableDiffusionVersion
 from airunner.handlers import BaseDiffusersModelManager
 
 

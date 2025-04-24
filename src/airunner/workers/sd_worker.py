@@ -3,7 +3,12 @@ from typing import Dict, Optional
 import threading
 
 import torch
-import transformers
+from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
+    StableDiffusionModelManager,
+)
+from airunner.handlers.flux.flux_model_manager import (
+    FluxModelManager,
+)
 
 from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
 from airunner.workers.worker import Worker
@@ -221,16 +226,9 @@ class SDWorker(Worker):
 
     def start_worker_thread(self):
         if self.sd is None:
-            from airunner.handlers import StableDiffusionModelManager
-
             self.sd = StableDiffusionModelManager()
 
         if self.flux is None:
-            from airunner.handlers import (
-                StableDiffusionModelManager,
-                FluxModelManager,
-            )
-
             self.flux = FluxModelManager()
 
         if self.application_settings.sd_enabled or AIRUNNER_SD_ON:
