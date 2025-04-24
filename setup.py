@@ -104,7 +104,7 @@ setup(
         "torchvision",
         "torchaudio",
         "torchao",
-        "accelerate==1.3.0",
+        "accelerate==1.6.0",
         "huggingface-hub>=0.24.0,<1.0",
         "tokenizers==0.21.1",
         "optimum==1.24.0",
