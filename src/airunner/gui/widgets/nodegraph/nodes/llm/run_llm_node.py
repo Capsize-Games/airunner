@@ -108,36 +108,10 @@ class RunLLMNode(BaseLLMNode):
         model_type = self.get_property("model_type")
         model_name = self.get_property("model_name")
         system_prompt = self.get_property("system_prompt")
-        use_mock = self.get_property("use_mock")
-
-        # Process the LLM request
-        if use_mock:
-            # Generate a mock response for testing (synchronous)
-            response = self._generate_mock_response(prompt, llm_request)
-            # Store the mock response for later use
-            self._current_llm_response = response
-            self._accumulated_response_text = response.message
-            # Return mock response immediately
-            return {
-                "llm_response": response,
-                "llm_message": response.message,
-            }
-        else:
-            # Start the actual LLM call (asynchronous)
-            self._call_llm(
-                prompt, system_prompt, llm_request, model_type, model_name
-            )
-
-            # Here we need to check if we have received a response from the LLM
-            # If we have, return it; otherwise, return None
-            if self._current_llm_response:
-                return {
-                    "llm_response": self._current_llm_response,
-                    "llm_message": self._accumulated_response_text,
-                }
-            else:
-                # Return None initially, the result will be updated when the response arrives
-                return {"llm_response": None, "llm_message": None}
+        self._call_llm(
+            prompt, system_prompt, llm_request, model_type, model_name
+        )
+        return None
 
     def _generate_mock_response(
         self, prompt: str, llm_request: LLMRequest
@@ -245,7 +219,13 @@ class RunLLMNode(BaseLLMNode):
         if llm_response.is_end_of_message:
             # Optionally, you could store the final complete response object if needed
             # self._final_complete_response = llm_response # If LLMResponse structure supports final state
-            pass
+            self.emit_signal(
+                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
+                {
+                    "node_id": self.id,
+                    "result": self.output_ports()[0].name(),
+                },
+            )
 
     def _propagate_outputs_to_downstream_nodes(self):
         """
@@ -293,5 +273,3 @@ class RunLLMNode(BaseLLMNode):
                         # Example: Propagate the full response object if needed
                         # downstream_node.set_property(downstream_port_name, port_data)
                         pass  # Adjust as needed for llm_response propagation
-
-        print(f"Propagated LLM response to all connected nodes")

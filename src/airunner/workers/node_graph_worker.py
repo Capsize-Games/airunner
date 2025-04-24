@@ -18,6 +18,7 @@ class NodeGraphWorker(Worker):
         self.execute_workflow()
 
     def handle_message(self, data: Dict):
+        print("HANDLE MESSAGE", data)
         node_id = data.get("node_id")
         result = data.get("result")
 
@@ -46,12 +47,9 @@ class NodeGraphWorker(Worker):
             f"Continuing workflow execution from node {node.name()}"
         )
 
-        # Create a new execution queue starting from this node's output ports
+        # Resume workflow from this node's output ports
         execution_queue = []
-        executed_nodes = set()  # Start fresh
         node_map = {n.id: n for n in self.graph.all_nodes()}
-
-        # Queue the next nodes manually based on the result port
         if result in node.outputs():
             output_port = node.outputs()[result]
             for connected_port in output_port.connected_ports():
@@ -60,179 +58,79 @@ class NodeGraphWorker(Worker):
                 self.logger.info(
                     f"Queuing node {next_node.name()} for continued execution"
                 )
-
-        # Continue workflow execution from these nodes
         if execution_queue:
-            # Start a new execution with the current node outputs
-            self.execute_workflow_from_queue(execution_queue, executed_nodes)
+            self._resume_workflow_from_queue(execution_queue)
         else:
             self.logger.info("No nodes to execute after async completion")
-
-    def execute_workflow_from_queue(
-        self, execution_queue, executed_nodes=None, initial_input_data=None
-    ):
-        """
-        Execute a workflow starting from a specific execution queue.
-        Used for continuing workflow execution after async operations.
-        """
-        if executed_nodes is None:
-            executed_nodes = set()
-
-        if initial_input_data is None:
-            initial_input_data = {}
-
-        node_outputs = {}  # Store data outputs {node_id: {port_name: data}}
-        node_map = {node.id: node for node in self.graph.all_nodes()}
-
-        processed_count = 0
-        max_steps = len(node_map) * 10  # Increased safety limit
-
-        self.logger.info(
-            f"Continuing workflow execution with queue: {execution_queue}"
-        )
-
-        while execution_queue and processed_count < max_steps:
-            node_id = execution_queue.pop(0)
-
-            # Skip if already executed
-            if node_id in executed_nodes:
-                continue
-
-            current_node = node_map.get(node_id)
-            if not current_node:
-                self.logger.warning(
-                    f"Node ID {node_id} not found in map during execution. Skipping."
-                )
-                continue
-
-            self.logger.info(
-                f"Executing node: {current_node.name()} (ID: {node_id})"
-            )
-
-            # Prepare input data for the current node
-            current_input_data = self._prepare_input_data(
-                current_node, node_outputs, initial_input_data
-            )
-
-            # Execute the node's logic
-            triggered_exec_port_name, output_data = self._execute_node(
-                current_node, current_input_data, node_outputs
-            )
-
-            # Check if the node execution is pending
-            if triggered_exec_port_name is None and output_data is None:
-                # Node execution is pending, add it back for retry
-                self.logger.info(
-                    f"  Node '{current_node.name()}' is pending execution. Adding back to queue."
-                )
-                execution_queue.append(node_id)
-                # Don't mark as executed yet
-                continue
-
-            # Store the output data
-            if output_data:
-                node_outputs[node_id] = output_data
-                self.logger.info(
-                    f"  Node {current_node.name()} produced output: {list(output_data.keys())}"
-                )
-
-            # Mark as executed
-            executed_nodes.add(node_id)
-            processed_count += 1
-
-            # Queue next nodes based on the triggered execution port
-            if triggered_exec_port_name:
-                self._queue_next_nodes(
-                    current_node,
-                    triggered_exec_port_name,
-                    execution_queue,
-                    executed_nodes,
-                )
-            else:
-                self.logger.info(
-                    f"  Node {current_node.name()} did not trigger an execution output."
-                )
-
-        self._finalize_execution(
-            processed_count, max_steps, node_outputs, node_map
-        )
 
     def execute_workflow(self, initial_input_data: Dict = None):
         if initial_input_data is None:
             initial_input_data = {}
-
-        node_outputs = {}  # Store data outputs {node_id: {port_name: data}}
+        self._node_outputs = (
+            {}
+        )  # Store data outputs {node_id: {port_name: data}}
         execution_queue, executed_nodes, node_map = self._initialize_execution(
             initial_input_data
         )
+        self._execution_queue = execution_queue
+        self._executed_nodes = executed_nodes
+        self._node_map = node_map
+        self._initial_input_data = initial_input_data
+        self._process_queue()
 
+    def _resume_workflow_from_queue(self, execution_queue):
+        # Continue workflow from a given queue after async completion
+        self._execution_queue = execution_queue
+        self._process_queue()
+
+    def _process_queue(self):
         processed_count = 0
-        max_steps = len(node_map) * 10
-
-        while execution_queue and processed_count < max_steps:
-            node_id = execution_queue.pop(0)
-
-            # Skip if already fully executed (important: don't skip nodes that might be pending)
-            if node_id in executed_nodes:
+        max_steps = len(self._node_map) * 10
+        while self._execution_queue and processed_count < max_steps:
+            node_id = self._execution_queue.pop(0)
+            if node_id in self._executed_nodes:
                 continue
-
-            current_node = node_map.get(node_id)
+            current_node = self._node_map.get(node_id)
             if not current_node:
                 self.logger.warning(
                     f"Node ID {node_id} not found in map during execution. Skipping."
                 )
                 continue
-
             self.logger.info(
                 f"Executing node: {current_node.name()} (ID: {node_id})"
             )
-
-            # Prepare input data for the current node
             current_input_data = self._prepare_input_data(
-                current_node, node_outputs, initial_input_data
+                current_node, self._node_outputs, self._initial_input_data
             )
-
-            # Execute the node's logic
             triggered_exec_port_name, output_data = self._execute_node(
-                current_node, current_input_data, node_outputs
+                current_node, current_input_data, self._node_outputs
             )
-
-            # Check if the node execution is pending
             if triggered_exec_port_name is None and output_data is None:
-                # Node execution is pending, add it back to the end of the queue for retry
                 self.logger.info(
-                    f"  Node '{current_node.name()}' is pending execution. Adding back to queue."
+                    f"  Node '{current_node.name()}' is pending execution. Workflow will pause until completion."
                 )
-                execution_queue.append(node_id)
-                # Don't mark as executed yet, don't increment processed_count beyond the retry count
-                continue
-
-            # Store the output data
+                # Pause workflow until async node signals completion
+                return
             if output_data:
-                node_outputs[node_id] = output_data
+                self._node_outputs[node_id] = output_data
                 self.logger.info(
                     f"  Node {current_node.name()} produced output: {list(output_data.keys())}"
                 )
-
-            # Mark as executed
-            executed_nodes.add(node_id)
+            self._executed_nodes.add(node_id)
             processed_count += 1
-
-            # Queue next nodes based on the triggered execution port
             if triggered_exec_port_name:
                 self._queue_next_nodes(
                     current_node,
                     triggered_exec_port_name,
-                    execution_queue,
-                    executed_nodes,
+                    self._execution_queue,
+                    self._executed_nodes,
                 )
             else:
                 self.logger.info(
                     f"  Node {current_node.name()} did not trigger an execution output."
                 )
-
         self._finalize_execution(
-            processed_count, max_steps, node_outputs, node_map
+            processed_count, max_steps, self._node_outputs, self._node_map
         )
 
     def _initialize_execution(self, initial_input_data):
@@ -326,6 +224,8 @@ class NodeGraphWorker(Worker):
             try:
                 # Execute the node and get its output
                 outputs = current_node.execute(current_input_data)
+                print("&" * 100)
+                print("OUTPUTS", outputs)
 
                 # Check if the node returned None, which indicates pending execution
                 if outputs is None:
