@@ -92,9 +92,7 @@ class NodeGraphWidget(BaseWidget):
 
     @Slot()
     def on_run_workflow(self):
-        self.emit_signal(SignalCode.RUN_WORKFLOW_SIGNAL, {
-            "graph": self.graph
-        })
+        self.emit_signal(SignalCode.RUN_WORKFLOW_SIGNAL, {"graph": self.graph})
 
     @Slot()
     def on_pause_workflow(self):
@@ -1328,5 +1326,5 @@ class NodeGraphWidget(BaseWidget):
 
     # --- End Database Interaction ---
 
-    def _on_node_execution_completed(self, data: dict):
+    def _on_node_execution_completed(self, data: Dict):
         self.node_graph_worker.add_to_queue(data)
