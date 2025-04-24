@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>node_graph_widget</class>
+ <widget class="QWidget" name="node_graph_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1331</width>
+    <height>853</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_5">
+   <property name="leftMargin">
+    <number>10</number>
+   </property>
+   <property name="topMargin">
+    <number>10</number>
+   </property>
+   <property name="rightMargin">
+    <number>10</number>
+   </property>
+   <property name="bottomMargin">
+    <number>10</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
+    <widget class="QWidget" name="widget" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>10</number>
+      </property>
+      <property name="horizontalSpacing">
+       <number>5</number>
+      </property>
+      <property name="verticalSpacing">
+       <number>0</number>
+      </property>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="pause_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Pause workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/pause-circle.svg</normaloff>:/dark/icons/feather/dark/pause-circle.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QPushButton" name="save_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Save workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/save.svg</normaloff>:/dark/icons/feather/dark/save.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QPushButton" name="play_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Run workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/play.svg</normaloff>:/dark/icons/feather/dark/play.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="stop_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Stop workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/stop-circle.svg</normaloff>:/dark/icons/feather/dark/stop-circle.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QPushButton" name="edit_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Edit workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/edit.svg</normaloff>:/dark/icons/feather/dark/edit.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="7">
+       <widget class="QPushButton" name="load_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Load workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/folder.svg</normaloff>:/dark/icons/feather/dark/folder.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>729</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="8">
+       <widget class="QPushButton" name="delete_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Delete workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/trash-2.svg</normaloff>:/dark/icons/feather/dark/trash-2.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="5">
+       <widget class="QPushButton" name="pushButton">
+        <property name="toolTip">
+         <string>Clear workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/x-circle.svg</normaloff>:/dark/icons/feather/dark/x-circle.svg</iconset>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+     <widget class="VariablesPanelWidget" name="variables" native="true">
+      <layout class="QGridLayout" name="gridLayout_4">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="spacing">
+        <number>0</number>
+       </property>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="graph" native="true">
+      <layout class="QGridLayout" name="gridLayout_2">
+       <property name="leftMargin">
+        <number>10</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="spacing">
+        <number>0</number>
+       </property>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="palette" native="true">
+      <layout class="QGridLayout" name="gridLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="spacing">
+        <number>0</number>
+       </property>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VariablesPanelWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/nodegraph/variables_panel</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../../../resources/feather.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>play_button</sender>
+   <signal>clicked()</signal>
+   <receiver>node_graph_widget</receiver>
+   <slot>on_run_workflow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>19</x>
+     <y>18</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>67</x>
+     <y>-10</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pause_button</sender>
+   <signal>clicked()</signal>
+   <receiver>node_graph_widget</receiver>
+   <slot>on_pause_workflow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>66</x>
+     <y>23</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>164</x>
+     <y>1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>stop_button</sender>
+   <signal>clicked()</signal>
+   <receiver>node_graph_widget</receiver>
+   <slot>on_stop_workflow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>102</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2</x>
+     <y>99</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>load_button</sender>
+   <signal>clicked()</signal>
+   <receiver>node_graph_widget</receiver>
+   <slot>on_load_workflow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>943</x>
+     <y>30</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>134</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>save_button</sender>
+   <signal>clicked()</signal>
+   <receiver>node_graph_widget</receiver>
+   <slot>on_save_workflow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>841</x>
+     <y>29</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-2</x>
+     <y>172</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>edit_button</sender>
+   <signal>clicked()</signal>
+   <receiver>node_graph_widget</receiver>
+   <slot>on_edit_workflow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>909</x>
+     <y>23</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1</x>
+     <y>206</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>delete_button</sender>
+   <signal>clicked()</signal>
+   <receiver>node_graph_widget</receiver>
+   <slot>on_delete_workflow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>964</x>
+     <y>22</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>244</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>node_graph_widget</receiver>
+   <slot>on_clear_workflow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>849</x>
+     <y>15</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>870</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>on_run_workflow()</slot>
+  <slot>on_pause_workflow()</slot>
+  <slot>on_stop_workflow()</slot>
+  <slot>on_load_workflow()</slot>
+  <slot>on_save_workflow()</slot>
+  <slot>on_edit_workflow()</slot>
+  <slot>on_delete_workflow()</slot>
+  <slot>on_clear_workflow()</slot>
+ </slots>
+</ui>
