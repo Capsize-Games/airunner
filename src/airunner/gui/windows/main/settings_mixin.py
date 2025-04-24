@@ -377,6 +377,9 @@ class SettingsMixin:
     @property
     def chatbot(self) -> Optional[Chatbot]:
         current_chatbot_id = self.llm_generator_settings.current_chatbot
+
+        # Use string-based relationship names for eager loading
+        # This is more compatible with SQLAlchemy's joinedload especially for nested relationships
         eager_load = [
             "target_files",
             "target_directories",
@@ -384,19 +387,25 @@ class SettingsMixin:
             "voice_settings.settings",
         ]
 
-        chatbot = Chatbot.objects.get(
-            pk=current_chatbot_id,
-            eager_load=eager_load,
-        )
+        try:
+            chatbot = Chatbot.objects.get(
+                pk=current_chatbot_id,
+                eager_load=eager_load,
+            )
 
-        if chatbot is None:
-            chatbot = Chatbot.objects.first(eager_load=eager_load)
+            if chatbot is None:
+                chatbot = Chatbot.objects.first(eager_load=eager_load)
 
-        if chatbot is None:
-            chatbot = Chatbot.objects.create(name="Foobar")
-            chatbot = Chatbot.objects.first(eager_load=eager_load)
+            if chatbot is None:
+                chatbot = Chatbot.objects.create(name="Foobar")
+                chatbot = Chatbot.objects.first(eager_load=eager_load)
 
-        return chatbot
+            return chatbot
+        except Exception as e:
+            self.logger.error(f"Error getting chatbot: {e}")
+            # Create a default chatbot as fallback
+            chatbot = Chatbot.objects.create(name="Default")
+            return chatbot
 
     def _get_settings_for_voice_settings(self, model_type: TTSModel):
         if model_type is TTSModel.SPEECHT5:
@@ -527,11 +536,49 @@ class SettingsMixin:
     def load_settings_from_db(
         model_class_, eager_load: Optional[List[str]] = None
     ) -> Type:
-        settings = model_class_.objects.first(eager_load=eager_load)
-        if settings is None:
-            settings = model_class_()
-            settings.save()
-        return model_class_.objects.first(eager_load=eager_load)
+        try:
+            with session_scope() as session:
+                # Try to fetch existing settings first
+                query = session.query(model_class_)
+                if eager_load:
+                    # Skip eager loading if we can't resolve the attribute
+                    for relation in eager_load:
+                        try:
+                            # Get the actual attribute instead of using string
+                            relation_attr = getattr(
+                                model_class_, relation, None
+                            )
+                            if relation_attr is not None:
+                                query = query.options(
+                                    joinedload(relation_attr)
+                                )
+                        except Exception as e:
+                            logger = get_logger(
+                                "AI Runner", AIRUNNER_LOG_LEVEL
+                            )
+                            logger.warning(
+                                f"Could not eager load {relation}: {e}"
+                            )
+
+                settings = query.first()
+
+                # If settings don't exist, create them
+                if settings is None:
+                    settings = model_class_()
+                    session.add(settings)
+                    session.commit()
+                    # Re-query to ensure we have a fresh instance
+                    settings = query.first()
+
+                # Make a copy of the settings to return after the session closes
+                session.expunge_all()
+                return settings
+
+        except Exception as e:
+            logger = get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
+            logger.error(f"Error in load_settings_from_db: {e}")
+            # Create new settings with defaults if there was an error
+            return model_class_()
 
     def update_setting_by_table_name(self, table_name, column_name, val):
         model_class_ = table_to_class.get(table_name)
@@ -781,18 +828,25 @@ class SettingsMixin:
 
     def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
         if not self.settings_mixin_shared_instance.chatbot:
-            chatbot = Chatbot.objects.get(
-                pk=chatbot_id,
-                eager_load=[
-                    "target_files",
-                    "target_directories",
-                    "voice_settings",
-                    "voice_settings.settings",
-                ],
-            )
-            if chatbot is None:
+            try:
+                # Use the proper approach for eager loading with SQLAlchemy attributes
+                chatbot = Chatbot.objects.get(
+                    pk=chatbot_id,
+                    eager_load=[
+                        Chatbot.target_files,
+                        Chatbot.target_directories,
+                        Chatbot.voice_settings,
+                        # We'll handle this special case in the base_manager.py
+                        "voice_settings.settings",
+                    ],
+                )
+                if chatbot is None:
+                    chatbot = self.create_chatbot("Default")
+                self.settings_mixin_shared_instance.chatbot = chatbot
+            except Exception as e:
+                self.logger.error(f"Error getting chatbot by id: {e}")
                 chatbot = self.create_chatbot("Default")
-            self.settings_mixin_shared_instance.chatbot = chatbot
+                self.settings_mixin_shared_instance.chatbot = chatbot
         return self.settings_mixin_shared_instance.chatbot
 
     def __settings_updated(
