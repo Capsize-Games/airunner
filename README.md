@@ -19,6 +19,14 @@
 No cloud dependency. No complicated setup. Just install, run, and create.
 
 ![image](https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa)
+<small>**Art tools**</small>
+
+![image](https://github.com/user-attachments/assets/695293b3-4688-40aa-acf3-4ecb2de4a524)
+<small>**Agent workflows**</small>
+
+![image](https://github.com/user-attachments/assets/d6a4c89b-d0d7-4c8b-9661-b7ce8a14ece9)
+<small>**OpenRouter integration**</small>
+---
 
 ## Table of Contents
 - [Overview](#overview)
