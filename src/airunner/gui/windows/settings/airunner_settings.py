@@ -43,6 +43,7 @@ from airunner.gui.windows.settings.templates.airunner_settings_ui import (
     Ui_airunner_settings,
 )
 from airunner.gui.windows.base_window import BaseWindow
+from airunner.utils.settings import get_qsettings
 
 
 class HighlightDelegate(QStyledItemDelegate):
@@ -73,6 +74,7 @@ class SettingsWindow(BaseWindow):
 
     def __init__(self, **kwargs):
         self.widgets = {}
+        self.qsettings = get_qsettings()
         super().__init__(**kwargs)
         self.model = None
         self.scroll_widget = None
@@ -203,6 +205,12 @@ class SettingsWindow(BaseWindow):
                         "description": "If enabled, AI Runner will check for updates on startup.",
                     },
                     {
+                        "name": "enable_workflows",
+                        "display_name": "Enable Workflows",
+                        "checkable": True,
+                        "description": "Enable experimental agent workflows.",
+                    },
+                    {
                         "name": "sound_settings",
                         "display_name": "Sound Settings",
                         "checkable": False,
@@ -254,6 +262,8 @@ class SettingsWindow(BaseWindow):
         item.setCheckable(checkable)
         if checkable:
             checked = False
+            if name == "enable_workflows":
+                checked = self.enable_workflows
             item.setCheckState(
                 Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
             )
@@ -284,6 +294,8 @@ class SettingsWindow(BaseWindow):
                 checked = self.application_settings.override_system_theme
             elif name == "check_for_updates":
                 checked = self.application_settings.latest_version_check
+            elif name == "enable_workflows":
+                checked = self.enable_workflows
             elif name == "allow_online_mode":
                 checked = self.application_settings.allow_online_mode
 
@@ -297,6 +309,16 @@ class SettingsWindow(BaseWindow):
         file_item.setData(description, Qt.ItemDataRole.ToolTipRole)
         file_item.setSizeHint(QSize(0, 24))
         parent_item.appendRow(file_item)
+
+    @property
+    def enable_workflows(self) -> bool:
+        return self.qsettings.value("enable_workflows") == "true"
+
+    @enable_workflows.setter
+    def enable_workflows(self, val: bool):
+        self.qsettings.setValue("enable_workflows", val)
+        self.emit_signal(SignalCode.ENABLE_WORKFLOWS_TOGGLED, {"enabled": val})
+        self.qsettings.sync()
 
     def on_item_clicked(self, index):
         item = self.model.itemFromIndex(index)
@@ -325,6 +347,9 @@ class SettingsWindow(BaseWindow):
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("latest_version_check", checked)
+        elif name == "enable_workflows":
+            checked = item.checkState() == Qt.CheckState.Checked
+            self.enable_workflows = checked
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("allow_online_mode", checked)
@@ -344,7 +369,6 @@ class SettingsWindow(BaseWindow):
             if _widget_class is not None:
                 widget_object = _widget_class()
         if widget_object is None:
-            print(f"Unable to load widget {name}")
             return
 
         self.clear_scroll_area()
