@@ -1,17 +1,13 @@
 from typing import Dict
 
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
-)
-from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
-    StableDiffusionModelManager,
+from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
+    BaseArtNode,
 )
 from airunner.handlers.stablediffusion.image_request import ImageRequest
-from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.enums import SignalCode
 
 
-class GenerateImageNode(BaseWorkflowNode):
+class GenerateImageNode(BaseArtNode):
     """
     Node for generating images using a specified Stable Diffusion model
     """

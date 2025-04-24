@@ -1,12 +1,12 @@
 # Random Number Generator Node
 import random
 from NodeGraphQt.constants import NodePropWidgetEnum
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.math.base_math_node import (
+    BaseMathNode,
 )
 
 
-class RandomNumberNode(BaseWorkflowNode):
+class RandomNumberNode(BaseMathNode):
     NODE_NAME = "Random Number Generator"
 
     def __init__(self):

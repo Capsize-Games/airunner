@@ -6,17 +6,17 @@ from PySide6.QtCore import Qt
 
 from NodeGraphQt.constants import NodePropWidgetEnum
 
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.core.base_core_node import (
+    BaseCoreNode,
 )
-from airunner.gui.widgets.nodegraph.variable_types import (
+from airunner.gui.widgets.nodegraph.nodes.core.variable_types import (
     get_variable_color,
     VariableType,
     get_variable_type_from_string,
 )
 
 
-class SetNode(BaseWorkflowNode):
+class SetNode(BaseCoreNode):
     """
     A node that sets a variable to a new value.
 
@@ -26,7 +26,6 @@ class SetNode(BaseWorkflowNode):
     - The output port passes the set value to the next node
     - When executed, the selected variable will be updated with the input value
     """
-    __identifier__ = "airunner.variables"
     NODE_NAME = "Set Variable"
     has_exec_in_port: bool = True
     has_exec_out_port: bool = True

@@ -2,8 +2,8 @@ from typing import Dict
 
 from NodeGraphQt.constants import NodePropWidgetEnum
 
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import (
+    BaseLLMNode,
 )
 from airunner.settings import (
     AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
@@ -13,7 +13,7 @@ from airunner.settings import (
 from airunner.enums import Gender
 
 
-class ChatbotNode(BaseWorkflowNode):
+class ChatbotNode(BaseLLMNode):
     """
     A node that outputs a Chatbot configuration as a dictionary.
 
@@ -22,7 +22,6 @@ class ChatbotNode(BaseWorkflowNode):
     """
 
     NODE_NAME = "Chatbot"
-    __identifier__ = "airunner.workflow.nodes.ChatbotNode"
 
     def __init__(self):
         super().__init__()

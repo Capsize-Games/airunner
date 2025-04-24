@@ -13,13 +13,13 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Slot
 
 from airunner.enums import SignalCode
-from airunner.gui.widgets.nodegraph.nodes.variable_getter_node import (
+from airunner.gui.widgets.nodegraph.nodes.core.variable_getter_node import (
     VariableGetterNode,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.nodegraph.variable import Variable
-from airunner.gui.widgets.nodegraph.variable_types import (
+from airunner.gui.widgets.nodegraph.nodes.core.variable_types import (
     VariableType,
     get_variable_color,
     get_variable_type_from_string,
@@ -360,7 +360,7 @@ class VariablesPanelWidget(BaseWidget):
         Args:
             variable: The variable to create a node class for
         """
-        from airunner.gui.widgets.nodegraph.nodes.variable_getter_node import (
+        from airunner.gui.widgets.nodegraph.nodes.core.variable_getter_node import (
             create_variable_getter_node_class,
         )
 
