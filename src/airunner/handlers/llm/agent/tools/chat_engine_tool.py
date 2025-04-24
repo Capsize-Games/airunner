@@ -3,6 +3,7 @@ from typing import (
     Optional,
     Union,
 )
+import jinja2
 import openai
 
 from llama_index.core.tools.types import (
@@ -101,9 +102,24 @@ class ChatEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
                 {"chat_history": chat_history} if len(chat_history) > 0 else {}
             )
 
-            streaming_response = self.chat_engine.stream_chat(
-                query_str, **params
-            )
+            try:
+                streaming_response = self.chat_engine.stream_chat(
+                    query_str, **params
+                )
+            except jinja2.exceptions.TemplateError as e:
+                self.logger.error(
+                    f"Error in template rendering. Please check your template. {e}"
+                )
+                response = (
+                    "Error in template rendering. Please check your template."
+                )
+                self._do_interrupt = False
+                return ToolOutput(
+                    content=str(response),
+                    tool_name=self.metadata.name,
+                    raw_input={"input": query_str},
+                    raw_output=response,
+                )
 
             is_first_message = True
             try:
