@@ -9,6 +9,7 @@ from airunner.handlers.llm.llm_request import OpenrouterMistralRequest
 from airunner.handlers.llm.agent.agents.local import LocalAgent
 from airunner.utils.application.get_logger import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.data.models import ApplicationSettings
 from logging import Logger
 
 import asyncio
@@ -94,8 +95,14 @@ class OpenRouterQObject(LocalAgent):
     def llm(self) -> Type[LLM]:
         if not self._llm:
             llm_request = OpenrouterMistralRequest.from_default()
-            qsettings = get_qsettings()
-            api_key = qsettings.value("api_key", None)
+            # Get API key from ApplicationSettings
+            app_settings = ApplicationSettings.objects.first()
+            api_key = app_settings.openrouter_api_key if app_settings else None
+
+            if not api_key:
+                self.logger.warning("No OpenRouter API key found in settings")
+                return None
+
             try:
                 self._llm = OpenRouterEnhanced(
                     model=self.llm_settings.model,

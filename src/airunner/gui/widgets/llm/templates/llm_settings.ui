@@ -32,20 +32,7 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="0" column="0">
-    <widget class="QLabel" name="label_2">
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>LLM Settings</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
+   <item row="4" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="frameShadow">
       <enum>QFrame::Shadow::Plain</enum>
@@ -62,7 +49,7 @@
         <x>0</x>
         <y>0</y>
         <width>579</width>
-        <height>700</height>
+        <height>563</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -863,15 +850,15 @@
           <property name="verticalSpacing">
            <number>10</number>
           </property>
-          <item row="1" column="0">
-           <widget class="QComboBox" name="model"/>
-          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="model_type_label">
             <property name="text">
              <string>Model Type</string>
             </property>
            </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QComboBox" name="model"/>
           </item>
          </layout>
         </widget>
@@ -880,11 +867,72 @@
      </widget>
     </widget>
    </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>LLM Settings</string>
+     </property>
+    </widget>
+   </item>
    <item row="1" column="0">
     <widget class="Line" name="line_2">
      <property name="orientation">
       <enum>Qt::Orientation::Horizontal</enum>
      </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Model service</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>5</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QComboBox" name="model_service"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QGroupBox" name="remote_model_path">
+     <property name="title">
+      <string>Model Path</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>5</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QLineEdit" name="model_path"/>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>
@@ -913,7 +961,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>146</x>
-     <y>819</y>
+     <y>559</y>
     </hint>
     <hint type="destinationlabel">
      <x>120</x>
@@ -928,8 +976,8 @@
    <slot>early_stopping_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>226</x>
-     <y>695</y>
+     <x>191</x>
+     <y>510</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -944,8 +992,8 @@
    <slot>reset_settings_to_default_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>407</x>
-     <y>807</y>
+     <x>410</x>
+     <y>556</y>
     </hint>
     <hint type="destinationlabel">
      <x>437</x>
@@ -960,8 +1008,8 @@
    <slot>do_sample_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>548</x>
-     <y>695</y>
+     <x>378</x>
+     <y>510</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -976,12 +1024,44 @@
    <slot>toggle_use_cache(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>814</x>
-     <y>695</y>
+     <x>565</x>
+     <y>510</y>
     </hint>
     <hint type="destinationlabel">
      <x>851</x>
      <y>825</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>model_service</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>llm_settings_widget</receiver>
+   <slot>on_model_service_currentTextChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>281</x>
+     <y>94</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>191</x>
+     <y>-12</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>model_path</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>llm_settings_widget</receiver>
+   <slot>on_model_path_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>47</x>
+     <y>161</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>388</x>
+     <y>-13</y>
     </hint>
    </hints>
   </connection>
@@ -1020,5 +1100,7 @@
   <slot>enable_manual_tools()</slot>
   <slot>enable_automatic_tools()</slot>
   <slot>toggle_use_cache(bool)</slot>
+  <slot>on_model_service_currentTextChanged(QString)</slot>
+  <slot>on_model_path_textChanged(QString)</slot>
  </slots>
 </ui>

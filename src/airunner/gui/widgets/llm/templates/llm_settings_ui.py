@@ -18,7 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
     QGridLayout, QGroupBox, QHBoxLayout, QLabel,
     QLayout, QLineEdit, QPushButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QWidget)
+    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
 
 from airunner.gui.widgets.slider.slider_widget import SliderWidget
 
@@ -32,15 +32,6 @@ class Ui_llm_settings_widget(object):
         self.gridLayout_4.setHorizontalSpacing(0)
         self.gridLayout_4.setVerticalSpacing(10)
         self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.label_2 = QLabel(llm_settings_widget)
-        self.label_2.setObjectName(u"label_2")
-        font = QFont()
-        font.setPointSize(11)
-        font.setBold(True)
-        self.label_2.setFont(font)
-
-        self.gridLayout_4.addWidget(self.label_2, 0, 0, 1, 1)
-
         self.scrollArea = QScrollArea(llm_settings_widget)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setFrameShadow(QFrame.Shadow.Plain)
@@ -48,7 +39,7 @@ class Ui_llm_settings_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 579, 700))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 579, 563))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -56,9 +47,9 @@ class Ui_llm_settings_widget(object):
         self.gridLayout.setContentsMargins(0, 0, 10, 0)
         self.override_parameters = QGroupBox(self.scrollAreaWidgetContents)
         self.override_parameters.setObjectName(u"override_parameters")
-        font1 = QFont()
-        font1.setPointSize(8)
-        self.override_parameters.setFont(font1)
+        font = QFont()
+        font.setPointSize(8)
+        self.override_parameters.setFont(font)
         self.override_parameters.setCheckable(True)
         self.override_parameters.setChecked(True)
         self.gridLayout_12 = QGridLayout(self.override_parameters)
@@ -347,7 +338,7 @@ class Ui_llm_settings_widget(object):
 
         self.model_version_label = QLabel(self.model_version_container)
         self.model_version_label.setObjectName(u"model_version_label")
-        self.model_version_label.setFont(font1)
+        self.model_version_label.setFont(font)
 
         self.gridLayout_11.addWidget(self.model_version_label, 0, 0, 1, 1)
 
@@ -368,7 +359,7 @@ class Ui_llm_settings_widget(object):
 
         self.prompt_template_label = QLabel(self.prompt_template_container)
         self.prompt_template_label.setObjectName(u"prompt_template_label")
-        self.prompt_template_label.setFont(font1)
+        self.prompt_template_label.setFont(font)
 
         self.gridLayout_17.addWidget(self.prompt_template_label, 0, 0, 1, 1)
 
@@ -377,28 +368,37 @@ class Ui_llm_settings_widget(object):
 
         self.model_type_container = QWidget(self.scrollAreaWidgetContents)
         self.model_type_container.setObjectName(u"model_type_container")
-        self.model_type_container.setFont(font1)
+        self.model_type_container.setFont(font)
         self.gridLayout_10 = QGridLayout(self.model_type_container)
         self.gridLayout_10.setObjectName(u"gridLayout_10")
         self.gridLayout_10.setHorizontalSpacing(0)
         self.gridLayout_10.setVerticalSpacing(10)
         self.gridLayout_10.setContentsMargins(0, 0, 0, 0)
-        self.model = QComboBox(self.model_type_container)
-        self.model.setObjectName(u"model")
-
-        self.gridLayout_10.addWidget(self.model, 1, 0, 1, 1)
-
         self.model_type_label = QLabel(self.model_type_container)
         self.model_type_label.setObjectName(u"model_type_label")
 
         self.gridLayout_10.addWidget(self.model_type_label, 0, 0, 1, 1)
+
+        self.model = QComboBox(self.model_type_container)
+        self.model.setObjectName(u"model")
+
+        self.gridLayout_10.addWidget(self.model, 1, 0, 1, 1)
 
 
         self.gridLayout.addWidget(self.model_type_container, 0, 0, 1, 1)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
-        self.gridLayout_4.addWidget(self.scrollArea, 2, 0, 1, 1)
+        self.gridLayout_4.addWidget(self.scrollArea, 4, 0, 1, 1)
+
+        self.label_2 = QLabel(llm_settings_widget)
+        self.label_2.setObjectName(u"label_2")
+        font1 = QFont()
+        font1.setPointSize(11)
+        font1.setBold(True)
+        self.label_2.setFont(font1)
+
+        self.gridLayout_4.addWidget(self.label_2, 0, 0, 1, 1)
 
         self.line_2 = QFrame(llm_settings_widget)
         self.line_2.setObjectName(u"line_2")
@@ -406,6 +406,32 @@ class Ui_llm_settings_widget(object):
         self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout_4.addWidget(self.line_2, 1, 0, 1, 1)
+
+        self.groupBox = QGroupBox(llm_settings_widget)
+        self.groupBox.setObjectName(u"groupBox")
+        self.verticalLayout = QVBoxLayout(self.groupBox)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setContentsMargins(0, 5, 0, 0)
+        self.model_service = QComboBox(self.groupBox)
+        self.model_service.setObjectName(u"model_service")
+
+        self.verticalLayout.addWidget(self.model_service)
+
+
+        self.gridLayout_4.addWidget(self.groupBox, 2, 0, 1, 1)
+
+        self.remote_model_path = QGroupBox(llm_settings_widget)
+        self.remote_model_path.setObjectName(u"remote_model_path")
+        self.verticalLayout_2 = QVBoxLayout(self.remote_model_path)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(0, 5, 0, 0)
+        self.model_path = QLineEdit(self.remote_model_path)
+        self.model_path.setObjectName(u"model_path")
+
+        self.verticalLayout_2.addWidget(self.model_path)
+
+
+        self.gridLayout_4.addWidget(self.remote_model_path, 3, 0, 1, 1)
 
         QWidget.setTabOrder(self.model, self.model_version)
         QWidget.setTabOrder(self.model_version, self.seed)
@@ -417,6 +443,8 @@ class Ui_llm_settings_widget(object):
         self.pushButton.clicked.connect(llm_settings_widget.reset_settings_to_default_clicked)
         self.do_sample.toggled.connect(llm_settings_widget.do_sample_toggled)
         self.use_cache.clicked["bool"].connect(llm_settings_widget.toggle_use_cache)
+        self.model_service.currentTextChanged.connect(llm_settings_widget.on_model_service_currentTextChanged)
+        self.model_path.textChanged.connect(llm_settings_widget.on_model_path_textChanged)
 
         self.model_version.setCurrentIndex(-1)
 
@@ -426,7 +454,6 @@ class Ui_llm_settings_widget(object):
 
     def retranslateUi(self, llm_settings_widget):
         llm_settings_widget.setWindowTitle(QCoreApplication.translate("llm_settings_widget", u"Form", None))
-        self.label_2.setText(QCoreApplication.translate("llm_settings_widget", u"LLM Settings", None))
         self.override_parameters.setTitle(QCoreApplication.translate("llm_settings_widget", u"Override Prameters", None))
         self.random_seed.setText(QCoreApplication.translate("llm_settings_widget", u"Random seed", None))
         self.length_penalty.setProperty("settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.length_penalty", None))
@@ -456,5 +483,8 @@ class Ui_llm_settings_widget(object):
         self.model_version_label.setText(QCoreApplication.translate("llm_settings_widget", u"Model Version", None))
         self.prompt_template_label.setText(QCoreApplication.translate("llm_settings_widget", u"Prompt Template", None))
         self.model_type_label.setText(QCoreApplication.translate("llm_settings_widget", u"Model Type", None))
+        self.label_2.setText(QCoreApplication.translate("llm_settings_widget", u"LLM Settings", None))
+        self.groupBox.setTitle(QCoreApplication.translate("llm_settings_widget", u"Model service", None))
+        self.remote_model_path.setTitle(QCoreApplication.translate("llm_settings_widget", u"Model Path", None))
     # retranslateUi
 
