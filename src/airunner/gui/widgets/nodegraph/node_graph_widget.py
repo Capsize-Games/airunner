@@ -71,9 +71,12 @@ class NodeGraphWidget(BaseWidget):
         self._register_nodes()
         self._initialize_context_menu()
         self._register_graph()
-        self._add_start_node()
+
         if self.current_workflow_id is not None:
             self._perform_load(self.current_workflow_id)
+
+        # if self.current_workflow_id is None:
+        #     self._add_start_node()
 
     @property
     def current_workflow_id(self) -> Optional[int]:
@@ -744,7 +747,6 @@ class NodeGraphWidget(BaseWidget):
                 self.logger.warning(
                     "No StartNode found in database after saving. Adding one automatically."
                 )
-                self._add_start_node()
                 # We need to update the nodes_map to include the newly created StartNode
                 for node in self.graph.all_nodes():
                     if (
@@ -962,11 +964,13 @@ class NodeGraphWidget(BaseWidget):
             workflow, db_nodes, db_connections = self._find_workflow_and_data(
                 workflow_id=workflow_id
             )
+            self.current_workflow_id = workflow_id
         except Exception as e:
             self.logger.warning(e)
+            self.current_workflow_id = None
             return
 
-        self._clear_graph()
+        self._clear_graph(add_start_node=False)
         self.current_workflow_id = workflow_id
         data = dict(
             workflow_id=workflow_id,
@@ -994,14 +998,14 @@ class NodeGraphWidget(BaseWidget):
                 f"Workflow '{workflow.name}' loaded successfully."
             )
 
-    def _clear_graph(self):
+    def _clear_graph(self, add_start_node: bool = True):
         self.logger.info("Clearing current graph session and variables...")
         self.emit_signal(
             SignalCode.CLEAR_WORKFLOW_SIGNAL,
-            {"callback": self._finalize_clear_graph},
+            {"callback": lambda: self._finalize_clear_graph(add_start_node)},
         )
 
-    def _finalize_clear_graph(self):
+    def _finalize_clear_graph(self, add_start_node: bool = True):
         # Clear the graph session
         self.graph.clear_session()
 
@@ -1029,7 +1033,8 @@ class NodeGraphWidget(BaseWidget):
             )
 
         # Automatically add a StartNode to the workflow
-        self._add_start_node()
+        if add_start_node:
+            self._add_start_node()
 
     def _add_start_node(self):
         """Add a StartNode to the workflow at a default position if one doesn't already exist."""
@@ -1061,6 +1066,17 @@ class NodeGraphWidget(BaseWidget):
             self.logger.info("Added default StartNode to workflow")
         else:
             self.logger.error("Failed to add default StartNode to workflow")
+
+    def _remove_start_node(self):
+        """Remove the StartNode from the workflow if it exists."""
+        start_nodes = [
+            node
+            for node in self.graph.all_nodes()
+            if isinstance(node, StartNode)
+        ]
+        for start_node in start_nodes:
+            self.graph.delete_node(start_node)
+            self.logger.info(f"Removed StartNode: {start_node.name()}")
 
     def _load_workflow_connections(self, db_connections, node_map):
         """Load connections from database records into the graph."""
@@ -1112,6 +1128,7 @@ class NodeGraphWidget(BaseWidget):
         """Find workflow by ID/name and fetch its nodes and connections."""
         workflow = self._find_workflow_by_id(workflow_id)
         assert workflow is not None, f"Workflow '{workflow_id}' not found."
+        self._remove_start_node()
         db_nodes, db_connections = self._fetch_workflow_data(workflow)
         return workflow, db_nodes, db_connections
 
