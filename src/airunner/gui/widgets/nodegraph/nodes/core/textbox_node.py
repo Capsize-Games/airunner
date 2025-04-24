@@ -1,14 +1,14 @@
 from NodeGraphQt.constants import NodePropWidgetEnum
-from airunner.gui.widgets.nodegraph.nodes.textedit_node import (
+from airunner.gui.widgets.nodegraph.nodes.core.textedit_node import (
     TextEditNode,
 )
 
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.core.base_core_node import (
+    BaseCoreNode,
 )
 
 
-class TextboxNode(BaseWorkflowNode):
+class TextboxNode(BaseCoreNode):
     NODE_NAME = "Textbox"
     has_exec_in_port: bool = False
     has_exec_out_port: bool = False

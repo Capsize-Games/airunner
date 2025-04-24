@@ -2,7 +2,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict
 
-from airunner.gui.widgets.nodegraph.variable_types import (
+from airunner.gui.widgets.nodegraph.nodes.core.variable_types import (
     VariableType,
     get_variable_type_from_string,
 )

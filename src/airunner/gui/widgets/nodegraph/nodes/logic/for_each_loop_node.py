@@ -1,14 +1,13 @@
-from NodeGraphQt.constants import NodePropWidgetEnum
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.logic.base_logic_node import (
+    BaseLogicNode,
 )
 
 
-class ReverseForEachLoopNode(BaseWorkflowNode):
+class ForEachLoopNode(BaseLogicNode):
     """
-    A node that iterates over elements in an array/collection in reverse order.
+    A node that iterates over elements in an array/collection.
 
-    Similar to Unreal Engine's ReverseForEachLoop node, this node has:
+    Similar to Unreal Engine's ForEachLoop node, this node has:
     - An exec input to start the loop
     - A loop body exec output that triggers for each iteration
     - An array input for the collection to iterate through
@@ -16,10 +15,7 @@ class ReverseForEachLoopNode(BaseWorkflowNode):
     - A completed exec output triggered when the loop finishes
     """
 
-    NODE_NAME = "Reverse For Each Loop"
-    LOOP_BODY_PORT_NAME = "Loop Body"
-    COMPLETED_PORT_NAME = "Completed"
-    has_exec_out_port: bool = False
+    NODE_NAME = "For Each Loop"
 
     def __init__(self):
         super().__init__()
@@ -49,10 +45,10 @@ class ReverseForEachLoopNode(BaseWorkflowNode):
 
     def execute(self, input_data):
         """
-        Executes the Reverse ForEach loop over the input array in reverse order.
+        Executes the ForEach loop over the input array.
 
         In a real implementation, this would need to handle execution flow differently
-        to actually iterate through each element of the array in reverse. This implementation
+        to actually iterate through each element of the array. This implementation
         simulates the concept but doesn't actually perform the iteration as that
         would require more changes to the execution engine.
 
@@ -70,14 +66,14 @@ class ReverseForEachLoopNode(BaseWorkflowNode):
             array = []
 
         if array:
-            # For demonstration, just use the last element
+            # For demonstration, just use the first element
             # In a real implementation, this would need to connect back to the execution
-            # engine to process each element in reverse sequence
-            index = len(array) - 1
-            element = array[index]
+            # engine to process each element in sequence
+            element = array[0]
+            index = 0
 
             print(
-                f"{self.name()}: Processing element {element} at index {index} (in reverse)"
+                f"{self.name()}: Processing element {element} at index {index}"
             )
 
             # Return the current element and index

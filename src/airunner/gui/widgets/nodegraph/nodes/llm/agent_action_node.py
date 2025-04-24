@@ -1,10 +1,9 @@
-# Node representing a single Agent Action
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import (
+    BaseLLMNode,
 )
 
 
-class AgentActionNode(BaseWorkflowNode):
+class AgentActionNode(BaseLLMNode):
     NODE_NAME = "Agent Action"
 
     def __init__(self):

@@ -1,13 +1,12 @@
-from sqlalchemy.orm import Session
 from NodeGraphQt.constants import NodePropWidgetEnum
 
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.core.base_core_node import (
+    BaseCoreNode,
 )
 from airunner.data.models.workflow import Workflow
 
 
-class SubWorkflowNode(BaseWorkflowNode):
+class SubWorkflowNode(BaseCoreNode):
     """
     A node that represents a saved workflow that can be used within other workflows.
 

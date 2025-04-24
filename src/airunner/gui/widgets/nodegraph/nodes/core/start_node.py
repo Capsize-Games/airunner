@@ -1,12 +1,10 @@
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.core.base_core_node import (
+    BaseCoreNode,
 )
 
 
-class StartNode(BaseWorkflowNode):
+class StartNode(BaseCoreNode):
     NODE_NAME = "Start Workflow"
-    __identifier__ = "airunner.workflow.nodes.control"  # Specific identifier for control flow
-    # NODE_PORTS_REMOVABLE = True # Class attribute might not be working reliably
     has_exec_in_port: bool = False
 
     def __init__(self):

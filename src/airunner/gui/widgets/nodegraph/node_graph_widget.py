@@ -15,7 +15,6 @@ from airunner.enums import SignalCode
 from airunner.gui.widgets.nodegraph.nodes import (
     AgentActionNode,
     BaseWorkflowNode,
-    PromptNode,
     TextboxNode,
     RandomNumberNode,
     LLMRequestNode,
@@ -46,6 +45,7 @@ from airunner.gui.widgets.nodegraph.templates.node_graph_ui import (
 from airunner.data.models.workflow import Workflow
 from airunner.data.models.workflow_node import WorkflowNode
 from airunner.data.models.workflow_connection import WorkflowConnection
+from airunner.utils.settings import get_qsettings
 
 
 # Properties to explicitly ignore during save/load
@@ -62,6 +62,7 @@ class NodeGraphWidget(BaseWidget):
             SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL: self._on_node_execution_completed,
         }
         super().__init__(*args, **kwargs)
+        self.q_settings = get_qsettings()
         self.graph = CustomNodeGraph()
         self.viewer = self.graph.widget
         self._node_outputs = {}
@@ -71,6 +72,18 @@ class NodeGraphWidget(BaseWidget):
         self._initialize_context_menu()
         self._register_graph()
         self._add_start_node()
+        if self.current_workflow_id is not None:
+            self._perform_load(self.current_workflow_id)
+
+    @property
+    def current_workflow_id(self) -> Optional[int]:
+        id = self.q_settings.value("current_workflow_id", None)
+        return id
+
+    @current_workflow_id.setter
+    def current_workflow_id(self, value: Optional[int]):
+        self.q_settings.setValue("current_workflow_id", value)
+        self.q_settings.sync()
 
     @Slot()
     def on_run_workflow(self):
@@ -87,6 +100,10 @@ class NodeGraphWidget(BaseWidget):
     @Slot()
     def on_save_workflow(self):
         """Shows a dialog to save the workflow, allowing creation of a new one or overwriting an existing one."""
+        if self.current_workflow_id is not None:
+            self._perform_save(self.current_workflow_id)
+            return
+
         workflows = Workflow.objects.all()
         workflow_map = {
             wf.name: wf for wf in workflows
@@ -265,16 +282,7 @@ class NodeGraphWidget(BaseWidget):
         if dialog.exec():
             selected_id = combo.currentData()
             if selected_id != -1:
-                try:
-                    self._perform_load(selected_id)
-                except Exception as e:
-                    self.logger.error(
-                        f"Error loading workflow ID {selected_id}: {e}",
-                        exc_info=True,
-                    )
-                    QMessageBox.critical(
-                        self, "Load Workflow", f"Failed to load workflow: {e}"
-                    )
+                self._perform_load(selected_id)
             else:
                 QMessageBox.warning(
                     self, "Load Workflow", "No workflow selected."
@@ -292,6 +300,7 @@ class NodeGraphWidget(BaseWidget):
     def on_clear_workflow(self):
         """Clear the current workflow graph and variables."""
         self._clear_graph()
+        self.current_workflow_id = None
         self.logger.info("Workflow graph and variables cleared.")
 
     def _register_nodes(self):
@@ -301,8 +310,6 @@ class NodeGraphWidget(BaseWidget):
         )
         for node_cls in [
             AgentActionNode,
-            BaseWorkflowNode,
-            PromptNode,
             TextboxNode,
             RandomNumberNode,
             LLMRequestNode,
@@ -445,7 +452,10 @@ class NodeGraphWidget(BaseWidget):
 
     # --- Database Interaction ---
     def _perform_save(
-        self, workflow_id: int, name: str, description: str = ""
+        self,
+        workflow_id: int,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
     ):
         """Saves the current node graph state to the specified workflow using CRUD operations."""
         self.logger.info(f"Saving workflow '{name}' (ID: {workflow_id})...")
@@ -456,6 +466,11 @@ class NodeGraphWidget(BaseWidget):
                 self, "Save Error", f"Workflow ID {workflow_id} not found."
             )
             return
+
+        name = workflow.name if name is None else name
+        description = (
+            workflow.description if description is None else description
+        )
 
         # Update workflow metadata
         workflow.name = name
@@ -716,7 +731,7 @@ class NodeGraphWidget(BaseWidget):
         start_node_identifiers = [
             node_type
             for node_type in self.graph.registered_nodes()
-            if issubclass(node_type, StartNode)
+            if isinstance(node_type, type) and issubclass(node_type, StartNode)
         ]
 
         if start_node_identifiers:
@@ -939,47 +954,9 @@ class NodeGraphWidget(BaseWidget):
             f"Connection saving complete. {len(current_connections)} processed, {len(connection_keys_to_keep)} kept or created."
         )
 
-    def _perform_load(self, workflow_id):
+    def _perform_load(self, workflow_id: int):
         """Loads a workflow, including variables, from the database."""
         self.logger.info(f"Loading workflow ID '{workflow_id}'...")
-
-        try:
-            workflow, db_nodes, db_connections = self._find_workflow_and_data(
-                workflow_id=workflow_id
-            )
-            if (
-                not workflow
-            ):  # Should be caught by _find_workflow_and_data assertion, but double check
-                raise ValueError(f"Workflow ID {workflow_id} not found.")
-
-        except Exception as e:
-            self.logger.error(
-                f"Failed to find or fetch data for workflow ID {workflow_id}: {e}",
-                exc_info=True,
-            )
-            # Raise the exception to be caught by the caller (on_load_workflow) for user message
-            raise  # Re-raise the exception
-
-        # Proceed with loading if data fetch was successful
-        self._clear_graph()
-        data = dict(
-            workflow=workflow,
-            db_nodes=db_nodes,
-            db_connections=db_connections,
-        )
-        self.emit_signal(
-            SignalCode.WORKFLOW_LOAD_SIGNAL,
-            {
-                "workflow": workflow,
-                "callback": lambda _data=data: self._finalize_load_workflow(
-                    _data
-                ),
-            },
-        )
-
-    def load_workflow(self, workflow_id):
-        """Loads a workflow from the database."""
-        self.logger.info(f"Loading workflow '{workflow_id}'...")
 
         try:
             workflow, db_nodes, db_connections = self._find_workflow_and_data(
@@ -990,6 +967,7 @@ class NodeGraphWidget(BaseWidget):
             return
 
         self._clear_graph()
+        self.current_workflow_id = workflow_id
         data = dict(
             workflow_id=workflow_id,
             db_nodes=db_nodes,
@@ -1075,7 +1053,7 @@ class NodeGraphWidget(BaseWidget):
 
         # Create a new StartNode at a default position
         start_node = self.graph.create_node(
-            "airunner.workflow.nodes.control.StartNode",
+            "Core.StartNode",
             name="Start Workflow",
             pos=(0, 0),
         )
@@ -1291,13 +1269,10 @@ class NodeGraphWidget(BaseWidget):
                 )
 
     def _set_property_on_node(self, node_instance, prop_name, prop_value):
-        print("-----------", prop_name, prop_value)
         # Skip ignored properties and dynamic port lists (handled in _load_workflow_nodes)
-        # if prop_name in IGNORED_NODE_PROPERTIES or prop_name in [
-        #     "_dynamic_input_names",
-        #     "_dynamic_output_names",
-        # ]:
-        if prop_name in IGNORED_NODE_PROPERTIES:
+        if prop_name in IGNORED_NODE_PROPERTIES or prop_name in [
+            "id",
+        ]:
             self.logger.debug(f"    Skipping property: {prop_name}")
             return
 
@@ -1316,7 +1291,7 @@ class NodeGraphWidget(BaseWidget):
             elif hasattr(node_instance, prop_name) and not callable(
                 getattr(node_instance, prop_name)
             ):
-                setattr(node_instance, prop_value)
+                setattr(node_instance, prop_name, prop_value)
                 self.logger.warning(
                     f"    Set attribute directly (use with caution): {prop_name} = {prop_value}"
                 )

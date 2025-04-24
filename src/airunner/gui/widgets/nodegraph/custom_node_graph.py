@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt
 
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.gui.widgets.nodegraph.nodes.variable_getter_node import (
+from airunner.gui.widgets.nodegraph.nodes.core.variable_getter_node import (
     VariableGetterNode,
 )
 

@@ -3,8 +3,8 @@ from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtCore import Qt
 from PIL.ImageQt import ImageQt
 
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
+    BaseArtNode,
 )
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 
@@ -43,15 +43,15 @@ class ImageDisplayWidget(QWidget):
         super().setDisabled(state)
 
 
-class ImageDisplayNode(BaseWorkflowNode):
-    NODE_NAME = "Image Display"
-    __identifier__ = "airunner.workflow.nodes"  # Ensure consistent identifier
+class CanvasNode(BaseArtNode):
+    NODE_NAME = "Canvas Node"
 
     def __init__(self):
         super().__init__()
 
         # Input port for ImageResponse object
-        self.add_input("image_response")
+        self.add_input("image_in")
+        self.add_output("image_out")
 
         # Create and add the custom wrapper widget to the node's view
         self.image_widget = ImageDisplayWidget(name="image_display")

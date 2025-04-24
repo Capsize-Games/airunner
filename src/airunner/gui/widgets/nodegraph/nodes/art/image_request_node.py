@@ -2,14 +2,14 @@ from typing import Dict
 
 from NodeGraphQt.constants import NodePropWidgetEnum
 
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
+    BaseArtNode,
 )
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.enums import ImagePreset, Scheduler, StableDiffusionVersion
 
 
-class ImageRequestNode(BaseWorkflowNode):
+class ImageRequestNode(BaseArtNode):
     """
     A node that outputs an ImageRequest object with configurable parameters.
 
@@ -17,7 +17,6 @@ class ImageRequestNode(BaseWorkflowNode):
     a properly constructed ImageRequest object for stable diffusion image generation.
     """
 
-    __identifier__ = "airunner.workflow.nodes"
     NODE_NAME = "Image Request"
     has_exec_in_port = False
     has_exec_out_port = False

@@ -1,10 +1,9 @@
-from NodeGraphQt.constants import NodePropWidgetEnum
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.logic.base_logic_node import (
+    BaseLogicNode,
 )
 
 
-class ForLoopNode(BaseWorkflowNode):
+class ForLoopNode(BaseLogicNode):
     """
     A node that iterates from a first index to a last index.
 
@@ -17,9 +16,6 @@ class ForLoopNode(BaseWorkflowNode):
     """
 
     NODE_NAME = "For Loop"
-    LOOP_BODY_PORT_NAME = "Loop Body"
-    COMPLETED_PORT_NAME = "Completed"
-    has_exec_out_port: bool = False
 
     def __init__(self):
         super().__init__()

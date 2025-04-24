@@ -2,23 +2,22 @@ from typing import Dict, Type
 
 from NodeGraphQt.constants import NodePropWidgetEnum
 
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.core.base_core_node import (
+    BaseCoreNode,
 )
-from airunner.gui.widgets.nodegraph.variable_types import (
+from airunner.gui.widgets.nodegraph.nodes.core.variable_types import (
     get_variable_color,
     VariableType,
 )
 
 
-class VariableGetterNode(BaseWorkflowNode):
+class VariableGetterNode(BaseCoreNode):
     """
     A node that represents getting the value of a graph variable.
     It is created by dragging a variable from the Variables panel.
     """
 
     # Define a unique identifier for the node type
-    __identifier__ = "airunner.variables"
     NODE_NAME = "Get Variable"  # Default name, will be updated
 
     # This node doesn't have execution pins
@@ -288,7 +287,7 @@ class VariableGetterNode(BaseWorkflowNode):
         var_type_str = custom_data.get("variable_type")
 
         if var_name and var_type_str:
-            from airunner.gui.widgets.nodegraph.variable_types import (
+            from airunner.gui.widgets.nodegraph.nodes.core.variable_types import (
                 get_variable_type_from_string,
             )
 
