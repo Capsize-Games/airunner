@@ -64,14 +64,16 @@ class BaseAgent(
         self,
         default_tool_choice: Optional[Union[str, dict]] = None,
         llm_settings: LLMSettings = LLMSettings(),
+        use_memory: bool = True,
         *args,
         **kwargs,
     ) -> None:
         self.default_tool_choice: Optional[Union[str, dict]] = (
             default_tool_choice
         )
+        self._llm_request: Optional[LLMRequest] = None
         self.llm_settings: LLMSettings = llm_settings
-
+        self._use_memory: bool = use_memory
         self._action: LLMActionType = LLMActionType.NONE
         self._chat_prompt: str = ""
         self._current_tab: Optional[Tab] = None
@@ -111,6 +113,17 @@ class BaseAgent(
             }
         )
         super().__init__(*args, **kwargs)
+
+    @property
+    def use_memory(self) -> bool:
+        use_memory = self._use_memory
+        if (
+            self.llm
+            and self.llm_request
+            and self.llm_request.use_memory is False
+        ):  # override with llm_request
+            use_memory = False
+        return use_memory
 
     @property
     def action(self) -> LLMActionType:
@@ -242,6 +255,16 @@ class BaseAgent(
         self._react_tool_agent = None
 
     @property
+    def llm_request(self) -> LLMRequest:
+        if not self._llm_request:
+            self._llm_request = LLMRequest.from_default()
+        return self._llm_request
+
+    @llm_request.setter
+    def llm_request(self, value: LLMRequest):
+        self._llm_request = value
+
+    @property
     def llm(self) -> Type[LLM]:
         if not self._llm and self.model and self.tokenizer:
             self.logger.info("Loading HuggingFaceLLM")
@@ -281,6 +304,9 @@ class BaseAgent(
 
     @property
     def do_summarize_conversation(self) -> bool:
+        if not self.conversation:
+            return False
+        
         messages = self.conversation.value or []
         total_messages = len(messages)
         if (
@@ -850,7 +876,9 @@ class BaseAgent(
             self.emit_signal(SignalCode.BOT_MOOD_UPDATED, {"mood": value})
 
     @property
-    def conversation(self) -> Conversation:
+    def conversation(self) -> Optional[Conversation]:
+        if not self.use_memory:
+            return None
         if not self._conversation:
             self.conversation = self._create_conversation()
         return self._conversation
@@ -866,6 +894,8 @@ class BaseAgent(
 
     @property
     def conversation_id(self) -> int:
+        if not self.use_memory:
+            return ""
         conversation_id = self._conversation_id
         if not conversation_id and self._conversation:
             self._conversation_id = self._conversation.id
@@ -993,6 +1023,12 @@ class BaseAgent(
                 "------\n"
             )
         section_prompt = ""
+        if self.conversation is not None:
+            conversation_timestamp_prompt = (
+                f"The conversation started on {self.conversation.timestamp}.\n"
+            )
+        else:
+            conversation_timestamp_prompt = ""
         prompt = (
             f"Your name is {self.botname}.\n"
             f"- The user ({self.username}) is having a conversation with the assistant ({self.botname}).\n"
@@ -1030,7 +1066,7 @@ class BaseAgent(
             f"------\n"
             "**More information about the current conversation:**\n"
             f"The conversation is between user ({self.username}) and assistant ({self.botname}).\n"
-            f"The conversation started on {self.conversation.timestamp}.\n"
+            f"{conversation_timestamp_prompt}"
             f"{section_prompt}"
         )
         prompt = prompt.replace("{{ username }}", self.username)
@@ -1060,7 +1096,7 @@ class BaseAgent(
     @property
     def chat_store(self) -> Type[BaseChatStore]:
         if not self._chat_store:
-            if AIRUNNER_LLM_CHAT_STORE == "db":
+            if AIRUNNER_LLM_CHAT_STORE == "db" and self.use_memory:
                 self._chat_store = DatabaseChatStore()
             else:
                 self._chat_store = SimpleChatStore()
@@ -1072,9 +1108,6 @@ class BaseAgent(
 
     @property
     def chat_memory(self) -> Optional[ChatMemoryBuffer]:
-        if self.llm and self.llm.llm_request and not self.llm.llm_request.use_memory:
-            return None
-        
         if not self._chat_memory:
             self.logger.info("Loading ChatMemoryBuffer")
             self._chat_memory = ChatMemoryBuffer.from_defaults(
@@ -1179,8 +1212,22 @@ class BaseAgent(
             self._update_user_data()
 
     def _update_llm_request(self, llm_request: Optional[LLMRequest]):
+        self.llm_request = llm_request
         if hasattr(self.llm, "llm_request"):
-            self.llm.llm_request = llm_request
+            self.llm_request = llm_request
+
+    def _update_memory_settings(self):
+        print("2" * 100)
+        print("_update_memory_settings", type(self.chat_store))
+        if (
+            type(self.chat_store) is DatabaseChatStore and not self.use_memory
+        ) or (type(self.chat_store) is SimpleChatStore and self.use_memory):
+            print("clearing", self.use_memory)
+            self.chat_memory = None
+            self.chat_store = None
+        self.chat_engine._memory = self.chat_memory
+        self.chat_engine_tool.chat_engine = self.chat_engine
+        print("memory settings are now", type(self.chat_store))
 
     def _perform_tool_call(self, action: LLMActionType, **kwargs):
         if action is LLMActionType.CHAT:
@@ -1228,11 +1275,15 @@ class BaseAgent(
     def _update_memory(self, action: LLMActionType):
         memory = None
         if action is LLMActionType.CHAT:
-            memory = self.chat_engine.memory
+            memory = self.chat_engine.memory if self.chat_engine else None
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            memory = self.rag_engine.memory
+            memory = self.rag_engine.memory if self.rag_engine else None
         elif action is LLMActionType.APPLICATION_COMMAND:
-            memory = self.react_tool_agent.chat_engine.memory
+            memory = (
+                self.react_tool_agent.chat_engine.memory
+                if self.react_tool_agent
+                else None
+            )
         self._memory = memory
 
     def _update_mood(self):
@@ -1274,7 +1325,7 @@ class BaseAgent(
         chat_history = chat_history[start_index:]
         kwargs = {
             "input": f"What is {self.botname}'s mood based on this conversation?",
-            "chat_history": chat_history,
+            # "chat_history": chat_history,
         }
         response = self.mood_engine_tool.call(do_not_display=True, **kwargs)
         self.logger.info(f"Saving conversation with mood: {response.content}")
@@ -1301,7 +1352,7 @@ class BaseAgent(
             ]
         kwargs = {
             "input": f"Extract concise, one-sentence summaries of relevant information about {self.username} from this conversation.",
-            "chat_history": chat_history,
+            # "chat_history": chat_history,
         }
         response = self.update_user_data_tool.call(
             do_not_display=True, **kwargs
@@ -1348,7 +1399,7 @@ class BaseAgent(
         response = self.summary_engine_tool.call(
             do_not_display=True,
             input="Provide a brief summary of this conversation",
-            chat_history=chat_history,
+            # chat_history=chat_history,
         )
         self.logger.info(
             f"Saving conversation with summary: {response.content}"
@@ -1376,7 +1427,7 @@ class BaseAgent(
         self.react_tool_agent.call(
             tool_choice="information_scraper_tool",
             input=message,
-            chat_history=self._memory.get_all() if self._memory else None,
+            # chat_history=self._memory.get_all() if self._memory else None,
         )
 
     def _create_conversation(self) -> Conversation:
@@ -1426,9 +1477,9 @@ class BaseAgent(
         kwargs.update(
             {
                 "input": f"{self.username}: {message}",
-                "chat_history": (
-                    self._memory.get_all() if self._memory else None
-                ),
+                # "chat_history": (
+                #     self._memory.get_all() if self._memory else None
+                # ),
                 "llm_request": llm_request,
             }
         )
@@ -1441,8 +1492,10 @@ class BaseAgent(
         print("system_prompt", system_prompt)
         self._update_system_prompt(system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
+        self._update_memory_settings()
         self._perform_tool_call(action, **kwargs)
         return AgentChatResponse(response=self._complete_response)
+
     # def chat(
     #     self,
     #     message: str,
@@ -1535,7 +1588,7 @@ class BaseAgent(
                         is_first_message=is_first_message,
                         is_end_of_message=is_last_message,
                         name=self.botname,
-                        node_id=self.llm.llm_request.node_id,
+                        node_id=self.llm_request.node_id,
                     ),
                     "do_tts_reply": do_tts_reply,
                 },
