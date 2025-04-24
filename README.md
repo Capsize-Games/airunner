@@ -150,10 +150,12 @@ These are the sizes of the various models that power AI Runner.
 
 ---
 
-## Quick Start (Docker)
+## Quick Start
 
 
 ### Development Environment setup
+
+#### Docker
 
 **Recommended for most developers**—it avoids Python environment headaches and streamlines GPU access.
 
@@ -169,6 +171,36 @@ These are the sizes of the various models that power AI Runner.
    ./src/airunner/bin/docker.sh airunner
    ```
 This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
+
+---
+
+#### Bare metal / local
+
+1. **Clone AI Runner**  
+   ```bash
+   git clone https://github.com/Capsize-Games/airunner.git
+   cd airunner
+   ```
+2. **Create a virtual environment**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+3. **Install dependencies**  
+   ```bash
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+   pip install -e .[all_dev]
+   pip install -U timm
+   ```
+---
+
+***See the [Installation Wiki for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).***
+
+---
+
+## Building the package
+
+AI Runner can be packaged with PyInstaller which packages Python runtime and dependencies so that the application can be used without any dependencies. Useful for distributing to non-technical users.
 
 ### Build the package locally
 
@@ -189,12 +221,6 @@ If you want to build the production package, follow these steps.
    ```bash
    ./src/airunner/bin/docker.sh build_package
    ```
-
----
-
-## Installation Details
-
-If you prefer **not** to use Docker, see the [Installation Wiki for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
 ---
 
