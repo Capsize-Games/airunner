@@ -963,7 +963,7 @@ class NodeGraphWidget(BaseWidget):
                 workflow_id=workflow_id
             )
         except Exception as e:
-            self.logger.error(e)
+            self.logger.warning(e)
             return
 
         self._clear_graph()
