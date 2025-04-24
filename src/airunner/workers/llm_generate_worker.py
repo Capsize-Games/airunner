@@ -4,6 +4,7 @@ from typing import Dict, Optional
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
+from airunner.handlers.llm.llm_model_manager import LLMModelManager
 
 
 class LLMGenerateWorker(Worker):
@@ -101,8 +102,6 @@ class LLMGenerateWorker(Worker):
     def _load_llm(self, data=None):
         data = data or {}
         if self.llm is None:
-            from airunner.handlers.llm.llm_model_manager import LLMModelManager
-
             self.llm = LLMModelManager(
                 local_agent_class=self.local_agent_class
             )
