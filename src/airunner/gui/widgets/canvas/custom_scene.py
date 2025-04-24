@@ -111,6 +111,10 @@ class CustomScene(
                 self.on_import_image_signal,
             ),
             (
+                SignalCode.SEND_IMAGE_TO_CANVAS_SIGNAL,
+                self.on_send_image_to_canvas_signal,
+            ),
+            (
                 SignalCode.CANVAS_APPLY_FILTER_SIGNAL,
                 self.on_apply_filter_signal,
             ),
@@ -242,6 +246,11 @@ class CustomScene(
         if file_path == "":
             return
         self.on_load_image_signal(file_path)
+
+    def on_send_image_to_canvas_signal(self, data: Dict):
+        image_response: ImageResponse = data.get("image_response")
+        image = image_response.images[0]
+        self.initialize_image(image)
 
     def on_paste_image_from_clipboard(self):
         image = self._paste_image_from_clipboard()
