@@ -39,6 +39,9 @@ from airunner.data.models.image_filter_value import ImageFilterValue
 from airunner.data.models.whisper_settings import WhisperSettings
 from airunner.data.models.news import RSSFeed, Category, Article
 from airunner.data.models.tab import Tab
+from airunner.data.models.workflow import Workflow
+from airunner.data.models.workflow_node import WorkflowNode
+from airunner.data.models.workflow_connection import WorkflowConnection
 from airunner.data.models.base import Base
 
 
@@ -85,6 +88,9 @@ classes = [
     Tab,
     VoiceSettings,
     OpenVoiceSettings,
+    Workflow,
+    WorkflowNode,
+    WorkflowConnection,
     Base,
 ]
 
