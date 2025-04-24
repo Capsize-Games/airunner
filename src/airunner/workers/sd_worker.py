@@ -3,21 +3,15 @@ from typing import Dict, Optional
 import threading
 
 import torch
-from PySide6.QtCore import QThread
-from PySide6.QtCore import QObject, Signal, Slot
 
 from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
 from airunner.workers.worker import Worker
-from airunner.handlers import StableDiffusionModelManager
+from airunner.handlers import StableDiffusionModelManager, FluxModelManager
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.data.models.ai_models import AIModels
+from airunner.enums import StableDiffusionVersion
 from airunner.settings import (
     AIRUNNER_SD_ON,
-    AIRUNNER_ART_MODEL_PATH,
-    AIRUNNER_ART_MODEL_VERSION,
-    AIRUNNER_ART_PIPELINE,
-    AIRUNNER_ART_SCHEDULER,
-    AIRUNNER_ART_USE_COMPEL,
 )
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -27,7 +21,8 @@ class SDWorker(Worker):
     queue_type = QueueType.GET_LAST_ITEM
 
     def __init__(self):
-        self.sd = None
+        self.sd: StableDiffusionModelManager = None
+        self.flux: FluxModelManager = None
         self.signal_handlers = {
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
             SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
@@ -36,8 +31,8 @@ class SDWorker(Worker):
             SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
             SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
-            SignalCode.SD_LOAD_SIGNAL: self.on_load_stablediffusion_signal,
-            SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_stablediffusion_signal,
+            SignalCode.SD_LOAD_SIGNAL: self.on_load_art_signal,
+            SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_art_signal,
             SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
             SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
             SignalCode.LORA_UPDATE_SIGNAL: self.on_update_lora_signal,
@@ -104,7 +99,7 @@ class SDWorker(Worker):
             thread = threading.Thread(target=self._unload_controlnet)
             thread.start()
 
-    def on_load_stablediffusion_signal(self, data: Dict = None):
+    def on_load_art_signal(self, data: Dict = None):
         data["settings"] = self.generator_settings
         self._handle_load_stable_diffusion(data)
 
@@ -177,7 +172,7 @@ class SDWorker(Worker):
         #     thread = threading.Thread(target=self._load_sd, args=(data,))
         #     thread.start()
 
-    def on_unload_stablediffusion_signal(self, data=None):
+    def on_unload_art_signal(self, data=None):
         # if self.sd:
         #     thread = threading.Thread(target=self._unload_sd, args=(data,))
         #     thread.start()
@@ -218,14 +213,32 @@ class SDWorker(Worker):
         if self.sd:
             self.sd.sd_load_tokenizer(data)
 
+    @property
+    def is_flux(self) -> bool:
+        return self.generator_settings.version in (
+            StableDiffusionVersion.FLUX_S.value,
+        )
+
     def start_worker_thread(self):
-        self.sd = StableDiffusionModelManager()
+        if self.sd is None:
+            self.sd = StableDiffusionModelManager()
+
+        if self.flux is None:
+            self.flux = FluxModelManager()
+
         if self.application_settings.sd_enabled or AIRUNNER_SD_ON:
-            self.sd.load()
+            if self.is_flux:
+                self.flux.load()
+            else:
+                self.sd.load()
 
     def handle_message(self, message):
-        if self.sd:
-            self.sd.run()
+        if self.is_flux:
+            if self.flux:
+                self.flux.run()
+        else:
+            if self.sd:
+                self.sd.run()
 
     @staticmethod
     def on_sd_cancel_signal(_data=None):
@@ -247,7 +260,10 @@ class SDWorker(Worker):
     def _finalize_do_generate_signal(self, message: Dict):
         print("_finalize_do_generate_signal", message)
         try:
-            self.sd.handle_generate_signal(message)
+            if self.is_flux:
+                self.flux.handle_generate_signal(message)
+            else:
+                self.sd.handle_generate_signal(message)
         except ValueError as e:
             self.logger.error(f"Failed to generate: {e}")
             print(message)
@@ -260,18 +276,32 @@ class SDWorker(Worker):
         print(f"SDWorker Error: {error_message}")
 
     def on_interrupt_image_generation_signal(self, _data=None):
-        if self.sd:
-            self.sd.interrupt_image_generation()
+        if self.is_flux:
+            if self.flux:
+                self.flux.interrupt_image_generation()
+        else:
+            if self.sd:
+                self.sd.interrupt_image_generation()
 
     def on_change_scheduler_signal(self, data: Dict):
-        if self.sd:
-            self.sd.load_scheduler(data["scheduler"])
+        if self.is_flux:
+            if self.flux:
+                self.flux.load_scheduler(data["scheduler"])
+        else:
+            if self.sd:
+                self.sd.load_scheduler(data["scheduler"])
 
     def on_model_status_changed_signal(self, message: Dict):
-        if self.sd and message["model"] == ModelType.SD:
-            if self.__requested_action is ModelAction.CLEAR:
-                self.on_unload_stablediffusion_signal()
-            self.__requested_action = ModelAction.NONE
+        if self.is_flux:
+            if self.sd and message["model"] == ModelType.FLUX_MODEL:
+                if self.__requested_action is ModelAction.CLEAR:
+                    self.on_unload_art_signal()
+                self.__requested_action = ModelAction.NONE
+        else:
+            if self.sd and message["model"] == ModelType.SD:
+                if self.__requested_action is ModelAction.CLEAR:
+                    self.on_unload_art_signal()
+                self.__requested_action = ModelAction.NONE
 
     def send_missing_model_alert(self, message):
         self.emit_signal(
