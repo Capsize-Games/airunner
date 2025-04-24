@@ -1,6 +1,8 @@
 import time
 from typing import Dict, Optional
 
+from NodeGraphQt.constants import NodePropWidgetEnum
+
 from airunner.enums import LLMActionType, SignalCode
 from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import (
     BaseLLMNode,
@@ -71,6 +73,13 @@ class RunLLMNode(BaseLLMNode):
             tab="settings",
         )
 
+        self.create_property(
+            "prompt",
+            "",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+            tab="basic",
+        )
+
     def execute(self, input_data: Dict):
         """
         Execute the node to process an LLMRequest and return an LLMResponse.
@@ -93,9 +102,7 @@ class RunLLMNode(BaseLLMNode):
             llm_request = LLMRequest()
 
         # Get the prompt text if provided
-        prompt = input_data.get("prompt", None)
-        if not prompt:
-            prompt = "Hello, how are you today?"
+        prompt = input_data.get("prompt", self.get_property("prompt"))
 
         # Get settings
         model_type = self.get_property("model_type")
