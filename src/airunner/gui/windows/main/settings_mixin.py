@@ -195,11 +195,42 @@ class SettingsMixin:
         return self.load_shortcut_keys()
 
     @property
+    def chatbot_voice_settings(self) -> VoiceSettings:
+        if self.chatbot.voice_id is None:
+            voice_settings = VoiceSettings.objects.first()
+            if voice_settings is None:
+                settings = self._get_settings_for_voice_settings(
+                    TTSModel.ESPEAK
+                )
+                voice_settings = VoiceSettings.objects.create(
+                    name="Default Voice",
+                    model_type=TTSModel.ESPEAK.value,
+                    settings_id=settings.id,
+                )
+            Chatbot.objects.update(
+                self.chatbot.id,
+                voice_id=voice_settings.id,
+            )
+            self.chatbot.voice_id = voice_settings.id
+
+        voice_settings = VoiceSettings.objects.get(pk=self.chatbot.voice_id)
+
+        if voice_settings is None:
+            raise ValueError(
+                "Chatbot voice settings not found. Please check the database."
+            )
+
+        return voice_settings
+
+    @property
+    def chatbot_voice_model_type(self) -> TTSModel:
+        return TTSModel(self.chatbot_voice_settings.model_type)
+
+    @property
     def speech_t5_settings(self) -> SpeechT5Settings:
-        model_type = self.chatbot.voice_settings.model_type
         settings = None
-        if model_type == TTSModel.SPEECHT5.value:
-            settings_id = self.chatbot.voice_settings.settings_id
+        if self.chatbot_voice_model_type is TTSModel.SPEECHT5:
+            settings_id = self.chatbot_voice_settings.settings_id
             settings = SpeechT5Settings.objects.filter_by_first(id=settings_id)
         if settings is None:
             settings = SpeechT5Settings.objects.create()
@@ -207,15 +238,14 @@ class SettingsMixin:
                 self.chatbot.id,
                 voice_settings_id=settings.id,
             )
-            self.chatbot.voice_settings.settings_id = settings.id
+            self.chatbot_voice_settings.settings_id = settings.id
         return settings
 
     @property
     def espeak_settings(self) -> Optional[object]:
-        model_type = self.chatbot.voice_settings.model_type
         settings = None
-        if model_type == TTSModel.ESPEAK.value:
-            settings_id = self.chatbot.voice_settings.settings_id
+        if self.chatbot_voice_model_type == TTSModel.ESPEAK:
+            settings_id = self.chatbot_voice_settings.settings_id
             settings = EspeakSettings.objects.filter_by_first(id=settings_id)
         if settings is None:
             settings = EspeakSettings.objects.create()
@@ -223,15 +253,14 @@ class SettingsMixin:
                 self.chatbot.id,
                 voice_settings_id=settings.id,
             )
-            self.chatbot.voice_settings.settings_id = settings.id
+            self.chatbot_voice_settings.settings_id = settings.id
         return settings
 
     @property
     def openvoice_settings(self) -> OpenVoiceSettings:
-        model_type = self.chatbot.voice_settings.model_type
         settings = None
-        if model_type == TTSModel.OPENVOICE.value:
-            settings_id = self.chatbot.voice_settings.settings_id
+        if self.chatbot_voice_model_type == TTSModel.OPENVOICE:
+            settings_id = self.chatbot_voice_settings.settings_id
             settings = OpenVoiceSettings.objects.filter_by_first(
                 id=settings_id
             )
@@ -241,7 +270,7 @@ class SettingsMixin:
                 self.chatbot.id,
                 voice_settings_id=settings.id,
             )
-            self.chatbot.voice_settings.settings_id = settings.id
+            self.chatbot_voice_settings.settings_id = settings.id
         return settings
 
     @property
@@ -348,49 +377,33 @@ class SettingsMixin:
     @property
     def chatbot(self) -> Optional[Chatbot]:
         current_chatbot_id = self.llm_generator_settings.current_chatbot
+        eager_load = [
+            "target_files",
+            "target_directories",
+            "voice_settings",
+            "voice_settings.settings",
+        ]
 
-        chatbot = Chatbot.objects.options(
-            joinedload(Chatbot.target_files),
-        ).get(current_chatbot_id)
+        chatbot = Chatbot.objects.get(
+            pk=current_chatbot_id,
+            eager_load=eager_load,
+        )
 
         if chatbot is None:
-            chatbot = Chatbot.objects.options(
-                joinedload(Chatbot.target_files),
-            ).first()
+            chatbot = Chatbot.objects.first(eager_load=eager_load)
 
         if chatbot is None:
-            chatbot = Chatbot()
-            chatbot.save()
-            chatbot = Chatbot.objects.options(
-                joinedload(Chatbot.target_files),
-            ).first()
-
-        if chatbot.voice_settings is None:
-            voice_settings = VoiceSettings.objects.first()
-            if voice_settings is None:
-                settings = self._get_settings_for_voice_settings(
-                    TTSModel.ESPEAK.value
-                )
-                voice_settings = VoiceSettings.objects.create(
-                    name="Default Voice",
-                    model_type=TTSModel.ESPEAK.value,
-                    settings_id=settings.id,
-                )
-
-            Chatbot.objects.update(chatbot.id, voice_id=voice_settings.id)
-            chatbot.voice_id = voice_settings.id
+            chatbot = Chatbot.objects.create(name="Foobar")
+            chatbot = Chatbot.objects.first(eager_load=eager_load)
 
         return chatbot
 
-    def _get_settings_for_voice_settings(self, model_type: str):
-        if model_type == TTSModel.SPEECHT5.value:
+    def _get_settings_for_voice_settings(self, model_type: TTSModel):
+        if model_type is TTSModel.SPEECHT5:
             settings = SpeechT5Settings.objects.first()
             if settings is None:
                 settings = SpeechT5Settings.objects.create()
-        elif (
-            model_type == TTSModel.OPENVOICE.value
-            and AIRUNNER_ENABLE_OPEN_VOICE
-        ):
+        elif model_type is TTSModel.OPENVOICE and AIRUNNER_ENABLE_OPEN_VOICE:
             settings = OpenVoiceSettings.objects.first()
             if settings is None:
                 settings = OpenVoiceSettings.objects.create()
@@ -768,10 +781,15 @@ class SettingsMixin:
 
     def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
         if not self.settings_mixin_shared_instance.chatbot:
-            chatbot = Chatbot.objects.options(
-                joinedload(Chatbot.target_files),
-                joinedload(Chatbot.target_directories),
-            ).get(chatbot_id)
+            chatbot = Chatbot.objects.get(
+                pk=chatbot_id,
+                eager_load=[
+                    "target_files",
+                    "target_directories",
+                    "voice_settings",
+                    "voice_settings.settings",
+                ],
+            )
             if chatbot is None:
                 chatbot = self.create_chatbot("Default")
             self.settings_mixin_shared_instance.chatbot = chatbot

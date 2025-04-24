@@ -11,6 +11,9 @@ from airunner.data.bootstrap.controlnet_bootstrap_data import (
 from airunner.data.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
+from airunner.data.bootstrap.flux_file_bootstrap_data import (
+    FLUX_FILE_BOOTSTRAP_DATA,
+)
 from airunner.data.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
@@ -157,6 +160,41 @@ class InstallWorker(
                 try:
                     self.hf_downloader.download_model(
                         requested_path=controlnet_model["path"],
+                        requested_file_name=filename,
+                        requested_file_path=requested_file_path,
+                        requested_callback=self.progress_updated.emit,
+                    )
+                except Exception as e:
+                    print(f"Error downloading {filename}: {e}")
+
+    def download_flux(self):
+        self.parent.on_set_downloading_status_label(
+            {"label": "Downloading Flux files..."}
+        )
+
+        models = model_bootstrap_data
+
+        self.total_models_in_current_step += len(models)
+        for model in models:
+            action = model["pipeline_action"]
+            try:
+                files = FLUX_FILE_BOOTSTRAP_DATA[model["version"]]
+            except KeyError:
+                continue
+            self.parent.total_steps += len(files)
+            for filename in files:
+                requested_file_path = os.path.expanduser(
+                    os.path.join(
+                        self.path_settings.base_path,
+                        model["model_type"],
+                        "models",
+                        model["version"],
+                        action,
+                    )
+                )
+                try:
+                    self.hf_downloader.download_model(
+                        requested_path=model["path"],
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
                         requested_callback=self.progress_updated.emit,
@@ -375,24 +413,27 @@ class InstallWorker(
             self.current_step = 3
             self.download_controlnet_processors()
         elif self.current_step == 3:
+            self.current_step = 4
+            self.download_flux()
+        elif self.current_step == 4:
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading LLM"}
             )
-            self.current_step = 4
+            self.current_step = 5
             self.download_llms()
-        elif self.current_step == 4:
+        elif self.current_step == 5:
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Text-to-Speech"}
             )
-            self.current_step = 5
+            self.current_step = 6
             self.download_tts()
-        elif self.current_step == 5:
+        elif self.current_step == 6:
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Speech-to-Text"}
             )
-            self.current_step = 6
+            self.current_step = 7
             self.download_stt()
-        elif self.current_step == 6:
+        elif self.current_step == 7:
             self.hf_downloader.download_model(
                 requested_path="",
                 requested_file_name="",
