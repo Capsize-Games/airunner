@@ -3,22 +3,12 @@ import re
 import threading
 from typing import Optional, Type
 
-from airunner.data.models.espeak_settings import EspeakSettings
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
 from airunner.workers.worker import Worker
 from airunner.handlers.llm.llm_response import LLMResponse
-from airunner.handlers import (
-    SpeechT5ModelManager,
-    EspeakModelManager,
-)
 from airunner.settings import AIRUNNER_TTS_ON, AIRUNNER_ENABLE_OPEN_VOICE
 from airunner.handlers.tts.tts_request import TTSRequest, EspeakTTSRequest
-
-if AIRUNNER_ENABLE_OPEN_VOICE:
-    from airunner.handlers.tts.openvoice_model_manager import (
-        OpenVoiceModelManager,
-    )
 
 
 class TTSGeneratorWorker(Worker):
@@ -139,10 +129,22 @@ class TTSGeneratorWorker(Worker):
             return
         model_type = TTSModel(model)
         if model_type is TTSModel.SPEECHT5:
+            from airunner.handlers.tts.speecht5_model_manager import (
+                SpeechT5ModelManager,
+            )
+
             tts_model_manager_class_ = SpeechT5ModelManager
         elif AIRUNNER_ENABLE_OPEN_VOICE and model_type is TTSModel.OPENVOICE:
+            from airunner.handlers.tts.openvoice_model_manager import (
+                OpenVoiceModelManager,
+            )
+
             tts_model_manager_class_ = OpenVoiceModelManager
         else:
+            from airunner.handlers.tts.espeak_model_manager import (
+                EspeakModelManager,
+            )
+
             tts_model_manager_class_ = EspeakModelManager
         self.tts = tts_model_manager_class_()
 
