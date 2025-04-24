@@ -2,14 +2,14 @@ import time
 from typing import Dict, Optional
 
 from airunner.enums import LLMActionType, SignalCode
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import (
+    BaseLLMNode,
 )
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 
 
-class RunLLMNode(BaseWorkflowNode):
+class RunLLMNode(BaseLLMNode):
     """
     A node that executes an LLMRequest and returns an LLMResponse.
 

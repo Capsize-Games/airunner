@@ -2,12 +2,12 @@ from typing import Dict
 
 from NodeGraphQt.constants import NodePropWidgetEnum
 
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
+    BaseArtNode,
 )
 
 
-class EmbeddingNode(BaseWorkflowNode):
+class EmbeddingNode(BaseArtNode):
     """
     A node that outputs an Embedding configuration as a dictionary.
 
@@ -16,7 +16,6 @@ class EmbeddingNode(BaseWorkflowNode):
     """
 
     NODE_NAME = "Embedding"
-    __identifier__ = "airunner.workflow.nodes.EmbeddingNode"
 
     def __init__(self):
         super().__init__()

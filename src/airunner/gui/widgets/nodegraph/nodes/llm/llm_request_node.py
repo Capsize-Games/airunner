@@ -3,13 +3,13 @@ import inspect
 
 from NodeGraphQt.constants import NodePropWidgetEnum
 
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import (
+    BaseLLMNode,
 )
 from airunner.handlers.llm.llm_request import LLMRequest
 
 
-class LLMRequestNode(BaseWorkflowNode):
+class LLMRequestNode(BaseLLMNode):
     """
     A node that outputs an LLMRequest object with configurable parameters.
 

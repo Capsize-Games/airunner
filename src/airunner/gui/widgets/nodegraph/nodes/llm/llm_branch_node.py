@@ -4,14 +4,14 @@ from typing import Dict, Optional
 from NodeGraphQt.constants import NodePropWidgetEnum
 
 from airunner.enums import LLMActionType, SignalCode
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import (
+    BaseLLMNode,
 )
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 
 
-class LLMBranchNode(BaseWorkflowNode):
+class LLMBranchNode(BaseLLMNode):
     """
     A node that evaluates a logical condition using an LLM and routes execution flow
     based on whether the condition is true or false.
@@ -21,8 +21,6 @@ class LLMBranchNode(BaseWorkflowNode):
     """
 
     NODE_NAME = "Branch"
-    __identifier__ = "airunner.workflow.nodes.LLMBranchNode"
-    type_ = "airunner.workflow.nodes.LLMBranchNode"
 
     EXEC_TRUE_PORT_NAME = "True"  # Internal name
     EXEC_FALSE_PORT_NAME = "False"  # Internal name
