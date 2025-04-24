@@ -26,7 +26,7 @@ extras_require = {
     ],
     "art": [  # Art generation dependencies
         "DeepCache==0.1.1",
-        "diffusers==0.32.2",
+        "diffusers==0.33.1",
         "controlnet_aux==0.0.9",
         "safetensors==0.5.2",
         "compel==2.0.3",
@@ -34,7 +34,7 @@ extras_require = {
         "timm<=0.6.7",  # Timm is marked at a lower version for compel, we upgrade after installing
     ],
     "llm": [  # LLM dependencies (also text-to-speech and speech-to-text)
-        "transformers==4.48.1",
+        "transformers==4.51.3",
         "auto-gptq==0.7.1",
         "bitsandbytes==0.45.5",
         "datasets==3.2.0",
@@ -87,7 +87,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="4.1.4",
+    version="4.1.5",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -100,11 +100,10 @@ setup(
     packages=find_packages("src"),
     python_requires=">=3.10.12,<3.11",
     install_requires=[
-        "torch==2.8.0.dev20250419+cu128",
-        "torchvision==0.22.0.dev20250419+cu128",
-        "torchaudio==2.6.0.dev20250419+cu128",
-        "torchao==0.11.0.dev20250420+cu126",
-        "pytorch-triton==3.3.0+git96316ce5",
+        "torch",
+        "torchvision",
+        "torchaudio",
+        "torchao",
         "accelerate==1.3.0",
         "huggingface-hub>=0.24.0,<1.0",
         "tokenizers==0.21.1",
