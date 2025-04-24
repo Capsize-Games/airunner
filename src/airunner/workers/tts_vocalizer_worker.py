@@ -4,7 +4,7 @@ from queue import Queue
 
 from PySide6.QtCore import QThread
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, TTSModel
 from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.workers.worker import Worker
 from airunner.data.models import SoundSettings
@@ -36,6 +36,10 @@ class TTSVocalizerWorker(Worker):
         self.do_interrupt = False
         self.accept_message = True
 
+    @property
+    def is_espeak(self) -> bool:
+        return self.chatbot_voice_model_type == TTSModel.ESPEAK.value
+
     def on_interrupt_process_signal(self):
         self.stream.abort()
         self.accept_message = False
@@ -64,7 +68,7 @@ class TTSVocalizerWorker(Worker):
         self.start_stream()
 
     def stop_stream(self):
-        if self.chatbot.voice_settings.model_type == "Espeak":
+        if self.is_espeak:
             return
         if self.stream:
             self.logger.info("Stopping TTS vocalizer stream...")
@@ -83,7 +87,7 @@ class TTSVocalizerWorker(Worker):
             self.stream = None
 
     def start_stream(self, pitch: Optional[int] = None):
-        if self.chatbot.voice_settings.model_type == "Espeak":
+        if self.is_espeak:
             return
         self.logger.info("Starting TTS vocalizer stream...")
         try:

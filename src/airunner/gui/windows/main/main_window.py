@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QSystemTrayIcon,
     QMenu,
+    QPushButton,
 )
 from PySide6.QtGui import QIcon
 
@@ -84,6 +85,7 @@ from airunner.gui.windows.settings.airunner_settings import SettingsWindow
 from airunner.gui.windows.update.update_window import UpdateWindow
 from airunner.gui.managers.icon_manager import IconManager
 from airunner.plugin_loader import PluginLoader
+from airunner.gui.widgets.nodegraph.node_graph_widget import NodeGraphWidget
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
 from airunner.workers.llm_generate_worker import LLMGenerateWorker
@@ -155,11 +157,19 @@ class MainWindow(
         ("message-square", "actionDiscord"),
         ("download", "actionImport_image"),
         ("upload", "actionExport_image_button"),
+        ("codesandbox", "menuWorkflow"),
+        ("trash-2", "workflow_actionClear"),
+        ("edit", "workflow_actionEdit"),
+        ("folder", "workflow_actionOpen"),
+        ("pause-circle", "workflow_actionPause"),
+        ("play", "workflow_actionRun"),
+        ("save", "workflow_actionSave"),
+        ("stop-circle", "workflow_actionStop"),
     ]
 
     def __init__(self, *args, **kwargs):
         self.ui = self.ui_class_()
-
+        self.qsettings = get_qsettings()
         self.icon_manager: Optional[IconManager] = None
         self.quitting = False
         self.update_popup = None
@@ -217,6 +227,7 @@ class MainWindow(
             SignalCode.NAVIGATE_TO_URL: self.on_navigate_to_url,
             SignalCode.MISSING_REQUIRED_MODELS: self.display_missing_models_error,
             SignalCode.TOGGLE_TOOL: self.on_toggle_tool_signal,
+            SignalCode.ENABLE_WORKFLOWS_TOGGLED: self.on_enable_workflows_toggled,
         }
         self.logger.debug("Starting AI Runnner")
         super().__init__()
@@ -241,8 +252,7 @@ class MainWindow(
 
     @property
     def close_to_system_tray(self) -> bool:
-        settings = get_qsettings()
-        val = settings.value("close_to_system_tray")
+        val = self.qsettings.value("close_to_system_tray")
         return val is True or val is None
 
     @property
@@ -267,6 +277,10 @@ class MainWindow(
     def document_name(self):
         return "Untitled"
 
+    @property
+    def enable_workflows(self) -> bool:
+        return self.qsettings.value("enable_workflows") == "true"
+
     """
     Slot functions
     
@@ -280,9 +294,8 @@ class MainWindow(
 
     @Slot(bool)
     def action_toggle_close_to_system_tray(self, val):
-        settings = get_qsettings()
-        settings.setValue("close_to_system_tray", val)
-        settings.sync()
+        self.qsettings.setValue("close_to_system_tray", val)
+        self.qsettings.sync()
 
     @Slot(bool)
     def action_toggle_brush(self, active: bool):
@@ -758,20 +771,44 @@ class MainWindow(
 
         self.ui.setupUi(self)
 
+        self.ui.workflow_actionClear.triggered.connect(
+            self.ui.graph.on_run_workflow
+        )
+        self.ui.workflow_actionEdit.triggered.connect(
+            self.ui.graph.on_edit_workflow
+        )
+        self.ui.workflow_actionOpen.triggered.connect(
+            self.ui.graph.on_load_workflow
+        )
+        self.ui.workflow_actionPause.triggered.connect(
+            self.ui.graph.on_pause_workflow
+        )
+        self.ui.workflow_actionRun.triggered.connect(
+            self.ui.graph.on_run_workflow
+        )
+        self.ui.workflow_actionSave.triggered.connect(
+            self.ui.graph.on_save_workflow
+        )
+        self.ui.workflow_actionStop.triggered.connect(
+            self.ui.graph.on_stop_workflow
+        )
+
         self.icon_manager = IconManager(self.icons, self.ui)
 
         if not AIRUNNER_ART_ENABLED:
             self._disable_aiart_gui_elements()
 
         active_index = 0
-
-        tabs = Tab.objects.filter_by(section="center")
-        for tab in tabs:
-            if tab.active:
-                active_index = tab.index
-                break
+        tab = Tab.objects.filter_by(section="center", active=True)
+        if tab:
+            print(tab)
+            active_index = tab[0].index
 
         self.ui.center_tab_container.setCurrentIndex(active_index)
+        # on tab change, track the Tab index on the Tab object
+        self.ui.center_tab_container.currentChanged.connect(
+            lambda index: self.update_tab_index(section="center", index=index)
+        )
 
         self.set_stylesheet()
 
@@ -783,9 +820,6 @@ class MainWindow(
         self.statusBar().addPermanentWidget(self.status_widget)
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
         self.initialize_widget_elements()
-
-        self.ui.actionUndo.setEnabled(False)
-        self.ui.actionRedo.setEnabled(False)
         self._load_plugins()
         self.emit_signal(
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL,
@@ -797,6 +831,14 @@ class MainWindow(
 
         self.ui.actionCollapse_to_system_tray.setChecked(
             self.close_to_system_tray
+        )
+
+        self._toggle_agent_workflow_feature(self.enable_workflows)
+
+    def update_tab_index(self, section: str, index: int):
+        Tab.objects.update_by(filter=dict(section=section), active=False)
+        Tab.objects.update_by(
+            filter=dict(section=section, index=index), active=True
         )
 
     def _disable_aiart_gui_elements(self):
@@ -1076,19 +1118,18 @@ class MainWindow(
         self.quitting = True
         self.logger.debug("Saving window state")
 
-        settings = get_qsettings()
-        settings.beginGroup("window_settings")
-        settings.setValue("is_maximized", self.isMaximized())
-        settings.setValue("is_fullscreen", self.isFullScreen())
-        settings.setValue("width", self.width())
-        settings.setValue("height", self.height())
-        settings.setValue("x_pos", self.pos().x())
-        settings.setValue("y_pos", self.pos().y())
-        settings.setValue(
+        self.qsettings.beginGroup("window_settings")
+        self.qsettings.setValue("is_maximized", self.isMaximized())
+        self.qsettings.setValue("is_fullscreen", self.isFullScreen())
+        self.qsettings.setValue("width", self.width())
+        self.qsettings.setValue("height", self.height())
+        self.qsettings.setValue("x_pos", self.pos().x())
+        self.qsettings.setValue("y_pos", self.pos().y())
+        self.qsettings.setValue(
             "mode_tab_widget_index",
             self.ui.generator_widget.ui.generator_form_tabs.currentIndex(),
         )
-        settings.endGroup()
+        self.qsettings.endGroup()
         save_splitter_settings(self.ui, ["main_window_splitter"])
 
     def restore_state(self):
@@ -1149,6 +1190,52 @@ class MainWindow(
 
     def on_toggle_tool_signal(self, data: Dict):
         self.toggle_tool(data["tool"], data["active"])
+
+    def on_enable_workflows_toggled(self, message: Dict):
+        self._toggle_agent_workflow_feature(message.get("enabled", False))
+
+    tab_backup = {}
+    workflow_tab = None
+
+    def _toggle_agent_workflow_feature(self, enabled: bool):
+        """
+        Toggles the visibility of the workflow tab and menu based on the given value.
+        """
+        # --- Tab handling ---
+        tab_widget = self.ui.center_tab_container
+        if not self.workflow_tab:
+            self.workflow_tab = self.ui.agent_workflow_tab
+
+        if enabled:
+            # Only add if not present
+            if self.tab_backup != {}:
+                tab_widget.addTab(
+                    self.tab_backup["tab_widget"],
+                    self.tab_backup["tab_text"],
+                )
+                self.tab_backup = {}
+        else:
+            # Remove if present
+            index = tab_widget.indexOf(self.workflow_tab)
+            self.tab_backup = dict(
+                tab_text=tab_widget.tabText(index),
+                tab_widget=tab_widget.widget(index),
+            )
+            if index != -1:
+                tab_widget.removeTab(index)
+
+        # --- Menu handling ---
+        # If menuWorkflow is a QMenu, use menuBar(). If it's an action, use setVisible.
+        if hasattr(self.ui, "menuWorkflow"):
+            menu = self.ui.menuWorkflow
+            # Try both methods for robustness
+            try:
+                menu.menuAction().setVisible(enabled)
+            except Exception:
+                try:
+                    menu.setVisible(enabled)
+                except Exception:
+                    pass
 
     def show_nsfw_warning_popup(self):
         if self.application_settings.show_nsfw_warning:

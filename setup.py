@@ -11,6 +11,7 @@ extras_require = {
         "PySide6==6.7.0",
         "PySide6_Addons==6.7.0",
         "PySide6_Essentials==6.7.0",
+        "nodegraphqt==0.6.38",
     ],
     "linux": [  # Linux-specific dependencies
         "faiss-gpu==1.7.2",
@@ -99,9 +100,11 @@ setup(
     packages=find_packages("src"),
     python_requires=">=3.10.12,<3.11",
     install_requires=[
-        "torch==2.6.0",
-        "torchvision==0.21.0",
-        "torchaudio==2.6.0",
+        "torch==2.8.0.dev20250419+cu128",
+        "torchvision==0.22.0.dev20250419+cu128",
+        "torchaudio==2.6.0.dev20250419+cu128",
+        "torchao==0.11.0.dev20250420+cu126",
+        "pytorch-triton==3.3.0+git96316ce5",
         "accelerate==1.3.0",
         "huggingface-hub>=0.24.0,<1.0",
         "tokenizers==0.21.1",
@@ -113,6 +116,7 @@ setup(
         "sqlalchemy==2.0.38",
         "setuptools==78.1.0",
         "facehuggershield==0.1.13",
+        "etils[epath]==1.12.2",
     ],
     extras_require=extras_require,
     package_data={
