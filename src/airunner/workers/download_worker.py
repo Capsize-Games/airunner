@@ -65,7 +65,6 @@ class DownloadWorker(
 
             file_name = os.path.join(file_path, file_name)
             file_name = os.path.expanduser(file_name)
-
             if not os.path.exists(os.path.dirname(file_name)):
                 try:
                     os.makedirs(os.path.dirname(file_name), exist_ok=True)

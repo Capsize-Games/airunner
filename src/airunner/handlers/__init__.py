@@ -7,6 +7,8 @@ __all__ = [
     "EspeakModelManager",
     "WhisperModelManager",
     "StableDiffusionModelManager",
+    "FluxModelManager",
+    "BaseDiffusersModelManager",
 ]
 
 
@@ -45,4 +47,12 @@ def __getattr__(name):
         )
 
         return StableDiffusionModelManager
+    elif name == "FluxModelManager":
+        from .flux.flux_model_manager import FluxModelManager
+
+        return FluxModelManager
+    elif name == "BaseDiffusersModelManager":
+        from .base_diffusers_model_manager import BaseDiffusersModelManager
+
+        return BaseDiffusersModelManager
     raise AttributeError(f"module {__name__} has no attribute {name}")

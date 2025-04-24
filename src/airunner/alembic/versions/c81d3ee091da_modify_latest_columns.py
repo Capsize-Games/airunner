@@ -14,6 +14,7 @@ from sqlalchemy import inspect
 from airunner.utils.db import (
     drop_constraint,
     add_column_with_fk,
+    add_column,
     drop_column,
     safe_alter_column,
 )
@@ -56,14 +57,8 @@ def upgrade() -> None:
         with op.batch_alter_table("chatbots", recreate="always") as batch_op:
             batch_op.drop_constraint(constraint_name, type_="unique")
 
-    # Add columns with nullable=True to avoid NOT NULL constraint errors
-    with op.batch_alter_table("workflow_connections") as batch_op:
-        batch_op.add_column(
-            sa.Column("output_port_name", sa.String(), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("input_port_name", sa.String(), nullable=True)
-        )
+    add_column(WorkflowConnection, "output_port_name")
+    add_column(WorkflowConnection, "input_port_name")
 
     # Use batch operations for foreign keys in SQLite
     with op.batch_alter_table("workflow_connections") as batch_op:
