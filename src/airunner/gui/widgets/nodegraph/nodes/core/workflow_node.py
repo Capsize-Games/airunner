@@ -1,10 +1,10 @@
 # Node representing a nested Workflow
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.core.base_core_node import (
+    BaseCoreNode,
 )
 
 
-class WorkflowNode(BaseWorkflowNode):
+class WorkflowNode(BaseCoreNode):
     NODE_NAME = "Workflow"  # Default name
 
     def __init__(self):

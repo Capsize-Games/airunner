@@ -2,12 +2,12 @@ from typing import Dict
 
 from NodeGraphQt.constants import NodePropWidgetEnum
 
-from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
-    BaseWorkflowNode,
+from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
+    BaseArtNode,
 )
 
 
-class LoraNode(BaseWorkflowNode):
+class LoraNode(BaseArtNode):
     """
     A node that outputs a Lora configuration as a dictionary.
 
@@ -16,7 +16,6 @@ class LoraNode(BaseWorkflowNode):
     """
 
     NODE_NAME = "Lora"
-    __identifier__ = "airunner.workflow.nodes.LoraNode"
 
     def __init__(self):
         super().__init__()
