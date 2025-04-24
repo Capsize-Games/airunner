@@ -61,4 +61,3 @@ class ApplicationSettings(BaseModel):
     airunner_agreement_checked = Column(Boolean, default=True)
     user_agreement_checked = Column(Boolean, default=True)
     llama_license_agreement_checked = Column(Boolean, default=True)
-    allow_huggingface_downloads = Column(Boolean, default=False)

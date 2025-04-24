@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>huggingface_settings_widget</class>
- <widget class="QWidget" name="huggingface_settings_widget">
+ <class>openrouter_settings_widget</class>
+ <widget class="QWidget" name="openrouter_settings_widget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -17,14 +17,14 @@
    <item row="0" column="0">
     <widget class="QCheckBox" name="allow">
      <property name="text">
-      <string>Allow Huggingface connection</string>
+      <string>Allow OpenRouter connection</string>
      </property>
     </widget>
    </item>
    <item row="1" column="0">
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
-      <string>Huggingface Read API key</string>
+      <string>OpenRouter API key</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
@@ -51,40 +51,40 @@
  <resources/>
  <connections>
   <connection>
-   <sender>api_key</sender>
-   <signal>textEdited(QString)</signal>
-   <receiver>huggingface_settings_widget</receiver>
-   <slot>on_api_key_textChanged(QString)</slot>
+   <sender>allow</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>openrouter_settings_widget</receiver>
+   <slot>on_allow_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>57</x>
-     <y>80</y>
+     <x>104</x>
+     <y>23</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-1</x>
-     <y>92</y>
+     <x>60</x>
+     <y>-7</y>
     </hint>
    </hints>
   </connection>
   <connection>
-   <sender>allow</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>huggingface_settings_widget</receiver>
-   <slot>on_allow_toggled(bool)</slot>
+   <sender>api_key</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>openrouter_settings_widget</receiver>
+   <slot>on_api_key_textChanged(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>53</x>
-     <y>16</y>
+     <x>239</x>
+     <y>95</y>
     </hint>
     <hint type="destinationlabel">
-     <x>25</x>
-     <y>-23</y>
+     <x>-5</x>
+     <y>72</y>
     </hint>
    </hints>
   </connection>
  </connections>
  <slots>
-  <slot>on_api_key_textChanged(QString)</slot>
   <slot>on_allow_toggled(bool)</slot>
+  <slot>on_api_key_textChanged(QString)</slot>
  </slots>
 </ui>

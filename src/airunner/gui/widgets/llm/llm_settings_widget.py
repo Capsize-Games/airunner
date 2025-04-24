@@ -1,17 +1,16 @@
-
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 
 from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.llm.templates.llm_settings_ui import Ui_llm_settings_widget
+from airunner.gui.widgets.llm.templates.llm_settings_ui import (
+    Ui_llm_settings_widget,
+)
 from airunner.gui.windows.main.ai_model_mixin import AIModelMixin
+from airunner.enums import ModelService
 
 
-class LLMSettingsWidget(
-    BaseWidget,
-    AIModelMixin
-):
+class LLMSettingsWidget(BaseWidget, AIModelMixin):
     widget_class_ = Ui_llm_settings_widget
 
     def __init__(self, *args, **kwargs):
@@ -21,9 +20,26 @@ class LLMSettingsWidget(
         self.ui.prompt_template_container.hide()
         self.initialize_form()
 
+    @Slot(str)
+    def on_model_path_textChanged(self, val: str):
+        self.update_llm_generator_settings("model_path", val)
+
+    @Slot(str)
+    def on_model_service_currentTextChanged(self, val: str):
+        self.update_llm_generator_settings("model_service", val)
+        self.update_model_version_combobox()
+        self.model_version_changed(self.ui.model_version.currentText())
+        self._toggle_model_path_visibility(val != ModelService.LOCAL.value)
+
     @Slot(bool)
     def toggle_use_cache(self, val: bool):
         self.update_chatbot("use_cache", val)
+
+    def _toggle_model_path_visibility(self, val: bool):
+        if val:
+            self.ui.remote_model_path.show()
+        else:
+            self.ui.remote_model_path.hide()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -33,7 +49,7 @@ class LLMSettingsWidget(
 
     def do_sample_toggled(self, val):
         self.update_chatbot("do_sample", val)
-    
+
     def toggle_leave_model_in_vram(self, val):
         if val:
             self.update_memory_settings("unload_unused_models", False)
@@ -49,43 +65,78 @@ class LLMSettingsWidget(
             self.ui.early_stopping,
             self.ui.override_parameters,
             self.ui.use_cache,
+            self.ui.model_service,
+            self.ui.model_path,
         ]
 
         for element in elements:
             element.blockSignals(True)
 
-        self.ui.top_p.init(slider_callback=self.callback, current_value=self.llm_generator_settings.top_p)
+        self.ui.model_service.setCurrentText(
+            self.llm_generator_settings.model_service
+        )
+        # QLineEdit requires setText, not setCurrentText
+        self.ui.model_path.setText(self.llm_generator_settings.model_path)
+
+        self.ui.top_p.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.top_p,
+        )
         self.ui.max_new_tokens.init(
             slider_callback=self.callback,
-            current_value=self.llm_generator_settings.max_new_tokens
+            current_value=self.llm_generator_settings.max_new_tokens,
         )
         self.ui.repetition_penalty.init(
             slider_callback=self.callback,
-            current_value=self.llm_generator_settings.repetition_penalty
+            current_value=self.llm_generator_settings.repetition_penalty,
         )
-        self.ui.min_length.init(slider_callback=self.callback, current_value=self.llm_generator_settings.min_length)
+        self.ui.min_length.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.min_length,
+        )
         self.ui.length_penalty.init(
             slider_callback=self.callback,
-            current_value=self.llm_generator_settings.length_penalty
+            current_value=self.llm_generator_settings.length_penalty,
         )
-        self.ui.num_beams.init(slider_callback=self.callback, current_value=self.llm_generator_settings.num_beams)
-        self.ui.ngram_size.init(slider_callback=self.callback, current_value=self.llm_generator_settings.ngram_size)
-        self.ui.temperature.init(slider_callback=self.callback, current_value=self.llm_generator_settings.temperature)
-        self.ui.sequences.init(slider_callback=self.callback, current_value=self.llm_generator_settings.sequences)
-        self.ui.top_k.init(slider_callback=self.callback, current_value=self.llm_generator_settings.top_k)
+        self.ui.num_beams.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.num_beams,
+        )
+        self.ui.ngram_size.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.ngram_size,
+        )
+        self.ui.temperature.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.temperature,
+        )
+        self.ui.sequences.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.sequences,
+        )
+        self.ui.top_k.init(
+            slider_callback=self.callback,
+            current_value=self.llm_generator_settings.top_k,
+        )
 
-        self.ui.override_parameters.setChecked(self.llm_generator_settings.override_parameters)
+        self.ui.override_parameters.setChecked(
+            self.llm_generator_settings.override_parameters
+        )
 
         self.ui.use_cache.setChecked(self.chatbot.use_cache)
 
         # get unique model names
         self.ui.model.clear()
-        self.ui.model.addItems([
-            "seq2seq",
-            "causallm",
-            "visualqa",
-        ])
-        self.ui.model.setCurrentText(self.application_settings.current_llm_generator)
+        self.ui.model.addItems(
+            [
+                "seq2seq",
+                "causallm",
+                "visualqa",
+            ]
+        )
+        self.ui.model.setCurrentText(
+            self.application_settings.current_llm_generator
+        )
 
         templates = {
             "Mistral 7B Instruct: Default Chatbot": dict(
@@ -102,23 +153,17 @@ class LLMSettingsWidget(
         template_name = self.llm_generator_settings.prompt_template
         if template_name == "":
             template_name = names[0]
-            self.update_llm_generator_settings("prompt_template", template_name)
+            self.update_llm_generator_settings(
+                "prompt_template", template_name
+            )
         self.ui.prompt_template.setCurrentText(template_name)
         self.ui.prompt_template.blockSignals(False)
 
         self.update_model_version_combobox()
-        self.ui.model_version.setCurrentText(
-            self.chatbot.model_version
-        )
-        self.ui.random_seed.setChecked(
-            self.chatbot.random_seed
-        )
-        self.ui.do_sample.setChecked(
-            self.chatbot.do_sample
-        )
-        self.ui.early_stopping.setChecked(
-            self.chatbot.early_stopping
-        )
+        self.ui.model_version.setCurrentText(self.chatbot.model_version)
+        self.ui.random_seed.setChecked(self.chatbot.random_seed)
+        self.ui.do_sample.setChecked(self.chatbot.do_sample)
+        self.ui.early_stopping.setChecked(self.chatbot.early_stopping)
 
         for element in elements:
             element.blockSignals(False)
@@ -135,7 +180,7 @@ class LLMSettingsWidget(
 
     def model_version_changed(self, val):
         self.update_llm_generator_settings("model_version", val)
-    
+
     def toggle_move_model_to_cpu(self, val):
         self.update_memory_settings("move_unused_model_to_cpu", val)
         if val:
@@ -143,16 +188,16 @@ class LLMSettingsWidget(
 
     def override_parameters_toggled(self, val):
         self.update_llm_generator_settings("override_parameters", val)
-        
+
     def prompt_template_text_changed(self, value):
         self.update_llm_generator_settings("prompt_template", value)
-        
+
     def random_seed_toggled(self, val):
         self.update_chatbot("random_seed", val)
-        
+
     def seed_changed(self, val):
         self.update_chatbot("seed", val)
-        
+
     def toggle_unload_model(self, val):
         self.update_memory_settings("unload_unused_models", val)
         if val:
@@ -162,9 +207,13 @@ class LLMSettingsWidget(
         self.initialize_form()
         chatbot = self.chatbot
         self.ui.top_p.set_slider_and_spinbox_values(chatbot.top_p)
-        self.ui.repetition_penalty.set_slider_and_spinbox_values(chatbot.repetition_penalty)
+        self.ui.repetition_penalty.set_slider_and_spinbox_values(
+            chatbot.repetition_penalty
+        )
         self.ui.min_length.set_slider_and_spinbox_values(chatbot.min_length)
-        self.ui.length_penalty.set_slider_and_spinbox_values(chatbot.length_penalty)
+        self.ui.length_penalty.set_slider_and_spinbox_values(
+            chatbot.length_penalty
+        )
         self.ui.num_beams.set_slider_and_spinbox_values(chatbot.num_beams)
         self.ui.ngram_size.set_slider_and_spinbox_values(chatbot.ngram_size)
         self.ui.temperature.set_slider_and_spinbox_values(chatbot.temperature)
@@ -175,12 +224,16 @@ class LLMSettingsWidget(
     def update_model_version_combobox(self):
         self.ui.model_version.blockSignals(True)
         self.ui.model_version.clear()
-        ai_model_paths = self.ai_model_paths(model_type="llm", pipeline_action=self.ui.model.currentText())
+        ai_model_paths = self.ai_model_paths(
+            model_type="llm", pipeline_action=self.ui.model.currentText()
+        )
         self.ui.model_version.addItems(ai_model_paths)
         self.ui.model_version.blockSignals(False)
 
     def set_tab(self, tab_name):
-        index = self.ui.tabWidget.indexOf(self.ui.tabWidget.findChild(QWidget, tab_name))
+        index = self.ui.tabWidget.indexOf(
+            self.ui.tabWidget.findChild(QWidget, tab_name)
+        )
         self.ui.tabWidget.setCurrentIndex(index)
 
     def update_chatbot(self, key, val):
