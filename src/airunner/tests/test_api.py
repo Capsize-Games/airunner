@@ -77,7 +77,7 @@ class TestAPI(unittest.TestCase):
 
         mock_emit_signal.assert_called_once_with(
             SignalCode.DO_GENERATE_SIGNAL,
-            {"sd_request": image_request}
+            {"image_request": image_request}
         )
 
     @patch('airunner.api.render_ui_from_spec', autospec=True)

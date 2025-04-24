@@ -53,8 +53,8 @@ class CanvasWidget(BaseWidget):
             SignalCode.TOGGLE_GRID: self.on_toggle_grid_signal,
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
         }
-        self.splitters = ["canvas_splitter"]
         super().__init__(*args, **kwargs)
+        self.splitters = ["canvas_splitter"]
         current_tool = self.current_tool
         show_grid = self.grid_settings.show_grid
 

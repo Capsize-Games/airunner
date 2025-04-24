@@ -76,10 +76,3 @@ class Chatbot(BaseModel):
     target_directories = relationship(
         "TargetDirectories", back_populates="chatbot"
     )
-
-    @property
-    def voice_settings(self) -> Optional[VoiceSettings]:
-        """Return the voice settings associated with the chatbot."""
-        if self.voice_id is not None:
-            return VoiceSettings.objects.get(self.voice_id)
-        return None

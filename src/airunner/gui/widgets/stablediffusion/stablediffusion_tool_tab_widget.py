@@ -12,11 +12,11 @@ class StablediffusionToolTabWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ui.tool_tab_widget_container.currentChanged.connect(
-            self.on_tab_section_changed
+            self.on_tool_tab_widget_container_currentChanged
         )
 
     @Slot(int)
-    def on_tab_section_changed(self, index: int):
+    def on_tool_tab_widget_container_currentChanged(self, index: int):
         Tab.update_tabs(
             "stablediffusion_tool_tab",
             self.ui.tool_tab_widget_container,
