@@ -29,8 +29,8 @@ No cloud dependency. No complicated setup. Just install, run, and create.
 
 <small>**OpenRouter + Huggingface integration**</small>
 
-![image](https://github.com/user-attachments/assets/f80bd9e2-061d-4952-ae05-782d05ee9f30)
-<small>**Chatbots with moods and local weather capablities**</small>
+![image](https://github.com/user-attachments/assets/f9d2697c-f2d1-422d-9501-d5966ac94595)
+<small>**Chatbots with personalities, moods, and local weather capablities**</small>
 
 ---
 
