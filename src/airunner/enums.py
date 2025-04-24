@@ -211,6 +211,11 @@ class SignalCode(Enum):
     VOICE_SAVED = enum.auto()
     PLAYBACK_DEVICE_CHANGED = enum.auto()
     RECORDING_DEVICE_CHANGED = enum.auto()
+    NODE_EXECUTION_COMPLETED_SIGNAL = enum.auto()
+    CLEAR_WORKFLOW_SIGNAL = enum.auto()
+    WORKFLOW_LOAD_SIGNAL = enum.auto()
+    REGISTER_GRAPH_SIGNAL = enum.auto()
+    ENABLE_WORKFLOWS_TOGGLED = enum.auto()
 
 
 class EngineResponseCode(Enum):
@@ -330,6 +335,7 @@ class StableDiffusionVersion(Enum):
     SDXL_LIGHTNING = "SDXL Lightning"
     SDXL_HYPER = "SDXL Hyper"
     SD1_5 = "SD 1.5"
+    FLUX_S = "Flux S"
 
 
 class Language(Enum):
@@ -371,6 +377,7 @@ class StatusColors(Enum):
 
 class ModelType(Enum):
     SD = "SD Model"
+    FLUX_MODEL = "Flux Model"
     SD_VAE = "SD VAE"
     SD_UNET = "SD UNet"
     SD_TOKENIZER = "SD Tokenizer"

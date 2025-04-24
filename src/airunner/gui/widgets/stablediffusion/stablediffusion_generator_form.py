@@ -443,7 +443,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
 
         self.emit_signal(
-            SignalCode.DO_GENERATE_SIGNAL, {"sd_request": image_request}
+            SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request}
         )
 
     def action_clicked_button_save_prompts(self):

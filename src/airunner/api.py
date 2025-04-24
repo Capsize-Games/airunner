@@ -82,12 +82,12 @@ class API(App):
     def send_image_request(self, image_request: Optional[ImageRequest] = None):
         """ "
         Send a request to the image generator with the given request.
-        :param sd_request: Optional ImageRequest object.
+        :param image_request: Optional ImageRequest object.
         :return: None
         """
         image_request = image_request or ImageRequest()
         self.emit_signal(
-            SignalCode.DO_GENERATE_SIGNAL, {"sd_request": image_request}
+            SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request}
         )
 
     def show_hello_world_window(self):

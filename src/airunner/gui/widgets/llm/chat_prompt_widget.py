@@ -17,7 +17,9 @@ from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.gui.widgets.llm.message_widget import MessageWidget
 from airunner.data.models import Conversation
-from airunner.utils.llm.strip_names_from_message import strip_names_from_message
+from airunner.utils.llm.strip_names_from_message import (
+    strip_names_from_message,
+)
 from airunner.utils import create_worker
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
@@ -235,6 +237,9 @@ class ChatPromptWidget(BaseWidget):
         llm_response: LLMResponse = data.get("response", None)
         if not llm_response:
             raise ValueError("No LLMResponse object found in data")
+
+        if llm_response.node_id is not None:
+            return
 
         self.token_buffer.append(llm_response.message)
 
