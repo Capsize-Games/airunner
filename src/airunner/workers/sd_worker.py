@@ -3,10 +3,10 @@ from typing import Dict, Optional
 import threading
 
 import torch
+import transformers
 
 from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
 from airunner.workers.worker import Worker
-from airunner.handlers import StableDiffusionModelManager, FluxModelManager
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.data.models.ai_models import AIModels
 from airunner.enums import StableDiffusionVersion
@@ -21,8 +21,8 @@ class SDWorker(Worker):
     queue_type = QueueType.GET_LAST_ITEM
 
     def __init__(self):
-        self.sd: StableDiffusionModelManager = None
-        self.flux: FluxModelManager = None
+        self.sd = None
+        self.flux = None
         self.signal_handlers = {
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
             SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
@@ -221,9 +221,16 @@ class SDWorker(Worker):
 
     def start_worker_thread(self):
         if self.sd is None:
+            from airunner.handlers import StableDiffusionModelManager
+
             self.sd = StableDiffusionModelManager()
 
         if self.flux is None:
+            from airunner.handlers import (
+                StableDiffusionModelManager,
+                FluxModelManager,
+            )
+
             self.flux = FluxModelManager()
 
         if self.application_settings.sd_enabled or AIRUNNER_SD_ON:
