@@ -16,6 +16,7 @@ from airunner.utils.widgets import (
 )
 from airunner.enums import SignalCode
 from airunner.gui.managers.icon_manager import IconManager
+from airunner.utils.settings.get_qsettings import get_qsettings
 
 
 class BaseABCMeta(type(QWidget), ABCMeta):
@@ -54,6 +55,7 @@ class BaseWidget(AbstractBaseWidget):
         self.signal_handlers.update(
             {SignalCode.QUIT_APPLICATION: self.handle_close}
         )
+        self.settings = get_qsettings()
         super().__init__(*args, **kwargs)
         if self.widget_class_:
             self.ui = self.widget_class_()
