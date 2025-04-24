@@ -1071,7 +1071,10 @@ class BaseAgent(
         self._chat_store = value
 
     @property
-    def chat_memory(self) -> ChatMemoryBuffer:
+    def chat_memory(self) -> Optional[ChatMemoryBuffer]:
+        if self.llm and self.llm.llm_request and not self.llm.llm_request.use_memory:
+            return None
+        
         if not self._chat_memory:
             self.logger.info("Loading ChatMemoryBuffer")
             self._chat_memory = ChatMemoryBuffer.from_defaults(
@@ -1413,7 +1416,8 @@ class BaseAgent(
         **kwargs,
     ) -> AgentChatResponse:
         self.action = action
-        system_prompt = system_prompt or self.system_prompt
+        # system_prompt = system_prompt or self.system_prompt
+        system_prompt = self.system_prompt
         self._chat_prompt = message
         self._complete_response = ""
         self.do_interrupt = False
@@ -1433,10 +1437,35 @@ class BaseAgent(
         self._log_system_prompt(
             action, system_prompt, rag_system_prompt, llm_request
         )
+        print("x" * 100)
+        print("system_prompt", system_prompt)
         self._update_system_prompt(system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
         self._perform_tool_call(action, **kwargs)
         return AgentChatResponse(response=self._complete_response)
+    # def chat(
+    #     self,
+    #     message: str,
+    #     action: LLMActionType = LLMActionType.CHAT,
+    #     system_prompt: Optional[str] = None,
+    #     rag_system_prompt: Optional[str] = None,
+    #     llm_request: Optional[LLMRequest] = None,
+    #     **kwargs,
+    # ) -> AgentChatResponse:
+    #     kwargs = kwargs or {}
+    #     kwargs.update(
+    #         {
+    #             "input": message,
+    #             "chat_history": [],
+    #             "llm_request": llm_request,
+    #         }
+    #     )
+    #     self._chat_prompt = message
+    #     print("CALLING PERFORM TOOL CALL WITH", action, kwargs)
+    #     self._update_system_prompt(system_prompt, rag_system_prompt)
+    #     self._update_llm_request(llm_request)
+    #     self._perform_tool_call(action, **kwargs)
+    #     return AgentChatResponse(response=self._complete_response)
 
     def on_load_conversation(self, data: Optional[Dict] = None):
         data = data or {}
@@ -1506,6 +1535,7 @@ class BaseAgent(
                         is_first_message=is_first_message,
                         is_end_of_message=is_last_message,
                         name=self.botname,
+                        node_id=self.llm.llm_request.node_id,
                     ),
                     "do_tts_reply": do_tts_reply,
                 },

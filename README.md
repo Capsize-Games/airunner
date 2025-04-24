@@ -211,6 +211,7 @@ Organize them under your local AI Runner data directory:
 │       ├── SD 1.5
 │       │   ├── lora
 │       │   └── embeddings
+│       ├── Flux
 │       ├── SDXL 1.0
 │       │   ├── lora
 │       │   └── embeddings
