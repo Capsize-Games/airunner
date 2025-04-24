@@ -6,7 +6,7 @@ from airunner.gui.widgets.nodegraph.nodes.base_workflow_node import (
     BaseWorkflowNode,
 )
 from airunner.handlers.stablediffusion.image_request import ImageRequest
-from airunner.enums import ImagePreset
+from airunner.enums import ImagePreset, Scheduler, StableDiffusionVersion
 
 
 class ImageRequestNode(BaseWorkflowNode):
@@ -51,7 +51,7 @@ class ImageRequestNode(BaseWorkflowNode):
 
         # Add output port for the ImageRequest object
         self.add_output("image_request")
-
+        scheduler_values = [scheduler.value for scheduler in Scheduler]
         props = [
             {
                 "name": "pipeline_action",
@@ -97,14 +97,16 @@ class ImageRequestNode(BaseWorkflowNode):
             },
             {
                 "name": "scheduler",
-                "value": "DDIM",
-                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+                "value": Scheduler.DPM_PP_2M_SDE_K.value,
+                "items": scheduler_values,
+                "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
                 "tab": "model",
             },
             {
                 "name": "version",
-                "value": "SD 1.5",
-                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+                "value": StableDiffusionVersion.SDXL1_0.value,
+                "items": [version.value for version in StableDiffusionVersion],
+                "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
                 "tab": "model",
             },
             {
