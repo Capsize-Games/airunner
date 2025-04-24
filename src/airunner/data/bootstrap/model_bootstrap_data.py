@@ -11,7 +11,7 @@ ai_art_models = [
         "pipeline_action": "txt2img",
         "enabled": True,
         "model_type": "art",
-        "is_default": True
+        "is_default": True,
     },
     {
         "name": "Stable Diffusion XL Base 1.0",
@@ -22,7 +22,7 @@ ai_art_models = [
         "pipeline_action": "txt2img",
         "enabled": True,
         "model_type": "art",
-        "is_default": True
+        "is_default": True,
     },
     {
         "name": "Stable Diffusion XL Turbo",
@@ -33,7 +33,7 @@ ai_art_models = [
         "pipeline_action": "txt2img",
         "enabled": True,
         "model_type": "art",
-        "is_default": True
+        "is_default": True,
     },
     {
         "name": "Stable Diffusion Inpaint 1.5",
@@ -44,7 +44,7 @@ ai_art_models = [
         "pipeline_action": "inpaint",
         "enabled": True,
         "model_type": "art",
-        "is_default": True
+        "is_default": True,
     },
     {
         "name": "SDXL Inpaint",
@@ -55,7 +55,7 @@ ai_art_models = [
         "pipeline_action": "inpaint",
         "enabled": True,
         "model_type": "art",
-        "is_default": True
+        "is_default": True,
     },
     {
         "name": "CompVis Safety Checker",
@@ -66,7 +66,7 @@ ai_art_models = [
         "pipeline_action": "txt2img",
         "enabled": True,
         "model_type": "art",
-        "is_default": True
+        "is_default": True,
     },
     {
         "name": "OpenAI Feature Extractor",
@@ -77,7 +77,7 @@ ai_art_models = [
         "pipeline_action": "txt2img",
         "enabled": True,
         "model_type": "art",
-        "is_default": True
+        "is_default": True,
     },
     {
         "name": "Inpaint vae",
@@ -88,7 +88,18 @@ ai_art_models = [
         "pipeline_action": "inpaint_vae",
         "enabled": True,
         "model_type": "art",
-        "is_default": True
+        "is_default": True,
+    },
+    {
+        "name": "Flux S",
+        "path": "black-forest-labs/FLUX.1-schnell",
+        "branch": "main",
+        "version": "Flux S",
+        "category": "flux",
+        "pipeline_action": "txt2img",
+        "enabled": True,
+        "model_type": "art",
+        "is_default": True,
     },
 ]
 
@@ -102,7 +113,7 @@ llm_models = [
         "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
-        "is_default": True
+        "is_default": True,
     },
     {
         "name": "Intfloat E5 Large",
@@ -113,7 +124,7 @@ llm_models = [
         "pipeline_action": "embedding",
         "enabled": True,
         "model_type": "llm",
-        "is_default": True
+        "is_default": True,
     },
 ]
 
