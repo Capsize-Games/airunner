@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QSplitter,
-    QTabWidget, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QTabWidget,
+    QWidget)
 
 from airunner.gui.widgets.llm.llm_history_widget import LLMHistoryWidget
 from airunner.gui.widgets.llm.llm_settings_widget import LLMSettingsWidget
@@ -25,7 +25,7 @@ class Ui_tool_tab_widget(object):
     def setupUi(self, tool_tab_widget):
         if not tool_tab_widget.objectName():
             tool_tab_widget.setObjectName(u"tool_tab_widget")
-        tool_tab_widget.resize(654, 785)
+        tool_tab_widget.resize(696, 867)
         self.gridLayout_3 = QGridLayout(tool_tab_widget)
         self.gridLayout_3.setSpacing(0)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
@@ -46,20 +46,11 @@ class Ui_tool_tab_widget(object):
         self.tab.setObjectName(u"tab")
         self.gridLayout_2 = QGridLayout(self.tab)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.gridLayout_2.setHorizontalSpacing(0)
-        self.gridLayout_2.setVerticalSpacing(10)
-        self.gridLayout_2.setContentsMargins(10, 10, 0, 0)
-        self.llm_splitter = QSplitter(self.tab)
-        self.llm_splitter.setObjectName(u"llm_splitter")
-        self.llm_splitter.setOrientation(Qt.Orientation.Vertical)
-        self.llm_settings = LLMSettingsWidget(self.llm_splitter)
+        self.gridLayout_2.setContentsMargins(10, 10, 10, 10)
+        self.llm_settings = LLMSettingsWidget(self.tab)
         self.llm_settings.setObjectName(u"llm_settings")
-        self.llm_splitter.addWidget(self.llm_settings)
-        self.llm_preferences = QWidget(self.llm_splitter)
-        self.llm_preferences.setObjectName(u"llm_preferences")
-        self.llm_splitter.addWidget(self.llm_preferences)
 
-        self.gridLayout_2.addWidget(self.llm_splitter, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.llm_settings, 0, 0, 1, 1)
 
         self.tool_tab_widget_container.addTab(self.tab, "")
         self.tab_2 = QWidget()

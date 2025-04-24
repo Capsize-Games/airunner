@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>654</width>
-    <height>785</height>
+    <width>696</width>
+    <height>867</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -78,25 +78,13 @@
         <number>10</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <property name="horizontalSpacing">
-        <number>0</number>
-       </property>
-       <property name="verticalSpacing">
         <number>10</number>
        </property>
        <item row="0" column="0">
-        <widget class="QSplitter" name="llm_splitter">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <widget class="LLMSettingsWidget" name="llm_settings" native="true"/>
-         <widget class="QWidget" name="llm_preferences" native="true"/>
-        </widget>
+        <widget class="LLMSettingsWidget" name="llm_settings" native="true"/>
        </item>
       </layout>
      </widget>

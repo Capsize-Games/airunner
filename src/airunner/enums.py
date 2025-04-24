@@ -448,3 +448,9 @@ class AvailableLanguage(enum.Enum):
     ZH = "ZH"
     JP = "JP"
     KR = "KR"
+
+
+class ModelService(enum.Enum):
+    LOCAL = "local"
+    HUGGINGFACE = "huggingface"
+    OPENROUTER = "openrouter"
