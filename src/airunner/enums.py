@@ -215,6 +215,7 @@ class SignalCode(Enum):
     CLEAR_WORKFLOW_SIGNAL = enum.auto()
     WORKFLOW_LOAD_SIGNAL = enum.auto()
     REGISTER_GRAPH_SIGNAL = enum.auto()
+    ENABLE_WORKFLOWS_TOGGLED = enum.auto()
 
 
 class EngineResponseCode(Enum):

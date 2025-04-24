@@ -30,12 +30,12 @@ class GeneratorForm(BaseWidget):
         self.parent = None
         self.initialized = False
         self.ui.generator_form_tabs.currentChanged.connect(
-            self.on_tab_section_changed
+            self.on_generator_form_tabs_currentChanged
         )
         self.ui.generator_form_tabs.tabBar().setVisible(False)
 
     @Slot(int)
-    def on_tab_section_changed(self, index: int):
+    def on_generator_form_tabs_currentChanged(self, index: int):
         Tab.update_tabs("left", self.ui.generator_form_tabs, index)
 
     @property
