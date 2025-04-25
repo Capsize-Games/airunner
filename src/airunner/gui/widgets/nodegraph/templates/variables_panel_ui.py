@@ -32,20 +32,20 @@ class Ui_variables_panel(object):
 
         self.gridLayout.addWidget(self.variables_list_widget, 0, 0, 1, 1)
 
-        self.pushButton = QPushButton(variables_panel)
-        self.pushButton.setObjectName(u"pushButton")
+        self.add_variable_button = QPushButton(variables_panel)
+        self.add_variable_button.setObjectName(u"add_variable_button")
 
-        self.gridLayout.addWidget(self.pushButton, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.add_variable_button, 1, 0, 1, 1)
 
 
         self.retranslateUi(variables_panel)
-        self.pushButton.clicked.connect(variables_panel.on_add_variable)
+        self.add_variable_button.clicked.connect(variables_panel.on_add_variable_button_clicked)
 
         QMetaObject.connectSlotsByName(variables_panel)
     # setupUi
 
     def retranslateUi(self, variables_panel):
         variables_panel.setWindowTitle(QCoreApplication.translate("variables_panel", u"Form", None))
-        self.pushButton.setText(QCoreApplication.translate("variables_panel", u"Add Variable", None))
+        self.add_variable_button.setText(QCoreApplication.translate("variables_panel", u"Add Variable", None))
     # retranslateUi
 
