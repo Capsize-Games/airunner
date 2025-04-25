@@ -189,7 +189,7 @@
        </widget>
       </item>
       <item row="0" column="5">
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="clear_button">
         <property name="toolTip">
          <string>Clear workflow</string>
         </property>
@@ -210,25 +210,7 @@
      <property name="orientation">
       <enum>Qt::Orientation::Horizontal</enum>
      </property>
-     <widget class="VariablesPanelWidget" name="variables" native="true">
-      <layout class="QGridLayout" name="gridLayout_4">
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>10</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <property name="spacing">
-        <number>0</number>
-       </property>
-      </layout>
-     </widget>
+     <widget class="VariablesPanelWidget" name="variables" native="true"/>
      <widget class="QWidget" name="graph" native="true">
       <layout class="QGridLayout" name="gridLayout_2">
        <property name="leftMargin">
@@ -284,34 +266,34 @@
  </resources>
  <connections>
   <connection>
-   <sender>play_button</sender>
+   <sender>pause_button</sender>
    <signal>clicked()</signal>
    <receiver>node_graph_widget</receiver>
-   <slot>on_run_workflow()</slot>
+   <slot>on_pause_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>19</x>
-     <y>18</y>
+     <x>55</x>
+     <y>17</y>
     </hint>
     <hint type="destinationlabel">
-     <x>67</x>
-     <y>-10</y>
+     <x>61</x>
+     <y>-12</y>
     </hint>
    </hints>
   </connection>
   <connection>
-   <sender>pause_button</sender>
+   <sender>play_button</sender>
    <signal>clicked()</signal>
    <receiver>node_graph_widget</receiver>
-   <slot>on_pause_workflow()</slot>
+   <slot>on_play_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>66</x>
-     <y>23</y>
+     <x>28</x>
+     <y>16</y>
     </hint>
     <hint type="destinationlabel">
-     <x>164</x>
-     <y>1</y>
+     <x>35</x>
+     <y>-11</y>
     </hint>
    </hints>
   </connection>
@@ -319,31 +301,15 @@
    <sender>stop_button</sender>
    <signal>clicked()</signal>
    <receiver>node_graph_widget</receiver>
-   <slot>on_stop_workflow()</slot>
+   <slot>on_stop_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>102</x>
-     <y>20</y>
+     <x>97</x>
+     <y>24</y>
     </hint>
     <hint type="destinationlabel">
-     <x>2</x>
-     <y>99</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>load_button</sender>
-   <signal>clicked()</signal>
-   <receiver>node_graph_widget</receiver>
-   <slot>on_load_workflow()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>943</x>
-     <y>30</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-1</x>
-     <y>134</y>
+     <x>152</x>
+     <y>2</y>
     </hint>
    </hints>
   </connection>
@@ -351,15 +317,31 @@
    <sender>save_button</sender>
    <signal>clicked()</signal>
    <receiver>node_graph_widget</receiver>
-   <slot>on_save_workflow()</slot>
+   <slot>on_save_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>841</x>
-     <y>29</y>
+     <x>1170</x>
+     <y>25</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-2</x>
-     <y>172</y>
+     <x>1113</x>
+     <y>-11</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>clear_button</sender>
+   <signal>clicked()</signal>
+   <receiver>node_graph_widget</receiver>
+   <slot>on_clear_button_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1206</x>
+     <y>27</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1201</x>
+     <y>-13</y>
     </hint>
    </hints>
   </connection>
@@ -367,15 +349,31 @@
    <sender>edit_button</sender>
    <signal>clicked()</signal>
    <receiver>node_graph_widget</receiver>
-   <slot>on_edit_workflow()</slot>
+   <slot>on_edit_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>909</x>
+     <x>1239</x>
+     <y>21</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1242</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>load_button</sender>
+   <signal>clicked()</signal>
+   <receiver>node_graph_widget</receiver>
+   <slot>on_load_button_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1280</x>
      <y>23</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1</x>
-     <y>206</y>
+     <x>1276</x>
+     <y>-2</y>
     </hint>
    </hints>
   </connection>
@@ -383,43 +381,27 @@
    <sender>delete_button</sender>
    <signal>clicked()</signal>
    <receiver>node_graph_widget</receiver>
-   <slot>on_delete_workflow()</slot>
+   <slot>on_delete_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>964</x>
-     <y>22</y>
+     <x>1311</x>
+     <y>19</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-1</x>
-     <y>244</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushButton</sender>
-   <signal>clicked()</signal>
-   <receiver>node_graph_widget</receiver>
-   <slot>on_clear_workflow()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>849</x>
-     <y>15</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>870</x>
-     <y>-13</y>
+     <x>1054</x>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
  </connections>
  <slots>
-  <slot>on_run_workflow()</slot>
-  <slot>on_pause_workflow()</slot>
-  <slot>on_stop_workflow()</slot>
-  <slot>on_load_workflow()</slot>
-  <slot>on_save_workflow()</slot>
-  <slot>on_edit_workflow()</slot>
-  <slot>on_delete_workflow()</slot>
-  <slot>on_clear_workflow()</slot>
+  <slot>on_play_button_clicked()</slot>
+  <slot>on_pause_button_clicked()</slot>
+  <slot>on_stop_button_clicked()</slot>
+  <slot>on_save_button_clicked()</slot>
+  <slot>on_edit_button_clicked()</slot>
+  <slot>on_load_button_clicked()</slot>
+  <slot>on_delete_button_clicked()</slot>
+  <slot>on_clear_button_clicked()</slot>
  </slots>
 </ui>

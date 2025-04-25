@@ -34,7 +34,7 @@
     </widget>
    </item>
    <item row="1" column="0">
-    <widget class="QPushButton" name="pushButton">
+    <widget class="QPushButton" name="add_variable_button">
      <property name="text">
       <string>Add Variable</string>
      </property>
@@ -45,23 +45,23 @@
  <resources/>
  <connections>
   <connection>
-   <sender>pushButton</sender>
+   <sender>add_variable_button</sender>
    <signal>clicked()</signal>
    <receiver>variables_panel</receiver>
-   <slot>on_add_variable()</slot>
+   <slot>on_add_variable_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>118</x>
-     <y>294</y>
+     <x>172</x>
+     <y>292</y>
     </hint>
     <hint type="destinationlabel">
-     <x>77</x>
-     <y>-16</y>
+     <x>397</x>
+     <y>135</y>
     </hint>
    </hints>
   </connection>
  </connections>
  <slots>
-  <slot>on_add_variable()</slot>
+  <slot>on_add_variable_button_clicked()</slot>
  </slots>
 </ui>

@@ -11,7 +11,7 @@ from airunner.enums import (
     SignalCode,
     StableDiffusionVersion,
 )
-from airunner.handlers.base_diffusers_model_manager import (
+from airunner.handlers.stablediffusion.base_diffusers_model_manager import (
     BaseDiffusersModelManager,
 )
 from diffusers import (
