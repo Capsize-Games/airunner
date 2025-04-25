@@ -96,8 +96,8 @@ class OpenRouterQObject(LocalAgent):
         if not self._llm:
             llm_request = OpenrouterMistralRequest.from_default()
             # Get API key from ApplicationSettings
-            app_settings = ApplicationSettings.objects.first()
-            api_key = app_settings.openrouter_api_key if app_settings else None
+            settings = get_qsettings()
+            api_key = settings.value("openrouter/api_key", None)
 
             if not api_key:
                 self.logger.warning("No OpenRouter API key found in settings")
@@ -105,7 +105,7 @@ class OpenRouterQObject(LocalAgent):
 
             try:
                 self._llm = OpenRouterEnhanced(
-                    model=self.llm_settings.model,
+                    model=self.llm_generator_settings.model_path,
                     api_key=api_key,
                     **llm_request.to_dict(),
                 )
