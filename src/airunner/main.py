@@ -20,7 +20,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
         os.path.expanduser("~"), ".local", "share", "airunner"
     )
     activate(
-        activate_shadowlogger=False,
+        activate_shadowlogger=True,
         darklock_os_whitelisted_operations=["makedirs", "mkdir", "open"],
         darklock_os_whitelisted_directories=[
             airunner_path,

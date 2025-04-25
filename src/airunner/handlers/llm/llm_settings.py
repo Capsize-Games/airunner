@@ -14,11 +14,8 @@ if os.environ.get("DEV_ENV", "1") == "1":
         # environment variables will be read directly from the OS
         pass
 
+from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.settings import (
-    AIRUNNER_LLM_USE_LOCAL,
-    AIRUNNER_LLM_USE_OPENROUTER,
-    AIRUNNER_LLM_USE_OPENAI,
-    AIRUNNER_LLM_OPENAI_API_KEY,
     AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY,
     AIRUNNER_LLM_USE_WEATHER_PROMPT,
     AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS,
@@ -40,7 +37,6 @@ class LLMSettings:
     Contains configuration options for local and API-based LLM usage.
     """
 
-    use_local_llm: bool = AIRUNNER_LLM_USE_LOCAL
     use_weather_prompt: bool = (
         AIRUNNER_LLM_USE_WEATHER_PROMPT  # Fixed trailing comma
     )
@@ -48,9 +44,6 @@ class LLMSettings:
         AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS
     )
     summarize_after_n_turns: int = AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS
-    use_openrouter: bool = AIRUNNER_LLM_USE_OPENROUTER
-    use_openai: bool = AIRUNNER_LLM_USE_OPENAI
-    openai_api_key: str = AIRUNNER_LLM_OPENAI_API_KEY
     perform_conversation_summary: bool = (
         AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY
     )
@@ -61,13 +54,3 @@ class LLMSettings:
     update_user_data_enabled: bool = AIRUNNER_LLM_UPDATE_USER_DATA_ENABLED
     use_chatbot_mood: bool = AIRUNNER_LLM_USE_CHATBOT_MOOD
     perform_conversation_rag: bool = AIRUNNER_LLM_PERFORM_CONVERSATION_RAG
-
-    @property
-    def use_api(self) -> bool:
-        """
-        Determines if any API-based LLM services are enabled.
-
-        Returns:
-            bool: True if either OpenRouter or OpenAI is enabled, False otherwise.
-        """
-        return self.use_openrouter or self.use_openai

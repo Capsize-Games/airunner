@@ -72,6 +72,9 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         for element in elements:
             element.blockSignals(True)
 
+        self.ui.model_service.clear()
+        self.ui.model_service.addItems([item.value for item in ModelService])
+
         self.ui.model_service.setCurrentText(
             self.llm_generator_settings.model_service
         )
