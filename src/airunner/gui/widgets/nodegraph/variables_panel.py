@@ -55,7 +55,7 @@ class VariablesPanelWidget(BaseWidget):
         self.ui.variables_list_widget.startDrag = self._start_variable_drag
 
     @Slot()
-    def on_add_variable(self):
+    def on_add_variable_button_clicked(self):
         """Opens a dialog to add a new variable."""
         dialog = QDialog(self)
         dialog.setWindowTitle("Add Variable")

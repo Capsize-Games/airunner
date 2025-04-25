@@ -287,6 +287,56 @@ class MainWindow(
     signals in the corresponding ui file.
     """
 
+    @Slot(QSystemTrayIcon.ActivationReason)
+    def on_tray_icon_activated(self, reason: QSystemTrayIcon.ActivationReason):
+        """Handle tray icon activation events."""
+        print(f"Tray icon activated with reason: {reason}")
+
+        # For single left click or double click, toggle visibility
+        if (
+            reason is QSystemTrayIcon.ActivationReason.Trigger
+            or reason is QSystemTrayIcon.ActivationReason.DoubleClick
+        ):
+            print(f"Left click detected (reason: {reason})")
+            self.toggle_window_visibility()
+        elif reason == QSystemTrayIcon.ActivationReason.MiddleClick:
+            print("Middle click detected")
+        elif reason == QSystemTrayIcon.ActivationReason.Context:
+            print("Context menu requested")
+            # Update menu text before showing context menu
+            if self.isVisible():
+                self.toggle_visibility_action.setText("Hide Window")
+            else:
+                self.toggle_visibility_action.setText("Show Window")
+
+    @Slot()
+    def workflow_actionRun_triggered(self):
+        self.ui.graph.run_workflow()
+
+    @Slot()
+    def workflow_actionEdit_triggered(self):
+        self.ui.graph.edit_workflow()
+
+    @Slot()
+    def workflow_actionClear_triggered(self):
+        self.ui.graph.clear_graph()
+
+    @Slot()
+    def workflow_actionPause_triggered(self):
+        self.ui.graph.pause_workflow()
+
+    @Slot()
+    def workflow_actionSave_triggered(self):
+        self.ui.graph.save_workflow()
+
+    @Slot()
+    def workflow_actionStop_triggered(self):
+        self.ui.graph.stop_workflow()
+
+    @Slot()
+    def workflow_actionOpen_triggered(self):
+        self.ui.graph.load_workflow()
+
     @Slot()
     def action_quit_triggered(self):
         self.handle_close()
@@ -681,27 +731,6 @@ class MainWindow(
         # Update the tray menu so it reflects the current state immediately
         self.tray_icon.setContextMenu(self.tray_menu)
 
-    def on_tray_icon_activated(self, reason):
-        """Handle tray icon activation events."""
-        print(f"Tray icon activated with reason: {reason}")
-
-        # For single left click or double click, toggle visibility
-        if (
-            reason is QSystemTrayIcon.ActivationReason.Trigger
-            or reason is QSystemTrayIcon.ActivationReason.DoubleClick
-        ):
-            print(f"Left click detected (reason: {reason})")
-            self.toggle_window_visibility()
-        elif reason == QSystemTrayIcon.ActivationReason.MiddleClick:
-            print("Middle click detected")
-        elif reason == QSystemTrayIcon.ActivationReason.Context:
-            print("Context menu requested")
-            # Update menu text before showing context menu
-            if self.isVisible():
-                self.toggle_visibility_action.setText("Hide Window")
-            else:
-                self.toggle_visibility_action.setText("Show Window")
-
     def handle_single_click(self):
         """Handle single-click on the tray icon."""
         print("Single click handler executing")
@@ -769,28 +798,6 @@ class MainWindow(
         self.logger.debug("Loading UI")
 
         self.ui.setupUi(self)
-
-        self.ui.workflow_actionClear.triggered.connect(
-            self.ui.graph.on_run_workflow
-        )
-        self.ui.workflow_actionEdit.triggered.connect(
-            self.ui.graph.on_edit_workflow
-        )
-        self.ui.workflow_actionOpen.triggered.connect(
-            self.ui.graph.on_load_workflow
-        )
-        self.ui.workflow_actionPause.triggered.connect(
-            self.ui.graph.on_pause_workflow
-        )
-        self.ui.workflow_actionRun.triggered.connect(
-            self.ui.graph.on_run_workflow
-        )
-        self.ui.workflow_actionSave.triggered.connect(
-            self.ui.graph.on_save_workflow
-        )
-        self.ui.workflow_actionStop.triggered.connect(
-            self.ui.graph.on_stop_workflow
-        )
 
         self.icon_manager = IconManager(self.icons, self.ui)
 
