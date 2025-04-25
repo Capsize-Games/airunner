@@ -517,6 +517,14 @@ class Ui_MainWindow(object):
         self.actionExport_image_button.triggered.connect(MainWindow.action_export_image_triggered)
         self.actionDiscord.triggered.connect(MainWindow.action_open_discord)
         self.actionCollapse_to_system_tray.toggled.connect(MainWindow.action_toggle_close_to_system_tray)
+        self.workflow_actionRun.triggered.connect(MainWindow.workflow_actionRun_triggered)
+        self.menubar.triggered.connect(MainWindow.workflow_actionRun_triggered)
+        self.workflow_actionClear.triggered.connect(MainWindow.workflow_actionClear_triggered)
+        self.workflow_actionEdit.triggered.connect(MainWindow.workflow_actionEdit_triggered)
+        self.workflow_actionOpen.triggered.connect(MainWindow.workflow_actionOpen_triggered)
+        self.workflow_actionPause.triggered.connect(MainWindow.workflow_actionPause_triggered)
+        self.workflow_actionSave.triggered.connect(MainWindow.workflow_actionSave_triggered)
+        self.workflow_actionStop.triggered.connect(MainWindow.workflow_actionStop_triggered)
 
         self.center_tab_container.setCurrentIndex(0)
 

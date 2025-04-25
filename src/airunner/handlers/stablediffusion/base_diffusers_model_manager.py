@@ -14,7 +14,6 @@ from PIL.Image import Image
 from compel import (
     Compel,
     DiffusersTextualInversionManager,
-    ReturnedEmbeddingsType,
 )
 from controlnet_aux.processor import MODELS as controlnet_aux_models
 from diffusers import (
@@ -24,12 +23,6 @@ from diffusers import (
     StableDiffusionControlNetPipeline,
     StableDiffusionControlNetImg2ImgPipeline,
     StableDiffusionControlNetInpaintPipeline,
-    StableDiffusionXLPipeline,
-    StableDiffusionXLImg2ImgPipeline,
-    StableDiffusionXLInpaintPipeline,
-    StableDiffusionXLControlNetPipeline,
-    StableDiffusionXLControlNetImg2ImgPipeline,
-    StableDiffusionXLControlNetInpaintPipeline,
     ControlNetModel,
 )
 from airunner.settings import (
@@ -54,7 +47,6 @@ from airunner.data.models import (
     AIModels,
 )
 from airunner.enums import (
-    StableDiffusionVersion,
     GeneratorSection,
     ModelStatus,
     ModelType,
@@ -161,32 +153,29 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._path_settings = None
         self._current_memory_settings = None
 
-    def on_application_settings_changed(self):
-        if self._pipe:
-            pipeline_class = self._pipe.__class__
-            if (
-                pipeline_class in self.img2img_pipelines
-                and not self.image_to_image_settings.enabled
-            ) or (
-                pipeline_class in self.txt2img_pipelines
-                and self.image_to_image_settings.enabled
-            ):
-                self._swap_pipeline()
+    @property
+    def img2img_pipelines(
+        self,
+    ) -> List[Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+        return []
 
-        memory_settings = self.memory_settings.to_dict()
-        if self._pipe and self._current_memory_settings != memory_settings:
-            self._clear_memory_efficient_settings()
-            self._make_memory_efficient()
+    @property
+    def txt2img_pipelines(
+        self,
+    ) -> List[Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+        return []
 
-    def _clear_cached_properties(self):
-        self._outpaint_image = None
-        self._img2img_image = None
-        self._controlnet_settings = None
-        self._controlnet_image_settings = None
-        self._application_settings = None
-        self._drawing_pad_settings = None
-        self._outpaint_settings = None
-        self._path_settings = None
+    @property
+    def controlnet_pipelines(
+        self,
+    ) -> List[Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+        return []
+
+    @property
+    def outpaint_pipelines(
+        self,
+    ) -> List[Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+        return []
 
     @property
     def use_compel(self) -> bool:
@@ -201,33 +190,6 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.logger.debug("Loading generator")
             self._generator = torch.Generator(device=self._device)
         return self._generator
-
-    @property
-    def img2img_pipelines(self):
-        return (
-            StableDiffusionXLImg2ImgPipeline,
-            StableDiffusionXLControlNetImg2ImgPipeline,
-            StableDiffusionImg2ImgPipeline,
-            StableDiffusionControlNetImg2ImgPipeline,
-        )
-
-    @property
-    def txt2img_pipelines(self):
-        return (
-            StableDiffusionXLPipeline,
-            StableDiffusionXLControlNetPipeline,
-            StableDiffusionPipeline,
-            StableDiffusionControlNetPipeline,
-        )
-
-    @property
-    def outpaint_pipelines(self):
-        return (
-            StableDiffusionXLInpaintPipeline,
-            StableDiffusionInpaintPipeline,
-            StableDiffusionControlNetInpaintPipeline,
-            StableDiffusionXLControlNetInpaintPipeline,
-        )
 
     @property
     def controlnet_path(self):
@@ -256,22 +218,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         )
 
     @property
-    def model_status(self):
+    def model_status(self) -> Dict[ModelType, ModelStatus]:
         return self._model_status
-
-    @property
-    def is_sd_xl(self) -> bool:
-        return self.real_model_version == StableDiffusionVersion.SDXL1_0.value
-
-    @property
-    def is_sd_xl_turbo(self) -> bool:
-        return (
-            self.real_model_version == StableDiffusionVersion.SDXL_TURBO.value
-        )
-
-    @property
-    def is_sd_xl_or_turbo(self) -> bool:
-        return self.is_sd_xl or self.is_sd_xl_turbo
 
     @property
     def img2img_image_cached(self) -> Image:
@@ -387,13 +335,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def version(self) -> str:
-        """
-        Turbo paths are SDXL 1.0 paths so we normalize the version to SDXL 1.0
-        """
-        version = self.real_model_version
-        if version == "SDXL Turbo":
-            version = "SDXL 1.0"
-        return version
+        return self.real_model_version
 
     @property
     def section(self) -> GeneratorSection:
@@ -488,35 +430,28 @@ class BaseDiffusersModelManager(BaseModelManager):
         return get_torch_device(self._device_index)
 
     @property
+    def pipeline_map(
+        self,
+    ) -> Dict[str, Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+        return {
+            "txt2img": StableDiffusionPipeline,
+            "img2img": StableDiffusionImg2ImgPipeline,
+            "outpaint": StableDiffusionInpaintPipeline,
+            "txt2img_controlnet": StableDiffusionControlNetPipeline,
+            "img2img_controlnet": StableDiffusionControlNetImg2ImgPipeline,
+            "outpaint_controlnet": StableDiffusionControlNetInpaintPipeline,
+        }
+
+    @property
     def _pipeline_class(self):
         operation_type = "txt2img"
         if self.is_img2img:
             operation_type = "img2img"
         elif self.is_outpaint:
             operation_type = "outpaint"
-
         if self.controlnet_enabled:
             operation_type = f"{operation_type}_controlnet"
-
-        if self.is_sd_xl_or_turbo:
-            pipeline_map = {
-                "txt2img": StableDiffusionXLPipeline,
-                "img2img": StableDiffusionXLImg2ImgPipeline,
-                "outpaint": StableDiffusionXLInpaintPipeline,
-                "txt2img_controlnet": StableDiffusionXLControlNetPipeline,
-                "img2img_controlnet": StableDiffusionXLControlNetImg2ImgPipeline,
-                "outpaint_controlnet": StableDiffusionXLControlNetInpaintPipeline,
-            }
-        else:
-            pipeline_map = {
-                "txt2img": StableDiffusionPipeline,
-                "img2img": StableDiffusionImg2ImgPipeline,
-                "outpaint": StableDiffusionInpaintPipeline,
-                "txt2img_controlnet": StableDiffusionControlNetPipeline,
-                "img2img_controlnet": StableDiffusionControlNetImg2ImgPipeline,
-                "outpaint_controlnet": StableDiffusionControlNetInpaintPipeline,
-            }
-        return pipeline_map.get(operation_type)
+        return self.pipeline_map.get(operation_type)
 
     @property
     def mask_blur(self) -> int:
@@ -577,32 +512,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def second_prompt(self) -> str:
-        if not self.is_sd_xl_or_turbo:
-            return ""
-        prompt = self.image_request.second_prompt
-        prompt_preset = self.prompt_preset
-
-        # Format the prompt
-        formatted_prompt = None
-        if self.do_join_prompts:
-            prompts = [f'"{prompt}"']
-            for (
-                additional_prompt_settings
-            ) in self.image_request.additional_prompts:
-                addtional_prompt = additional_prompt_settings[
-                    "prompt_secondary"
-                ]
-                prompts.append(f'"{addtional_prompt}"')
-            formatted_prompt = (
-                f'({", ".join(prompts)}, "{prompt_preset}").and()'
-            )
-
-        if prompt_preset != "":
-            prompt = f'("{prompt}", "{prompt_preset}").and()'
-
-        formatted_prompt = formatted_prompt or prompt
-
-        return formatted_prompt
+        return ""
 
     @property
     def negative_prompt(self) -> str:
@@ -616,15 +526,46 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def second_negative_prompt(self) -> str:
-        if not self.is_sd_xl_or_turbo:
-            return ""
-        prompt = self.image_request.second_negative_prompt
-        negative_prompt_preset = self.negative_prompt_preset
+        return ""
 
-        if negative_prompt_preset != "":
-            prompt = f'("{prompt}", "{negative_prompt_preset}").and()'
+    @property
+    def config_path(self) -> str:
+        return os.path.dirname(self.model_path)
 
-        return prompt
+    @property
+    def compel_tokenizer(self) -> Any:
+        return self._pipe.tokenizer
+
+    @property
+    def compel_text_encoder(self) -> Any:
+        return self._pipe.text_encoder
+
+    @property
+    def compel_parameters(self) -> Dict[str, Any]:
+        parameters = {
+            "truncate_long_prompts": False,
+            "textual_inversion_manager": self._textual_inversion_manager,
+            "tokenizer": self.compel_tokenizer,
+            "text_encoder": self.compel_text_encoder,
+        }
+        return parameters
+
+    def on_application_settings_changed(self):
+        if self._pipe:
+            pipeline_class = self._pipe.__class__
+            if (
+                pipeline_class in self.img2img_pipelines
+                and not self.image_to_image_settings.enabled
+            ) or (
+                pipeline_class in self.txt2img_pipelines
+                and self.image_to_image_settings.enabled
+            ):
+                self._swap_pipeline()
+
+        memory_settings = self.memory_settings.to_dict()
+        if self._pipe and self._current_memory_settings != memory_settings:
+            self._clear_memory_efficient_settings()
+            self._make_memory_efficient()
 
     def load_safety_checker(self):
         """
@@ -816,6 +757,16 @@ class BaseDiffusersModelManager(BaseModelManager):
         ):
             self.do_interrupt_image_generation = True
 
+    def _clear_cached_properties(self):
+        self._outpaint_image = None
+        self._img2img_image = None
+        self._controlnet_settings = None
+        self._controlnet_image_settings = None
+        self._application_settings = None
+        self._drawing_pad_settings = None
+        self._outpaint_settings = None
+        self._path_settings = None
+
     def _swap_pipeline(self):
         pipeline_class_ = self._pipeline_class
         if self._pipe.__class__ is pipeline_class_:  # noqa
@@ -828,14 +779,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         )
         try:
             kwargs = {}
-            if pipeline_class_ in (
-                StableDiffusionControlNetPipeline,
-                StableDiffusionControlNetImg2ImgPipeline,
-                StableDiffusionControlNetInpaintPipeline,
-                StableDiffusionXLControlNetPipeline,
-                StableDiffusionXLControlNetImg2ImgPipeline,
-                StableDiffusionXLControlNetInpaintPipeline,
-            ):
+            if pipeline_class_ in self.controlnet_pipelines:
                 kwargs.update(controlnet=self._controlnet)
             self._pipe = pipeline_class_.from_pipe(self._pipe, **kwargs)
         except Exception as e:
@@ -1219,21 +1163,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         if data is None:
             return
 
-        if self.is_sd_xl_turbo:
-            config_path = os.path.expanduser(
-                os.path.join(
-                    self.path_settings_cached.base_path,
-                    "art",
-                    "models",
-                    StableDiffusionVersion.SDXL1_0.value,
-                    self.image_request.pipeline_action,
-                )
-            )
-        else:
-            config_path = os.path.dirname(self.model_path)
-
         try:
-            self._set_pipe(config_path, data)
+            self._set_pipe(self.config_path, data)
         except (
             FileNotFoundError,
             EnvironmentError,
@@ -1422,25 +1353,35 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def _load_compel_proc(self):
         self.logger.debug("Loading compel proc")
-        parameters = {
-            "truncate_long_prompts": False,
-            "textual_inversion_manager": self._textual_inversion_manager,
-        }
-        if self.is_sd_xl_or_turbo:
-            tokenizer = [self._pipe.tokenizer, self._pipe.tokenizer_2]
-            text_encoder = [self._pipe.text_encoder, self._pipe.text_encoder_2]
-            parameters["returned_embeddings_type"] = (
-                ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED
-            )
-            parameters["requires_pooled"] = [False, True]
-        else:
-            tokenizer = self._pipe.tokenizer
-            text_encoder = self._pipe.text_encoder
-        parameters.update(
-            {"tokenizer": tokenizer, "text_encoder": text_encoder}
-        )
-        self._compel_proc = Compel(**parameters)
+        self._compel_proc = Compel(**self.compel_parameters)
 
+    def _finalize_load_stable_diffusion(self):
+        safety_checker_ready = True
+        if self.use_safety_checker:
+            safety_checker_ready = (
+                self._safety_checker is not None
+                and self._feature_extractor is not None
+            )
+        if self._pipe is not None and safety_checker_ready:
+            self._current_state = HandlerState.READY
+            self.change_model_status(ModelType.SD, ModelStatus.LOADED)
+        else:
+            self.logger.error(
+                "Something went wrong with Stable Diffusion loading"
+            )
+            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
+            self.unload()
+            self._clear_cached_properties()
+
+        if (
+            self._controlnet is not None
+            and self._controlnet_processor is not None
+            and self._pipe
+        ):
+            self._pipe.__controlnet = self._controlnet
+            self._pipe.processor = self._controlnet_processor
+
+    # MEMORY SETTINGS
     def _make_memory_efficient(self):
         self._current_memory_settings = self.memory_settings.to_dict()
 
@@ -1487,32 +1428,6 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._apply_memory_setting(
                 setting_name, attribute_name, apply_func
             )
-
-    def _finalize_load_stable_diffusion(self):
-        safety_checker_ready = True
-        if self.use_safety_checker:
-            safety_checker_ready = (
-                self._safety_checker is not None
-                and self._feature_extractor is not None
-            )
-        if self._pipe is not None and safety_checker_ready:
-            self._current_state = HandlerState.READY
-            self.change_model_status(ModelType.SD, ModelStatus.LOADED)
-        else:
-            self.logger.error(
-                "Something went wrong with Stable Diffusion loading"
-            )
-            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
-            self.unload()
-            self._clear_cached_properties()
-
-        if (
-            self._controlnet is not None
-            and self._controlnet_processor is not None
-            and self._pipe
-        ):
-            self._pipe.__controlnet = self._controlnet
-            self._pipe.processor = self._controlnet_processor
 
     def _apply_memory_setting(self, setting_name, attribute_name, apply_func):
         attr_val = getattr(self.memory_settings, attribute_name)
@@ -1656,6 +1571,8 @@ class BaseDiffusersModelManager(BaseModelManager):
             tomesd.remove_patch(self._pipe)
         except Exception as e:
             self.logger.error(f"Error removing ToMe SD weight merging: {e}")
+
+    # END MEMORY SETTINGS
 
     def _unload_safety_checker(self):
         self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING)
@@ -1843,9 +1760,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         ):
             self.logger.debug("Loading prompt embeds")
 
-            pooled_prompt_embeds = None
-            negative_pooled_prompt_embeds = None
-
             if prompt != "" and second_prompt != "":
                 compel_prompt = f'("{prompt}", "{second_prompt}").and()'
             elif prompt != "" and second_prompt == "":
@@ -1866,24 +1780,15 @@ class BaseDiffusersModelManager(BaseModelManager):
             else:
                 compel_negative_prompt = ""
 
-            if self.is_sd_xl_or_turbo:
-                prompt_embeds, pooled_prompt_embeds = (
-                    self._compel_proc.build_conditioning_tensor(compel_prompt)
-                )
-                negative_prompt_embeds, negative_pooled_prompt_embeds = (
-                    self._compel_proc.build_conditioning_tensor(
-                        compel_negative_prompt
-                    )
-                )
-            else:
-                prompt_embeds = self._compel_proc.build_conditioning_tensor(
-                    compel_prompt
-                )
-                negative_prompt_embeds = (
-                    self._compel_proc.build_conditioning_tensor(
-                        compel_negative_prompt
-                    )
-                )
+            (
+                prompt_embeds,
+                pooled_prompt_embeds,
+                negative_prompt_embeds,
+                negative_pooled_prompt_embeds,
+            ) = self._build_conditioning_tensors(
+                compel_prompt, compel_negative_prompt
+            )
+
             [prompt_embeds, negative_prompt_embeds] = (
                 self._compel_proc.pad_conditioning_tensors_to_same_length(
                     [prompt_embeds, negative_prompt_embeds]
@@ -1904,11 +1809,31 @@ class BaseDiffusersModelManager(BaseModelManager):
             if self._negative_pooled_prompt_embeds is not None:
                 self._negative_pooled_prompt_embeds.half().to(self._device)
 
+    def _build_conditioning_tensors(
+        self, compel_prompt, compel_negative_prompt
+    ):
+        prompt_embeds = self._compel_proc.build_conditioning_tensor(
+            compel_prompt
+        )
+        negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(
+            compel_negative_prompt
+        )
+        return prompt_embeds, None, negative_prompt_embeds, None
+
     def _clear_memory_efficient_settings(self):
         self.logger.debug("Clearing memory efficient settings")
         for key in self._memory_settings_flags:
             if key.endswith("_applied"):
                 self._memory_settings_flags[key] = None
+
+    def _prepare_compel_data(self, data: Dict) -> Dict:
+        data.update(
+            {
+                "prompt_embeds": self._prompt_embeds,
+                "negative_prompt_embeds": self._negative_prompt_embeds,
+            }
+        )
+        return data
 
     def _prepare_data(self, active_rect=None) -> Dict:
         """
@@ -1934,33 +1859,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._set_lora_adapters()
 
         if self.use_compel:
-            args.update(
-                {
-                    "prompt_embeds": self._prompt_embeds,
-                    "negative_prompt_embeds": self._negative_prompt_embeds,
-                }
-            )
-
-            if self.is_sd_xl_or_turbo:
-                args.update(
-                    {
-                        "pooled_prompt_embeds": self._pooled_prompt_embeds,
-                        "negative_pooled_prompt_embeds": self._negative_pooled_prompt_embeds,
-                    }
-                )
-
-                for key in [
-                    "negative_target_size",
-                    "negative_original_size",
-                    "crops_coords_top_left",
-                ]:
-                    val = getattr(self.image_request, key, None)
-                    if (
-                        val
-                        and val.get("width", None)
-                        and val.get("height", None)
-                    ):
-                        args.update({key: (val["width"], val["height"])})
+            args = self._prepare_compel_data(args)
 
         else:
             args.update(

@@ -96,7 +96,6 @@ class TTSGeneratorWorker(Worker):
             thread.start()
 
     def start_worker_thread(self):
-        self._initialize_tts_model_manager()
         if self.tts_enabled:
             self._load_tts()
 
@@ -108,7 +107,6 @@ class TTSGeneratorWorker(Worker):
         if self._current_model != data["model"]:
             self._current_model = data["model"]
             self.tts.unload()
-            self._initialize_tts_model_manager()
             self._load_tts()
 
     def on_application_settings_changed_signal(self, data):
@@ -215,12 +213,13 @@ class TTSGeneratorWorker(Worker):
             self.logger.info("TTS is disabled. Skipping load.")
             return
 
+        if not self.tts:
+            self._initialize_tts_model_manager()
+
         if self.tts:
             self.tts.load()
 
     def load(self):
-        if not self.tts:
-            self._initialize_tts_model_manager()
         self._load_tts()
 
     def unload(self):
