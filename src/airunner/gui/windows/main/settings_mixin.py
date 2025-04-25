@@ -39,7 +39,8 @@ from airunner.data.models import (
     User,
 )
 from airunner.data.models import table_to_class
-from airunner.enums import SignalCode, TTSModel
+from airunner.data.models.rag_settings import RAGSettings
+from airunner.enums import ModelService, SignalCode, TTSModel
 from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
 from airunner.utils.settings import get_qsettings
@@ -119,6 +120,18 @@ class SettingsMixin:
         }
         settings.endGroup()
         return window_settings
+
+    @property
+    def rag_settings(self) -> RAGSettings:
+        rag_settings = RAGSettings.objects.first()
+        if rag_settings is None:
+            RAGSettings.objects.create(
+                enabled=False,
+                model_service=ModelService.LOCAL.value,
+                model_path="",
+            )
+            rag_settings = RAGSettings.objects.first()
+        return rag_settings
 
     @property
     def llm_generator_settings(self) -> LLMGeneratorSettings:
