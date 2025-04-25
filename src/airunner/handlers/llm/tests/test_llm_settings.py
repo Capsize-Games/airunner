@@ -9,12 +9,12 @@ class TestLLMSettings(unittest.TestCase):
 
     def test_default_initialization(self):
         """Test that LLMSettings initializes with default values from settings."""
-        with patch('airunner.handlers.llm.llm_settings.AIRUNNER_LLM_USE_LOCAL', True), \
-             patch('airunner.handlers.llm.llm_settings.AIRUNNER_LLM_USE_OPENROUTER', False), \
-             patch('airunner.handlers.llm.llm_settings.AIRUNNER_LLM_USE_OPENAI', False):
-            
+        with patch(
+            "airunner.handlers.llm.llm_settings.AIRUNNER_LLM_USE_OPENAI", False
+        ):
+
             settings = LLMSettings()
-            
+
             # Verify correct default values
             self.assertTrue(settings.use_local_llm)
             self.assertFalse(settings.use_openrouter)
@@ -25,7 +25,7 @@ class TestLLMSettings(unittest.TestCase):
         settings = LLMSettings()
         settings.use_openrouter = True
         settings.use_openai = False
-        
+
         # Verify use_api is True when openrouter is enabled
         self.assertTrue(settings.use_api)
 
@@ -34,7 +34,7 @@ class TestLLMSettings(unittest.TestCase):
         settings = LLMSettings()
         settings.use_openrouter = False
         settings.use_openai = True
-        
+
         # Verify use_api is True when openai is enabled
         self.assertTrue(settings.use_api)
 
@@ -43,7 +43,7 @@ class TestLLMSettings(unittest.TestCase):
         settings = LLMSettings()
         settings.use_openrouter = False
         settings.use_openai = False
-        
+
         # Verify use_api is False when both APIs are disabled
         self.assertFalse(settings.use_api)
 
@@ -52,10 +52,10 @@ class TestLLMSettings(unittest.TestCase):
         settings = LLMSettings()
         settings.use_openrouter = True
         settings.use_openai = True
-        
+
         # Verify use_api is True when both APIs are enabled
         self.assertTrue(settings.use_api)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
