@@ -550,23 +550,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         }
         return parameters
 
-    def on_application_settings_changed(self):
-        if self._pipe:
-            pipeline_class = self._pipe.__class__
-            if (
-                pipeline_class in self.img2img_pipelines
-                and not self.image_to_image_settings.enabled
-            ) or (
-                pipeline_class in self.txt2img_pipelines
-                and self.image_to_image_settings.enabled
-            ):
-                self._swap_pipeline()
-
-        memory_settings = self.memory_settings.to_dict()
-        if self._pipe and self._current_memory_settings != memory_settings:
-            self._clear_memory_efficient_settings()
-            self._make_memory_efficient()
-
     def load_safety_checker(self):
         """
         Public method to load the safety checker model.
@@ -641,14 +624,16 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         self._load_safety_checker()
         self.load_controlnet()
-        self._load_pipe()
-        self._load_scheduler()
-        self._load_lora()
-        self._load_embeddings()
-        self._load_compel()
-        self._load_deep_cache()
-        self._make_memory_efficient()
-        self._finalize_load_stable_diffusion()
+        if self._load_pipe():
+            self._send_pipeline_loaded_signal()
+            self._move_pipe_to_device()
+            self._load_scheduler()
+            self._load_lora()
+            self._load_embeddings()
+            self._load_compel()
+            self._load_deep_cache()
+            self._make_memory_efficient()
+            self._finalize_load_stable_diffusion()
 
     def unload(self):
         if self.sd_is_loading or self.sd_is_unloaded:
@@ -684,7 +669,6 @@ class BaseDiffusersModelManager(BaseModelManager):
 
         self.load()
         self._clear_cached_properties()
-        self._swap_pipeline()
         if self._current_state not in (
             HandlerState.GENERATING,
             HandlerState.PREPARING_TO_GENERATE,
@@ -766,27 +750,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._drawing_pad_settings = None
         self._outpaint_settings = None
         self._path_settings = None
-
-    def _swap_pipeline(self):
-        pipeline_class_ = self._pipeline_class
-        if self._pipe.__class__ is pipeline_class_:  # noqa
-            return
-
-        self.logger.info(
-            "Swapping pipeline from %s to %s",
-            self._pipe.__class__ if self._pipe else "",
-            pipeline_class_,
-        )
-        try:
-            kwargs = {}
-            if pipeline_class_ in self.controlnet_pipelines:
-                kwargs.update(controlnet=self._controlnet)
-            self._pipe = pipeline_class_.from_pipe(self._pipe, **kwargs)
-        except Exception as e:
-            self.logger.error(f"Error swapping pipeline: {e}")
-        finally:
-            self._send_pipeline_loaded_signal()
-            self._move_pipe_to_device()
 
     def _generate(self) -> ImageResponse:
         self.logger.debug("Generating image")
@@ -1148,7 +1111,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self._pipe:
             self._pipe.scheduler = self.scheduler
 
-    def _load_pipe(self):
+    def _load_pipe(self) -> bool:
         self.logger.debug("Loading pipe")
         data = {
             "torch_dtype": self.data_type,
@@ -1183,10 +1146,8 @@ class BaseDiffusersModelManager(BaseModelManager):
                 {"code": code, "message": response},
             )
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
-            return
-
-        self._send_pipeline_loaded_signal()
-        self._move_pipe_to_device()
+            return False
+        return True
 
     def _set_pipe(self, config_path: str, data: Dict):
         pipeline_class_ = self._pipeline_class
