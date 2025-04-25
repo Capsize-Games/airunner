@@ -52,7 +52,7 @@ def __getattr__(name):
 
         return FluxModelManager
     elif name == "BaseDiffusersModelManager":
-        from .base_diffusers_model_manager import BaseDiffusersModelManager
+        from .stablediffusion.base_diffusers_model_manager import BaseDiffusersModelManager
 
         return BaseDiffusersModelManager
     raise AttributeError(f"module {__name__} has no attribute {name}")
