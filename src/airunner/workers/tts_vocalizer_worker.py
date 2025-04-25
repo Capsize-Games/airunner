@@ -30,7 +30,7 @@ class TTSVocalizerWorker(Worker):
         self.queue = Queue()
         # check if speakers are available
         self.stream = None
-        self.start_stream()
+        # self.start_stream()
         self.started = False
         self.do_interrupt = False
         self.accept_message = True
@@ -121,7 +121,9 @@ class TTSVocalizerWorker(Worker):
         return self._selected_device
 
     def _initialize_stream(self, samplerate: int):
-        self.logger.info(f"Initializing stream with samplerate: {samplerate}")
+        self.logger.info(
+            f"Initializing TTS stream with samplerate: {samplerate}"
+        )
         try:
             if self.selected_device is not None:
                 self.stream = sd.OutputStream(

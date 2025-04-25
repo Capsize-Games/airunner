@@ -109,13 +109,13 @@ class Ui_node_graph_widget(object):
 
         self.gridLayout_3.addWidget(self.delete_button, 0, 8, 1, 1)
 
-        self.pushButton = QPushButton(self.widget)
-        self.pushButton.setObjectName(u"pushButton")
+        self.clear_button = QPushButton(self.widget)
+        self.clear_button.setObjectName(u"clear_button")
         icon7 = QIcon()
         icon7.addFile(u":/dark/icons/feather/dark/x-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.pushButton.setIcon(icon7)
+        self.clear_button.setIcon(icon7)
 
-        self.gridLayout_3.addWidget(self.pushButton, 0, 5, 1, 1)
+        self.gridLayout_3.addWidget(self.clear_button, 0, 5, 1, 1)
 
 
         self.gridLayout_5.addWidget(self.widget, 0, 0, 1, 1)
@@ -125,10 +125,6 @@ class Ui_node_graph_widget(object):
         self.splitter.setOrientation(Qt.Orientation.Horizontal)
         self.variables = VariablesPanelWidget(self.splitter)
         self.variables.setObjectName(u"variables")
-        self.gridLayout_4 = QGridLayout(self.variables)
-        self.gridLayout_4.setSpacing(0)
-        self.gridLayout_4.setObjectName(u"gridLayout_4")
-        self.gridLayout_4.setContentsMargins(0, 0, 10, 0)
         self.splitter.addWidget(self.variables)
         self.graph = QWidget(self.splitter)
         self.graph.setObjectName(u"graph")
@@ -149,14 +145,14 @@ class Ui_node_graph_widget(object):
 
 
         self.retranslateUi(node_graph_widget)
-        self.play_button.clicked.connect(node_graph_widget.on_run_workflow)
-        self.pause_button.clicked.connect(node_graph_widget.on_pause_workflow)
-        self.stop_button.clicked.connect(node_graph_widget.on_stop_workflow)
-        self.load_button.clicked.connect(node_graph_widget.on_load_workflow)
-        self.save_button.clicked.connect(node_graph_widget.on_save_workflow)
-        self.edit_button.clicked.connect(node_graph_widget.on_edit_workflow)
-        self.delete_button.clicked.connect(node_graph_widget.on_delete_workflow)
-        self.pushButton.clicked.connect(node_graph_widget.on_clear_workflow)
+        self.pause_button.clicked.connect(node_graph_widget.on_pause_button_clicked)
+        self.play_button.clicked.connect(node_graph_widget.on_play_button_clicked)
+        self.stop_button.clicked.connect(node_graph_widget.on_stop_button_clicked)
+        self.save_button.clicked.connect(node_graph_widget.on_save_button_clicked)
+        self.clear_button.clicked.connect(node_graph_widget.on_clear_button_clicked)
+        self.edit_button.clicked.connect(node_graph_widget.on_edit_button_clicked)
+        self.load_button.clicked.connect(node_graph_widget.on_load_button_clicked)
+        self.delete_button.clicked.connect(node_graph_widget.on_delete_button_clicked)
 
         QMetaObject.connectSlotsByName(node_graph_widget)
     # setupUi
@@ -192,8 +188,8 @@ class Ui_node_graph_widget(object):
 #endif // QT_CONFIG(tooltip)
         self.delete_button.setText("")
 #if QT_CONFIG(tooltip)
-        self.pushButton.setToolTip(QCoreApplication.translate("node_graph_widget", u"Clear workflow", None))
+        self.clear_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"Clear workflow", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton.setText("")
+        self.clear_button.setText("")
     # retranslateUi
 

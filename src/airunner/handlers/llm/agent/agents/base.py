@@ -138,8 +138,12 @@ class BaseAgent(
         return self.action is LLMActionType.CHAT
 
     @property
+    def rag_enabled(self) -> bool:
+        return self.rag_settings.enabled
+
+    @property
     def rag_mode_enabled(self) -> bool:
-        return self.action is LLMActionType.PERFORM_RAG_SEARCH
+        return self.rag_enabled and self.action is LLMActionType.PERFORM_RAG_SEARCH
 
     @property
     def conversation_summaries(self) -> str:
@@ -306,7 +310,7 @@ class BaseAgent(
     def do_summarize_conversation(self) -> bool:
         if not self.conversation:
             return False
-        
+
         messages = self.conversation.value or []
         total_messages = len(messages)
         if (
