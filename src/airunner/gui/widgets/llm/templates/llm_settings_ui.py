@@ -259,15 +259,15 @@ class Ui_llm_settings_widget(object):
 
         self.gridLayout_3.addWidget(self.early_stopping, 0, 0, 1, 1)
 
-        self.do_sample = QCheckBox(self.override_parameters)
-        self.do_sample.setObjectName(u"do_sample")
-
-        self.gridLayout_3.addWidget(self.do_sample, 0, 1, 1, 1)
-
         self.use_cache = QCheckBox(self.override_parameters)
         self.use_cache.setObjectName(u"use_cache")
 
         self.gridLayout_3.addWidget(self.use_cache, 0, 2, 1, 1)
+
+        self.do_sample = QCheckBox(self.override_parameters)
+        self.do_sample.setObjectName(u"do_sample")
+
+        self.gridLayout_3.addWidget(self.do_sample, 0, 1, 1, 1)
 
 
         self.gridLayout_12.addLayout(self.gridLayout_3, 8, 0, 1, 1)
@@ -473,8 +473,8 @@ class Ui_llm_settings_widget(object):
         self.temperature.setProperty("settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.temperature", None))
         self.temperature.setProperty("label_text", QCoreApplication.translate("llm_settings_widget", u"Temperature", None))
         self.early_stopping.setText(QCoreApplication.translate("llm_settings_widget", u"Early stopping", None))
-        self.do_sample.setText(QCoreApplication.translate("llm_settings_widget", u"Do sample", None))
         self.use_cache.setText(QCoreApplication.translate("llm_settings_widget", u"Use Cache", None))
+        self.do_sample.setText(QCoreApplication.translate("llm_settings_widget", u"Do sample", None))
         self.pushButton.setText(QCoreApplication.translate("llm_settings_widget", u"Reset Settings to Default", None))
         self.repetition_penalty.setProperty("settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.repetition_penalty", None))
         self.repetition_penalty.setProperty("label_text", QCoreApplication.translate("llm_settings_widget", u"Repetition Penalty", None))

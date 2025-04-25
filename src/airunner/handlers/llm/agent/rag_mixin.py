@@ -55,9 +55,9 @@ class RAGMixin:
         self.__keyword_cache = {}
         self.__last_index_refresh = 0
         self.__preloaded = False
-        self._load_settings()
 
         if self.rag_mode_enabled:
+            self._load_settings()
             # Start the preloading process in a background thread to avoid blocking
             Thread(target=self._preload_resources, daemon=True).start()
 
