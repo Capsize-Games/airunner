@@ -91,19 +91,47 @@ class NodeGraphWidget(BaseWidget):
         self.q_settings.sync()
 
     @Slot()
-    def on_run_workflow(self):
+    def on_play_button_clicked(self):
+        self.run_workflow()
+
+    @Slot()
+    def on_pause_button_clicked(self):
+        self.pause_workflow()
+
+    @Slot()
+    def on_stop_button_clicked(self):
+        self.stop_workflow()
+
+    @Slot()
+    def on_save_button_clicked(self):
+        self.save_workflow()
+
+    @Slot()
+    def on_load_button_clicked(self):
+        self.load_workflow()
+
+    @Slot()
+    def on_edit_button_clicked(self):
+        self.edit_workflow()
+
+    @Slot()
+    def on_delete_button_clicked(self):
+        self.delete_workflow()
+
+    @Slot()
+    def on_clear_button_clicked(self):
+        self.clear_graph()
+
+    def run_workflow(self):
         self.emit_signal(SignalCode.RUN_WORKFLOW_SIGNAL, {"graph": self.graph})
 
-    @Slot()
-    def on_pause_workflow(self):
+    def pause_workflow(self):
         print("TODO: PAUSE WORKFLOW")
 
-    @Slot()
-    def on_stop_workflow(self):
+    def stop_workflow(self):
         print("TODO: STOP WORKFLOW")
 
-    @Slot()
-    def on_save_workflow(self):
+    def save_workflow(self):
         """Shows a dialog to save the workflow, allowing creation of a new one or overwriting an existing one."""
         if self.current_workflow_id is not None:
             self._perform_save(self.current_workflow_id)
@@ -247,8 +275,7 @@ class NodeGraphWidget(BaseWidget):
                         self, "Save Workflow", "Selected workflow not found."
                     )
 
-    @Slot()
-    def on_load_workflow(self):
+    def load_workflow(self):
         """Shows a dialog to select and load an existing workflow."""
         try:
             workflows = Workflow.objects.all()
@@ -293,16 +320,13 @@ class NodeGraphWidget(BaseWidget):
                     self, "Load Workflow", "No workflow selected."
                 )
 
-    @Slot()
-    def on_edit_workflow(self):
+    def edit_workflow(self):
         print("TODO: EDIT WORKFLOW")
 
-    @Slot()
-    def on_delete_workflow(self):
+    def delete_workflow(self):
         print("TODO: DELETE WORKFLOW")
 
-    @Slot()
-    def on_clear_workflow(self):
+    def clear_graph(self):
         """Clear the current workflow graph and variables."""
         self._clear_graph()
         self.current_workflow_id = None

@@ -13,7 +13,13 @@ from transformers.generation.streamers import TextIteratorStreamer
 from llama_index.core.chat_engine.types import AgentChatResponse
 
 from airunner.handlers.base_model_manager import BaseModelManager
-from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
+from airunner.enums import (
+    ModelService,
+    SignalCode,
+    ModelType,
+    ModelStatus,
+    LLMActionType,
+)
 from airunner.settings import (
     AIRUNNER_MAX_SEED,
     AIRUNNER_LOCAL_FILES_ONLY,
@@ -193,6 +199,20 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             )
         )
 
+    @property
+    def use_openrouter(self) -> bool:
+        return (
+            self.llm_generator_settings.model_service
+            == ModelService.OPENROUTER.value
+        )
+
+    @property
+    def use_api(self) -> bool:
+        return (
+            self.llm_generator_settings.model_service
+            != ModelService.LOCAL.value
+        )
+
     def load(self) -> None:
         """
         Load the LLM model and associated components.
@@ -213,18 +233,18 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         self._current_model_path = self.model_path
 
         # Load components based on settings
-        if self.llm_settings.use_local_llm:
+        if not self.use_api:
             self._load_tokenizer()
             self._load_model()
         self._load_agent()
 
         # Update status based on loading results
         if (self._model and self._tokenizer and self._chat_agent) or (
-            self._chat_agent and self.llm_settings.use_api
+            self._chat_agent and self.use_api
         ):
             self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
         else:
-            if not self._model and self.llm_settings.use_local_llm:
+            if not self._model and not self.use_api:
                 self.logger.error("Model failed to load")
             if not self._chat_agent:
                 self.logger.error("Chat agent failed to load")
@@ -481,7 +501,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         self.logger.debug("Loading agent")
 
         # Load appropriate agent type based on settings
-        if self.llm_settings.use_local_llm:
+        if not self.use_api:
             self.logger.info("Loading local chat agent")
             self._chat_agent = self.local_agent_class_(
                 model=self._model,
@@ -489,7 +509,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 default_tool_choice=None,
                 llm_settings=self.llm_settings,
             )
-        elif self.llm_settings.use_openrouter:
+        elif self.use_openrouter:
             self.logger.info("Loading openrouter chat agent")
             self._chat_agent = OpenRouterQObject(
                 llm_settings=self.llm_settings

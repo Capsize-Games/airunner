@@ -26,6 +26,7 @@ class FilterType(Enum):
 class ModelAction(Enum):
     NONE = auto()
     LOAD = auto()
+    UNLOAD = auto()
     CLEAR = auto()
     APPLY_TO_PIPE = auto()
 
@@ -332,6 +333,7 @@ class GeneratorSection(Enum):
 
 
 class StableDiffusionVersion(Enum):
+    NONE = "None"
     SDXL1_0 = "SDXL 1.0"
     SDXL_TURBO = "SDXL Turbo"
     SDXL_LIGHTNING = "SDXL Lightning"
