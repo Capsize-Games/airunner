@@ -39,6 +39,9 @@ from airunner.gui.widgets.sound_settings.sound_settings_widget import (
 from airunner.gui.widgets.huggingface_settings.huggingface_settings_widget import (
     HuggingfaceSettingsWidget,
 )
+from airunner.gui.widgets.rag_settings.rag_settings_widget import (
+    RAGSettingsWidget,
+)
 from airunner.gui.widgets.openrouter_settings.openrouter_settings_widget import (
     OpenrouterSettingsWidget,
 )
@@ -113,6 +116,8 @@ class SettingsWindow(BaseWindow):
             return SoundSettingsWidget
         elif name == "huggingface_settings":
             return HuggingfaceSettingsWidget
+        elif name == "rag_settings":
+            return RAGSettingsWidget
         elif name == "openrouter_settings":
             return OpenrouterSettingsWidget
         # elif name == "stt_preferences":
@@ -223,6 +228,11 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "huggingface_settings",
                         "display_name": "Huggingface Settings",
+                        "checkable": False,
+                    },
+                    {
+                        "name": "rag_settings",
+                        "display_name": "RAG Settings",
                         "checkable": False,
                     },
                     {
