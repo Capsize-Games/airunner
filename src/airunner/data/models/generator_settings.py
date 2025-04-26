@@ -1,21 +1,24 @@
 from sqlalchemy import (
-    Column, 
-    Integer, 
-    Boolean, 
-    String, 
-    Float, 
-    JSON, 
-    ForeignKey, 
-    BigInteger
+    Column,
+    Integer,
+    Boolean,
+    String,
+    Float,
+    JSON,
+    ForeignKey,
+    BigInteger,
 )
 from sqlalchemy.orm import relationship
 
 from airunner.data.models.base import BaseModel
-from airunner.settings import AIRUNNER_SD_DEFAULT_VAE_PATH, AIRUNNER_DEFAULT_SCHEDULER
+from airunner.settings import (
+    AIRUNNER_SD_DEFAULT_VAE_PATH,
+    AIRUNNER_DEFAULT_SCHEDULER,
+)
 
 
 class GeneratorSettings(BaseModel):
-    __tablename__ = 'generator_settings'
+    __tablename__ = "generator_settings"
     id = Column(Integer, primary_key=True, autoincrement=True)
     pipeline_action = Column(String, default="txt2img")
     generator_name = Column(String, default="stablediffusion")
@@ -27,8 +30,9 @@ class GeneratorSettings(BaseModel):
     second_negative_prompt = Column(String, default="")
     random_seed = Column(Boolean, default=True)
     model_name = Column(String, default="")
-    model = Column(Integer, ForeignKey('aimodels.id'), nullable=True)
+    model = Column(Integer, ForeignKey("aimodels.id"), nullable=True)
     aimodel = relationship("AIModels", back_populates="generator_settings")
+    custom_path = Column(String, default="")
     vae = Column(String, default=AIRUNNER_SD_DEFAULT_VAE_PATH)
     scheduler = Column(String, default=AIRUNNER_DEFAULT_SCHEDULER)
     variation = Column(Boolean, default=False)
@@ -48,7 +52,9 @@ class GeneratorSettings(BaseModel):
     crops_coord_top_left = Column(JSON, default={"x": 0, "y": 0})
     original_size = Column(JSON, default={"width": 512, "height": 512})
     target_size = Column(JSON, default={"width": 1024, "height": 1024})
-    negative_original_size = Column(JSON, default={"width": 512, "height": 512})
+    negative_original_size = Column(
+        JSON, default={"width": 512, "height": 512}
+    )
     negative_target_size = Column(JSON, default={"width": 512, "height": 512})
 
     lora_scale = Column(Integer, default=100)

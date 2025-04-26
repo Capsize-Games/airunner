@@ -15,6 +15,7 @@ class ImageRequest:
     second_negative_prompt: str = ""
     random_seed: bool = True
     model_path: str = ""
+    custom_path: str = ""
     scheduler: str = AIRUNNER_DEFAULT_SCHEDULER
     version: str = "SD 1.5"
     use_compel: bool = True
