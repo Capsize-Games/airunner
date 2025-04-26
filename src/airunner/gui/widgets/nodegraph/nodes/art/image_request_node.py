@@ -1,4 +1,5 @@
 from typing import Dict
+from PySide6.QtWidgets import QFileDialog
 
 from NodeGraphQt.constants import NodePropWidgetEnum
 
@@ -33,6 +34,7 @@ class ImageRequestNode(BaseArtNode):
         self.add_input("second_negative_prompt", display_name=True)
         self.add_input("random_seed", display_name=True)
         self.add_input("model_path", display_name=True)
+        self.add_input("custom_path", display_name=True)
         self.add_input("scheduler", display_name=True)
         self.add_input("version", display_name=True)
         self.add_input("use_compel", display_name=True)
@@ -92,6 +94,18 @@ class ImageRequestNode(BaseArtNode):
                 "name": "model_path",
                 "value": "",
                 "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+                "tab": "model",
+            },
+            {
+                "name": "custom_path",
+                "value": "",
+                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+                "tab": "model",
+            },
+            {
+                "name": "custom_path_button",
+                "value": "Browse",
+                "widget_type": NodePropWidgetEnum.BUTTON,
                 "tab": "model",
             },
             {
@@ -212,6 +226,27 @@ class ImageRequestNode(BaseArtNode):
             tab="generation",
         )
 
+    def on_widget_button_clicked(self, prop_name, value):
+        """
+        Handle button clicks for node properties.
+        """
+        if prop_name == "custom_path_button":
+            self.on_browse_button_clicked()
+
+    def on_browse_button_clicked(self):
+        """
+        Open a file dialog to select a custom model path.
+        """
+        current_path = self.get_property("custom_path") or ""
+        file_path, _ = QFileDialog.getOpenFileName(
+            None,  # Parent widget (can be None for nodes)
+            "Select custom model",
+            current_path,
+            "Model Files (*.safetensors *.ckpt *.pt *.bin)",
+        )
+        if file_path:
+            self.set_property("custom_path", file_path)
+
     def execute(self, input_data: Dict):
         """
         Execute the node to create and output an ImageRequest object.
@@ -233,6 +268,7 @@ class ImageRequestNode(BaseArtNode):
         )
         random_seed = self._get_value(input_data, "random_seed", bool)
         model_path = self._get_value(input_data, "model_path", str)
+        custom_path = self._get_value(input_data, "custom_path", str)
         scheduler = self._get_value(input_data, "scheduler", str)
         version = self._get_value(input_data, "version", str)
         use_compel = self._get_value(input_data, "use_compel", bool)
@@ -264,6 +300,7 @@ class ImageRequestNode(BaseArtNode):
             second_negative_prompt=second_negative_prompt,
             random_seed=random_seed,
             model_path=model_path,
+            custom_path=custom_path,
             scheduler=scheduler,
             version=version,
             use_compel=use_compel,
