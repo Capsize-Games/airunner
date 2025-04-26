@@ -306,6 +306,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         action = self._pipeline
         if self.image_request and self.image_request.pipeline_action != "":
             action = self.image_request.pipeline_action
+        if action is None or action == "":
+            action = self.generator_settings.pipeline_action
         return action
 
     @property
@@ -357,7 +359,33 @@ class BaseDiffusersModelManager(BaseModelManager):
         return section
 
     @property
-    def model_path(self) -> str:
+    def custom_path(
+        self,
+    ) -> Optional[str]:  # Changed return type to Optional[str]
+        path_value = (
+            self.image_request.custom_path if self.image_request else None
+        )
+        if path_value is None:
+            path_value = self.generator_settings.custom_path
+        if path_value is not None and path_value != "":
+            expanded_path = os.path.expanduser(path_value)
+            # Check if the expanded path exists
+            if os.path.exists(
+                expanded_path
+            ):  # Added missing colon and check existence
+                return expanded_path
+        return None  # Return None if path is None, empty, or doesn't exist
+
+    @property
+    def model_path(
+        self,
+    ) -> Optional[str]:  # Changed return type to Optional[str]
+        custom_path = (
+            self.custom_path
+        )  # Use the property which already checks existence
+        if custom_path is not None:
+            return custom_path
+
         path = self.image_request.model_path if self.image_request else None
         if path is None or path == "":
             model_id = self.generator_settings.model
@@ -365,7 +393,19 @@ class BaseDiffusersModelManager(BaseModelManager):
                 model = AIModels.objects.get(model_id)
                 if model is not None:
                     path = model.path
-        return path
+
+        # Ensure the final path exists if it's not None or empty
+        if path and path != "":
+            expanded_path = os.path.expanduser(path)
+            if os.path.exists(expanded_path):
+                return expanded_path
+            else:
+                # Log a warning if the path is specified but doesn't exist
+                self.logger.warning(
+                    f"Model path specified but does not exist: {path}"
+                )
+
+        return None  # Return None if no valid path found
 
     @property
     def lora_base_path(self) -> str:
@@ -532,7 +572,16 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def config_path(self) -> str:
-        return os.path.dirname(self.model_path)
+        print(self.path_settings.base_path, self.version, self.pipeline)
+        path = os.path.expanduser(
+            os.path.join(
+                self.path_settings.base_path,
+                "art/models",
+                self.version,
+                self.pipeline,
+            )
+        )
+        return path
 
     @property
     def compel_tokenizer(self) -> Any:
@@ -582,7 +631,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         try:
             self._load_controlnet_model()
         except Exception as e:
-            self.logger.error(f"Error loading controlnet {e} from {self.controlnet_path}")
+            self.logger.error(
+                f"Error loading controlnet {e} from {self.controlnet_path}"
+            )
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
             return
 
@@ -635,7 +686,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._load_deep_cache()
             self._make_memory_efficient()
             self._finalize_load_stable_diffusion()
-        
+
         self.load_controlnet()
 
     def unload(self):
@@ -1212,15 +1263,16 @@ class BaseDiffusersModelManager(BaseModelManager):
             )
             self._loaded_lora[lora.path] = lora
         except AttributeError as _e:
-            self.logger.warning("This model does not support LORA")
+            message = "This model does not support LORA"
             do_disable_lora = True
         except RuntimeError:
-            self.logger.warning(f"LORA {filename} could not be loaded")
+            message = f"LORA {filename} could not be loaded"
             do_disable_lora = True
         except ValueError:
-            self.logger.warning(f"LORA {filename} could not be loaded")
+            message = f"LORA {filename} could not be loaded"
             do_disable_lora = True
         if do_disable_lora:
+            self.logger.warning(message)
             self._disabled_lora.append(lora)
 
     def _set_lora_adapters(self):

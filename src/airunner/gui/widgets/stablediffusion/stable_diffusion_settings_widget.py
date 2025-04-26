@@ -1,4 +1,5 @@
 from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QFileDialog
 
 from airunner.data.models import AIModels, GeneratorSettings
 from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
@@ -21,6 +22,9 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.update_form,
         }
         super().__init__(*args, **kwargs)
+        self.ui.custom_model.blockSignals(True)
+        self.ui.custom_model.setText(self.generator_settings.custom_path)
+        self.ui.custom_model.blockSignals(False)
         PipelineMixin.__init__(self)
         self.model_scanner_worker = create_worker(ModelScannerWorker)
 
@@ -75,6 +79,26 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
 
     def toggled_use_compel(self, val):
         self.update_generator_settings("use_compel", val)
+
+    @Slot()
+    def on_browse_button_clicked(self):
+        # Use QFileDialog to get the file path
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("Select custom model"),
+            self.generator_settings.custom_path
+            or "",  # Start in current custom path or home
+            self.tr("Model Files (*.safetensors)"),
+        )
+        if file_path:
+            self.ui.custom_model.blockSignals(True)
+            self.ui.custom_model.setText(file_path)
+            self.ui.custom_model.blockSignals(False)
+            self.update_generator_settings("custom_path", file_path)
+
+    @Slot(str)
+    def on_custom_model_textChanged(self, val: str):
+        self.update_generator_settings("custom_path", val)
 
     @Slot(str)
     def handle_model_changed(self, val: str):
