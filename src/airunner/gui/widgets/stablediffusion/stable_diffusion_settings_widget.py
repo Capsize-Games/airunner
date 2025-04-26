@@ -1,3 +1,5 @@
+from PySide6.QtCore import Slot
+
 from airunner.data.models import AIModels, GeneratorSettings
 from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -74,10 +76,10 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     def toggled_use_compel(self, val):
         self.update_generator_settings("use_compel", val)
 
-    def handle_model_changed(self, _model_name):
+    @Slot(str)
+    def handle_model_changed(self, val: str):
         self._update_model_id()
-        if self.application_settings.sd_enabled:
-            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {"do_reload": True})
+        self.emit_signal(SignalCode.SD_ART_MODEL_CHANGED, {"model": val})
 
     def _update_model_id(self):
         index = self.ui.model.currentIndex()
@@ -90,7 +92,8 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": name}
         )
 
-    def handle_pipeline_changed(self, val):
+    @Slot(str)
+    def handle_pipeline_changed(self, val: str):
         if (
             val
             == f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}"
@@ -125,11 +128,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
 
         self.load_versions()
         self.load_models()
-        if do_reload:
-            if self.application_settings.sd_enabled:
-                self.emit_signal(
-                    SignalCode.SD_LOAD_SIGNAL, {"do_reload": True}
-                )
+        self.emit_signal(SignalCode.SD_ART_MODEL_CHANGED, {"pipeline": val})
 
     def handle_version_changed(self, val):
         self.update_generator_settings("version", val)
@@ -152,11 +151,13 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             generator_settings.save()
 
         self.load_models()
-
-        if model is None:
-            self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL, {})
-        elif self.application_settings.sd_enabled:
-            self.emit_signal(SignalCode.SD_LOAD_SIGNAL, {"do_reload": True})
+        self.emit_signal(
+            SignalCode.SD_ART_MODEL_CHANGED,
+            {
+                "model": model.id,
+                "version": val,
+            },
+        )
 
     def _load_pipelines(self):
         self.ui.pipeline.blockSignals(True)

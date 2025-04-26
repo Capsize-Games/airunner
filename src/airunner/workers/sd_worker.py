@@ -40,6 +40,7 @@ class SDWorker(Worker):
             SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.SD_LOAD_SIGNAL: self.on_load_art_signal,
+            SignalCode.SD_ART_MODEL_CHANGED: self.on_art_model_changed,
             SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_art_signal,
             SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
             SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
@@ -48,8 +49,13 @@ class SDWorker(Worker):
             SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL: self.delete_missing_embeddings,
             SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_load_safety_checker,
             SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.on_unload_safety_checker,
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
         }
+        self._current_model = None
+        self._current_version = None
+        self._current_pipeline = None
+        self._requested_model = None
+        self._requested_version = None
+        self._requested_pipeline = None
         super().__init__()
         self.__requested_action = ModelAction.NONE
         self._threads = []
@@ -70,6 +76,7 @@ class SDWorker(Worker):
             self.add_to_queue(
                 {
                     "action": ModelAction.UNLOAD,
+                    "type": ModelType.SD,
                 }
             )
         self._version = value
@@ -92,14 +99,11 @@ class SDWorker(Worker):
 
     @model_manager.setter
     def model_manager(self, value):
-        if value is None and self._model_manager is not None:
-            self._model_manager.unload()
         self._model_manager = value
 
     @property
     def sd(self):
         if self._sd is None:
-            print("LOADING STABLE DIFFUSION")
             self._sd = StableDiffusionModelManager()
         return self._sd
 
@@ -122,18 +126,6 @@ class SDWorker(Worker):
     def on_unload_safety_checker(self):
         if self.model_manager:
             self._unload_safety_checker()
-
-    def on_application_settings_changed(self):
-        if self.model_manager and self.model_manager._pipe:
-            pipeline_class = self.model_manager._pipe.__class__
-            if (
-                pipeline_class in self.model_manager.img2img_pipelines
-                and not self.image_to_image_settings.enabled
-            ) or (
-                pipeline_class in self.model_manager.txt2img_pipelines
-                and self.image_to_image_settings.enabled
-            ):
-                self.model_manager = None
 
     def scan_for_embeddings(self):
         if self.model_manager:
@@ -163,8 +155,12 @@ class SDWorker(Worker):
             self.model_manager.on_add_lora_signal(message)
 
     def on_load_controlnet_signal(self, _data=None):
-        if self.model_manager:
-            self._load_controlnet()
+        self.add_to_queue(
+            {
+                "Action": ModelAction.LOAD,
+                "type": ModelType.CONTROLNET,
+            }
+        )
 
     def on_unload_controlnet_signal(self, _data=None):
         if self.model_manager:
@@ -174,13 +170,22 @@ class SDWorker(Worker):
         self.add_to_queue(
             {
                 "action": ModelAction.LOAD,
+                "type": ModelType.SD,
             }
         )
+
+    def on_art_model_changed(self, data: Dict = None):
+        model = data.get("model", self._current_model)
+        version = data.get("version", self._current_version)
+        pipeline = data.get("pipeline", self._current_pipeline)
+
+        self.unload_model_manager()
 
     def on_unload_art_signal(self, data=None):
         self.add_to_queue(
             {
                 "action": ModelAction.UNLOAD,
+                "type": ModelType.SD,
             }
         )
 
@@ -264,23 +269,29 @@ class SDWorker(Worker):
                 callback(data)
 
     def unload_model_manager(self, data: Dict = None):
-        self.model_manager = None
+        if self._model_manager is not None:
+            self._model_manager.unload()
+            self.model_manager = None
         if data:
             callback = data.get("callback", None)
             if callback is not None:
                 callback(data)
 
     def _load_controlnet(self):
-        self.model_manager.load_controlnet()
+        if self.model_manager:
+            self.model_manager.load_controlnet()
 
     def _unload_controlnet(self):
-        self.model_manager.unload_controlnet()
+        if self.model_manager:
+            self.model_manager.unload_controlnet()
 
     def _load_safety_checker(self):
-        self.model_manager.load_safety_checker()
+        if self.model_manager:
+            self.model_manager.load_safety_checker()
 
     def _unload_safety_checker(self):
-        self.model_manager.unload_safety_checker()
+        if self.model_manager:
+            self.model_manager.unload_safety_checker()
 
     def on_tokenizer_load_signal(self, data: Dict = None):
         if self.model_manager:
@@ -304,8 +315,12 @@ class SDWorker(Worker):
         pass
 
     def on_do_generate_signal(self, message: Dict):
-        message["callback"] = self._finalize_do_generate_signal
-        self.load_model_manager(message)
+        self.add_to_queue(
+            {
+                "action": ModelAction.GENERATE,
+                "type": ModelType.SD,
+            }
+        )
 
     def on_interrupt_image_generation_signal(self, _data=None):
         if self.model_manager:
@@ -326,27 +341,33 @@ class SDWorker(Worker):
             self.model_manager.load()
 
     def handle_message(self, message: Optional[Dict] = None):
-        do_run = False
-
         if message is not None:
             action = message.get("action", None)
-            if action is not None:
+            model_type = message.get("type", None)
+            if action is not None and model_type is not None:
                 if action is ModelAction.LOAD:
-                    self.load_model_manager(message)
+                    if model_type is ModelType.SD:
+                        self.load_model_manager(message)
+                    elif model_type is ModelType.CONTROLNET:
+                        self._load_controlnet()
                 elif action == ModelAction.UNLOAD:
-                    self.unload_model_manager(message)
-            else:
-                do_run = True
+                    if model_type is ModelType.SD:
+                        self.unload_model_manager(message)
+                    elif model_type is ModelType.CONTROLNET:
+                        self._unload_controlnet()
+                elif action is ModelAction.GENERATE:
+                    if model_type is ModelType.SD:
+                        self._generate_image(message)
 
-        if do_run:
-            self.model_manager.run()
+    def _generate_image(self, message: Dict):
+        message["callback"] = self._finalize_do_generate_signal
+        self.load_model_manager(message)
 
     def _finalize_do_generate_signal(self, message: Dict):
         try:
             self.model_manager.handle_generate_signal(message)
         except ValueError as e:
             self.logger.error(f"Failed to generate: {e}")
-            print(message)
 
     def handle_error(self, error_message):
         self.logger.error(f"SDWorker Error: {error_message}")
