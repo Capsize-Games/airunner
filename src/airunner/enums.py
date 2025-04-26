@@ -29,6 +29,7 @@ class ModelAction(Enum):
     UNLOAD = auto()
     CLEAR = auto()
     APPLY_TO_PIPE = auto()
+    GENERATE = auto()
 
 
 class SignalCode(Enum):
@@ -160,6 +161,7 @@ class SignalCode(Enum):
     LLM_UNLOAD_SIGNAL = "llm_unload_signal"
     SD_LOAD_SIGNAL = "load_stablediffusion_signal"
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
+    SD_ART_MODEL_CHANGED = "reload_stablediffusion_signal"
     CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
     CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
     SAFETY_CHECKER_LOAD_SIGNAL = "SAFETY_CHECKER_LOAD_SIGNAL"
