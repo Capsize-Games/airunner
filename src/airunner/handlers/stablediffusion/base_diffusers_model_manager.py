@@ -192,19 +192,21 @@ class BaseDiffusersModelManager(BaseModelManager):
         return self._generator
 
     @property
-    def controlnet_path(self):
-        version: str = self.controlnet_model.version
-        path: str = self.controlnet_model.path
-        return os.path.expanduser(
-            os.path.join(
-                self.path_settings_cached.base_path,
-                "art",
-                "models",
-                version,
-                "controlnet",
-                path,
+    def controlnet_path(self) -> Optional[str]:
+        if self.controlnet_model:
+            version: str = self.controlnet_model.version
+            path: str = self.controlnet_model.path
+            return os.path.expanduser(
+                os.path.join(
+                    self.path_settings_cached.base_path,
+                    "art",
+                    "models",
+                    version,
+                    "controlnet",
+                    path,
+                )
             )
-        )
+        return None
 
     @property
     def controlnet_processor_path(self):
@@ -580,7 +582,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         try:
             self._load_controlnet_model()
         except Exception as e:
-            self.logger.error(f"Error loading controlnet {e}")
+            self.logger.error(f"Error loading controlnet {e} from {self.controlnet_path}")
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
             return
 
@@ -623,7 +625,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.unload()
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         self._load_safety_checker()
-        self.load_controlnet()
         if self._load_pipe():
             self._send_pipeline_loaded_signal()
             self._move_pipe_to_device()
@@ -634,6 +635,8 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._load_deep_cache()
             self._make_memory_efficient()
             self._finalize_load_stable_diffusion()
+        
+        self.load_controlnet()
 
     def unload(self):
         if self.sd_is_loading or self.sd_is_unloaded:
