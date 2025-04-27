@@ -84,8 +84,7 @@ class ActiveGridArea(DraggablePixmap):
             else QColor(0, 0, 0, 1)
         )
         self.image.fill(fill_color)
-        pixmap = QPixmap.fromImage(self.image)
-        self.setPixmap(pixmap)
+        self.updateImage(self.image)
 
     def get_fill_color(self) -> QColor:
         render_fill = self.active_grid_settings.render_fill
@@ -110,7 +109,7 @@ class ActiveGridArea(DraggablePixmap):
 
     def draw_border(self, painter: QPainter = None) -> QPainter:
         if painter is None:
-            painter = QPainter(self.pixmap)
+            painter = QPainter()
 
         if self.active_grid_settings.enabled:
             render_border = self.active_grid_settings.render_border
