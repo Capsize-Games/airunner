@@ -257,7 +257,9 @@ class SDWorker(Worker):
                 negative_target_size=settings.negative_target_size,
                 lora_scale=settings.lora_scale,
             )
-        self.version = StableDiffusionVersion(version)
+        new_version = StableDiffusionVersion(version)
+        if new_version is not self.version:
+            self.version = new_version
         return data
 
     def load_model_manager(self, data: Dict = None):
@@ -267,10 +269,7 @@ class SDWorker(Worker):
         if self.model_manager:
             if do_reload:
                 self.model_manager.reload()
-            elif (
-                self.model_manager.model_status[ModelType.SD]
-                is not ModelStatus.LOADED
-            ):
+            elif not self.model_manager.sd_is_loaded:
                 self.model_manager.load()
         if data:
             callback = data.get("callback", None)
