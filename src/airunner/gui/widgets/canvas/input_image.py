@@ -9,8 +9,8 @@ from PySide6.QtWidgets import QGraphicsScene
 
 from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
 from airunner.utils.image import (
-    convert_binary_to_image, 
-    convert_image_to_binary
+    convert_binary_to_image,
+    convert_image_to_binary,
 )
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.canvas.templates.input_image_ui import Ui_input_image
@@ -32,6 +32,9 @@ class InputImage(BaseWidget):
         self.is_mask = kwargs.pop("is_mask", False)
         self._import_path = ""
         super().__init__(*args, **kwargs)
+        self.ui.strength_slider_widget.setProperty(
+            "settings_property", f"{self.settings_key}.strength"
+        )
 
     @property
     def current_settings(self):
@@ -46,7 +49,9 @@ class InputImage(BaseWidget):
             settings = self.drawing_pad_settings
 
         if not settings:
-            raise ValueError(f"Settings not found for key: {self.settings_key}")
+            raise ValueError(
+                f"Settings not found for key: {self.settings_key}"
+            )
 
         return settings
 
@@ -74,43 +79,39 @@ class InputImage(BaseWidget):
             self.ui.controlnet_settings.hide()
 
         if self.settings_key == "outpaint_settings":
-            self.ui.strength_slider_widget.setProperty("settings_property", 'outpaint_settings.strength')
+            self.ui.strength_slider_widget.setProperty(
+                "settings_property", "outpaint_settings.strength"
+            )
             self.ui.mask_blur_slider_widget.show()
         else:
             self.ui.mask_blur_slider_widget.hide()
 
         self.ui.EnableSwitch.toggled.connect(self.enabled_toggled)
+
         if self.settings_key == "outpaint_settings":
             if self.is_mask:
                 self.ui.import_button.hide()
-                self.ui.link_to_grid_image_button.hide()
-                self.ui.link_to_grid_image_button.hide()
-                self.ui.lock_input_image_button.hide()
-            self.ui.EnableSwitch.blockSignals(True)
-            self.ui.EnableSwitch.checked = self.current_settings.enabled
-            self.ui.EnableSwitch.setChecked(self.current_settings.enabled)
-            self.ui.EnableSwitch.dPtr.animate(self.current_settings.enabled)
-            self.ui.EnableSwitch.blockSignals(False)
-        else:
-            self.ui.EnableSwitch.blockSignals(True)
-            self.ui.link_to_grid_image_button.blockSignals(True)
-            self.ui.lock_input_image_button.blockSignals(True)
-            self.ui.EnableSwitch.checked = self.current_settings.enabled
-            self.ui.EnableSwitch.setChecked(self.current_settings.enabled)
-            self.ui.EnableSwitch.dPtr.animate(self.current_settings.enabled)
-            self.ui.link_to_grid_image_button.setChecked(
-                self.current_settings.use_grid_image_as_input
-            )
-            self.ui.lock_input_image_button.setChecked(
-                self.current_settings.lock_input_image or False  # Provide a default value
-            )
-            self.ui.EnableSwitch.blockSignals(False)
-            self.ui.link_to_grid_image_button.blockSignals(False)
-            self.ui.lock_input_image_button.blockSignals(False)
 
-            if self.current_settings.use_grid_image_as_input:
-                self.load_image_from_grid()
-                return
+        self.ui.EnableSwitch.blockSignals(True)
+        self.ui.EnableSwitch.checked = self.current_settings.enabled
+        self.ui.EnableSwitch.setChecked(self.current_settings.enabled)
+        self.ui.EnableSwitch.dPtr.animate(self.current_settings.enabled)
+        self.ui.EnableSwitch.blockSignals(False)
+
+        self.ui.link_to_grid_image_button.blockSignals(True)
+        self.ui.lock_input_image_button.blockSignals(True)
+        self.ui.link_to_grid_image_button.setChecked(
+            self.current_settings.use_grid_image_as_input
+        )
+        self.ui.lock_input_image_button.setChecked(
+            self.current_settings.lock_input_image or False
+        )
+        self.ui.link_to_grid_image_button.blockSignals(False)
+        self.ui.lock_input_image_button.blockSignals(False)
+        if self.current_settings.use_grid_image_as_input:
+            self.load_image_from_grid()
+            return
+
         self.load_image_from_settings()
 
     @Slot(bool)
@@ -144,19 +145,19 @@ class InputImage(BaseWidget):
             self.window(),
             "Open Image",
             self._import_path,
-            f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})"
+            f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})",
         )
         if self._import_path == "":
             return
-        self.load_image(
-            os.path.abspath(self._import_path)
-        )
+        self.load_image(os.path.abspath(self._import_path))
 
     def load_image(self, file_path: str):
         image = Image.open(file_path)
         self.load_image_from_object(image)
         if image is not None:
-            self.update_current_settings("image", convert_image_to_binary(image))
+            self.update_current_settings(
+                "image", convert_image_to_binary(image)
+            )
 
     def load_image_from_grid(self, forced=False):
         if not forced and not self.current_settings.use_grid_image_as_input:
@@ -180,7 +181,7 @@ class InputImage(BaseWidget):
 
         if image is not None:
             image = convert_binary_to_image(image)
-        
+
         if image is not None:
             self.load_image_from_object(image)
         else:
@@ -211,7 +212,9 @@ class InputImage(BaseWidget):
         self.ui.image_container.setScene(scene)
 
         # Set the alignment to top-left corner
-        self.ui.image_container.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        self.ui.image_container.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
 
         # Draw a red border around the image
         pen = QPen(Qt.GlobalColor.red)
