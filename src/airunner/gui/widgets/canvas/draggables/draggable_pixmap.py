@@ -1,7 +1,7 @@
 from typing import Optional
-from PySide6.QtCore import QPoint
-from PySide6.QtGui import QPainter
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsPixmapItem
+from PySide6.QtCore import QPoint, QRectF
+from PySide6.QtGui import QPainter, QImage
+from PySide6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 
 from airunner.enums import CanvasToolName
 from airunner.utils.application.mediator_mixin import MediatorMixin
@@ -13,15 +13,14 @@ from airunner.utils.settings import get_qsettings
 class DraggablePixmap(
     MediatorMixin,
     SettingsMixin,
-    QGraphicsPixmapItem,
+    QGraphicsItem,
 ):
-    def __init__(self, pixmap):
-        super().__init__(pixmap)
-        self.pixmap = pixmap
+    def __init__(self, qimage: Optional[QImage] = None):
+        super().__init__()
+        self._qimage = qimage
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.last_pos = QPoint(0, 0)
         self.save = False
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         pos = self.drawing_pad_settings.pos
         self.settings = get_qsettings()
         # Threshold for snapping (percentage of cell size)
@@ -39,6 +38,17 @@ class DraggablePixmap(
     @property
     def current_tool(self):
         return CanvasToolName(self.application_settings.current_tool)
+
+    def boundingRect(self) -> QRectF:
+        if self._qimage is not None:
+            return QRectF(self._qimage.rect())
+        return QRectF()
+
+    def updateImage(self, qimage: QImage):
+        """Update the image data directly without conversion to pixmap"""
+        self.prepareGeometryChange()
+        self._qimage = qimage
+        self.update()  # Schedule a repaint of this item
 
     def mouseMoveEvent(self, event):
         if self.current_tool not in [
@@ -117,9 +127,11 @@ class DraggablePixmap(
         if x is not None and y is not None:
             self.setPos(QPoint(x, y))
 
-    def paint(self, painter: QPainter, option, widget=None):
-        painter.drawPixmap(self.pixmap.rect(), self.pixmap)
-
-    def setPixmap(self, pixmap):
-        self.pixmap = pixmap
-        super().setPixmap(pixmap)
+    def paint(
+        self,
+        painter: QPainter,
+        option: QStyleOptionGraphicsItem,
+        widget: Optional[QWidget] = None,
+    ):
+        if self._qimage is not None:
+            painter.drawImage(0, 0, self._qimage)
