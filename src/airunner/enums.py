@@ -382,6 +382,8 @@ class StatusColors(Enum):
 
 
 class ModelType(Enum):
+    LORA = "Lora"
+    EMBEDDINGS = "Embeddings"
     SD = "SD Model"
     FLUX_MODEL = "Flux Model"
     SD_VAE = "SD VAE"
