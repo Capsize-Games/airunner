@@ -181,10 +181,6 @@ class SDWorker(Worker):
         )
 
     def on_art_model_changed(self, data: Dict = None):
-        model = data.get("model", self._current_model)
-        version = data.get("version", self._current_version)
-        pipeline = data.get("pipeline", self._current_pipeline)
-
         self.unload_model_manager()
 
     def on_unload_art_signal(self, data=None):
