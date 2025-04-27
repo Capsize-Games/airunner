@@ -22,7 +22,7 @@ class Ui_slider_widget(object):
     def setupUi(self, slider_widget):
         if not slider_widget.objectName():
             slider_widget.setObjectName(u"slider_widget")
-        slider_widget.resize(548, 38)
+        slider_widget.resize(548, 50)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -47,7 +47,7 @@ class Ui_slider_widget(object):
         self.gridLayout_2 = QGridLayout(self.groupBox)
         self.gridLayout_2.setSpacing(0)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout_2.setContentsMargins(5, 5, 5, 5)
         self.slider = QSlider(self.groupBox)
         self.slider.setObjectName(u"slider")
         sizePolicy.setHeightForWidth(self.slider.sizePolicy().hasHeightForWidth())
@@ -84,8 +84,9 @@ class Ui_slider_widget(object):
 
 
         self.retranslateUi(slider_widget)
-        self.slider_spinbox.valueChanged.connect(slider_widget.handle_spinbox_change)
-        self.slider.valueChanged.connect(slider_widget.handle_slider_change)
+        self.slider.valueChanged.connect(slider_widget.handle_slider_valueChanged)
+        self.slider_spinbox.valueChanged.connect(slider_widget.handle_spinbox_valueChanged)
+        self.slider.sliderReleased.connect(slider_widget.on_slider_sliderReleased)
 
         QMetaObject.connectSlotsByName(slider_widget)
     # setupUi

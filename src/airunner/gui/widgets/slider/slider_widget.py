@@ -21,12 +21,6 @@ class SliderWidget(BaseWidget):
         self.table_name = None
         self.table_column = None
         self.table_item = None
-        self.ui.slider.sliderReleased.connect(
-            self.handle_slider_release
-        )  # Connect valueChanged signal
-        self.ui.slider_spinbox.valueChanged.connect(
-            self.handle_spinbox_change
-        )  # Connect valueChanged signal
         self._callback = None
 
     @property
@@ -109,6 +103,48 @@ class SliderWidget(BaseWidget):
     @spinbox_minimum.setter
     def spinbox_minimum(self, val):
         self.ui.slider_spinbox.setMinimum(val)
+
+    @property
+    def current_value(self):
+        return self.ui.slider.value()
+
+    @Slot(int)
+    def handle_slider_valueChanged(self, val):
+        if self.is_loading:
+            return
+        position = val
+        single_step = self.ui.slider.singleStep()
+        adjusted_value = round(position / single_step) * single_step
+        if adjusted_value < self.slider_minimum:
+            adjusted_value = self.slider_minimum
+
+        self.ui.slider.blockSignals(True)
+        self.ui.slider.setValue(adjusted_value)
+        self.ui.slider.blockSignals(False)
+
+        try:
+            normalized = adjusted_value / self.slider_maximum
+            spinbox_val = normalized * self.spinbox_maximum
+        except ZeroDivisionError:
+            spinbox_val = 0.0
+
+        spinbox_val = round(spinbox_val, 2)
+        self.ui.slider_spinbox.setValue(spinbox_val)
+
+    @Slot()
+    def on_slider_sliderReleased(self):
+        if self.is_loading:
+            return
+        self.slider_callback(self.settings_property, self.current_value)
+
+    @Slot(float)
+    def handle_spinbox_valueChanged(self, val: float):
+        normalized = val / self.spinbox_maximum
+        slider_val = round(normalized * self.slider_maximum)
+        self.ui.slider.blockSignals(True)
+        self.ui.slider.setValue(slider_val)
+        self.ui.slider.blockSignals(False)
+        self.slider_callback(self.settings_property, slider_val)
 
     def showEvent(self, event):
         self.init()
@@ -255,7 +291,7 @@ class SliderWidget(BaseWidget):
                 f"Object {table_name} is None for settings_property: {settings_property}"
             )
             return
-        
+
         # Return the value of the column
         return getattr(obj, column_name, None)
 
@@ -285,49 +321,6 @@ class SliderWidget(BaseWidget):
         self.ui.slider.blockSignals(False)
         self.ui.slider_spinbox.blockSignals(False)
 
-    @property
-    def current_value(self):
-        return self.ui.slider.value()
-
-    def handle_spinbox_change(self, val):
-        normalized = val / self.spinbox_maximum
-        slider_val = round(normalized * self.slider_maximum)
-        self.ui.slider.blockSignals(True)
-        self.ui.slider.setValue(slider_val)
-        self.ui.slider.blockSignals(False)
-        self.slider_callback(self.settings_property, slider_val)
-
-    @Slot(int)
-    def handle_slider_change(self, val):
-        if self.is_loading:
-            return
-        position = val
-        single_step = self.ui.slider.singleStep()
-        adjusted_value = round(position / single_step) * single_step
-        if adjusted_value < self.slider_minimum:
-            adjusted_value = self.slider_minimum
-
-        self.ui.slider.blockSignals(True)
-        self.ui.slider.setValue(adjusted_value)
-        self.ui.slider.blockSignals(False)
-
-        try:
-            normalized = adjusted_value / self.slider_maximum
-            spinbox_val = normalized * self.spinbox_maximum
-        except ZeroDivisionError:
-            spinbox_val = 0.0
-
-        spinbox_val = round(spinbox_val, 2)
-        self.ui.slider_spinbox.blockSignals(True)
-        self.ui.slider_spinbox.setValue(spinbox_val)
-        self.ui.slider_spinbox.blockSignals(False)
-
-    @Slot()
-    def handle_slider_release(self):
-        if self.is_loading:
-            return
-        self.slider_callback(self.settings_property, self.current_value)
-
     def set_tick_value(self, val):
         """
         This will set all intervals in spinbox and slider to the same amount.
@@ -341,11 +334,3 @@ class SliderWidget(BaseWidget):
         self.spinbox_single_step = val
         self.spinbox_page_step = val
         self.spinbox_minimum = val
-
-    def closeEvent(self, event):
-        self.ui.slider.sliderReleased.disconnect(self.handle_slider_release)
-        self.ui.slider.valueChanged.disconnect(self.handle_slider_change)
-        self.ui.slider_spinbox.valueChanged.disconnect(
-            self.handle_spinbox_change
-        )
-        super().closeEvent(event)
