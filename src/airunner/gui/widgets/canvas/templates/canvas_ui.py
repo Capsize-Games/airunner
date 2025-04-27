@@ -28,7 +28,7 @@ class Ui_canvas(object):
     def setupUi(self, canvas):
         if not canvas.objectName():
             canvas.setObjectName(u"canvas")
-        canvas.resize(793, 579)
+        canvas.resize(789, 579)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -69,13 +69,16 @@ class Ui_canvas(object):
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.widget1.sizePolicy().hasHeightForWidth())
         self.widget1.setSizePolicy(sizePolicy2)
-        self.widget1.setMinimumSize(QSize(300, 50))
+        self.widget1.setMinimumSize(QSize(370, 40))
         self.widget1.setMaximumSize(QSize(16777215, 56))
         self.horizontalLayout_2 = QHBoxLayout(self.widget1)
+        self.horizontalLayout_2.setSpacing(5)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(10, 0, 0, 0)
+        self.horizontalLayout_2.setContentsMargins(5, 0, 0, 0)
         self.actionNew = QPushButton(self.widget1)
         self.actionNew.setObjectName(u"actionNew")
+        self.actionNew.setMinimumSize(QSize(30, 30))
+        self.actionNew.setMaximumSize(QSize(30, 30))
         self.actionNew.setCursor(QCursor(Qt.PointingHandCursor))
         icon = QIcon()
         icon.addFile(u":/light/icons/feather/light/file-plus.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -86,6 +89,8 @@ class Ui_canvas(object):
 
         self.actionImport = QPushButton(self.widget1)
         self.actionImport.setObjectName(u"actionImport")
+        self.actionImport.setMinimumSize(QSize(30, 30))
+        self.actionImport.setMaximumSize(QSize(30, 30))
         self.actionImport.setCursor(QCursor(Qt.PointingHandCursor))
         icon1 = QIcon()
         icon1.addFile(u":/light/icons/feather/light/folder.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -96,6 +101,8 @@ class Ui_canvas(object):
 
         self.actionExport = QPushButton(self.widget1)
         self.actionExport.setObjectName(u"actionExport")
+        self.actionExport.setMinimumSize(QSize(30, 30))
+        self.actionExport.setMaximumSize(QSize(30, 30))
         self.actionExport.setCursor(QCursor(Qt.PointingHandCursor))
         icon2 = QIcon()
         icon2.addFile(u":/light/icons/feather/light/save.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -113,6 +120,8 @@ class Ui_canvas(object):
 
         self.recenter_Grid_Button = QPushButton(self.widget1)
         self.recenter_Grid_Button.setObjectName(u"recenter_Grid_Button")
+        self.recenter_Grid_Button.setMinimumSize(QSize(30, 30))
+        self.recenter_Grid_Button.setMaximumSize(QSize(30, 30))
         self.recenter_Grid_Button.setCursor(QCursor(Qt.PointingHandCursor))
         icon3 = QIcon()
         icon3.addFile(u":/light/icons/feather/light/target.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -123,6 +132,8 @@ class Ui_canvas(object):
 
         self.actionToggle_Active_Grid_Area = QPushButton(self.widget1)
         self.actionToggle_Active_Grid_Area.setObjectName(u"actionToggle_Active_Grid_Area")
+        self.actionToggle_Active_Grid_Area.setMinimumSize(QSize(30, 30))
+        self.actionToggle_Active_Grid_Area.setMaximumSize(QSize(30, 30))
         self.actionToggle_Active_Grid_Area.setCursor(QCursor(Qt.PointingHandCursor))
         icon4 = QIcon()
         icon4.addFile(u":/light/icons/feather/light/object-selected-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -134,6 +145,8 @@ class Ui_canvas(object):
 
         self.actionToggle_Brush = QPushButton(self.widget1)
         self.actionToggle_Brush.setObjectName(u"actionToggle_Brush")
+        self.actionToggle_Brush.setMinimumSize(QSize(30, 30))
+        self.actionToggle_Brush.setMaximumSize(QSize(30, 30))
         self.actionToggle_Brush.setCursor(QCursor(Qt.PointingHandCursor))
         icon5 = QIcon()
         icon5.addFile(u":/light/icons/feather/light/pencil-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -145,6 +158,8 @@ class Ui_canvas(object):
 
         self.actionToggle_Eraser = QPushButton(self.widget1)
         self.actionToggle_Eraser.setObjectName(u"actionToggle_Eraser")
+        self.actionToggle_Eraser.setMinimumSize(QSize(30, 30))
+        self.actionToggle_Eraser.setMaximumSize(QSize(30, 30))
         self.actionToggle_Eraser.setCursor(QCursor(Qt.PointingHandCursor))
         icon6 = QIcon()
         icon6.addFile(u":/light/icons/feather/light/eraser-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -156,6 +171,8 @@ class Ui_canvas(object):
 
         self.actionToggle_Grid = QPushButton(self.widget1)
         self.actionToggle_Grid.setObjectName(u"actionToggle_Grid")
+        self.actionToggle_Grid.setMinimumSize(QSize(30, 30))
+        self.actionToggle_Grid.setMaximumSize(QSize(30, 30))
         self.actionToggle_Grid.setCursor(QCursor(Qt.PointingHandCursor))
         icon7 = QIcon()
         icon7.addFile(u":/light/icons/feather/light/grid.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -174,6 +191,8 @@ class Ui_canvas(object):
 
         self.actionUndo = QPushButton(self.widget1)
         self.actionUndo.setObjectName(u"actionUndo")
+        self.actionUndo.setMinimumSize(QSize(30, 30))
+        self.actionUndo.setMaximumSize(QSize(30, 30))
         self.actionUndo.setCursor(QCursor(Qt.PointingHandCursor))
         icon8 = QIcon()
         icon8.addFile(u":/light/icons/feather/light/corner-up-left.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -184,6 +203,8 @@ class Ui_canvas(object):
 
         self.actionRedo = QPushButton(self.widget1)
         self.actionRedo.setObjectName(u"actionRedo")
+        self.actionRedo.setMinimumSize(QSize(30, 30))
+        self.actionRedo.setMaximumSize(QSize(30, 30))
         self.actionRedo.setCursor(QCursor(Qt.PointingHandCursor))
         icon9 = QIcon()
         icon9.addFile(u":/light/icons/feather/light/corner-up-right.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -231,16 +252,16 @@ class Ui_canvas(object):
 
 
         self.retranslateUi(canvas)
-        self.actionUndo.clicked.connect(canvas.action_undo)
-        self.actionRedo.clicked.connect(canvas.action_redo)
-        self.actionToggle_Eraser.toggled.connect(canvas.action_toggle_eraser)
-        self.actionToggle_Brush.toggled.connect(canvas.action_toggle_brush)
-        self.actionToggle_Active_Grid_Area.toggled.connect(canvas.action_toggle_active_grid_area)
-        self.actionExport.clicked.connect(canvas.action_export)
-        self.actionImport.clicked.connect(canvas.action_import)
         self.actionNew.clicked.connect(canvas.action_new)
+        self.actionToggle_Eraser.toggled.connect(canvas.action_toggle_eraser)
+        self.actionExport.clicked.connect(canvas.action_export)
+        self.actionRedo.clicked.connect(canvas.action_redo)
         self.actionToggle_Grid.toggled.connect(canvas.action_toggle_grid)
+        self.actionToggle_Brush.toggled.connect(canvas.action_toggle_brush)
+        self.actionUndo.clicked.connect(canvas.action_undo)
         self.recenter_Grid_Button.clicked.connect(canvas.action_recenter)
+        self.actionImport.clicked.connect(canvas.action_import)
+        self.actionToggle_Active_Grid_Area.toggled.connect(canvas.action_toggle_active_grid_area)
 
         QMetaObject.connectSlotsByName(canvas)
     # setupUi
