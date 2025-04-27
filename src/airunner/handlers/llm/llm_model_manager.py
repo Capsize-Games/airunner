@@ -79,6 +79,9 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
     # Settings
     llm_settings: LLMSettings
+    _model_status = {
+        ModelType.LLM: ModelStatus.UNLOADED,
+    }
 
     def __init__(
         self,
@@ -95,9 +98,6 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             *args: Variable length argument list passed to parent classes.
             **kwargs: Arbitrary keyword arguments passed to parent classes.
         """
-        self._model_status = {
-            ModelType.LLM: ModelStatus.UNLOADED,
-        }
         self.local_agent_class_ = local_agent_class or LocalAgent
         super().__init__(*args, **kwargs)
         self.llm_settings = LLMSettings()

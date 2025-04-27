@@ -56,9 +56,9 @@ class BaseModelManager(
 
     handler_type = HandlerType.TRANSFORMER
     model_type = None
+    _model_status: Dict = {}
 
     def __init__(self, *args, **kwargs):
-        self._model_status: Dict = {}
         self.use_gpu = True
         super().__init__()
         self._requested_action: ModelAction = ModelAction.NONE
