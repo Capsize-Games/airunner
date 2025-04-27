@@ -12,7 +12,13 @@ from airunner.handlers.flux.flux_model_manager import (
     FluxModelManager,
 )
 
-from airunner.enums import QueueType, SignalCode, ModelType, ModelAction
+from airunner.enums import (
+    ModelStatus,
+    QueueType,
+    SignalCode,
+    ModelType,
+    ModelAction,
+)
 from airunner.workers.worker import Worker
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.data.models.ai_models import AIModels
@@ -261,7 +267,10 @@ class SDWorker(Worker):
         if self.model_manager:
             if do_reload:
                 self.model_manager.reload()
-            else:
+            elif (
+                self.model_manager.model_status[ModelType.SD]
+                is not ModelStatus.LOADED
+            ):
                 self.model_manager.load()
         if data:
             callback = data.get("callback", None)
