@@ -10,6 +10,7 @@ from airunner.settings import AIRUNNER_ART_ENABLED
 
 class StatusWidget(BaseWidget):
     widget_class_ = Ui_status_widget
+    _model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
@@ -36,7 +37,6 @@ class StatusWidget(BaseWidget):
 
         self.safety_checker_status = ModelStatus.UNLOADED
         self.feature_extractor_status = ModelStatus.UNLOADED
-        self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
 
         if self.application_settings.nsfw_filter and self.application_settings.sd_enabled:
             self.safety_checker_status = ModelStatus.LOADING
