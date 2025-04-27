@@ -18,7 +18,7 @@ from PySide6.QtGui import (
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import (
     QGraphicsScene,
-    QGraphicsPixmapItem,
+    QGraphicsItem,
     QFileDialog,
     QGraphicsSceneMouseEvent,
     QMessageBox,
@@ -58,7 +58,7 @@ class CustomScene(
         self.previewing_filter = False
         self.painter = None
         self.image: Optional[QImage] = None
-        self.item: Optional[QGraphicsPixmapItem] = None
+        self.item: Optional[DraggablePixmap] = None
         super().__init__()
         self.last_export_path = None
         self._target_size = None
@@ -331,7 +331,6 @@ class CustomScene(
             callback(data)
 
     def display_gpu_memory_error(self, message: str):
-        print("display_gpu_memory_error", message)
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Icon.Critical)
         msg_box.setWindowTitle("Error: Unable to Generate Image")
@@ -583,22 +582,24 @@ class CustomScene(
         self.setSceneRect(self._extended_viewport_rect)
 
         if image is not None:
-            pixmap = QPixmap.fromImage(image)
             if self.item is None:
-                self.item = DraggablePixmap(pixmap)
+                self.item = DraggablePixmap(image)
+                if self.item.scene() is None:
+                    self.addItem(self.item)
+                    # Store initial position when adding to scene
+                    self._original_item_positions[self.item] = self.item.pos()
             else:
-                self.item.setPixmap(pixmap)
+                self.item.updateImage(image)
+
             self.item.setZValue(
                 z_index
             )  # Higher Z-value for better visibility
-            if self.item.scene() is None:
-                self.addItem(self.item)
-                # Store initial position when adding to scene
-                self._original_item_positions[self.item] = self.item.pos()
 
             # Ensure item is visible and prepare its geometry
             self.item.setVisible(True)
-            self.item.prepareGeometryChange()
+
+    def clear_selection(self):
+        self.selection_start_pos = None
 
     def clear_selection(self):
         self.selection_start_pos = None
@@ -633,6 +634,15 @@ class CustomScene(
 
             # Force immediate update of the image area
             self.update(self.item.boundingRect())
+
+            # Make sure the view's viewport also gets updated
+            if self.views():
+                self.views()[0].viewport().update()
+
+                # Force immediate event processing to display the image faster
+                from PySide6.QtWidgets import QApplication
+
+                QApplication.processEvents()
 
     def stop_painter(self):
         if self.painter is not None and self.painter.isActive():
@@ -704,7 +714,7 @@ class CustomScene(
             self.logger.error(f"Failed to get image from clipboard: {e}")
             return None
 
-    def _copy_image(self, image: Image) -> DraggablePixmap:
+    def _copy_image(self, image: Image) -> Image:
         return self._move_pixmap_to_clipboard(image)
 
     def _move_pixmap_to_clipboard(self, image: Image) -> Image:
@@ -807,12 +817,19 @@ class CustomScene(
             )
 
         # self._set_current_active_image(image)
-        self.current_active_image = image
         q_image = ImageQt.ImageQt(image)
-        self.item.setPixmap(QPixmap.fromImage(q_image))
-        self.item.setZValue(0)
+
+        # Use updateImage method instead of setPixmap
+        if self.item:
+            self.item.updateImage(q_image)
+            self.item.setZValue(0)
+        else:
+            # If there's no item yet, create one first
+            self.set_item(q_image, z_index=0)
+
         self.update()
         self.initialize_image(image)
+        self.current_active_image = image
 
     def _handle_outpaint(
         self, outpaint_box_rect: Rect, outpainted_image: Image
