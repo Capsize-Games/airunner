@@ -84,8 +84,9 @@ class Ui_slider_widget(object):
 
 
         self.retranslateUi(slider_widget)
-        self.slider_spinbox.valueChanged.connect(slider_widget.handle_spinbox_change)
-        self.slider.valueChanged.connect(slider_widget.handle_slider_change)
+        self.slider.valueChanged.connect(slider_widget.handle_slider_valueChanged)
+        self.slider_spinbox.valueChanged.connect(slider_widget.handle_spinbox_valueChanged)
+        self.slider.sliderReleased.connect(slider_widget.on_slider_sliderReleased)
 
         QMetaObject.connectSlotsByName(slider_widget)
     # setupUi

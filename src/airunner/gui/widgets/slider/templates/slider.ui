@@ -182,40 +182,57 @@
  <resources/>
  <connections>
   <connection>
+   <sender>slider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>slider_widget</receiver>
+   <slot>handle_slider_valueChanged(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>186</x>
+     <y>33</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>29</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
    <sender>slider_spinbox</sender>
    <signal>valueChanged(double)</signal>
    <receiver>slider_widget</receiver>
-   <slot>handle_spinbox_change(double)</slot>
+   <slot>handle_spinbox_valueChanged(double)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>465</x>
-     <y>66</y>
+     <x>419</x>
+     <y>34</y>
     </hint>
     <hint type="destinationlabel">
-     <x>165</x>
-     <y>-9</y>
+     <x>391</x>
+     <y>-12</y>
     </hint>
    </hints>
   </connection>
   <connection>
    <sender>slider</sender>
-   <signal>valueChanged(int)</signal>
+   <signal>sliderReleased()</signal>
    <receiver>slider_widget</receiver>
-   <slot>handle_slider_change(int)</slot>
+   <slot>on_slider_sliderReleased()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>90</x>
-     <y>46</y>
+     <x>202</x>
+     <y>34</y>
     </hint>
     <hint type="destinationlabel">
-     <x>68</x>
-     <y>23</y>
+     <x>-5</x>
+     <y>16</y>
     </hint>
    </hints>
   </connection>
  </connections>
  <slots>
-  <slot>handle_spinbox_change(double)</slot>
-  <slot>handle_slider_change(int)</slot>
+  <slot>handle_spinbox_valueChanged(double)</slot>
+  <slot>handle_slider_valueChanged(int)</slot>
+  <slot>on_slider_sliderReleased()</slot>
  </slots>
 </ui>
