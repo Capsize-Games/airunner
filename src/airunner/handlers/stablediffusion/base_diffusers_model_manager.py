@@ -695,9 +695,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.load_controlnet()
 
     def unload(self):
-        import traceback
-
-        traceback.print_stack()
         if self.sd_is_loading or self.sd_is_unloaded:
             return
         elif self._current_state in (
