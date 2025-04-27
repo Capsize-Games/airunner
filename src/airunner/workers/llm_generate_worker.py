@@ -5,6 +5,10 @@ from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
 from airunner.handlers.llm.llm_model_manager import LLMModelManager
+from airunner.handlers.llm.openrouter_model_manager import (
+    OpenRouterModelManager,
+)
+from airunner.enums import ModelService
 
 
 class LLMGenerateWorker(Worker):
@@ -24,9 +28,17 @@ class LLMGenerateWorker(Worker):
             SignalCode.CONVERSATION_DELETED: self.on_conversation_deleted_signal,
             SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
             SignalCode.WEB_BROWSER_PAGE_HTML: self.on_web_browser_page_html_signal,
+            SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
         }
         super().__init__()
         self._llm_thread = None
+
+    @property
+    def use_openrouter(self) -> bool:
+        return (
+            self.llm_generator_settings.model_service
+            == ModelService.OPENROUTER.value
+        )
 
     def on_conversation_deleted_signal(self, data):
         self.llm.on_conversation_deleted(data)
@@ -38,6 +50,9 @@ class LLMGenerateWorker(Worker):
         if self.llm:
             self.llm.on_web_browser_page_html(data.get("content", ""))
 
+    def on_llm_model_changed_signal(self, data: Dict):
+        self.unload_llm()
+
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")
         self.running = False
@@ -46,7 +61,10 @@ class LLMGenerateWorker(Worker):
         if self._llm_thread is not None:
             self._llm_thread.join()
 
-    def on_llm_on_unload_signal(self, data=None):
+    def on_llm_on_unload_signal(self, data: Optional[Dict] = None):
+        self.unload_llm(data)
+
+    def unload_llm(self, data: Optional[Dict] = None):
         if not self.llm:
             return
         data = data or {}
@@ -102,9 +120,14 @@ class LLMGenerateWorker(Worker):
     def _load_llm(self, data=None):
         data = data or {}
         if self.llm is None:
-            self.llm = LLMModelManager(
-                local_agent_class=self.local_agent_class
-            )
+            if self.use_openrouter:
+                self.llm = OpenRouterModelManager(
+                    local_agent_class=self.local_agent_class
+                )
+            else:
+                self.llm = LLMModelManager(
+                    local_agent_class=self.local_agent_class
+                )
 
         self.llm.load()
 
