@@ -78,29 +78,27 @@ class SDWorker(Worker):
 
     @version.setter
     def version(self, value: StableDiffusionVersion):
-        if self._version is not value:
-            self.add_to_queue(
-                {
-                    "action": ModelAction.UNLOAD,
-                    "type": ModelType.SD,
-                }
-            )
         self._version = value
 
     @property
     def model_manager(self):
         if self._model_manager is None:
-            if self.version is StableDiffusionVersion.SD1_5:
+            version = StableDiffusionVersion(self.generator_settings.version)
+            if version is StableDiffusionVersion.SD1_5:
                 self._model_manager = self.sd
-            elif self.version in (
+            elif version in (
                 StableDiffusionVersion.SDXL1_0,
                 StableDiffusionVersion.SDXL_TURBO,
                 StableDiffusionVersion.SDXL_LIGHTNING,
                 StableDiffusionVersion.SDXL_HYPER,
             ):
                 self._model_manager = self.sdxl
-            elif self.version is StableDiffusionVersion.FLUX_S:
+            elif version is StableDiffusionVersion.FLUX_S:
                 self._model_manager = self.flux
+            else:
+                raise ValueError(
+                    f"Unsupported Stable Diffusion version: {version}"
+                )
         return self._model_manager
 
     @model_manager.setter
@@ -365,10 +363,8 @@ class SDWorker(Worker):
         self.load_model_manager(message)
 
     def _finalize_do_generate_signal(self, message: Dict):
-        try:
+        if self.model_manager:
             self.model_manager.handle_generate_signal(message)
-        except ValueError as e:
-            self.logger.error(f"Failed to generate: {e}")
 
     def handle_error(self, error_message):
         self.logger.error(f"SDWorker Error: {error_message}")
