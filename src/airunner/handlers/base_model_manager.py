@@ -1,5 +1,6 @@
 import torch
 from abc import ABC, abstractmethod, ABCMeta
+from typing import Dict
 
 """
 The following code ensures that we only use PySide6 if it is available.
@@ -7,21 +8,32 @@ If it is not available, we use a placeholder class instead.
 """
 try:
     from PySide6.QtCore import QObject
+
     class OptionalQObject(QObject):
         pass
+
 except ImportError:
+
     class OptionalQObject:
         """
         A placeholder class to avoid hard dependency on PySide6.
         """
+
         pass
 
-from airunner.enums import HandlerType, SignalCode, ModelType, ModelStatus, ModelAction
+
+from airunner.enums import (
+    HandlerType,
+    SignalCode,
+    ModelType,
+    ModelStatus,
+    ModelAction,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import get_torch_device
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.settings import (
-    AIRUNNER_MEM_LLM_DEVICE, 
+    AIRUNNER_MEM_LLM_DEVICE,
     AIRUNNER_MEM_SD_DEVICE,
     AIRUNNER_MEM_TTS_DEVICE,
     AIRUNNER_MEM_STT_DEVICE,
@@ -35,28 +47,25 @@ class CombinedMeta(QObjectMeta, ABCMeta):
 
 
 class BaseModelManager(
-    MediatorMixin,
-    SettingsMixin,
-    OptionalQObject,
-    ABC,
-    metaclass=CombinedMeta
+    MediatorMixin, SettingsMixin, OptionalQObject, ABC, metaclass=CombinedMeta
 ):
     """
     Base abstract class for all model handlers.
     Provides common functionality and interface for all handlers.
     """
+
     handler_type = HandlerType.TRANSFORMER
     model_type = None
 
     def __init__(self, *args, **kwargs):
-        self._model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
+        self._model_status: Dict = {}
         self.use_gpu = True
         super().__init__()
         self._requested_action: ModelAction = ModelAction.NONE
 
     @property
-    def model_status(self):
-        return self._model_status[self.model_type]
+    def model_status(self) -> Dict:
+        return self._model_status
 
     @property
     def requested_action(self):
@@ -85,7 +94,7 @@ class BaseModelManager(
         """
         Unload the model and free resources.
         """
-    
+
     @property
     def device_index(self):
         device = None
@@ -106,16 +115,13 @@ class BaseModelManager(
             if not self.model_type:
                 raise ValueError("model_type not set")
             device = getattr(
-                self.memory_settings,
-                f"default_gpu_{model_type_str}"
+                self.memory_settings, f"default_gpu_{model_type_str}"
             )
         return device
 
     @property
     def device(self):
-        return get_torch_device(
-            self.device_index
-        )
+        return get_torch_device(self.device_index)
 
     @property
     def llm_dtype(self):
@@ -137,15 +143,9 @@ class BaseModelManager(
     def torch_dtype(self):
         return torch.float16 if self.use_cuda else torch.float32
 
-    def change_model_status(
-        self, 
-        model: ModelType, 
-        status: ModelStatus
-    ):
+    def change_model_status(self, model: ModelType, status: ModelStatus):
         self._model_status[model] = status
         self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, {
-                "model": model,
-                "status": status
-            }
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": model, "status": status},
         )
