@@ -311,12 +311,18 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def pipeline(self) -> str:
-        action = self._pipeline
-        if self.image_request and self.image_request.pipeline_action != "":
-            action = self.image_request.pipeline_action
-        if action is None or action == "":
-            action = self.generator_settings.pipeline_action
-        return action
+        return self.generator_settings.pipeline_action
+
+    @property
+    def operation_type(self) -> str:
+        operation_type = self.pipeline
+        if self.is_img2img:
+            operation_type = "img2img"
+        elif self.is_outpaint:
+            operation_type = "outpaint"
+        if self.controlnet_enabled:
+            operation_type = f"{operation_type}_controlnet"
+        return operation_type
 
     @property
     def scheduler_name(self) -> str:
@@ -359,9 +365,8 @@ class BaseDiffusersModelManager(BaseModelManager):
             section = GeneratorSection.IMG2IMG
         if (
             self.drawing_pad_settings.mask is not None
-            and self.drawing_pad_settings.image is not None
-            and self.pipeline == "inpaint"
-            and self.outpaint_settings_cached.enabled
+            and self.outpaint_settings.image is not None
+            and self.outpaint_settings.enabled
         ):
             section = GeneratorSection.OUTPAINT
         return section
@@ -494,14 +499,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def _pipeline_class(self):
-        operation_type = "txt2img"
-        if self.is_img2img:
-            operation_type = "img2img"
-        elif self.is_outpaint:
-            operation_type = "outpaint"
-        if self.controlnet_enabled:
-            operation_type = f"{operation_type}_controlnet"
-        return self.pipeline_map.get(operation_type)
+        return self.pipeline_map.get(self.operation_type)
 
     @property
     def mask_blur(self) -> int:
@@ -1168,7 +1166,9 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._pipe.scheduler = self.scheduler
 
     def _load_pipe(self) -> bool:
-        self.logger.debug("Loading pipe")
+        self.logger.debug(
+            f"Loading pipe {self._pipeline_class} for {self.section}"
+        )
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         data = {
             "torch_dtype": self.data_type,
