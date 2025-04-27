@@ -405,8 +405,9 @@ class ChatPromptWidget(BaseWidget):
         self.ui.progressBar.reset()
 
     def disable_send_button(self):
-        self.ui.send_button.setEnabled(False)
-        self._disabled = True
+        # self.ui.send_button.setEnabled(False)
+        # self._disabled = True
+        pass
 
     def enable_send_button(self):
         self.ui.send_button.setEnabled(True)
