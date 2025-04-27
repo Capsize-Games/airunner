@@ -202,13 +202,6 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             )
         )
 
-    @property
-    def use_api(self) -> bool:
-        return (
-            self.llm_generator_settings.model_service
-            != ModelService.LOCAL.value
-        )
-
     def load(self) -> None:
         """
         Load the LLM model and associated components.
@@ -232,18 +225,17 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         self._current_model_path = self.model_path
 
         # Load components based on settings
-        if not self.use_api:
-            self._load_tokenizer()
-            self._load_model()
+        self._load_tokenizer()
+        self._load_model()
         self._load_agent()
+        self._update_model_status()
 
+    def _update_model_status(self):
         # Update status based on loading results
-        if (self._model and self._tokenizer and self._chat_agent) or (
-            self._chat_agent and self.use_api
-        ):
+        if self._model and self._tokenizer and self._chat_agent:
             self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
         else:
-            if not self._model and not self.use_api:
+            if not self._model:
                 self.logger.error("Model failed to load")
             if not self._chat_agent:
                 self.logger.error("Chat agent failed to load")
@@ -498,21 +490,13 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         if self._chat_agent is not None:
             return
 
-        self.logger.debug("Loading agent")
-
-        # Load appropriate agent type based on settings
-        if not self.use_api:
-            self.logger.info("Loading local chat agent")
-            self._chat_agent = self.local_agent_class_(
-                model=self._model,
-                tokenizer=self._tokenizer,
-                default_tool_choice=None,
-                llm_settings=self.llm_settings,
-            )
-        else:
-            self.logger.warning("No chat agent to load")
-            self._chat_agent = None
-            return
+        self.logger.info("Loading local chat agent")
+        self._chat_agent = self.local_agent_class_(
+            model=self._model,
+            tokenizer=self._tokenizer,
+            default_tool_choice=None,
+            llm_settings=self.llm_settings,
+        )
 
         self.logger.info("Chat agent loaded")
 

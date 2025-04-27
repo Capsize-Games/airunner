@@ -1145,7 +1145,7 @@ class MainWindow(
         settings = self.window_settings
 
         # Resize the window
-        self.setMinimumSize(100, 100)
+        self.setMinimumSize(512, 512)
         width = int(settings["width"])
         height = int(settings["height"])
         self.resize(width, height)
