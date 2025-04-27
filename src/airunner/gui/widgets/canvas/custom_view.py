@@ -1,7 +1,7 @@
 from typing import Optional, Dict
 
 from PySide6 import QtGui
-from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, QTimer
+from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, QTimer, QSize
 from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen
 from PySide6.QtWidgets import (
     QGraphicsView,
@@ -47,12 +47,6 @@ class CustomGraphicsView(
         self.canvas_offset = QPoint(0, 0)  # Offset for infinite scrolling
         self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
-
-        # Timer for debouncing resize events
-        self._resize_timer = QTimer(self)
-        self._resize_timer.setSingleShot(True)
-        self._resize_timer.setInterval(100)  # 100ms debounce, adjust as needed
-        self._resize_timer.timeout.connect(self._handle_resize_timeout)
 
         # Add settings to handle negative coordinates properly
         self.setAlignment(
@@ -112,9 +106,6 @@ class CustomGraphicsView(
             elif self.canvas_type == CanvasType.BRUSH.value:
                 scene = BrushScene(canvas_type=self.canvas_type)
             else:
-                import traceback
-
-                traceback.print_stack()
                 self.logger.error(f"Unknown canvas type: {self.canvas_type}")
                 return
 
@@ -186,20 +177,22 @@ class CustomGraphicsView(
         else:
             self.clear_lines()
 
-    def do_draw(self, force_draw: bool = False):
+    def do_draw(self, force_draw: bool = False, size: Optional[QSize] = None):
         if (self.drawing or not self.initialized) and not force_draw:
             return
         self.drawing = True
         self.set_scene_rect()
         if self.grid_settings.show_grid:
-            self.draw_grid()
+            self.draw_grid(size=size)
+            self.clear_lines()
+            self.draw_grid(size=size)
         else:
             self.clear_lines()
         self.show_active_grid_area()
         self.update_scene()
         self.drawing = False
 
-    def draw_grid(self):
+    def draw_grid(self, size: Optional[QSize] = None):
         if not self.__can_draw_grid:
             return
 
@@ -210,8 +203,12 @@ class CustomGraphicsView(
             self.scene.addItem(self.line_group)
 
         cell_size = self.grid_settings.cell_size
-        scene_width = int(self.scene.width())
-        scene_height = int(self.scene.height())
+        if size:
+            scene_width = size.width()
+            scene_height = size.height()
+        else:
+            scene_width = int(self.scene.width())
+            scene_height = int(self.scene.height())
 
         # Adjust for canvas offset
         offset_x = self.canvas_offset.x() % cell_size
@@ -250,13 +247,6 @@ class CustomGraphicsView(
             else:
                 line = QGraphicsLineItem(0, y, scene_width, y)
                 self.line_group.addToGroup(line)
-
-        # Hide unused lines
-        for i in range(
-            num_vertical_lines + num_horizontal_lines,
-            len(self.line_group.childItems()),
-        ):
-            self.line_group.childItems()[i].setVisible(False)
 
     def clear_lines(self):
         self.remove_scene_item(self.line_group)
@@ -393,7 +383,8 @@ class CustomGraphicsView(
 
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         super().resizeEvent(event)
-        self._resize_timer.start()
+        self.scene.update()
+        self.do_draw(force_draw=True, size=event.size())
 
     def showEvent(self, event):
         super().showEvent(event)
