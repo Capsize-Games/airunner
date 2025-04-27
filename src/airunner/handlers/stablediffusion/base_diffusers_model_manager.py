@@ -90,14 +90,15 @@ import time
 
 
 class BaseDiffusersModelManager(BaseModelManager):
+    _model_status = {
+        ModelType.SD: ModelStatus.UNLOADED,
+        ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
+        ModelType.CONTROLNET: ModelStatus.UNLOADED,
+        ModelType.LORA: ModelStatus.UNLOADED,
+        ModelType.EMBEDDINGS: ModelStatus.UNLOADED,
+    }
+    
     def __init__(self, *args, **kwargs):
-        self._model_status = {
-            ModelType.SD: ModelStatus.UNLOADED,
-            ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
-            ModelType.CONTROLNET: ModelStatus.UNLOADED,
-            ModelType.LORA: ModelStatus.UNLOADED,
-            ModelType.EMBEDDINGS: ModelStatus.UNLOADED,
-        }
         super().__init__(*args, **kwargs)
         self._pipeline: Optional[str] = None
         self._scheduler_name: Optional[str] = None
