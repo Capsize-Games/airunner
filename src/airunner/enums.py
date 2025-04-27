@@ -162,6 +162,7 @@ class SignalCode(Enum):
     SD_LOAD_SIGNAL = "load_stablediffusion_signal"
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
     SD_ART_MODEL_CHANGED = "reload_stablediffusion_signal"
+    LLM_MODEL_CHANGED = enum.auto()
     CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
     CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
     SAFETY_CHECKER_LOAD_SIGNAL = "SAFETY_CHECKER_LOAD_SIGNAL"
