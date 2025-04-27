@@ -283,16 +283,23 @@ class StableDiffusionGeneratorForm(BaseWidget):
             # If SD is not enabled, enable it and then emit a signal to generate the image
             # The callback function is handled by the signal handler for the SD_LOAD_SIGNAL.
             # The finalize function is a callback which is called after the image has been generated.
+            self.logger.info(
+                "Stable Diffusion is not enabled, enabling it now."
+            )
             self.emit_signal(
                 SignalCode.TOGGLE_SD_SIGNAL,
                 dict(
                     callback=self.handle_generate_button_clicked,
                     finalize=self.finalize_image_generated_by_llm,
+                    enabled=True,
                 ),
             )
         else:
             # If SD is already enabled, emit a signal to generate the image.
             # The finalize function is a callback which is called after the image has been generated.
+            self.logger.info(
+                "Stable Diffusion is already enabled, generating the image."
+            )
             self.handle_generate_button_clicked(
                 dict(
                     enabled=True, finalize=self.finalize_image_generated_by_llm
