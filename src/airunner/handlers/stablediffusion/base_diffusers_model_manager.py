@@ -97,7 +97,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         ModelType.LORA: ModelStatus.UNLOADED,
         ModelType.EMBEDDINGS: ModelStatus.UNLOADED,
     }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._pipeline: Optional[str] = None
@@ -580,7 +580,6 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def config_path(self) -> str:
-        print(self.path_settings.base_path, self.version, self.pipeline)
         path = os.path.expanduser(
             os.path.join(
                 self.path_settings.base_path,
@@ -681,7 +680,6 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.logger.error("No model selected")
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
-        self.unload()
         self._load_safety_checker()
         if self._load_pipe():
             self._send_pipeline_loaded_signal()
@@ -715,6 +713,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._unload_generator()
         self._unload_deep_cache()
         self._unload_pipe()
+        self._send_pipeline_loaded_signal()
         self._clear_memory_efficient_settings()
         clear_memory()
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
@@ -829,14 +828,14 @@ class BaseDiffusersModelManager(BaseModelManager):
             -drawing_pad_pos[0],
             -drawing_pad_pos[1],
         )
-        args = self._prepare_data(active_rect)
+        data = self._prepare_data(active_rect)
         self._current_state = HandlerState.GENERATING
 
         # Use torch.amp.autocast for mixed precision handling
         with torch.no_grad(), torch.amp.autocast(
             "cuda", dtype=self.data_type, enabled=True
         ):
-            results = self._pipe(**args)
+            results = self._pipe(**data)
 
         # Benchmark memory clearing
         clear_memory()
@@ -858,12 +857,12 @@ class BaseDiffusersModelManager(BaseModelManager):
             )
 
             # Benchmark exporting images
-            self._export_images(images, args)
+            self._export_images(images, data)
         else:
             images = images or []
         return ImageResponse(
             images=images,
-            data=args,
+            data=data,
             nsfw_content_detected=any(nsfw_content_detected),
             active_rect=active_rect,
             is_outpaint=self.is_outpaint,
@@ -1214,7 +1213,7 @@ class BaseDiffusersModelManager(BaseModelManager):
     def _set_pipe(self, config_path: str, data: Dict):
         pipeline_class_ = self._pipeline_class
         self.logger.info(
-            f"LOADING {pipeline_class_.__class__} {self.model_path}"
+            f"Loading {pipeline_class_.__class__} from {self.model_path}"
         )
         self._pipe = pipeline_class_.from_single_file(
             self.model_path,
@@ -1736,8 +1735,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         del self._pipe
         self._pipe = None
-        self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
-        self._send_pipeline_loaded_signal()
 
     def _unload_generator(self):
         self.logger.debug("Unloading generator")
@@ -1865,7 +1862,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.logger.debug("Preparing data")
         self._set_seed()
 
-        args = {
+        data = {
             "width": int(self.application_settings_cached.working_width),
             "height": int(self.application_settings_cached.working_height),
             "clip_skip": int(self.image_request.clip_skip),
@@ -1877,14 +1874,14 @@ class BaseDiffusersModelManager(BaseModelManager):
         }
 
         if len(self._loaded_lora) > 0:
-            args["cross_attention_kwargs"] = {"scale": self.lora_scale}
+            data["cross_attention_kwargs"] = {"scale": self.lora_scale}
             self._set_lora_adapters()
 
         if self.use_compel:
-            args = self._prepare_compel_data(args)
+            data = self._prepare_compel_data(data)
 
         else:
-            args.update(
+            data.update(
                 {
                     "prompt": self.prompt,
                     "negative_prompt": self.negative_prompt,
@@ -1897,15 +1894,15 @@ class BaseDiffusersModelManager(BaseModelManager):
         mask = None
 
         if self.is_txt2img or self.is_outpaint or self.is_img2img:
-            args.update({"width": width, "height": height})
+            data.update({"width": width, "height": height})
 
         if self.is_img2img:
             image = self.img2img_image
             if (
-                args["num_inference_steps"]
+                data["num_inference_steps"]
                 < AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
             ):
-                args["num_inference_steps"] = (
+                data["num_inference_steps"] = (
                     AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
                 )
         elif self.is_outpaint:
@@ -1931,7 +1928,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             new_image.paste(cropped_image, (0, 0))
             image = new_image.convert("RGB")
 
-        args["guidance_scale"] = self.image_request.scale
+        data["guidance_scale"] = self.image_request.scale
 
         # set the image to controlnet image if controlnet is enabled
         if self.controlnet_enabled:
@@ -1954,23 +1951,23 @@ class BaseDiffusersModelManager(BaseModelManager):
                     if self.is_txt2img:
                         image = control_image
                     else:
-                        args["control_image"] = control_image
+                        data["control_image"] = control_image
                 else:
                     raise ValueError("Controlnet image is None")
 
         if image is not None:
             image = self._resize_image(image, width, height)
-            args["image"] = image
+            data["image"] = image
 
         if mask is not None and self.is_outpaint:
             mask = self._resize_image(mask, width, height)
             mask = self._pipe.mask_processor.blur(
                 mask, blur_factor=self.mask_blur
             )
-            args["mask_image"] = mask
+            data["mask_image"] = mask
 
         if self.controlnet_enabled:
-            args.update(
+            data.update(
                 {
                     "guess_mode": False,
                     "control_guidance_start": 0.0,
@@ -1981,7 +1978,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                     / 100.0,
                 }
             )
-        return args
+        return data
 
     @staticmethod
     def _resize_image(

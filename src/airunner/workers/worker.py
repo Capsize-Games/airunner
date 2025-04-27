@@ -51,8 +51,6 @@ class Worker(
         pass
 
     def start(self):
-        import traceback
-        traceback.format_exc()
         self.run()
 
     def run(self):
