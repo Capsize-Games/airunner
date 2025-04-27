@@ -155,6 +155,7 @@ class CustomGraphicsView(
         self.canvas_offset = QPoint(0, 0)
         self.save_canvas_offset()
         self.updateImagePositions()
+        self.update_active_grid_area_position()
         self.do_draw()
 
     def on_mask_generator_worker_response_signal(self, message: dict):
