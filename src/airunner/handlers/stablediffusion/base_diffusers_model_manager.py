@@ -91,6 +91,13 @@ import time
 
 class BaseDiffusersModelManager(BaseModelManager):
     def __init__(self, *args, **kwargs):
+        self._model_status = {
+            ModelType.SD: ModelStatus.UNLOADED,
+            ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
+            ModelType.CONTROLNET: ModelStatus.UNLOADED,
+            ModelType.LORA: ModelStatus.UNLOADED,
+            ModelType.EMBEDDINGS: ModelStatus.UNLOADED,
+        }
         super().__init__(*args, **kwargs)
         self._pipeline: Optional[str] = None
         self._scheduler_name: Optional[str] = None
@@ -674,7 +681,6 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
         self.unload()
-        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         self._load_safety_checker()
         if self._load_pipe():
             self._send_pipeline_loaded_signal()
@@ -721,7 +727,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self.image_request.scheduler != self.scheduler_name:
             self._load_scheduler(self.image_request.scheduler)
 
-        self.load()
         self._clear_cached_properties()
         if self._current_state not in (
             HandlerState.GENERATING,
@@ -766,11 +771,11 @@ class BaseDiffusersModelManager(BaseModelManager):
             HandlerState.GENERATING,
         ):
             return
-        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
+        self.change_model_status(ModelType.LORA, ModelStatus.LOADING)
         self._unload_loras()
         self._load_lora()
         self.emit_signal(SignalCode.LORA_UPDATED_SIGNAL)
-        self.change_model_status(ModelType.SD, ModelStatus.LOADED)
+        self.change_model_status(ModelType.LORA, ModelStatus.LOADED)
 
     def reload_embeddings(self):
         if self.model_status[
@@ -780,10 +785,10 @@ class BaseDiffusersModelManager(BaseModelManager):
             HandlerState.GENERATING,
         ):
             return
-        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
+        self.change_model_status(ModelType.EMBEDDINGS, ModelStatus.LOADING)
         self._load_embeddings()
         self.emit_signal(SignalCode.EMBEDDING_UPDATED_SIGNAL)
-        self.change_model_status(ModelType.SD, ModelStatus.LOADED)
+        self.change_model_status(ModelType.EMBEDDINGS, ModelStatus.LOADED)
 
     def load_embeddings(self):
         self._load_embeddings()
@@ -1167,6 +1172,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def _load_pipe(self) -> bool:
         self.logger.debug("Loading pipe")
+        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         data = {
             "torch_dtype": self.data_type,
             "use_safetensors": True,
@@ -1182,6 +1188,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
         try:
             self._set_pipe(self.config_path, data)
+            self.change_model_status(ModelType.SD, ModelStatus.LOADED)
         except (
             FileNotFoundError,
             EnvironmentError,
@@ -1380,12 +1387,10 @@ class BaseDiffusersModelManager(BaseModelManager):
             )
         if self._pipe is not None and safety_checker_ready:
             self._current_state = HandlerState.READY
-            self.change_model_status(ModelType.SD, ModelStatus.LOADED)
         else:
             self.logger.error(
                 "Something went wrong with Stable Diffusion loading"
             )
-            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             self.unload()
             self._clear_cached_properties()
 
