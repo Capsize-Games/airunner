@@ -364,8 +364,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         ):
             section = GeneratorSection.IMG2IMG
         if (
-            self.drawing_pad_settings.mask is not None
-            and self.outpaint_settings.image is not None
+            self.drawing_pad_settings.image is not None
             and self.outpaint_settings.enabled
         ):
             section = GeneratorSection.OUTPAINT
@@ -1973,6 +1972,12 @@ class BaseDiffusersModelManager(BaseModelManager):
                     "guidance_scale": self.image_request.scale,
                     "controlnet_conditioning_scale": self.controlnet_conditioning_scale
                     / 100.0,
+                }
+            )
+        elif self.is_outpaint:
+            data.update(
+                {
+                    "strength": self.outpaint_settings.strength / 100.0,
                 }
             )
         return data
