@@ -198,7 +198,8 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 "models",
                 "llm",
                 "causallm",
-                self.model_version,
+                "w4ffl35/Ministral-8B-Instruct-2410-doublequant",
+                
             )
         )
 
