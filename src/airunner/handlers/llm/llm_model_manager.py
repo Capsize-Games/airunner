@@ -199,15 +199,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 "llm",
                 "causallm",
                 "w4ffl35/Ministral-8B-Instruct-2410-doublequant",
-                
             )
-        )
-
-    @property
-    def use_openrouter(self) -> bool:
-        return (
-            self.llm_generator_settings.model_service
-            == ModelService.OPENROUTER.value
         )
 
     @property
@@ -228,7 +220,10 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         - Updating the model status based on loading results
         """
         # Skip if already loading or loaded
-        if self.model_status in (ModelStatus.LOADING, ModelStatus.LOADED):
+        if self.model_status[ModelType.LLM] in (
+            ModelStatus.LOADING,
+            ModelStatus.LOADED,
+        ):
             return
 
         # Start loading process
@@ -264,7 +259,10 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         - Updating the model status
         """
         # Skip if already unloading or unloaded
-        if self.model_status in (ModelStatus.LOADING, ModelStatus.UNLOADED):
+        if self.model_status[ModelType.LLM] in (
+            ModelStatus.LOADING,
+            ModelStatus.UNLOADED,
+        ):
             return
 
         self.logger.debug("Unloading LLM")
@@ -296,8 +294,6 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         self.logger.debug("Handling request")
         self._do_set_seed()
         self.load()
-        print("-" * 100)
-        print("HANDLE REQUEST")
 
         return self._do_generate(
             prompt=data["request_data"]["prompt"],
@@ -512,11 +508,6 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 tokenizer=self._tokenizer,
                 default_tool_choice=None,
                 llm_settings=self.llm_settings,
-            )
-        elif self.use_openrouter:
-            self.logger.info("Loading openrouter chat agent")
-            self._chat_agent = OpenRouterQObject(
-                llm_settings=self.llm_settings
             )
         else:
             self.logger.warning("No chat agent to load")

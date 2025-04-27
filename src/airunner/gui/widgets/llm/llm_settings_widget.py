@@ -7,7 +7,7 @@ from airunner.gui.widgets.llm.templates.llm_settings_ui import (
     Ui_llm_settings_widget,
 )
 from airunner.gui.windows.main.ai_model_mixin import AIModelMixin
-from airunner.enums import ModelService
+from airunner.enums import ModelService, SignalCode
 
 
 class LLMSettingsWidget(BaseWidget, AIModelMixin):
@@ -30,6 +30,12 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         self.update_model_version_combobox()
         self.model_version_changed(self.ui.model_version.currentText())
         self._toggle_model_path_visibility(val != ModelService.LOCAL.value)
+        self.emit_signal(
+            SignalCode.LLM_MODEL_CHANGED,
+            {
+                "model_service": val,
+            },
+        )
 
     @Slot(bool)
     def toggle_use_cache(self, val: bool):
