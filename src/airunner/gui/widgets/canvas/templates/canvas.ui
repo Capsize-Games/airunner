@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>793</width>
+    <width>789</width>
     <height>579</height>
    </rect>
   </property>
@@ -117,8 +117,8 @@
            </property>
            <property name="minimumSize">
             <size>
-             <width>300</width>
-             <height>50</height>
+             <width>370</width>
+             <height>40</height>
             </size>
            </property>
            <property name="maximumSize">
@@ -128,8 +128,11 @@
             </size>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <property name="spacing">
+             <number>5</number>
+            </property>
             <property name="leftMargin">
-             <number>10</number>
+             <number>5</number>
             </property>
             <property name="topMargin">
              <number>0</number>
@@ -142,6 +145,18 @@
             </property>
             <item>
              <widget class="QPushButton" name="actionNew">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
@@ -159,6 +174,18 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionImport">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
@@ -176,6 +203,18 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionExport">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
@@ -200,6 +239,18 @@
             </item>
             <item>
              <widget class="QPushButton" name="recenter_Grid_Button">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
@@ -220,6 +271,18 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionToggle_Active_Grid_Area">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
@@ -243,6 +306,18 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionToggle_Brush">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
@@ -266,6 +341,18 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionToggle_Eraser">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
@@ -289,6 +376,18 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionToggle_Grid">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
@@ -319,6 +418,18 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionUndo">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
@@ -336,6 +447,18 @@
             </item>
             <item>
              <widget class="QPushButton" name="actionRedo">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
@@ -426,34 +549,18 @@
  </resources>
  <connections>
   <connection>
-   <sender>actionUndo</sender>
+   <sender>actionNew</sender>
    <signal>clicked()</signal>
    <receiver>canvas</receiver>
-   <slot>action_undo()</slot>
+   <slot>action_new()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>351</x>
-     <y>42</y>
+     <x>18</x>
+     <y>34</y>
     </hint>
     <hint type="destinationlabel">
-     <x>299</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionRedo</sender>
-   <signal>clicked()</signal>
-   <receiver>canvas</receiver>
-   <slot>action_redo()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>385</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>473</x>
-     <y>0</y>
+     <x>0</x>
+     <y>158</y>
     </hint>
    </hints>
   </connection>
@@ -474,38 +581,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionToggle_Brush</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>canvas</receiver>
-   <slot>action_toggle_brush(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>206</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>39</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionToggle_Active_Grid_Area</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>canvas</receiver>
-   <slot>action_toggle_active_grid_area(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>172</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>13</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionExport</sender>
    <signal>clicked()</signal>
    <receiver>canvas</receiver>
@@ -522,34 +597,18 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionImport</sender>
+   <sender>actionRedo</sender>
    <signal>clicked()</signal>
    <receiver>canvas</receiver>
-   <slot>action_import()</slot>
+   <slot>action_redo()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>49</x>
-     <y>35</y>
+     <x>385</x>
+     <y>42</y>
     </hint>
     <hint type="destinationlabel">
-     <x>0</x>
-     <y>109</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionNew</sender>
-   <signal>clicked()</signal>
-   <receiver>canvas</receiver>
-   <slot>action_new()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>18</x>
-     <y>34</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>158</y>
+     <x>473</x>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -570,6 +629,38 @@
    </hints>
   </connection>
   <connection>
+   <sender>actionToggle_Brush</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>canvas</receiver>
+   <slot>action_toggle_brush(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>206</x>
+     <y>42</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>39</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionUndo</sender>
+   <signal>clicked()</signal>
+   <receiver>canvas</receiver>
+   <slot>action_undo()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>351</x>
+     <y>42</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>299</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
    <sender>recenter_Grid_Button</sender>
    <signal>clicked()</signal>
    <receiver>canvas</receiver>
@@ -582,6 +673,38 @@
     <hint type="destinationlabel">
      <x>-5</x>
      <y>199</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionImport</sender>
+   <signal>clicked()</signal>
+   <receiver>canvas</receiver>
+   <slot>action_import()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>49</x>
+     <y>35</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>109</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionToggle_Active_Grid_Area</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>canvas</receiver>
+   <slot>action_toggle_active_grid_area(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>172</x>
+     <y>42</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>13</y>
     </hint>
    </hints>
   </connection>
