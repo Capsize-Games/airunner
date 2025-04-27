@@ -837,9 +837,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         ):
             results = self._pipe(**data)
 
-        # Benchmark memory clearing
-        clear_memory()
-
         # Benchmark getting images from results
         images = results.get("images", [])
 
