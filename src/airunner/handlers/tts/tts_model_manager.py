@@ -1,11 +1,10 @@
-# Refactored imports for better readability
 from abc import abstractmethod, ABCMeta, ABC
 from typing import Optional, Type, ClassVar
 
 from transformers import PreTrainedModel, ProcessorMixin
 
 from airunner.handlers.base_model_manager import BaseModelManager
-from airunner.enums import ModelType
+from airunner.enums import ModelType, ModelStatus
 from airunner.utils import prepare_text_for_tts
 from airunner.handlers.tts.tts_request import TTSRequest
 
@@ -33,6 +32,15 @@ class TTSModelManager(BaseModelManager, ABC, metaclass=CombinedMeta):
     processor_class: ClassVar[Optional[Type[ProcessorMixin]]] = None
 
     def __init__(self, *args, **kwargs):
+        self._model_status = {
+            ModelType.TTS: ModelStatus.UNLOADED,
+            ModelType.TTS_PROCESSOR: ModelStatus.UNLOADED,
+            ModelType.TTS_FEATURE_EXTRACTOR: ModelStatus.UNLOADED,
+            ModelType.TTS_VOCODER: ModelStatus.UNLOADED,
+            ModelType.TTS_SPEAKER_EMBEDDINGS: ModelStatus.UNLOADED,
+            ModelType.TTS_TOKENIZER: ModelStatus.UNLOADED,
+            ModelType.TTS_DATASET: ModelStatus.UNLOADED,
+        }
         super().__init__(*args, **kwargs)
         self._tts_request: Optional[Type[TTSRequest]] = None
         self.model_type = ModelType.TTS
