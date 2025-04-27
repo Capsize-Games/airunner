@@ -160,11 +160,12 @@ class SDWorker(Worker):
         if self.model_manager:
             self.model_manager.on_add_lora_signal(message)
 
-    def on_load_controlnet_signal(self, _data=None):
+    def on_load_controlnet_signal(self, data=None):
         self.add_to_queue(
             {
                 "Action": ModelAction.LOAD,
                 "type": ModelType.CONTROLNET,
+                "data": data,
             }
         )
 
@@ -174,10 +175,7 @@ class SDWorker(Worker):
 
     def on_load_art_signal(self, data: Dict = None):
         self.add_to_queue(
-            {
-                "action": ModelAction.LOAD,
-                "type": ModelType.SD,
-            }
+            {"action": ModelAction.LOAD, "type": ModelType.SD, "data": data}
         )
 
     def on_art_model_changed(self, data: Dict = None):
@@ -185,10 +183,7 @@ class SDWorker(Worker):
 
     def on_unload_art_signal(self, data=None):
         self.add_to_queue(
-            {
-                "action": ModelAction.UNLOAD,
-                "type": ModelType.SD,
-            }
+            {"action": ModelAction.UNLOAD, "type": ModelType.SD, "data": data}
         )
 
     def _get_model_path_from_image_request(
@@ -323,6 +318,7 @@ class SDWorker(Worker):
             {
                 "action": ModelAction.GENERATE,
                 "type": ModelType.SD,
+                "message": message,
             }
         )
 
@@ -348,20 +344,21 @@ class SDWorker(Worker):
         if message is not None:
             action = message.get("action", None)
             model_type = message.get("type", None)
+            data = message.get("data", {})
             if action is not None and model_type is not None:
                 if action is ModelAction.LOAD:
                     if model_type is ModelType.SD:
-                        self.load_model_manager(message)
+                        self.load_model_manager(data)
                     elif model_type is ModelType.CONTROLNET:
                         self._load_controlnet()
                 elif action == ModelAction.UNLOAD:
                     if model_type is ModelType.SD:
-                        self.unload_model_manager(message)
+                        self.unload_model_manager(data)
                     elif model_type is ModelType.CONTROLNET:
                         self._unload_controlnet()
                 elif action is ModelAction.GENERATE:
                     if model_type is ModelType.SD:
-                        self._generate_image(message)
+                        self._generate_image(data)
 
     def _generate_image(self, message: Dict):
         message["callback"] = self._finalize_do_generate_signal
