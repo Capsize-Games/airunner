@@ -1,5 +1,5 @@
 import threading
-from typing import Dict, Optional
+from typing import Dict, Optional, Type
 
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
@@ -13,7 +13,6 @@ from airunner.enums import ModelService
 
 class LLMGenerateWorker(Worker):
     def __init__(self, local_agent_class=None):
-        self.llm = None
         self.local_agent_class = local_agent_class
         self.signal_handlers = {
             SignalCode.LLM_UNLOAD_SIGNAL: self.on_llm_on_unload_signal,
@@ -30,6 +29,9 @@ class LLMGenerateWorker(Worker):
             SignalCode.WEB_BROWSER_PAGE_HTML: self.on_web_browser_page_html_signal,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
         }
+        self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
+        self._local_model_manager: Optional[LLMModelManager] = None
+        self._model_manager: Optional[Type[LLMModelManager]] = None
         super().__init__()
         self._llm_thread = None
 
@@ -40,15 +42,42 @@ class LLMGenerateWorker(Worker):
             == ModelService.OPENROUTER.value
         )
 
+    @property
+    def openrouter_model_manager(self) -> OpenRouterModelManager:
+        if not self._openrouter_model_manager:
+            self._openrouter_model_manager = OpenRouterModelManager(
+                local_agent_class=self.local_agent_class
+            )
+        return self._openrouter_model_manager
+
+    @property
+    def local_model_manager(self) -> LLMModelManager:
+        if not self._local_model_manager:
+            self._local_model_manager = LLMModelManager(
+                local_agent_class=self.local_agent_class
+            )
+        return self._local_model_manager
+
+    @property
+    def model_manager(self) -> Type[LLMModelManager]:
+        if self._model_manager is None:
+            if self.use_openrouter:
+                self._model_manager = self.openrouter_model_manager
+            else:
+                self._model_manager = self.local_model_manager
+        return self._model_manager
+
     def on_conversation_deleted_signal(self, data):
-        self.llm.on_conversation_deleted(data)
+        self.model_manager.on_conversation_deleted(data)
 
     def on_section_changed_signal(self):
-        self.llm.on_section_changed()
+        self.model_manager.on_section_changed()
 
     def on_web_browser_page_html_signal(self, data):
-        if self.llm:
-            self.llm.on_web_browser_page_html(data.get("content", ""))
+        if self.model_manager:
+            self.model_manager.on_web_browser_page_html(
+                data.get("content", "")
+            )
 
     def on_llm_model_changed_signal(self, data: Dict):
         self.unload_llm()
@@ -56,8 +85,8 @@ class LLMGenerateWorker(Worker):
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")
         self.running = False
-        if self.llm:
-            self.llm.unload()
+        if self.model_manager:
+            self.model_manager.unload()
         if self._llm_thread is not None:
             self._llm_thread.join()
 
@@ -65,10 +94,10 @@ class LLMGenerateWorker(Worker):
         self.unload_llm(data)
 
     def unload_llm(self, data: Optional[Dict] = None):
-        if not self.llm:
+        if not self.model_manager:
             return
         data = data or {}
-        self.llm.unload()
+        self.model_manager.unload()
         callback = data.get("callback", None)
         if callback:
             callback(data)
@@ -77,26 +106,26 @@ class LLMGenerateWorker(Worker):
         self._load_llm_thread(data)
 
     def on_llm_clear_history_signal(self, data: Optional[Dict] = None):
-        if self.llm:
-            self.llm.clear_history(data)
+        if self.model_manager:
+            self.model_manager.clear_history(data)
 
     def on_llm_request_signal(self, message: dict):
         self.add_to_queue(message)
 
     def llm_on_interrupt_process_signal(self):
-        if self.llm:
-            self.llm.do_interrupt()
+        if self.model_manager:
+            self.model_manager.do_interrupt()
 
     def on_llm_reload_rag_index_signal(self):
-        if self.llm:
-            self.llm.reload_rag_engine()
+        if self.model_manager:
+            self.model_manager.reload_rag_engine()
 
     def on_llm_add_chatbot_response_to_history(self, message):
-        self.llm.add_chatbot_response_to_history(message)
+        self.model_manager.add_chatbot_response_to_history(message)
 
     def on_llm_load_conversation(self, message):
         try:
-            self.llm.load_conversation(message)
+            self.model_manager.load_conversation(message)
         except Exception as e:
             self.logger.error(f"Error in on_load_conversation: {e}")
 
@@ -105,8 +134,8 @@ class LLMGenerateWorker(Worker):
             self._load_llm_thread()
 
     def handle_message(self, message):
-        if self.llm:
-            self.llm.handle_request(message)
+        if self.model_manager:
+            self.model_manager.handle_request(message)
 
     def _load_llm_thread(self, data=None):
         self._llm_thread = threading.Thread(
@@ -119,18 +148,8 @@ class LLMGenerateWorker(Worker):
 
     def _load_llm(self, data=None):
         data = data or {}
-        if self.llm is None:
-            if self.use_openrouter:
-                self.llm = OpenRouterModelManager(
-                    local_agent_class=self.local_agent_class
-                )
-            else:
-                self.llm = LLMModelManager(
-                    local_agent_class=self.local_agent_class
-                )
-
-        self.llm.load()
-
+        if self.model_manager is not None:
+            self.model_manager.load()
         callback = data.get("callback", None)
         if callback:
             callback(data)
