@@ -75,6 +75,7 @@ class FramePackWorker(Worker):
 
     def on_video_generate_signal(self, data: Dict):
         """Handle signal to generate a video."""
+        print("FRAMEPACK WORKER ON VIDEO GENERATE SIGNAL")
         self.add_to_queue(
             {
                 "action": ModelAction.GENERATE,
@@ -95,14 +96,15 @@ class FramePackWorker(Worker):
     def load_model_manager(self, data: Dict = None):
         """Load the FramePack model manager."""
         data = data or {}
+        print("LOAD MODEL MANAGER", self._framepack_handler)
 
         if not self._framepack_handler:
+            print("n" * 100)
+            print("setting framepack handler")
             self._framepack_handler = FramePackHandler()
-
-        if self._framepack_handler:
-            self._framepack_handler.state = HandlerState.LOADED
             self._framepack_handler.load()
 
+        if self._framepack_handler:
             callback = data.get("callback", None)
             if callback:
                 callback(data)
@@ -119,47 +121,91 @@ class FramePackWorker(Worker):
             if callback:
                 callback(data)
 
-    def generate_video(self, data: Dict):
-        """Generate a video using the FramePack handler."""
-        if not self._framepack_handler:
+    def generate_video(self, data):
+        """Process video generation request and pass to the handler.
+
+        Args:
+            data (dict): The request data containing:
+                - image: Path to input image or base64 encoded image
+                - prompt: Text prompt for video generation
+                - n_prompt: Optional negative prompt
+                - duration: Video duration in seconds
+                - Additional parameters as needed
+        """
+        try:
+            # Load the model manager on first use
             self.load_model_manager()
 
-        if (
-            self._framepack_handler
-            and self._framepack_handler.state == HandlerState.LOADED
-        ):
-            input_image = data.get("input_image")
-            prompt = data.get("prompt")
-
-            if not input_image:
+            # Get image path or data
+            image_path = data.get("image")
+            if not image_path:
                 self.emit_signal(
-                    SignalCode.STATUS_MESSAGE_SIGNAL,
-                    {
-                        "message": "No input image provided for video generation"
-                    },
+                    SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                    "No input image provided for video generation",
                 )
                 return
 
-            if not prompt:
+            # Load image
+            from PIL import Image
+            import base64
+            import io
+
+            if isinstance(image_path, str) and image_path.startswith(
+                "data:image"
+            ):
+                # Base64 encoded image
+                image_data = image_path.split(",")[1]
+                image = Image.open(io.BytesIO(base64.b64decode(image_data)))
+            elif isinstance(image_path, str) and os.path.exists(image_path):
+                # File path
+                image = Image.open(image_path)
+            else:
                 self.emit_signal(
-                    SignalCode.STATUS_MESSAGE_SIGNAL,
-                    {"message": "No prompt provided for video generation"},
+                    SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                    "Invalid image format for video generation",
                 )
                 return
 
-            try:
-                self._framepack_handler.generate_video(
-                    input_image=input_image,
-                    prompt=prompt,
-                    n_prompt=data.get("negative_prompt", ""),
-                    total_second_length=data.get("duration", 5.0),
-                    steps=data.get("steps", 20),
-                    guidance_scale=data.get("guidance_scale", 4.0),
-                    cfg=data.get("cfg", 7.5),
-                    seed=data.get("seed", 42),
-                )
-            except Exception as e:
-                self.emit_signal(
-                    SignalCode.STATUS_MESSAGE_SIGNAL,
-                    {"message": f"Error generating video: {str(e)}"},
-                )
+            # Convert image to RGB if needed
+            if image.mode != "RGB":
+                image = image.convert("RGB")
+
+            # Get parameters
+            prompt = data.get("prompt", "")
+            n_prompt = data.get("n_prompt", "")
+            duration = float(data.get("duration", 5.0))
+
+            # Additional parameters
+            steps = int(data.get("steps", 20))
+            guidance_scale = float(data.get("guidance_scale", 4.0))
+            cfg_scale = float(data.get("cfg_scale", 7.5))
+            seed = int(data.get("seed", 42))
+
+            # Generate video
+            job_id = self._framepack_handler.generate_video(
+                input_image=image,
+                prompt=prompt,
+                n_prompt=n_prompt,
+                total_second_length=duration,
+                steps=steps,
+                guidance_scale=guidance_scale,
+                cfg=cfg_scale,
+                seed=seed,
+                random_seed=1.0,  # Default value
+            )
+
+            # Store job ID for potential cancellation
+            self._current_job_id = job_id
+
+            # Send initial response
+            self.emit_signal(
+                SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
+                f"Video generation started (Job ID: {job_id})",
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error in video generation: {str(e)}")
+            self.emit_signal(
+                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                f"Video generation error: {str(e)}",
+            )

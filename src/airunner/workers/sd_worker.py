@@ -219,6 +219,7 @@ class SDWorker(Worker):
         settings = self.generator_settings
         image_request = data.get("image_request", None)
         model_path = self._get_model_path_from_image_request(image_request)
+        print("PROCESSING IMAGE REQUEST", image_request, data)
 
         if image_request is not None:
             version = image_request.version
@@ -346,7 +347,7 @@ class SDWorker(Worker):
         if message is not None:
             action = message.get("action", None)
             model_type = message.get("type", None)
-            data = message.get("data", {})
+            data = message.get("message", {})
             if action is not None and model_type is not None:
                 if action is ModelAction.LOAD:
                     if model_type is ModelType.SD:

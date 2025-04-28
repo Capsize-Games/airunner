@@ -925,6 +925,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             nsfw_content_detected=any(nsfw_content_detected),
             active_rect=active_rect,
             is_outpaint=self.is_outpaint,
+            node_id=self.image_request.node_id,
         )
 
     def _initialize_metadata(

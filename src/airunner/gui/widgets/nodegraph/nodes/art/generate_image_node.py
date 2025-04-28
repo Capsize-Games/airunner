@@ -20,7 +20,7 @@ class GenerateImageNode(BaseArtNode):
         self.signal_handlers = {
             SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL: self._on_image_generated
         }
-        self.wait = False
+        self._pending_request = False
         super().__init__()
         self.image_request_port = self.add_input(
             "image_request", display_name=True
@@ -30,6 +30,10 @@ class GenerateImageNode(BaseArtNode):
         )
 
     def _generate_image(self, image_request: ImageRequest):
+        # Store the current node ID with the request to identify this node
+        image_request.node_id = self.id
+
+        # Emit signal to generate the image
         self.emit_signal(
             SignalCode.DO_GENERATE_SIGNAL,
             {
@@ -38,21 +42,77 @@ class GenerateImageNode(BaseArtNode):
         )
 
     def _on_image_generated(self, data: Dict):
-        image_response = data.get("image_response", None)
-        if image_response is not None:
+        print("*" * 100)
+        print(data)
+        image_response = data.get("message", None)
+        if image_response is None:
+            print("image response is none, returning.")
+            # Send completion signal with empty output data
             self.emit_signal(
                 SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
                 {
-                    "image": image_response.images[0],
+                    "node_id": self.id,
+                    "result": self.EXEC_OUT_PORT_NAME,
+                    "output_data": {"image_response": None, "image": None},
                 },
             )
+            self._pending_request = False
+            return
+
+        # Verify this response belongs to this node
+        if image_response.node_id is None or image_response.node_id != self.id:
+            return
+
+        # Mark that request is no longer pending
+        self._pending_request = False
+
+        # Prepare output data that will be passed to connected nodes
+        output_data = {
+            "image_response": image_response,
+            "image_response": (
+                image_response.images[0] if image_response.images else None
+            ),
+        }
+
+        # Emit signal that execution is complete with the result and output data
+        # This continues the workflow execution at this node
+        print("CONTINUING EXECUTING")
+        self.emit_signal(
+            SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
+            {
+                "node_id": self.id,
+                "result": self.EXEC_OUT_PORT_NAME,
+                "output_data": output_data,  # Include the output data in the signal
+            },
+        )
 
     def execute(self, input_data: Dict):
-        if not self.wait:
-            self.wait = True
-            image_request = input_data.get("image_request", None)
-            if image_request is not None:
-                self._generate_image(image_request)
-        else:
-            self.wait = False
-            return {"image": input_data.get("image", None)}
+        """
+        Execute the node to generate an image.
+
+        If this is the first execution, start image generation and return None
+        to indicate pending execution.
+        """
+        # Check if we're already waiting for generation
+        if self._pending_request:
+            self.logger.warning(
+                f"Node {self.id} is already waiting for image generation"
+            )
+            return None
+
+        # Get image request from input
+        image_request = input_data.get("image_request", None)
+        if image_request is None:
+            self.logger.error("No image request provided to GenerateImageNode")
+            return {"image_response": None, "image": None}
+
+        # Mark as pending and initiate image generation
+        self.logger.info(f"Starting image generation for node {self.id}")
+        image_request.node_id = self.id
+        print("SENDING IMAGE REQUEST WITH NODE id", self.id)
+        self._generate_image(image_request)
+        self._pending_request = True
+
+        # Return None to indicate the node execution is pending
+        # The NodeGraphWorker will pause execution until NODE_EXECUTION_COMPLETED_SIGNAL
+        return None
