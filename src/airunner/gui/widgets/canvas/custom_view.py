@@ -359,7 +359,8 @@ class CustomGraphicsView(
                 pos_y = absolute_y - self.canvas_offset.y()
 
                 # Set position directly and update settings for consistency
-                self.active_grid_area.setPos(pos_x, pos_y)
+                if self.active_grid_area:
+                    self.active_grid_area.setPos(pos_x, pos_y)
                 self.update_active_grid_settings("pos_x", absolute_x)
                 self.update_active_grid_settings("pos_y", absolute_y)
             else:
@@ -367,7 +368,8 @@ class CustomGraphicsView(
                 pos = self.active_grid_settings.pos
                 pos_x = pos[0] - self.canvas_offset.x()
                 pos_y = pos[1] - self.canvas_offset.y()
-                self.active_grid_area.setPos(pos_x, pos_y)
+                if self.active_grid_area:
+                    self.active_grid_area.setPos(pos_x, pos_y)
 
     def on_zoom_level_changed_signal(self):
         transform = self.zoom_handler.on_zoom_level_changed()
@@ -436,7 +438,8 @@ class CustomGraphicsView(
             pos = self.active_grid_settings.pos
             pos_x = pos[0] - self.canvas_offset.x()
             pos_y = pos[1] - self.canvas_offset.y()
-            self.active_grid_area.setPos(pos_x, pos_y)
+            if self.active_grid_area:
+                self.active_grid_area.setPos(pos_x, pos_y)
 
     def updateImagePositions(self):
         """Update positions of all images in the scene based on canvas offset."""
