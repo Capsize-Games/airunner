@@ -43,7 +43,7 @@ from airunner.data.models import (
     Schedulers,
     Lora,
     Embedding,
-    ControlnetModel,
+    ControlnetModel as ControlnetDataModel,
     AIModels,
 )
 from airunner.enums import (
@@ -135,7 +135,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._current_prompt_2: str = ""
         self._current_negative_prompt_2: str = ""
         self._generator: Optional[torch.Generator] = None
-        self._latents = None
         self._textual_inversion_manager: Optional[
             DiffusersTextualInversionManager
         ] = None
@@ -164,6 +163,28 @@ class BaseDiffusersModelManager(BaseModelManager):
     def settings_changed(self):
         if self._pipe and self._pipe.__class__ is not self._pipeline_class:
             self._swap_pipeline()
+
+    @property
+    def controlnet(self) -> Optional[ControlNetModel]:
+        if self._controlnet is None:
+            self._load_controlnet_model()
+        return self._controlnet
+
+    @controlnet.setter
+    def controlnet(self, value: Optional[ControlNetModel]):
+        if value is None:
+            del self.controlnet
+        self._controlnet = value
+
+    @property
+    def controlnet_processor(self) -> Any:
+        if self._controlnet_processor is None:
+            self._load_controlnet_processor()
+        return self._controlnet_processor
+
+    @controlnet_processor.setter
+    def controlnet_processor(self, value: Optional[Any]):
+        self._controlnet_processor = value
 
     @property
     def img2img_pipelines(
@@ -250,30 +271,28 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._image_request = value
 
     @property
-    def controlnet_settings_cached(self):
-        return self.controlnet_settings
-
-    @property
     def controlnet_image(self) -> Image:
-        img = self.controlnet_settings_cached.image
+        img = self.controlnet_settings.image
         if img is not None:
             img = convert_binary_to_image(img)
         return img
 
     @property
-    def controlnet_model(self) -> Optional[ControlnetModel]:
+    def controlnet_model(self) -> Optional[ControlnetDataModel]:
         if (
             self._controlnet_model is None
             or self._controlnet_model.version != self.version
             or self._controlnet_model.display_name
-            != self.controlnet_settings_cached.controlnet
+            != self.controlnet_settings.controlnet
         ):
             self.logger.debug(
-                f"Loading controlnet model from database {self.controlnet_settings_cached.controlnet} {self.version}"
+                f"Loading controlnet model from database {self.controlnet_settings.controlnet} {self.version}"
             )
-            self._controlnet_model = ControlnetModel.objects.filter_by_first(
-                display_name=self.controlnet_settings_cached.controlnet,
-                version=self.version,
+            self._controlnet_model = (
+                ControlnetDataModel.objects.filter_by_first(
+                    display_name=self.controlnet_settings.controlnet,
+                    version=self.version,
+                )
             )
         return self._controlnet_model
 
@@ -286,11 +305,11 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def controlnet_strength(self) -> int:
-        return self.controlnet_settings_cached.strength
+        return self.controlnet_settings.strength
 
     @property
     def controlnet_conditioning_scale(self) -> int:
-        return self.controlnet_settings_cached.conditioning_scale
+        return self.controlnet_settings.conditioning_scale
 
     @property
     def controlnet_is_loading(self) -> bool:
@@ -669,8 +688,10 @@ class BaseDiffusersModelManager(BaseModelManager):
             }
 
             if self.controlnet_enabled:
-                kwargs["controlnet"] = self._controlnet
+                print("SETTING CONTROLNET", self.controlnet)
+                kwargs["controlnet"] = self.controlnet
             else:
+                print("CONTROLNET IS NOT ENABLED")
                 kwargs.pop("controlnet", None)
 
             kwargs = {
@@ -969,7 +990,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                         "controlnet_conditioning_scale": data[
                             "controlnet_conditioning_scale"
                         ],
-                        "controlnet": self.controlnet_settings_cached.controlnet,
+                        "controlnet": self.controlnet_settings.controlnet,
                     }
                 )
             if self.is_txt2img:
@@ -1128,15 +1149,11 @@ class BaseDiffusersModelManager(BaseModelManager):
             )
 
     def _load_controlnet_model(self):
-        if self._controlnet is not None:
+        if not self.controlnet_enabled:
             return
         self.logger.debug(f"Loading controlnet model")
-        if not self.controlnet_model:
-            raise ValueError(
-                f"Unable to find controlnet model {self.controlnet_settings_cached.controlnet}"
-            )
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
-        self._controlnet = ControlNetModel.from_pretrained(
+        self.controlnet = ControlNetModel.from_pretrained(
             self.controlnet_path,
             torch_dtype=self.data_type,
             device=self._device,
@@ -1145,9 +1162,11 @@ class BaseDiffusersModelManager(BaseModelManager):
             use_fp16=True,
             variant="fp16",
         )
+        if self.controlnet_processor is not None:
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
 
     def _load_controlnet_processor(self):
-        if self._controlnet_processor is not None:
+        if not self.controlnet_enabled:
             return
         self.logger.debug(
             f"Loading controlnet processor {self.controlnet_model.name}"
@@ -1156,12 +1175,12 @@ class BaseDiffusersModelManager(BaseModelManager):
         controlnet_class_: Any = controlnet_data["class"]
         checkpoint: bool = controlnet_data["checkpoint"]
         if checkpoint:
-            self._controlnet_processor = controlnet_class_.from_pretrained(
+            self.controlnet_processor = controlnet_class_.from_pretrained(
                 self.controlnet_processor_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             )
         else:
-            self._controlnet_processor = controlnet_class_()
+            self.controlnet_processor = controlnet_class_()
 
     def _load_scheduler(self, scheduler_name: Optional[str] = None):
         if not scheduler_name:
@@ -1221,10 +1240,10 @@ class BaseDiffusersModelManager(BaseModelManager):
             "device": self._device,
         }
         if self.controlnet_enabled:
-            data.update(controlnet=self._controlnet)
+            data.update(controlnet=self.controlnet)
 
         if self.controlnet_enabled:
-            data["controlnet"] = self._controlnet
+            data["controlnet"] = self.controlnet
 
         if data is None:
             return
@@ -1438,12 +1457,12 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._clear_cached_properties()
 
         if (
-            self._controlnet is not None
-            and self._controlnet_processor is not None
+            self.controlnet is not None
+            and self.controlnet_processor is not None
             and self._pipe
         ):
-            self._pipe.__controlnet = self._controlnet
-            self._pipe.processor = self._controlnet_processor
+            self._pipe.__controlnet = self.controlnet
+            self._pipe.processor = self.controlnet_processor
 
     # MEMORY SETTINGS
     def _make_memory_efficient(self):
@@ -1691,8 +1710,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             except AttributeError:
                 pass
             self._pipe.__controlnet = None
-        del self._controlnet
-        self._controlnet = None
+        self.controlnet = None
 
     def _unload_controlnet_processor(self):
         self.logger.debug("Clearing controlnet processor")
@@ -1748,11 +1766,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         del self._compel_proc
         self._compel_proc = None
 
-    def _unload_latents(self):
-        self.logger.debug("Unloading latents")
-        del self._latents
-        self._latents = None
-
     def _unload_prompt_embeds(self):
         self.logger.debug("Unloading prompt embeds")
         del self._prompt_embeds
@@ -1807,7 +1820,6 @@ class BaseDiffusersModelManager(BaseModelManager):
             or self._current_prompt_2 != second_prompt
             or self._current_negative_prompt_2 != second_negative_prompt
         ):
-            self._unload_latents()
             self._current_prompt = prompt
             self._current_negative_prompt = negative_prompt
             self._current_prompt_2 = second_prompt
@@ -1910,10 +1922,8 @@ class BaseDiffusersModelManager(BaseModelManager):
             "height": int(self.application_settings.working_height),
             "clip_skip": int(self.image_request.clip_skip),
             "num_inference_steps": int(self.image_request.steps),
-            "callback": self._callback,
-            "callback_steps": 1,
+            "callback_on_step_end": self._callback,
             "generator": self.generator,
-            "callback_on_step_end": self.__interrupt_callback,
         }
 
         if len(self._loaded_lora) > 0:
@@ -2075,17 +2085,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         seed = self.image_request.seed
         self.generator.manual_seed(seed)
 
-    def _callback(self, step: int, _time_step, latents):
+    def _callback(self, _pipe, _i, _t, callback_kwargs):
         self.emit_signal(
             SignalCode.SD_PROGRESS_SIGNAL,
-            {"step": step, "total": self.image_request.steps},
+            {"step": _i, "total": self.image_request.steps},
         )
-        if self._latents is None:
-            self._latents = latents
         return {}
-
-    def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
-        if self.do_interrupt_image_generation:
-            self.do_interrupt_image_generation = False
-            raise InterruptedException()
-        return callback_kwargs
