@@ -11,7 +11,10 @@ from airunner.enums import SignalCode, LLMActionType
 from airunner.setup_database import setup_database
 from airunner.utils.application.create_worker import create_worker
 from airunner.gui.utils.ui_dispatcher import render_ui_from_spec
-from airunner.utils.application.ui_loader import load_ui_file, load_ui_from_string
+from airunner.utils.application.ui_loader import (
+    load_ui_file,
+    load_ui_from_string,
+)
 
 
 class API(App):
@@ -30,11 +33,17 @@ class API(App):
         from airunner.workers.model_scanner_worker import (
             ModelScannerWorker,
         )
+        from airunner.workers.framepack_worker import (
+            FramePackWorker,
+        )
 
         if self._initialize_app:
             setup_database()
             self.model_scanner_worker = create_worker(ModelScannerWorker)
             self.model_scanner_worker.add_to_queue("scan_for_models")
+
+            # Initialize FramePack worker for video generation
+            self.framepack_worker = create_worker(FramePackWorker)
 
     def send_llm_request(
         self,

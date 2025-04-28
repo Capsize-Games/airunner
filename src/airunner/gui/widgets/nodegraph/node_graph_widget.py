@@ -33,6 +33,8 @@ from airunner.gui.widgets.nodegraph.nodes import (
     LLMBranchNode,
     SetNode,
     GenerateImageNode,
+    FramePackNode,
+    VideoNode,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -357,6 +359,8 @@ class NodeGraphWidget(BaseWidget):
             LLMBranchNode,
             SetNode,
             GenerateImageNode,
+            FramePackNode,
+            VideoNode,
         ]:
             self.graph.register_node(node_cls)
 
