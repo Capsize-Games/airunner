@@ -49,6 +49,7 @@ class SignalCode(Enum):
     APPLICATION_SETTINGS_LOADED_SIGNAL = (
         "settings_loaded_signal"  # No listeners
     )
+    STATUS_MESSAGE_SIGNAL = "status_message_signal"
     APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL = "clear_status_message_signal"
     APPLICATION_RESET_SETTINGS_SIGNAL = "reset_settings_signal"
     APPLICATION_RESET_PATHS_SIGNAL = "reset_paths_signal"
