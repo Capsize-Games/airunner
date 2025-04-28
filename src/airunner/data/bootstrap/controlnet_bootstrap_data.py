@@ -107,7 +107,7 @@ controlnet_bootstrap_data = [
         "size": "722600",
     },
     {
-        "display_name": "Canny SDXL",
+        "display_name": "Canny",
         "name": "canny",
         "path": "diffusers/controlnet-canny-sdxl-1.0-small",
         "version": "SDXL 1.0",
@@ -119,4 +119,3 @@ controlnet_bootstrap_data = [
 
 if not AIRUNNER_ART_ENABLED:
     controlnet_bootstrap_data = []
-
