@@ -624,22 +624,6 @@
     </hint>
    </hints>
   </connection>
-  <connection>
-   <sender>browse_button</sender>
-   <signal>clicked()</signal>
-   <receiver>stable_diffusion_settings_widget</receiver>
-   <slot>on_browse_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>349</x>
-     <y>322</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-6</x>
-     <y>223</y>
-    </hint>
-   </hints>
-  </connection>
  </connections>
  <slots>
   <slot>image_to_canvas()</slot>
