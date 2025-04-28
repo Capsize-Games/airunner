@@ -1338,10 +1338,6 @@ class NodeGraphWidget(BaseWidget):
                 self.logger.warning(
                     f"    Set attribute directly (use with caution): {prop_name} = {prop_value}"
                 )
-            else:
-                self.logger.warning(
-                    f"    Property '{prop_name}' not found or settable on node {node_instance.name()}. Skipping."
-                )
 
         except Exception as e:
             self.logger.error(
