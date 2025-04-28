@@ -282,12 +282,13 @@ class BaseDiffusersModelManager(BaseModelManager):
             or self._controlnet_model.display_name
             != self.controlnet_settings_cached.controlnet
         ):
-
+            self.logger.debug(
+                f"Loading controlnet model from database {self.controlnet_settings_cached.controlnet} {self.version}"
+            )
             self._controlnet_model = ControlnetModel.objects.filter_by_first(
                 display_name=self.controlnet_settings_cached.controlnet,
                 version=self.version,
             )
-
         return self._controlnet_model
 
     @property

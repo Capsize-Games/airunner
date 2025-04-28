@@ -13,7 +13,6 @@ from airunner.handlers.flux.flux_model_manager import (
 )
 
 from airunner.enums import (
-    ModelStatus,
     QueueType,
     SignalCode,
     ModelType,
@@ -161,7 +160,7 @@ class SDWorker(Worker):
     def on_load_controlnet_signal(self, data=None):
         self.add_to_queue(
             {
-                "Action": ModelAction.LOAD,
+                "action": ModelAction.LOAD,
                 "type": ModelType.CONTROLNET,
                 "data": data,
             }
