@@ -161,6 +161,10 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._path_settings = None
         self._current_memory_settings = None
 
+    def on_application_settings_changed(self):
+        if self._pipe and self._pipe.__class__ is not self._pipeline_class:
+            self._swap_pipeline()
+
     @property
     def img2img_pipelines(
         self,
@@ -650,6 +654,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             return
 
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
+        self._swap_pipeline()
 
     def unload_controlnet(self):
         """
@@ -658,6 +663,39 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self.controlnet_is_loading:
             return
         self._unload_controlnet()
+        self._swap_pipeline()
+
+    def _swap_pipeline(self):
+        pipeline_class_ = self._pipeline_class
+        if (
+            self._pipe.__class__ is pipeline_class_ or self._pipe is None
+        ):  # noqa
+            return
+        self.logger.info(
+            "Swapping pipeline from %s to %s",
+            self._pipe.__class__ if self._pipe else "",
+            pipeline_class_,
+        )
+        try:
+            self._unload_compel()
+            self._unload_deep_cache()
+            self._clear_memory_efficient_settings()
+            clear_memory()
+            original_config = dict(self._pipe.config)
+            kwargs = {k: getattr(self._pipe, k) for k in original_config.keys()}
+            if self.controlnet_enabled:
+                kwargs["controlnet"] = self._controlnet
+            else:
+                kwargs.pop("controlnet", None)
+            self._pipe = self._pipeline_class(**kwargs)
+        except Exception as e:
+            self.logger.error(f"Error swapping pipeline: {e}")
+        finally:
+            self._load_compel()
+            self._load_deep_cache()
+            self._make_memory_efficient()
+            self._send_pipeline_loaded_signal()
+            self._move_pipe_to_device()
 
     def load_scheduler(self, scheduler_name):
         """
@@ -726,6 +764,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._load_scheduler(self.image_request.scheduler)
 
         self._clear_cached_properties()
+
         if self._current_state not in (
             HandlerState.GENERATING,
             HandlerState.PREPARING_TO_GENERATE,
@@ -1176,6 +1215,8 @@ class BaseDiffusersModelManager(BaseModelManager):
             "local_files_only": True,
             "device": self._device,
         }
+        if self.controlnet_enabled:
+            data.update(controlnet=self._controlnet)
 
         if self.controlnet_enabled:
             data["controlnet"] = self._controlnet
