@@ -224,6 +224,14 @@ class SignalCode(Enum):
     RUN_WORKFLOW_SIGNAL = enum.auto()
     INPUT_IMAGE_SETTINGS_CHANGED = enum.auto()
 
+    # Video generation signals
+    VIDEO_LOAD_SIGNAL = enum.auto()
+    VIDEO_UNLOAD_SIGNAL = enum.auto()
+    VIDEO_GENERATE_SIGNAL = enum.auto()
+    VIDEO_GENERATED_SIGNAL = enum.auto()
+    INTERRUPT_VIDEO_GENERATION_SIGNAL = enum.auto()
+    VIDEO_PROGRESS_SIGNAL = enum.auto()
+
 
 class EngineResponseCode(Enum):
     NONE = 0
@@ -409,6 +417,7 @@ class ModelType(Enum):
     SCHEDULER = "SD Scheduler"
     LLM = "LLM Model"
     LLM_TOKENIZER = "LLM Tokenizer"
+    VIDEO = "Video Model"
 
 
 class HandlerState(Enum):
