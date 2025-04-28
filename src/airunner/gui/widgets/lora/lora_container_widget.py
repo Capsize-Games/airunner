@@ -7,7 +7,9 @@ from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.utils.models import scan_path_for_lora
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.lora.lora_widget import LoraWidget
-from airunner.gui.widgets.lora.templates.lora_container_ui import Ui_lora_container
+from airunner.gui.widgets.lora.templates.lora_container_ui import (
+    Ui_lora_container,
+)
 from airunner.workers.directory_watcher import DirectoryWatcher
 
 from airunner.data.models import Lora
@@ -31,13 +33,15 @@ class LoraContainerWidget(BaseWidget):
         self.initialized = False
         self._deleting = False
         self.ui.loading_icon.hide()
-        self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
+        self.ui.loading_icon.set_size(
+            spinner_size=QSize(30, 30), label_size=QSize(24, 24)
+        )
         self._apply_button_enabled = False
         self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
         self._scanner_worker = DirectoryWatcher(
             self.path_settings.base_path,
             self._scan_path_for_lora,
-            self.on_scan_completed
+            self.on_scan_completed,
         )
         self._scanner_thread = QThread()
         self._scanner_worker.moveToThread(self._scanner_thread)
@@ -92,7 +96,9 @@ class LoraContainerWidget(BaseWidget):
 
     def _toggle_lora_widgets(self, enable: bool):
         for i in range(self.ui.lora_scroll_area.widget().layout().count()):
-            lora_widget = self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
+            lora_widget = (
+                self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
+            )
             if isinstance(lora_widget, LoraWidget):
                 if enable:
                     lora_widget.enable_lora_widget()
@@ -109,7 +115,10 @@ class LoraContainerWidget(BaseWidget):
         lora_widgets = [
             self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
             for i in range(self.ui.lora_scroll_area.widget().layout().count())
-            if isinstance(self.ui.lora_scroll_area.widget().layout().itemAt(i).widget(), LoraWidget)
+            if isinstance(
+                self.ui.lora_scroll_area.widget().layout().itemAt(i).widget(),
+                LoraWidget,
+            )
         ]
         for lora_widget in lora_widgets:
             lora_widget.ui.enabledCheckbox.blockSignals(True)
@@ -120,7 +129,7 @@ class LoraContainerWidget(BaseWidget):
         if not self.initialized:
             self.scan_for_lora()
             self.initialized = True
-        self._load_lora()
+        self._load_lora(force_reload=True)
 
     def _load_lora(self, force_reload=False):
         version = self.generator_settings.version
@@ -128,11 +137,11 @@ class LoraContainerWidget(BaseWidget):
         if self._version is None or self._version != version or force_reload:
             self._version = version
             self.clear_lora_widgets()
-            loras = self.get_lora_by_version(self._version)
+            loras = Lora.objects.filter_by(version=version)
             if loras:
-                self.remove_spacer()
                 filtered_loras = [
-                    lora for lora in loras
+                    lora
+                    for lora in loras
                     if self.search_filter.lower() in lora.name.lower()
                 ]
                 for lora in filtered_loras:
@@ -148,7 +157,9 @@ class LoraContainerWidget(BaseWidget):
         # add spacer to end of self.ui.scrollAreaWidgetContents.layout()
         if not self.spacer:
             self.spacer = QWidget()
-            self.spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self.spacer.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            )
         else:
             self.remove_spacer()
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
@@ -169,7 +180,7 @@ class LoraContainerWidget(BaseWidget):
                 self.path_settings.base_path,
                 "art/models",
                 self._version,
-                "lora"
+                "lora",
             )
         )
         lora_file = lora_widget.current_lora.name
@@ -180,7 +191,7 @@ class LoraContainerWidget(BaseWidget):
                     break
 
         # Remove lora from database
-        
+
         Lora.objects.delete(lora_widget.current_lora.id)
 
         self._apply_button_enabled = True
@@ -197,18 +208,30 @@ class LoraContainerWidget(BaseWidget):
 
     def initialize_lora_trigger_words(self):
         for lora in self.lora:
-            trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
+            trigger_word = (
+                lora["trigger_word"] if "trigger_word" in lora else ""
+            )
             for tab_name in self.tabs.keys():
-                for i in range(self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget().layout().count()):
-                    lora_widget = self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget().layout().itemAt(
-                        i).widget()
+                for i in range(
+                    self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget()
+                    .layout()
+                    .count()
+                ):
+                    lora_widget = (
+                        self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget()
+                        .layout()
+                        .itemAt(i)
+                        .widget()
+                    )
                     if not lora_widget:
                         continue
                     if lora_widget.enabledCheckbox.text() == lora["name"]:
                         if trigger_word != "":
                             lora_widget.trigger_word.setText(trigger_word)
                         lora_widget.trigger_word.textChanged.connect(
-                            lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_trigger_word(_lora, _lora_widget, value)
+                            lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_trigger_word(
+                                _lora, _lora_widget, value
+                            )
                         )
                         break
 
@@ -239,11 +262,15 @@ class LoraContainerWidget(BaseWidget):
     def search_text_changed(self, val):
         self.search_filter = val
         self._load_lora(force_reload=True)
-    
+
     def clear_lora_widgets(self):
         if self.spacer:
             self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
-        for i in reversed(range(self.ui.scrollAreaWidgetContents.layout().count())):
-            widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+        for i in reversed(
+            range(self.ui.scrollAreaWidgetContents.layout().count())
+        ):
+            widget = (
+                self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+            )
             if isinstance(widget, LoraWidget):
                 widget.deleteLater()
