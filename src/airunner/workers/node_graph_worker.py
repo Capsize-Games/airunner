@@ -224,9 +224,6 @@ class NodeGraphWorker(Worker):
             try:
                 # Execute the node and get its output
                 outputs = current_node.execute(current_input_data)
-                print("&" * 100)
-                print("OUTPUTS", outputs)
-
                 # Check if the node returned None, which indicates pending execution
                 if outputs is None:
                     self.logger.info(

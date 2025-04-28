@@ -8,6 +8,8 @@ from airunner.gui.widgets.nodegraph.nodes.math.base_math_node import (
 
 class RandomNumberNode(BaseMathNode):
     NODE_NAME = "Random Number Generator"
+    has_exec_in_port = False
+    has_exec_out_port = False
 
     def __init__(self):
         super().__init__()

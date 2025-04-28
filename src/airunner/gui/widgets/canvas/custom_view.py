@@ -42,9 +42,9 @@ class CustomGraphicsView(
         self.pixmaps: Dict = {}
         self.line_group: Optional[QGraphicsItemGroup] = None
         self._scene_is_active: bool = False
-        self.last_pos: QPoint = QPoint(0, 0)
+        self.last_pos: QPoint = self.zero_point
         self.zoom_handler: ZoomHandler = ZoomHandler()
-        self.canvas_offset = QPoint(0, 0)  # Offset for infinite scrolling
+        self.canvas_offset = self.zero_point
         self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
 
@@ -79,6 +79,10 @@ class CustomGraphicsView(
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
+
+    @property
+    def zero_point(self) -> QPoint:
+        return QPoint(0, 0)
 
     def load_canvas_offset(self):
         """Load the canvas offset from QSettings."""
@@ -143,7 +147,7 @@ class CustomGraphicsView(
         )
 
     def on_recenter_grid_signal(self):
-        self.canvas_offset = QPoint(0, 0)
+        self.canvas_offset = self.zero_point
         self.save_canvas_offset()
         self.updateImagePositions()
         self.update_active_grid_area_position()

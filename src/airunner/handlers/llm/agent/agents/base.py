@@ -1221,8 +1221,6 @@ class BaseAgent(
             self.llm_request = llm_request
 
     def _update_memory_settings(self):
-        print("2" * 100)
-        print("_update_memory_settings", type(self.chat_store))
         if (
             type(self.chat_store) is DatabaseChatStore and not self.use_memory
         ) or (type(self.chat_store) is SimpleChatStore and self.use_memory):
