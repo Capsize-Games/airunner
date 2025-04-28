@@ -518,7 +518,6 @@ class Ui_MainWindow(object):
         self.actionDiscord.triggered.connect(MainWindow.action_open_discord)
         self.actionCollapse_to_system_tray.toggled.connect(MainWindow.action_toggle_close_to_system_tray)
         self.workflow_actionRun.triggered.connect(MainWindow.workflow_actionRun_triggered)
-        self.menubar.triggered.connect(MainWindow.workflow_actionRun_triggered)
         self.workflow_actionClear.triggered.connect(MainWindow.workflow_actionClear_triggered)
         self.workflow_actionEdit.triggered.connect(MainWindow.workflow_actionEdit_triggered)
         self.workflow_actionOpen.triggered.connect(MainWindow.workflow_actionOpen_triggered)
