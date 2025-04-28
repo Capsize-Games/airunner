@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import ClassVar, Dict
 
 from airunner.enums import SignalCode
 from airunner.gui.widgets.nodegraph.nodes.art.image_request_node import (
@@ -35,7 +35,13 @@ class FramePackNode(BaseWorkflowNode):
 
     def __init__(self):
         """Initialize the FramePackNode."""
+        self.signal_handlers = {
+            SignalCode.VIDEO_GENERATED_SIGNAL: self._on_video_generated,
+            SignalCode.VIDEO_PROGRESS_SIGNAL: self._on_video_progress,
+        }
+        self._pending_request = False
         super().__init__()
+
         self._setup_ports()
         self._setup_properties()
 
@@ -106,15 +112,35 @@ class FramePackNode(BaseWorkflowNode):
             tab="settings",
         )
 
-    def execute(self, input_data=None):
-        """Execute the node to generate a video."""
+    def execute(self, input_data: Dict):
+        """
+        Execute the node to generate a video.
+
+        If this is the first execution, start video generation and return None
+        to indicate pending execution.
+        """
         self.logger.info(f"Executing {self.title} node")
+        print("x" * 100)
+        print(input_data)
+        image_response = input_data.get("image_response", None)
+        image = input_data.get("image", None)
+
+        # Check if we're already waiting for generation
+        if self._pending_request:
+            self.logger.warning(
+                f"Node {self.id} is already waiting for video generation"
+            )
+            return None
 
         # Get the input image
-        input_image = input_data.get("image", None) if input_data else None
+        input_image = image or (
+            image_response.images[0]
+            if image_response and image_response.images
+            else None
+        )
         if input_image is None:
             self.logger.error("No input image provided")
-            return {"error": "No input image provided"}
+            return {"error": "No input image provided", "video": None}
 
         # Get property values
         prompt = self.get_property("prompt")
@@ -132,6 +158,9 @@ class FramePackNode(BaseWorkflowNode):
 
             seed = random.randint(0, 2147483647)
 
+        # Mark as pending
+        self._pending_request = True
+
         # Prepare the data for the handler
         data = {
             "input_image": input_image,
@@ -146,40 +175,43 @@ class FramePackNode(BaseWorkflowNode):
         }
 
         # Emit signal to generate video
+        print("emitting SignalCode.VIDEO_GENERATE_SIGNAL", data)
         self.mediator.emit_signal(SignalCode.VIDEO_GENERATE_SIGNAL, data)
 
-        # Register for video generation signals
-        self.register(
-            SignalCode.VIDEO_GENERATED_SIGNAL, self._on_video_generated
-        )
-        self.register(
-            SignalCode.VIDEO_PROGRESS_SIGNAL, self._on_video_progress
-        )
-
-        # Return a placeholder - actual result will be set when video is generated
-        return {"status": "Video generation started"}
+        # Return None to indicate the node execution is pending
+        # The NodeGraphWorker will pause execution until NODE_EXECUTION_COMPLETED_SIGNAL
+        return None
 
     def _on_video_generated(self, data):
         """Handle generated video data."""
-        if data.get("node_id") == self.id:
-            video_path = data.get("video_path")
-            self.set_property("video", video_path)
+        if data.get("node_id") != self.id:
+            return
 
-            # Emit signal that execution is complete
-            self.mediator.emit_signal(
-                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
-                {"node_id": self.id, "result": {"video": video_path}},
-            )
+        # Mark that request is no longer pending
+        self._pending_request = False
+
+        # Get video path from the result
+        video_path = data.get("video_path")
+        self.set_property_value("video", video_path)
+
+        # Emit signal that execution is complete with the result
+        # This continues the workflow execution at this node
+        self.mediator.emit_signal(
+            SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
+            {"node_id": self.id, "result": {"video": video_path}},
+        )
+
+        self.logger.info(f"Video generation complete for node {self.id}")
 
     def _on_video_progress(self, data):
         """Handle progress updates during video generation."""
-        if data.get("node_id") == self.id:
-            progress = data.get("progress", 0)
-            message = data.get("message", "")
-            self.logger.info(
-                f"Video generation progress: {progress}% - {message}"
-            )
+        if data.get("node_id") != self.id:
+            return
 
-            # Update node status if supported
-            # if hasattr(self, "set_status"):
-            #     self.set_status(f"Generating: {progress}%")
+        progress = data.get("progress", 0)
+        message = data.get("message", "")
+        self.logger.info(f"Video generation progress: {progress}% - {message}")
+
+        # Update node status if supported
+        if hasattr(self, "set_status"):
+            self.set_status(f"Generating: {progress}%")

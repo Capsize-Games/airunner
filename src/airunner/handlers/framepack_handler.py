@@ -5,6 +5,17 @@ from PIL import Image
 from typing import Optional, Dict, Any, List
 import threading
 
+# --- Use the correct imports based on FramePack implementation ---
+from transformers import (
+    LlamaModel,
+    CLIPTextModel,
+    LlamaTokenizerFast,
+    CLIPTokenizer,
+    SiglipImageProcessor,
+    SiglipVisionModel,
+)
+from diffusers import AutoencoderKLHunyuanVideo
+
 from PySide6.QtCore import Signal
 
 from airunner.enums import HandlerType, ModelType, ModelStatus, SignalCode
@@ -19,6 +30,19 @@ import airunner.vendor.framepack.diffusers_helper.clip_vision as clip_vision
 import airunner.vendor.framepack.diffusers_helper.hunyuan as hunyuan
 import airunner.vendor.framepack.diffusers_helper.memory as memory_utils
 import airunner.vendor.framepack.diffusers_helper.utils as fp_utils
+from airunner.vendor.framepack.diffusers_helper.models.hunyuan_video_packed import (
+    HunyuanVideoTransformer3DModelPacked,
+)
+from airunner.vendor.framepack.diffusers_helper.pipelines.k_diffusion_hunyuan import (
+    sample_hunyuan,
+)
+from airunner.vendor.framepack.diffusers_helper.utils import (
+    save_bcthw_as_mp4,
+    crop_or_pad_yield_mask,
+    soft_append_bcthw,
+    resize_and_center_crop,
+    generate_timestamp,
+)
 
 
 class AsyncFramePackStream:
@@ -55,28 +79,33 @@ class FramePackHandler(BaseModelManager):
     progress_update = Signal(
         int, str
     )  # Emits progress percentage and status message
+    model_status = {
+        ModelType.VIDEO: ModelStatus.UNLOADED,
+    }
 
     def __init__(self):
         super().__init__()
-        # Initialize models as None
+        # Initialize models and tokenizers as None
         self.text_encoder = None
         self.text_encoder_2 = None
+        self.tokenizer = None
+        self.tokenizer_2 = None
         self.image_encoder = None
+        self.feature_extractor = None
         self.transformer = None
         self.vae = None
-        self.feature_extractor = None
 
         # Default configuration
         self.config = {
             "high_vram": False,  # If true, models are kept in memory
             "use_teacache": True,  # For speedup
-            "gpu_memory_preservation": True,  # For memory management
+            "gpu_memory_preservation": 6.0,  # For memory management
             "mp4_crf": 23,  # Video quality (lower is better)
             "steps": 20,  # Default diffusion steps
-            "cfg": 7.5,  # Default classifier-free guidance scale
-            "guidance_scale": 4.0,  # Default guidance scale
+            "cfg": 1.0,  # Default classifier-free guidance scale
+            "guidance_scale": 10.0,  # Default guidance scale
             "random_seed": 1.0,  # Default random seed
-            "latent_window_size": 4,  # Default window size
+            "latent_window_size": 9,  # Default window size
         }
 
         # Output directory
@@ -98,59 +127,136 @@ class FramePackHandler(BaseModelManager):
         """Load the FramePack models."""
         try:
             self.change_model_status(ModelType.VIDEO, ModelStatus.LOADING)
-
-            # Using the same logic from demo_gradio.py
-            # Load models from Hugging Face
             device_string = "cuda:0" if torch.cuda.is_available() else "cpu"
+            gpu = torch.device(device_string)
+            free_mem_gb = memory_utils.get_cuda_free_memory_gb(gpu)
+            high_vram = free_mem_gb > 60
+            self.config["high_vram"] = high_vram
 
-            self.progress_update.emit(10, "Loading text encoders...")
-            self.text_encoder = hunyuan.create_text_encoder(
-                device=device_string
-            )
-            self.text_encoder_2 = hunyuan.create_text_encoder_2(
-                device=device_string
+            self.logger.info(f"Free VRAM: {free_mem_gb} GB")
+            self.logger.info(f"High-VRAM Mode: {high_vram}")
+
+            # Based on demo_gradio.py, use the correct model identifiers
+            hunyuan_model_id = "hunyuanvideo-community/HunyuanVideo"
+            flux_model_id = "lllyasviel/flux_redux_bfl"
+            transformer_model_id = "lllyasviel/FramePackI2V_HY"
+
+            # Progress updates
+            self.progress_update.emit(10, "Loading Text Encoders...")
+
+            # Load Text Encoder (Llama model)
+            self.text_encoder = LlamaModel.from_pretrained(
+                hunyuan_model_id,
+                subfolder="text_encoder",
+                torch_dtype=torch.float16,
+            ).cpu()
+
+            # Load Text Encoder 2 (CLIP)
+            self.text_encoder_2 = CLIPTextModel.from_pretrained(
+                hunyuan_model_id,
+                subfolder="text_encoder_2",
+                torch_dtype=torch.float16,
+            ).cpu()
+
+            # Load Tokenizers
+            self.tokenizer = LlamaTokenizerFast.from_pretrained(
+                hunyuan_model_id, subfolder="tokenizer"
             )
 
-            self.progress_update.emit(30, "Loading image encoder...")
-            self.image_encoder, self.feature_extractor = (
-                clip_vision.create_clip_vision(device=device_string)
+            self.tokenizer_2 = CLIPTokenizer.from_pretrained(
+                hunyuan_model_id, subfolder="tokenizer_2"
             )
 
-            self.progress_update.emit(50, "Loading VAE...")
-            self.vae = hunyuan.create_vae(device=device_string)
+            self.progress_update.emit(30, "Loading VAE...")
 
-            self.progress_update.emit(70, "Loading transformer...")
-            self.transformer = hunyuan.create_hunyuan_transformer(
-                device=device_string
+            # Load VAE
+            self.vae = AutoencoderKLHunyuanVideo.from_pretrained(
+                hunyuan_model_id, subfolder="vae", torch_dtype=torch.float16
+            ).cpu()
+
+            self.progress_update.emit(60, "Loading Vision Encoder...")
+
+            # Load Image Encoder (SiGLIP)
+            self.feature_extractor = SiglipImageProcessor.from_pretrained(
+                flux_model_id, subfolder="feature_extractor"
             )
+
+            self.image_encoder = SiglipVisionModel.from_pretrained(
+                flux_model_id,
+                subfolder="image_encoder",
+                torch_dtype=torch.float16,
+            ).cpu()
+
+            self.progress_update.emit(80, "Loading Transformer...")
+
+            # Load Transformer (HunyuanDiT)
+            self.transformer = (
+                HunyuanVideoTransformer3DModelPacked.from_pretrained(
+                    transformer_model_id, torch_dtype=torch.bfloat16
+                ).cpu()
+            )
+
+            # Set models to eval mode
+            self.vae.eval()
+            self.text_encoder.eval()
+            self.text_encoder_2.eval()
+            self.image_encoder.eval()
+            self.transformer.eval()
+
+            # Apply optimization settings
+            if not high_vram:
+                self.vae.enable_slicing()
+                self.vae.enable_tiling()
+
+            # High quality output setting
+            self.transformer.high_quality_fp32_output_for_inference = True
+
+            # Convert models to the right dtypes
+            self.transformer.to(dtype=torch.bfloat16)
+            self.vae.to(dtype=torch.float16)
+            self.image_encoder.to(dtype=torch.float16)
+            self.text_encoder.to(dtype=torch.float16)
+            self.text_encoder_2.to(dtype=torch.float16)
+
+            # Disable gradients
+            self.vae.requires_grad_(False)
+            self.text_encoder.requires_grad_(False)
+            self.text_encoder_2.requires_grad_(False)
+            self.image_encoder.requires_grad_(False)
+            self.transformer.requires_grad_(False)
 
             # Initialize teacache if enabled
             if self.config["use_teacache"]:
                 self.progress_update.emit(90, "Initializing teacache...")
                 self.transformer.initialize_teacache(enable_teacache=True)
 
-            # Set models to eval mode and disable gradients
-            self.text_encoder.eval()
-            self.text_encoder_2.eval()
-            self.image_encoder.eval()
-            self.vae.eval()
-            self.transformer.eval()
-
-            # Apply DynamicSwap if not high VRAM mode
-            if not self.config["high_vram"]:
+            # Move models to GPU if high VRAM mode
+            if high_vram:
+                self.text_encoder.to(gpu)
+                self.text_encoder_2.to(gpu)
+                self.image_encoder.to(gpu)
+                self.vae.to(gpu)
+                self.transformer.to(gpu)
+            else:
+                # Use DynamicSwap for better memory efficiency
                 DynamicSwapInstaller.install_model(
-                    self.transformer, device=device_string
+                    self.transformer, device=gpu
+                )
+                DynamicSwapInstaller.install_model(
+                    self.text_encoder, device=gpu
                 )
 
             self.change_model_status(ModelType.VIDEO, ModelStatus.READY)
+            self.logger.info("FramePack models loaded successfully.")
             return True
-
         except Exception as e:
             self.change_model_status(ModelType.VIDEO, ModelStatus.FAILED)
-            self.emit_signal(
-                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-                f"Failed to load FramePack models: {str(e)}",
+            # Log the full traceback for better debugging
+            self.logger.error(
+                f"Failed to load FramePack models: {str(e)}", exc_info=True
             )
+            # Clean up partially loaded models
+            self.unload()
             return False
 
     def unload(self):
@@ -169,18 +275,31 @@ class FramePackHandler(BaseModelManager):
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
-            # Unload models
+            # Unload models and tokenizers
             self.text_encoder = None
             self.text_encoder_2 = None
+            self.tokenizer = None
+            self.tokenizer_2 = None
             self.image_encoder = None
             self.feature_extractor = None
             self.vae = None
             self.transformer = None
 
+            # Explicitly delete to help GC, especially with CUDA tensors
+            import gc
+
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
             self.change_model_status(ModelType.VIDEO, ModelStatus.UNLOADED)
+            self.logger.info("FramePack models unloaded.")
             return True
 
         except Exception as e:
+            self.logger.error(
+                f"Failed to unload FramePack models: {e}", exc_info=True
+            )
             self.emit_signal(
                 SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
                 f"Failed to unload FramePack models: {str(e)}",
@@ -203,12 +322,15 @@ class FramePackHandler(BaseModelManager):
         Returns:
             str: Path to the generated video file
         """
+        print("GENERATE VIDEO CALLED")
         if self.model_status.get(ModelType.VIDEO) != ModelStatus.READY:
+            print("raising error")
             raise RuntimeError(
                 "FramePack models are not ready. Load models first."
             )
 
         if self.is_generating:
+            print("raising error 2")
             raise RuntimeError("A video generation is already in progress.")
 
         # Create a unique job ID
@@ -224,10 +346,12 @@ class FramePackHandler(BaseModelManager):
 
         # Start generation in a separate thread
         self.is_generating = True
+        print("creating a thread")
         self.generation_thread = threading.Thread(
             target=self._generate_video_thread,
             args=(input_image, prompt, n_prompt, total_second_length, config),
         )
+        print("starting thread")
         self.generation_thread.start()
 
         return self.current_job_id
@@ -236,140 +360,312 @@ class FramePackHandler(BaseModelManager):
         self, input_image, prompt, n_prompt, total_second_length, config
     ):
         """Thread function for video generation."""
+        job_id = generate_timestamp()
+        self.stream.push(
+            ("progress", (None, "", f"Starting video generation..."))
+        )
+
         try:
-            # Convert input image to the expected format
-            if isinstance(input_image, Image.Image):
-                input_image_np = np.array(input_image)
-                input_image_pt = (
-                    torch.from_numpy(input_image_np)
-                    .permute(2, 0, 1)
-                    .unsqueeze(0)
-                    .float()
-                    / 127.5
-                    - 1
-                )
-            else:
-                input_image_np = input_image
-                input_image_pt = (
-                    torch.from_numpy(input_image_np)
-                    .permute(2, 0, 1)
-                    .unsqueeze(0)
-                    .float()
-                    / 127.5
-                    - 1
+            # --- Ensure all models are loaded ---
+            if not all(
+                [
+                    self.text_encoder,
+                    self.text_encoder_2,
+                    self.tokenizer,
+                    self.tokenizer_2,
+                    self.vae,
+                    self.transformer,
+                    self.image_encoder,
+                    self.feature_extractor,
+                ]
+            ):
+                raise RuntimeError("FramePack models are not fully loaded.")
+
+            # Clean GPU memory if using low VRAM mode
+            if not self.config.get("high_vram", False):
+                memory_utils.unload_complete_models(
+                    self.text_encoder,
+                    self.text_encoder_2,
+                    self.image_encoder,
+                    self.vae,
+                    self.transformer,
                 )
 
-            # Set device
+            # --- Process input image ---
             device_string = "cuda:0" if torch.cuda.is_available() else "cpu"
             gpu = torch.device(device_string)
 
-            # Generate starting latent
-            self.stream.push(("progress", (None, "", f"VAE encoding...")))
-            start_latent = hunyuan.vae_encode(input_image_pt, self.vae)
+            # Get image data
+            if isinstance(input_image, Image.Image):
+                H, W = input_image.height, input_image.width
+                input_image_np = np.array(input_image)
+            else:
+                H, W, _ = input_image.shape
+                input_image_np = input_image
 
-            # CLIP Vision encoding
-            self.stream.push(
-                ("progress", (None, "", f"CLIP Vision encoding..."))
+            # Find nearest dimension bucket for optimal processing
+            height, width = bucket_tools.find_nearest_bucket(
+                H, W, resolution=640
             )
+            input_image_np = resize_and_center_crop(
+                input_image_np, target_width=width, target_height=height
+            )
+
+            # Save input image for reference
+            Image.fromarray(input_image_np).save(
+                os.path.join(self.outputs_folder, f"{job_id}.png")
+            )
+
+            # Convert to tensor format
+            input_image_pt = (
+                torch.from_numpy(input_image_np).float() / 127.5 - 1
+            )
+            input_image_pt = input_image_pt.permute(2, 0, 1)[None, :, None]
+
+            # --- Text encoding ---
+            self.stream.push(("progress", (None, "", f"Text encoding...")))
+
+            if not self.config.get("high_vram", False):
+                memory_utils.fake_diffusers_current_device(
+                    self.text_encoder, gpu
+                )
+                memory_utils.load_model_as_complete(
+                    self.text_encoder_2, target_device=gpu
+                )
+
+            # Encode prompt
+            llama_vec, clip_l_pooler = hunyuan.encode_prompt_conds(
+                prompt,
+                self.text_encoder,
+                self.text_encoder_2,
+                self.tokenizer,
+                self.tokenizer_2,
+            )
+
+            # Encode negative prompt
+            cfg_scale = config.get("cfg", 1.0)
+            if cfg_scale == 1:
+                llama_vec_n, clip_l_pooler_n = torch.zeros_like(
+                    llama_vec
+                ), torch.zeros_like(clip_l_pooler)
+            else:
+                llama_vec_n, clip_l_pooler_n = hunyuan.encode_prompt_conds(
+                    n_prompt,
+                    self.text_encoder,
+                    self.text_encoder_2,
+                    self.tokenizer,
+                    self.tokenizer_2,
+                )
+
+            # Process text embeddings
+            llama_vec, llama_attention_mask = crop_or_pad_yield_mask(
+                llama_vec, length=512
+            )
+            llama_vec_n, llama_attention_mask_n = crop_or_pad_yield_mask(
+                llama_vec_n, length=512
+            )
+
+            # --- VAE encoding ---
+            self.stream.push(("progress", (None, "", f"VAE encoding...")))
+
+            if not self.config.get("high_vram", False):
+                memory_utils.load_model_as_complete(
+                    self.vae, target_device=gpu
+                )
+
+            start_latent = hunyuan.vae_encode(input_image_pt.to(gpu), self.vae)
+
+            # --- CLIP Vision encoding ---
+            self.stream.push(("progress", (None, "", f"Vision encoding...")))
+
+            if not self.config.get("high_vram", False):
+                memory_utils.load_model_as_complete(
+                    self.image_encoder, target_device=gpu
+                )
+
             image_encoder_output = clip_vision.hf_clip_vision_encode(
                 input_image_np, self.feature_extractor, self.image_encoder
             )
-            image_encoder_last_hidden_state = (
+            image_encoder_hidden_states = (
                 image_encoder_output.last_hidden_state
             )
 
-            # LLAMA text encoding
-            self.stream.push(("progress", (None, "", f"Text encoding...")))
-            llama_vec = hunyuan.llama_encode_pre_computer(
-                prompt, self.text_encoder, self.text_encoder_2
-            )
-            llama_vec_n = hunyuan.llama_encode_pre_computer(
-                n_prompt, self.text_encoder, self.text_encoder_2
-            )
+            # --- Convert all tensors to the same dtype ---
+            dtype = self.transformer.dtype
+            llama_vec = llama_vec.to(dtype)
+            llama_vec_n = llama_vec_n.to(dtype)
+            clip_l_pooler = clip_l_pooler.to(dtype)
+            clip_l_pooler_n = clip_l_pooler_n.to(dtype)
+            image_encoder_hidden_states = image_encoder_hidden_states.to(dtype)
 
-            # CLIP pooler
-            clip_l_pooler, clip_l_pooler_n = hunyuan.clip_pooler_compute(
-                llama_vec, llama_vec_n
-            )
-
-            # Prepare for sampling
+            # --- Video generation settings ---
             self.stream.push(
                 ("progress", (None, "", f"Starting video generation..."))
             )
 
-            # Set random seed
             seed = int(config.get("seed", 42))
             rnd = torch.Generator("cpu").manual_seed(seed)
-
-            latent_window_size = config.get("latent_window_size", 4)
+            latent_window_size = int(config.get("latent_window_size", 9))
             num_frames = latent_window_size * 4 - 3
 
-            # Setup for image dimensions
-            height, width = start_latent.shape[-2], start_latent.shape[-1]
+            # Calculate sections based on video length
+            total_latent_sections = int(
+                max(
+                    round(
+                        (total_second_length * 30) / (latent_window_size * 4)
+                    ),
+                    1,
+                )
+            )
 
-            # Initialize history variables
+            # Setup history arrays
             history_latents = torch.zeros(
-                size=(1, 16, 1 + 2 + 16, height, width), dtype=torch.float32
+                size=(1, 16, 1 + 2 + 16, height // 8, width // 8),
+                dtype=torch.float32,
             ).cpu()
             history_pixels = None
             total_generated_latent_frames = 0
 
-            # Calculate sections for long videos
-            fps = 30
-            total_latent_frames = int(total_second_length * fps / 4)
-            total_latent_sections = max(
-                1, (total_latent_frames - 1) // latent_window_size + 1
-            )
+            # Determine latent padding sequence
+            if total_latent_sections > 4:
+                # Use padding trick from the original code
+                latent_paddings = (
+                    [3] + [2] * (total_latent_sections - 3) + [1, 0]
+                )
+            else:
+                latent_paddings = list(reversed(range(total_latent_sections)))
 
-            # Sampling loop (sections)
-            for section_idx in range(total_latent_sections):
-                is_last_section = section_idx == total_latent_sections - 1
+            # Process each section of the video
+            for latent_padding in latent_paddings:
+                is_last_section = latent_padding == 0
+                latent_padding_size = latent_padding * latent_window_size
 
-                self.stream.push(
-                    (
-                        "progress",
-                        (
-                            None,
-                            "",
-                            f"Generating section {section_idx+1}/{total_latent_sections}...",
-                        ),
+                self.logger.info(
+                    f"Processing section: padding={latent_padding_size}, is_last={is_last_section}"
+                )
+
+                # Calculate indices for frame processing
+                indices = torch.arange(
+                    0,
+                    sum(
+                        [1, latent_padding_size, latent_window_size, 1, 2, 16]
+                    ),
+                ).unsqueeze(0)
+
+                (
+                    clean_latent_indices_pre,
+                    blank_indices,
+                    latent_indices,
+                    clean_latent_indices_post,
+                    clean_latent_2x_indices,
+                    clean_latent_4x_indices,
+                ) = indices.split(
+                    [1, latent_padding_size, latent_window_size, 1, 2, 16],
+                    dim=1,
+                )
+
+                clean_latent_indices = torch.cat(
+                    [clean_latent_indices_pre, clean_latent_indices_post],
+                    dim=1,
+                )
+
+                # Prepare clean latents
+                clean_latents_pre = start_latent.to(history_latents)
+                clean_latents_post, clean_latents_2x, clean_latents_4x = (
+                    history_latents[:, :, : 1 + 2 + 16, :, :].split(
+                        [1, 2, 16], dim=2
                     )
                 )
-
-                # Get section latent
-                if section_idx == 0:
-                    input_latent = start_latent
-                else:
-                    # Get from history for continuation
-                    input_latent = history_latents[:, :, :1]
-
-                # Prepare generation params
-                steps = config.get("steps", 20)
-                cfg = config.get("cfg", 7.5)
-                gs = config.get("guidance_scale", 4.0)
-                rs = config.get("random_seed", 1.0)
-
-                # Generate latents
-                generated_latents = hunyuan.generate_hunyuan_video_packed(
-                    prompt=prompt,
-                    n_prompt=n_prompt,
-                    llama_vec=llama_vec,
-                    llama_vec_n=llama_vec_n,
-                    clip_l_pooler=clip_l_pooler,
-                    clip_l_pooler_n=clip_l_pooler_n,
-                    image_encoder_last_hidden_state=image_encoder_last_hidden_state,
-                    input_latent=input_latent,
-                    transformer=self.transformer,
-                    latent_window_size=latent_window_size,
-                    steps=steps,
-                    cfg=cfg,
-                    gs=gs,
-                    rs=rs,
-                    is_last_section=is_last_section,
-                    callback=self._callback_wrapper,
+                clean_latents = torch.cat(
+                    [clean_latents_pre, clean_latents_post], dim=2
                 )
 
-                # Process generated latents
+                # Load transformer for this section if using low VRAM mode
+                if not self.config.get("high_vram", False):
+                    memory_utils.unload_complete_models()
+                    memory_utils.move_model_to_device_with_memory_preservation(
+                        self.transformer,
+                        target_device=gpu,
+                        preserved_memory_gb=self.config.get(
+                            "gpu_memory_preservation", 6.0
+                        ),
+                    )
+
+                # Initialize TeaCache for optimization
+                if self.config.get("use_teacache", True):
+                    self.transformer.initialize_teacache(
+                        enable_teacache=True, num_steps=config.get("steps", 25)
+                    )
+                else:
+                    self.transformer.initialize_teacache(enable_teacache=False)
+
+                # Define callback function for progress updates
+                def callback(d):
+                    preview = d["denoised"]
+                    preview = hunyuan.vae_decode_fake(preview)
+
+                    # Convert to viewable format
+                    preview = (
+                        (preview * 255.0)
+                        .detach()
+                        .cpu()
+                        .numpy()
+                        .clip(0, 255)
+                        .astype(np.uint8)
+                    )
+                    preview = np.einsum("bcthu->bhtwc", preview).squeeze(0)
+
+                    current_step = d["i"] + 1
+                    steps = config.get("steps", 25)
+                    percentage = int(100.0 * current_step / steps)
+                    hint = f"Sampling {current_step}/{steps}"
+                    desc = (
+                        f"Generated frames: {int(max(0, total_generated_latent_frames * 4 - 3))}, "
+                        f"Length: {max(0, (total_generated_latent_frames * 4 - 3) / 30):.2f}s"
+                    )
+
+                    self.stream.push(
+                        (
+                            "progress",
+                            (preview, desc, f"{percentage}% - {hint}"),
+                        )
+                    )
+                    return
+
+                # Run the diffusion sampling
+                generated_latents = sample_hunyuan(
+                    transformer=self.transformer,
+                    sampler="unipc",
+                    width=width,
+                    height=height,
+                    frames=num_frames,
+                    real_guidance_scale=config.get("cfg", 1.0),
+                    distilled_guidance_scale=config.get(
+                        "guidance_scale", 10.0
+                    ),
+                    guidance_rescale=config.get("random_seed", 0.0),
+                    num_inference_steps=config.get("steps", 25),
+                    generator=rnd,
+                    prompt_embeds=llama_vec,
+                    prompt_embeds_mask=llama_attention_mask,
+                    prompt_poolers=clip_l_pooler,
+                    negative_prompt_embeds=llama_vec_n,
+                    negative_prompt_embeds_mask=llama_attention_mask_n,
+                    negative_prompt_poolers=clip_l_pooler_n,
+                    device=gpu,
+                    dtype=dtype,
+                    image_embeddings=image_encoder_hidden_states,
+                    latent_indices=latent_indices,
+                    clean_latents=clean_latents,
+                    clean_latent_indices=clean_latent_indices,
+                    clean_latents_2x=clean_latents_2x,
+                    clean_latent_2x_indices=clean_latent_2x_indices,
+                    clean_latents_4x=clean_latents_4x,
+                    clean_latent_4x_indices=clean_latent_4x_indices,
+                    callback=callback,
+                )
+
+                # If last section, prepend the start latent
                 if is_last_section:
                     generated_latents = torch.cat(
                         [
@@ -379,6 +675,7 @@ class FramePackHandler(BaseModelManager):
                         dim=2,
                     )
 
+                # Update counters and history
                 total_generated_latent_frames += int(
                     generated_latents.shape[2]
                 )
@@ -387,10 +684,8 @@ class FramePackHandler(BaseModelManager):
                     dim=2,
                 )
 
-                # Preserve memory if needed
-                if config.get(
-                    "gpu_memory_preservation", True
-                ) and not config.get("high_vram", False):
+                # Load VAE for decoding if using low VRAM mode
+                if not self.config.get("high_vram", False):
                     memory_utils.offload_model_from_device_for_memory_preservation(
                         self.transformer,
                         target_device=gpu,
@@ -400,11 +695,12 @@ class FramePackHandler(BaseModelManager):
                         self.vae, target_device=gpu
                     )
 
-                # Decode latents to pixels
+                # Get latents for this section and decode
                 real_history_latents = history_latents[
-                    :, :, :total_generated_latent_frames
+                    :, :, :total_generated_latent_frames, :, :
                 ]
 
+                # Decode latents to pixels
                 if history_pixels is None:
                     history_pixels = hunyuan.vae_decode(
                         real_history_latents, self.vae
@@ -421,48 +717,57 @@ class FramePackHandler(BaseModelManager):
                         real_history_latents[:, :, :section_latent_frames],
                         self.vae,
                     ).cpu()
-                    history_pixels = hunyuan.soft_append_bcthw(
+                    history_pixels = soft_append_bcthw(
                         current_pixels, history_pixels, overlapped_frames
                     )
 
-                # Save current progress
+                # Unload models if using low VRAM mode
+                if not self.config.get("high_vram", False):
+                    memory_utils.unload_complete_models()
+
+                # Save the video for this section
                 output_filename = os.path.join(
                     self.outputs_folder,
-                    f"{self.current_job_id}_{total_generated_latent_frames}.mp4",
+                    f"{job_id}_{total_generated_latent_frames}.mp4",
                 )
 
-                fp_utils.save_bcthw_as_mp4(
+                save_bcthw_as_mp4(
                     history_pixels,
                     output_filename,
                     fps=30,
                     crf=config.get("mp4_crf", 23),
                 )
 
-                # Emit the current video file
+                self.logger.info(
+                    f"Decoded section. Latent shape {real_history_latents.shape}; pixel shape {history_pixels.shape}"
+                )
+
+                # Send update for this section
                 self.stream.push(("file", output_filename))
 
-                # Check if this is the last section
                 if is_last_section:
                     break
 
-            # Final output file
+            # Final video with all sections
             final_output_filename = os.path.join(
-                self.outputs_folder, f"{self.current_job_id}_final.mp4"
+                self.outputs_folder, f"{job_id}_final.mp4"
             )
-            fp_utils.save_bcthw_as_mp4(
+            save_bcthw_as_mp4(
                 history_pixels,
                 final_output_filename,
                 fps=30,
                 crf=config.get("mp4_crf", 23),
             )
 
-            # Emit completion signal
             self.stream.push(("end", final_output_filename))
             self.video_completed.emit(final_output_filename)
 
             return final_output_filename
 
         except Exception as e:
+            self.logger.error(
+                f"Error during video generation: {str(e)}", exc_info=True
+            )
             self.stream.push(("error", str(e)))
             self.emit_signal(
                 SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
@@ -473,6 +778,21 @@ class FramePackHandler(BaseModelManager):
         finally:
             self.is_generating = False
             self.current_job_id = None
+
+            # Clean up CUDA memory
+            if torch.cuda.is_available():
+                if not self.config.get("high_vram", False):
+                    memory_utils.unload_complete_models(
+                        self.text_encoder,
+                        self.text_encoder_2,
+                        self.image_encoder,
+                        self.vae,
+                        self.transformer,
+                    )
+                import gc
+
+                gc.collect()
+                torch.cuda.empty_cache()
 
     def _callback_wrapper(self, d):
         """Callback function for the hunyuan generator."""
