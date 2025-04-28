@@ -36,6 +36,7 @@ class ImageRequest:
     height: int = 512
     callback: Optional[callable] = None
     image_preset: ImagePreset = ImagePreset.NONE
+    node_id: Optional[str] = None
 
     additional_prompts: Optional[List[Dict[str, str]]] = None
 

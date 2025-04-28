@@ -1,3 +1,4 @@
+from typing import Dict
 import os
 from typing import ClassVar
 
@@ -137,7 +138,9 @@ class VideoNode(BaseWorkflowNode):
         # )
         pass  # No properties for now
 
-    def execute(self):
+    def execute(self, input_data: Dict):
+        print("0" * 100)
+        print("video player node execute", input_data)
         """Execute the node to play the input video."""
         self.logger.info(f"Executing {self.title} node (ID: {self.id})")
 
