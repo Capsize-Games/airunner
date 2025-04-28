@@ -2,6 +2,8 @@ import torch
 from abc import ABC, abstractmethod, ABCMeta
 from typing import Dict
 
+from airunner.utils.memory import is_ampere_or_newer
+
 """
 The following code ensures that we only use PySide6 if it is available.
 If it is not available, we use a placeholder class instead.
@@ -122,6 +124,14 @@ class BaseModelManager(
     @property
     def device(self):
         return get_torch_device(self.device_index)
+
+    @property
+    def attn_implementation(self) -> str:
+        return (
+            "flash_attention_2"
+            if is_ampere_or_newer(self.device_index)
+            else "sdpa"
+        )
 
     @property
     def llm_dtype(self):
