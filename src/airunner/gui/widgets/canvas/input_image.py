@@ -7,6 +7,7 @@ from PIL.ImageQt import ImageQt
 from PySide6.QtGui import QPixmap, QImage, Qt, QPen
 from PySide6.QtWidgets import QGraphicsScene
 
+from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
 from airunner.utils.image import (
     convert_binary_to_image,
@@ -69,6 +70,10 @@ class InputImage(BaseWidget):
             self.update_outpaint_settings(key, value)
         elif self.settings_key == "drawing_pad_settings":
             self.update_drawing_pad_settings(key, value)
+        self.emit_signal(
+            SignalCode.INPUT_IMAGE_SETTINGS_CHANGED,
+            {"section": self.settings_key, "setting": key, "value": value},
+        )
 
     def showEvent(self, event):
         super().showEvent(event)

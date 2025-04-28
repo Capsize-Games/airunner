@@ -161,7 +161,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._path_settings = None
         self._current_memory_settings = None
 
-    def on_application_settings_changed(self):
+    def settings_changed(self):
         if self._pipe and self._pipe.__class__ is not self._pipeline_class:
             self._swap_pipeline()
 
@@ -210,7 +210,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             path: str = self.controlnet_model.path
             return os.path.expanduser(
                 os.path.join(
-                    self.path_settings_cached.base_path,
+                    self.path_settings.base_path,
                     "art",
                     "models",
                     version,
@@ -224,7 +224,7 @@ class BaseDiffusersModelManager(BaseModelManager):
     def controlnet_processor_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.path_settings_cached.base_path,
+                self.path_settings.base_path,
                 "art",
                 "models",
                 "controlnet_processors",
@@ -240,24 +240,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self._img2img_image is None:
             self._img2img_image = self.img2img_image
         return self._img2img_image
-
-    @property
-    def application_settings_cached(self):
-        if self._application_settings is None:
-            self._application_settings = self.application_settings
-        return self._application_settings
-
-    @property
-    def outpaint_settings_cached(self):
-        if self._outpaint_settings is None:
-            self._outpaint_settings = self.outpaint_settings
-        return self._outpaint_settings
-
-    @property
-    def path_settings_cached(self):
-        if self._path_settings is None:
-            self._path_settings = self.path_settings
-        return self._path_settings
 
     @property
     def image_request(self) -> ImageRequest:
@@ -298,7 +280,7 @@ class BaseDiffusersModelManager(BaseModelManager):
     @property
     def controlnet_enabled(self) -> bool:
         return (
-            self.controlnet_settings_cached.enabled
+            self.controlnet_settings.enabled
             and self.application_settings.controlnet_enabled
         )
 
@@ -428,7 +410,7 @@ class BaseDiffusersModelManager(BaseModelManager):
     def lora_base_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
-                self.path_settings_cached.base_path,
+                self.path_settings.base_path,
                 "art/models",
                 self.version,
                 "lora",
@@ -445,7 +427,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def use_safety_checker(self) -> bool:
-        return self.application_settings_cached.nsfw_filter
+        return self.application_settings.nsfw_filter
 
     @property
     def is_txt2img(self) -> bool:
@@ -507,7 +489,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def mask_blur(self) -> int:
-        return self.outpaint_settings_cached.mask_blur
+        return self.outpaint_settings.mask_blur
 
     @property
     def do_join_prompts(self) -> bool:
@@ -682,11 +664,34 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._clear_memory_efficient_settings()
             clear_memory()
             original_config = dict(self._pipe.config)
-            kwargs = {k: getattr(self._pipe, k) for k in original_config.keys()}
+            kwargs = {
+                k: getattr(self._pipe, k) for k in original_config.keys()
+            }
+
             if self.controlnet_enabled:
                 kwargs["controlnet"] = self._controlnet
             else:
                 kwargs.pop("controlnet", None)
+
+            kwargs = {
+                k: v
+                for k, v in kwargs.items()
+                if k
+                in [
+                    "vae",
+                    "text_encoder",
+                    "text_encoder_2",
+                    "tokenizer",
+                    "tokenizer_2",
+                    "unet",
+                    "controlnet",
+                    "scheduler",
+                    "feature_extractor",
+                    "image_encoder",
+                    "force_zeros_for_empty_prompt",
+                ]
+            }
+
             self._pipe = self._pipeline_class(**kwargs)
         except Exception as e:
             self.logger.error(f"Error swapping pipeline: {e}")
@@ -857,8 +862,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         active_rect = Rect(
             pos[0],
             pos[1],
-            self.application_settings_cached.working_width,
-            self.application_settings_cached.working_height,
+            self.application_settings.working_width,
+            self.application_settings.working_height,
         )
         drawing_pad_pos = self.drawing_pad_settings.pos
         active_rect.translate(
@@ -988,15 +993,15 @@ class BaseDiffusersModelManager(BaseModelManager):
         return metadata
 
     def _export_images(self, images: List[Any], data: Dict):
-        if not self.application_settings_cached.auto_export_images:
+        if not self.application_settings.auto_export_images:
             return
 
         self.logger.debug("Exporting images")
-        extension = self.application_settings_cached.image_export_type
+        extension = self.application_settings.image_export_type
         filename = "image"
         file_path = os.path.expanduser(
             os.path.join(
-                self.path_settings_cached.image_path, f"{filename}.{extension}"
+                self.path_settings.image_path, f"{filename}.{extension}"
             )
         )
         metadata = self._initialize_metadata(images, data)
@@ -1052,7 +1057,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def _load_safety_checker(self):
         if (
-            not self.application_settings_cached.nsfw_filter
+            not self.application_settings.nsfw_filter
             or self.safety_checker_is_loading
         ):
             return
@@ -1064,7 +1069,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING)
         safety_checker_path = os.path.expanduser(
             os.path.join(
-                self.path_settings_cached.base_path,
+                self.path_settings.base_path,
                 "art",
                 "models",
                 "SD 1.5",
@@ -1098,7 +1103,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         )
         feature_extractor_path = os.path.expanduser(
             os.path.join(
-                self.path_settings_cached.base_path,
+                self.path_settings.base_path,
                 "art",
                 "models",
                 "SD 1.5",
@@ -1165,7 +1170,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
 
         self.scheduler_name = scheduler_name or self.scheduler_name
-        base_path: str = self.path_settings_cached.base_path
+        base_path: str = self.path_settings.base_path
         scheduler_version: str = self.version
         scheduler_path = os.path.expanduser(
             os.path.join(
@@ -1901,8 +1906,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._set_seed()
 
         data = {
-            "width": int(self.application_settings_cached.working_width),
-            "height": int(self.application_settings_cached.working_height),
+            "width": int(self.application_settings.working_width),
+            "height": int(self.application_settings.working_height),
             "clip_skip": int(self.image_request.clip_skip),
             "num_inference_steps": int(self.image_request.steps),
             "callback": self._callback,
@@ -1926,8 +1931,8 @@ class BaseDiffusersModelManager(BaseModelManager):
                 }
             )
 
-        width = int(self.application_settings_cached.working_width)
-        height = int(self.application_settings_cached.working_height)
+        width = int(self.application_settings.working_width)
+        height = int(self.application_settings.working_height)
         image = None
         mask = None
 
