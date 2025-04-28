@@ -7,7 +7,9 @@ from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.utils.models import scan_path_for_embeddings
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.embeddings.embedding_widget import EmbeddingWidget
-from airunner.gui.widgets.embeddings.templates.embeddings_container_ui import Ui_embeddings_container
+from airunner.gui.widgets.embeddings.templates.embeddings_container_ui import (
+    Ui_embeddings_container,
+)
 from airunner.workers.directory_watcher import DirectoryWatcher
 
 
@@ -29,13 +31,15 @@ class EmbeddingsContainerWidget(BaseWidget):
         self.initialized = False
         self._deleting = False
         self.ui.loading_icon.hide()
-        self.ui.loading_icon.set_size(spinner_size=QSize(30, 30), label_size=QSize(24, 24))
+        self.ui.loading_icon.set_size(
+            spinner_size=QSize(30, 30), label_size=QSize(24, 24)
+        )
         self._apply_button_enabled = False
         self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
         self._scanner_worker = DirectoryWatcher(
             self.path_settings.base_path,
             self._scan_path_for_embeddings,
-            self.on_scan_completed
+            self.on_scan_completed,
         )
         self._scanner_thread = QThread()
         self._scanner_worker.moveToThread(self._scanner_thread)
@@ -82,8 +86,16 @@ class EmbeddingsContainerWidget(BaseWidget):
     def toggle_all_toggled(self, val):
         embedding_widgets = [
             self.ui.embeddings_scroll_area.widget().layout().itemAt(i).widget()
-            for i in range(self.ui.embeddings_scroll_area.widget().layout().count())
-            if isinstance(self.ui.embeddings_scroll_area.widget().layout().itemAt(i).widget(), EmbeddingWidget)
+            for i in range(
+                self.ui.embeddings_scroll_area.widget().layout().count()
+            )
+            if isinstance(
+                self.ui.embeddings_scroll_area.widget()
+                .layout()
+                .itemAt(i)
+                .widget(),
+                EmbeddingWidget,
+            )
         ]
         for embedding in embedding_widgets:
             embedding.ui.enabledCheckbox.blockSignals(True)
@@ -106,7 +118,7 @@ class EmbeddingsContainerWidget(BaseWidget):
                 self.path_settings.base_path,
                 "art/models",
                 self._version,
-                "embeddings"
+                "embeddings",
             )
         )
         lora_file = embedding_widget.embedding.name
@@ -128,7 +140,7 @@ class EmbeddingsContainerWidget(BaseWidget):
         if not self.initialized:
             self.scan_for_embeddings()
             self.initialized = True
-        self.load_embeddings()
+        self.load_embeddings(force_reload=True)
 
     def load_embeddings(self, force_reload: bool = False):
         version = self.generator_settings.version
@@ -140,7 +152,8 @@ class EmbeddingsContainerWidget(BaseWidget):
             if embeddings:
                 self.remove_spacer()
                 filtered_embeddings = [
-                    embedding for embedding in embeddings
+                    embedding
+                    for embedding in embeddings
                     if self.search_filter.lower() in embedding.name.lower()
                 ]
                 for embedding in filtered_embeddings:
@@ -156,7 +169,9 @@ class EmbeddingsContainerWidget(BaseWidget):
         # add spacer to end of self.ui.scrollAreaWidgetContents.layout()
         if not self.spacer:
             self.spacer = QWidget()
-            self.spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self.spacer.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            )
         else:
             self.remove_spacer()
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
@@ -174,11 +189,17 @@ class EmbeddingsContainerWidget(BaseWidget):
     def clear_embedding_widgets(self):
         if self.spacer:
             try:
-                self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
+                self.ui.scrollAreaWidgetContents.layout().removeWidget(
+                    self.spacer
+                )
             except RuntimeError as _e:
                 pass
-        for i in reversed(range(self.ui.scrollAreaWidgetContents.layout().count())):
-            widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+        for i in reversed(
+            range(self.ui.scrollAreaWidgetContents.layout().count())
+        ):
+            widget = (
+                self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+            )
             if isinstance(widget, EmbeddingWidget):
                 widget.deleteLater()
 
@@ -195,8 +216,15 @@ class EmbeddingsContainerWidget(BaseWidget):
         self._toggle_embedding_widgets(True)
 
     def _toggle_embedding_widgets(self, enable: bool):
-        for i in range(self.ui.embeddings_scroll_area.widget().layout().count()):
-            embedding_widget = self.ui.embeddings_scroll_area.widget().layout().itemAt(i).widget()
+        for i in range(
+            self.ui.embeddings_scroll_area.widget().layout().count()
+        ):
+            embedding_widget = (
+                self.ui.embeddings_scroll_area.widget()
+                .layout()
+                .itemAt(i)
+                .widget()
+            )
             if isinstance(embedding_widget, EmbeddingWidget):
                 if enable:
                     embedding_widget.enable_embedding_widget()
