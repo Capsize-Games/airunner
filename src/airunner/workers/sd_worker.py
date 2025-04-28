@@ -49,6 +49,7 @@ class SDWorker(Worker):
             SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_art_signal,
             SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
             SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
+            SignalCode.INPUT_IMAGE_SETTINGS_CHANGED: self.on_input_image_settings_changed_signal,
             SignalCode.LORA_UPDATE_SIGNAL: self.on_update_lora_signal,
             SignalCode.EMBEDDING_UPDATE_SIGNAL: self.on_update_embeddings_signal,
             SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL: self.delete_missing_embeddings,
@@ -165,6 +166,10 @@ class SDWorker(Worker):
                 "data": data,
             }
         )
+
+    def on_input_image_settings_changed_signal(self, data: Dict):
+        if self.model_manager:
+            self.model_manager.settings_changed()
 
     def on_unload_controlnet_signal(self, _data=None):
         if self.model_manager:
