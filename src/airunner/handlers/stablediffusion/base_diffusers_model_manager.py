@@ -43,7 +43,7 @@ from airunner.data.models import (
     Schedulers,
     Lora,
     Embedding,
-    ControlnetModel,
+    ControlnetModel as ControlnetDataModel,
     AIModels,
 )
 from airunner.enums import (
@@ -135,7 +135,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._current_prompt_2: str = ""
         self._current_negative_prompt_2: str = ""
         self._generator: Optional[torch.Generator] = None
-        self._latents = None
         self._textual_inversion_manager: Optional[
             DiffusersTextualInversionManager
         ] = None
@@ -160,6 +159,32 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._outpaint_settings = None
         self._path_settings = None
         self._current_memory_settings = None
+
+    def settings_changed(self):
+        if self._pipe and self._pipe.__class__ is not self._pipeline_class:
+            self._swap_pipeline()
+
+    @property
+    def controlnet(self) -> Optional[ControlNetModel]:
+        if self._controlnet is None:
+            self._load_controlnet_model()
+        return self._controlnet
+
+    @controlnet.setter
+    def controlnet(self, value: Optional[ControlNetModel]):
+        if value is None:
+            del self.controlnet
+        self._controlnet = value
+
+    @property
+    def controlnet_processor(self) -> Any:
+        if self._controlnet_processor is None:
+            self._load_controlnet_processor()
+        return self._controlnet_processor
+
+    @controlnet_processor.setter
+    def controlnet_processor(self, value: Optional[Any]):
+        self._controlnet_processor = value
 
     @property
     def img2img_pipelines(
@@ -206,7 +231,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             path: str = self.controlnet_model.path
             return os.path.expanduser(
                 os.path.join(
-                    self.path_settings_cached.base_path,
+                    self.path_settings.base_path,
                     "art",
                     "models",
                     version,
@@ -220,7 +245,7 @@ class BaseDiffusersModelManager(BaseModelManager):
     def controlnet_processor_path(self):
         return os.path.expanduser(
             os.path.join(
-                self.path_settings_cached.base_path,
+                self.path_settings.base_path,
                 "art",
                 "models",
                 "controlnet_processors",
@@ -238,24 +263,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         return self._img2img_image
 
     @property
-    def application_settings_cached(self):
-        if self._application_settings is None:
-            self._application_settings = self.application_settings
-        return self._application_settings
-
-    @property
-    def outpaint_settings_cached(self):
-        if self._outpaint_settings is None:
-            self._outpaint_settings = self.outpaint_settings
-        return self._outpaint_settings
-
-    @property
-    def path_settings_cached(self):
-        if self._path_settings is None:
-            self._path_settings = self.path_settings
-        return self._path_settings
-
-    @property
     def image_request(self) -> ImageRequest:
         return self._image_request
 
@@ -264,46 +271,45 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._image_request = value
 
     @property
-    def controlnet_settings_cached(self):
-        return self.controlnet_settings
-
-    @property
     def controlnet_image(self) -> Image:
-        img = self.controlnet_settings_cached.image
+        img = self.controlnet_settings.image
         if img is not None:
             img = convert_binary_to_image(img)
         return img
 
     @property
-    def controlnet_model(self) -> Optional[ControlnetModel]:
+    def controlnet_model(self) -> Optional[ControlnetDataModel]:
         if (
             self._controlnet_model is None
             or self._controlnet_model.version != self.version
             or self._controlnet_model.display_name
-            != self.controlnet_settings_cached.controlnet
+            != self.controlnet_settings.controlnet
         ):
-
-            self._controlnet_model = ControlnetModel.objects.filter_by_first(
-                display_name=self.controlnet_settings_cached.controlnet,
-                version=self.version,
+            self.logger.debug(
+                f"Loading controlnet model from database {self.controlnet_settings.controlnet} {self.version}"
             )
-
+            self._controlnet_model = (
+                ControlnetDataModel.objects.filter_by_first(
+                    display_name=self.controlnet_settings.controlnet,
+                    version=self.version,
+                )
+            )
         return self._controlnet_model
 
     @property
     def controlnet_enabled(self) -> bool:
         return (
-            self.controlnet_settings_cached.enabled
+            self.controlnet_settings.enabled
             and self.application_settings.controlnet_enabled
         )
 
     @property
     def controlnet_strength(self) -> int:
-        return self.controlnet_settings_cached.strength
+        return self.controlnet_settings.strength
 
     @property
     def controlnet_conditioning_scale(self) -> int:
-        return self.controlnet_settings_cached.conditioning_scale
+        return self.controlnet_settings.conditioning_scale
 
     @property
     def controlnet_is_loading(self) -> bool:
@@ -423,7 +429,7 @@ class BaseDiffusersModelManager(BaseModelManager):
     def lora_base_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
-                self.path_settings_cached.base_path,
+                self.path_settings.base_path,
                 "art/models",
                 self.version,
                 "lora",
@@ -440,7 +446,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def use_safety_checker(self) -> bool:
-        return self.application_settings_cached.nsfw_filter
+        return self.application_settings.nsfw_filter
 
     @property
     def is_txt2img(self) -> bool:
@@ -502,7 +508,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def mask_blur(self) -> int:
-        return self.outpaint_settings_cached.mask_blur
+        return self.outpaint_settings.mask_blur
 
     @property
     def do_join_prompts(self) -> bool:
@@ -649,6 +655,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             return
 
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
+        self._swap_pipeline()
 
     def unload_controlnet(self):
         """
@@ -657,6 +664,64 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self.controlnet_is_loading:
             return
         self._unload_controlnet()
+        self._swap_pipeline()
+
+    def _swap_pipeline(self):
+        pipeline_class_ = self._pipeline_class
+        if (
+            self._pipe.__class__ is pipeline_class_ or self._pipe is None
+        ):  # noqa
+            return
+        self.logger.info(
+            "Swapping pipeline from %s to %s",
+            self._pipe.__class__ if self._pipe else "",
+            pipeline_class_,
+        )
+        try:
+            self._unload_compel()
+            self._unload_deep_cache()
+            self._clear_memory_efficient_settings()
+            clear_memory()
+            original_config = dict(self._pipe.config)
+            kwargs = {
+                k: getattr(self._pipe, k) for k in original_config.keys()
+            }
+
+            if self.controlnet_enabled:
+                print("SETTING CONTROLNET", self.controlnet)
+                kwargs["controlnet"] = self.controlnet
+            else:
+                print("CONTROLNET IS NOT ENABLED")
+                kwargs.pop("controlnet", None)
+
+            kwargs = {
+                k: v
+                for k, v in kwargs.items()
+                if k
+                in [
+                    "vae",
+                    "text_encoder",
+                    "text_encoder_2",
+                    "tokenizer",
+                    "tokenizer_2",
+                    "unet",
+                    "controlnet",
+                    "scheduler",
+                    "feature_extractor",
+                    "image_encoder",
+                    "force_zeros_for_empty_prompt",
+                ]
+            }
+
+            self._pipe = self._pipeline_class(**kwargs)
+        except Exception as e:
+            self.logger.error(f"Error swapping pipeline: {e}")
+        finally:
+            self._load_compel()
+            self._load_deep_cache()
+            self._make_memory_efficient()
+            self._send_pipeline_loaded_signal()
+            self._move_pipe_to_device()
 
     def load_scheduler(self, scheduler_name):
         """
@@ -725,6 +790,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._load_scheduler(self.image_request.scheduler)
 
         self._clear_cached_properties()
+
         if self._current_state not in (
             HandlerState.GENERATING,
             HandlerState.PREPARING_TO_GENERATE,
@@ -817,8 +883,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         active_rect = Rect(
             pos[0],
             pos[1],
-            self.application_settings_cached.working_width,
-            self.application_settings_cached.working_height,
+            self.application_settings.working_width,
+            self.application_settings.working_height,
         )
         drawing_pad_pos = self.drawing_pad_settings.pos
         active_rect.translate(
@@ -924,7 +990,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                         "controlnet_conditioning_scale": data[
                             "controlnet_conditioning_scale"
                         ],
-                        "controlnet": self.controlnet_settings_cached.controlnet,
+                        "controlnet": self.controlnet_settings.controlnet,
                     }
                 )
             if self.is_txt2img:
@@ -948,15 +1014,15 @@ class BaseDiffusersModelManager(BaseModelManager):
         return metadata
 
     def _export_images(self, images: List[Any], data: Dict):
-        if not self.application_settings_cached.auto_export_images:
+        if not self.application_settings.auto_export_images:
             return
 
         self.logger.debug("Exporting images")
-        extension = self.application_settings_cached.image_export_type
+        extension = self.application_settings.image_export_type
         filename = "image"
         file_path = os.path.expanduser(
             os.path.join(
-                self.path_settings_cached.image_path, f"{filename}.{extension}"
+                self.path_settings.image_path, f"{filename}.{extension}"
             )
         )
         metadata = self._initialize_metadata(images, data)
@@ -1012,7 +1078,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def _load_safety_checker(self):
         if (
-            not self.application_settings_cached.nsfw_filter
+            not self.application_settings.nsfw_filter
             or self.safety_checker_is_loading
         ):
             return
@@ -1024,7 +1090,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING)
         safety_checker_path = os.path.expanduser(
             os.path.join(
-                self.path_settings_cached.base_path,
+                self.path_settings.base_path,
                 "art",
                 "models",
                 "SD 1.5",
@@ -1058,7 +1124,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         )
         feature_extractor_path = os.path.expanduser(
             os.path.join(
-                self.path_settings_cached.base_path,
+                self.path_settings.base_path,
                 "art",
                 "models",
                 "SD 1.5",
@@ -1083,15 +1149,11 @@ class BaseDiffusersModelManager(BaseModelManager):
             )
 
     def _load_controlnet_model(self):
-        if self._controlnet is not None:
+        if not self.controlnet_enabled:
             return
         self.logger.debug(f"Loading controlnet model")
-        if not self.controlnet_model:
-            raise ValueError(
-                f"Unable to find controlnet model {self.controlnet_settings_cached.controlnet}"
-            )
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
-        self._controlnet = ControlNetModel.from_pretrained(
+        self.controlnet = ControlNetModel.from_pretrained(
             self.controlnet_path,
             torch_dtype=self.data_type,
             device=self._device,
@@ -1100,9 +1162,11 @@ class BaseDiffusersModelManager(BaseModelManager):
             use_fp16=True,
             variant="fp16",
         )
+        if self.controlnet_processor is not None:
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
 
     def _load_controlnet_processor(self):
-        if self._controlnet_processor is not None:
+        if not self.controlnet_enabled:
             return
         self.logger.debug(
             f"Loading controlnet processor {self.controlnet_model.name}"
@@ -1111,12 +1175,12 @@ class BaseDiffusersModelManager(BaseModelManager):
         controlnet_class_: Any = controlnet_data["class"]
         checkpoint: bool = controlnet_data["checkpoint"]
         if checkpoint:
-            self._controlnet_processor = controlnet_class_.from_pretrained(
+            self.controlnet_processor = controlnet_class_.from_pretrained(
                 self.controlnet_processor_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             )
         else:
-            self._controlnet_processor = controlnet_class_()
+            self.controlnet_processor = controlnet_class_()
 
     def _load_scheduler(self, scheduler_name: Optional[str] = None):
         if not scheduler_name:
@@ -1125,7 +1189,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
 
         self.scheduler_name = scheduler_name or self.scheduler_name
-        base_path: str = self.path_settings_cached.base_path
+        base_path: str = self.path_settings.base_path
         scheduler_version: str = self.version
         scheduler_path = os.path.expanduser(
             os.path.join(
@@ -1175,9 +1239,11 @@ class BaseDiffusersModelManager(BaseModelManager):
             "local_files_only": True,
             "device": self._device,
         }
+        if self.controlnet_enabled:
+            data.update(controlnet=self.controlnet)
 
         if self.controlnet_enabled:
-            data["controlnet"] = self._controlnet
+            data["controlnet"] = self.controlnet
 
         if data is None:
             return
@@ -1391,12 +1457,12 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._clear_cached_properties()
 
         if (
-            self._controlnet is not None
-            and self._controlnet_processor is not None
+            self.controlnet is not None
+            and self.controlnet_processor is not None
             and self._pipe
         ):
-            self._pipe.__controlnet = self._controlnet
-            self._pipe.processor = self._controlnet_processor
+            self._pipe.__controlnet = self.controlnet
+            self._pipe.processor = self.controlnet_processor
 
     # MEMORY SETTINGS
     def _make_memory_efficient(self):
@@ -1644,8 +1710,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             except AttributeError:
                 pass
             self._pipe.__controlnet = None
-        del self._controlnet
-        self._controlnet = None
+        self.controlnet = None
 
     def _unload_controlnet_processor(self):
         self.logger.debug("Clearing controlnet processor")
@@ -1701,11 +1766,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         del self._compel_proc
         self._compel_proc = None
 
-    def _unload_latents(self):
-        self.logger.debug("Unloading latents")
-        del self._latents
-        self._latents = None
-
     def _unload_prompt_embeds(self):
         self.logger.debug("Unloading prompt embeds")
         del self._prompt_embeds
@@ -1760,7 +1820,6 @@ class BaseDiffusersModelManager(BaseModelManager):
             or self._current_prompt_2 != second_prompt
             or self._current_negative_prompt_2 != second_negative_prompt
         ):
-            self._unload_latents()
             self._current_prompt = prompt
             self._current_negative_prompt = negative_prompt
             self._current_prompt_2 = second_prompt
@@ -1859,14 +1918,12 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._set_seed()
 
         data = {
-            "width": int(self.application_settings_cached.working_width),
-            "height": int(self.application_settings_cached.working_height),
+            "width": int(self.application_settings.working_width),
+            "height": int(self.application_settings.working_height),
             "clip_skip": int(self.image_request.clip_skip),
             "num_inference_steps": int(self.image_request.steps),
-            "callback": self._callback,
-            "callback_steps": 1,
+            "callback_on_step_end": self._callback,
             "generator": self.generator,
-            "callback_on_step_end": self.__interrupt_callback,
         }
 
         if len(self._loaded_lora) > 0:
@@ -1884,8 +1941,8 @@ class BaseDiffusersModelManager(BaseModelManager):
                 }
             )
 
-        width = int(self.application_settings_cached.working_width)
-        height = int(self.application_settings_cached.working_height)
+        width = int(self.application_settings.working_width)
+        height = int(self.application_settings.working_height)
         image = None
         mask = None
 
@@ -2028,17 +2085,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         seed = self.image_request.seed
         self.generator.manual_seed(seed)
 
-    def _callback(self, step: int, _time_step, latents):
+    def _callback(self, _pipe, _i, _t, callback_kwargs):
         self.emit_signal(
             SignalCode.SD_PROGRESS_SIGNAL,
-            {"step": step, "total": self.image_request.steps},
+            {"step": _i, "total": self.image_request.steps},
         )
-        if self._latents is None:
-            self._latents = latents
         return {}
-
-    def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
-        if self.do_interrupt_image_generation:
-            self.do_interrupt_image_generation = False
-            raise InterruptedException()
-        return callback_kwargs
