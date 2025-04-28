@@ -37,8 +37,6 @@ class GenerateImageNode(BaseArtNode):
 
     def execute(self, input_data: Dict):
         image_request = input_data.get("image_request", None)
-        print("*" * 100)
-        print("image_request", image_request)
         if image_request is not None:
             image_request.callback = self._on_image_generated
             self._generate_image(image_request)

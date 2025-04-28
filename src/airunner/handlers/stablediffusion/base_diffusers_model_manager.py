@@ -173,7 +173,7 @@ class BaseDiffusersModelManager(BaseModelManager):
     @controlnet.setter
     def controlnet(self, value: Optional[ControlNetModel]):
         if value is None:
-            del self.controlnet
+            del self._controlnet
         self._controlnet = value
 
     @property
@@ -1308,7 +1308,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 self.logger.error(f"Failed to load model to device: {e}")
 
     def _load_lora(self):
-
+        self.logger.debug(f"Loading LORA weights")
         enabled_lora = Lora.objects.filter_by(
             version=self.version, enabled=True
         )
@@ -1322,9 +1322,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         filename = os.path.basename(lora.path)
         try:
             lora_base_path = self.lora_base_path
-            self.logger.info(
-                f"Loading LORA weights from {lora_base_path}/{filename}"
-            )
             adapter_name = os.path.splitext(filename)[0]
             adapter_name = adapter_name.replace(".", "_")
             self._pipe.load_lora_weights(
@@ -1346,16 +1343,15 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def _set_lora_adapters(self):
         self.logger.debug("Setting LORA adapters")
-
         loaded_lora_id = [lora.id for lora in self._loaded_lora.values()]
-        enabled_lora = Lora.objects.filter_by(Lora.id.in_(loaded_lora_id))
+        enabled_lora = Lora.objects.filter(Lora.id.in_(loaded_lora_id))
         adapter_weights = []
         adapter_names = []
         for lora in enabled_lora:
             adapter_weights.append(lora.scale / 100.0)
-            adapter_names.append(
-                os.path.splitext(os.path.basename(lora.path))[0]
-            )
+            adapter_name = os.path.splitext(os.path.basename(lora.path))[0]
+            adapter_name = adapter_name.replace(".", "_")
+            adapter_names.append(adapter_name)
         if len(adapter_weights) > 0:
             self._pipe.set_adapters(
                 adapter_names, adapter_weights=adapter_weights

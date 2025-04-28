@@ -374,10 +374,6 @@ class SettingsMixin:
     def image_filter_values(self) -> Optional[List[ImageFilterValue]]:
         return ImageFilterValue.objects.all()
 
-    @staticmethod
-    def get_lora_by_version(version) -> Optional[List[Lora]]:
-        return Lora.objects.filter_by(version=version)
-
     def get_embeddings_by_version(
         self, version
     ) -> Optional[List[Type[Embedding]]]:
