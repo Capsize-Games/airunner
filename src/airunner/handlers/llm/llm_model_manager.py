@@ -14,7 +14,6 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 
 from airunner.handlers.base_model_manager import BaseModelManager
 from airunner.enums import (
-    ModelService,
     SignalCode,
     ModelType,
     ModelStatus,
@@ -458,7 +457,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 trust_remote_code=False,
                 torch_dtype=self.torch_dtype,
                 device_map=self.device,
-                attn_implementation="sdpa",  # "flash_attention_2" if is_ampere_or_newer(self.device_index) else "sdpa",
+                attn_implementation=self.attn_implementation,
             )
 
             # Attempt to load adapter if available
