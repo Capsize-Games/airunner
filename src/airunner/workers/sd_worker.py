@@ -339,7 +339,7 @@ class SDWorker(Worker):
             self.__requested_action = ModelAction.NONE
 
     def start_worker_thread(self):
-        if self.model_manager and self.aplication_settings.sd_enabled:
+        if self.model_manager and self.application_settings.sd_enabled:
             self.model_manager.load()
 
     def handle_message(self, message: Optional[Dict] = None):
