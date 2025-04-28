@@ -322,21 +322,24 @@ class FramePackHandler(BaseModelManager):
         Returns:
             str: Path to the generated video file
         """
-        print("GENERATE VIDEO CALLED")
+        import uuid
+        import traceback
+
+        self.logger.info("generate_video called")
+
         if self.model_status.get(ModelType.VIDEO) != ModelStatus.READY:
-            print("raising error")
-            raise RuntimeError(
-                "FramePack models are not ready. Load models first."
-            )
+            error_msg = f"FramePack models are not ready. Current status: {self.model_status.get(ModelType.VIDEO)}"
+            self.logger.error(error_msg)
+            raise RuntimeError(error_msg)
 
         if self.is_generating:
-            print("raising error 2")
-            raise RuntimeError("A video generation is already in progress.")
+            error_msg = "A video generation is already in progress."
+            self.logger.error(error_msg)
+            raise RuntimeError(error_msg)
 
         # Create a unique job ID
-        import uuid
-
         self.current_job_id = f"framepack_{uuid.uuid4().hex[:8]}"
+        self.logger.info(f"Created job ID: {self.current_job_id}")
 
         # Update config with any provided kwargs
         config = self.config.copy()
@@ -344,17 +347,47 @@ class FramePackHandler(BaseModelManager):
             if key in config:
                 config[key] = value
 
-        # Start generation in a separate thread
-        self.is_generating = True
-        print("creating a thread")
-        self.generation_thread = threading.Thread(
-            target=self._generate_video_thread,
-            args=(input_image, prompt, n_prompt, total_second_length, config),
-        )
-        print("starting thread")
-        self.generation_thread.start()
+        self.logger.info(f"Configuration updated with kwargs: {kwargs}")
+        self.logger.info(f"Final config: {config}")
 
-        return self.current_job_id
+        # Start generation in a separate thread
+        try:
+            self.is_generating = True
+            self.logger.info(
+                f"Creating video generation thread for job {self.current_job_id}"
+            )
+
+            self.generation_thread = threading.Thread(
+                target=self._generate_video_thread,
+                args=(
+                    input_image,
+                    prompt,
+                    n_prompt,
+                    total_second_length,
+                    config,
+                ),
+            )
+
+            self.logger.info("Starting video generation thread")
+            self.generation_thread.daemon = True  # Make thread daemonic so it doesn't block application exit
+            self.generation_thread.start()
+            self.logger.info(
+                f"Generation thread started: {self.generation_thread.ident}"
+            )
+
+            # Report that the thread has started
+            self.emit_signal(
+                SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
+                f"Video generation started: {self.current_job_id}",
+            )
+
+            return self.current_job_id
+
+        except Exception as e:
+            self.is_generating = False
+            self.logger.error(f"Failed to start generation thread: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            raise RuntimeError(f"Failed to start video generation: {str(e)}")
 
     def _generate_video_thread(
         self, input_image, prompt, n_prompt, total_second_length, config

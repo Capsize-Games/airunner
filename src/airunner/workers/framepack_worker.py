@@ -134,40 +134,37 @@ class FramePackWorker(Worker):
         """
         try:
             # Load the model manager on first use
+            self.logger.info(f"Starting video generation with data: {data}")
             self.load_model_manager()
 
+            if not self._framepack_handler:
+                self.logger.error("FramePack handler is not initialized")
+                self.emit_signal(
+                    SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                    "Video generation failed: FramePack not initialized",
+                )
+                return
+
+            # Report model status
+            model_status = self._framepack_handler.model_status.get(
+                ModelType.VIDEO
+            )
+            self.logger.info(f"FramePack model status: {model_status}")
+
             # Get image path or data
-            image_path = data.get("image")
-            if not image_path:
+            image = data.get("input_image")
+            if not image:
+                self.logger.error("No input image provided")
+                print(data)
                 self.emit_signal(
                     SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
                     "No input image provided for video generation",
                 )
                 return
 
-            # Load image
-            from PIL import Image
-            import base64
-            import io
-
-            if isinstance(image_path, str) and image_path.startswith(
-                "data:image"
-            ):
-                # Base64 encoded image
-                image_data = image_path.split(",")[1]
-                image = Image.open(io.BytesIO(base64.b64decode(image_data)))
-            elif isinstance(image_path, str) and os.path.exists(image_path):
-                # File path
-                image = Image.open(image_path)
-            else:
-                self.emit_signal(
-                    SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-                    "Invalid image format for video generation",
-                )
-                return
-
             # Convert image to RGB if needed
             if image.mode != "RGB":
+                self.logger.info(f"Converting image from {image.mode} to RGB")
                 image = image.convert("RGB")
 
             # Get parameters
@@ -181,7 +178,32 @@ class FramePackWorker(Worker):
             cfg_scale = float(data.get("cfg_scale", 7.5))
             seed = int(data.get("seed", 42))
 
+            self.logger.info(
+                f"Starting video generation with parameters: prompt='{prompt}', duration={duration}, steps={steps}, guidance_scale={guidance_scale}, cfg_scale={cfg_scale}, seed={seed}"
+            )
+
+            # Set up signal connections for progress updates
+            # Connect the handler's signals to our own signal emitters
+            self._framepack_handler.frame_ready.connect(
+                lambda frame: self.emit_signal(
+                    SignalCode.VIDEO_FRAME_UPDATE_SIGNAL, {"frame": frame}
+                )
+            )
+            self._framepack_handler.video_completed.connect(
+                lambda path: self.emit_signal(
+                    SignalCode.VIDEO_GENERATION_COMPLETED_SIGNAL,
+                    {"path": path},
+                )
+            )
+            self._framepack_handler.progress_update.connect(
+                lambda percent, message: self.emit_signal(
+                    SignalCode.VIDEO_GENERATION_PROGRESS_SIGNAL,
+                    {"percent": percent, "message": message},
+                )
+            )
+
             # Generate video
+            self.logger.info("Calling FramePackHandler.generate_video()")
             job_id = self._framepack_handler.generate_video(
                 input_image=image,
                 prompt=prompt,
@@ -196,6 +218,7 @@ class FramePackWorker(Worker):
 
             # Store job ID for potential cancellation
             self._current_job_id = job_id
+            self.logger.info(f"Video generation started with job ID: {job_id}")
 
             # Send initial response
             self.emit_signal(
@@ -204,7 +227,10 @@ class FramePackWorker(Worker):
             )
 
         except Exception as e:
+            import traceback
+
             self.logger.error(f"Error in video generation: {str(e)}")
+            self.logger.error(traceback.format_exc())
             self.emit_signal(
                 SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
                 f"Video generation error: {str(e)}",
