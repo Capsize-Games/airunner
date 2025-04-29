@@ -165,6 +165,22 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._swap_pipeline()
 
     @property
+    def active_rect(self) -> Rect:
+        pos = self.active_grid_settings.pos
+        active_rect = Rect(
+            pos[0],
+            pos[1],
+            self.application_settings.working_width,
+            self.application_settings.working_height,
+        )
+        drawing_pad_pos = self.drawing_pad_settings.pos
+        active_rect.translate(
+            -drawing_pad_pos[0],
+            -drawing_pad_pos[1],
+        )
+        return active_rect
+
+    @property
     def controlnet(self) -> Optional[ControlNetModel]:
         if self._controlnet is None:
             self._load_controlnet_model()
@@ -878,26 +894,10 @@ class BaseDiffusersModelManager(BaseModelManager):
             raise PipeNotLoadedException()
         self._load_prompt_embeds()
         clear_memory()
-        pos = self.active_grid_settings.pos
-        active_rect = Rect(
-            pos[0],
-            pos[1],
-            self.application_settings.working_width,
-            self.application_settings.working_height,
-        )
-        drawing_pad_pos = self.drawing_pad_settings.pos
-        active_rect.translate(
-            -drawing_pad_pos[0],
-            -drawing_pad_pos[1],
-        )
-        data = self._prepare_data(active_rect)
+        data = self._prepare_data(self.active_rect)
         self._current_state = HandlerState.GENERATING
 
-        # Use torch.amp.autocast for mixed precision handling
-        with torch.no_grad(), torch.amp.autocast(
-            "cuda", dtype=self.data_type, enabled=True
-        ):
-            results = self._pipe(**data)
+        results = self._get_results(data)
 
         # Benchmark getting images from results
         images = results.get("images", [])
@@ -923,10 +923,18 @@ class BaseDiffusersModelManager(BaseModelManager):
             images=images,
             data=data,
             nsfw_content_detected=any(nsfw_content_detected),
-            active_rect=active_rect,
+            active_rect=self.active_rect,
             is_outpaint=self.is_outpaint,
             node_id=self.image_request.node_id,
         )
+
+    def _get_results(self, data):
+        # Use torch.amp.autocast for mixed precision handling
+        with torch.no_grad(), torch.amp.autocast(
+            "cuda", dtype=self.data_type, enabled=True
+        ):
+            results = self._pipe(**data)
+        return results
 
     def _initialize_metadata(
         self, images: List[Any], data: Dict
