@@ -64,6 +64,11 @@ class BaseModelManager(
         self.use_gpu = True
         super().__init__()
         self._requested_action: ModelAction = ModelAction.NONE
+        # Initialize instance status using the specific class's model_status definition
+        # Use getattr to safely get the class attribute from the actual instance's class
+        self.logger.debug(
+            f"Initialized instance {id(self)} with status: {self._model_status}"
+        )
 
     @property
     def model_status(self) -> Dict:
@@ -154,8 +159,26 @@ class BaseModelManager(
         return torch.float16 if self.use_cuda else torch.float32
 
     def change_model_status(self, model: ModelType, status: ModelStatus):
-        self._model_status[model] = status
-        self.emit_signal(
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
-            {"model": model, "status": status},
-        )
+        self.logger.debug(
+            f"Instance {id(self)}: Attempting to change status for {model.name} to {status.name}"
+        )  # Added instance ID
+        if model in self._model_status:
+            old_status = self._model_status.get(
+                model, ModelStatus.UNLOADED
+            )  # Get old status safely
+            self._model_status[model] = status
+            # Use f-string for clarity
+            self.logger.info(
+                f"Instance {id(self)}: Model {model.name} status changed from {old_status.name} to {status.name}"
+            )
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                {"model": model, "status": status},
+            )
+            self.logger.debug(
+                f"Instance {id(self)}: Current status dict: {self._model_status}"
+            )  # Added instance ID
+        else:
+            self.logger.warning(
+                f"Instance {id(self)}: Attempted to change status for model type {model.name} not defined in this handler's initial status."
+            )
