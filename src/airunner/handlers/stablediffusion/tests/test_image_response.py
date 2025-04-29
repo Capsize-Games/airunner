@@ -11,6 +11,7 @@ class TestImageResponse(unittest.TestCase):
             nsfw_content_detected=False,
             active_rect=rect,
             is_outpaint=True
+            node_id="testnodeid"
         )
         expected_dict = {
             "images": None,

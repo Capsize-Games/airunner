@@ -346,7 +346,7 @@ class SDWorker(Worker):
         if message is not None:
             action = message.get("action", None)
             model_type = message.get("type", None)
-            data = message.get("data", {})
+            data = message.get("message", {})
             if action is not None and model_type is not None:
                 if action is ModelAction.LOAD:
                     if model_type is ModelType.SD:

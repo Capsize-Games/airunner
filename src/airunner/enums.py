@@ -49,6 +49,7 @@ class SignalCode(Enum):
     APPLICATION_SETTINGS_LOADED_SIGNAL = (
         "settings_loaded_signal"  # No listeners
     )
+    STATUS_MESSAGE_SIGNAL = "status_message_signal"
     APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL = "clear_status_message_signal"
     APPLICATION_RESET_SETTINGS_SIGNAL = "reset_settings_signal"
     APPLICATION_RESET_PATHS_SIGNAL = "reset_paths_signal"
@@ -223,6 +224,14 @@ class SignalCode(Enum):
     SEND_IMAGE_TO_CANVAS_SIGNAL = enum.auto()
     RUN_WORKFLOW_SIGNAL = enum.auto()
     INPUT_IMAGE_SETTINGS_CHANGED = enum.auto()
+
+    # Video generation signals
+    VIDEO_LOAD_SIGNAL = enum.auto()
+    VIDEO_UNLOAD_SIGNAL = enum.auto()
+    VIDEO_GENERATE_SIGNAL = enum.auto()
+    VIDEO_GENERATED_SIGNAL = enum.auto()
+    INTERRUPT_VIDEO_GENERATION_SIGNAL = enum.auto()
+    VIDEO_PROGRESS_SIGNAL = enum.auto()
 
 
 class EngineResponseCode(Enum):
@@ -409,6 +418,7 @@ class ModelType(Enum):
     SCHEDULER = "SD Scheduler"
     LLM = "LLM Model"
     LLM_TOKENIZER = "LLM Tokenizer"
+    VIDEO = "Video Model"
 
 
 class HandlerState(Enum):
