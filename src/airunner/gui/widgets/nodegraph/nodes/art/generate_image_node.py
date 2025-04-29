@@ -25,6 +25,10 @@ class GenerateImageNode(BaseArtNode):
         self.image_request_port = self.add_input(
             "image_request", display_name=True
         )
+        self.controlnet_port = self.add_input("controlnet", display_name=True)
+        self.image_to_image_port = self.add_input(
+            "image_to_image", display_name=True
+        )
         self.image_response_port = self.add_output(
             "image_response", display_name=True
         )
@@ -66,9 +70,6 @@ class GenerateImageNode(BaseArtNode):
         # Prepare output data that will be passed to connected nodes
         output_data = {
             "image_response": image_response,
-            "image_response": (
-                image_response.images[0] if image_response.images else None
-            ),
         }
 
         # Emit signal that execution is complete with the result and output data
