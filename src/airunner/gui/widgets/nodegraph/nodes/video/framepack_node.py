@@ -120,8 +120,6 @@ class FramePackNode(BaseWorkflowNode):
         to indicate pending execution.
         """
         self.logger.info(f"Executing {self.title} node")
-        print("x" * 100)
-        print(input_data)
         image_response = input_data.get("image_response", None)
         image = input_data.get("image", None)
 
@@ -175,7 +173,6 @@ class FramePackNode(BaseWorkflowNode):
         }
 
         # Emit signal to generate video
-        print("emitting SignalCode.VIDEO_GENERATE_SIGNAL", data)
         self.mediator.emit_signal(SignalCode.VIDEO_GENERATE_SIGNAL, data)
 
         # Return None to indicate the node execution is pending
