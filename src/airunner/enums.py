@@ -233,6 +233,15 @@ class SignalCode(Enum):
     INTERRUPT_VIDEO_GENERATION_SIGNAL = enum.auto()
     VIDEO_PROGRESS_SIGNAL = enum.auto()
 
+    # MuseTalk signals
+    MUSETALK_LOAD_SIGNAL = enum.auto()
+    MUSETALK_UNLOAD_SIGNAL = enum.auto()
+    MUSETALK_GENERATE_SIGNAL = enum.auto()
+    INTERRUPT_MUSETALK_GENERATION_SIGNAL = enum.auto()
+    VIDEO_GENERATION_COMPLETED_SIGNAL = enum.auto()
+    VIDEO_GENERATION_PROGRESS_SIGNAL = enum.auto()
+    VIDEO_FRAME_UPDATE_SIGNAL = enum.auto()
+
 
 class EngineResponseCode(Enum):
     NONE = 0
@@ -398,7 +407,7 @@ class ModelType(Enum):
     SD = "SD Model"
     FLUX_MODEL = "Flux Model"
     SD_VAE = "SD VAE"
-    SD_UNET = "SD UNet"
+    SD_UNET = "SD Unet"
     SD_TOKENIZER = "SD Tokenizer"
     SD_TEXT_ENCODER = "SD Text Encoder"
     TTS = "TTS Model"
@@ -419,6 +428,7 @@ class ModelType(Enum):
     LLM = "LLM Model"
     LLM_TOKENIZER = "LLM Tokenizer"
     VIDEO = "Video Model"
+    MUSETALK = "MuseTalk Model"
 
 
 class HandlerState(Enum):

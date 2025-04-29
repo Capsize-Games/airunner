@@ -68,6 +68,9 @@ from airunner.gui.widgets.nodegraph.nodes.art.generate_image_node import (
 from airunner.gui.widgets.nodegraph.nodes.video.framepack_node import (
     FramePackNode,
 )
+from airunner.gui.widgets.nodegraph.nodes.video.musetalk_node import (
+    MuseTalkNode,
+)
 from airunner.gui.widgets.nodegraph.nodes.video.video_player_node import (
     VideoNode,
 )
@@ -99,6 +102,7 @@ __all__ = [
     "SetNode",
     "GenerateImageNode",
     "FramePackNode",
+    "MuseTalkNode",
     "VideoNode",
     "Gemma3Node",
 ]

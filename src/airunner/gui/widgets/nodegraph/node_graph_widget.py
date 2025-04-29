@@ -36,6 +36,7 @@ from airunner.gui.widgets.nodegraph.nodes import (
     FramePackNode,
     VideoNode,
     Gemma3Node,
+    MuseTalkNode,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -366,6 +367,7 @@ class NodeGraphWidget(BaseWidget):
             FramePackNode,
             VideoNode,
             Gemma3Node,
+            MuseTalkNode,
         ]:
             self.graph.register_node(node_cls)
 

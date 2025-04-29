@@ -92,6 +92,8 @@ from airunner.workers.mask_generator_worker import MaskGeneratorWorker
 from airunner.workers.sd_worker import SDWorker
 from airunner.workers.tts_generator_worker import TTSGeneratorWorker
 from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
+from airunner.workers.framepack_worker import FramePackWorker
+from airunner.workers.musetalk_worker import MuseTalkWorker
 
 
 class MainWindow(
@@ -1391,6 +1393,7 @@ class MainWindow(
         self._tts_generator_worker = create_worker(TTSGeneratorWorker)
         self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
         self._llm_generate_worker = create_worker(LLMGenerateWorker)
+        self._musetalk_worker = create_worker(MuseTalkWorker)
 
         self.logger.info("INITIALIZE WORKERS COMPLETE")
 
