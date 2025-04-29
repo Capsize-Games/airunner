@@ -337,6 +337,16 @@
             </layout>
            </widget>
           </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="use_refiner_checkbox">
+            <property name="toolTip">
+             <string>Uses second refiner model to enhance image</string>
+            </property>
+            <property name="text">
+             <string>Use refiner model</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </widget>
@@ -557,6 +567,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>use_refiner_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_use_refiner_checkbox_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>69</x>
+     <y>632</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-6</x>
+     <y>475</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>handle_prompt_changed()</slot>
@@ -576,5 +602,6 @@
   <slot>handle_quality_effects_changed(QString)</slot>
   <slot>past_conversations_clicked()</slot>
   <slot>handle_add_prompt_clicked()</slot>
+  <slot>on_use_refiner_checkbox_toggled(bool)</slot>
  </slots>
 </ui>
