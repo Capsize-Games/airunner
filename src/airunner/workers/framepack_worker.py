@@ -98,16 +98,102 @@ class FramePackWorker(Worker):
         data = data or {}
         print("LOAD MODEL MANAGER", self._framepack_handler)
 
-        if not self._framepack_handler:
-            print("n" * 100)
-            print("setting framepack handler")
-            self._framepack_handler = FramePackHandler()
-            self._framepack_handler.load()
+        try:
+            if not self._framepack_handler:
+                self.logger.info("Creating new FramePackHandler instance")
+                print("n" * 100)
+                print("setting framepack handler")
+                self._framepack_handler = FramePackHandler()
 
-        if self._framepack_handler:
-            callback = data.get("callback", None)
-            if callback:
-                callback(data)
+                # Immediately load the model and wait for completion
+                self.logger.info("Loading FramePack models")
+                success = self._framepack_handler.load()
+
+                if not success:
+                    self.logger.error("Failed to load FramePack models")
+                    self.emit_signal(
+                        SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                        "Failed to load FramePack models",
+                    )
+                    return False
+
+                # Verify model status after loading
+                model_status = self._framepack_handler.model_status.get(
+                    ModelType.VIDEO
+                )
+                self.logger.info(
+                    f"FramePack model status after loading: {model_status}"
+                )
+
+                if model_status != ModelStatus.READY:
+                    self.logger.error(
+                        f"FramePack models are not ready after loading. Status: {model_status}"
+                    )
+                    self.emit_signal(
+                        SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                        f"FramePack models not ready: {model_status}",
+                    )
+                    return False
+
+            if self._framepack_handler:
+                # Ensure the model is loaded
+                if (
+                    self._framepack_handler.model_status.get(ModelType.VIDEO)
+                    != ModelStatus.READY
+                ):
+                    self.logger.info(
+                        "FramePack models not ready, attempting to load"
+                    )
+                    success = self._framepack_handler.load()
+
+                    if not success:
+                        self.logger.error("Failed to load FramePack models")
+                        self.emit_signal(
+                            SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                            "Failed to load FramePack models",
+                        )
+                        return False
+
+                    # Double-check model status after loading
+                    if (
+                        self._framepack_handler.model_status.get(
+                            ModelType.VIDEO
+                        )
+                        != ModelStatus.READY
+                    ):
+                        self.logger.error(
+                            "FramePack models still not ready after loading"
+                        )
+                        self.emit_signal(
+                            SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                            "FramePack models are not ready after loading attempt",
+                        )
+                        return False
+
+                # Run callback if provided
+                callback = data.get("callback", None)
+                if callback:
+                    callback(data)
+
+                self.logger.info("FramePack models loaded successfully")
+                self.emit_signal(
+                    SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
+                    "FramePack models loaded successfully",
+                )
+                return True
+
+            return False
+
+        except Exception as e:
+            import traceback
+
+            self.logger.error(f"Error loading FramePack models: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            self.emit_signal(
+                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                f"Error loading FramePack models: {str(e)}",
+            )
+            return False
 
     def unload_model_manager(self, data: Dict = None):
         """Unload the FramePack model manager."""

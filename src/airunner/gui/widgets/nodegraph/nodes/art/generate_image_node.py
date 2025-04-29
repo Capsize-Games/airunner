@@ -85,6 +85,7 @@ class GenerateImageNode(BaseArtNode):
                 "output_data": output_data,  # Include the output data in the signal
             },
         )
+        self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
 
     def execute(self, input_data: Dict):
         """
