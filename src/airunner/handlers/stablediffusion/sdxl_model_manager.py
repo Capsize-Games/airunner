@@ -23,7 +23,7 @@ from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint_sd_xl import (
 
 from compel import ReturnedEmbeddingsType
 
-from airunner.enums import StableDiffusionVersion
+from airunner.enums import QualityEffects, StableDiffusionVersion, ImagePreset
 from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
     StableDiffusionModelManager,
 )
@@ -153,8 +153,8 @@ class SDXLModelManager(StableDiffusionModelManager):
     def compel_text_encoder(self) -> List[Any]:
         return [self._pipe.text_encoder, self._pipe.text_encoder_2]
 
-    def _prepare_compel_data(self, data: Dict) -> Dict:
-        data = super()._prepare_compel_data(data)
+    def _prepare_data(self, active_rect=None) -> Dict:
+        data = super()._prepare_data(active_rect)
         data.update(
             {
                 "pooled_prompt_embeds": self._pooled_prompt_embeds,
@@ -163,13 +163,104 @@ class SDXLModelManager(StableDiffusionModelManager):
         )
 
         for key in [
-            "negative_target_size",
-            "negative_original_size",
             "crops_coords_top_left",
+            "negative_crops_coords_top_left",
         ]:
             val = getattr(self.image_request, key, None)
-            if val and val.get("width", None) and val.get("height", None):
-                data.update({key: (val["width"], val["height"])})
+            if (
+                val
+                and val.get("x", None) is not None
+                and val.get("y", None) is not None
+            ):
+                data.update({key: (val["x"], val["y"])})
+
+        if (
+            self.image_request.quality_effects
+            is QualityEffects.HIGH_RESOLUTION
+        ):
+            data["target_size"] = (
+                self.image_request.width,
+                self.image_request.height,
+            )
+            data["original_size"] = (
+                self.image_request.width,
+                self.image_request.height,
+            )
+            data["negative_original_size"] = (
+                self.image_request.width // 2,
+                self.image_request.height // 2,
+            )
+            data["negative_target_size"] = (
+                self.image_request.width // 2,
+                self.image_request.height // 2,
+            )
+        elif (
+            self.image_request.quality_effects is QualityEffects.LOW_RESOLUTION
+        ):
+            data["target_size"] = (
+                0,
+                0,
+            )
+            data["original_size"] = (
+                0,
+                0,
+            )
+            data["negative_original_size"] = (
+                self.image_request.width,
+                self.image_request.height,
+            )
+            data["negative_target_size"] = (
+                self.image_request.width,
+                self.image_request.height,
+            )
+        elif self.image_request.quality_effects in (
+            QualityEffects.SUPER_SAMPLE_X2,
+            QualityEffects.SUPER_SAMPLE_X4,
+            QualityEffects.SUPER_SAMPLE_X8,
+        ):
+            if (
+                self.image_request.quality_effects
+                is QualityEffects.SUPER_SAMPLE_X2
+            ):
+                multiplier = 2
+            elif (
+                self.image_request.quality_effects
+                is QualityEffects.SUPER_SAMPLE_X4
+            ):
+                multiplier = 4
+            else:
+                multiplier = 8
+            data["target_size"] = (
+                self.image_request.width,
+                self.image_request.height,
+            )
+            data["original_size"] = (
+                self.image_request.width * multiplier,
+                self.image_request.height * multiplier,
+            )
+            data["negative_original_size"] = (
+                self.image_request.width // 2,
+                self.image_request.height // 2,
+            )
+            data["negative_target_size"] = (
+                self.image_request.width // 2,
+                self.image_request.height // 2,
+            )
+        elif self.image_request.quality_effects is QualityEffects.CUSTOM:
+            for key in [
+                "target_size",
+                "original_size",
+                "negative_target_size",
+                "negative_original_size",
+            ]:
+                val = getattr(self.image_request, key, None)
+                if (
+                    val
+                    and val.get("width", None) is not None
+                    and val.get("height", None) is not None
+                ):
+                    data.update({key: (val["width"], val["height"])})
+
         return data
 
     def _build_conditioning_tensors(
