@@ -472,3 +472,13 @@ class ModelService(enum.Enum):
     LOCAL = "local"
     HUGGINGFACE = "huggingface"
     OPENROUTER = "openrouter"
+
+
+class QualityEffects(enum.Enum):
+    CUSTOM = "Custom"
+    STANDARD = "Standard"
+    LOW_RESOLUTION = "Low Resolution"
+    HIGH_RESOLUTION = "High Resolution"
+    SUPER_SAMPLE_X2 = "Super Sample x2"
+    SUPER_SAMPLE_X4 = "Super Sample x4"
+    SUPER_SAMPLE_X8 = "Super Sample x8"
