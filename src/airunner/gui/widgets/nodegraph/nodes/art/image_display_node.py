@@ -1,7 +1,8 @@
-from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QLabel
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtCore import Qt
 from PIL.ImageQt import ImageQt
+from NodeGraphQt import NodeBaseWidget
 
 from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
     BaseArtNode,
@@ -9,24 +10,37 @@ from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 
 
-# Wrapper widget required by NodeGraphQt
-class ImageDisplayWidget(QWidget):
-    def __init__(self, parent=None, name="image_display_widget"):
-        super().__init__(parent)
-        self._name = name
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.image_label = QLabel("No Image")
-        self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setMinimumSize(128, 128)  # Set a minimum size
-        layout.addWidget(self.image_label)
+class ImageDisplayWidget(NodeBaseWidget):
+    """
+    Widget to display images in a node graph.
+    Following the pattern of TextEditNode which works correctly in NodeGraphQt.
+    """
 
-    # Implement the method expected by NodeGraphQt
-    def widget(self):
-        return self
+    def __init__(
+        self, parent=None, name="image_display", label="Image Display"
+    ):
+        super().__init__(parent, name, label)
+        # Create the QLabel widget that will actually display the image
+        label = QLabel("No Image")
+        label.setAlignment(Qt.AlignCenter)
+        label.setMinimumSize(512, 512)
+        # This is the key part - set the QLabel as the custom widget
+        self.set_custom_widget(label)
+        # Store the last value for get_value() to return
+        self._value = None
 
-    def get_name(self):
-        return self._name
+    def get_value(self):
+        """Return the stored value, which might be None for display-only widgets"""
+        return self._value
+
+    def set_value(self, value=None):
+        """
+        Required method for NodeGraphQt to restore widget state.
+        For image display, we just store the value and emit change signal.
+        """
+        self._value = value
+        # Use _name instead of name for the signal
+        self.value_changed.emit(self._name, value)
 
     def get_label_widget(self):
         """Get the actual QLabel widget inside the NodeGroupBox wrapper"""
@@ -43,11 +57,6 @@ class ImageDisplayWidget(QWidget):
                     return item.widget()
         return None
 
-    def set_pixmap(self, pixmap):
-        label = self.get_label_widget()
-        if label:
-            label.setPixmap(pixmap)
-
     def get_label_size(self):
         return self.image_label.size()
 
@@ -56,11 +65,15 @@ class ImageDisplayWidget(QWidget):
         self.image_label.setDisabled(state)
         super().setDisabled(state)
 
+    def set_pixmap(self, pixmap):
+        """Set the pixmap to display"""
+        if self.widget():
+            self.widget().setPixmap(pixmap)
+
     def set_text(self, text):
         """Set text to display when no image is available"""
-        label = self.get_label_widget()
-        if label:
-            label.setText(text)
+        if self.widget():
+            self.widget().setText(text)
             
 
 class ImageDisplayNode(BaseArtNode):
@@ -72,15 +85,9 @@ class ImageDisplayNode(BaseArtNode):
         # Input port for ImageResponse object
         self.add_input("image_response")
 
-        # Create and add the custom wrapper widget to the node's view
+        # Create and add the custom wrapper widget to the node using NodeGraphQt's API
         self.image_widget = ImageDisplayWidget(name="image_display")
-        # Call add_widget on the view object
-        if hasattr(self, "view") and hasattr(self.view, "add_widget"):
-            self.view.add_widget(self.image_widget)
-        else:
-            print(
-                f"Warning: Could not add widget to {self.NODE_NAME}. View or add_widget method not found."
-            )
+        self.add_custom_widget(self.image_widget)
 
     def execute(self, input_data):
         image_response = self.get_input_data("image_response", input_data)
@@ -96,19 +103,15 @@ class ImageDisplayNode(BaseArtNode):
                 pixmap = QPixmap.fromImage(qimage)
                 # Scale pixmap to fit the label while maintaining aspect ratio
                 scaled_pixmap = pixmap.scaled(
-                    self.image_widget.get_label_size(),  # Use wrapper method
+                    self.image_widget.widget().size(),
                     Qt.KeepAspectRatio,
                     Qt.SmoothTransformation,
                 )
-                self.image_widget.set_pixmap(
-                    scaled_pixmap
-                )  # Use wrapper method
+                self.image_widget.set_pixmap(scaled_pixmap)
             else:
-                self.image_widget.set_text(
-                    "Image Data Empty"
-                )  # Use wrapper method
+                self.image_widget.set_text("Image Data Empty")
         else:
-            self.image_widget.set_text("Invalid Input")  # Use wrapper method
+            self.image_widget.set_text("Invalid Input")
 
         # Return empty dict as this node primarily displays data
         # Execution flow is handled by the graph executor via exec ports
