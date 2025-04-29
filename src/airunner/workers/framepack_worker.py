@@ -75,7 +75,6 @@ class FramePackWorker(Worker):
 
     def on_video_generate_signal(self, data: Dict):
         """Handle signal to generate a video."""
-        print("FRAMEPACK WORKER ON VIDEO GENERATE SIGNAL")
         self.add_to_queue(
             {
                 "action": ModelAction.GENERATE,
@@ -96,13 +95,10 @@ class FramePackWorker(Worker):
     def load_model_manager(self, data: Dict = None):
         """Load the FramePack model manager."""
         data = data or {}
-        print("LOAD MODEL MANAGER", self._framepack_handler)
 
         try:
             if not self._framepack_handler:
                 self.logger.info("Creating new FramePackHandler instance")
-                print("n" * 100)
-                print("setting framepack handler")
                 self._framepack_handler = FramePackHandler()
 
                 # Immediately load the model and wait for completion
@@ -241,7 +237,6 @@ class FramePackWorker(Worker):
             image = data.get("input_image")
             if not image:
                 self.logger.error("No input image provided")
-                print(data)
                 self.emit_signal(
                     SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
                     "No input image provided for video generation",

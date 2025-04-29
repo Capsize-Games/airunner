@@ -22,7 +22,6 @@ class OpenrouterSettingsWidget(BaseWidget):
 
     @Slot(bool)
     def on_allow_toggled(self, val: bool):
-        print("val", val)
         self.settings.setValue("openrouter/allow_downloads", val)
 
     @Slot(str)
