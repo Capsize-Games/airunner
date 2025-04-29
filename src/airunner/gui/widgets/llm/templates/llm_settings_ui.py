@@ -39,16 +39,31 @@ class Ui_llm_settings_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 579, 563))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 579, 546))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
         self.gridLayout.setContentsMargins(0, 0, 10, 0)
+        self.prompt_template_container = QWidget(self.scrollAreaWidgetContents)
+        self.prompt_template_container.setObjectName(u"prompt_template_container")
+        self.gridLayout_17 = QGridLayout(self.prompt_template_container)
+        self.gridLayout_17.setObjectName(u"gridLayout_17")
+        self.gridLayout_17.setHorizontalSpacing(0)
+        self.gridLayout_17.setVerticalSpacing(10)
+        self.gridLayout_17.setContentsMargins(0, 0, 0, 0)
+
+        self.gridLayout.addWidget(self.prompt_template_container, 0, 0, 1, 1)
+
+        self.verticalSpacer = QSpacerItem(20, 263, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout.addItem(self.verticalSpacer, 2, 0, 1, 1)
+
         self.override_parameters = QGroupBox(self.scrollAreaWidgetContents)
         self.override_parameters.setObjectName(u"override_parameters")
         font = QFont()
-        font.setPointSize(8)
+        font.setPointSize(9)
+        font.setBold(True)
         self.override_parameters.setFont(font)
         self.override_parameters.setCheckable(True)
         self.override_parameters.setChecked(True)
@@ -274,6 +289,10 @@ class Ui_llm_settings_widget(object):
 
         self.pushButton = QPushButton(self.override_parameters)
         self.pushButton.setObjectName(u"pushButton")
+        font1 = QFont()
+        font1.setPointSize(9)
+        font1.setBold(False)
+        self.pushButton.setFont(font1)
 
         self.gridLayout_12.addWidget(self.pushButton, 11, 0, 1, 1)
 
@@ -318,74 +337,7 @@ class Ui_llm_settings_widget(object):
         self.gridLayout_12.addLayout(self.horizontalLayout_2, 2, 0, 1, 1)
 
 
-        self.gridLayout.addWidget(self.override_parameters, 3, 0, 1, 1)
-
-        self.verticalSpacer = QSpacerItem(20, 263, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.gridLayout.addItem(self.verticalSpacer, 4, 0, 1, 1)
-
-        self.model_version_container = QWidget(self.scrollAreaWidgetContents)
-        self.model_version_container.setObjectName(u"model_version_container")
-        self.gridLayout_11 = QGridLayout(self.model_version_container)
-        self.gridLayout_11.setObjectName(u"gridLayout_11")
-        self.gridLayout_11.setHorizontalSpacing(0)
-        self.gridLayout_11.setVerticalSpacing(10)
-        self.gridLayout_11.setContentsMargins(0, 0, 0, 0)
-        self.model_version = QComboBox(self.model_version_container)
-        self.model_version.setObjectName(u"model_version")
-
-        self.gridLayout_11.addWidget(self.model_version, 1, 0, 1, 1)
-
-        self.model_version_label = QLabel(self.model_version_container)
-        self.model_version_label.setObjectName(u"model_version_label")
-        self.model_version_label.setFont(font)
-
-        self.gridLayout_11.addWidget(self.model_version_label, 0, 0, 1, 1)
-
-
-        self.gridLayout.addWidget(self.model_version_container, 1, 0, 1, 1)
-
-        self.prompt_template_container = QWidget(self.scrollAreaWidgetContents)
-        self.prompt_template_container.setObjectName(u"prompt_template_container")
-        self.gridLayout_17 = QGridLayout(self.prompt_template_container)
-        self.gridLayout_17.setObjectName(u"gridLayout_17")
-        self.gridLayout_17.setHorizontalSpacing(0)
-        self.gridLayout_17.setVerticalSpacing(10)
-        self.gridLayout_17.setContentsMargins(0, 0, 0, 0)
-        self.prompt_template = QComboBox(self.prompt_template_container)
-        self.prompt_template.setObjectName(u"prompt_template")
-
-        self.gridLayout_17.addWidget(self.prompt_template, 1, 0, 1, 1)
-
-        self.prompt_template_label = QLabel(self.prompt_template_container)
-        self.prompt_template_label.setObjectName(u"prompt_template_label")
-        self.prompt_template_label.setFont(font)
-
-        self.gridLayout_17.addWidget(self.prompt_template_label, 0, 0, 1, 1)
-
-
-        self.gridLayout.addWidget(self.prompt_template_container, 2, 0, 1, 1)
-
-        self.model_type_container = QWidget(self.scrollAreaWidgetContents)
-        self.model_type_container.setObjectName(u"model_type_container")
-        self.model_type_container.setFont(font)
-        self.gridLayout_10 = QGridLayout(self.model_type_container)
-        self.gridLayout_10.setObjectName(u"gridLayout_10")
-        self.gridLayout_10.setHorizontalSpacing(0)
-        self.gridLayout_10.setVerticalSpacing(10)
-        self.gridLayout_10.setContentsMargins(0, 0, 0, 0)
-        self.model_type_label = QLabel(self.model_type_container)
-        self.model_type_label.setObjectName(u"model_type_label")
-
-        self.gridLayout_10.addWidget(self.model_type_label, 0, 0, 1, 1)
-
-        self.model = QComboBox(self.model_type_container)
-        self.model.setObjectName(u"model")
-
-        self.gridLayout_10.addWidget(self.model, 1, 0, 1, 1)
-
-
-        self.gridLayout.addWidget(self.model_type_container, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.override_parameters, 1, 0, 1, 1)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
@@ -393,10 +345,10 @@ class Ui_llm_settings_widget(object):
 
         self.label_2 = QLabel(llm_settings_widget)
         self.label_2.setObjectName(u"label_2")
-        font1 = QFont()
-        font1.setPointSize(11)
-        font1.setBold(True)
-        self.label_2.setFont(font1)
+        font2 = QFont()
+        font2.setPointSize(11)
+        font2.setBold(True)
+        self.label_2.setFont(font2)
 
         self.gridLayout_4.addWidget(self.label_2, 0, 0, 1, 1)
 
@@ -409,9 +361,13 @@ class Ui_llm_settings_widget(object):
 
         self.groupBox = QGroupBox(llm_settings_widget)
         self.groupBox.setObjectName(u"groupBox")
+        font3 = QFont()
+        font3.setPointSize(10)
+        font3.setBold(True)
+        self.groupBox.setFont(font3)
         self.verticalLayout = QVBoxLayout(self.groupBox)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(0, 5, 0, 0)
+        self.verticalLayout.setContentsMargins(9, 9, 9, 9)
         self.model_service = QComboBox(self.groupBox)
         self.model_service.setObjectName(u"model_service")
 
@@ -422,9 +378,10 @@ class Ui_llm_settings_widget(object):
 
         self.remote_model_path = QGroupBox(llm_settings_widget)
         self.remote_model_path.setObjectName(u"remote_model_path")
+        self.remote_model_path.setFont(font3)
         self.verticalLayout_2 = QVBoxLayout(self.remote_model_path)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.verticalLayout_2.setContentsMargins(0, 5, 0, 0)
+        self.verticalLayout_2.setContentsMargins(9, 9, 9, 9)
         self.model_path = QLineEdit(self.remote_model_path)
         self.model_path.setObjectName(u"model_path")
 
@@ -433,8 +390,6 @@ class Ui_llm_settings_widget(object):
 
         self.gridLayout_4.addWidget(self.remote_model_path, 3, 0, 1, 1)
 
-        QWidget.setTabOrder(self.model, self.model_version)
-        QWidget.setTabOrder(self.model_version, self.seed)
         QWidget.setTabOrder(self.seed, self.random_seed)
 
         self.retranslateUi(llm_settings_widget)
@@ -445,9 +400,6 @@ class Ui_llm_settings_widget(object):
         self.use_cache.clicked["bool"].connect(llm_settings_widget.toggle_use_cache)
         self.model_service.currentTextChanged.connect(llm_settings_widget.on_model_service_currentTextChanged)
         self.model_path.textChanged.connect(llm_settings_widget.on_model_path_textChanged)
-
-        self.model_version.setCurrentIndex(-1)
-
 
         QMetaObject.connectSlotsByName(llm_settings_widget)
     # setupUi
@@ -480,11 +432,8 @@ class Ui_llm_settings_widget(object):
         self.repetition_penalty.setProperty("label_text", QCoreApplication.translate("llm_settings_widget", u"Repetition Penalty", None))
         self.min_length.setProperty("settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.min_length", None))
         self.min_length.setProperty("label_text", QCoreApplication.translate("llm_settings_widget", u"Min Length", None))
-        self.model_version_label.setText(QCoreApplication.translate("llm_settings_widget", u"Model Version", None))
-        self.prompt_template_label.setText(QCoreApplication.translate("llm_settings_widget", u"Prompt Template", None))
-        self.model_type_label.setText(QCoreApplication.translate("llm_settings_widget", u"Model Type", None))
         self.label_2.setText(QCoreApplication.translate("llm_settings_widget", u"LLM Settings", None))
         self.groupBox.setTitle(QCoreApplication.translate("llm_settings_widget", u"Model service", None))
-        self.remote_model_path.setTitle(QCoreApplication.translate("llm_settings_widget", u"Model Path", None))
+        self.remote_model_path.setTitle(QCoreApplication.translate("llm_settings_widget", u"Custom path", None))
     # retranslateUi
 

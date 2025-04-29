@@ -15,9 +15,6 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ui.model_type_container.hide()
-        self.ui.model_version_container.hide()
-        self.ui.prompt_template_container.hide()
         self.initialize_form()
 
     @Slot(str)
@@ -27,8 +24,6 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
     @Slot(str)
     def on_model_service_currentTextChanged(self, val: str):
         self.update_llm_generator_settings("model_service", val)
-        self.update_model_version_combobox()
-        self.model_version_changed(self.ui.model_version.currentText())
         self._toggle_model_path_visibility(val != ModelService.LOCAL.value)
         self.emit_signal(
             SignalCode.LLM_MODEL_CHANGED,
@@ -63,9 +58,6 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def initialize_form(self):
         elements = [
-            self.ui.prompt_template,
-            self.ui.model,
-            self.ui.model_version,
             self.ui.random_seed,
             self.ui.do_sample,
             self.ui.early_stopping,
@@ -134,42 +126,6 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
         self.ui.use_cache.setChecked(self.chatbot.use_cache)
 
-        # get unique model names
-        self.ui.model.clear()
-        self.ui.model.addItems(
-            [
-                "seq2seq",
-                "causallm",
-                "visualqa",
-            ]
-        )
-        self.ui.model.setCurrentText(
-            self.application_settings.current_llm_generator
-        )
-
-        templates = {
-            "Mistral 7B Instruct: Default Chatbot": dict(
-                name="Mistral 7B Instruct: Default Chatbot",
-                model=AIRUNNER_DEFAULT_LLM_HF_PATH,
-                llm_category="causallm",
-            ),
-        }
-        names = [v["name"] for k, v in templates.items()]
-
-        self.ui.prompt_template.blockSignals(True)
-        self.ui.prompt_template.clear()
-        self.ui.prompt_template.addItems(names)
-        template_name = self.llm_generator_settings.prompt_template
-        if template_name == "":
-            template_name = names[0]
-            self.update_llm_generator_settings(
-                "prompt_template", template_name
-            )
-        self.ui.prompt_template.setCurrentText(template_name)
-        self.ui.prompt_template.blockSignals(False)
-
-        self.update_model_version_combobox()
-        self.ui.model_version.setCurrentText(self.chatbot.model_version)
         self.ui.random_seed.setChecked(self.chatbot.random_seed)
         self.ui.do_sample.setChecked(self.chatbot.do_sample)
         self.ui.early_stopping.setChecked(self.chatbot.early_stopping)
@@ -183,12 +139,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def model_text_changed(self, val):
         self.update_application_settings("current_llm_generator", val)
-        self.update_model_version_combobox()
-        self.model_version_changed(self.ui.model_version.currentText())
         self.initialize_form()
-
-    def model_version_changed(self, val):
-        self.update_llm_generator_settings("model_version", val)
 
     def toggle_move_model_to_cpu(self, val):
         self.update_memory_settings("move_unused_model_to_cpu", val)
@@ -197,9 +148,6 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def override_parameters_toggled(self, val):
         self.update_llm_generator_settings("override_parameters", val)
-
-    def prompt_template_text_changed(self, value):
-        self.update_llm_generator_settings("prompt_template", value)
 
     def random_seed_toggled(self, val):
         self.update_chatbot("random_seed", val)
@@ -229,15 +177,6 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         self.ui.sequences.set_slider_and_spinbox_values(chatbot.sequences)
         self.ui.top_k.set_slider_and_spinbox_values(chatbot.top_k)
         self.ui.random_seed.setChecked(chatbot.random_seed)
-
-    def update_model_version_combobox(self):
-        self.ui.model_version.blockSignals(True)
-        self.ui.model_version.clear()
-        ai_model_paths = self.ai_model_paths(
-            model_type="llm", pipeline_action=self.ui.model.currentText()
-        )
-        self.ui.model_version.addItems(ai_model_paths)
-        self.ui.model_version.blockSignals(False)
 
     def set_tab(self, tab_name):
         index = self.ui.tabWidget.indexOf(
