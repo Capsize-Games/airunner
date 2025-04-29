@@ -480,6 +480,10 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.start_progress_bar()
         self.generate(data)
 
+    @Slot(bool)
+    def on_use_refiner_checkbox_toggled(self, val: bool):
+        self.update_generator_settings("use_refiner", val)
+
     @Slot()
     def handle_interrupt_button_clicked(self):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)

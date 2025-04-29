@@ -58,3 +58,4 @@ class GeneratorSettings(BaseModel):
     negative_target_size = Column(JSON, default={"width": 512, "height": 512})
 
     lora_scale = Column(Integer, default=100)
+    use_refiner = Column(Boolean, default=False)
