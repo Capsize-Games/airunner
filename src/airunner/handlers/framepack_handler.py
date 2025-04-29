@@ -681,7 +681,13 @@ class FramePackHandler(BaseModelManager):
                         .astype(np.uint8)
                     )
                     # Corrected einsum string: bcthu -> bhtuc
-                    preview = np.einsum("bcthu->bhtuc", preview).squeeze(0)
+                    preview_sequence = np.einsum(
+                        "bcthu->bhtuc", preview
+                    ).squeeze(0)
+
+                    # Select the last frame for preview (shape: h, u, c)
+                    # Assuming time is the second dimension (index 1) after squeeze
+                    last_frame_preview = preview_sequence[:, -1, :, :]
 
                     current_step = d["i"] + 1
                     steps = config.get("steps", 25)
@@ -695,7 +701,12 @@ class FramePackHandler(BaseModelManager):
                     self.stream.push(
                         (
                             "progress",
-                            (preview, desc, f"{percentage}% - {hint}"),
+                            # Send only the last frame
+                            (
+                                last_frame_preview,
+                                desc,
+                                f"{percentage}% - {hint}",
+                            ),
                         )
                     )
                     return
