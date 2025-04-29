@@ -7,7 +7,7 @@ from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
     BaseArtNode,
 )
 from airunner.handlers.stablediffusion.image_request import ImageRequest
-from airunner.enums import ImagePreset, Scheduler, StableDiffusionVersion
+from airunner.enums import ImagePreset, QualityEffects, Scheduler, StableDiffusionVersion
 
 
 class ImageRequestNode(BaseArtNode):
@@ -204,6 +204,42 @@ class ImageRequestNode(BaseArtNode):
                 "range": (0.0, 2.0),
                 "tab": "advanced",
             },
+            {
+                "name": "crops_coords_top_left",
+                "value": {"x": 0, "y": 0},
+                "widget_type": NodePropWidgetEnum.VECTOR2,
+                "tab": "advanced",
+            },
+            {
+                "name": "original_size",
+                "value": {"width": 512, "height": 512},
+                "widget_type": NodePropWidgetEnum.VECTOR2,
+                "tab": "advanced",
+            },
+            {
+                "name": "target_size",
+                "value": {"width": 1024, "height": 1024},
+                "widget_type": NodePropWidgetEnum.VECTOR2,
+                "tab": "advanced",
+            },
+            {
+                "name": "negative_crops_coords_top_left",
+                "value": {"x": 0, "y": 0},
+                "widget_type": NodePropWidgetEnum.VECTOR2,
+                "tab": "advanced",
+            },
+            {
+                "name": "negative_original_size",
+                "value": {"width": 512, "height": 512},
+                "widget_type": NodePropWidgetEnum.VECTOR2,
+                "tab": "advanced",
+            },
+            {
+                "name": "negative_target_size",
+                "value": {"width": 512, "height": 512},
+                "widget_type": NodePropWidgetEnum.VECTOR2,
+                "tab": "advanced",
+            },
         ]
 
         for prop in props:
@@ -315,6 +351,15 @@ class ImageRequestNode(BaseArtNode):
             width=image_width,
             height=image_height,
             image_preset=image_preset,
+            crops_coords_top_left=self.generator_settings.crops_coords_top_left,
+            negative_crops_coords_top_left=self.generator_settings.negative_crops_coords_top_left,
+            target_size=self.generator_settings.target_size,
+            original_size=self.generator_settings.original_size,
+            negative_target_size=self.generator_settings.negative_target_size,
+            negative_original_size=self.generator_settings.negative_original_size,
+            quality_effects=QualityEffects(
+                self.generator_settings.quality_effects
+            ),
         )
         return {"image_request": image_request}
 

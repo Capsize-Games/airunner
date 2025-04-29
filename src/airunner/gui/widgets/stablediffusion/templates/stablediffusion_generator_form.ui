@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>565</width>
-    <height>813</height>
+    <width>586</width>
+    <height>825</height>
    </rect>
   </property>
   <property name="font">
@@ -71,8 +71,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>565</width>
-           <height>763</height>
+           <width>586</width>
+           <height>775</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayout">
@@ -94,73 +94,6 @@
           <property name="verticalSpacing">
            <number>10</number>
           </property>
-          <item row="2" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout">
-            <item>
-             <layout class="QVBoxLayout" name="verticalLayout">
-              <item>
-               <widget class="QLabel" name="label_2">
-                <property name="text">
-                 <string>Presets</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QComboBox" name="image_presets"/>
-              </item>
-              <item>
-               <widget class="Line" name="line_2">
-                <property name="orientation">
-                 <enum>Qt::Orientation::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <layout class="QVBoxLayout" name="quality_effects_container">
-              <item>
-               <widget class="QLabel" name="label_3">
-                <property name="text">
-                 <string>Quality Effects</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QComboBox" name="quality_effects">
-                <item>
-                 <property name="text">
-                  <string/>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Normal</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Upscaled</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Downscaled</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item>
-               <widget class="Line" name="line">
-                <property name="orientation">
-                 <enum>Qt::Orientation::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </item>
           <item row="0" column="0">
            <widget class="QSplitter" name="generator_form_splitter">
             <property name="orientation">
@@ -302,49 +235,249 @@
             </widget>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QGroupBox" name="croops_coord_top_left_groupbox">
-            <property name="title">
-             <string>Crops Coord (top left)</string>
-            </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_2">
-             <property name="leftMargin">
-              <number>2</number>
-             </property>
-             <property name="topMargin">
-              <number>2</number>
-             </property>
-             <property name="rightMargin">
-              <number>2</number>
-             </property>
-             <property name="bottomMargin">
-              <number>2</number>
-             </property>
+          <item row="1" column="0">
+           <widget class="QWidget" name="sdxl_settings_container" native="true">
+            <layout class="QVBoxLayout" name="sdxl_settings">
              <item>
-              <widget class="QLineEdit" name="crops_coord_top_left_x">
-               <property name="placeholderText">
-                <string>x position</string>
+              <widget class="QCheckBox" name="use_refiner_checkbox">
+               <property name="toolTip">
+                <string>Uses second refiner model to enhance image</string>
+               </property>
+               <property name="text">
+                <string>Use refiner model</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QLineEdit" name="crops_coord_top_left_y">
-               <property name="placeholderText">
-                <string>y position</string>
-               </property>
-              </widget>
+              <layout class="QHBoxLayout" name="horizontalLayout">
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayout">
+                 <item>
+                  <widget class="QLabel" name="label_2">
+                   <property name="text">
+                    <string>Presets</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="image_presets"/>
+                 </item>
+                 <item>
+                  <widget class="Line" name="line_2">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QVBoxLayout" name="quality_effects_container">
+                 <item>
+                  <widget class="QLabel" name="label_3">
+                   <property name="text">
+                    <string>Quality Effects</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="quality_effects">
+                   <item>
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Normal</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Upscaled</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Downscaled</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="Line" name="line">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_5">
+               <item>
+                <widget class="QGroupBox" name="groupBox">
+                 <property name="title">
+                  <string>Original size</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_3">
+                  <item>
+                   <widget class="QLineEdit" name="original_size_width">
+                    <property name="placeholderText">
+                     <string>width</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="original_size_height">
+                    <property name="placeholderText">
+                     <string>height</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="groupBox_3">
+                 <property name="title">
+                  <string>Negative original size</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_9">
+                  <item>
+                   <widget class="QLineEdit" name="negative_original_size_width">
+                    <property name="placeholderText">
+                     <string>width</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="negative_original_size_height">
+                    <property name="placeholderText">
+                     <string>height</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_10">
+               <item>
+                <widget class="QGroupBox" name="groupBox_4">
+                 <property name="title">
+                  <string>Target size</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_11">
+                  <item>
+                   <widget class="QLineEdit" name="target_size_width">
+                    <property name="placeholderText">
+                     <string>width</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="target_size_height">
+                    <property name="placeholderText">
+                     <string>height</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="groupBox_2">
+                 <property name="title">
+                  <string>Negative target size</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_4">
+                  <item>
+                   <widget class="QLineEdit" name="negative_target_size_width">
+                    <property name="placeholderText">
+                     <string>width</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="negative_target_size_height">
+                    <property name="placeholderText">
+                     <string>height</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_12">
+               <item>
+                <widget class="QGroupBox" name="croops_coord_top_left_groupbox">
+                 <property name="title">
+                  <string>Crops top left</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_2">
+                  <property name="leftMargin">
+                   <number>9</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>9</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>9</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>9</number>
+                  </property>
+                  <item>
+                   <widget class="QLineEdit" name="crops_coords_top_left_x">
+                    <property name="placeholderText">
+                     <string>x position</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="crops_coords_top_left_y">
+                    <property name="placeholderText">
+                     <string>y position</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="groupBox_5">
+                 <property name="title">
+                  <string>Negative crops top left</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_13">
+                  <item>
+                   <widget class="QLineEdit" name="negative_crops_coord_top_left_x">
+                    <property name="placeholderText">
+                     <string>x position</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="negative_crops_coord_top_left_y">
+                    <property name="placeholderText">
+                     <string>y position</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
              </item>
             </layout>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="use_refiner_checkbox">
-            <property name="toolTip">
-             <string>Uses second refiner model to enhance image</string>
-            </property>
-            <property name="text">
-             <string>Use refiner model</string>
-            </property>
            </widget>
           </item>
          </layout>
@@ -459,13 +592,30 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>generator_form_tabs</tabstop>
-  <tabstop>stable_diffusion_generator_form</tabstop>
-  <tabstop>pushButton</tabstop>
-  <tabstop>crops_coord_top_left_x</tabstop>
-  <tabstop>crops_coord_top_left_y</tabstop>
+  <tabstop>prompt</tabstop>
+  <tabstop>secondary_prompt</tabstop>
+  <tabstop>add_prompt_button</tabstop>
+  <tabstop>negative_prompt</tabstop>
+  <tabstop>secondary_negative_prompt</tabstop>
+  <tabstop>use_refiner_checkbox</tabstop>
+  <tabstop>image_presets</tabstop>
+  <tabstop>quality_effects</tabstop>
+  <tabstop>original_size_width</tabstop>
+  <tabstop>original_size_height</tabstop>
+  <tabstop>negative_original_size_width</tabstop>
+  <tabstop>negative_original_size_height</tabstop>
+  <tabstop>target_size_width</tabstop>
+  <tabstop>target_size_height</tabstop>
+  <tabstop>negative_target_size_width</tabstop>
+  <tabstop>negative_target_size_height</tabstop>
+  <tabstop>crops_coords_top_left_x</tabstop>
+  <tabstop>crops_coords_top_left_y</tabstop>
+  <tabstop>negative_crops_coord_top_left_x</tabstop>
+  <tabstop>negative_crops_coord_top_left_y</tabstop>
   <tabstop>generate_button</tabstop>
   <tabstop>interrupt_button</tabstop>
+  <tabstop>pushButton</tabstop>
+  <tabstop>stable_diffusion_generator_form</tabstop>
  </tabstops>
  <resources>
   <include location="../../../resources/feather.qrc"/>
@@ -478,8 +628,8 @@
    <slot>handle_generate_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>496</x>
-     <y>781</y>
+     <x>539</x>
+     <y>814</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -494,8 +644,8 @@
    <slot>handle_interrupt_button_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>540</x>
-     <y>792</y>
+     <x>575</x>
+     <y>814</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -510,44 +660,12 @@
    <slot>action_clicked_button_save_prompts()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>473</x>
-     <y>24</y>
+     <x>573</x>
+     <y>32</y>
     </hint>
     <hint type="destinationlabel">
      <x>416</x>
      <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>image_presets</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>handle_image_presets_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>109</x>
-     <y>693</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>795</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>quality_effects</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>handle_quality_effects_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>552</x>
-     <y>693</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>524</x>
-     <y>700</y>
     </hint>
    </hints>
   </connection>
@@ -559,11 +677,171 @@
    <hints>
     <hint type="sourcelabel">
      <x>60</x>
-     <y>318</y>
+     <y>243</y>
     </hint>
     <hint type="destinationlabel">
      <x>-3</x>
      <y>291</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>original_size_width</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_original_size_width_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>55</x>
+     <y>600</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>536</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>original_size_height</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_original_size_height_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>243</x>
+     <y>598</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>522</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>negative_original_size_width</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_negative_original_size_width_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>386</x>
+     <y>602</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>589</x>
+     <y>493</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>negative_original_size_height</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_negative_original_size_height_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>535</x>
+     <y>608</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>534</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>target_size_width</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_target_size_width_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>112</x>
+     <y>671</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>604</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>target_size_height</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_target_size_height_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>190</x>
+     <y>668</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-5</x>
+     <y>637</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>negative_target_size_width</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_negative_target_size_width_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>375</x>
+     <y>675</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>586</x>
+     <y>568</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>negative_target_size_height</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_negative_target_size_height_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>506</x>
+     <y>672</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>592</x>
+     <y>614</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>image_presets</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_image_presets_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>540</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>473</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>quality_effects</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_quality_effects_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>404</x>
+     <y>532</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>434</y>
     </hint>
    </hints>
   </connection>
@@ -574,12 +852,140 @@
    <slot>on_use_refiner_checkbox_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>69</x>
-     <y>632</y>
+     <x>30</x>
+     <y>483</y>
     </hint>
     <hint type="destinationlabel">
-     <x>-6</x>
-     <y>475</y>
+     <x>-3</x>
+     <y>462</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>127</x>
+     <y>91</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>62</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>secondary_prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_second_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>394</x>
+     <y>99</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>97</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>negative_prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_negative_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>144</x>
+     <y>383</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>328</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>secondary_negative_prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_second_negative_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>503</x>
+     <y>381</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>589</x>
+     <y>294</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>crops_coords_top_left_x</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_crops_coords_top_left_x_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>98</x>
+     <y>734</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-2</x>
+     <y>782</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>crops_coords_top_left_y</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_crops_coords_top_left_y_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>227</x>
+     <y>733</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-8</x>
+     <y>821</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>negative_crops_coord_top_left_x</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_negative_crops_coords_top_left_x_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>399</x>
+     <y>736</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>644</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>negative_crops_coord_top_left_y</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>on_negative_crops_coords_top_left_y_textChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>459</x>
+     <y>737</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>699</y>
     </hint>
    </hints>
   </connection>
@@ -603,5 +1009,17 @@
   <slot>past_conversations_clicked()</slot>
   <slot>handle_add_prompt_clicked()</slot>
   <slot>on_use_refiner_checkbox_toggled(bool)</slot>
+  <slot>on_original_size_width_textChanged(QString)</slot>
+  <slot>on_original_size_height_textChanged(QString)</slot>
+  <slot>on_negative_original_size_width_textChanged(QString)</slot>
+  <slot>on_negative_original_size_height_textChanged(QString)</slot>
+  <slot>on_target_size_width_textChanged(QString)</slot>
+  <slot>on_target_size_height_textChanged(QString)</slot>
+  <slot>on_negative_target_size_width_textChanged(QString)</slot>
+  <slot>on_negative_target_size_height_textChanged(QString)</slot>
+  <slot>on_crops_coords_top_left_x_textChanged(QString)</slot>
+  <slot>on_crops_coords_top_left_y_textChanged(QString)</slot>
+  <slot>on_negative_crops_coords_top_left_x_textChanged(QString)</slot>
+  <slot>on_negative_crops_coords_top_left_y_textChanged(QString)</slot>
  </slots>
 </ui>
