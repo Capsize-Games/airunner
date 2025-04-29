@@ -15,11 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
-    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QSplitter, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
+    QGridLayout, QGroupBox, QHBoxLayout, QLabel,
+    QLineEdit, QPlainTextEdit, QProgressBar, QPushButton,
+    QScrollArea, QSizePolicy, QSpacerItem, QSplitter,
+    QVBoxLayout, QWidget)
 import airunner.feather_rc
 
 class Ui_stablediffusion_generator_form(object):
@@ -214,6 +214,11 @@ class Ui_stablediffusion_generator_form(object):
 
         self.gridLayout.addWidget(self.croops_coord_top_left_groupbox, 3, 0, 1, 1)
 
+        self.use_refiner_checkbox = QCheckBox(self.scrollAreaWidgetContents)
+        self.use_refiner_checkbox.setObjectName(u"use_refiner_checkbox")
+
+        self.gridLayout.addWidget(self.use_refiner_checkbox, 1, 0, 1, 1)
+
         self.stable_diffusion_generator_form.setWidget(self.scrollAreaWidgetContents)
 
         self.gridLayout_3.addWidget(self.stable_diffusion_generator_form, 0, 0, 1, 1)
@@ -281,6 +286,7 @@ class Ui_stablediffusion_generator_form(object):
         self.image_presets.currentTextChanged.connect(stablediffusion_generator_form.handle_image_presets_changed)
         self.quality_effects.currentTextChanged.connect(stablediffusion_generator_form.handle_quality_effects_changed)
         self.add_prompt_button.clicked.connect(stablediffusion_generator_form.handle_add_prompt_clicked)
+        self.use_refiner_checkbox.toggled.connect(stablediffusion_generator_form.on_use_refiner_checkbox_toggled)
 
         QMetaObject.connectSlotsByName(stablediffusion_generator_form)
     # setupUi
@@ -305,6 +311,10 @@ class Ui_stablediffusion_generator_form(object):
         self.croops_coord_top_left_groupbox.setTitle(QCoreApplication.translate("stablediffusion_generator_form", u"Crops Coord (top left)", None))
         self.crops_coord_top_left_x.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"x position", None))
         self.crops_coord_top_left_y.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"y position", None))
+#if QT_CONFIG(tooltip)
+        self.use_refiner_checkbox.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Uses second refiner model to enhance image", None))
+#endif // QT_CONFIG(tooltip)
+        self.use_refiner_checkbox.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Use refiner model", None))
 #if QT_CONFIG(tooltip)
         self.generate_button.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Generate image", None))
 #endif // QT_CONFIG(tooltip)
