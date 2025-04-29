@@ -79,7 +79,7 @@ class FramePackHandler(BaseModelManager):
     progress_update = Signal(
         int, str
     )  # Emits progress percentage and status message
-    model_status = {
+    _model_status = {
         ModelType.VIDEO: ModelStatus.UNLOADED,
     }
 
@@ -126,7 +126,12 @@ class FramePackHandler(BaseModelManager):
     def load(self):
         """Load the FramePack models."""
         try:
+            self.logger.info("Starting FramePack model loading...")
             self.change_model_status(ModelType.VIDEO, ModelStatus.LOADING)
+            self.logger.info(
+                f"Status set to LOADING: {self.model_status.get(ModelType.VIDEO)}"
+            )
+
             device_string = "cuda:0" if torch.cuda.is_available() else "cpu"
             gpu = torch.device(device_string)
             free_mem_gb = memory_utils.get_cuda_free_memory_gb(gpu)
@@ -143,6 +148,7 @@ class FramePackHandler(BaseModelManager):
 
             # Progress updates
             self.progress_update.emit(10, "Loading Text Encoders...")
+            self.logger.info("Loading Text Encoders...")
 
             # Load Text Encoder (Llama model)
             self.text_encoder = LlamaModel.from_pretrained(
@@ -150,6 +156,7 @@ class FramePackHandler(BaseModelManager):
                 subfolder="text_encoder",
                 torch_dtype=torch.float16,
             ).cpu()
+            self.logger.info("Text Encoder 1 loaded.")
 
             # Load Text Encoder 2 (CLIP)
             self.text_encoder_2 = CLIPTextModel.from_pretrained(
@@ -157,37 +164,46 @@ class FramePackHandler(BaseModelManager):
                 subfolder="text_encoder_2",
                 torch_dtype=torch.float16,
             ).cpu()
+            self.logger.info("Text Encoder 2 loaded.")
 
             # Load Tokenizers
             self.tokenizer = LlamaTokenizerFast.from_pretrained(
                 hunyuan_model_id, subfolder="tokenizer"
             )
+            self.logger.info("Tokenizer 1 loaded.")
 
             self.tokenizer_2 = CLIPTokenizer.from_pretrained(
                 hunyuan_model_id, subfolder="tokenizer_2"
             )
+            self.logger.info("Tokenizer 2 loaded.")
 
             self.progress_update.emit(30, "Loading VAE...")
+            self.logger.info("Loading VAE...")
 
             # Load VAE
             self.vae = AutoencoderKLHunyuanVideo.from_pretrained(
                 hunyuan_model_id, subfolder="vae", torch_dtype=torch.float16
             ).cpu()
+            self.logger.info("VAE loaded.")
 
             self.progress_update.emit(60, "Loading Vision Encoder...")
+            self.logger.info("Loading Vision Encoder...")
 
             # Load Image Encoder (SiGLIP)
             self.feature_extractor = SiglipImageProcessor.from_pretrained(
                 flux_model_id, subfolder="feature_extractor"
             )
+            self.logger.info("Feature Extractor loaded.")
 
             self.image_encoder = SiglipVisionModel.from_pretrained(
                 flux_model_id,
                 subfolder="image_encoder",
                 torch_dtype=torch.float16,
             ).cpu()
+            self.logger.info("Image Encoder loaded.")
 
             self.progress_update.emit(80, "Loading Transformer...")
+            self.logger.info("Loading Transformer...")
 
             # Load Transformer (HunyuanDiT)
             self.transformer = (
@@ -195,6 +211,7 @@ class FramePackHandler(BaseModelManager):
                     transformer_model_id, torch_dtype=torch.bfloat16
                 ).cpu()
             )
+            self.logger.info("Transformer loaded.")
 
             # Set models to eval mode
             self.vae.eval()
@@ -202,14 +219,17 @@ class FramePackHandler(BaseModelManager):
             self.text_encoder_2.eval()
             self.image_encoder.eval()
             self.transformer.eval()
+            self.logger.info("Models set to eval mode.")
 
             # Apply optimization settings
             if not high_vram:
                 self.vae.enable_slicing()
                 self.vae.enable_tiling()
+                self.logger.info("VAE slicing/tiling enabled for low VRAM.")
 
             # High quality output setting
             self.transformer.high_quality_fp32_output_for_inference = True
+            self.logger.info("Transformer high quality output enabled.")
 
             # Convert models to the right dtypes
             self.transformer.to(dtype=torch.bfloat16)
@@ -217,6 +237,7 @@ class FramePackHandler(BaseModelManager):
             self.image_encoder.to(dtype=torch.float16)
             self.text_encoder.to(dtype=torch.float16)
             self.text_encoder_2.to(dtype=torch.float16)
+            self.logger.info("Models converted to target dtypes.")
 
             # Disable gradients
             self.vae.requires_grad_(False)
@@ -224,36 +245,49 @@ class FramePackHandler(BaseModelManager):
             self.text_encoder_2.requires_grad_(False)
             self.image_encoder.requires_grad_(False)
             self.transformer.requires_grad_(False)
+            self.logger.info("Gradients disabled for all models.")
 
             # Initialize teacache if enabled
             if self.config["use_teacache"]:
                 self.progress_update.emit(90, "Initializing teacache...")
+                self.logger.info("Initializing teacache...")
                 self.transformer.initialize_teacache(enable_teacache=True)
+                self.logger.info("Teacache initialized.")
 
             # Move models to GPU if high VRAM mode
             if high_vram:
+                self.logger.info("Moving models to GPU (High VRAM mode)...")
                 self.text_encoder.to(gpu)
                 self.text_encoder_2.to(gpu)
                 self.image_encoder.to(gpu)
                 self.vae.to(gpu)
                 self.transformer.to(gpu)
+                self.logger.info("Models moved to GPU.")
             else:
                 # Use DynamicSwap for better memory efficiency
+                self.logger.info("Installing DynamicSwap for low VRAM mode...")
                 DynamicSwapInstaller.install_model(
                     self.transformer, device=gpu
                 )
                 DynamicSwapInstaller.install_model(
                     self.text_encoder, device=gpu
                 )
+                self.logger.info("DynamicSwap installed.")
 
             self.change_model_status(ModelType.VIDEO, ModelStatus.READY)
+            self.logger.info(
+                f"Status set to READY: {self.model_status.get(ModelType.VIDEO)}"
+            )
             self.logger.info("FramePack models loaded successfully.")
             return True
+
         except Exception as e:
-            self.change_model_status(ModelType.VIDEO, ModelStatus.FAILED)
-            # Log the full traceback for better debugging
             self.logger.error(
                 f"Failed to load FramePack models: {str(e)}", exc_info=True
+            )
+            self.change_model_status(ModelType.VIDEO, ModelStatus.FAILED)
+            self.logger.error(
+                f"Status set to FAILED: {self.model_status.get(ModelType.VIDEO)}"
             )
             # Clean up partially loaded models
             self.unload()
