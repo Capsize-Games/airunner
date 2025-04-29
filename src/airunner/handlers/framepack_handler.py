@@ -680,7 +680,8 @@ class FramePackHandler(BaseModelManager):
                         .clip(0, 255)
                         .astype(np.uint8)
                     )
-                    preview = np.einsum("bcthu->bhtwc", preview).squeeze(0)
+                    # Corrected einsum string: bcthu -> bhtuc
+                    preview = np.einsum("bcthu->bhtuc", preview).squeeze(0)
 
                     current_step = d["i"] + 1
                     steps = config.get("steps", 25)
