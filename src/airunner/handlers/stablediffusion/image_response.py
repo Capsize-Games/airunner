@@ -3,6 +3,7 @@ from PIL.Image import Image
 from dataclasses import dataclass
 from airunner.handlers.stablediffusion.rect import Rect
 
+
 @dataclass
 class ImageResponse:
     """
@@ -15,11 +16,13 @@ class ImageResponse:
         active_rect: The active rectangular region in the image.
         is_outpaint: Flag indicating if the image is an outpainting.
     """
+
     images: Optional[List[Image]]
     data: Dict[str, Any]
     nsfw_content_detected: bool
     active_rect: Rect
     is_outpaint: bool
+    node_id: Optional[str] = None
 
     def to_dict(self) -> Dict:
         """

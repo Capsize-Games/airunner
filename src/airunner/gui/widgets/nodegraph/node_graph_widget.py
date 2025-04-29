@@ -33,6 +33,8 @@ from airunner.gui.widgets.nodegraph.nodes import (
     LLMBranchNode,
     SetNode,
     GenerateImageNode,
+    FramePackNode,
+    VideoNode,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -47,6 +49,7 @@ from airunner.data.models.workflow_node import WorkflowNode
 from airunner.data.models.workflow_connection import WorkflowConnection
 from airunner.utils.settings import get_qsettings
 
+from airunner.workers.framepack_worker import FramePackWorker
 from airunner.workers.node_graph_worker import NodeGraphWorker
 from airunner.utils.application.create_worker import create_worker
 
@@ -76,6 +79,8 @@ class NodeGraphWidget(BaseWidget):
 
         if self.current_workflow_id is not None:
             self._perform_load(self.current_workflow_id)
+        
+        self.framepack_worker = create_worker(FramePackWorker)
 
         # if self.current_workflow_id is None:
         #     self._add_start_node()
@@ -357,6 +362,8 @@ class NodeGraphWidget(BaseWidget):
             LLMBranchNode,
             SetNode,
             GenerateImageNode,
+            FramePackNode,
+            VideoNode,
         ]:
             self.graph.register_node(node_cls)
 

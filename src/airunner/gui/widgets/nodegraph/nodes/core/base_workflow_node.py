@@ -2,7 +2,6 @@ from PySide6.QtGui import QPolygonF, QPen, QBrush
 from PySide6.QtCore import QPointF, Qt
 
 from NodeGraphQt import BaseNode
-from NodeGraphQt.constants import PortTypeEnum
 
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin

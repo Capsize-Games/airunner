@@ -811,9 +811,8 @@ class BaseDiffusersModelManager(BaseModelManager):
                     code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
                     response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
                 self.logger.error(error_message)
-            if message is not None:
-                if self.image_request.callback:
-                    self.image_request.callback(message)
+            if self.image_request.callback:
+                self.image_request.callback(response)
             self.emit_signal(
                 SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
                 {"code": code, "message": response},
@@ -926,6 +925,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             nsfw_content_detected=any(nsfw_content_detected),
             active_rect=active_rect,
             is_outpaint=self.is_outpaint,
+            node_id=self.image_request.node_id,
         )
 
     def _initialize_metadata(
