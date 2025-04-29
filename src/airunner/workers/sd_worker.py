@@ -243,12 +243,16 @@ class SDWorker(Worker):
                 strength=settings.strength / 100,
                 n_samples=settings.n_samples,
                 clip_skip=settings.clip_skip,
-                crops_coord_top_left=settings.crops_coord_top_left,
+                crops_coords_top_left=settings.crops_coords_top_left,
+                negative_crops_coords_top_left=settings.negative_crops_coords_top_left,
                 original_size=settings.original_size,
                 target_size=settings.target_size,
                 negative_original_size=settings.negative_original_size,
                 negative_target_size=settings.negative_target_size,
                 lora_scale=settings.lora_scale,
+                quality_effects=settings.quality_effects,
+                width=self.application_settings.working_width,
+                height=self.application_settings.working_height,
             )
         new_version = StableDiffusionVersion(version)
         if new_version is not self.version:
