@@ -27,17 +27,17 @@ from airunner.enums import StableDiffusionVersion
 from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
     StableDiffusionModelManager,
 )
+from airunner.utils.memory import clear_memory
 
 
 class SDXLModelManager(StableDiffusionModelManager):
     def __init__(self, *args, **kwargs):
         self._refiner = None
-        self._use_refiner = False
         super().__init__(*args, **kwargs)
 
     @property
     def use_refiner(self) -> bool:
-        return self._use_refiner
+        return self.generator_settings.use_refiner
 
     @property
     def refiner(self):
@@ -50,7 +50,9 @@ class SDXLModelManager(StableDiffusionModelManager):
                 torch_dtype=self.data_type,
                 use_safetensors=True,
                 variant="fp16",
-            ).to("cuda")
+            )
+            self.unload()
+            self._refiner.to("cuda")
         return self._refiner
 
     @property
@@ -192,8 +194,24 @@ class SDXLModelManager(StableDiffusionModelManager):
             image = self._pipe(
                 output_type="latent", denoising_end=high_noise_frac, **data
             ).images
+            refiner_data = {
+                k: v
+                for k, v in data.items()
+                if k
+                not in [
+                    "prompt_embeds",
+                    "pooled_prompt_embeds",
+                    "negative_prompt_embeds",
+                    "negative_pooled_prompt_embeds",
+                ]
+            }
+            refiner_data["prompt"] = self.prompt
+            refiner_data["negative_prompt"] = self.negative_prompt
             result = self.refiner(
-                denoising_start=high_noise_frac, image=image, **data
+                denoising_start=high_noise_frac, image=image, **refiner_data
             )
+            del self._refiner
+            self._refiner = None
+            clear_memory()
             return result
         return super()._get_results(data)
