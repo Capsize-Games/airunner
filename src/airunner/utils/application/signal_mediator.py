@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 import inspect
 from typing import Callable
 from PySide6.QtCore import QObject, Signal as BaseSignal, Slot
@@ -9,6 +9,7 @@ class SingletonMeta(type):
     """
     Metaclass used to create a Singleton instance of a class.
     """
+
     _instances: Dict = {}
 
     def __call__(cls, *args, **kwargs):
@@ -22,17 +23,18 @@ class Signal(QObject):
     """
     Represents a signal that can be emitted and received.
     """
+
     signal: BaseSignal = BaseSignal(dict)
 
     def __init__(self, callback: Callable):
         super().__init__()
         self.callback = callback
-        
+
         try:
             self.param_count = len(inspect.signature(self.callback).parameters)
         except (ValueError, TypeError, RecursionError):
             self.param_count = 1
-            
+
         self.signal.connect(self.on_signal_received)
 
     @Slot(object)
@@ -59,11 +61,7 @@ class SignalMediator(metaclass=SingletonMeta):
         self.backend = backend
         self.signals = {} if backend is None else None
 
-    def register(
-        self,
-        code: SignalCode,
-        slot_function: Callable
-    ):
+    def register(self, code: SignalCode, slot_function: Callable):
         """
         Register a signal to be received by a function.
         """
@@ -76,11 +74,7 @@ class SignalMediator(metaclass=SingletonMeta):
                 self.signals[code] = []
             self.signals[code].append(Signal(callback=slot_function))
 
-    def emit_signal(
-        self,
-        code: SignalCode,
-        data: Optional[Dict] = None
-    ):
+    def emit_signal(self, code: SignalCode, data: Optional[Dict] = None):
         """
         Emit a signal to be received by a function.
         """

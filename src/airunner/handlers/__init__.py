@@ -9,6 +9,7 @@ __all__ = [
     "StableDiffusionModelManager",
     "FluxModelManager",
     "BaseDiffusersModelManager",
+    "FramePackHandler",
 ]
 
 
@@ -52,7 +53,13 @@ def __getattr__(name):
 
         return FluxModelManager
     elif name == "BaseDiffusersModelManager":
-        from .stablediffusion.base_diffusers_model_manager import BaseDiffusersModelManager
+        from .stablediffusion.base_diffusers_model_manager import (
+            BaseDiffusersModelManager,
+        )
 
         return BaseDiffusersModelManager
+    elif name == "FramePackHandler":
+        from .framepack_handler import FramePackHandler
+
+        return FramePackHandler
     raise AttributeError(f"module {__name__} has no attribute {name}")
