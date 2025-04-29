@@ -19,6 +19,5 @@ class StartNode(BaseCoreNode):
 
     # No specific execution logic needed here, it just starts the flow
     def execute(self, input_data):
-        print(f"Executing {self.NODE_NAME}")
         # Simply forward the execution flow to the next nodes
         return {"_exec_triggered": self.EXEC_OUT_PORT_NAME}
