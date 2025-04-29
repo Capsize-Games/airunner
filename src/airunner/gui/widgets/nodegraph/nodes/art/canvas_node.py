@@ -45,8 +45,8 @@ class CanvasNode(BaseArtNode):
         super().__init__()
 
         # Input port for ImageResponse object
-        self.add_input("image_in")
-        self.add_output("image_out")
+        self.add_input("image_response_in")
+        self.add_output("image_response_out")
 
         # Create and add the custom wrapper widget to the node's view
         # self.image_widget = ImageDisplayWidget(name="image_display")
