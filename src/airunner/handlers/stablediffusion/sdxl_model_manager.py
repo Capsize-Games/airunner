@@ -30,6 +30,29 @@ from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
 
 
 class SDXLModelManager(StableDiffusionModelManager):
+    def __init__(self, *args, **kwargs):
+        self._refiner = None
+        self._use_refiner = False
+        super().__init__(*args, **kwargs)
+
+    @property
+    def use_refiner(self) -> bool:
+        return self._use_refiner
+
+    @property
+    def refiner(self):
+        if self._refiner is None:
+            cls = self.pipeline_map.get("img2img")
+            self._refiner = cls.from_pretrained(
+                "stabilityai/stable-diffusion-xl-refiner-1.0",
+                text_encoder_2=self._pipe.text_encoder_2,
+                vae=self._pipe.vae,
+                torch_dtype=self.data_type,
+                use_safetensors=True,
+                variant="fp16",
+            ).to("cuda")
+        return self._refiner
+
     @property
     def img2img_pipelines(self):
         return (
@@ -162,3 +185,15 @@ class SDXLModelManager(StableDiffusionModelManager):
             negative_prompt_embeds,
             negative_pooled_prompt_embeds,
         )
+
+    def _get_results(self, data):
+        if self.use_refiner:
+            high_noise_frac = 0.7
+            image = self._pipe(
+                output_type="latent", denoising_end=high_noise_frac, **data
+            ).images
+            result = self.refiner(
+                denoising_start=high_noise_frac, image=image, **data
+            )
+            return result
+        return super()._get_results(data)
