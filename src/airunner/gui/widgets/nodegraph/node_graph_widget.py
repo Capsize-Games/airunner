@@ -35,6 +35,7 @@ from airunner.gui.widgets.nodegraph.nodes import (
     GenerateImageNode,
     FramePackNode,
     VideoNode,
+    Gemma3Node,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -79,7 +80,7 @@ class NodeGraphWidget(BaseWidget):
 
         if self.current_workflow_id is not None:
             self._perform_load(self.current_workflow_id)
-        
+
         self.framepack_worker = create_worker(FramePackWorker)
 
         # if self.current_workflow_id is None:
@@ -364,6 +365,7 @@ class NodeGraphWidget(BaseWidget):
             GenerateImageNode,
             FramePackNode,
             VideoNode,
+            Gemma3Node,
         ]:
             self.graph.register_node(node_cls)
 
@@ -1329,6 +1331,26 @@ class NodeGraphWidget(BaseWidget):
         # Handle color conversion from list back to tuple if needed by NodeGraphQt
         if prop_name == "color" and isinstance(prop_value, list):
             prop_value = tuple(prop_value)
+
+        # Convert dicts to tuples for VECTOR2 properties
+        VECTOR2_PROPERTY_NAMES = [
+            "crops_coords_top_left",
+            "negative_crops_coords_top_left",
+            "target_size",
+            "original_size",
+            "negative_target_size",
+            "negative_original_size",
+        ]
+        if prop_name in VECTOR2_PROPERTY_NAMES and isinstance(
+            prop_value, dict
+        ):
+            # Try x/y first, then width/height for size properties
+            if "x" in prop_value and "y" in prop_value:
+                prop_value = (prop_value["x"], prop_value["y"])
+            elif "width" in prop_value and "height" in prop_value:
+                prop_value = (prop_value["width"], prop_value["height"])
+            else:
+                prop_value = (0, 0)
 
         try:
             # Use NodeGraphQt's property system primarily
