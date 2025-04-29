@@ -101,7 +101,7 @@ class FramePackHandler(BaseModelManager):
             "use_teacache": True,  # For speedup
             "gpu_memory_preservation": 6.0,  # For memory management
             "mp4_crf": 23,  # Video quality (lower is better)
-            "steps": 20,  # Default diffusion steps
+            "steps": 25,  # Default diffusion steps
             "cfg": 1.0,  # Default classifier-free guidance scale
             "guidance_scale": 10.0,  # Default guidance scale
             "random_seed": 1.0,  # Default random seed
@@ -110,7 +110,7 @@ class FramePackHandler(BaseModelManager):
 
         # Output directory
         self.outputs_folder = os.path.join(
-            os.path.expanduser("~"), "airunner_outputs", "framepack"
+            os.path.expanduser("~"), self.path_settings.base_path, "framepack"
         )
         os.makedirs(self.outputs_folder, exist_ok=True)
 
@@ -911,12 +911,16 @@ class FramePackHandler(BaseModelManager):
                 # Convert to QPixmap and emit
                 from PySide6.QtGui import QImage, QPixmap
 
+                # Ensure the array is C-contiguous before creating QImage
+                if not preview.flags["C_CONTIGUOUS"]:
+                    preview = np.ascontiguousarray(preview)
+
                 height, width, channel = preview.shape
                 q_img = QImage(
-                    preview.data,
+                    preview.data,  # Use the data buffer of the contiguous array
                     width,
                     height,
-                    width * 3,
+                    width * 3,  # Bytes per line
                     QImage.Format_RGB888,
                 )
                 pixmap = QPixmap.fromImage(q_img)
