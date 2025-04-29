@@ -296,8 +296,6 @@ CONDITION: {condition}"""
         """
         Evaluate the final text to determine if the condition is TRUE or FALSE.
         """
-        print("x" * 100)
-        print("EVALUATE CONDITION", self._accumulated_response_text)
         if not self._accumulated_response_text:
             self._condition_result = False
             return
