@@ -219,7 +219,6 @@ class SDWorker(Worker):
         settings = self.generator_settings
         image_request = data.get("image_request", None)
         model_path = self._get_model_path_from_image_request(image_request)
-        print("PROCESSING IMAGE REQUEST", image_request, data)
 
         if image_request is not None:
             version = image_request.version

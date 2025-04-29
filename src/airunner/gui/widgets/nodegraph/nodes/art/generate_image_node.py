@@ -42,11 +42,8 @@ class GenerateImageNode(BaseArtNode):
         )
 
     def _on_image_generated(self, data: Dict):
-        print("*" * 100)
-        print(data)
         image_response = data.get("message", None)
         if image_response is None:
-            print("image response is none, returning.")
             # Send completion signal with empty output data
             self.emit_signal(
                 SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
@@ -76,7 +73,6 @@ class GenerateImageNode(BaseArtNode):
 
         # Emit signal that execution is complete with the result and output data
         # This continues the workflow execution at this node
-        print("CONTINUING EXECUTING")
         self.emit_signal(
             SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
             {
@@ -110,7 +106,6 @@ class GenerateImageNode(BaseArtNode):
         # Mark as pending and initiate image generation
         self.logger.info(f"Starting image generation for node {self.id}")
         image_request.node_id = self.id
-        print("SENDING IMAGE REQUEST WITH NODE id", self.id)
         self._generate_image(image_request)
         self._pending_request = True
 

@@ -22,7 +22,6 @@ class NodeGraphWorker(Worker):
         self.execute_workflow()
 
     def handle_message(self, data: Dict):
-        print("HANDLE MESSAGE", data)
         node_id = data.get("node_id")
         result = data.get("result")
         output_data = data.get(
@@ -171,8 +170,6 @@ class NodeGraphWorker(Worker):
             self.logger.info(
                 f"Executing node: {current_node.name()} (ID: {node_id})"
             )
-            print("9" * 100)
-            print(f"Executing node: {current_node.name()} (ID: {node_id})")
             current_input_data = self._prepare_input_data(
                 current_node, self._node_outputs, self._initial_input_data
             )
