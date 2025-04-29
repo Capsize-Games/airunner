@@ -28,11 +28,25 @@ class ImageDisplayWidget(QWidget):
     def get_name(self):
         return self._name
 
-    def set_pixmap(self, pixmap):
-        self.image_label.setPixmap(pixmap)
+    def get_label_widget(self):
+        """Get the actual QLabel widget inside the NodeGroupBox wrapper"""
+        if (
+            self.widget()
+            and hasattr(self.widget(), "layout")
+            and self.widget().layout()
+        ):
+            # NodeGroupBox contains our actual widget in its layout at index 0
+            layout = self.widget().layout()
+            if layout.count() > 0:
+                item = layout.itemAt(0)
+                if item and item.widget():
+                    return item.widget()
+        return None
 
-    def set_text(self, text):
-        self.image_label.setText(text)
+    def set_pixmap(self, pixmap):
+        label = self.get_label_widget()
+        if label:
+            label.setPixmap(pixmap)
 
     def get_label_size(self):
         return self.image_label.size()
@@ -42,6 +56,12 @@ class ImageDisplayWidget(QWidget):
         self.image_label.setDisabled(state)
         super().setDisabled(state)
 
+    def set_text(self, text):
+        """Set text to display when no image is available"""
+        label = self.get_label_widget()
+        if label:
+            label.setText(text)
+            
 
 class ImageDisplayNode(BaseArtNode):
     NODE_NAME = "Image Display"
